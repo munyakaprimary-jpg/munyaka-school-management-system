@@ -6,6 +6,22 @@ export const STUDENTS = [
   { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M" },
 ];
 
+export const STAFF = [
+  { id: "1", name: "Jane Mwangi", role: "Class Teacher", subjects: ["Math", "Science"], status: "Active" },
+  { id: "2", name: "Peter Kamau", role: "Senior Teacher", subjects: ["English", "CRE"], status: "Active" },
+  { id: "3", name: "Sarah Chebet", role: "Junior School Lead", subjects: ["Pre-Tech", "Agri"], status: "On Leave" },
+  { id: "4", name: "John Onyango", role: "Head Teacher", subjects: ["Administration"], status: "Active" },
+];
+
+export const TIMETABLE = [
+  { time: "08:00 - 08:30", mon: "Assembly", tue: "Pastoral", wed: "Assembly", thu: "Pastoral", fri: "Assembly" },
+  { time: "08:30 - 09:10", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Science", fri: "Creative Arts" },
+  { time: "09:10 - 09:50", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Science", fri: "Creative Arts" },
+  { time: "09:50 - 10:30", mon: "English", tue: "Mathematics", wed: "Science", thu: "Kiswahili", fri: "Social Studies" },
+  { time: "10:30 - 11:00", mon: "BREAK", tue: "BREAK", wed: "BREAK", thu: "BREAK", fri: "BREAK" },
+  { time: "11:00 - 11:40", mon: "Physical Ed", tue: "Pre-Tech", wed: "Agri", thu: "Nutrition", fri: "Library" },
+];
+
 export const ATTENDANCE_TREND = [
   { day: "Mon", rate: 94 },
   { day: "Tue", rate: 96 },

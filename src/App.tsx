@@ -13,6 +13,8 @@ import ReportCards from "./pages/ReportCards";
 import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
+import Staff from "./pages/Staff";
+import Timetable from "./pages/Timetable";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +29,8 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/students" element={<Students />} />
+            <Route path="/staff" element={<Staff />} />
+            <Route path="/timetable" element={<Timetable />} />
             <Route path="/registration" element={<Registration />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/assessments" element={<Assessments />} />

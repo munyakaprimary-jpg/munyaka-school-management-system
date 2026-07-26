@@ -14,7 +14,9 @@ import {
   Search,
   Bell,
   Users,
-  Settings
+  Settings,
+  Calendar,
+  Contact2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -26,6 +28,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Students', path: '/students' },
+    { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
+    { icon: Calendar, label: 'Timetable', path: '/timetable' },
     { icon: UserPlus, label: 'Registration', path: '/registration' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
     { icon: FileSpreadsheet, label: 'Assessments', path: '/assessments' },
