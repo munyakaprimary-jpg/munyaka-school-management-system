@@ -2,7 +2,7 @@
 
 import { Toaster as Sonner } from "sonner";
 
-export function Toaster() {
+export default function Toaster() {
   return (
     <Sonner
       position="bottom-right"
