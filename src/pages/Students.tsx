@@ -5,58 +5,30 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
-import {
-  Search,
-  Filter,
-  MoreVertical,
-  UserCircle,
+import { 
+  Search, 
+  Filter, 
+  MoreVertical, 
+  UserCircle, 
   Phone,
-  GraduationCap,
-  Plus,
+  GraduationCap
 } from 'lucide-react';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { STUDENTS } from '@/lib/mock-data';
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [isAddStudentOpen, setIsAddStudentOpen] = useState(false);
-  const { toast } = useToast();
 
-  const filteredStudents = STUDENTS.filter(s =>
+  const filteredStudents = STUDENTS.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.assessment.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleAddStudent = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsAddStudentOpen(false);
-    toast({
-      title: "Student Added",
-      description: "The new student has been registered successfully.",
-    });
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -69,87 +41,17 @@ const Students = () => {
           <Button variant="outline" className="rounded-2xl border-slate-200">
             Export CSV
           </Button>
-          <Dialog open={isAddStudentOpen} onOpenChange={setIsAddStudentOpen}>
-            <DialogTrigger asChild>
-              <Button className="rounded-2xl shadow-lg shadow-indigo-100">
-                <Plus size={18} className="mr-2" /> Add New Student
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-[560px] rounded-3xl flex flex-col flex-1 overflow-y-auto">
-              <DialogHeader>
-                <DialogTitle>Register New Student</DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleAddStudent} className="flex-1 flex flex-col space-y-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullname">Full Name</Label>
-                    <Input id="fullname" placeholder="e.g. John Doe" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="assessment">Assessment Number (KNEC)</Label>
-                    <Input id="assessment" placeholder="e.g. 1002003004" required />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Grade Level</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Grade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pp1">PP1</SelectItem>
-                        <SelectItem value="pp2">PP2</SelectItem>
-                        {[1,2,3,4,5,6,7,8,9].map(n => (
-                          <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Stream</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Stream" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="blue">Blue</SelectItem>
-                        <SelectItem value="green">Green</SelectItem>
-                        <SelectItem value="yellow">Yellow</SelectItem>
-                        <SelectItem value="alpha">Alpha</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="guardian">Guardian Name</Label>
-                  <Input id="guardian" placeholder="Full name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" placeholder="e.g. 0712345678" required />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Physical Address/Location</Label>
-                  <Input id="address" placeholder="e.g. Eldoret West" />
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => setIsAddStudentOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="lg" className="rounded-xl px-8 shadow-lg shadow-primary/20">
-                    Register Student
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
+          <Button className="rounded-2xl shadow-lg shadow-indigo-100">
+            Add New Student
+          </Button>
         </div>
       </div>
 
       <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input
-            placeholder="Search by name, ID or assessment number..."
+          <Input 
+            placeholder="Search by name, ID or assessment number..." 
             className="pl-12 h-14 rounded-3xl border-none shadow-sm bg-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -210,7 +112,7 @@ const Students = () => {
                   </div>
                 </div>
               </div>
-
+              
               <Link to={`/students/${student.id}`}>
                 <div className="bg-slate-50/80 px-8 py-4 flex justify-between items-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
                   <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-100">View Full Profile</span>
