@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Info } from "lucide-react";
+import { showSuccess } from '@/utils/toast';
 
 const Assessments = () => {
   const performanceLevels = [
@@ -117,7 +118,9 @@ const Assessments = () => {
       </Card>
 
       <div className="flex justify-end">
-        <Button size="lg" className="rounded-xl px-12">Submit Marks</Button>
+        <Button size="lg" className="rounded-xl px-12" onClick={() => showSuccess('Marks submitted successfully!')}>
+          Submit Marks
+        </Button>
       </div>
     </div>
   );
