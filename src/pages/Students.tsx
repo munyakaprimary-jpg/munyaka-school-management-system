@@ -75,71 +75,73 @@ const Students = () => {
                 <Plus size={18} className="mr-2" /> Add New Student
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-[560px] rounded-3xl flex flex-col flex-1 overflow-y-auto">
+            <DialogContent className="sm:max-w-[560px] rounded-3xl max-h-[80vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>Register New Student</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleAddStudent} className="flex-1 flex flex-col space-y-6 mt-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="fullname">Full Name</Label>
-                    <Input id="fullname" placeholder="e.g. John Doe" required />
+              <form onSubmit={handleAddStudent} className="flex-1 overflow-y-auto pr-2">
+                <div className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="fullname">Full Name</Label>
+                      <Input id="fullname" placeholder="e.g. John Doe" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="assessment">Assessment Number (KNEC)</Label>
+                      <Input id="assessment" placeholder="e.g. 1002003004" required />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Grade Level</Label>
+                      <Select required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="pp1">PP1</SelectItem>
+                          <SelectItem value="pp2">PP2</SelectItem>
+                          {[1,2,3,4,5,6,7,8,9].map(n => (
+                            <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Stream</Label>
+                      <Select required>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select Stream" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="blue">Blue</SelectItem>
+                          <SelectItem value="green">Green</SelectItem>
+                          <SelectItem value="yellow">Yellow</SelectItem>
+                          <SelectItem value="alpha">Alpha</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="assessment">Assessment Number (KNEC)</Label>
-                    <Input id="assessment" placeholder="e.g. 1002003004" required />
+                    <Label htmlFor="guardian">Guardian Name</Label>
+                    <Input id="guardian" placeholder="Full name" required />
                   </div>
                   <div className="space-y-2">
-                    <Label>Grade Level</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Grade" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="pp1">PP1</SelectItem>
-                        <SelectItem value="pp2">PP2</SelectItem>
-                        {[1,2,3,4,5,6,7,8,9].map(n => (
-                          <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                    <Label htmlFor="phone">Phone Number</Label>
+                    <Input id="phone" placeholder="e.g. 0712345678" required />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Stream</Label>
-                    <Select required>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Stream" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="blue">Blue</SelectItem>
-                        <SelectItem value="green">Green</SelectItem>
-                        <SelectItem value="yellow">Yellow</SelectItem>
-                        <SelectItem value="alpha">Alpha</SelectItem>
-                      </SelectContent>
-                    </Select>
+                  <div className="space-y-2 md:col-span-2">
+                    <Label htmlFor="address">Physical Address/Location</Label>
+                    <Input id="address" placeholder="e.g. Eldoret West" />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="guardian">Guardian Name</Label>
-                  <Input id="guardian" placeholder="Full name" required />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="phone">Phone Number</Label>
-                  <Input id="phone" placeholder="e.g. 0712345678" required />
-                </div>
-                <div className="space-y-2 md:col-span-2">
-                  <Label htmlFor="address">Physical Address/Location</Label>
-                  <Input id="address" placeholder="e.g. Eldoret West" />
-                </div>
-                <div className="flex justify-end gap-3 pt-4">
-                  <Button type="button" variant="outline" className="rounded-xl" onClick={() => setIsAddStudentOpen(false)}>
-                    Cancel
-                  </Button>
-                  <Button type="submit" size="lg" className="rounded-xl px-8 shadow-lg shadow-primary/20">
-                    Register Student
-                  </Button>
                 </div>
               </form>
+              <div className="flex justify-end gap-3 pt-4 pb-2 border-t">
+                <Button type="button" variant="outline" className="rounded-xl" onClick={() => setIsAddStudentOpen(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="rounded-xl px-8 shadow-lg shadow-primary/20" onClick={() => { handleAddStudent as any; setIsAddStudentOpen(false); }}>
+                  Register Student
+                </Button>
+              </div>
             </DialogContent>
           </Dialog>
         </div>
