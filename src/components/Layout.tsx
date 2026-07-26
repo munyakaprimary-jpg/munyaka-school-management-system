@@ -20,7 +20,8 @@ import {
   Megaphone,
   Box,
   Library,
-  MessageSquare
+  MessageSquare,
+  CalendarDays
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },
+    { icon: CalendarDays, label: 'School Calendar', path: '/calendar' },
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
     { icon: UserPlus, label: 'Registration', path: '/registration' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },

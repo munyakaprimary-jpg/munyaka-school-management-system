@@ -33,10 +33,16 @@ export const INVENTORY = [
 ];
 
 export const STAFF = [
-  { id: "1", name: "Jane Mwangi", role: "Class Teacher", subjects: ["Math", "Science"], status: "Active" },
-  { id: "2", name: "Peter Kamau", role: "Senior Teacher", subjects: ["English", "CRE"], status: "Active" },
-  { id: "3", name: "Sarah Chebet", role: "Junior School Lead", subjects: ["Pre-Tech", "Agri"], status: "On Leave" },
-  { id: "4", name: "John Onyango", role: "Head Teacher", subjects: ["Administration"], status: "Active" },
+  { id: "1", name: "Jane Mwangi", role: "Class Teacher", subjects: ["Math", "Science"], status: "Active", joined: "Jan 2020", id_no: "28374615", phone: "+254 700 111 222", email: "j.mwangi@munyaka.sc.ke" },
+  { id: "2", name: "Peter Kamau", role: "Senior Teacher", subjects: ["English", "CRE"], status: "Active", joined: "May 2018", id_no: "24556122", phone: "+254 700 333 444", email: "p.kamau@munyaka.sc.ke" },
+  { id: "3", name: "Sarah Chebet", role: "Junior School Lead", subjects: ["Pre-Tech", "Agri"], status: "On Leave", joined: "Feb 2021", id_no: "30112233", phone: "+254 700 555 666", email: "s.chebet@munyaka.sc.ke" },
+  { id: "4", name: "John Onyango", role: "Head Teacher", subjects: ["Administration"], status: "Active", joined: "Jan 2015", id_no: "12334455", phone: "+254 700 777 888", email: "headteacher@munyaka.sc.ke" },
+];
+
+export const EVENTS = [
+  { id: 1, title: "Staff Meeting", date: "2024-10-25", time: "02:00 PM", type: "Internal" },
+  { id: 2, title: "Music Festival", date: "2024-11-02", time: "08:00 AM", type: "County" },
+  { id: 3, title: "End of Term Exams", date: "2024-11-15", time: "All Day", type: "Academic" },
 ];
 
 export const TIMETABLE = [

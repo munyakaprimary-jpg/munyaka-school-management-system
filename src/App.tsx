@@ -15,11 +15,13 @@ import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
+import StaffProfile from "./pages/StaffProfile";
 import Timetable from "./pages/Timetable";
 import Notices from "./pages/Notices";
 import Inventory from "./pages/Inventory";
 import Library from "./pages/Library";
 import Communication from "./pages/Communication";
+import SchoolCalendar from "./pages/SchoolCalendar";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,8 +38,10 @@ const App = () => (
             <Route path="/students" element={<Students />} />
             <Route path="/students/:id" element={<StudentProfile />} />
             <Route path="/staff" element={<Staff />} />
+            <Route path="/staff/:id" element={<StaffProfile />} />
             <Route path="/communication" element={<Communication />} />
             <Route path="/notices" element={<Notices />} />
+            <Route path="/calendar" element={<SchoolCalendar />} />
             <Route path="/timetable" element={<Timetable />} />
             <Route path="/registration" element={<Registration />} />
             <Route path="/attendance" element={<Attendance />} />

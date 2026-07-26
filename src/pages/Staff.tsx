@@ -1,6 +1,7 @@
 "use client";
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,7 +27,7 @@ const Staff = () => {
             <CardContent className="p-0">
               <div className="p-8">
                 <div className="flex justify-between items-start mb-6">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xl">
+                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 font-black text-xl group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                     {member.name.split(' ').map(n => n[0]).join('')}
                   </div>
                   <Badge className={
@@ -50,12 +51,14 @@ const Staff = () => {
                   </div>
                   <div className="flex items-center gap-3 text-sm text-slate-600">
                     <Phone size={16} className="text-slate-400" />
-                    <span>+254 700 *** ***</span>
+                    <span>{member.phone}</span>
                   </div>
                 </div>
               </div>
               <div className="px-8 py-4 bg-slate-50 flex justify-between items-center group-hover:bg-indigo-50/50 transition-colors">
-                <Button variant="ghost" size="sm" className="text-slate-500 font-bold hover:text-indigo-600">Edit Profile</Button>
+                <Link to={`/staff/${member.id}`}>
+                  <Button variant="ghost" size="sm" className="text-slate-500 font-bold hover:text-indigo-600 p-0">View Profile</Button>
+                </Link>
                 <Button variant="ghost" size="icon" className="text-slate-400"><MoreHorizontal size={18} /></Button>
               </div>
             </CardContent>
