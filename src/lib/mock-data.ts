@@ -64,23 +64,18 @@ export const ATTENDANCE_TREND = [
   { day: "Mon", rate: 94 },
   { day: "Tue", rate: 96 },
   { day: "Wed", rate: 92 },
-  { day: "Thu", rate: 97 },
-  { day: "Fri", rate: 95 },
-  { day: "Sat", rate: 88 },
-  { day: "Sun", rate: 0 },
+  { day: "Thu", rate: 95 },
+  { day: "Fri", rate: 91 },
 ];
 
 export const FEES_DATA = [
-  { id: 1, student: "Brian Kiptoo", total: 15000, paid: 12000, status: "Partial" },
-  { id: 2, student: "Mary Atieno", total: 15000, paid: 15000, status: "Cleared" },
-  { id: 3, student: "Emmanuel Maina", total: 15000, paid: 8000, status: "Partial" },
-  { id: 4, student: "Sheila Chepkoech", total: 15000, paid: 0, status: "Pending" },
-  { id: 5, student: "David Mutua", total: 15000, paid: 15000, status: "Cleared" },
+  { id: "1", student: "Brian Kiptoo", total: 15000, paid: 12000, status: "Partial" },
+  { id: "2", student: "Mary Atieno", total: 15000, paid: 15000, status: "Cleared" },
+  { id: "3", student: "Emmanuel Maina", total: 15000, paid: 5000, status: "Pending" },
 ];
 
 export const TRANSACTIONS = [
-  { id: "TXN-001", date: "Oct 18, 2024", category: "Term 1 Fees", ref: "MPESA-12345", amount: 5000, method: "M-Pesa" },
-  { id: "TXN-002", date: "Oct 17, 2024", category: "Uniform", ref: "CASH-001", amount: 3500, method: "Cash" },
-  { id: "TXN-003", date: "Oct 16, 2024", category: "Term 1 Fees", ref: "MPESA-12346", amount: 10000, method: "M-Pesa" },
-  { id: "TXN-004", date: "Oct 15, 2024", category: "Trip Fee", ref: "CARD-001", amount: 2000, method: "Card" },
+  { id: "TX-901", date: "Oct 12, 2024", amount: 5000, method: "M-Pesa", ref: "RI82JD91S", category: "Tuition" },
+  { id: "TX-882", date: "Sep 28, 2024", amount: 2000, method: "Bank Deposit", ref: "DEP-2938", category: "Activity" },
+  { id: "TX-750", date: "Aug 15, 2024", amount: 5000, method: "M-Pesa", ref: "QH12LK34P", category: "Tuition" },
 ];
