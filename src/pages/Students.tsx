@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,8 @@ import {
   MoreVertical, 
   UserCircle, 
   Phone,
-  GraduationCap
+  GraduationCap,
+  Plus
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -21,9 +22,11 @@ import {
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
 import { STUDENTS } from '@/lib/mock-data';
+import { showSuccess } from '@/utils/toast';
 
 const Students = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const navigate = useNavigate();
 
   const filteredStudents = STUDENTS.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -41,9 +44,11 @@ const Students = () => {
           <Button variant="outline" className="rounded-2xl border-slate-200">
             Export CSV
           </Button>
-          <Button className="rounded-2xl shadow-lg shadow-indigo-100">
-            Add New Student
-          </Button>
+          <Link to="/registration">
+            <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2">
+              <Plus size={18} /> Add New Student
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -81,8 +86,18 @@ const Students = () => {
                       <Link to={`/students/${student.id}`}>
                         <DropdownMenuItem className="rounded-xl font-medium">View Profile</DropdownMenuItem>
                       </Link>
-                      <DropdownMenuItem className="rounded-xl font-medium">Edit Details</DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-xl font-medium text-red-600">Archive Student</DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="rounded-xl font-medium"
+                        onClick={() => navigate(`/students/${student.id}`)}
+                      >
+                        Edit Details
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="rounded-xl font-medium text-red-600"
+                        onClick={() => showSuccess(`${student.name} archived successfully`)}
+                      >
+                        Archive Student
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
