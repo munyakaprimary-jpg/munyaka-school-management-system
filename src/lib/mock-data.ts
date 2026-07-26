@@ -32,6 +32,12 @@ export const INVENTORY = [
   { id: "4", item: "Grade 4 English Textbooks", category: "Library", qty: 120, status: "In Use", color: "text-blue-600" },
 ];
 
+export const ASSET_LOGS = [
+  { id: 1, item: "Science Kit #04", issuedTo: "Jane Mwangi", date: "Oct 18, 2024", status: "In Use" },
+  { id: 2, item: "Music Keyboard #01", issuedTo: "Brian Kiptoo", date: "Oct 17, 2024", status: "Returned" },
+  { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", status: "In Use" },
+];
+
 export const STAFF = [
   { id: "1", name: "Jane Mwangi", role: "Class Teacher", subjects: ["Math", "Science"], status: "Active", joined: "Jan 2020", id_no: "28374615", phone: "+254 700 111 222", email: "j.mwangi@munyaka.sc.ke" },
   { id: "2", name: "Peter Kamau", role: "Senior Teacher", subjects: ["English", "CRE"], status: "Active", joined: "May 2018", id_no: "24556122", phone: "+254 700 333 444", email: "p.kamau@munyaka.sc.ke" },
@@ -66,4 +72,10 @@ export const FEES_DATA = [
   { id: "1", student: "Brian Kiptoo", total: 15000, paid: 12000, status: "Partial" },
   { id: "2", student: "Mary Atieno", total: 15000, paid: 15000, status: "Cleared" },
   { id: "3", student: "Emmanuel Maina", total: 15000, paid: 5000, status: "Pending" },
+];
+
+export const TRANSACTIONS = [
+  { id: "TX-901", date: "Oct 12, 2024", amount: 5000, method: "M-Pesa", ref: "RI82JD91S", category: "Tuition" },
+  { id: "TX-882", date: "Sep 28, 2024", amount: 2000, method: "Bank Deposit", ref: "DEP-2938", category: "Activity" },
+  { id: "TX-750", date: "Aug 15, 2024", amount: 5000, method: "M-Pesa", ref: "QH12LK34P", category: "Tuition" },
 ];
