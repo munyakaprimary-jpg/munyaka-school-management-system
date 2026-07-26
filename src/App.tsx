@@ -9,6 +9,8 @@ import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
 import Assessments from "./pages/Assessments";
 import ReportCards from "./pages/ReportCards";
+import Portfolio from "./pages/Portfolio";
+import Fees from "./pages/Fees";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -25,6 +27,8 @@ const App = () => (
             <Route path="/registration" element={<Registration />} />
             <Route path="/attendance" element={<Attendance />} />
             <Route path="/assessments" element={<Assessments />} />
+            <Route path="/portfolio" element={<Portfolio />} />
+            <Route path="/fees" element={<Fees />} />
             <Route path="/reports" element={<ReportCards />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
