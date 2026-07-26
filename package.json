@@ -12,11 +12,11 @@
   },
   "pnpm": {
     "overrides": {
-      "rollup": "3.29.5"
+      "rollup": "npm:@rollup/wasm-node@4.28.0"
     }
   },
   "dependencies": {
-    "rollup": "3.29.5",
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
