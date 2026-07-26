@@ -12,16 +12,28 @@
   },
   "pnpm": {
     "overrides": {
-      "rollup": "npm:@rollup/wasm-node@^4.28.0"
+      "rollup": "npm:@rollup/wasm-node@4.28.0",
+      "rollup@*": "npm:@rollup/wasm-node@4.28.0",
+      "@rollup/rollup-win32-x64-msvc": "npm:@rollup/wasm-node@4.28.0",
+      "@rollup/rollup-win32-arm64-msvc": "npm:@rollup/wasm-node@4.28.0",
+      "@rollup/rollup-win32-ia32-msvc": "npm:@rollup/wasm-node@4.28.0"
     }
   },
   "overrides": {
-    "rollup": "npm:@rollup/wasm-node@^4.28.0"
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "rollup@*": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/rollup-win32-x64-msvc": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/rollup-win32-arm64-msvc": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/rollup-win32-ia32-msvc": "npm:@rollup/wasm-node@4.28.0"
   },
   "resolutions": {
-    "rollup": "npm:@rollup/wasm-node@^4.28.0"
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "rollup@*": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/rollup-win32-x64-msvc": "npm:@rollup/wasm-node@4.28.0"
   },
   "dependencies": {
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/wasm-node": "4.28.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
@@ -50,7 +62,6 @@
     "@radix-ui/react-toggle": "^1.1.0",
     "@radix-ui/react-toggle-group": "^1.1.0",
     "@radix-ui/react-tooltip": "^1.1.4",
-    "@rollup/wasm-node": "^4.28.0",
     "@tanstack/react-query": "^5.56.2",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -74,6 +85,7 @@
     "zod": "^3.25.0"
   },
   "devDependencies": {
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
     "@eslint/js": "^9.9.0",
     "@tailwindcss/typography": "^0.5.15",
     "@types/node": "^22.5.5",
