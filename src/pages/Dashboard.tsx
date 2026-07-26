@@ -58,7 +58,7 @@ const Dashboard = () => {
             </Badge>
           </CardHeader>
           <CardContent className="h-[300px] w-full pt-4">
-            <ResponsiveContainer width="100%" height="100%">
+            <ResponsiveContainer width="100%" height={260}>
               <BarChart data={ATTENDANCE_TREND}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
