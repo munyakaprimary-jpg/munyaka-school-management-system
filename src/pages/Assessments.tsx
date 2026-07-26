@@ -1,140 +1,127 @@
-"use client";
-
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/input";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Search, Filter, Plus, Download, Upload, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { showSuccess } from "@/utils/toast";
+import { Info } from "lucide-react";
+import { showSuccess } from '@/utils/toast';
 
 const Assessments = () => {
-  const [selectedClass, setSelectedClass] = useState("4-Blue");
-
-  const assessments = [
-    { id: "1", student: "Brian Kiptoo", subject: "Mathematics", score: 85, max: 100, grade: "A", status: "Graded" },
-    { id: "2", student: "Mary Atieno", subject: "Mathematics", score: 92, max: 100, grade: "A+", status: "Graded" },
-    { id: "3", student: "Emmanuel Maina", subject: "Mathematics", score: 78, max: 100, grade: "B+", status: "Graded" },
-    { id: "4", student: "Sheila Chepkoech", subject: "Mathematics", score: 0, max: 100, grade: "-", status: "Pending" },
-    { id: "5", student: "David Mutua", subject: "Mathematics", score: 65, max: 100, grade: "C+", status: "Graded" },
+  const performanceLevels = [
+    { code: "EE", label: "Exceeding Expectation", color: "bg-emerald-100 text-emerald-700" },
+    { code: "ME", label: "Meeting Expectation", color: "bg-blue-100 text-blue-700" },
+    { code: "AE", label: "Approaching Expectation", color: "bg-amber-100 text-amber-700" },
+    { code: "BE", label: "Below Expectation", color: "bg-red-100 text-red-700" },
   ];
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Assessments</h1>
-          <p className="text-muted-foreground">Manage student assessments, marks, and grades.</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => showSuccess('Assessments exported!')}>
-            <Download size={18} />
-            Export
-          </Button>
-          <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => showSuccess('New assessment created!')}>
-            <Plus size={18} />
-            New Assessment
-          </Button>
-        </div>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">CBC Marksheet</h1>
+        <p className="text-muted-foreground">Grade students based on specific learning outcomes.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-              <CheckCircle size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Graded</p>
-              <h3 className="text-2xl font-bold text-slate-900">4</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-              <Clock size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Pending</p>
-              <h3 className="text-2xl font-bold text-slate-900">1</h3>
-            </div>
-          </CardContent>
-        </Card>
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardContent className="p-6 flex items-center gap-4">
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Upload size={24} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-muted-foreground">Avg Score</p>
-              <h3 className="text-2xl font-bold text-slate-900">84%</h3>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-none shadow-sm rounded-3xl bg-white">
-        <CardHeader>
-          <CardTitle className="text-lg">Assessment Results</CardTitle>
-          <CardDescription>Class: {selectedClass} - Mathematics</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <Input placeholder="Search students..." className="rounded-xl h-12 pl-10" />
+      <Card className="border-none bg-blue-50/50 shadow-none rounded-2xl overflow-hidden border border-blue-100">
+        <CardContent className="p-4 flex items-center gap-4">
+          <Info className="text-blue-600 shrink-0" size={20} />
+          <div className="flex flex-wrap gap-4 items-center">
+            <span className="text-xs font-semibold text-blue-800 uppercase tracking-wider">Legend:</span>
+            {performanceLevels.map(lvl => (
+              <div key={lvl.code} className="flex items-center gap-2">
+                <Badge className={`${lvl.color} font-bold shadow-none`}>{lvl.code}</Badge>
+                <span className="text-[11px] font-medium text-slate-600">{lvl.label}</span>
               </div>
-              <Select>
-                <SelectTrigger className="rounded-xl h-12 w-[180px]">
-                  <SelectValue placeholder="Subject" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="math">Mathematics</SelectItem>
-                  <SelectItem value="english">English</SelectItem>
-                  <SelectItem value="kiswahili">Kiswahili</SelectItem>
-                  <SelectItem value="science">Science</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="text-slate-500">
-                    <TableHead className="font-bold uppercase text-[10px] tracking-wider">Student</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-wider">Subject</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-wider">Score</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-wider">Grade</TableHead>
-                    <TableHead className="font-bold uppercase text-[10px] tracking-wider text-right">Status</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {assessments.map((assessment) => (
-                    <TableRow key={assessment.id} className="hover:bg-slate-50/50 transition-colors">
-                      <TableCell className="font-medium text-slate-900">{assessment.student}</TableCell>
-                      <TableCell className="text-slate-600">{assessment.subject}</TableCell>
-                      <TableCell className="font-bold text-slate-900">{assessment.score}/{assessment.max}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="bg-slate-50 text-slate-700">
-                          {assessment.grade}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <Badge className={assessment.status === 'Graded' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'}>
-                          {assessment.status === 'Graded' ? 'Graded' : 'Pending'}
-                        </Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+            ))}
           </div>
         </CardContent>
       </Card>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Select defaultValue="math">
+          <SelectTrigger className="rounded-xl">
+            <SelectValue placeholder="Learning Area" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="math">Mathematics</SelectItem>
+            <SelectItem value="english">English Language</SelectItem>
+            <SelectItem value="kiswahili">Kiswahili</SelectItem>
+            <SelectItem value="science">Science & Tech</SelectItem>
+            <SelectItem value="custom">Custom Subject...</SelectItem>
+          </SelectContent>
+        </Select>
+        <Select defaultValue="formative">
+          <SelectTrigger className="rounded-xl">
+            <SelectValue placeholder="Assessment Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="formative">Formative (Task-based)</SelectItem>
+            <SelectItem value="summative">Summative (End of Term)</SelectItem>
+            <SelectItem value="project">Project / Portfolio</SelectItem>
+            <SelectItem value="custom">Custom Assessment...</SelectItem>
+          </SelectContent>
+        </Select>
+        <Input placeholder="Search Assessment Task..." className="rounded-xl" />
+      </div>
+
+      <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+        <CardContent className="p-0">
+          <table className="w-full text-sm text-left">
+            <thead className="bg-slate-50 border-b">
+              <tr>
+                <th className="px-6 py-4 font-medium">Student</th>
+                <th className="px-6 py-4 font-medium">Numbers & Algebra</th>
+                <th className="px-6 py-4 font-medium">Geometry</th>
+                <th className="px-6 py-4 font-medium">Teacher's Comment</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {[
+                { name: "Brian Kiptoo" },
+                { name: "Mary Atieno" },
+                { name: "Emmanuel Maina" },
+              ].map((s, i) => (
+                <tr key={i}>
+                  <td className="px-6 py-4 font-bold">{s.name}</td>
+                  <td className="px-6 py-4">
+                    <Select defaultValue="ME">
+                      <SelectTrigger className="w-[80px] h-8 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {performanceLevels.map(lvl => (
+                          <SelectItem key={lvl.code} value={lvl.code}>{lvl.code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Select defaultValue="EE">
+                      <SelectTrigger className="w-[80px] h-8 rounded-lg">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {performanceLevels.map(lvl => (
+                          <SelectItem key={lvl.code} value={lvl.code}>{lvl.code}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-6 py-4">
+                    <Input className="h-8 rounded-lg text-xs" placeholder="e.g. Consistent effort" />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
+
+      <div className="flex justify-end">
+        <Button size="lg" className="rounded-xl px-12" onClick={() => showSuccess('Marks submitted successfully!')}>
+          Submit Marks
+        </Button>
+      </div>
     </div>
   );
 };

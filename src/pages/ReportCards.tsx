@@ -1,149 +1,113 @@
-"use client";
-
-import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/input";
+import { Printer, Download, School } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Download, Search, Filter, Printer, FileText, TrendingUp, Award } from 'lucide-react';
-import { showSuccess } from "@/utils/toast";
 
 const ReportCards = () => {
-  const [selectedStudent, setSelectedStudent] = useState("");
-
-  const reportData = [
-    { subject: "Mathematics", score: 85, grade: "A", remarks: "Excellent performance" },
-    { subject: "English", score: 78, grade: "B+", remarks: "Good effort" },
-    { subject: "Kiswahili", score: 82, grade: "A-", remarks: "Very good" },
-    { subject: "Science", score: 90, grade: "A", remarks: "Outstanding" },
-    { subject: "Social Studies", score: 75, grade: "B", remarks: "Satisfactory" },
-    { subject: "Creative Arts", score: 88, grade: "A", remarks: "Excellent" },
-    { subject: "Physical Ed", score: 92, grade: "A+", remarks: "Excellent" },
-  ];
-
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Report Cards</h1>
-          <p className="text-muted-foreground">Generate and manage student report cards.</p>
+          <h1 className="text-3xl font-bold tracking-tight">Report Cards</h1>
+          <p className="text-muted-foreground">Preview and print summative assessment reports.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => showSuccess('Report PDF generated!')}>
-            <Download size={18} />
-            Export PDF
+        <div className="flex gap-2 print:hidden">
+          <Button variant="outline" className="rounded-xl">
+            <Download size={18} className="mr-2" /> Export PDF
           </Button>
-          <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => showSuccess('Report printed!')}>
-            <Printer size={18} />
-            Print
+          <Button onClick={() => window.print()} className="rounded-xl shadow-lg shadow-primary/20">
+            <Printer size={18} className="mr-2" /> Print Reports
           </Button>
         </div>
       </div>
 
-      <Card className="border-none shadow-sm rounded-3xl bg-white">
-        <CardHeader>
-          <CardTitle className="text-lg">Generate Report Card</CardTitle>
-        </CardHeader>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Student</label>
-              <Select>
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select student" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="brian">Brian Kiptoo</SelectItem>
-                  <SelectItem value="mary">Mary Atieno</SelectItem>
-                  <SelectItem value="emmanuel">Emmanuel Maina</SelectItem>
-                </SelectContent>
-              </Select>
+      {/* Report Card Preview */}
+      <Card className="max-w-4xl mx-auto border-none shadow-xl rounded-none bg-white p-8 md:p-12 print:shadow-none print:p-0">
+        <CardContent className="space-y-10 p-0">
+          {/* Official Header */}
+          <div className="text-center space-y-2 border-b-2 border-primary pb-6 relative">
+            <div className="absolute left-0 top-0 hidden md:block">
+              <School size={60} className="text-primary opacity-20" />
             </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Term</label>
-              <Select>
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select term" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="term1">Term 1</SelectItem>
-                  <SelectItem value="term2">Term 2</SelectItem>
-                  <SelectItem value="term3">Term 3</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-bold text-slate-700">Academic Year</label>
-              <Select>
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select year" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="2024">2024</SelectItem>
-                  <SelectItem value="2023">2023</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="flex justify-end mt-6">
-            <Button className="rounded-xl px-8 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => showSuccess('Report card generated!')}>
-              <FileText size={18} className="mr-2" />
-              Generate Report
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="border-none shadow-sm rounded-3xl bg-white">
-        <CardHeader>
-          <CardTitle className="text-lg">Recent Report Cards</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <Input placeholder="Search reports..." className="rounded-xl h-12 pl-10" />
+            <h2 className="text-2xl font-black text-primary uppercase tracking-tighter">Munyaka Primary and Junior School</h2>
+            <p className="text-sm font-bold">P.O. Box 5239-30100 Eldoret</p>
+            <p className="text-sm font-medium uppercase text-slate-500">Academic Progress Report</p>
+            <div className="flex justify-center gap-8 mt-4">
+              <div className="text-left text-xs">
+                <p><span className="text-muted-foreground">Year:</span> 2024</p>
+                <p><span className="text-muted-foreground">Term:</span> One</p>
               </div>
-              <Button variant="outline" className="rounded-xl border-slate-200 gap-2">
-                <Filter size={18} />
-                Filter
-              </Button>
+              <div className="text-left text-xs">
+                <p><span className="text-muted-foreground">Grade:</span> 4 Blue</p>
+                <p><span className="text-muted-foreground">Category:</span> Primary</p>
+              </div>
             </div>
+          </div>
 
-            <Table>
-              <TableHeader>
-                <TableRow className="text-slate-500">
-                  <TableHead className="font-bold uppercase text-[10px] tracking-wider">Student</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-wider">Term</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-wider">Average</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-wider">Grade</TableHead>
-                  <TableHead className="font-bold uppercase text-[10px] tracking-wider text-right">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+          {/* Student Info */}
+          <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200">
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-widest">Student Name</p>
+              <p className="font-bold text-lg">Brian Kiptoo</p>
+            </div>
+            <div>
+              <p className="text-muted-foreground text-xs uppercase tracking-widest">Assessment Number</p>
+              <p className="font-bold text-lg">KNEC/CBC/2024/481</p>
+            </div>
+          </div>
+
+          {/* Performance Table */}
+          <div className="space-y-4">
+            <h3 className="font-bold text-lg border-l-4 border-primary pl-3 uppercase">Performance Summary</h3>
+            <table className="w-full text-sm border">
+              <thead>
+                <tr className="bg-slate-50 border-b">
+                  <th className="px-4 py-2 text-left">Learning Area</th>
+                  <th className="px-4 py-2 text-center">Formative</th>
+                  <th className="px-4 py-2 text-center">Summative</th>
+                  <th className="px-4 py-2 text-center">Level</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
                 {[
-                  { student: "Brian Kiptoo", term: "Term 1", avg: "84%", grade: "A" },
-                  { student: "Mary Atieno", term: "Term 1", avg: "91%", grade: "A+" },
-                  { student: "Emmanuel Maina", term: "Term 1", avg: "78%", grade: "B+" },
+                  { subject: "Mathematics", form: "85%", sum: "88%", lvl: "EE" },
+                  { subject: "English Language", form: "72%", sum: "75%", lvl: "ME" },
+                  { subject: "Kiswahili", form: "68%", sum: "70%", lvl: "ME" },
+                  { subject: "Science & Technology", form: "90%", sum: "92%", lvl: "EE" },
+                  { subject: "CRE", form: "80%", sum: "82%", lvl: "EE" },
                 ].map((row, i) => (
-                  <TableRow key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="font-medium text-slate-900">{row.student}</TableCell>
-                    <TableCell className="text-slate-600">{row.term}</TableCell>
-                    <TableCell className="font-bold text-slate-900">{row.avg}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline" className="bg-slate-50 text-slate-700">{row.grade}</Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button variant="ghost" size="sm" className="text-indigo-600 font-bold" onClick={() => showSuccess('Report opened!')}>
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
+                  <tr key={i}>
+                    <td className="px-4 py-3 font-medium">{row.subject}</td>
+                    <td className="px-4 py-3 text-center">{row.form}</td>
+                    <td className="px-4 py-3 text-center">{row.sum}</td>
+                    <td className="px-4 py-3 text-center">
+                      <Badge variant="outline" className={row.lvl === 'EE' ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"}>
+                        {row.lvl}
+                      </Badge>
+                    </td>
+                  </tr>
                 ))}
-              </TableBody>
-            </Table>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer Comments */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10">
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-500 uppercase">Class Teacher's Remarks</p>
+              <p className="text-sm italic border-b border-dotted pb-2">A very hardworking and disciplined student. Keep it up!</p>
+              <p className="text-xs font-bold pt-4">Sign: ...........................................</p>
+            </div>
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-500 uppercase">Headteacher's Message</p>
+              <p className="text-sm italic border-b border-dotted pb-2">Outstanding performance across all learning areas.</p>
+              <p className="text-xs font-bold pt-4">Sign: ...........................................</p>
+            </div>
+          </div>
+
+          <div className="text-center pt-8 text-[10px] text-slate-400">
+            This is an official computer-generated report card for Munyaka Primary School.
           </div>
         </CardContent>
       </Card>
