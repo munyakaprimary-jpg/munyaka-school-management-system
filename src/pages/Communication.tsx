@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -37,10 +37,12 @@ const Communication = () => {
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => showSuccess('Logs loaded!')}>
-            <History size={18} /> Logs
+            <History size={18} />
+            Logs
           </Button>
           <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 gap-2" onClick={() => showSuccess('Message composed!')}>
-            <Send size={18} /> Compose
+            <Send size={18} />
+            Compose
           </Button>
         </div>
       </div>

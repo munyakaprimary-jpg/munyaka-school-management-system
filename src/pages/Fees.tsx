@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState } from 'eact';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Mpesa, Bank, Download, Plus, Warning } from 'lucide-react';
 import { showSuccess } from "@/utils/toast";
@@ -17,14 +18,12 @@ const Fees = () => {
 
   const handleRecordPayment = async () => {
     setIsProcessing(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1000));
     setIsProcessing(false);
     showSuccess(`Payment of ${amount} via ${paymentMethod} recorded!`);
   };
 
   const handleGenerateReport = () => {
-    // Simulate report generation
     showSuccess('Fee report generated successfully!');
   };
 
@@ -47,7 +46,7 @@ const Fees = () => {
           <Button 
             variant="outline" 
             className="rounded-xl border-slate-200 bg-white shadow-sm"
-            onClick={() => showSuccess('Student selected!')}
+            onClick={() => showSuccess('Student added!')}
           >
             <Plus size={18} className="mr-2 text-slate-500" />
             Add Student
@@ -80,16 +79,12 @@ const Fees = () => {
               <TableBody>
                 {students.map(student => (
                   <TableRow key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="font-medium text-slate-900">
                       <span className="font-bold text-slate-900">{student.name}</span>
                     </TableCell>
-                    <TableCell className="px-6 py-4 text-slate-600">
-                      {student.total}
-                    </TableCell>
-                    <TableCell className="px-6 py-4 text-slate-600">
-                      {student.paid}
-                    </TableCell>
-                    <TableCell className="px-6 py-4">
+                    <TableCell className="text-slate-600">{student.total}</TableCell>
+                    <TableCell className="text-slate-600">{student.paid}</TableCell>
+                    <TableCell>
                       <Badge variant={student.status === 'Cleared' ? 'default' : student.status === 'Partial' ? 'secondary' : 'destructive'} className="bg-emerald-50 text-emerald-700">
                         {student.status}
                       </Badge>

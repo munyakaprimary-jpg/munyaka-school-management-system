@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'eact';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,6 +9,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CheckCircle2, XCircle, Clock, Save, Filter, Calendar as CalendarIcon, Users } from 'lucide-react';
 import { showSuccess } from "@/utils/toast";
 import { STUDENTS } from "@/lib/mock-data";
+import { cn } from "@/lib/utils";
 
 type AttendanceStatus = 'present' | 'absent' | 'late';
 
@@ -24,14 +25,13 @@ const Attendance = () => {
 
   const handleStatusChange = (studentId: string, status: AttendanceStatus) => {
     setAttendance(prev => ({
-      ..prev,
+      ...prev,
       [studentId]: status
     }));
   };
 
   const handleSave = async () => {
     setIsSaving(true);
-    // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSaving(false);
     showSuccess('Attendance register saved successfully!');
@@ -67,7 +67,7 @@ const Attendance = () => {
             onClick={handleSave}
             disabled={isSaving}
           >
-            {isSaving? (
+            {isSaving ? (
               <>
                 <span className="animate-spin mr-2">⌛</span>
                 Saving...
@@ -98,8 +98,8 @@ const Attendance = () => {
             <Table>
               <TableHeader className="bg-slate-50/50">
                 <TableRow>
-                  <TableHead className="px-6 py-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Student Name</TabelHead>
-                  <TableHead className="px-6 py-4 font-bold text-slateة-500 uppercase text-[10px] tracking-wider">Assessment ID</TableHead>
+                  <TableHead className="px-6 py-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Student Name</TableHead>
+                  <TableHead className="px-6 py-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider">Assessment ID</TableHead>
                   <TableHead className="px-6 py-4 font-bold text-slate-500 uppercase text-[10px] tracking-wider text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
@@ -120,33 +120,33 @@ const Attendance = () => {
                     <TableCell className="px-6 py-4">
                       <div className="flex justify-center gap-2">
                         <Button
-                          variant={attendance[student.id] === 'present'? 'default' : 'outline'}
+                          variant={attendance[student.id] === 'present' ? 'default' : 'outline'}
                           size="icon"
                           className={cn(
                             "h-9 w-9 rounded-lg",
-                            attendance[student.id] === 'present'? "bg-emerald-500 hover:bg-emerald-600 text-white" : "text-slate-400"
+                            attendance[student.id] === 'present' ? "bg-emerald-500 hover:bg-emerald-600 text-white" : "text-slate-400"
                           )}
                           onClick={() => handleStatusChange(student.id, 'present')}
                         >
                           <CheckCircle2 size={18} />
                         </Button>
                         <Button
-                          variant={attendance[student.id] === 'late'? 'default' : 'outline'}
+                          variant={attendance[student.id] === 'late' ? 'default' : 'outline'}
                           size="icon"
                           className={cn(
                             "h-9 w-9 rounded-lg",
-                            attendance[student.id] === 'late'? "bg-amber-500 hover:bg-amber-600 text-white" : "text-slate-400"
+                            attendance[student.id] === 'late' ? "bg-amber-500 hover:bg-amber-600 text-white" : "text-slate-400"
                           )}
                           onClick={() => handleStatusChange(student.id, 'late')}
                         >
                           <Clock size={18} />
                         </Button>
                         <Button
-                          variant={attendance[student.id] === 'absent'? 'destructive' : 'outline'}
+                          variant={attendance[student.id] === 'absent' ? 'destructive' : 'outline'}
                           size="icon"
                           className={cn(
                             "h-9 w-9 rounded-lg",
-                            attendance[student.id] === 'absent'? "bg-red-500 hover:bg-red-600 text-white" : "text-slate-400"
+                            attendance[student.id] === 'absent' ? "bg-red-500 hover:bg-red-600 text-white" : "text-slate-400"
                           )}
                           onClick={() => handleStatusChange(student.id, 'absent')}
                         >

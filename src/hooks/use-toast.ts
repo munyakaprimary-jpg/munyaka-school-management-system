@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { createContext, useContext, useState } from "react";
+import { toast } from "sonner";
 
 type Toast = {
   id: string;
@@ -27,10 +28,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
   const toast = (props: Omit<Toast, "id">) => {
     const id = Math.random().toString(36).slice(2, 11);
     setToasts((prev) => [...prev, { id, ...props }]);
+    toast(props.title || "", {
+      description: props.description,
+    });
   };
 
   const dismiss = (id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
+    toast.dismiss(id);
   };
 
   return (
