@@ -1,21 +1,19 @@
 module.exports = {
   hooks: {
     readPackage(pkg) {
+      if (pkg.dependencies && pkg.dependencies['rollup']) {
+        pkg.dependencies['rollup'] = 'npm:@rollup/wasm-node@^4.0.0';
+      }
+      if (pkg.devDependencies && pkg.devDependencies['rollup']) {
+        pkg.devDependencies['rollup'] = 'npm:@rollup/wasm-node@^4.0.0';
+      }
       if (pkg.optionalDependencies) {
-        for (const dep of Object.keys(pkg.optionalDependencies)) {
-          if (dep.includes('rollup')) {
-            delete pkg.optionalDependencies[dep];
+        Object.keys(pkg.optionalDependencies).forEach((dep) => {
+          if (dep.startsWith('@rollup/rollup-win32')) {
+            pkg.optionalDependencies[dep] = 'npm:@rollup/wasm-node@^4.0.0';
           }
-        }
+        });
       }
-
-      const depTypes = ['dependencies', 'devDependencies', 'peerDependencies'];
-      for (const type of depTypes) {
-        if (pkg[type] && pkg[type]['rollup']) {
-          pkg[type]['rollup'] = 'npm:@rollup/wasm-node@4.28.0';
-        }
-      }
-
       return pkg;
     }
   }
