@@ -1,9 +1,22 @@
 export const STUDENTS = [
-  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com" },
-  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com" },
-  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com" },
-  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com" },
-  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com" },
+  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com", health: "None", needs: "None" },
+  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com", health: "Asthma", needs: "None" },
+  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com", health: "None", needs: "Vision Support" },
+  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com", health: "None", needs: "None" },
+  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com", health: "Allergy: Peanuts", needs: "None" },
+];
+
+export const BOOKS = [
+  { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
+  { id: "2", title: "KLB Mathematics Grade 5", author: "KLB", isbn: "978-9966", category: "Core Text", stock: 150, borrowed: 142 },
+  { id: "3", title: "Dunia Yetu: Kiswahili", author: "Longhorn", isbn: "978-9977", category: "Reference", stock: 45, borrowed: 12 },
+  { id: "4", title: "Science in Action", author: "Pearson", isbn: "978-0321", category: "Supplementary", stock: 60, borrowed: 58 },
+];
+
+export const MESSAGES = [
+  { id: "1", recipient: "All Parents", subject: "Fee Balance Reminder", type: "SMS", date: "Oct 18, 2024", status: "Delivered" },
+  { id: "2", recipient: "Grade 4 Blue", subject: "Trip to Museum", type: "Email", date: "Oct 16, 2024", status: "Opened" },
+  { id: "3", recipient: "Samuel Kiptoo", subject: "Disciplinary Notice", type: "SMS", date: "Oct 15, 2024", status: "Delivered" },
 ];
 
 export const NOTICES = [
