@@ -1,0 +1,102 @@
+import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/components/ui/use-toast";
+
+const Registration = () => {
+  const { toast } = useToast();
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    toast({
+      title: "Success",
+      description: "Student has been registered successfully.",
+    });
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight">Student Registration</h1>
+        <p className="text-muted-foreground">Register new students for the current academic year.</p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <Card className="border-none shadow-sm rounded-2xl bg-white mb-6">
+          <CardHeader>
+            <CardTitle>Basic Information</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="fullname">Full Name</Label>
+              <Input id="fullname" placeholder="e.g. John Doe" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="assessment">Assessment Number (KNEC)</Label>
+              <Input id="assessment" placeholder="e.g. 1002003004" required />
+            </div>
+            <div className="space-y-2">
+              <Label>Grade Level</Label>
+              <Select required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pp1">PP1</SelectItem>
+                  <SelectItem value="pp2">PP2</SelectItem>
+                  {[1,2,3,4,5,6,7,8,9].map(n => (
+                    <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Stream</Label>
+              <Select required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select Stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blue">Blue</SelectItem>
+                  <SelectItem value="green">Green</SelectItem>
+                  <SelectItem value="yellow">Yellow</SelectItem>
+                  <SelectItem value="alpha">Alpha</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm rounded-2xl bg-white">
+          <CardHeader>
+            <CardTitle>Guardian Contact Details</CardTitle>
+          </CardHeader>
+          <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label htmlFor="guardian">Guardian Name</Label>
+              <Input id="guardian" placeholder="Full name" required />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone Number</Label>
+              <Input id="phone" placeholder="e.g. 0712345678" required />
+            </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="address">Physical Address/Location</Label>
+              <Input id="address" placeholder="e.g. Eldoret West" />
+            </div>
+          </CardContent>
+          <div className="p-6 pt-0 flex justify-end">
+            <Button type="submit" size="lg" className="rounded-xl px-8 shadow-lg shadow-primary/20">
+              Register Student
+            </Button>
+          </div>
+        </Card>
+      </form>
+    </div>
+  );
+};
+
+export default Registration;
