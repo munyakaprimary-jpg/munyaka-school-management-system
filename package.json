@@ -12,17 +12,12 @@
   },
   "pnpm": {
     "overrides": {
-      "rollup": "npm:@rollup/wasm-node@4.28.0",
-      "rollup@*": "npm:@rollup/wasm-node@4.28.0"
-    }
-  },
-  "overrides": {
-    "rollup": "npm:@rollup/wasm-node@4.28.0",
-    "rollup@*": "npm:@rollup/wasm-node@4.28.0"
-  },
-  "resolutions": {
-    "rollup": "npm:@rollup/wasm-node@4.28.0",
-    "rollup@*": "npm:@rollup/wasm-node@4.28.0"
+      "rollup": "npm:@rollup/wasm-node@4.28.0"
+    },
+    "neverBuiltDependencies": [
+      "@rollup/rollup-win32-x64-msvc",
+      "rollup"
+    ]
   },
   "dependencies": {
     "rollup": "npm:@rollup/wasm-node@4.28.0",
