@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +11,6 @@ import {
   Filter, 
   MoreVertical, 
   UserCircle, 
-  Mail, 
   Phone,
   GraduationCap
 } from 'lucide-react';
@@ -78,7 +78,9 @@ const Students = () => {
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="rounded-2xl p-2">
-                      <DropdownMenuItem className="rounded-xl font-medium">View Profile</DropdownMenuItem>
+                      <Link to={`/students/${student.id}`}>
+                        <DropdownMenuItem className="rounded-xl font-medium">View Profile</DropdownMenuItem>
+                      </Link>
                       <DropdownMenuItem className="rounded-xl font-medium">Edit Details</DropdownMenuItem>
                       <DropdownMenuItem className="rounded-xl font-medium text-red-600">Archive Student</DropdownMenuItem>
                     </DropdownMenuContent>
@@ -111,12 +113,14 @@ const Students = () => {
                 </div>
               </div>
               
-              <div className="bg-slate-50/80 px-8 py-4 flex justify-between items-center group-hover:bg-indigo-50/50 transition-colors">
-                <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-400">Status</span>
-                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
-                </span>
-              </div>
+              <Link to={`/students/${student.id}`}>
+                <div className="bg-slate-50/80 px-8 py-4 flex justify-between items-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-100">View Full Profile</span>
+                  <span className="text-xs font-bold text-emerald-600 group-hover:text-white flex items-center gap-1.5">
+                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:bg-white" /> Active
+                  </span>
+                </div>
+              </Link>
             </CardContent>
           </Card>
         ))}
