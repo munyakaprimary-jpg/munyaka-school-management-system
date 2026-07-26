@@ -1,33 +1,36 @@
-import { useToast } from "@/hooks/use-toast";
-import {
-  Toast,
-  ToastClose,
-  ToastDescription,
-  ToastProvider,
-  ToastTitle,
-  ToastViewport,
-} from "@/components/ui/toast";
+"use client";
 
-export function Toaster() {
+import { SonnerToast } from "./sonner";
+import { useToast } from "@/hooks/use-toast";
+
+export const Toaster = () => {
   const { toasts } = useToast();
 
   return (
-    <ToastProvider>
-      {toasts.map(function ({ id, title, description, action, ...props }) {
-        return (
-          <Toast key={id} {...props}>
-            <div className="grid gap-1">
-              {title && <ToastTitle>{title}</ToastTitle>}
-              {description && (
-                <ToastDescription>{description}</ToastDescription>
-              )}
-            </div>
-            {action}
-            <ToastClose />
-          </Toast>
-        );
-      })}
-      <ToastViewport />
-    </ToastProvider>
+    <div
+      role="presentation"
+      style={{
+        position: "fixed",
+        inset: 0,
+        pointerEvents: "none",
+        display: "flex",
+        flexDirection: "column",
+        padding: "1rem",
+        gap: "0.5rem",
+        justifyContent: "end",
+        alignItems: "end",
+        zIndex: 2147483647,
+      }}
+    >
+      {toasts.map((toast) => (
+        <SonnerToast
+          key={toast.id}
+          action={toast.action}
+          description={toast.description}
+          title={toast.title}
+          toastId={toast.id}
+        />
+      ))}
+    </div>
   );
-}
+};
