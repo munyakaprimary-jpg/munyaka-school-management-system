@@ -21,7 +21,8 @@ import {
   Box,
   Library,
   MessageSquare,
-  CalendarDays
+  CalendarDays,
+  User
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -133,15 +134,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Bell size={20} />
             </Button>
             <div className="w-[1px] h-8 bg-slate-100 mx-2" />
-            <div className="flex items-center gap-4">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-black text-slate-900">Administrator</p>
-                <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Master Control</p>
+            <Link to="/profile">
+              <div className="flex items-center gap-4 hover:opacity-80 transition-opacity">
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-black text-slate-900">Administrator</p>
+                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest">Master Control</p>
+                </div>
+                <div className="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm">
+                  AD
+                </div>
               </div>
-              <div className="w-11 h-11 rounded-2xl bg-indigo-50 flex items-center justify-center font-black text-indigo-600 shadow-sm">
-                AD
-              </div>
-            </div>
+            </Link>
           </div>
         </header>
 

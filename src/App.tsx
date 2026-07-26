@@ -22,6 +22,7 @@ import Inventory from "./pages/Inventory";
 import Library from "./pages/Library";
 import Communication from "./pages/Communication";
 import SchoolCalendar from "./pages/SchoolCalendar";
+import AdminProfile from "./pages/AdminProfile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/fees" element={<Fees />} />
             <Route path="/reports" element={<ReportCards />} />
             <Route path="/settings" element={<Settings />} />
+            <Route path="/profile" element={<AdminProfile />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Layout>
