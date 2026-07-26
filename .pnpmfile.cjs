@@ -1,20 +1,12 @@
 module.exports = {
   hooks: {
     readPackage(pkg) {
-      if (pkg.optionalDependencies) {
-        for (const dep of Object.keys(pkg.optionalDependencies)) {
-          if (dep.includes('rollup')) {
-            delete pkg.optionalDependencies[dep];
-          }
-        }
+      if (pkg.dependencies && pkg.dependencies['rollup']) {
+        pkg.dependencies['rollup'] = 'npm:@rollup/wasm-node@^4.0.0';
       }
-
-      for (const field of ['dependencies', 'devDependencies', 'peerDependencies']) {
-        if (pkg[field] && pkg[field]['rollup']) {
-          pkg[field]['rollup'] = 'npm:@rollup/wasm-node@4.28.0';
-        }
+      if (pkg.devDependencies && pkg.devDependencies['rollup']) {
+        pkg.devDependencies['rollup'] = 'npm:@rollup/wasm-node@^4.0.0';
       }
-
       return pkg;
     }
   }
