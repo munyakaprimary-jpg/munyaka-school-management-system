@@ -1,9 +1,22 @@
 export const STUDENTS = [
-  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M" },
-  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F" },
-  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M" },
-  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F" },
-  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M" },
+  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com" },
+  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com" },
+  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com" },
+  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com" },
+  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com" },
+];
+
+export const NOTICES = [
+  { id: "1", title: "Half-Term Break", content: "School will close on Friday 20th Oct for a one-week break.", date: "Oct 15, 2024", category: "Urgent", color: "bg-red-50 text-red-600" },
+  { id: "2", title: "Sports Day 2024", content: "All parents are invited to the annual sports day on Nov 5th.", date: "Oct 12, 2024", category: "Event", color: "bg-blue-50 text-blue-600" },
+  { id: "3", title: "CBC Materials Needed", description: "Grade 4 learners require clay for Creative Arts next week.", date: "Oct 10, 2024", category: "Notice", color: "bg-emerald-50 text-emerald-600" },
+];
+
+export const INVENTORY = [
+  { id: "1", item: "Jembes (Small)", category: "Agriculture", qty: 45, status: "Available", color: "text-emerald-600" },
+  { id: "2", item: "Science Kits", category: "Science & Tech", qty: 12, status: "Low Stock", color: "text-amber-600" },
+  { id: "3", item: "Music Keyboards", category: "Creative Arts", qty: 8, status: "Available", color: "text-purple-600" },
+  { id: "4", item: "Grade 4 English Textbooks", category: "Library", qty: 120, status: "In Use", color: "text-blue-600" },
 ];
 
 export const STAFF = [
