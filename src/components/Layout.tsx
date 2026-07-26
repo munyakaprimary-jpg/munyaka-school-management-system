@@ -12,7 +12,9 @@ import {
   Menu,
   X,
   Search,
-  Bell
+  Bell,
+  Users,
+  Settings
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,12 +25,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
+    { icon: Users, label: 'Students', path: '/students' },
     { icon: UserPlus, label: 'Registration', path: '/registration' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
     { icon: FileSpreadsheet, label: 'Assessments', path: '/assessments' },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
     { icon: FileText, label: 'Report Cards', path: '/reports' },
+    { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
   return (
@@ -57,7 +61,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <nav className="space-y-1.5 flex-1">
+          <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
             {menuItems.map((item) => (
               <Link 
                 key={item.path} 
