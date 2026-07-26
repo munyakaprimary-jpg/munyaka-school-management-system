@@ -5,36 +5,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { User, Calendar, MapPin, Phone, Mail, BookOpen, Award, Download, CreditCard } from 'lucide-react';
-import { showSuccess } from "@/utils/toast";
-
-const StudentProfile = () => {
-  return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row gap-8">
-        <div className="w-full md:w-80 space-y-6">
-          <Card className="border-none shadow-sm rounded-3xl bg-white p-6 text-center">
-            <div className="w-24 h-24 rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-3xl font-bold mx-auto mb-4">
-              BK
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">Brian Kiptoo</h2>
-            <p className="text-xs font-bold text-indigo-500 uppercase tracking-widest mt-1">Grade 4 - Blue</p>
-            <Badge className="mt-3 bg-emerald-50 text-emerald-700 border-none">
-              Assessment: A827361
-            </Badge>
-          </Card>
-
-          <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-            <h3 className="font-bold text-slate-900 mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Button className="w-full rounded-2xl bg-slate<dyad-write path="src/pages/StudentProfile.tsx" description="Creating complete StudentProfile page with toast functionality">
-"use client";
-
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { User, Calendar, MapPin, Phone, Mail, BookOpen, Award, Download, CreditCard } from 'lucide-react';
 import { showSuccess } from "@/utils/toast";
 
