@@ -18,6 +18,7 @@ import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
 import StaffProfile from "./pages/StaffProfile";
+import StaffRegistration from "./pages/StaffRegistration";
 import Timetable from "./pages/Timetable";
 import Notices from "./pages/Notices";
 import Inventory from "./pages/Inventory";
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/students/:id" element={<StudentProfile />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/staff/:id" element={<StaffProfile />} />
+              <Route path="/staff/registration" element={<StaffRegistration />} />
               <Route path="/communication" element={<Communication />} />
               <Route path="/notices" element={<Notices />} />
               <Route path="/calendar" element={<SchoolCalendar />} />

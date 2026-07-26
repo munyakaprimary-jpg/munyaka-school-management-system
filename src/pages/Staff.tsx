@@ -16,9 +16,11 @@ const Staff = () => {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff & Personnel</h1>
           <p className="text-muted-foreground">Manage teachers, administrators, and support staff.</p>
         </div>
-        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
-          <UserPlus size={18} /> Add Staff Member
-        </Button>
+        <Link to="/staff/registration">
+          <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
+            <UserPlus size={18} /> Add Staff Member
+          </Button>
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
