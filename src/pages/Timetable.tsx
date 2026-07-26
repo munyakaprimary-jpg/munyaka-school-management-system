@@ -1,79 +1,113 @@
 "use client";
 
-import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import React, { useState } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Calendar, Printer, Download, Clock } from 'lucide-react';
-import { TIMETABLE } from '@/lib/mock-data';
+import { Calendar, Printer, RefreshCw, Download, Edit } from 'lucide-react';
+import { showSuccess } from "@/utils/toast";
+import { TIMETABLE } from "@/lib/mock-data";
 
 const Timetable = () => {
+  const [selectedGrade, setSelectedGrade] = useState('4');
+  const [selectedStream, setSelectedStream] = useState('Blue');
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">School Timetable</h1>
-          <p className="text-muted-foreground">Manage and view weekly schedules for different grades.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Timetable</h1>
+          <p className="text-muted-foreground">View class schedules and lesson plans.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl"><Printer size={18} className="mr-2" /> Print</Button>
-          <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100"><Calendar size={18} className="mr-2" /> Current Week</Button>
+        <div className="flex items-center gap-3">
+          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => showSuccess('Schedule printed!')}>
+            <Printer size={18} />
+            Print
+          </Button>
+          <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => showSuccess('Week updated!')}>
+            <Calendar size={18} />
+            Current Week
+          </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select defaultValue="grade4">
-          <SelectTrigger className="rounded-2xl h-12 bg-white border-none shadow-sm">
-            <SelectValue placeholder="Select Grade" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="grade4">Grade 4 - Blue</SelectItem>
-            <SelectItem value="grade5">Grade 5 - Green</SelectItem>
-            <SelectItem value="grade6">Grade 6 - Alpha</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-none shadow-sm rounded-3xl bg-white">
+          <CardHeader>
+            <CardTitle className="text-lg">Filter Schedule</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Grade</label>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Grade 1</SelectItem>
+                  <SelectItem value="2">Grade 2</SelectItem>
+                  <SelectItem value="3">Grade 3</SelectItem>
+                  <SelectItem value="4">Grade 4</SelectItem>
+                  <SelectItem value="5">Grade 5</SelectItem>
+                  <SelectItem value="6">Grade 6</SelectItem>
+                  <SelectItem value="7">Grade 7</SelectItem>
+                  <SelectItem value="8">Grade 8</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700">Stream</label>
+              <Select value={selectedStream} onValueChange={setSelectedStream}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select stream" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="blue">Blue</SelectItem>
+                  <SelectItem value="green">Green</SelectItem>
+                  <SelectItem value="yellow">Yellow</SelectItem>
+                  <SelectItem value="alpha">Alpha</SelectItem>
+                  <SelectItem value="beta">Beta</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-center border-collapse">
-              <thead>
-                <tr className="bg-slate-50/50 border-b">
-                  <th className="px-6 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px] w-40">Time</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Monday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Tuesday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Wednesday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Thursday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Friday</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {TIMETABLE.map((row, i) => (
-                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-6 font-bold text-slate-500 bg-slate-50/30">
-                      <div className="flex items-center justify-center gap-2">
-                        <Clock size={12} /> {row.time}
-                      </div>
-                    </td>
-                    {[row.mon, row.tue, row.wed, row.thu, row.fri].map((lesson, idx) => (
-                      <td key={idx} className="px-6 py-6">
-                        <div className={`p-3 rounded-2xl text-xs font-bold ${
-                          lesson === 'BREAK' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
-                          ['Assembly', 'Pastoral'].includes(lesson) ? 'bg-purple-50 text-purple-700' :
-                          'bg-indigo-50 text-indigo-700'
-                        }`}>
-                          {lesson}
-                        </div>
-                      </td>
-                    ))}
+        <Card className="border-none shadow-sm rounded-3xl bg-white">
+          <CardHeader>
+            <CardTitle className="text-lg">Week Overview</CardTitle>
+            <CardDescription>Grade {selectedGrade} - {selectedStream} Stream</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="text-slate-500 bg-slate-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Time</th>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Mon</th>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Tue</th>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Wed</th>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Thu</th>
+                    <th className="px-4 py-3 text-left font-bold uppercase text-[10px] tracking-wider">Fri</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                </thead>
+                <tbody>
+                  {TIMETABLE.map((row, i) => (
+                    <tr key={i} className="border-b border-slate-100 last:border-b-0 hover:bg-slate-50/50">
+                      <td className="px-4 py-3 font-medium text-slate-600">{row.time}</td>
+                      <td className="px-4 py-3">{row.mon}</td>
+                      <td className="px-4 py-3">{row.tue}</td>
+                      <td className="px-4 py-3">{row.wed}</td>
+                      <td className="px-4 py-3">{row.thu}</td>
+                      <td className="px-4 py-3">{row.fri}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

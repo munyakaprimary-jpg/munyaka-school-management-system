@@ -1,142 +1,245 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Settings as SettingsIcon, 
-  Shield, 
-  Bell, 
-  School, 
-  Users, 
-  BookOpen,
-  Plus,
-  Trash2
-} from 'lucide-react';
+import { Settings as SettingsIcon, Shield, Bell, Palette, Globe, Database, Save, Plus } from 'lucide-react';
+import { showSuccess } from "@/utils/toast";
 
 const Settings = () => {
+  const [activeTab, setActiveTab] = useState('general');
+
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">System Configuration</h1>
-        <p className="text-muted-foreground">Tailor the system to Munyaka Primary's specific needs and academic structure.</p>
+    <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Settings</h1>
+          <p className="text-muted-foreground">Configure school system preferences and settings.</p>
+        </div>
       </div>
 
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
-          <TabsTrigger value="general" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">General</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Academic Setup</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Users & Roles</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Security</TabsTrigger>
-        </TabsList>
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <div className="lg:col-span-1">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-1">
+            <TabsList className="grid grid-cols-5 gap-2 bg-slate-100 p-2 rounded-2xl">
+              <TabsTrigger value="general" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">General</TabsTrigger>
+              <TabsTrigger value="academic" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Academic</TabsTrigger>
+              <TabsTrigger value="notifications" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Notifications</TabsTrigger>
+              <TabsTrigger value="security" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Security</TabsTrigger>
+              <TabsTrigger value="integrations" className="rounded-xl data-[state=active]:bg-white data-[state=active]:shadow-sm">Integrations</TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
 
-        <TabsContent value="general" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-            <CardHeader className="p-8">
-              <CardTitle>School Profile</CardTitle>
-              <CardDescription>Public identity details for official document headers.</CardDescription>
-            </CardHeader>
-            <CardContent className="p-8 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>School Name</Label>
-                <Input defaultValue="Munyaka Primary and Junior School" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-              </div>
-              <div className="space-y-2">
-                <Label>School Code / Registration No.</Label>
-                <Input defaultValue="PS/2024/0042" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-              </div>
-              <div className="space-y-2">
-                <Label>Physical Location</Label>
-                <Input defaultValue="Munyaka, Eldoret East" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-              </div>
-              <div className="space-y-2">
-                <Label>Official Contact</Label>
-                <Input defaultValue="+254 712 345 678" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-              </div>
-            </CardContent>
-          </Card>
+        <div className="lg:col-span-3">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsContent value="general">
+              <Card className="border-none shadow-sm rounded-3xl bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">General Settings</CardTitle>
+                  <CardDescription>Manage school information and basic preferences.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>School Name</Label>
+                      <Input defaultValue="Munyaka Primary & Junior School" className="rounded-xl h-12" />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Academic Year</Label>
+                      <Select defaultValue="2024-2025">
+                        <SelectTrigger className="rounded-xl h-12">
+                          <SelectValue placeholder="Select year" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="2024-2025">2024 - 2025</SelectItem>
+                          <SelectItem value="2023-2024">2023 - 2024</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Current Term</Label>
+                      <Select defaultValue="term1">
+                        <SelectTrigger className="rounded-xl h-12">
+                          <SelectValue placeholder="Select term" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="term1">Term 1</SelectItem>
+                          <SelectItem value="term2">Term 2</SelectItem>
+                          <SelectItem value="term3">Term 3</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>School Code</Label>
+                      <Input defaultValue="MUNY-PRIMARY" className="rounded-xl h-12" />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
 
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-lg">Maintenance Mode</CardTitle>
-                <p className="text-sm text-muted-foreground">Temporarily disable portal access for regular users during updates.</p>
-              </div>
-              <Switch />
+            <TabsContent value="academic">
+              <Card className="border-none shadow-sm rounded-3xl bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Academic Settings</CardTitle>
+                  <CardDescription>Configure grading systems, subjects, and learning areas.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label>Grading System</Label>
+                      <Select defaultValue="cbse">
+                        <SelectTrigger className="rounded-xl h-12">
+                          <SelectValue placeholder="Select system" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="cbse">CBSE</SelectItem>
+                          <SelectItem value="igcse">IGCSE</SelectItem>
+                          <SelectItem value="local">Local Curriculum</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Attendance Policy</Label>
+                      <Select defaultValue="strict">
+                        <SelectTrigger className="rounded-xl h-12">
+                          <SelectValue placeholder="Select policy" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="strict">Strict (90%)</SelectItem>
+                          <SelectItem value="lenient">Lenient (80%)</SelectItem>
+                          <SelectItem value="custom">Custom</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                  <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl">
+                    <div className="space-y-1">
+                      <p className="font-bold text-slate-900">Enable Learning Areas</p>
+                      <p className="text-sm text-slate-500">Allow teachers to manage learning areas</p>
+                    </div>
+                    <Switch defaultChecked />
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="notifications">
+              <Card className="border-none shadow-sm rounded-3xl bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Notification Settings</CardTitle>
+                  <CardDescription>Configure how and when notifications are sent.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">SMS Notifications</p>
+                        <p className="text-sm text-slate-500">Send SMS alerts to parents</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">Email Notifications</p>
+                        <p className="text-sm text-slate-500">Send email updates to staff</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">Push Notifications</p>
+                        <p className="text-sm text-slate-500">Enable in-app notifications</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="security">
+              <Card className="border-none shadow-sm rounded-3xl bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Security Settings</CardTitle>
+                  <CardDescription>Manage account security and access controls.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">Two-Factor Authentication</p>
+                        <p className="text-sm text-slate-500">Add an extra layer of security</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="space-y-1">
+                        <p className="font-bold text-slate-900">Auto Lock After Inactivity</p>
+                        <p className="text-sm text-slate-500">Lock after 30 minutes of inactivity</p>
+                      </div>
+                      <Switch defaultChecked />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="integrations">
+              <Card className="border-none shadow-sm rounded-3xl bg-white">
+                <CardHeader>
+                  <CardTitle className="text-lg">Integrations</CardTitle>
+                  <CardDescription>Connect with external services and APIs.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="flex        <div className="flex items-center justify-between p-4 border border-slate-200 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-blue-50 text-blue-600 rounded-lg">
+              <Globe size={20} />
             </div>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="academic" className="space-y-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-              <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Learning Areas (CBC)</CardTitle>
-                  <CardDescription>Manage active subjects per grade level.</CardDescription>
-                </div>
-                <Button size="sm" variant="ghost" className="text-indigo-600 rounded-xl font-bold">
-                  <Plus size={16} className="mr-1" /> Add New
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {['Mathematics', 'English Language', 'Kiswahili', 'Science & Tech', 'Agriculture'].map(subject => (
-                    <div key={subject} className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-                      <div className="flex items-center gap-3">
-                        <div className="w-2 h-2 rounded-full bg-indigo-500" />
-                        <span className="font-bold text-slate-700">{subject}</span>
-                      </div>
-                      <Button variant="ghost" size="icon" className="text-slate-300 hover:text-red-500">
-                        <Trash2 size={16} />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-              <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle>Class Streams</CardTitle>
-                  <CardDescription>Configure group names for student categorization.</CardDescription>
-                </div>
-                <Button size="sm" variant="ghost" className="text-emerald-600 rounded-xl font-bold">
-                  <Plus size={16} className="mr-1" /> Add Stream
-                </Button>
-              </CardHeader>
-              <CardContent className="p-0">
-                <div className="divide-y">
-                  {['Blue (A)', 'Green (B)', 'Alpha (C)', 'Beta (D)'].map(stream => (
-                    <div key={stream} className="flex items-center justify-between p-5 hover:bg-slate-50 transition-colors">
-                      <span className="font-bold text-slate-700">{stream}</span>
-                      <div className="flex gap-4 items-center">
-                        <span className="text-[10px] font-black text-slate-400 uppercase">32 Learners</span>
-                        <Button variant="ghost" size="icon" className="text-slate-300">
-                          <SettingsIcon size={16} />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            <div>
+              <p className="font-bold text-slate-900">Google Workspace</p>
+              <p className="text-sm text-slate-500">Sync calendars and documents</p>
+            </div>
           </div>
-        </TabsContent>
-      </Tabs>
-
-      <div className="flex justify-end pt-4">
-        <Button className="rounded-2xl px-10 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
-          Apply All Changes
-        </Button>
+          <Badge variant="outline" className="bg-green-50 text-green-700">Connected</Badge>
+        </div>
+        <div className="flex items-center justify-between p-4 border border-slate-200 rounded-2xl">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-50 text-purple-600 rounded-lg">
+              <Database size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-slate-900">SMS Gateway</p>
+              <p className="text-sm text-slate-500">Send SMS to parents and staff</p>
+            </div>
+          </div>
+          <Badge variant="outline" className="bg-amber-50 text-amber-700">Not Connected</Badge>
+        </div>
       </div>
-    </div>
-  );
+    </CardContent>
+  </Card>
+</TabsContent>
+</Tabs>
+</div>
+</div>
+
+<div className="flex justify-end">
+<Button className="rounded-2xl px-10 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => showSuccess('Settings applied!')}>
+<Save size={18} className="mr-2" />
+Apply All Changes
+</Button>
+</div>
+</div>
+);
 };
 
 export default Settings;
