@@ -12,18 +12,21 @@
   },
   "pnpm": {
     "overrides": {
-      "rollup": "npm:@rollup/wasm-node@^4.0.0"
+      "rollup": "npm:@rollup/wasm-node@4.28.0",
+      "rollup@*": "npm:@rollup/wasm-node@4.28.0"
     }
   },
   "overrides": {
-    "rollup": "npm:@rollup/wasm-node@^4.0.0"
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "rollup@*": "npm:@rollup/wasm-node@4.28.0"
   },
   "resolutions": {
-    "rollup": "npm:@rollup/wasm-node@^4.0.0"
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "rollup@*": "npm:@rollup/wasm-node@4.28.0"
   },
   "dependencies": {
-    "rollup": "npm:@rollup/wasm-node@^4.0.0",
-    "@rollup/wasm-node": "^4.0.0",
+    "rollup": "npm:@rollup/wasm-node@4.28.0",
+    "@rollup/wasm-node": "4.28.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",
     "@radix-ui/react-alert-dialog": "^1.1.1",
