@@ -6,6 +6,59 @@ export const STUDENTS = [
   { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com", health: "Allergy: Peanuts", needs: "None" },
 ];
 
+export interface Stream {
+  id: string;
+  name: string;
+  teacher: string;
+  studentsCount: number;
+}
+
+export interface Grade {
+  id: string;
+  name: string;
+  category: 'Pre-Primary' | 'Primary' | 'Junior School';
+  streams: Stream[];
+}
+
+export const GRADES_DATA: Grade[] = [
+  {
+    id: "g1",
+    name: "Grade 1",
+    category: "Primary",
+    streams: [
+      { id: "s1", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
+      { id: "s2", name: "Green", teacher: "Peter Kamau", studentsCount: 38 }
+    ]
+  },
+  {
+    id: "g4",
+    name: "Grade 4",
+    category: "Primary",
+    streams: [
+      { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
+      { id: "s4", name: "Green", teacher: "Sarah Chebet", studentsCount: 38 }
+    ]
+  },
+  {
+    id: "g7",
+    name: "Grade 7",
+    category: "Junior School",
+    streams: [
+      { id: "s5", name: "Alpha", teacher: "Peter Kamau", studentsCount: 45 },
+      { id: "s6", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
+    ]
+  },
+  {
+    id: "g8",
+    name: "Grade 8",
+    category: "Junior School",
+    streams: [
+      { id: "s7", name: "Alpha", teacher: "John Onyango", studentsCount: 35 },
+      { id: "s8", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
+    ]
+  }
+];
+
 export const BOOKS = [
   { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
   { id: "2", title: "KLB Mathematics Grade 5", author: "KLB", isbn: "978-9966", category: "Core Text", stock: 150, borrowed: 142 },

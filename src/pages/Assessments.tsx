@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Info, Save, Filter } from "lucide-react";
+import { Info, Save } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
+import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
 interface StudentMark {
   id: number;
@@ -33,13 +34,34 @@ const Assessments = () => {
     { id: 5, name: "David Mutua", score: "28", performance: "BE", comment: "Requires remedial support" },
   ]);
 
+  // Load dynamic grades and streams
+  const [gradesList, setGradesList] = useState<Grade[]>(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    return saved ? JSON.parse(saved) : GRADES_DATA;
+  });
+
   // Dropdown states
-  const [grade, setGrade] = useState("grade4");
-  const [stream, setStream] = useState("blue");
+  const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
+    return gradesList.length > 0 ? gradesList[0].id : "";
+  });
+  const [selectedStreamId, setSelectedStreamId] = useState<string>("");
   const [examType, setExamType] = useState("summative");
   const [year, setYear] = useState("2024");
   const [term, setTerm] = useState("term1");
   const [subject, setSubject] = useState("math");
+
+  // Get streams for the currently selected grade
+  const currentGrade = gradesList.find(g => g.id === selectedGradeId);
+  const availableStreams = currentGrade ? currentGrade.streams : [];
+
+  // Automatically select the first stream when grade changes
+  useEffect(() => {
+    if (availableStreams.length > 0) {
+      setSelectedStreamId(availableStreams[0].id);
+    } else {
+      setSelectedStreamId("");
+    }
+  }, [selectedGradeId, gradesList]);
 
   // Helper to automatically determine performance level based on score (0-100)
   const getPerformanceFromScore = (scoreStr: string): string => {
@@ -128,30 +150,28 @@ const Assessments = () => {
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grade Level</label>
-            <Select value={grade} onValueChange={setGrade}>
+            <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="grade1">Grade 1</SelectItem>
-                <SelectItem value="grade4">Grade 4</SelectItem>
-                <SelectItem value="grade7">Grade 7</SelectItem>
-                <SelectItem value="grade8">Grade 8</SelectItem>
+                {gradesList.map(g => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Stream</label>
-            <Select value={stream} onValueChange={setStream}>
+            <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={availableStreams.length === 0}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Stream" />
+                <SelectValue placeholder={availableStreams.length === 0 ? "No Streams" : "Select Stream"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="blue">Blue</SelectItem>
-                <SelectItem value="green">Green</SelectItem>
-                <SelectItem value="alpha">Alpha</SelectItem>
-                <SelectItem value="beta">Beta</SelectItem>
+                {availableStreams.map(s => (
+                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

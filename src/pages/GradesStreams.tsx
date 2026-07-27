@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,64 +15,15 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Layers, Plus, Users, User, Trash2, Edit3, GraduationCap } from 'lucide-react';
+import { Layers, Plus, Users, User, Trash2 } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
-
-interface Stream {
-  id: string;
-  name: string;
-  teacher: string;
-  studentsCount: number;
-}
-
-interface Grade {
-  id: string;
-  name: string;
-  category: 'Pre-Primary' | 'Primary' | 'Junior School';
-  streams: Stream[];
-}
-
-const initialGrades: Grade[] = [
-  {
-    id: "g1",
-    name: "Grade 1",
-    category: "Primary",
-    streams: [
-      { id: "s1", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-      { id: "s2", name: "Green", teacher: "Peter Kamau", studentsCount: 38 }
-    ]
-  },
-  {
-    id: "g4",
-    name: "Grade 4",
-    category: "Primary",
-    streams: [
-      { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-      { id: "s4", name: "Green", teacher: "Sarah Chebet", studentsCount: 38 }
-    ]
-  },
-  {
-    id: "g7",
-    name: "Grade 7",
-    category: "Junior School",
-    streams: [
-      { id: "s5", name: "Alpha", teacher: "Peter Kamau", studentsCount: 45 },
-      { id: "s6", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
-    ]
-  },
-  {
-    id: "g8",
-    name: "Grade 8",
-    category: "Junior School",
-    streams: [
-      { id: "s7", name: "Alpha", teacher: "John Onyango", studentsCount: 35 },
-      { id: "s8", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
-    ]
-  }
-];
+import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
 const GradesStreams = () => {
-  const [grades, setGrades] = useState<Grade[]>(initialGrades);
+  const [grades, setGrades] = useState<Grade[]>(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    return saved ? JSON.parse(saved) : GRADES_DATA;
+  });
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
@@ -85,6 +36,10 @@ const GradesStreams = () => {
   const [newStreamName, setNewStreamName] = useState("");
   const [newStreamTeacher, setNewStreamTeacher] = useState("");
   const [newStreamStudents, setNewStreamStudents] = useState("");
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_grades', JSON.stringify(grades));
+  }, [grades]);
 
   const handleAddGrade = (e: React.FormEvent) => {
     e.preventDefault();
