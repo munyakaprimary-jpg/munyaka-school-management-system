@@ -46,7 +46,7 @@ const StaffAndRoles = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
       
-      {/* Permanent Header */}
+      {/* Top Navbar */}
       <header className="bg-slate-900 border-b border-slate-800 h-16 px-6 flex items-center justify-between shrink-0 shadow-md">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
@@ -58,7 +58,7 @@ const StaffAndRoles = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4 pr-32">
+        <div className="flex items-center gap-4">
           <div className="hidden sm:flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-bold text-slate-300">{user?.email}</span>
@@ -67,14 +67,14 @@ const StaffAndRoles = () => {
 
           <Button 
             onClick={handleSignOut} 
-            className="rounded-xl h-9 px-4 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/50 gap-2 border border-rose-500/30 transition-all"
+            className="rounded-xl h-9 px-4 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/50 gap-2 border border-rose-500/30 transition-all shrink-0"
           >
             <LogOut size={15} /> Sign Out
           </Button>
         </div>
       </header>
 
-      {/* Main Panel View */}
+      {/* Main Content View */}
       <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
         
         {/* Header Title */}
@@ -102,7 +102,7 @@ const StaffAndRoles = () => {
               <div className="flex-1 w-full">
                 <input
                   type="email"
-                  placeholder="Enter new email address..."
+                  placeholder="Enter user email..."
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
