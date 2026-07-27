@@ -17,19 +17,23 @@ export interface Student {
   stream: string;
   current_grade: number; // 1 to 9
   grade_band_id: string; // Auto-assigned
+  gender: 'M' | 'F';
+  dob: string;
 }
 
-export interface StudentMark {
-  id: string;
-  student_id: string;
-  learning_area_id: string;
-  score: number;
-  performance_level: 'EE' | 'ME' | 'AE' | 'BE';
+export interface SubjectMarks {
+  mid_term: number;
+  end_term: number;
 }
 
 export interface StudentRemarks {
   teacher_remark: string;
   hoi_remark: string;
+}
+
+export interface TermDates {
+  closing_date: string;
+  next_term_opening: string;
 }
 
 export const GRADE_BANDS: GradeBand[] = [
@@ -71,9 +75,28 @@ export const LEARNING_AREAS: LearningArea[] = [
 ];
 
 /**
- * AUTO-ASSIGNMENT LOGIC:
- * Evaluates current_grade (1-9) and auto-assigns grade_band_id
+ * Performance Level Evaluator based on Average Score:
+ * EE (Exceeding Expectation): 75% – 100%
+ * ME (Meeting Expectation): 50% – 74%
+ * AE (Approaching Expectation): 31% – 49%
+ * BE (Below Expectation): 0% – 30%
  */
+export function calculatePerformanceLevel(avgScore: number): 'EE' | 'ME' | 'AE' | 'BE' {
+  if (avgScore >= 75) return 'EE';
+  if (avgScore >= 50) return 'ME';
+  if (avgScore >= 31) return 'AE';
+  return 'BE';
+}
+
+export function getPerformanceLabel(level: 'EE' | 'ME' | 'AE' | 'BE'): string {
+  switch (level) {
+    case 'EE': return 'Exceeding Expectation';
+    case 'ME': return 'Meeting Expectation';
+    case 'AE': return 'Approaching Expectation';
+    case 'BE': return 'Below Expectation';
+  }
+}
+
 export function resolveGradeBandId(currentGrade: number): string {
   if (currentGrade >= 1 && currentGrade <= 3) return 'band-1-3';
   if (currentGrade >= 4 && currentGrade <= 6) return 'band-4-6';
@@ -82,53 +105,53 @@ export function resolveGradeBandId(currentGrade: number): string {
 }
 
 export const INITIAL_STUDENTS: Student[] = [
-  { id: 'std-1', name: 'Brian Kiptoo', assessment_number: 'KNEC/CBC/2024/101', stream: 'Blue', current_grade: 2, grade_band_id: 'band-1-3' },
-  { id: 'std-2', name: 'Mary Atieno', assessment_number: 'KNEC/CBC/2024/102', stream: 'Blue', current_grade: 2, grade_band_id: 'band-1-3' },
-  { id: 'std-3', name: 'Emmanuel Maina', assessment_number: 'KNEC/CBC/2024/401', stream: 'Blue', current_grade: 4, grade_band_id: 'band-4-6' },
-  { id: 'std-4', name: 'Sheila Chepkoech', assessment_number: 'KNEC/CBC/2024/402', stream: 'Green', current_grade: 5, grade_band_id: 'band-4-6' },
-  { id: 'std-5', name: 'David Mutua', assessment_number: 'KNEC/CBC/2024/701', stream: 'Alpha', current_grade: 7, grade_band_id: 'band-7-9' },
-  { id: 'std-6', name: 'Faith Wanjiku', assessment_number: 'KNEC/CBC/2024/801', stream: 'Alpha', current_grade: 8, grade_band_id: 'band-7-9' },
+  { id: 'std-1', name: 'Brian Kiptoo', assessment_number: 'A827361', stream: 'Blue', current_grade: 2, grade_band_id: 'band-1-3', gender: 'M', dob: '2016-05-12' },
+  { id: 'std-2', name: 'Mary Atieno', assessment_number: 'A827362', stream: 'Blue', current_grade: 2, grade_band_id: 'band-1-3', gender: 'F', dob: '2016-08-20' },
+  { id: 'std-3', name: 'Emmanuel Maina', assessment_number: 'A827363', stream: 'Blue', current_grade: 4, grade_band_id: 'band-4-6', gender: 'M', dob: '2014-03-15' },
+  { id: 'std-4', name: 'Sheila Chepkoech', assessment_number: 'A827364', stream: 'Green', current_grade: 5, grade_band_id: 'band-4-6', gender: 'F', dob: '2013-11-05' },
+  { id: 'std-5', name: 'David Mutua', assessment_number: 'A827365', stream: 'Alpha', current_grade: 7, grade_band_id: 'band-7-9', gender: 'M', dob: '2011-09-28' },
+  { id: 'std-6', name: 'Faith Wanjiku', assessment_number: 'A827366', stream: 'Alpha', current_grade: 8, grade_band_id: 'band-7-9', gender: 'F', dob: '2010-01-14' },
 ];
 
-export const INITIAL_MARKS: Record<string, Record<string, { score: number; performance_level: 'EE' | 'ME' | 'AE' | 'BE' }>> = {
+export const INITIAL_MARKS: Record<string, Record<string, SubjectMarks>> = {
   'std-1': {
-    'la-lp-1': { score: 88, performance_level: 'EE' },
-    'la-lp-2': { score: 76, performance_level: 'EE' },
-    'la-lp-3': { score: 70, performance_level: 'ME' },
-    'la-lp-4': { score: 85, performance_level: 'EE' },
-    'la-lp-5': { score: 68, performance_level: 'ME' },
-    'la-lp-6': { score: 92, performance_level: 'EE' },
-    'la-lp-7': { score: 80, performance_level: 'EE' },
+    'la-lp-1': { mid_term: 84, end_term: 92 },
+    'la-lp-2': { mid_term: 70, end_term: 82 },
+    'la-lp-3': { mid_term: 65, end_term: 75 },
+    'la-lp-4': { mid_term: 80, end_term: 90 },
+    'la-lp-5': { mid_term: 62, end_term: 74 },
+    'la-lp-6': { mid_term: 90, end_term: 94 },
+    'la-lp-7': { mid_term: 78, end_term: 82 },
   },
   'std-2': {
-    'la-lp-1': { score: 62, performance_level: 'ME' },
-    'la-lp-2': { score: 74, performance_level: 'ME' },
-    'la-lp-3': { score: 81, performance_level: 'EE' },
-    'la-lp-4': { score: 58, performance_level: 'ME' },
-    'la-lp-5': { score: 64, performance_level: 'ME' },
-    'la-lp-6': { score: 70, performance_level: 'ME' },
-    'la-lp-7': { score: 75, performance_level: 'EE' },
+    'la-lp-1': { mid_term: 58, end_term: 66 },
+    'la-lp-2': { mid_term: 72, end_term: 76 },
+    'la-lp-3': { mid_term: 80, end_term: 82 },
+    'la-lp-4': { mid_term: 54, end_term: 62 },
+    'la-lp-5': { mid_term: 60, end_term: 68 },
+    'la-lp-6': { mid_term: 66, end_term: 74 },
+    'la-lp-7': { mid_term: 74, end_term: 76 },
   },
   'std-3': {
-    'la-up-1': { score: 85, performance_level: 'EE' },
-    'la-up-2': { score: 72, performance_level: 'ME' },
-    'la-up-3': { score: 68, performance_level: 'ME' },
-    'la-up-4': { score: 90, performance_level: 'EE' },
-    'la-up-5': { score: 82, performance_level: 'EE' },
-    'la-up-6': { score: 78, performance_level: 'EE' },
-    'la-up-7': { score: 65, performance_level: 'ME' },
-    'la-up-8': { score: 80, performance_level: 'EE' },
+    'la-up-1': { mid_term: 82, end_term: 88 },
+    'la-up-2': { mid_term: 68, end_term: 76 },
+    'la-up-3': { mid_term: 62, end_term: 74 },
+    'la-up-4': { mid_term: 88, end_term: 92 },
+    'la-up-5': { mid_term: 78, end_term: 86 },
+    'la-up-6': { mid_term: 74, end_term: 82 },
+    'la-up-7': { mid_term: 60, end_term: 70 },
+    'la-up-8': { mid_term: 76, end_term: 84 },
   },
   'std-5': {
-    'la-js-1': { score: 78, performance_level: 'EE' },
-    'la-js-2': { score: 84, performance_level: 'EE' },
-    'la-js-3': { score: 72, performance_level: 'ME' },
-    'la-js-4': { score: 89, performance_level: 'EE' },
-    'la-js-5': { score: 91, performance_level: 'EE' },
-    'la-js-6': { score: 76, performance_level: 'EE' },
-    'la-js-7': { score: 70, performance_level: 'ME' },
-    'la-js-8': { score: 68, performance_level: 'ME' },
-    'la-js-9': { score: 85, performance_level: 'EE' },
+    'la-js-1': { mid_term: 74, end_term: 82 },
+    'la-js-2': { mid_term: 80, end_term: 88 },
+    'la-js-3': { mid_term: 68, end_term: 76 },
+    'la-js-4': { mid_term: 86, end_term: 92 },
+    'la-js-5': { mid_term: 88, end_term: 94 },
+    'la-js-6': { mid_term: 72, end_term: 80 },
+    'la-js-7': { mid_term: 66, end_term: 74 },
+    'la-js-8': { mid_term: 64, end_term: 72 },
+    'la-js-9': { mid_term: 82, end_term: 88 },
   }
 };
 
@@ -145,4 +168,9 @@ export const DEFAULT_REMARKS: Record<string, StudentRemarks> = {
     teacher_remark: 'Demonstrates remarkable aptitude in Pre-Technical Studies and Integrated Science.',
     hoi_remark: 'Excellent academic performance. Consistently exceeds expectations across all learning areas.',
   }
+};
+
+export const DEFAULT_TERM_DATES: TermDates = {
+  closing_date: '2024-10-25',
+  next_term_opening: '2024-11-04',
 };

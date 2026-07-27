@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectGroup, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Check, BookmarkCheck } from "lucide-react";
+import { BookmarkCheck, Stamp } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 
 interface RemarkSectionProps {
@@ -13,6 +13,7 @@ interface RemarkSectionProps {
   savedRemark: string;
   onSave: (remark: string) => void;
   type: 'Class Teacher' | 'Head of Institution';
+  showStampBox?: boolean;
 }
 
 const PRESET_REMARKS = [
@@ -46,7 +47,7 @@ const PRESET_REMARKS = [
   }
 ];
 
-const SingleRemarkBlock: React.FC<RemarkSectionProps> = ({ title, savedRemark, onSave, type }) => {
+const SingleRemarkBlock: React.FC<RemarkSectionProps> = ({ title, savedRemark, onSave, type, showStampBox = false }) => {
   const [currentText, setCurrentText] = useState(savedRemark || "");
   const [selectedPreset, setSelectedPreset] = useState("");
 
@@ -99,8 +100,8 @@ const SingleRemarkBlock: React.FC<RemarkSectionProps> = ({ title, savedRemark, o
         className="text-xs rounded-lg min-h-[60px] bg-white border-slate-200 focus:ring-1 ring-indigo-500 leading-relaxed italic print:bg-transparent print:border-none print:p-0 print:min-h-0 print:resize-none"
       />
 
-      {/* Footer Controls: Dark Lime Save Button & Dedicated Signature Line */}
-      <div className="flex items-center justify-between pt-1 gap-4">
+      {/* Footer Controls & Signature / Rubber Stamp Area */}
+      <div className="flex items-center justify-between pt-2 gap-4">
         <div className="print:hidden">
           <Button
             type="button"
@@ -111,11 +112,20 @@ const SingleRemarkBlock: React.FC<RemarkSectionProps> = ({ title, savedRemark, o
           </Button>
         </div>
 
-        <div className="text-xs font-bold text-slate-800 flex items-center gap-1 ml-auto">
-          <span>Sign:</span>
-          <span className="border-b border-slate-400 min-w-[140px] inline-block text-center italic text-slate-500 font-normal">
-            ..........................................
-          </span>
+        <div className="flex items-center gap-4 ml-auto">
+          {showStampBox && (
+            <div className="border-2 border-dashed border-slate-300 rounded-lg p-1.5 w-28 h-12 flex flex-col items-center justify-center text-[8px] text-slate-400 font-bold uppercase tracking-widest text-center">
+              <Stamp size={12} className="text-slate-300 mb-0.5" />
+              <span>Official Stamp</span>
+            </div>
+          )}
+
+          <div className="text-xs font-bold text-slate-800 flex items-center gap-1">
+            <span>Sign:</span>
+            <span className="border-b border-slate-400 min-w-[120px] inline-block text-center italic text-slate-500 font-normal">
+              ..................................
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -148,6 +158,7 @@ export const ReportCardRemarks: React.FC<ReportCardRemarksProps> = ({
         savedRemark={hoiRemark}
         onSave={onSaveHOI}
         type="Head of Institution"
+        showStampBox={true}
       />
     </div>
   );
