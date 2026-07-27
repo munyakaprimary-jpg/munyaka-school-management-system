@@ -60,42 +60,45 @@ const Notices = () => {
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Notice Board</h1>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 md:text-2xl">Notice Board</h1>
           <p className="text-muted-foreground">Stay updated with official school communications and events.</p>
         </div>
-        <Button 
-          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
-          onClick={() => setIsOpen(true)}
-        >
-          <Plus size={18} /> Post New Notice
+        <Button
+        className="rounded-xl gap-2 h-9 px-4 text-sm font-medium shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
+        onClick={() => setIsOpen(true)}
+      >
+        <Plus size={16} /> Post New Notice
         </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-6">
         {noticesList.map((notice) => (
           <Card key={notice.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
-            <CardContent className="p-8 flex flex-col md:flex-row gap-6">
-              <div className={`w-16 h-16 rounded-3xl ${notice.color} flex items-center justify-center shrink-0`}>
-                <Megaphone size={28} />
+            <CardContent className="p-4 md:p-6 flex flex-col md:flex-row gap-4 md:gap-6">
+                          <div className={`w-10 h-10 rounded-2xl ${notice.color} flex items-center justify-center shrink-0`}>
+                            <Megaphone size={20} />
               </div>
               <div className="flex-1 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-2">
-                    <Badge variant="outline" className={`rounded-lg font-bold border-none ${notice.color}`}>
-                      {notice.category}
-                    </Badge>
-                    <span className="text-xs font-bold text-slate-400 flex items-center gap-1.5">
-                      <Calendar size={14} /> {notice.date}
-                    </span>
+                                      <Badge variant="outline" className="rounded-lg font-medium border-none ${notice.color}">
+                                        {notice.category}}">
+                                      <Badge variant="outline" className="rounded-lg font-medium border-none ${notice.color}`}>
+                                        {notice.category}
+                                      </Badge>
+                                      <span className="text-xs font-medium border-none ${notice.color}`}>\n                      {notice.category}\n                    </Badge>
+                                      <span className="text-xs font-medium text-slate-400 flex items-center gap-1.5">
+                                        <Calendar size={12} /> {notice.date}
+                                      </span>
                   </div>
                   <Button variant="ghost" size="icon" className="text-slate-300 hover:text-indigo-600">
                     <Pin size={18} />
                   </Button>
                 </div>
-                <h3 className="text-xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
-                  {notice.title}
-                </h3>
-                <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
+                <h3 className="text-lg font-semibold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                                  {notice.title}
+                                </h3>
+                                <p className="text-slate-600 text-sm leading-relaxed max-w-2xl">
                   {notice.content || notice.description}
                 </p>
                 <div className="pt-4 flex items-center gap-4">
