@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { useIdleTimer } from '@/hooks/useIdleTimer';
 import { Shield, UserPlus, Trash2, LogOut, Lock, Key, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
@@ -11,10 +12,16 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
 const StaffAndRoles = () => {
   const { user, authorizedUsers, addAuthorizedUser, revokeAccess, logout } = useAuth();
+  const navigate = useNavigate();
   useIdleTimer(); // Active 10-min idle tracker
 
   const [newEmail, setNewEmail] = useState('');
   const [newRole, setNewRole] = useState<UserRole>('teacher');
+
+  const handleSignOut = () => {
+    logout();
+    navigate('/login');
+  };
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,7 +48,7 @@ const StaffAndRoles = () => {
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
       
       {/* Top Navbar */}
-      <header className="bg-slate-900 border-b border-slate-800 h-16 px-6 flex items-center justify-between shrink-0">
+      <header className="bg-slate-900 border-b border-slate-800 h-16 px-6 flex items-center justify-between shrink-0 shadow-md">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
             <Shield size={20} />
@@ -60,9 +67,8 @@ const StaffAndRoles = () => {
           </div>
 
           <Button 
-            onClick={() => logout()} 
-            variant="ghost" 
-            className="rounded-xl h-9 px-3 text-xs font-bold text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 gap-2 border border-slate-800"
+            onClick={handleSignOut} 
+            className="rounded-xl h-9 px-4 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-lg shadow-rose-950/50 gap-2 border border-rose-500/30 transition-all"
           >
             <LogOut size={15} /> Sign Out
           </Button>
