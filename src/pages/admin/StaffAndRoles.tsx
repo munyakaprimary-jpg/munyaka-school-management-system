@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, UserRole } from '@/context/AuthContext';
 import { useIdleTimer } from '@/hooks/useIdleTimer';
-import { Shield, UserPlus, Trash2, LogOut, Lock, Key, Clock, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Shield, UserPlus, Trash2, LogOut, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -90,19 +90,20 @@ const StaffAndRoles = () => {
           </div>
         </div>
 
-        {/* Inline Pre-Authorization Creation Form */}
-        <Card className="bg-slate-900 border-slate-800 rounded-3xl p-6 shadow-xl">
+        {/* 1. Explicit Inline Pre-Authorization Creation Form */}
+        <Card className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
           <CardHeader className="p-0 mb-4">
             <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
               <UserPlus size={18} className="text-emerald-400" /> Pre-Authorize New User Email
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <form onSubmit={handleAddSubmit} className="flex flex-col md:flex-row gap-3">
-              <div className="flex-1">
+            <form onSubmit={handleAddSubmit} className="flex flex-col md:flex-row gap-3 items-center">
+              {/* Email Input */}
+              <div className="flex-1 w-full">
                 <Input
                   type="email"
-                  placeholder="Enter authorized email (e.g. user@munyaka.sc.ke)"
+                  placeholder="e.g. newuser@domain.com"
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
@@ -110,27 +111,32 @@ const StaffAndRoles = () => {
                 />
               </div>
 
+              {/* Role Selector Dropdown */}
               <div className="w-full md:w-48">
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 px-3 text-xs text-slate-200 outline-none focus:border-emerald-500 font-semibold"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 px-3 text-xs text-slate-200 outline-none focus:border-emerald-500 font-semibold cursor-pointer"
                 >
-                  <option value="teacher">Teacher</option>
-                  <option value="staff">Staff</option>
-                  <option value="admin">Administrator</option>
+                  <option value="admin">admin</option>
+                  <option value="teacher">teacher</option>
+                  <option value="staff">staff</option>
                 </select>
               </div>
 
-              <Button type="submit" className="h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 px-6 gap-2 shrink-0">
+              {/* Submit Button */}
+              <Button 
+                type="submit" 
+                className="w-full md:w-auto h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 px-6 gap-2 shrink-0"
+              >
                 <UserPlus size={16} /> Authorize Access
               </Button>
             </form>
           </CardContent>
         </Card>
 
-        {/* Management Data Table */}
-        <Card className="bg-slate-900 border-slate-800 rounded-3xl overflow-hidden shadow-xl">
+        {/* 2. Authorized User Tracking Matrix Table */}
+        <Card className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-xl">
           <CardHeader className="p-6 border-b border-slate-800 flex flex-row items-center justify-between">
             <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
               <ShieldCheck size={18} className="text-emerald-400" /> Authorized User Tracking Matrix ({authorizedUsers.length})

@@ -256,7 +256,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     setAuthorizedUsers(prev => [newAuth, ...prev]);
-    toast.success(`Authorized ${normalized} as ${role.toUpperCase()}`);
+    toast.success("User successfully authorized!");
     return true;
   };
 
