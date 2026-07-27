@@ -167,6 +167,7 @@ const Assessments = () => {
                 <SelectItem value="summative">Summative Assessment</SelectItem>
                 <SelectItem value="opener">Opener Exam</SelectItem>
                 <SelectItem value="midterm">Mid-Term Exam</SelectItem>
+                <SelectItem value="endterm">End Term Exam</SelectItem>
               </SelectContent>
             </Select>
           </div>
