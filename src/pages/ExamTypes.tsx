@@ -15,7 +15,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Award, Plus, Trash2, ClipboardList, CheckCircle2 } from 'lucide-react';
+import { Award, Plus, Trash2, ClipboardList, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
 interface ExamType {
@@ -41,6 +41,8 @@ const ExamTypes = () => {
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isDeleteOpen, setIsDeleteOpen] = useState(false);
+  const [examToDelete, setExamToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Form states
   const [name, setName] = useState("");
@@ -76,10 +78,18 @@ const ExamTypes = () => {
     showSuccess(`Successfully created exam type "${newExam.name}"!`);
   };
 
-  const handleDeleteExamType = (id: string, examName: string) => {
-    const updated = examTypes.filter(et => et.id !== id);
+  const triggerDeleteConfirm = (id: string, examName: string) => {
+    setExamToDelete({ id, name: examName });
+    setIsDeleteOpen(true);
+  };
+
+  const confirmDeleteExamType = () => {
+    if (!examToDelete) return;
+    const updated = examTypes.filter(et => et.id !== examToDelete.id);
     setExamTypes(updated);
-    showSuccess(`Removed "${examName}" successfully.`);
+    setIsDeleteOpen(false);
+    showSuccess(`Removed "${examToDelete.name}" successfully.`);
+    setExamToDelete(null);
   };
 
   return (
@@ -116,7 +126,7 @@ const ExamTypes = () => {
                     variant="ghost" 
                     size="icon" 
                     className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors h-9 w-9"
-                    onClick={() => handleDeleteExamType(exam.id, exam.name)}
+                    onClick={() => triggerDeleteConfirm(exam.id, exam.name)}
                   >
                     <Trash2 size={16} />
                   </Button>
@@ -232,6 +242,39 @@ const ExamTypes = () => {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
+        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+          <DialogHeader className="flex flex-col items-center text-center">
+            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
+              <AlertTriangle size={32} />
+            </div>
+            <DialogTitle className="text-2xl font-bold text-slate-900">Delete Exam Type?</DialogTitle>
+            <DialogDescription className="text-slate-500 mt-2">
+              Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.name}"</strong>? This action cannot be undone and may affect existing marksheet configurations.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter className="flex gap-2 justify-center pt-6">
+            <Button 
+              type="button" 
+              variant="ghost" 
+              className="rounded-xl font-bold flex-1"
+              onClick={() => setIsDeleteOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="button" 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1"
+              onClick={confirmDeleteExamType}
+            >
+              Yes, Delete
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
