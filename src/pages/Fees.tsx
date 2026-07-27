@@ -51,10 +51,12 @@ const Fees = () => {
     e.preventDefault();
     if (!selectedStudentId || !paymentAmount) return;
 
-    // If M-Pesa, reference is required. If Cash, we can auto-generate one if empty.
+    // Handle reference code based on payment method
     let finalRef = paymentRef.trim();
     if (paymentMethod === "Cash" && !finalRef) {
       finalRef = `CSH-${Math.floor(100000 + Math.random() * 900000)}`;
+    } else if (paymentMethod === "Bank" && !finalRef) {
+      finalRef = `BNK-${Math.floor(100000 + Math.random() * 900000)}`;
     } else if (!finalRef) {
       return; // M-Pesa requires a reference
     }
@@ -315,6 +317,7 @@ const Fees = () => {
                 <SelectContent>
                   <SelectItem value="M-Pesa">M-Pesa</SelectItem>
                   <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="Bank">Bank Deposit / Transfer</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -332,12 +335,24 @@ const Fees = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>{paymentMethod === 'M-Pesa' ? 'M-Pesa Ref Code' : 'Receipt No. (Optional)'}</Label>
+                <Label>
+                  {paymentMethod === 'M-Pesa' 
+                    ? 'M-Pesa Ref Code' 
+                    : paymentMethod === 'Bank' 
+                    ? 'Bank Slip / Ref No.' 
+                    : 'Receipt No. (Optional)'}
+                </Label>
                 <Input 
                   value={paymentRef}
                   onChange={(e) => setPaymentRef(e.target.value)}
-                  placeholder={paymentMethod === 'M-Pesa' ? 'e.g. SKL92JD81S' : 'e.g. CSH-1029'}
-                  required={paymentMethod === 'M-Pesa'}
+                  placeholder={
+                    paymentMethod === 'M-Pesa' 
+                      ? 'e.g. SKL92JD81S' 
+                      : paymentMethod === 'Bank' 
+                      ? 'e.g. DEP-2938' 
+                      : 'e.g. CSH-1029'
+                  }
+                  required={paymentMethod !== 'Cash'}
                   className="rounded-xl h-12 uppercase"
                 />
               </div>
