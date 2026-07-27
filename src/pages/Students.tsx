@@ -102,7 +102,7 @@ const Students = () => {
             Export CSV
           </Button>
           <Button 
-            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2"
+            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2 font-bold"
             onClick={() => setIsRegisterOpen(true)}
           >
             <Plus size={18} /> Add New Student
@@ -120,7 +120,7 @@ const Students = () => {
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600">
+        <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold">
           <Filter size={18} /> Filters
         </Button>
       </div>
@@ -202,58 +202,60 @@ const Students = () => {
         ))}
       </div>
 
-      {/* Student Registration Modal */}
+      {/* Student Registration Centered Modal */}
       <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-        <DialogContent className="sm:max-w-xl rounded-3xl p-8 relative max-h-[90vh] overflow-y-auto">
+        <DialogContent className="w-[92vw] sm:max-w-xl rounded-[2rem] p-6 sm:p-8 bg-white border-none shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            className="absolute right-5 top-5 rounded-full h-9 w-9 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors z-10"
             onClick={() => setIsRegisterOpen(false)}
           >
-            <X size={16} />
+            <X size={18} />
           </Button>
 
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-2">
-              <UserPlus className="text-indigo-600" size={24} />
+          <DialogHeader className="pr-8">
+            <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <UserPlus size={22} />
+              </div>
               Register New Student
             </DialogTitle>
-            <DialogDescription>
-              Enter learner details to enroll them into the academic system.
+            <DialogDescription className="text-slate-500 text-sm mt-1">
+              Fill in the learner's details to enroll them into the school registry.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleRegisterStudent} className="space-y-4 py-2">
+          <form onSubmit={handleRegisterStudent} className="space-y-5 pt-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Full Name</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Full Name</Label>
                 <Input 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. John Doe"
                   required
-                  className="rounded-xl h-12"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Assessment Number (KNEC)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Assessment Number (KNEC)</Label>
                 <Input 
                   value={assessmentNo}
                   onChange={(e) => setAssessmentNo(e.target.value)}
                   placeholder="e.g. A1002003"
                   required
-                  className="rounded-xl h-12 uppercase"
+                  className="rounded-xl h-12 uppercase bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Grade Level</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Grade Level</Label>
                 <Select value={gradeLevel} onValueChange={setGradeLevel}>
-                  <SelectTrigger className="rounded-xl h-12">
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-200">
                     <SelectValue placeholder="Select Grade" />
                   </SelectTrigger>
                   <SelectContent>
@@ -266,10 +268,10 @@ const Students = () => {
                 </Select>
               </div>
 
-              <div className="space-y-2">
-                <Label>Stream</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Stream</Label>
                 <Select value={stream} onValueChange={setStream}>
-                  <SelectTrigger className="rounded-xl h-12">
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-200">
                     <SelectValue placeholder="Select Stream" />
                   </SelectTrigger>
                   <SelectContent>
@@ -283,51 +285,51 @@ const Students = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2 border-t border-slate-100">
-              <div className="space-y-2">
-                <Label>Guardian Name</Label>
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Guardian Name</Label>
                 <Input 
                   value={guardianName}
                   onChange={(e) => setGuardianName(e.target.value)}
                   placeholder="e.g. Samuel Kiptoo"
                   required
-                  className="rounded-xl h-12"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Phone Number</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Phone Number</Label>
                 <Input 
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. +254 712 345 678"
                   required
-                  className="rounded-xl h-12"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Physical Address / Location</Label>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Physical Address / Location</Label>
               <Input 
                 value={address}
                 onChange={(e) => setAddress(e.target.value)}
                 placeholder="e.g. Eldoret West"
-                className="rounded-xl h-12"
+                className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
               />
             </div>
 
-            <DialogFooter className="pt-4 flex gap-2">
+            <DialogFooter className="pt-4 flex flex-row gap-3 justify-end">
               <Button 
                 type="button" 
                 variant="ghost" 
-                className="rounded-xl font-bold flex-1"
+                className="rounded-xl font-bold h-12 px-6 text-slate-600 hover:bg-slate-100"
                 onClick={() => setIsRegisterOpen(false)}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 flex-1 shadow-lg shadow-indigo-100"
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-12 px-8 shadow-lg shadow-indigo-100 text-white"
               >
                 Register Student
               </Button>
