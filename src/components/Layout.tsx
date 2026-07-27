@@ -43,7 +43,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
     { icon: UserPlus, label: 'Registration', path: '/registration' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
-    { icon: FileSpreadsheet, label: 'Assessments', path: '/assessments' },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
     { icon: Library, label: 'Library & E-Resources', path: '/library' },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
