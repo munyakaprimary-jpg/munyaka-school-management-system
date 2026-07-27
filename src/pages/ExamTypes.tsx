@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -15,14 +15,14 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Award, Plus, Trash2, ClipboardList, CheckCircle2, AlertTriangle, X } from 'lucide-react';
+import { Plus, Trash2, AlertTriangle, X } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
 interface ExamType {
   id: string;
   name: string;
   code: string;
-  weight: number; // percentage weight in final report
+  weight: number;
   category: 'Formative' | 'Summative' | 'Other';
   description?: string;
 }
@@ -93,60 +93,60 @@ const ExamTypes = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Exam Types</h1>
-          <p className="text-muted-foreground">Configure and manage assessed exam types and their grading weights.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Exam Types</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Configure assessement types and grading weights.</p>
         </div>
         <Button 
-          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
+          className="rounded-xl gap-1.5 h-9 px-4 text-xs font-semibold shadow-sm bg-indigo-600 hover:bg-indigo-700"
           onClick={() => setIsOpen(true)}
         >
-          <Plus size={18} /> Add Exam Type
+          <Plus size={15} /> Add Exam Type
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {examTypes.map((exam) => (
-          <Card key={exam.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group relative">
-            <CardContent className="p-8 flex flex-col h-full justify-between">
+          <Card key={exam.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-2xl bg-white overflow-hidden group">
+            <CardContent className="p-4 flex flex-col justify-between h-full">
               <div>
-                <div className="flex justify-between items-start mb-4">
+                <div className="flex justify-between items-center mb-2.5">
                   <Badge className={
                     exam.category === 'Formative' 
-                      ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-none font-bold" 
+                      ? "bg-emerald-50 text-emerald-700 border-none font-bold text-[10px] px-2 py-0.5" 
                       : exam.category === 'Summative'
-                      ? "bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-none font-bold"
-                      : "bg-slate-100 text-slate-700 hover:bg-slate-100 border-none font-bold"
+                      ? "bg-indigo-50 text-indigo-700 border-none font-bold text-[10px] px-2 py-0.5"
+                      : "bg-slate-100 text-slate-700 border-none font-bold text-[10px] px-2 py-0.5"
                   }>
                     {exam.category}
                   </Badge>
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors h-9 w-9"
+                    className="rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors h-7 w-7"
                     onClick={() => triggerDeleteConfirm(exam.id, exam.name)}
                   >
-                    <Trash2 size={16} />
+                    <Trash2 size={14} />
                   </Button>
                 </div>
 
-                <h4 className="text-lg font-bold text-slate-900 leading-tight mb-1 group-hover:text-indigo-600 transition-colors">
+                <h4 className="text-base font-bold text-slate-900 leading-snug mb-0.5 group-hover:text-indigo-600 transition-colors">
                   {exam.name}
                 </h4>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Code: {exam.code}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Code: {exam.code}</p>
                 
                 {exam.description && (
-                  <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                  <p className="text-xs text-slate-500 leading-normal mb-3">
                     {exam.description}
                   </p>
                 )}
               </div>
 
-              <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Report Weight</span>
-                <Badge variant="outline" className="rounded-lg font-black text-slate-700 border-slate-200 bg-slate-50 px-2.5 py-1">
+              <div className="pt-3 border-t border-slate-50 flex justify-between items-center mt-auto">
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Report Weight</span>
+                <Badge variant="outline" className="rounded-md font-bold text-xs text-slate-700 border-slate-200 bg-slate-50 px-2 py-0.5">
                   {exam.weight}% Weight
                 </Badge>
               </div>
@@ -157,7 +157,7 @@ const ExamTypes = () => {
 
       {/* Add Exam Type Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 relative">
           <Button
             type="button"
             variant="ghost"
@@ -168,40 +168,40 @@ const ExamTypes = () => {
             <X size={16} />
           </Button>
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Add Exam Type</DialogTitle>
-            <DialogDescription>
+            <DialogTitle className="text-xl font-bold">Add Exam Type</DialogTitle>
+            <DialogDescription className="text-xs">
               Create a new assessment type for grading and report cards.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleAddExamType} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Exam Type Name</Label>
+          <form onSubmit={handleAddExamType} className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Exam Type Name</Label>
               <Input 
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. End Term Exam, Continuous Assessment"
+                placeholder="e.g. End Term Exam"
                 required
-                className="rounded-xl h-12"
+                className="rounded-xl h-10 text-xs"
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Unique Code</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Unique Code</Label>
                 <Input 
                   value={code}
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="e.g. ENDTERM"
                   required
-                  className="rounded-xl h-12 uppercase"
+                  className="rounded-xl h-10 text-xs uppercase"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Category</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Category</Label>
                 <Select value={category} onValueChange={(val: any) => setCategory(val)}>
-                  <SelectTrigger className="rounded-xl h-12">
-                    <SelectValue placeholder="Select Category" />
+                  <SelectTrigger className="rounded-xl h-10 text-xs">
+                    <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Formative">Formative</SelectItem>
@@ -212,40 +212,40 @@ const ExamTypes = () => {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Report Card Weight (%)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Report Card Weight (%)</Label>
               <Input 
                 type="number"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
                 placeholder="e.g. 60"
                 required
-                className="rounded-xl h-12"
+                className="rounded-xl h-10 text-xs"
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Description (Optional)</Label>
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Description (Optional)</Label>
               <Input 
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Final comprehensive exam at the end of term"
-                className="rounded-xl h-12"
+                placeholder="e.g. Final comprehensive evaluation"
+                className="rounded-xl h-10 text-xs"
               />
             </div>
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-3">
               <Button 
                 type="button" 
                 variant="ghost" 
-                className="rounded-xl font-bold"
+                className="rounded-xl h-9 text-xs font-semibold"
                 onClick={() => setIsOpen(false)}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+                className="rounded-xl h-9 px-5 text-xs bg-indigo-600 hover:bg-indigo-700 font-semibold"
               >
                 Add Exam Type
               </Button>
@@ -256,7 +256,7 @@ const ExamTypes = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+        <DialogContent className="sm:max-w-md rounded-2xl p-6 relative">
           <Button
             type="button"
             variant="ghost"
@@ -267,27 +267,27 @@ const ExamTypes = () => {
             <X size={16} />
           </Button>
           <DialogHeader className="flex flex-col items-center text-center">
-            <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
-              <AlertTriangle size={32} />
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-3">
+              <AlertTriangle size={24} />
             </div>
-            <DialogTitle className="text-2xl font-bold text-slate-900">Delete Exam Type?</DialogTitle>
-            <DialogDescription className="text-slate-500 mt-2">
-              Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.name}"</strong>? This action cannot be undone and may affect existing marksheet configurations.
+            <DialogTitle className="text-lg font-bold text-slate-900">Delete Exam Type?</DialogTitle>
+            <DialogDescription className="text-xs text-slate-500 mt-1">
+              Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.name}"</strong>?
             </DialogDescription>
           </DialogHeader>
 
-          <DialogFooter className="flex gap-2 justify-center pt-6">
+          <DialogFooter className="flex gap-2 justify-center pt-4">
             <Button 
               type="button" 
               variant="ghost" 
-              className="rounded-xl font-bold flex-1"
+              className="rounded-xl h-9 text-xs font-semibold flex-1"
               onClick={() => setIsDeleteOpen(false)}
             >
               Cancel
             </Button>
             <Button 
               type="button" 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1"
+              className="rounded-xl h-9 text-xs bg-red-600 hover:bg-red-700 text-white font-semibold flex-1"
               onClick={confirmDeleteExamType}
             >
               Yes, Delete

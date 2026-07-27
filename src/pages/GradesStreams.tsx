@@ -27,11 +27,9 @@ const GradesStreams = () => {
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const [isStreamOpen, setIsStreamOpen] = useState(false);
 
-  // Form states - Add Grade
   const [newGradeName, setNewGradeName] = useState("");
   const [newGradeCategory, setNewGradeCategory] = useState<'Pre-Primary' | 'Primary' | 'Junior School'>("Primary");
 
-  // Form states - Add Stream
   const [selectedGradeId, setSelectedGradeId] = useState("");
   const [newStreamName, setNewStreamName] = useState("");
   const [newStreamTeacher, setNewStreamTeacher] = useState("");
@@ -55,7 +53,7 @@ const GradesStreams = () => {
     setGrades([...grades, newGrade]);
     setIsGradeOpen(false);
     setNewGradeName("");
-    showSuccess(`Successfully created ${newGradeName}!`);
+    showSuccess(`Created ${newGradeName}!`);
   };
 
   const handleAddStream = (e: React.FormEvent) => {
@@ -86,7 +84,7 @@ const GradesStreams = () => {
     setNewStreamName("");
     setNewStreamTeacher("");
     setNewStreamStudents("");
-    showSuccess(`Successfully added ${newStreamName} stream!`);
+    showSuccess(`Added ${newStreamName} stream!`);
   };
 
   const handleDeleteStream = (gradeId: string, streamId: string) => {
@@ -100,95 +98,95 @@ const GradesStreams = () => {
       return grade;
     });
     setGrades(updatedGrades);
-    showSuccess("Stream removed successfully.");
+    showSuccess("Stream removed.");
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Grades & Streams</h1>
-          <p className="text-muted-foreground">Configure school classes, streams, and assign class teachers.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Grades & Streams</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Configure school classes and assigned teachers.</p>
         </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            className="rounded-2xl border-slate-200 gap-2"
+            className="rounded-xl border-slate-200 gap-1.5 h-9 px-3 text-xs"
             onClick={() => setIsStreamOpen(true)}
           >
-            <Plus size={18} /> Add Stream
+            <Plus size={15} /> Add Stream
           </Button>
           <Button 
-            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2"
+            className="rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 gap-1.5 h-9 px-4 text-xs font-semibold"
             onClick={() => setIsGradeOpen(true)}
           >
-            <Layers size={18} /> Add Grade Level
+            <Layers size={15} /> Add Grade
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8">
+      <div className="grid grid-cols-1 gap-4">
         {grades.map((grade) => (
-          <Card key={grade.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-            <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-4">
+          <Card key={grade.id} className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+            <CardHeader className="p-4 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-2">
               <div>
-                <div className="flex items-center gap-3">
-                  <CardTitle className="text-xl font-black text-slate-900">{grade.name}</CardTitle>
-                  <Badge className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-none font-bold">
+                <div className="flex items-center gap-2">
+                  <CardTitle className="text-base font-bold text-slate-900">{grade.name}</CardTitle>
+                  <Badge className="bg-indigo-50 text-indigo-700 font-bold text-[10px] px-2 py-0.5">
                     {grade.category}
                   </Badge>
                 </div>
-                <CardDescription className="mt-1">
-                  Total Streams: {grade.streams.length} • Total Learners: {grade.streams.reduce((acc, s) => acc + s.studentsCount, 0)}
+                <CardDescription className="text-xs mt-0.5">
+                  Streams: {grade.streams.length} • Learners: {grade.streams.reduce((acc, s) => acc + s.studentsCount, 0)}
                 </CardDescription>
               </div>
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="text-indigo-600 font-bold rounded-xl hover:bg-indigo-50"
+                className="text-indigo-600 font-bold rounded-lg text-xs h-8 px-2.5 hover:bg-indigo-50"
                 onClick={() => {
                   setSelectedGradeId(grade.id);
                   setIsStreamOpen(true);
                 }}
               >
-                <Plus size={16} className="mr-1" /> Add Stream
+                <Plus size={14} className="mr-1" /> Stream
               </Button>
             </CardHeader>
-            <CardContent className="p-8">
+            <CardContent className="p-4">
               {grade.streams.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 italic">
-                  No streams added to this grade yet. Click "Add Stream" to get started.
+                <div className="text-center py-4 text-slate-400 text-xs italic">
+                  No streams added. Click "Add Stream" to get started.
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {grade.streams.map((stream) => (
                     <div 
                       key={stream.id} 
-                      className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group"
+                      className="p-3.5 rounded-xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all group"
                     >
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start mb-2">
                         <div>
-                          <h4 className="text-lg font-bold text-slate-900">{stream.name} Stream</h4>
-                          <p className="text-xs text-slate-400 font-medium mt-0.5">Class Stream</p>
+                          <h4 className="text-sm font-bold text-slate-900">{stream.name} Stream</h4>
+                          <p className="text-[10px] text-slate-400 font-medium">Class Stream</p>
                         </div>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="rounded-lg text-slate-300 hover:text-red-500 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDeleteStream(grade.id, stream.id)}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={13} />
                         </Button>
                       </div>
 
-                      <div className="space-y-3 pt-4 border-t border-slate-100">
-                        <div className="flex items-center gap-2.5 text-sm text-slate-600">
-                          <User size={16} className="text-slate-400" />
-                          <span className="font-medium">Teacher: <strong className="text-slate-800">{stream.teacher}</strong></span>
+                      <div className="space-y-1.5 pt-2 border-t border-slate-100 text-xs">
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <User size={13} className="text-slate-400" />
+                          <span>Teacher: <strong className="text-slate-800">{stream.teacher}</strong></span>
                         </div>
-                        <div className="flex items-center gap-2.5 text-sm text-slate-600">
-                          <Users size={16} className="text-slate-400" />
-                          <span className="font-medium">Students: <strong className="text-slate-800">{stream.studentsCount} Learners</strong></span>
+                        <div className="flex items-center gap-2 text-slate-600">
+                          <Users size={13} className="text-slate-400" />
+                          <span>Students: <strong className="text-slate-800">{stream.studentsCount}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -200,45 +198,25 @@ const GradesStreams = () => {
         ))}
       </div>
 
-      {/* Add Grade Dialog */}
+      {/* Dialogs */}
       <Dialog open={isGradeOpen} onOpenChange={setIsGradeOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
-            onClick={() => setIsGradeOpen(false)}
-          >
+        <DialogContent className="sm:max-w-md rounded-2xl p-5 relative">
+          <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400" onClick={() => setIsGradeOpen(false)}>
             <X size={16} />
           </Button>
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Add Grade Level</DialogTitle>
-            <DialogDescription>
-              Create a new academic grade level for the school.
-            </DialogDescription>
+            <DialogTitle className="text-lg font-bold">Add Grade Level</DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleAddGrade} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Grade Name</Label>
-              <Input 
-                value={newGradeName}
-                onChange={(e) => setNewGradeName(e.target.value)}
-                placeholder="e.g. Grade 9, PP1"
-                required
-                className="rounded-xl h-12"
-              />
+          <form onSubmit={handleAddGrade} className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Grade Name</Label>
+              <Input value={newGradeName} onChange={(e) => setNewGradeName(e.target.value)} placeholder="e.g. Grade 9" required className="rounded-xl h-10 text-xs" />
             </div>
-
-            <div className="space-y-2">
-              <Label>Category</Label>
-              <Select 
-                value={newGradeCategory} 
-                onValueChange={(val: any) => setNewGradeCategory(val)}
-              >
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select category" />
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Category</Label>
+              <Select value={newGradeCategory} onValueChange={(val: any) => setNewGradeCategory(val)}>
+                <SelectTrigger className="rounded-xl h-10 text-xs">
+                  <SelectValue placeholder="Category" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Pre-Primary">Pre-Primary</SelectItem>
@@ -247,108 +225,9 @@ const GradesStreams = () => {
                 </SelectContent>
               </Select>
             </div>
-
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="rounded-xl font-bold"
-                onClick={() => setIsGradeOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
-              >
-                Create Grade
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Add Stream Dialog */}
-      <Dialog open={isStreamOpen} onOpenChange={setIsStreamOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
-            onClick={() => setIsStreamOpen(false)}
-          >
-            <X size={16} />
-          </Button>
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Add Stream</DialogTitle>
-            <DialogDescription>
-              Create a new stream/class group under a grade level.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAddStream} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Select Grade Level</Label>
-              <Select value={selectedGradeId} onValueChange={setSelectedGradeId} required>
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Choose grade" />
-                </SelectTrigger>
-                <SelectContent>
-                  {grades.map(g => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label>Stream Name</Label>
-              <Input 
-                value={newStreamName}
-                onChange={(e) => setNewStreamName(e.target.value)}
-                placeholder="e.g. Blue, Yellow, West"
-                required
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Class Teacher</Label>
-              <Input 
-                value={newStreamTeacher}
-                onChange={(e) => setNewStreamTeacher(e.target.value)}
-                placeholder="e.g. Jane Mwangi"
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Initial Student Count</Label>
-              <Input 
-                type="number"
-                value={newStreamStudents}
-                onChange={(e) => setNewStreamStudents(e.target.value)}
-                placeholder="e.g. 40"
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="rounded-xl font-bold"
-                onClick={() => setIsStreamOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
-              >
-                Add Stream
-              </Button>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="ghost" className="rounded-xl h-9 text-xs" onClick={() => setIsGradeOpen(false)}>Cancel</Button>
+              <Button type="submit" className="rounded-xl h-9 text-xs bg-indigo-600 hover:bg-indigo-700">Create Grade</Button>
             </DialogFooter>
           </form>
         </DialogContent>

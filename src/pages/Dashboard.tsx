@@ -21,53 +21,53 @@ const Dashboard = () => {
   ];
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
-          <p className="text-muted-foreground">System vitals for Munyaka Primary and Junior School.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">System vitals for Munyaka Primary and Junior School.</p>
         </div>
-        <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-2">
+        <div className="bg-white px-3 py-1.5 rounded-xl shadow-sm border border-slate-100 flex items-center gap-2 w-fit">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Live Sync Enabled</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Live Sync Enabled</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-4px] transition-transform">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className={`${stat.bg} p-4 rounded-2xl`}>
-                <stat.icon className={stat.color} size={24} />
+          <Card key={i} className="border-none shadow-sm bg-white rounded-2xl hover:translate-y-[-2px] transition-transform">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className={`${stat.bg} p-3 rounded-xl shrink-0`}>
+                <stat.icon className={stat.color} size={20} />
               </div>
               <div>
-                <p className="text-sm font-medium text-muted-foreground mb-0.5">{stat.title}</p>
-                <h3 className="text-2xl font-black text-slate-900">{stat.value}</h3>
+                <p className="text-xs font-medium text-muted-foreground">{stat.title}</p>
+                <h3 className="text-xl font-bold text-slate-900 leading-tight mt-0.5">{stat.value}</h3>
               </div>
             </CardContent>
           </Card>
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
-            <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+          <CardHeader className="p-4 border-b flex flex-row items-center justify-between">
+            <CardTitle className="text-sm font-bold">Attendance Trends (Weekly)</CardTitle>
+            <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100 text-[10px] px-2 py-0.5">
               <TrendingUp size={12} className="mr-1" /> Healthy
             </Badge>
           </CardHeader>
-          <CardContent className="h-[300px] w-full pt-4">
-            <ResponsiveContainer width="100%" height={260}>
+          <CardContent className="h-[220px] w-full p-4 pt-2">
+            <ResponsiveContainer width="100%" height={200}>
               <BarChart data={ATTENDANCE_TREND}>
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 11}} />
                 <YAxis hide />
                 <Tooltip 
                   cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}}
+                  contentStyle={{borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)', fontSize: '12px'}}
                 />
-                <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
+                <Bar dataKey="rate" radius={[8, 8, 0, 0]}>
                   {ATTENDANCE_TREND.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={entry.rate > 92 ? '#6366f1' : '#cbd5e1'} />
                   ))}
@@ -77,24 +77,24 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Alerts</CardTitle>
+        <Card className="border-none shadow-sm rounded-2xl bg-white">
+          <CardHeader className="p-4 border-b">
+            <CardTitle className="text-sm font-bold">Recent Activity</CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
+          <CardContent className="p-4">
+            <div className="space-y-4">
               {[
                 { time: "Just now", msg: "Grade 4 marks updated", type: "assess", color: "bg-blue-500" },
                 { time: "10m ago", msg: "New student registered", type: "reg", color: "bg-emerald-500" },
                 { time: "1h ago", msg: "Attendance marked: Grade 8", type: "attn", color: "bg-purple-500" },
                 { time: "3h ago", msg: "Fee payment: #2389", type: "fee", color: "bg-orange-500" },
               ].map((act, i) => (
-                <div key={i} className="flex gap-4 relative">
-                  {i !== 3 && <div className="absolute left-1.5 top-5 bottom-[-20px] w-[1px] bg-slate-100" />}
-                  <div className={`w-3 h-3 mt-1.5 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
+                <div key={i} className="flex gap-3 relative">
+                  {i !== 3 && <div className="absolute left-1.5 top-4 bottom-[-16px] w-[1px] bg-slate-100" />}
+                  <div className={`w-2.5 h-2.5 mt-1 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
                   <div>
-                    <p className="text-sm font-medium text-slate-800 leading-tight">{act.msg}</p>
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">{act.time}</p>
+                    <p className="text-xs font-semibold text-slate-800 leading-tight">{act.msg}</p>
+                    <p className="text-[9px] uppercase font-bold tracking-wider text-muted-foreground mt-0.5">{act.time}</p>
                   </div>
                 </div>
               ))}
@@ -103,29 +103,29 @@ const Dashboard = () => {
         </Card>
       </div>
 
-      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg">Active Class Performance</CardTitle>
+      <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
+        <CardHeader className="p-4 border-b">
+          <CardTitle className="text-sm font-bold">Active Class Performance</CardTitle>
         </CardHeader>
-        <CardContent className="px-0">
+        <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-xs text-left">
               <thead className="text-slate-500 bg-slate-50/50 border-b">
                 <tr>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Class Name</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Stream</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Enrollment</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Attendance</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px]">Class Name</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px]">Stream</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px]">Enrollment</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px] text-right">Attendance</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {classes.map((cls, i) => (
-                  <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900">{cls.name}</td>
-                    <td className="px-8 py-5 text-slate-600 font-medium">{cls.stream}</td>
-                    <td className="px-8 py-5 text-slate-600">{cls.students} Learners</td>
-                    <td className="px-8 py-5 text-right">
-                      <Badge className="bg-emerald-50 text-emerald-700 border-none shadow-none font-bold">
+                  <tr key={i} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-3.5 font-bold text-slate-900">{cls.name}</td>
+                    <td className="px-5 py-3.5 text-slate-600 font-medium">{cls.stream}</td>
+                    <td className="px-5 py-3.5 text-slate-600">{cls.students} Learners</td>
+                    <td className="px-5 py-3.5 text-right">
+                      <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold text-[10px] px-2 py-0.5">
                         {cls.attendance}
                       </Badge>
                     </td>

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -16,7 +16,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { BookOpen, Plus, Trash2, Edit3, Layers, GraduationCap, CheckCircle2, X } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, X } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
 interface LearningArea {
@@ -40,58 +40,47 @@ const DEFAULT_CLUSTERS: ClusterData[] = [
     name: "Pre-Primary",
     description: "Early childhood development learning areas (PP1 & PP2)",
     learningAreas: [
-      { id: "pp-1", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", description: "Basic number concepts and shapes" },
-      { id: "pp-2", name: "Language Activities", periodsPerWeek: 5, type: "Core", description: "Pre-reading and communication skills" },
-      { id: "pp-3", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", description: "Exploring the immediate environment" },
-      { id: "pp-4", name: "Psychomotor and Creative Activities", periodsPerWeek: 5, type: "Core", description: "Art, craft, music, and physical play" },
-      { id: "pp-5", name: "Religious Education Activities", periodsPerWeek: 2, type: "Core", description: "Moral and spiritual values" }
+      { id: "pp-1", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core", description: "Basic number concepts" },
+      { id: "pp-2", name: "Language Activities", periodsPerWeek: 5, type: "Core", description: "Pre-reading skills" },
+      { id: "pp-3", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", description: "Exploring environment" },
+      { id: "pp-4", name: "Psychomotor Activities", periodsPerWeek: 5, type: "Core", description: "Art & music" },
+      { id: "pp-5", name: "Religious Education", periodsPerWeek: 2, type: "Core", description: "Moral values" }
     ]
   },
   {
     id: "lower-primary",
     name: "Lower Primary",
-    description: "Foundational learning areas for Grades 1, 2, and 3",
+    description: "Foundational learning areas for Grades 1-3",
     learningAreas: [
-      { id: "lp-1", name: "Mathematics Activities", periodsPerWeek: 5, type: "Core", description: "Arithmetic and problem solving" },
-      { id: "lp-2", name: "English Language Activities", periodsPerWeek: 5, type: "Core", description: "Reading, writing, and grammar" },
-      { id: "lp-3", name: "Kiswahili Language Activities / KSL", periodsPerWeek: 4, type: "Core", description: "Lugha na kusoma" },
-      { id: "lp-4", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", description: "Science, geography, and social studies basics" },
-      { id: "lp-5", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core", description: "Healthy living and personal care" },
-      { id: "lp-6", name: "Movement and Creative Activities", periodsPerWeek: 4, type: "Core", description: "Physical education, art, and music" },
-      { id: "lp-7", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core", description: "Spiritual and moral guidance" }
+      { id: "lp-1", name: "Mathematics Activities", periodsPerWeek: 5, type: "Core", description: "Arithmetic" },
+      { id: "lp-2", name: "English Language Activities", periodsPerWeek: 5, type: "Core", description: "Grammar & reading" },
+      { id: "lp-3", name: "Kiswahili Language Activities", periodsPerWeek: 4, type: "Core", description: "Lugha na kusoma" },
+      { id: "lp-4", name: "Environmental Activities", periodsPerWeek: 4, type: "Core", description: "Science & social" },
+      { id: "lp-5", name: "Hygiene and Nutrition", periodsPerWeek: 2, type: "Core", description: "Personal care" }
     ]
   },
   {
     id: "upper-primary",
     name: "Upper Primary",
-    description: "Intermediate learning areas for Grades 4, 5, and 6",
+    description: "Intermediate learning areas for Grades 4-6",
     learningAreas: [
-      { id: "up-1", name: "Mathematics", periodsPerWeek: 5, type: "Core", description: "Advanced arithmetic, geometry, and algebra" },
-      { id: "up-2", name: "English", periodsPerWeek: 5, type: "Core", description: "Comprehension, creative writing, and literature" },
-      { id: "up-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core", description: "Insha, sarufi na fasihi simulizi" },
-      { id: "up-4", name: "Science and Technology", periodsPerWeek: 4, type: "Core", description: "Scientific inquiry, digital literacy, and coding" },
-      { id: "up-5", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core", description: "Farming practices and food preparation" },
-      { id: "up-6", name: "Creative Arts (Art, Craft & Music)", periodsPerWeek: 3, type: "Core", description: "Visual arts, crafts, and performing arts" },
-      { id: "up-7", name: "Social Studies", periodsPerWeek: 3, type: "Core", description: "History, citizenship, and geography" },
-      { id: "up-8", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 2, type: "Core", description: "Moral values and spiritual growth" }
+      { id: "up-1", name: "Mathematics", periodsPerWeek: 5, type: "Core", description: "Advanced arithmetic & geometry" },
+      { id: "up-2", name: "English", periodsPerWeek: 5, type: "Core", description: "Comprehension & writing" },
+      { id: "up-3", name: "Kiswahili", periodsPerWeek: 4, type: "Core", description: "Sarufi na insha" },
+      { id: "up-4", name: "Science and Technology", periodsPerWeek: 4, type: "Core", description: "Inquiry & digital skills" },
+      { id: "up-5", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core", description: "Farming & food prep" }
     ]
   },
   {
     id: "junior-school",
     name: "Junior School",
-    description: "Secondary preparation learning areas for Grades 7, 8, and 9",
+    description: "Secondary preparation learning areas for Grades 7-9",
     learningAreas: [
-      { id: "js-1", name: "Mathematics", periodsPerWeek: 5, type: "Core", description: "Secondary-level mathematics foundations" },
-      { id: "js-2", name: "English", periodsPerWeek: 5, type: "Core", description: "Advanced communication and literary analysis" },
-      { id: "js-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core", description: "Uandishi wa insha na uchambuzi wa vitabu" },
-      { id: "js-4", name: "Integrated Science", periodsPerWeek: 5, type: "Core", description: "Physics, Chemistry, and Biology concepts" },
-      { id: "js-5", name: "Health Education", periodsPerWeek: 2, type: "Core", description: "Community health, hygiene, and wellness" },
-      { id: "js-6", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core", description: "Engineering, woodwork, metalwork, and technical drawing" },
-      { id: "js-7", name: "Social Studies", periodsPerWeek: 3, type: "Core", description: "Global geography, history, and government" },
-      { id: "js-8", name: "Agriculture", periodsPerWeek: 3, type: "Core", description: "Crop production, animal husbandry, and agribusiness" },
-      { id: "js-9", name: "Business Studies", periodsPerWeek: 3, type: "Core", description: "Entrepreneurship, accounting, and economics" },
-      { id: "js-10", name: "Computer Science", periodsPerWeek: 3, type: "Elective", description: "Programming, networking, and hardware basics" },
-      { id: "js-11", name: "Foreign Languages (French/German)", periodsPerWeek: 3, type: "Elective", description: "Introductory foreign language skills" }
+      { id: "js-1", name: "Mathematics", periodsPerWeek: 5, type: "Core", description: "Secondary mathematics" },
+      { id: "js-2", name: "English", periodsPerWeek: 5, type: "Core", description: "Advanced literature" },
+      { id: "js-3", name: "Kiswahili", periodsPerWeek: 4, type: "Core", description: "Uandishi na uchambuzi" },
+      { id: "js-4", name: "Integrated Science", periodsPerWeek: 5, type: "Core", description: "Physics, Chem & Bio" },
+      { id: "js-5", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core", description: "Engineering & drawing" }
     ]
   }
 ];
@@ -105,7 +94,6 @@ const LearningAreas = () => {
   const [activeTab, setActiveTab] = useState<string>("pre-primary");
   const [isOpen, setIsOpen] = useState(false);
 
-  // Form states
   const [selectedClusterId, setSelectedClusterId] = useState<string>("pre-primary");
   const [name, setName] = useState("");
   const [periods, setPeriods] = useState("4");
@@ -130,10 +118,7 @@ const LearningAreas = () => {
 
     const updatedClusters = clusters.map(cluster => {
       if (cluster.id === selectedClusterId) {
-        return {
-          ...cluster,
-          learningAreas: [...cluster.learningAreas, newArea]
-        };
+        return { ...cluster, learningAreas: [...cluster.learningAreas, newArea] };
       }
       return cluster;
     });
@@ -142,51 +127,45 @@ const LearningAreas = () => {
     setIsOpen(false);
     setName("");
     setDescription("");
-    setPeriods("4");
-    setType("Core");
-    showSuccess(`Successfully added "${newArea.name}" to ${clusters.find(c => c.id === selectedClusterId)?.name}!`);
+    showSuccess(`Added "${newArea.name}"!`);
   };
 
   const handleDeleteLearningArea = (clusterId: string, areaId: string, areaName: string) => {
     const updatedClusters = clusters.map(cluster => {
       if (cluster.id === clusterId) {
-        return {
-          ...cluster,
-          learningAreas: cluster.learningAreas.filter(la => la.id !== areaId)
-        };
+        return { ...cluster, learningAreas: cluster.learningAreas.filter(la => la.id !== areaId) };
       }
       return cluster;
     });
-
     setClusters(updatedClusters);
-    showSuccess(`Removed "${areaName}" successfully.`);
+    showSuccess(`Removed "${areaName}".`);
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Area Manager</h1>
-          <p className="text-muted-foreground">Manage CBC subjects, lessons per week, and core/elective classifications.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Learning Area Manager</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Manage CBC subjects and lesson allocations.</p>
         </div>
         <Button 
-          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
+          className="rounded-xl gap-1.5 h-9 px-4 text-xs font-semibold shadow-sm bg-indigo-600 hover:bg-indigo-700"
           onClick={() => {
             setSelectedClusterId(activeTab);
             setIsOpen(true);
           }}
         >
-          <Plus size={18} /> Add Learning Area
+          <Plus size={15} /> Add Learning Area
         </Button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex overflow-x-auto">
+        <TabsList className="bg-white p-1 rounded-xl shadow-sm border h-10 mb-4 flex overflow-x-auto">
           {clusters.map(cluster => (
             <TabsTrigger 
               key={cluster.id} 
               value={cluster.id} 
-              className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold shrink-0 text-xs"
+              className="rounded-lg px-5 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-semibold text-xs shrink-0"
             >
               {cluster.name}
             </TabsTrigger>
@@ -194,54 +173,54 @@ const LearningAreas = () => {
         </TabsList>
 
         {clusters.map(cluster => (
-          <TabsContent key={cluster.id} value={cluster.id} className="space-y-6">
-            <div className="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-6 flex items-center gap-4">
-              <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
-                <GraduationCap size={24} />
+          <TabsContent key={cluster.id} value={cluster.id} className="space-y-4">
+            <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-4 flex items-center gap-3">
+              <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+                <GraduationCap size={20} />
               </div>
               <div>
-                <h3 className="font-bold text-indigo-900">{cluster.name} Cluster</h3>
-                <p className="text-sm text-indigo-700/80">{cluster.description}</p>
+                <h3 className="font-bold text-xs text-indigo-900">{cluster.name} Cluster</h3>
+                <p className="text-[11px] text-indigo-700/80">{cluster.description}</p>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
               {cluster.learningAreas.map(area => (
-                <Card key={area.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group relative">
-                  <CardContent className="p-8 flex flex-col h-full justify-between">
+                <Card key={area.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-2xl bg-white overflow-hidden group">
+                  <CardContent className="p-4 flex flex-col justify-between h-full">
                     <div>
-                      <div className="flex justify-between items-start mb-4">
+                      <div className="flex justify-between items-start mb-2">
                         <Badge className={
                           area.type === 'Core' 
-                            ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50 border-none font-bold" 
-                            : "bg-amber-50 text-amber-700 hover:bg-amber-50 border-none font-bold"
+                            ? "bg-emerald-50 text-emerald-700 font-bold text-[10px] px-2 py-0.5 border-none" 
+                            : "bg-amber-50 text-amber-700 font-bold text-[10px] px-2 py-0.5 border-none"
                         }>
                           {area.type}
                         </Badge>
                         <Button 
                           variant="ghost" 
                           size="icon" 
-                          className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                          className="rounded-lg text-slate-300 hover:text-red-500 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleDeleteLearningArea(cluster.id, area.id, area.name)}
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={13} />
                         </Button>
                       </div>
 
-                      <h4 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">
+                      <h4 className="text-base font-bold text-slate-900 leading-snug mb-1 group-hover:text-indigo-600 transition-colors">
                         {area.name}
                       </h4>
                       
                       {area.description && (
-                        <p className="text-xs text-slate-500 leading-relaxed mb-4">
+                        <p className="text-xs text-slate-500 leading-normal mb-3">
                           {area.description}
                         </p>
                       )}
                     </div>
 
-                    <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Lessons / Week</span>
-                      <Badge variant="outline" className="rounded-lg font-black text-slate-700 border-slate-200 bg-slate-50 px-2.5 py-1">
+                    <div className="pt-2.5 border-t border-slate-50 flex justify-between items-center mt-auto">
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Lessons / Week</span>
+                      <Badge variant="outline" className="rounded-md font-bold text-[11px] text-slate-700 border-slate-200 bg-slate-50 px-2 py-0.5">
                         {area.periodsPerWeek} Periods
                       </Badge>
                     </div>
@@ -253,102 +232,39 @@ const LearningAreas = () => {
         ))}
       </Tabs>
 
-      {/* Add Learning Area Dialog */}
+      {/* Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
-            onClick={() => setIsOpen(false)}
-          >
+        <DialogContent className="sm:max-w-md rounded-2xl p-5 relative">
+          <Button type="button" variant="ghost" size="icon" className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400" onClick={() => setIsOpen(false)}>
             <X size={16} />
           </Button>
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Add Learning Area</DialogTitle>
-            <DialogDescription>
-              Create a new subject or learning area for a specific CBC cluster.
-            </DialogDescription>
+            <DialogTitle className="text-lg font-bold">Add Learning Area</DialogTitle>
           </DialogHeader>
-
-          <form onSubmit={handleAddLearningArea} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>CBC Cluster</Label>
-              <Select value={selectedClusterId} onValueChange={setSelectedClusterId}>
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select Cluster" />
-                </SelectTrigger>
-                <SelectContent>
-                  {clusters.map(c => (
-                    <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+          <form onSubmit={handleAddLearningArea} className="space-y-3 pt-2">
+            <div className="space-y-1">
+              <Label className="text-xs font-semibold">Learning Area Name</Label>
+              <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Creative Arts" required className="rounded-xl h-10 text-xs" />
             </div>
-
-            <div className="space-y-2">
-              <Label>Learning Area Name</Label>
-              <Input 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Creative Arts, Pre-Technical Studies"
-                required
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Periods per Week</Label>
-                <Input 
-                  type="number"
-                  value={periods}
-                  onChange={(e) => setPeriods(e.target.value)}
-                  placeholder="e.g. 4"
-                  required
-                  className="rounded-xl h-12"
-                />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Periods per Week</Label>
+                <Input type="number" value={periods} onChange={(e) => setPeriods(e.target.value)} required className="rounded-xl h-10 text-xs" />
               </div>
-              <div className="space-y-2">
-                <Label>Classification</Label>
+              <div className="space-y-1">
+                <Label className="text-xs font-semibold">Classification</Label>
                 <Select value={type} onValueChange={(val: any) => setType(val)}>
-                  <SelectTrigger className="rounded-xl h-12">
-                    <SelectValue placeholder="Select Type" />
-                  </SelectTrigger>
+                  <SelectTrigger className="rounded-xl h-10 text-xs"><SelectValue placeholder="Type" /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Core">Core Subject</SelectItem>
-                    <SelectItem value="Elective">Elective Subject</SelectItem>
+                    <SelectItem value="Core">Core</SelectItem>
+                    <SelectItem value="Elective">Elective</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label>Description / Scope (Optional)</Label>
-              <Input 
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Basic programming and digital literacy"
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <DialogFooter className="pt-4">
-              <Button 
-                type="button" 
-                variant="ghost" 
-                className="rounded-xl font-bold"
-                onClick={() => setIsOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
-              >
-                Add Learning Area
-              </Button>
+            <DialogFooter className="pt-2">
+              <Button type="button" variant="ghost" className="rounded-xl h-9 text-xs" onClick={() => setIsOpen(false)}>Cancel</Button>
+              <Button type="submit" className="rounded-xl h-9 text-xs bg-indigo-600 hover:bg-indigo-700">Add Area</Button>
             </DialogFooter>
           </form>
         </DialogContent>

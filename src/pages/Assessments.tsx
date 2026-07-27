@@ -1,14 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Info, Save } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
-import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
 
 interface StudentMark {
   id: number;
@@ -46,60 +46,57 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
   {
     id: "pre-primary",
     name: "Pre-Primary",
-    description: "Early childhood development learning areas (PP1 & PP2)",
+    description: "Early childhood development learning areas",
     learningAreas: [
       { id: "pp-1", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core" },
       { id: "pp-2", name: "Language Activities", periodsPerWeek: 5, type: "Core" },
       { id: "pp-3", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "pp-4", name: "Psychomotor and Creative Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "pp-5", name: "Religious Education Activities", periodsPerWeek: 2, type: "Core" }
+      { id: "pp-4", name: "Psychomotor Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "pp-5", name: "Religious Education", periodsPerWeek: 2, type: "Core" }
     ]
   },
   {
     id: "lower-primary",
     name: "Lower Primary",
-    description: "Foundational learning areas for Grades 1, 2, and 3",
+    description: "Foundational learning areas for Grades 1-3",
     learningAreas: [
       { id: "lp-1", name: "Mathematics Activities", periodsPerWeek: 5, type: "Core" },
       { id: "lp-2", name: "English Language Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "lp-3", name: "Kiswahili Language Activities / KSL", periodsPerWeek: 4, type: "Core" },
+      { id: "lp-3", name: "Kiswahili Language Activities", periodsPerWeek: 4, type: "Core" },
       { id: "lp-4", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "lp-5", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core" },
+      { id: "lp-5", name: "Hygiene and Nutrition", periodsPerWeek: 2, type: "Core" },
       { id: "lp-6", name: "Movement and Creative Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "lp-7", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core" }
+      { id: "lp-7", name: "Religious Education", periodsPerWeek: 3, type: "Core" }
     ]
   },
   {
     id: "upper-primary",
     name: "Upper Primary",
-    description: "Intermediate learning areas for Grades 4, 5, and 6",
+    description: "Intermediate learning areas for Grades 4-6",
     learningAreas: [
       { id: "up-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
       { id: "up-2", name: "English", periodsPerWeek: 5, type: "Core" },
-      { id: "up-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
+      { id: "up-3", name: "Kiswahili", periodsPerWeek: 4, type: "Core" },
       { id: "up-4", name: "Science and Technology", periodsPerWeek: 4, type: "Core" },
       { id: "up-5", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core" },
-      { id: "up-6", name: "Creative Arts (Art, Craft & Music)", periodsPerWeek: 3, type: "Core" },
+      { id: "up-6", name: "Creative Arts", periodsPerWeek: 3, type: "Core" },
       { id: "up-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "up-8", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 2, type: "Core" }
+      { id: "up-8", name: "Religious Education", periodsPerWeek: 2, type: "Core" }
     ]
   },
   {
     id: "junior-school",
     name: "Junior School",
-    description: "Secondary preparation learning areas for Grades 7, 8, and 9",
+    description: "Secondary preparation learning areas for Grades 7-9",
     learningAreas: [
       { id: "js-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
       { id: "js-2", name: "English", periodsPerWeek: 5, type: "Core" },
-      { id: "js-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
+      { id: "js-3", name: "Kiswahili", periodsPerWeek: 4, type: "Core" },
       { id: "js-4", name: "Integrated Science", periodsPerWeek: 5, type: "Core" },
       { id: "js-5", name: "Health Education", periodsPerWeek: 2, type: "Core" },
       { id: "js-6", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core" },
       { id: "js-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "js-8", name: "Agriculture", periodsPerWeek: 3, type: "Core" },
-      { id: "js-9", name: "Business Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "js-10", name: "Computer Science", periodsPerWeek: 3, type: "Elective" },
-      { id: "js-11", name: "Foreign Languages (French/German)", periodsPerWeek: 3, type: "Elective" }
+      { id: "js-8", name: "Agriculture", periodsPerWeek: 3, type: "Core" }
     ]
   }
 ];
@@ -127,81 +124,58 @@ const Assessments = () => {
     { id: 5, name: "David Mutua", score: "", performance: "", comment: "" },
   ]);
 
-  // Load dynamic grades and streams
-  const [gradesList, setGradesList] = useState<Grade[]>(() => {
+  const [gradesList] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
     return saved ? JSON.parse(saved) : GRADES_DATA;
   });
 
-  // Load dynamic learning areas
-  const [clusters, setClusters] = useState<ClusterData[]>(() => {
+  const [clusters] = useState<ClusterData[]>(() => {
     const saved = localStorage.getItem('munyaka_learning_areas');
     return saved ? JSON.parse(saved) : FALLBACK_CLUSTERS;
   });
 
-  // Load dynamic exam types
-  const [examTypes, setExamTypes] = useState<ExamType[]>(() => {
+  const [examTypes] = useState<ExamType[]>(() => {
     const saved = localStorage.getItem('munyaka_exam_types');
     return saved ? JSON.parse(saved) : FALLBACK_EXAM_TYPES;
   });
 
-  // Dropdown states
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
-    return gradesList.length > 0 ? gradesList[0].id : "";
-  });
+  const [selectedGradeId, setSelectedGradeId] = useState<string>(() => gradesList[0]?.id || "");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
-  const [examType, setExamType] = useState<string>(() => {
-    return examTypes.length > 0 ? examTypes[0].code : "SUMMATIVE";
-  });
+  const [examType, setExamType] = useState<string>(() => examTypes[0]?.code || "SUMMATIVE");
   const [year, setYear] = useState("2024");
   const [term, setTerm] = useState("term1");
   const [subject, setSubject] = useState<string>("");
 
-  // Get streams for the currently selected grade
   const currentGrade = gradesList.find(g => g.id === selectedGradeId);
   const availableStreams = currentGrade ? currentGrade.streams : [];
 
-  // Get learning areas filtered by selected grade's category and specific grade level
   const getFilteredLearningAreas = (): LearningArea[] => {
     if (!currentGrade) return [];
     const gradeName = currentGrade.name.toLowerCase();
     const category = currentGrade.category;
 
     let matchedClusters: ClusterData[] = [];
-
-    // Precise mapping of grade levels to their exact CBC clusters
     if (gradeName.includes("grade 1") || gradeName.includes("grade 2") || gradeName.includes("grade 3")) {
       matchedClusters = clusters.filter(c => c.id === 'lower-primary');
     } else if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) {
       matchedClusters = clusters.filter(c => c.id === 'upper-primary');
     } else if (gradeName.includes("pp") || category === 'Pre-Primary') {
       matchedClusters = clusters.filter(c => c.id === 'pre-primary');
-    } else if (category === 'Junior School' || gradeName.includes("grade 7") || gradeName.includes("grade 8") || gradeName.includes("grade 9")) {
-      matchedClusters = clusters.filter(c => c.id === 'junior-school');
     } else {
-      // Fallback to category matching
-      if (category === 'Pre-Primary') {
-        matchedClusters = clusters.filter(c => c.id === 'pre-primary');
-      } else if (category === 'Primary') {
-        matchedClusters = clusters.filter(c => c.id === 'lower-primary' || c.id === 'upper-primary');
-      } else if (category === 'Junior School') {
-        matchedClusters = clusters.filter(c => c.id === 'junior-school');
-      }
+      matchedClusters = clusters.filter(c => c.id === 'junior-school');
     }
-
     return matchedClusters.flatMap(c => c.learningAreas);
   };
 
   const filteredLearningAreas = getFilteredLearningAreas();
 
-  // Automatically select the first stream and first learning area when grade changes
   useEffect(() => {
     if (availableStreams.length > 0) {
       setSelectedStreamId(availableStreams[0].id);
     } else {
       setSelectedStreamId("");
     }
-  }, [selectedGradeId, gradesList]);
+  }, [selectedGradeId]);
 
   useEffect(() => {
     const areas = getFilteredLearningAreas();
@@ -210,9 +184,8 @@ const Assessments = () => {
     } else {
       setSubject("");
     }
-  }, [selectedGradeId, clusters]);
+  }, [selectedGradeId]);
 
-  // Helper to automatically determine performance level based on score (0-100)
   const getPerformanceFromScore = (scoreStr: string): string => {
     const score = parseInt(scoreStr);
     if (isNaN(score)) return "";
@@ -229,7 +202,6 @@ const Assessments = () => {
       if (num > 100) cleanScore = "100";
       if (num < 0) cleanScore = "0";
     }
-
     const autoPerformance = getPerformanceFromScore(cleanScore);
 
     setStudentMarks(prev => prev.map(student => {
@@ -244,64 +216,44 @@ const Assessments = () => {
     }));
   };
 
-  const handlePerformanceChange = (id: number, perfVal: string) => {
-    setStudentMarks(prev => prev.map(student => {
-      if (student.id === id) {
-        return { ...student, performance: perfVal };
-      }
-      return student;
-    }));
-  };
-
-  const handleCommentChange = (id: number, commentVal: string) => {
-    setStudentMarks(prev => prev.map(student => {
-      if (student.id === id) {
-        return { ...student, comment: commentVal };
-      }
-      return student;
-    }));
-  };
-
   const handleSubmit = () => {
     showSuccess('Marks submitted and saved successfully!');
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">CBC Marksheet</h1>
-          <p className="text-muted-foreground">Grade students based on specific learning outcomes and scores.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">CBC Marksheet</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Grade students on specific learning outcomes.</p>
         </div>
-        <Button size="lg" className="rounded-2xl px-8 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 gap-2" onClick={handleSubmit}>
-          <Save size={18} /> Submit Marks
+        <Button className="rounded-xl h-9 px-5 text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 shadow-sm gap-1.5" onClick={handleSubmit}>
+          <Save size={15} /> Submit Marks
         </Button>
       </div>
 
-      {/* Performance Levels Info */}
-      <Card className="border-none bg-indigo-50/50 shadow-none rounded-3xl overflow-hidden border border-indigo-100">
-        <CardContent className="p-6 flex items-center gap-4">
-          <Info className="text-indigo-600 shrink-0" size={24} />
-          <div className="flex flex-wrap gap-4 items-center">
-            <span className="text-xs font-black text-indigo-800 uppercase tracking-wider">Performance Levels:</span>
+      <Card className="border-none bg-indigo-50/50 shadow-none rounded-2xl p-4 border border-indigo-100">
+        <div className="flex items-center gap-3">
+          <Info className="text-indigo-600 shrink-0" size={18} />
+          <div className="flex flex-wrap gap-3 items-center">
+            <span className="text-[10px] font-bold text-indigo-800 uppercase tracking-wider">Performance Levels:</span>
             {performanceLevels.map(lvl => (
-              <div key={lvl.code} className="flex items-center gap-2">
-                <Badge className={`${lvl.color} font-bold shadow-none rounded-lg px-2.5 py-0.5`}>{lvl.code}</Badge>
-                <span className="text-xs font-bold text-slate-600">{lvl.label}</span>
+              <div key={lvl.code} className="flex items-center gap-1.5">
+                <Badge className={`${lvl.color} font-bold text-[10px] px-2 py-0.5`}>{lvl.code}</Badge>
+                <span className="text-xs font-medium text-slate-600">{lvl.label}</span>
               </div>
             ))}
           </div>
-        </CardContent>
+        </div>
       </Card>
 
-      {/* Dropdown Selectors Grid */}
-      <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grade Level</label>
+      <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Grade Level</label>
             <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Grade" />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Grade" />
               </SelectTrigger>
               <SelectContent>
                 {gradesList.map(g => (
@@ -311,11 +263,11 @@ const Assessments = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Stream</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Stream</label>
             <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={availableStreams.length === 0}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder={availableStreams.length === 0 ? "No Streams" : "Select Stream"} />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Stream" />
               </SelectTrigger>
               <SelectContent>
                 {availableStreams.map(s => (
@@ -325,11 +277,11 @@ const Assessments = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Exam Type</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Exam Type" />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Exam" />
               </SelectTrigger>
               <SelectContent>
                 {examTypes.map(et => (
@@ -339,11 +291,11 @@ const Assessments = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Year</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Year</label>
             <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Year" />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Year" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="2023">2023</SelectItem>
@@ -353,11 +305,11 @@ const Assessments = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Term</label>
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Term</label>
             <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Term" />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Term" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="term1">Term 1</SelectItem>
@@ -368,12 +320,12 @@ const Assessments = () => {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mt-4 pt-4 border-t border-slate-100">
+          <div className="space-y-1">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
             <Select value={subject} onValueChange={setSubject} disabled={filteredLearningAreas.length === 0}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder={filteredLearningAreas.length === 0 ? "No Learning Areas" : "Select Learning Area"} />
+              <SelectTrigger className="rounded-xl h-9 text-xs bg-slate-50 border-none">
+                <SelectValue placeholder="Learning Area" />
               </SelectTrigger>
               <SelectContent>
                 {filteredLearningAreas.map(area => (
@@ -383,49 +335,47 @@ const Assessments = () => {
             </Select>
           </div>
 
-          <div className="space-y-1.5 md:col-span-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
-            <Input placeholder="Search or enter assessment task (e.g., Fractions, Oral Narrative)..." className="rounded-xl h-11 bg-slate-50 border-none text-sm" />
+          <div className="space-y-1 md:col-span-2">
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
+            <Input placeholder="Task description..." className="rounded-xl h-9 bg-slate-50 border-none text-xs" />
           </div>
         </div>
       </Card>
 
-      {/* Marksheet Table */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+      <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-xs text-left">
               <thead className="bg-slate-50/50 border-b">
                 <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500">Student Name</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-40">Score (0-100)</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-56">Performance Level</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500">Teacher's Comment</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px] text-slate-500">Student Name</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px] text-slate-500 w-32">Score (%)</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px] text-slate-500 w-44">Performance Level</th>
+                  <th className="px-5 py-3 font-bold uppercase tracking-wider text-[10px] text-slate-500">Teacher Comment</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
                 {studentMarks.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900 text-base">{student.name}</td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2">
-                        <Input 
-                          type="text"
-                          value={student.score}
-                          onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                          className="w-20 h-11 rounded-xl text-center font-bold text-slate-800 bg-slate-50 border-slate-100 focus:bg-white"
-                          placeholder="0"
-                        />
-                        <span className="text-xs font-bold text-slate-400">%</span>
-                      </div>
+                  <tr key={student.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-5 py-3.5 font-bold text-slate-900">{student.name}</td>
+                    <td className="px-5 py-3.5">
+                      <Input 
+                        type="text"
+                        value={student.score}
+                        onChange={(e) => handleScoreChange(student.id, e.target.value)}
+                        className="w-16 h-8 rounded-lg text-center font-bold bg-slate-50 border-slate-100 text-xs"
+                        placeholder="0"
+                      />
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <Select 
                         value={student.performance} 
-                        onValueChange={(val) => handlePerformanceChange(student.id, val)}
+                        onValueChange={(val) => {
+                          setStudentMarks(prev => prev.map(s => s.id === student.id ? { ...s, performance: val } : s));
+                        }}
                       >
-                        <SelectTrigger className="w-44 h-11 rounded-xl bg-slate-50 border-slate-100 font-bold">
-                          <SelectValue placeholder="Select Level" />
+                        <SelectTrigger className="w-36 h-8 rounded-lg bg-slate-50 border-slate-100 text-xs font-bold">
+                          <SelectValue placeholder="Level" />
                         </SelectTrigger>
                         <SelectContent>
                           {performanceLevels.map(lvl => (
@@ -436,12 +386,15 @@ const Assessments = () => {
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="px-5 py-3.5">
                       <Input 
                         value={student.comment}
-                        onChange={(e) => handleCommentChange(student.id, e.target.value)}
-                        className="h-11 rounded-xl bg-slate-50 border-slate-100 focus:bg-white text-sm" 
-                        placeholder="e.g. Consistent effort" 
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setStudentMarks(prev => prev.map(s => s.id === student.id ? { ...s, comment: val } : s));
+                        }}
+                        className="h-8 rounded-lg bg-slate-50 border-slate-100 text-xs" 
+                        placeholder="e.g. Good progress" 
                       />
                     </td>
                   </tr>
