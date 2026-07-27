@@ -6,7 +6,6 @@ import { useAuth, UserRole } from '@/context/AuthContext';
 import { useIdleTimer } from '@/hooks/useIdleTimer';
 import { Shield, UserPlus, Trash2, LogOut, Clock, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -47,7 +46,7 @@ const StaffAndRoles = () => {
   return (
     <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col font-sans selection:bg-emerald-500/30">
       
-      {/* Top Navbar */}
+      {/* Permanent Header */}
       <header className="bg-slate-900 border-b border-slate-800 h-16 px-6 flex items-center justify-between shrink-0 shadow-md">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400">
@@ -75,7 +74,7 @@ const StaffAndRoles = () => {
         </div>
       </header>
 
-      {/* Main Content View */}
+      {/* Main Panel View */}
       <main className="flex-1 p-6 md:p-8 max-w-6xl mx-auto w-full space-y-6">
         
         {/* Header Title */}
@@ -103,7 +102,7 @@ const StaffAndRoles = () => {
               <div className="flex-1 w-full">
                 <input
                   type="email"
-                  placeholder="Enter user email..."
+                  placeholder="Enter new email address..."
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required

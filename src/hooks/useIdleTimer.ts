@@ -29,7 +29,7 @@ export const useIdleTimer = () => {
       return;
     }
 
-    // Events listening for physical interaction
+    // Physical interaction listeners
     const events = ['mousemove', 'mousedown', 'click', 'scroll', 'keypress', 'touchstart'];
 
     const handleUserActivity = () => {
