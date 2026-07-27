@@ -1,15 +1,63 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { MessageSquare, Mail, Send, History, UserCheck, AlertCircle } from 'lucide-react';
-import { MESSAGES } from '@/lib/mock-data';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
+import { MESSAGES as initialMessages } from '@/lib/mock-data';
+import { showSuccess } from '@/utils/toast';
 
 const Communication = () => {
+  const [activeTab, setActiveTab] = useState("outreach");
+  const [messagesList, setMessagesList] = useState(initialMessages);
+  
+  // Compose modal state
+  const [isOpen, setIsOpen] = useState(false);
+  const [msgType, setMsgType] = useState<'SMS' | 'Email'>('Email');
+  const [recipient, setRecipient] = useState("All Parents");
+  const [subject, setSubject] = useState("");
+  const [body, setBody] = useState("");
+
+  const handleOpenCompose = (type: 'SMS' | 'Email') => {
+    setMsgType(type);
+    setSubject(type === 'Email' ? "Term 1 Academic & General Newsletter" : "Notice from Munyaka Primary");
+    setIsOpen(true);
+  };
+
+  const handleSend = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subject.trim() || !body.trim()) return;
+
+    const newMsg = {
+      id: Date.now().toString(),
+      recipient,
+      subject,
+      type: msgType,
+      date: "Just now",
+      status: msgType === 'SMS' ? "Delivered" : "Opened"
+    };
+
+    setMessagesList([newMsg, ...messagesList]);
+    setIsOpen(false);
+    setSubject("");
+    setBody("");
+    showSuccess(`${msgType} message broadcasted successfully!`);
+  };
+
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -18,19 +66,26 @@ const Communication = () => {
           <p className="text-muted-foreground">Broadcast messages, send SMS alerts, and track parent outreach.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2">
+          <Button 
+            variant="outline" 
+            className="rounded-2xl border-slate-200 gap-2"
+            onClick={() => setActiveTab("logs")}
+          >
             <History size={18} /> Logs
           </Button>
-          <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 gap-2">
+          <Button 
+            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2"
+            onClick={() => handleOpenCompose('Email')}
+          >
             <Send size={18} /> Compose
           </Button>
         </div>
       </div>
 
-      <Tabs defaultValue="outreach" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
           <TabsTrigger value="outreach" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold">
-            Outreach
+            Outreach Options
           </TabsTrigger>
           <TabsTrigger value="logs" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold">
             Recent Logs
@@ -39,7 +94,10 @@ const Communication = () => {
 
         <TabsContent value="outreach" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-10 text-center hover:shadow-md transition-all cursor-pointer group">
+            <Card 
+              className="border-none shadow-sm rounded-[2rem] bg-white p-10 text-center hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => handleOpenCompose('SMS')}
+            >
               <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <MessageSquare size={36} />
               </div>
@@ -47,7 +105,10 @@ const Communication = () => {
               <p className="text-sm text-slate-500 leading-relaxed">Direct mobile alerts for fee balances, disciplinary notices, or urgent school closures.</p>
             </Card>
 
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-10 text-center hover:shadow-md transition-all cursor-pointer group">
+            <Card 
+              className="border-none shadow-sm rounded-[2rem] bg-white p-10 text-center hover:shadow-md transition-all cursor-pointer group"
+              onClick={() => handleOpenCompose('Email')}
+            >
               <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform">
                 <Mail size={36} />
               </div>
@@ -70,7 +131,7 @@ const Communication = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {MESSAGES.map((msg) => (
+                  {messagesList.map((msg) => (
                     <tr key={msg.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-8 py-6 font-bold text-slate-900">{msg.recipient}</td>
                       <td className="px-8 py-6">
@@ -98,6 +159,100 @@ const Communication = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Compose Message Dialog */}
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-lg rounded-3xl p-8">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-bold">
+              Compose {msgType === 'Email' ? 'Email Newsletter' : 'SMS Alert'}
+            </DialogTitle>
+            <DialogDescription>
+              Send an official communication to parents or specific class streams.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSend} className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Communication Mode</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button 
+                  type="button" 
+                  variant={msgType === 'Email' ? 'default' : 'outline'}
+                  className="rounded-xl h-11 font-bold"
+                  onClick={() => setMsgType('Email')}
+                >
+                  <Mail size={16} className="mr-2" /> Email
+                </Button>
+                <Button 
+                  type="button" 
+                  variant={msgType === 'SMS' ? 'default' : 'outline'}
+                  className="rounded-xl h-11 font-bold"
+                  onClick={() => setMsgType('SMS')}
+                >
+                  <MessageSquare size={16} className="mr-2" /> SMS
+                </Button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Target Audience / Recipients</Label>
+              <Select value={recipient} onValueChange={setRecipient}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select target group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All Parents">All Parents & Guardians</SelectItem>
+                  <SelectItem value="Grade 1 Blue">Grade 1 - Blue</SelectItem>
+                  <SelectItem value="Grade 4 Blue">Grade 4 - Blue</SelectItem>
+                  <SelectItem value="Grade 7 Alpha">Grade 7 - Alpha</SelectItem>
+                  <SelectItem value="Grade 8 Beta">Grade 8 - Beta</SelectItem>
+                  <SelectItem value="All Teaching Staff">All Teaching Staff</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>{msgType === 'Email' ? 'Email Subject' : 'Alert Header'}</Label>
+              <Input 
+                value={subject}
+                onChange={(e) => setSubject(e.target.value)}
+                placeholder="e.g. End of Term Newsletter / Meeting Notice"
+                required
+                className="rounded-xl h-12"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Message Content</Label>
+              <Textarea 
+                value={body}
+                onChange={(e) => setBody(e.target.value)}
+                placeholder={msgType === 'Email' ? "Type your newsletter content here..." : "Type short SMS notice (Max 160 characters)..."}
+                required
+                className="rounded-xl min-h-[120px]"
+              />
+            </div>
+
+            <DialogFooter className="pt-4">
+              <Button 
+                type="button" 
+                variant="ghost" 
+                className="rounded-xl font-bold"
+                onClick={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button 
+                type="submit" 
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8"
+              >
+                <Send size={16} className="mr-2" /> Dispatch Message
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
