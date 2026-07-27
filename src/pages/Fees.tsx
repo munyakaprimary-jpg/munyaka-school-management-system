@@ -17,7 +17,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Wallet, CreditCard, Receipt, TrendingUp, History, Download, ArrowUpRight, Send } from 'lucide-react';
+import { Wallet, CreditCard, Receipt, TrendingUp, History, Download, ArrowUpRight, Send, X } from 'lucide-react';
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 
@@ -285,7 +285,16 @@ const Fees = () => {
 
       {/* Record Payment Dialog */}
       <Dialog open={isRecordOpen} onOpenChange={setIsRecordOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsRecordOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Record Payment</DialogTitle>
             <DialogDescription>
@@ -395,7 +404,16 @@ const Fees = () => {
 
       {/* Invoice Class Dialog */}
       <Dialog open={isInvoiceOpen} onOpenChange={setIsInvoiceOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsInvoiceOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Invoice Class / Stream</DialogTitle>
             <DialogDescription>
@@ -469,7 +487,16 @@ const Fees = () => {
 
       {/* Fee Statements Dialog */}
       <Dialog open={isStatementOpen} onOpenChange={setIsStatementOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsStatementOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Generate Fee Statement</DialogTitle>
             <DialogDescription>

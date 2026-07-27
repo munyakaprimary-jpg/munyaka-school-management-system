@@ -16,7 +16,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { BookOpen, Plus, Trash2, Edit3, Layers, GraduationCap, CheckCircle2 } from 'lucide-react';
+import { BookOpen, Plus, Trash2, Edit3, Layers, GraduationCap, CheckCircle2, X } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
 interface LearningArea {
@@ -255,7 +255,16 @@ const LearningAreas = () => {
 
       {/* Add Learning Area Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Add Learning Area</DialogTitle>
             <DialogDescription>

@@ -17,7 +17,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
+import { MessageSquare, Mail, Send, History, UserCheck, X } from 'lucide-react';
 import { MESSAGES as initialMessages } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 
@@ -162,7 +162,16 @@ const Communication = () => {
 
       {/* Compose Message Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-lg rounded-3xl p-8">
+        <DialogContent className="sm:max-w-lg rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">
               Compose {msgType === 'Email' ? 'Email Newsletter' : 'SMS Alert'}

@@ -22,7 +22,8 @@ import {
   Calendar as CalendarIcon, 
   Clock, 
   Search,
-  CalendarDays
+  CalendarDays,
+  X
 } from 'lucide-react';
 import { EVENTS as initialEvents } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
@@ -186,7 +187,16 @@ const SchoolCalendar = () => {
 
       {/* New Event Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Add New School Event</DialogTitle>
             <DialogDescription>

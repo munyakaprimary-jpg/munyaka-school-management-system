@@ -15,7 +15,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Layers, Plus, Users, User, Trash2 } from 'lucide-react';
+import { Layers, Plus, Users, User, Trash2, X } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
@@ -202,7 +202,16 @@ const GradesStreams = () => {
 
       {/* Add Grade Dialog */}
       <Dialog open={isGradeOpen} onOpenChange={setIsGradeOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsGradeOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Add Grade Level</DialogTitle>
             <DialogDescription>
@@ -261,7 +270,16 @@ const GradesStreams = () => {
 
       {/* Add Stream Dialog */}
       <Dialog open={isStreamOpen} onOpenChange={setIsStreamOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsStreamOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Add Stream</DialogTitle>
             <DialogDescription>

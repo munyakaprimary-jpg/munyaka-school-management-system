@@ -15,7 +15,7 @@ import {
   DialogTitle, 
   DialogFooter 
 } from "@/components/ui/dialog";
-import { Award, Plus, Trash2, ClipboardList, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Award, Plus, Trash2, ClipboardList, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
 interface ExamType {
@@ -157,7 +157,16 @@ const ExamTypes = () => {
 
       {/* Add Exam Type Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader>
             <DialogTitle className="text-2xl font-bold">Add Exam Type</DialogTitle>
             <DialogDescription>
@@ -247,7 +256,16 @@ const ExamTypes = () => {
 
       {/* Delete Confirmation Dialog */}
       <Dialog open={isDeleteOpen} onOpenChange={setIsDeleteOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8">
+        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+            onClick={() => setIsDeleteOpen(false)}
+          >
+            <X size={16} />
+          </Button>
           <DialogHeader className="flex flex-col items-center text-center">
             <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mb-4">
               <AlertTriangle size={32} />
