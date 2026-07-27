@@ -23,6 +23,7 @@ import {
   MessageSquare,
   CalendarDays,
   Layers,
+  BookOpen,
   User
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -36,6 +37,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Students', path: '/students' },
     { icon: Layers, label: 'Grades & Streams', path: '/grades' },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
     { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },
