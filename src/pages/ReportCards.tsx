@@ -1,116 +1,202 @@
-import React from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
+import React, { useState } from 'react';
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Printer, Download, School } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Printer, Download, Filter, RefreshCw, FileText } from "lucide-react";
+import { 
+  GRADE_BANDS, 
+  LEARNING_AREAS, 
+  INITIAL_STUDENTS, 
+  INITIAL_MARKS, 
+  DEFAULT_REMARKS,
+  StudentRemarks,
+  Student,
+  resolveGradeBandId
+} from '@/lib/report-card-store';
+import { LowerPrimaryReportCard } from '@/components/report-cards/LowerPrimaryReportCard';
+import { UpperPrimaryReportCard } from '@/components/report-cards/UpperPrimaryReportCard';
+import { JuniorSchoolReportCard } from '@/components/report-cards/JuniorSchoolReportCard';
+import { showSuccess } from '@/utils/toast';
 
 const ReportCards = () => {
+  const [selectedGradeFilter, setSelectedGradeFilter] = useState<string>("all");
+  const [selectedStreamFilter, setSelectedStreamFilter] = useState<string>("all");
+  const [remarksState, setRemarksState] = useState<Record<string, StudentRemarks>>(DEFAULT_REMARKS);
+
+  // Filter students
+  const filteredStudents = INITIAL_STUDENTS.filter(student => {
+    if (selectedGradeFilter !== "all" && student.current_grade.toString() !== selectedGradeFilter) {
+      return false;
+    }
+    if (selectedStreamFilter !== "all" && student.stream !== selectedStreamFilter) {
+      return false;
+    }
+    return true;
+  });
+
+  const handleSaveTeacherRemark = (studentId: string, remarkText: string) => {
+    setRemarksState(prev => ({
+      ...prev,
+      [studentId]: {
+        teacher_remark: remarkText,
+        hoi_remark: prev[studentId]?.hoi_remark || ""
+      }
+    }));
+  };
+
+  const handleSaveHOIRemark = (studentId: string, remarkText: string) => {
+    setRemarksState(prev => ({
+      ...prev,
+      [studentId]: {
+        teacher_remark: prev[studentId]?.teacher_remark || "",
+        hoi_remark: remarkText
+      }
+    }));
+  };
+
+  const handleTriggerPrint = () => {
+    showSuccess(`Preparing ${filteredStudents.length} report card(s) for printing...`);
+    setTimeout(() => {
+      window.print();
+    }, 500);
+  };
+
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex justify-between items-center">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Top Controls Bar - Hidden during printing */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Report Cards</h1>
-          <p className="text-muted-foreground">Preview and print summative assessment reports.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Dynamic Report Cards</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Auto-switch layouts based on school tier (Lower Primary, Upper Primary & Junior School).
+          </p>
         </div>
-        <div className="flex gap-2 print:hidden">
-          <Button variant="outline" className="rounded-xl">
-            <Download size={18} className="mr-2" /> Export PDF
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" className="rounded-xl h-10 text-xs border-slate-200">
+            <Download size={15} className="mr-1.5" /> Export All PDF
           </Button>
-          <Button onClick={() => window.print()} className="rounded-xl shadow-lg shadow-primary/20">
-            <Printer size={18} className="mr-2" /> Print Reports
+          <Button 
+            onClick={handleTriggerPrint}
+            className="rounded-xl h-10 px-5 text-xs font-bold shadow-md bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          >
+            <Printer size={16} /> Print Report Cards ({filteredStudents.length})
           </Button>
         </div>
       </div>
 
-      {/* Report Card Preview */}
-      <Card className="max-w-4xl mx-auto border-none shadow-xl rounded-none bg-white p-8 md:p-12 print:shadow-none print:p-0">
-        <CardContent className="space-y-10 p-0">
-          {/* Official Header */}
-          <div className="text-center space-y-2 border-b-2 border-primary pb-6 relative">
-            <div className="absolute left-0 top-0 hidden md:block">
-              <School size={60} className="text-primary opacity-20" />
+      {/* Filter Toolbar - Hidden during printing */}
+      <Card className="border-none shadow-sm bg-white p-4 rounded-2xl print:hidden">
+        <div className="flex flex-col sm:flex-row items-center gap-4 justify-between">
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+            <div className="flex items-center gap-2">
+              <Filter size={15} className="text-slate-400" />
+              <span className="text-xs font-bold text-slate-700">Filter Dataset:</span>
             </div>
-            <h2 className="text-2xl font-black text-primary uppercase tracking-tighter">Munyaka Primary and Junior School</h2>
-            <p className="text-sm font-bold">P.O. Box 5239-30100 Eldoret</p>
-            <p className="text-sm font-medium uppercase text-slate-500">Academic Progress Report</p>
-            <div className="flex justify-center gap-8 mt-4">
-              <div className="text-left text-xs">
-                <p><span className="text-muted-foreground">Year:</span> 2024</p>
-                <p><span className="text-muted-foreground">Term:</span> One</p>
-              </div>
-              <div className="text-left text-xs">
-                <p><span className="text-muted-foreground">Grade:</span> 4 Blue</p>
-                <p><span className="text-muted-foreground">Category:</span> Primary</p>
-              </div>
-            </div>
+
+            <Select value={selectedGradeFilter} onValueChange={setSelectedGradeFilter}>
+              <SelectTrigger className="w-36 h-9 text-xs rounded-xl bg-slate-50 border-slate-200">
+                <SelectValue placeholder="All Grades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades (1-9)</SelectItem>
+                <SelectItem value="2">Grade 2 (Lower Primary)</SelectItem>
+                <SelectItem value="4">Grade 4 (Upper Primary)</SelectItem>
+                <SelectItem value="5">Grade 5 (Upper Primary)</SelectItem>
+                <SelectItem value="7">Grade 7 (Junior School)</SelectItem>
+                <SelectItem value="8">Grade 8 (Junior School)</SelectItem>
+              </SelectContent>
+            </Select>
+
+            <Select value={selectedStreamFilter} onValueChange={setSelectedStreamFilter}>
+              <SelectTrigger className="w-32 h-9 text-xs rounded-xl bg-slate-50 border-slate-200">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                <SelectItem value="Blue">Blue Stream</SelectItem>
+                <SelectItem value="Green">Green Stream</SelectItem>
+                <SelectItem value="Alpha">Alpha Stream</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
 
-          {/* Student Info */}
-          <div className="grid grid-cols-2 gap-4 text-sm bg-slate-50 p-4 rounded-xl border border-dashed border-slate-200">
-            <div>
-              <p className="text-muted-foreground text-xs uppercase tracking-widest">Student Name</p>
-              <p className="font-bold text-lg">Brian Kiptoo</p>
-            </div>
-            <div>
-              <p className="text-muted-foreground text-xs uppercase tracking-widest">Assessment Number</p>
-              <p className="font-bold text-lg">KNEC/CBC/2024/481</p>
-            </div>
+          <div className="text-xs text-slate-500 font-semibold flex items-center gap-2">
+            <FileText size={14} className="text-indigo-600" />
+            Showing {filteredStudents.length} Student Record(s)
           </div>
-
-          {/* Performance Table */}
-          <div className="space-y-4">
-            <h3 className="font-bold text-lg border-l-4 border-primary pl-3 uppercase">Performance Summary</h3>
-            <table className="w-full text-sm border">
-              <thead>
-                <tr className="bg-slate-50 border-b">
-                  <th className="px-4 py-2 text-left">Learning Area</th>
-                  <th className="px-4 py-2 text-center">Formative</th>
-                  <th className="px-4 py-2 text-center">Summative</th>
-                  <th className="px-4 py-2 text-center">Level</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {[
-                  { subject: "Mathematics", form: "85%", sum: "88%", lvl: "EE" },
-                  { subject: "English Language", form: "72%", sum: "75%", lvl: "ME" },
-                  { subject: "Kiswahili", form: "68%", sum: "70%", lvl: "ME" },
-                  { subject: "Science & Technology", form: "90%", sum: "92%", lvl: "EE" },
-                  { subject: "CRE", form: "80%", sum: "82%", lvl: "EE" },
-                ].map((row, i) => (
-                  <tr key={i}>
-                    <td className="px-4 py-3 font-medium">{row.subject}</td>
-                    <td className="px-4 py-3 text-center">{row.form}</td>
-                    <td className="px-4 py-3 text-center">{row.sum}</td>
-                    <td className="px-4 py-3 text-center">
-                      <Badge variant="outline" className={row.lvl === 'EE' ? "border-emerald-200 bg-emerald-50 text-emerald-700" : "border-blue-200 bg-blue-50 text-blue-700"}>
-                        {row.lvl}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Footer Comments */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-10">
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-500 uppercase">Class Teacher's Remarks</p>
-              <p className="text-sm italic border-b border-dotted pb-2">A very hardworking and disciplined student. Keep it up!</p>
-              <p className="text-xs font-bold pt-4">Sign: ...........................................</p>
-            </div>
-            <div className="space-y-2">
-              <p className="text-xs font-bold text-slate-500 uppercase">Headteacher's Message</p>
-              <p className="text-sm italic border-b border-dotted pb-2">Outstanding performance across all learning areas.</p>
-              <p className="text-xs font-bold pt-4">Sign: ...........................................</p>
-            </div>
-          </div>
-
-          <div className="text-center pt-8 text-[10px] text-slate-400">
-            This is an official computer-generated report card for Munyaka Primary School.
-          </div>
-        </CardContent>
+        </div>
       </Card>
+
+      {/* Bulk Report Cards Printable Render Container */}
+      <div className="space-y-8">
+        {filteredStudents.length === 0 ? (
+          <div className="text-center py-12 bg-white rounded-2xl border border-slate-100 p-8">
+            <p className="text-slate-500 font-bold text-sm">No students found matching selected filters.</p>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="mt-2 text-indigo-600 text-xs font-bold"
+              onClick={() => { setSelectedGradeFilter("all"); setSelectedStreamFilter("all"); }}
+            >
+              Reset Filters
+            </Button>
+          </div>
+        ) : (
+          filteredStudents.map((student) => {
+            // Auto-assign grade band ID based on current_grade
+            const bandId = resolveGradeBandId(student.current_grade);
+            
+            // Dynamically fetch ONLY learning areas linked to this grade_band_id
+            const studentLearningAreas = LEARNING_AREAS.filter(la => la.grade_band_id === bandId);
+            const studentMarks = INITIAL_MARKS[student.id] || {};
+            const studentRemarks = remarksState[student.id] || { teacher_remark: '', hoi_remark: '' };
+
+            return (
+              <div key={student.id} className="print:m-0 print:p-0">
+                {/* CONDITIONAL LAYOUT SWITCHER BASED ON GRADE TIER */}
+                {student.current_grade >= 1 && student.current_grade <= 3 && (
+                  <LowerPrimaryReportCard
+                    student={student}
+                    learningAreas={studentLearningAreas}
+                    marks={studentMarks}
+                    teacherRemark={studentRemarks.teacher_remark}
+                    hoiRemark={studentRemarks.hoi_remark}
+                    onSaveTeacher={(text) => handleSaveTeacherRemark(student.id, text)}
+                    onSaveHOI={(text) => handleSaveHOIRemark(student.id, text)}
+                  />
+                )}
+
+                {student.current_grade >= 4 && student.current_grade <= 6 && (
+                  <UpperPrimaryReportCard
+                    student={student}
+                    learningAreas={studentLearningAreas}
+                    marks={studentMarks}
+                    teacherRemark={studentRemarks.teacher_remark}
+                    hoiRemark={studentRemarks.hoi_remark}
+                    onSaveTeacher={(text) => handleSaveTeacherRemark(student.id, text)}
+                    onSaveHOI={(text) => handleSaveHOIRemark(student.id, text)}
+                  />
+                )}
+
+                {student.current_grade >= 7 && student.current_grade <= 9 && (
+                  <JuniorSchoolReportCard
+                    student={student}
+                    learningAreas={studentLearningAreas}
+                    marks={studentMarks}
+                    teacherRemark={studentRemarks.teacher_remark}
+                    hoiRemark={studentRemarks.hoi_remark}
+                    onSaveTeacher={(text) => handleSaveTeacherRemark(student.id, text)}
+                    onSaveHOI={(text) => handleSaveHOIRemark(student.id, text)}
+                  />
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
     </div>
   );
 };
