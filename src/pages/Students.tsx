@@ -49,7 +49,6 @@ const Students = () => {
   const [stream, setStream] = useState("Blue");
   const [guardianName, setGuardianName] = useState("");
   const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
 
   const filteredStudents = studentsList.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -85,7 +84,6 @@ const Students = () => {
     setStream("Blue");
     setGuardianName("");
     setPhone("");
-    setAddress("");
 
     showSuccess(`Student ${newStudent.name} registered successfully!`);
   };
@@ -306,16 +304,6 @@ const Students = () => {
                   className="rounded-xl h-10 text-xs bg-slate-50/50"
                 />
               </div>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-xs font-semibold text-slate-700">Physical Address / Location</Label>
-              <Input 
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-                placeholder="e.g. Eldoret West"
-                className="rounded-xl h-10 text-xs bg-slate-50/50"
-              />
             </div>
 
             <DialogFooter className="pt-3 flex flex-row gap-2 justify-end">
