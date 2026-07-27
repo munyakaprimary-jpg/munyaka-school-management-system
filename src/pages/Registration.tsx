@@ -107,6 +107,10 @@ const Registration = () => {
               <Label htmlFor="phone">Phone Number</Label>
               <Input id="phone" placeholder="e.g. 0712345678" required className="rounded-xl h-12" />
             </div>
+            <div className="space-y-2 md:col-span-2">
+              <Label htmlFor="address">Physical Address/Location</Label>
+              <Input id="address" placeholder="e.g. Eldoret West" className="rounded-xl h-12" />
+            </div>
           </CardContent>
           <div className="p-6 pt-0 flex justify-end gap-3">
             <Button 
