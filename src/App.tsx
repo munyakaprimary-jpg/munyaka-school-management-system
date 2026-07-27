@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 
 import { AuthProvider } from "./context/AuthContext";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { EmergencyResetButton } from "./components/EmergencyResetButton";
 
 import Layout from "./components/Layout";
 import Login from "./pages/auth/Login";
@@ -50,6 +51,7 @@ const App = () => (
           <Toaster />
           <Sonner position="top-right" />
           <BrowserRouter>
+            <EmergencyResetButton />
             <Routes>
               {/* Public Auth Portal Route */}
               <Route path="/login" element={<Login />} />

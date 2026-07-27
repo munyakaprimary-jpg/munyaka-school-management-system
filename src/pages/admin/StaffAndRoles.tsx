@@ -59,7 +59,7 @@ const StaffAndRoles = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 pr-32">
           <div className="hidden sm:flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-xl">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-xs font-bold text-slate-300">{user?.email}</span>
@@ -90,29 +90,29 @@ const StaffAndRoles = () => {
           </div>
         </div>
 
-        {/* 1. Explicit Inline Pre-Authorization Creation Form */}
+        {/* 1. Explicit Inline Pre-Authorization Creation Form - PERMANENTLY VISIBLE */}
         <Card className="bg-slate-900 border border-slate-800 rounded-3xl p-6 shadow-xl">
           <CardHeader className="p-0 mb-4">
             <CardTitle className="text-sm font-bold text-white flex items-center gap-2">
-              <UserPlus size={18} className="text-emerald-400" /> Pre-Authorize New User Email
+              <UserPlus size={18} className="text-emerald-400" /> Authorize New User Email
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <form onSubmit={handleAddSubmit} className="flex flex-col md:flex-row gap-3 items-center">
+            <form onSubmit={handleAddSubmit} className="flex flex-col sm:flex-row gap-3 items-center">
               {/* Email Input */}
               <div className="flex-1 w-full">
-                <Input
+                <input
                   type="email"
-                  placeholder="e.g. newuser@domain.com"
+                  placeholder="Enter user email..."
                   value={newEmail}
                   onChange={(e) => setNewEmail(e.target.value)}
                   required
-                  className="bg-slate-950 border-slate-800 rounded-xl h-11 text-xs text-slate-100 placeholder:text-slate-600 focus:border-emerald-500 focus:ring-emerald-500/20"
+                  className="w-full bg-slate-950 border border-slate-800 rounded-xl h-11 px-4 text-xs text-slate-100 placeholder:text-slate-500 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none font-medium"
                 />
               </div>
 
-              {/* Role Selector Dropdown */}
-              <div className="w-full md:w-48">
+              {/* Role Dropdown Selector */}
+              <div className="w-full sm:w-44">
                 <select
                   value={newRole}
                   onChange={(e) => setNewRole(e.target.value as UserRole)}
@@ -124,13 +124,13 @@ const StaffAndRoles = () => {
                 </select>
               </div>
 
-              {/* Submit Button */}
-              <Button 
-                type="submit" 
-                className="w-full md:w-auto h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 px-6 gap-2 shrink-0"
+              {/* Green Action Button */}
+              <button
+                type="submit"
+                className="w-full sm:w-auto h-11 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg shadow-emerald-950/50 px-6 flex items-center justify-center gap-2 shrink-0 transition-all"
               >
                 <UserPlus size={16} /> Authorize Access
-              </Button>
+              </button>
             </form>
           </CardContent>
         </Card>

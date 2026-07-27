@@ -28,6 +28,7 @@ interface AuthContextType {
   verify2FA: (code: string) => { success: boolean; redirectUrl?: string; error?: string };
   signUp: (email: string, pass: string, role: UserRole) => { success: boolean; error?: string };
   logout: (reason?: string) => void;
+  emergencyReset: () => void;
   addAuthorizedUser: (email: string, role: UserRole) => boolean;
   revokeAccess: (id: string) => void;
   cancel2FA: () => void;
@@ -94,6 +95,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       toast.info("Logged out successfully");
     }
+  };
+
+  const emergencyReset = () => {
+    localStorage.clear();
+    setUser(null);
+    setPending2FAUser(null);
+    setLoginStage('credentials');
+    setAuthorizedUsers(INITIAL_AUTHORIZED_USERS);
+    setRegisteredUsers(INITIAL_REGISTERED_USERS);
+    toast.success("Session & Storage completely reset. Redirecting to login.");
   };
 
   const loginWithCredentials = (email: string, pass: string) => {
@@ -289,6 +300,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       verify2FA,
       signUp,
       logout,
+      emergencyReset,
       addAuthorizedUser,
       revokeAccess,
       cancel2FA
