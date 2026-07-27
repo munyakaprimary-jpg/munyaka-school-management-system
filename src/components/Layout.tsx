@@ -2,7 +2,6 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
-  UserPlus, 
   ClipboardCheck, 
   FileSpreadsheet, 
   FileText,
@@ -43,7 +42,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },
     { icon: CalendarDays, label: 'School Calendar', path: '/calendar' },
     { icon: Calendar, label: 'Timetable', path: '/timetable' },
-    { icon: UserPlus, label: 'Registration', path: '/registration' },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
