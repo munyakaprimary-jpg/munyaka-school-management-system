@@ -49,6 +49,7 @@ const Students = () => {
   const [stream, setStream] = useState("Blue");
   const [guardianName, setGuardianName] = useState("");
   const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
 
   const filteredStudents = studentsList.filter(s => 
     s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -84,72 +85,73 @@ const Students = () => {
     setStream("Blue");
     setGuardianName("");
     setPhone("");
+    setAddress("");
 
     showSuccess(`Student ${newStudent.name} registered successfully!`);
   };
 
   return (
-    <div className="space-y-5 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Directory</h1>
-          <p className="text-xs text-muted-foreground mt-0.5">Manage profiles and information for all learners.</p>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Student Directory</h1>
+          <p className="text-muted-foreground">Manage and view detailed profiles of all enrolled learners.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl border-slate-200 h-9 px-3 text-xs">
+          <Button variant="outline" className="rounded-2xl border-slate-200">
             Export CSV
           </Button>
           <Button 
-            className="rounded-xl shadow-sm bg-indigo-600 hover:bg-indigo-700 gap-1.5 h-9 px-4 text-xs font-semibold"
+            className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2 font-bold"
             onClick={() => setIsRegisterOpen(true)}
           >
-            <Plus size={15} /> Add New Student
+            <Plus size={18} /> Add New Student
           </Button>
         </div>
       </div>
 
-      <div className="flex flex-col md:flex-row gap-3">
+      <div className="flex flex-col md:flex-row gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <Input 
             placeholder="Search by name, ID or assessment number..." 
-            className="pl-9 h-10 rounded-xl border-none shadow-sm bg-white text-xs"
+            className="pl-12 h-14 rounded-3xl border-none shadow-sm bg-white"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        <Button variant="outline" className="h-10 px-4 rounded-xl border-none shadow-sm bg-white gap-1.5 text-slate-600 font-semibold text-xs">
-          <Filter size={15} /> Filters
+        <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold">
+          <Filter size={18} /> Filters
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {filteredStudents.map((student) => (
-          <Card key={student.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-2xl bg-white group overflow-hidden">
+          <Card key={student.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
             <CardContent className="p-0">
-              <div className="p-4">
-                <div className="flex justify-between items-start mb-3">
-                  <div className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors shrink-0">
-                    <UserCircle size={32} strokeWidth={1.5} />
+              <div className="p-8">
+                <div className="flex justify-between items-start mb-6">
+                  <div className="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-500 transition-colors">
+                    <UserCircle size={40} strokeWidth={1.5} />
                   </div>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="rounded-full h-7 w-7">
-                        <MoreVertical size={16} className="text-slate-400" />
+                      <Button variant="ghost" size="icon" className="rounded-full">
+                        <MoreVertical size={20} className="text-slate-400" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-xl p-1.5 text-xs">
+                    <DropdownMenuContent align="end" className="rounded-2xl p-2">
                       <Link to={`/students/${student.id}`}>
-                        <DropdownMenuItem className="rounded-lg font-medium">View Profile</DropdownMenuItem>
+                        <DropdownMenuItem className="rounded-xl font-medium">View Profile</DropdownMenuItem>
                       </Link>
                       <DropdownMenuItem 
-                        className="rounded-lg font-medium"
+                        className="rounded-xl font-medium"
                         onClick={() => navigate(`/students/${student.id}`)}
                       >
                         Edit Details
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        className="rounded-lg font-medium text-red-600"
+                        className="rounded-xl font-medium text-red-600"
                         onClick={() => {
                           setStudentsList(studentsList.filter(s => s.id !== student.id));
                           showSuccess(`${student.name} archived successfully`);
@@ -161,36 +163,36 @@ const Students = () => {
                   </DropdownMenu>
                 </div>
 
-                <div className="space-y-0.5 mb-3">
-                  <h3 className="text-base font-bold text-slate-900 leading-snug">{student.name}</h3>
-                  <p className="text-xs font-medium text-slate-500">ID: {student.assessment}</p>
+                <div className="space-y-1 mb-6">
+                  <h3 className="text-xl font-bold text-slate-900 leading-tight">{student.name}</h3>
+                  <p className="text-sm font-medium text-slate-500">ID: {student.assessment}</p>
                 </div>
 
-                <div className="flex flex-wrap gap-1.5 mb-4">
-                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 border-none px-2 py-0.5 rounded-md font-bold text-[10px]">
+                <div className="flex flex-wrap gap-2 mb-8">
+                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50 border-none px-3 py-1 rounded-lg font-bold">
                     Grade {student.grade}
                   </Badge>
-                  <Badge variant="secondary" className="bg-slate-100 text-slate-700 border-none px-2 py-0.5 rounded-md font-bold text-[10px]">
+                  <Badge variant="secondary" className="bg-slate-100 text-slate-700 hover:bg-slate-100 border-none px-3 py-1 rounded-lg font-bold">
                     {student.stream}
                   </Badge>
                 </div>
 
-                <div className="space-y-1.5 pt-3 border-t border-slate-50 text-xs">
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <Phone size={14} className="text-slate-400 shrink-0" />
+                <div className="space-y-3 pt-6 border-t border-slate-50">
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <Phone size={16} className="text-slate-400" />
                     <span>Guardian: {student.phone}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-slate-600">
-                    <GraduationCap size={14} className="text-slate-400 shrink-0" />
+                  <div className="flex items-center gap-3 text-sm text-slate-600">
+                    <GraduationCap size={16} className="text-slate-400" />
                     <span>Joined: Jan 2023</span>
                   </div>
                 </div>
               </div>
               
               <Link to={`/students/${student.id}`}>
-                <div className="bg-slate-50/80 px-4 py-2.5 flex justify-between items-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
-                  <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-indigo-100">View Full Profile</span>
-                  <span className="text-xs font-bold text-emerald-600 group-hover:text-white flex items-center gap-1">
+                <div className="bg-slate-50/80 px-8 py-4 flex justify-between items-center group-hover:bg-indigo-600 group-hover:text-white transition-all cursor-pointer">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-100">View Full Profile</span>
+                  <span className="text-xs font-bold text-emerald-600 group-hover:text-white flex items-center gap-1.5">
                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 group-hover:bg-white" /> Active
                   </span>
                 </div>
@@ -200,61 +202,61 @@ const Students = () => {
         ))}
       </div>
 
-      {/* Student Registration Modal */}
+      {/* Student Registration Centered Modal */}
       <Dialog open={isRegisterOpen} onOpenChange={setIsRegisterOpen}>
-        <DialogContent className="w-[92vw] sm:max-w-lg rounded-2xl p-5 sm:p-6 bg-white border-none shadow-2xl max-h-[85vh] overflow-y-auto">
+        <DialogContent className="w-[92vw] sm:max-w-xl rounded-[2rem] p-6 sm:p-8 bg-white border-none shadow-2xl max-h-[85vh] overflow-y-auto custom-scrollbar">
           <Button
             type="button"
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-700"
+            className="absolute right-5 top-5 rounded-full h-9 w-9 text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors z-10"
             onClick={() => setIsRegisterOpen(false)}
           >
-            <X size={16} />
+            <X size={18} />
           </Button>
 
-          <DialogHeader className="pr-6">
-            <DialogTitle className="text-xl font-bold text-slate-900 flex items-center gap-2">
-              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                <UserPlus size={18} />
+          <DialogHeader className="pr-8">
+            <DialogTitle className="text-2xl font-black text-slate-900 flex items-center gap-2">
+              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-2xl">
+                <UserPlus size={22} />
               </div>
               Register New Student
             </DialogTitle>
-            <DialogDescription className="text-slate-500 text-xs mt-0.5">
-              Fill in details to enroll the student into the registry.
+            <DialogDescription className="text-slate-500 text-sm mt-1">
+              Fill in the learner's details to enroll them into the school registry.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleRegisterStudent} className="space-y-3 pt-2">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Full Name</Label>
+          <form onSubmit={handleRegisterStudent} className="space-y-5 pt-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Full Name</Label>
                 <Input 
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   placeholder="e.g. John Doe"
                   required
-                  className="rounded-xl h-10 text-xs bg-slate-50/50"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Assessment Number (KNEC)</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Assessment Number (KNEC)</Label>
                 <Input 
                   value={assessmentNo}
                   onChange={(e) => setAssessmentNo(e.target.value)}
                   placeholder="e.g. A1002003"
                   required
-                  className="rounded-xl h-10 text-xs uppercase bg-slate-50/50"
+                  className="rounded-xl h-12 uppercase bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Grade Level</Label>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Grade Level</Label>
                 <Select value={gradeLevel} onValueChange={setGradeLevel}>
-                  <SelectTrigger className="rounded-xl h-10 text-xs bg-slate-50/50">
-                    <SelectValue placeholder="Grade" />
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-200">
+                    <SelectValue placeholder="Select Grade" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="PP1">PP1</SelectItem>
@@ -266,11 +268,11 @@ const Students = () => {
                 </Select>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Stream</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Stream</Label>
                 <Select value={stream} onValueChange={setStream}>
-                  <SelectTrigger className="rounded-xl h-10 text-xs bg-slate-50/50">
-                    <SelectValue placeholder="Stream" />
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-200">
+                    <SelectValue placeholder="Select Stream" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Blue">Blue</SelectItem>
@@ -283,41 +285,51 @@ const Students = () => {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Guardian Name</Label>
+            <div className="pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Guardian Name</Label>
                 <Input 
                   value={guardianName}
                   onChange={(e) => setGuardianName(e.target.value)}
                   placeholder="e.g. Samuel Kiptoo"
                   required
-                  className="rounded-xl h-10 text-xs bg-slate-50/50"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
-              <div className="space-y-1">
-                <Label className="text-xs font-semibold text-slate-700">Phone Number</Label>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold text-slate-700">Phone Number</Label>
                 <Input 
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="e.g. +254 712 345 678"
                   required
-                  className="rounded-xl h-10 text-xs bg-slate-50/50"
+                  className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
                 />
               </div>
             </div>
 
-            <DialogFooter className="pt-3 flex flex-row gap-2 justify-end">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-bold text-slate-700">Physical Address / Location</Label>
+              <Input 
+                value={address}
+                onChange={(e) => setAddress(e.target.value)}
+                placeholder="e.g. Eldoret West"
+                className="rounded-xl h-12 bg-slate-50/50 border-slate-200 focus:bg-white"
+              />
+            </div>
+
+            <DialogFooter className="pt-4 flex flex-row gap-3 justify-end">
               <Button 
                 type="button" 
                 variant="ghost" 
-                className="rounded-xl font-semibold h-9 px-4 text-xs text-slate-600"
+                className="rounded-xl font-bold h-12 px-6 text-slate-600 hover:bg-slate-100"
                 onClick={() => setIsRegisterOpen(false)}
               >
                 Cancel
               </Button>
               <Button 
                 type="submit" 
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-semibold h-9 px-6 text-xs text-white"
+                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-12 px-8 shadow-lg shadow-indigo-100 text-white"
               >
                 Register Student
               </Button>
