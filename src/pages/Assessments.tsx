@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Info, Save } from "lucide-react";
+import { Info, Save, Filter } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 
 interface StudentMark {
@@ -33,6 +33,14 @@ const Assessments = () => {
     { id: 5, name: "David Mutua", score: "28", performance: "BE", comment: "Requires remedial support" },
   ]);
 
+  // Dropdown states
+  const [grade, setGrade] = useState("grade4");
+  const [stream, setStream] = useState("blue");
+  const [examType, setExamType] = useState("summative");
+  const [year, setYear] = useState("2024");
+  const [term, setTerm] = useState("term1");
+  const [subject, setSubject] = useState("math");
+
   // Helper to automatically determine performance level based on score (0-100)
   const getPerformanceFromScore = (scoreStr: string): string => {
     const score = parseInt(scoreStr);
@@ -44,7 +52,6 @@ const Assessments = () => {
   };
 
   const handleScoreChange = (id: number, scoreVal: string) => {
-    // Limit score between 0 and 100
     let cleanScore = scoreVal.replace(/[^0-9]/g, '');
     if (cleanScore !== '') {
       const num = parseInt(cleanScore);
@@ -100,6 +107,7 @@ const Assessments = () => {
         </Button>
       </div>
 
+      {/* Performance Levels Info */}
       <Card className="border-none bg-indigo-50/50 shadow-none rounded-3xl overflow-hidden border border-indigo-100">
         <CardContent className="p-6 flex items-center gap-4">
           <Info className="text-indigo-600 shrink-0" size={24} />
@@ -115,32 +123,107 @@ const Assessments = () => {
         </CardContent>
       </Card>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Select defaultValue="math">
-          <SelectTrigger className="rounded-2xl h-12 bg-white border-none shadow-sm">
-            <SelectValue placeholder="Learning Area" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="math">Mathematics</SelectItem>
-            <SelectItem value="english">English Language</SelectItem>
-            <SelectItem value="kiswahili">Kiswahili</SelectItem>
-            <SelectItem value="science">Science & Tech</SelectItem>
-            <SelectItem value="custom">Custom Subject...</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select defaultValue="formative">
-          <SelectTrigger className="rounded-2xl h-12 bg-white border-none shadow-sm">
-            <SelectValue placeholder="Assessment Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="formative">Formative (Task-based)</SelectItem>
-            <SelectItem value="summative">Summative (End of Term)</SelectItem>
-            <SelectItem value="project">Project / Portfolio</SelectItem>
-          </SelectContent>
-        </Select>
-        <Input placeholder="Search Assessment Task..." className="rounded-2xl h-12 bg-white border-none shadow-sm px-4" />
-      </div>
+      {/* Dropdown Selectors Grid */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grade Level</label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="grade1">Grade 1</SelectItem>
+                <SelectItem value="grade4">Grade 4</SelectItem>
+                <SelectItem value="grade7">Grade 7</SelectItem>
+                <SelectItem value="grade8">Grade 8</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Stream</label>
+            <Select value={stream} onValueChange={setStream}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="blue">Blue</SelectItem>
+                <SelectItem value="green">Green</SelectItem>
+                <SelectItem value="alpha">Alpha</SelectItem>
+                <SelectItem value="beta">Beta</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Exam Type</label>
+            <Select value={examType} onValueChange={setExamType}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Exam Type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="formative">Formative Assessment</SelectItem>
+                <SelectItem value="summative">Summative Assessment</SelectItem>
+                <SelectItem value="opener">Opener Exam</SelectItem>
+                <SelectItem value="midterm">Mid-Term Exam</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Year</label>
+            <Select value={year} onValueChange={setYear}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Year" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="2023">2023</SelectItem>
+                <SelectItem value="2024">2024</SelectItem>
+                <SelectItem value="2025">2025</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Term</label>
+            <Select value={term} onValueChange={setTerm}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="term1">Term 1</SelectItem>
+                <SelectItem value="term2">Term 2</SelectItem>
+                <SelectItem value="term3">Term 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Learning Area" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="math">Mathematics</SelectItem>
+                <SelectItem value="english">English Language</SelectItem>
+                <SelectItem value="kiswahili">Kiswahili</SelectItem>
+                <SelectItem value="science">Science & Tech</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5 md:col-span-2">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
+            <Input placeholder="Search or enter assessment task (e.g., Fractions, Oral Narrative)..." className="rounded-xl h-11 bg-slate-50 border-none text-sm" />
+          </div>
+        </div>
+      </Card>
+
+      {/* Marksheet Table */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
