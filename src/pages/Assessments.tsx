@@ -27,11 +27,11 @@ const Assessments = () => {
   ];
 
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([
-    { id: 1, name: "Brian Kiptoo", score: "85", performance: "EE", comment: "Excellent understanding of concepts" },
-    { id: 2, name: "Mary Atieno", score: "72", performance: "ME", comment: "Good progress, very active" },
-    { id: 3, name: "Emmanuel Maina", score: "45", performance: "AE", comment: "Needs more practice in algebra" },
-    { id: 4, name: "Sheila Chepkoech", score: "92", performance: "EE", comment: "Outstanding performance" },
-    { id: 5, name: "David Mutua", score: "28", performance: "BE", comment: "Requires remedial support" },
+    { id: 1, name: "Brian Kiptoo", score: "", performance: "", comment: "" },
+    { id: 2, name: "Mary Atieno", score: "", performance: "", comment: "" },
+    { id: 3, name: "Emmanuel Maina", score: "", performance: "", comment: "" },
+    { id: 4, name: "Sheila Chepkoech", score: "", performance: "", comment: "" },
+    { id: 5, name: "David Mutua", score: "", performance: "", comment: "" },
   ]);
 
   // Load dynamic grades and streams
