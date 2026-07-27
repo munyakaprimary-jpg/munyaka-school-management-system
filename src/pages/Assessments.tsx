@@ -137,18 +137,32 @@ const Assessments = () => {
   const currentGrade = gradesList.find(g => g.id === selectedGradeId);
   const availableStreams = currentGrade ? currentGrade.streams : [];
 
-  // Get learning areas filtered by selected grade's category
+  // Get learning areas filtered by selected grade's category and specific grade level
   const getFilteredLearningAreas = (): LearningArea[] => {
     if (!currentGrade) return [];
-    const category = currentGrade.category; // 'Pre-Primary' | 'Primary' | 'Junior School'
+    const gradeName = currentGrade.name.toLowerCase();
+    const category = currentGrade.category;
 
     let matchedClusters: ClusterData[] = [];
-    if (category === 'Pre-Primary') {
+
+    // Precise mapping of grade levels to their exact CBC clusters
+    if (gradeName.includes("grade 1") || gradeName.includes("grade 2") || gradeName.includes("grade 3")) {
+      matchedClusters = clusters.filter(c => c.id === 'lower-primary');
+    } else if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) {
+      matchedClusters = clusters.filter(c => c.id === 'upper-primary');
+    } else if (gradeName.includes("pp") || category === 'Pre-Primary') {
       matchedClusters = clusters.filter(c => c.id === 'pre-primary');
-    } else if (category === 'Primary') {
-      matchedClusters = clusters.filter(c => c.id === 'lower-primary' || c.id === 'upper-primary');
-    } else if (category === 'Junior School') {
+    } else if (category === 'Junior School' || gradeName.includes("grade 7") || gradeName.includes("grade 8") || gradeName.includes("grade 9")) {
       matchedClusters = clusters.filter(c => c.id === 'junior-school');
+    } else {
+      // Fallback to category matching
+      if (category === 'Pre-Primary') {
+        matchedClusters = clusters.filter(c => c.id === 'pre-primary');
+      } else if (category === 'Primary') {
+        matchedClusters = clusters.filter(c => c.id === 'lower-primary' || c.id === 'upper-primary');
+      } else if (category === 'Junior School') {
+        matchedClusters = clusters.filter(c => c.id === 'junior-school');
+      }
     }
 
     return matchedClusters.flatMap(c => c.learningAreas);
