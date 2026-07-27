@@ -115,7 +115,7 @@ const ExamTypes = () => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors h-9 w-9"
                     onClick={() => handleDeleteExamType(exam.id, exam.name)}
                   >
                     <Trash2 size={16} />
