@@ -33,8 +33,9 @@ const Fees = () => {
 
   // Form states - Record Payment
   const [selectedStudentId, setSelectedStudentId] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("M-Pesa");
   const [paymentAmount, setPaymentAmount] = useState("");
-  const [mpesaRef, setMpesaRef] = useState("");
+  const [paymentRef, setPaymentRef] = useState("");
   const [paymentCategory, setPaymentCategory] = useState("Tuition");
 
   // Form states - Invoice Class
@@ -48,7 +49,15 @@ const Fees = () => {
   // Handle Record Payment
   const handleRecordPayment = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStudentId || !paymentAmount || !mpesaRef) return;
+    if (!selectedStudentId || !paymentAmount) return;
+
+    // If M-Pesa, reference is required. If Cash, we can auto-generate one if empty.
+    let finalRef = paymentRef.trim();
+    if (paymentMethod === "Cash" && !finalRef) {
+      finalRef = `CSH-${Math.floor(100000 + Math.random() * 900000)}`;
+    } else if (!finalRef) {
+      return; // M-Pesa requires a reference
+    }
 
     const amountNum = parseFloat(paymentAmount);
     if (isNaN(amountNum) || amountNum <= 0) return;
@@ -71,8 +80,8 @@ const Fees = () => {
       id: `TX-${Math.floor(100 + Math.random() * 900)}`,
       date: "Just now",
       amount: amountNum,
-      method: "M-Pesa",
-      ref: mpesaRef.toUpperCase(),
+      method: paymentMethod,
+      ref: finalRef.toUpperCase(),
       category: paymentCategory
     };
 
@@ -82,11 +91,12 @@ const Fees = () => {
     
     // Reset form
     setSelectedStudentId("");
+    setPaymentMethod("M-Pesa");
     setPaymentAmount("");
-    setMpesaRef("");
+    setPaymentRef("");
     setPaymentCategory("Tuition");
 
-    showSuccess(`Successfully recorded payment of KES ${amountNum.toLocaleString()} for ${studentFee.student}!`);
+    showSuccess(`Successfully recorded ${paymentMethod} payment of KES ${amountNum.toLocaleString()} for ${studentFee.student}!`);
   };
 
   // Handle Invoice Class
@@ -161,7 +171,7 @@ const Fees = () => {
               className="rounded-2xl h-16 flex-1 gap-2 bg-slate-50 text-slate-900 hover:bg-slate-100 border-none group"
               onClick={() => setIsRecordOpen(true)}
             >
-              <CreditCard size={20} className="text-blue-600 group-hover:scale-110 transition-transform" /> Record M-Pesa
+              <CreditCard size={20} className="text-blue-600 group-hover:scale-110 transition-transform" /> Record Payment
             </Button>
             <Button 
               className="rounded-2xl h-16 flex-1 gap-2 bg-slate-50 text-slate-900 hover:bg-slate-100 border-none group"
@@ -271,11 +281,11 @@ const Fees = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Record M-Pesa Payment Dialog */}
+      {/* Record Payment Dialog */}
       <Dialog open={isRecordOpen} onOpenChange={setIsRecordOpen}>
         <DialogContent className="sm:max-w-md rounded-3xl p-8">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Record M-Pesa Payment</DialogTitle>
+            <DialogTitle className="text-2xl font-bold">Record Payment</DialogTitle>
             <DialogDescription>
               Enter the transaction details to credit a student's fee account.
             </DialogDescription>
@@ -296,6 +306,19 @@ const Fees = () => {
               </Select>
             </div>
 
+            <div className="space-y-2">
+              <Label>Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="M-Pesa">M-Pesa</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Amount (KES)</Label>
@@ -309,12 +332,12 @@ const Fees = () => {
                 />
               </div>
               <div className="space-y-2">
-                <Label>M-Pesa Ref Code</Label>
+                <Label>{paymentMethod === 'M-Pesa' ? 'M-Pesa Ref Code' : 'Receipt No. (Optional)'}</Label>
                 <Input 
-                  value={mpesaRef}
-                  onChange={(e) => setMpesaRef(e.target.value)}
-                  placeholder="e.g. SKL92JD81S"
-                  required
+                  value={paymentRef}
+                  onChange={(e) => setPaymentRef(e.target.value)}
+                  placeholder={paymentMethod === 'M-Pesa' ? 'e.g. SKL92JD81S' : 'e.g. CSH-1029'}
+                  required={paymentMethod === 'M-Pesa'}
                   className="rounded-xl h-12 uppercase"
                 />
               </div>
