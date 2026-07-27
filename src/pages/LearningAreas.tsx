@@ -181,12 +181,12 @@ const LearningAreas = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex overflow-x-auto">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex overflow-x-auto">
           {clusters.map(cluster => (
             <TabsTrigger 
               key={cluster.id} 
               value={cluster.id} 
-              className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold shrink-0"
+              className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold shrink-0 text-xs"
             >
               {cluster.name}
             </TabsTrigger>

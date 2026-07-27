@@ -83,11 +83,11 @@ const Communication = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
-          <TabsTrigger value="outreach" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
+          <TabsTrigger value="outreach" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold text-xs">
             Outreach Options
           </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold">
+          <TabsTrigger value="logs" className="rounded-xl px-8 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all font-bold text-xs">
             Recent Logs
           </TabsTrigger>
         </TabsList>

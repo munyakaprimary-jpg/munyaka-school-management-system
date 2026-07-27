@@ -27,11 +27,11 @@ const Settings = () => {
       </div>
 
       <Tabs defaultValue="general" className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
-          <TabsTrigger value="general" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">General</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Academic Setup</TabsTrigger>
-          <TabsTrigger value="users" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Users & Roles</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold">Security</TabsTrigger>
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
+          <TabsTrigger value="general" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">General</TabsTrigger>
+          <TabsTrigger value="academic" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Academic Setup</TabsTrigger>
+          <TabsTrigger value="users" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Users & Roles</TabsTrigger>
+          <TabsTrigger value="notifications" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">

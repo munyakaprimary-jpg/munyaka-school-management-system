@@ -192,11 +192,11 @@ const Fees = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
-          <TabsTrigger value="balances" className="rounded-xl px-8 h-full data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-bold">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
+          <TabsTrigger value="balances" className="rounded-xl px-8 h-full data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-bold text-xs">
             Fee Balances
           </TabsTrigger>
-          <TabsTrigger value="ledger" className="rounded-xl px-8 h-full data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-bold">
+          <TabsTrigger value="ledger" className="rounded-xl px-8 h-full data-[state=active]:bg-primary data-[state=active]:text-white transition-all font-bold text-xs">
             Transaction Ledger
           </TabsTrigger>
         </TabsList>

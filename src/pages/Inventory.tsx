@@ -23,11 +23,11 @@ const Inventory = () => {
       </div>
 
       <Tabs defaultValue="stock" className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8">
-          <TabsTrigger value="stock" className="rounded-xl px-8 h-full data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all font-bold">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
+          <TabsTrigger value="stock" className="rounded-xl px-8 h-full data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all font-bold text-xs">
             Asset Stock
           </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-8 h-full data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all font-bold">
+          <TabsTrigger value="logs" className="rounded-xl px-8 h-full data-[state=active]:bg-emerald-600 data-[state=active]:text-white transition-all font-bold text-xs">
             Issuance History
           </TabsTrigger>
         </TabsList>
