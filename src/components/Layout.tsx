@@ -24,6 +24,7 @@ import {
   CalendarDays,
   Layers,
   BookOpen,
+  Award,
   User
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
@@ -38,6 +39,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Users, label: 'Students', path: '/students' },
     { icon: Layers, label: 'Grades & Streams', path: '/grades' },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
+    { icon: Award, label: 'Exam Types', path: '/exam-types' },
     { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },

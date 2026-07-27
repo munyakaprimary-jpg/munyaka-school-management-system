@@ -33,6 +33,15 @@ interface ClusterData {
   learningAreas: LearningArea[];
 }
 
+interface ExamType {
+  id: string;
+  name: string;
+  code: string;
+  weight: number;
+  category: string;
+  description?: string;
+}
+
 const FALLBACK_CLUSTERS: ClusterData[] = [
   {
     id: "pre-primary",
@@ -95,6 +104,13 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
   }
 ];
 
+const FALLBACK_EXAM_TYPES: ExamType[] = [
+  { id: "et-1", name: "Formative Assessment", code: "FORMATIVE", weight: 40, category: "Formative" },
+  { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative" },
+  { id: "et-3", name: "Opener Exam", code: "OPENER", weight: 0, category: "Other" },
+  { id: "et-4", name: "Mid-Term Exam", code: "MIDTERM", weight: 0, category: "Other" }
+];
+
 const Assessments = () => {
   const performanceLevels = [
     { code: "EE", label: "Exceeding Expectation", color: "bg-emerald-100 text-emerald-700" },
@@ -123,12 +139,20 @@ const Assessments = () => {
     return saved ? JSON.parse(saved) : FALLBACK_CLUSTERS;
   });
 
+  // Load dynamic exam types
+  const [examTypes, setExamTypes] = useState<ExamType[]>(() => {
+    const saved = localStorage.getItem('munyaka_exam_types');
+    return saved ? JSON.parse(saved) : FALLBACK_EXAM_TYPES;
+  });
+
   // Dropdown states
   const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
     return gradesList.length > 0 ? gradesList[0].id : "";
   });
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
-  const [examType, setExamType] = useState("summative");
+  const [examType, setExamType] = useState<string>(() => {
+    return examTypes.length > 0 ? examTypes[0].code : "SUMMATIVE";
+  });
   const [year, setYear] = useState("2024");
   const [term, setTerm] = useState("term1");
   const [subject, setSubject] = useState<string>("");
@@ -308,11 +332,9 @@ const Assessments = () => {
                 <SelectValue placeholder="Select Exam Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="formative">Formative Assessment</SelectItem>
-                <SelectItem value="summative">Summative Assessment</SelectItem>
-                <SelectItem value="opener">Opener Exam</SelectItem>
-                <SelectItem value="midterm">Mid-Term Exam</SelectItem>
-                <SelectItem value="endterm">End Term Exam</SelectItem>
+                {examTypes.map(et => (
+                  <SelectItem key={et.id} value={et.code}>{et.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>

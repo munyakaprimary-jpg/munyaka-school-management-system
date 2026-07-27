@@ -28,6 +28,7 @@ import SchoolCalendar from "./pages/SchoolCalendar";
 import AdminProfile from "./pages/AdminProfile";
 import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
+import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +48,7 @@ const App = () => (
               <Route path="/students/:id" element={<StudentProfile />} />
               <Route path="/grades" element={<GradesStreams />} />
               <Route path="/learning-areas" element={<LearningAreas />} />
+              <Route path="/exam-types" element={<ExamTypes />} />
               <Route path="/staff" element={<Staff />} />
               <Route path="/staff/:id" element={<StaffProfile />} />
               <Route path="/staff/registration" element={<StaffRegistration />} />
