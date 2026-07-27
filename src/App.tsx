@@ -3,18 +3,8 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-
-import { AuthProvider } from "./context/AuthContext";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { EmergencyResetButton } from "./components/EmergencyResetButton";
-
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Layout from "./components/Layout";
-import Login from "./pages/auth/Login";
-import StaffAndRoles from "./pages/admin/StaffAndRoles";
-import TeacherDashboard from "./pages/dashboard/TeacherDashboard";
-import StaffDashboard from "./pages/dashboard/StaffDashboard";
-
 import Dashboard from "./pages/Dashboard";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
@@ -45,86 +35,41 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
       <TooltipProvider>
-        <AuthProvider>
-          <Toaster />
-          <Sonner position="top-right" />
-          <BrowserRouter>
-            <EmergencyResetButton />
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <Layout>
             <Routes>
-              {/* Public Auth Portal Route */}
-              <Route path="/login" element={<Login />} />
-
-              {/* Master Admin Panel (Strict Guarded to 'admin') */}
-              <Route
-                path="/admin/staff-and-roles"
-                element={
-                  <ProtectedRoute allowedRoles={['admin']}>
-                    <StaffAndRoles />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Dedicated Role Landing Dashboards */}
-              <Route
-                path="/dashboard/teacher"
-                element={
-                  <ProtectedRoute allowedRoles={['teacher', 'admin']}>
-                    <TeacherDashboard />
-                  </ProtectedRoute>
-                }
-              />
-
-              <Route
-                path="/dashboard/staff"
-                element={
-                  <ProtectedRoute allowedRoles={['staff', 'admin']}>
-                    <StaffDashboard />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* General Portal App Wrapped in Layout & Protected */}
-              <Route
-                path="/*"
-                element={
-                  <ProtectedRoute>
-                    <Layout>
-                      <Routes>
-                        <Route path="/" element={<Dashboard />} />
-                        <Route path="/index" element={<Index />} />
-                        <Route path="/students" element={<Students />} />
-                        <Route path="/students/:id" element={<StudentProfile />} />
-                        <Route path="/grades" element={<GradesStreams />} />
-                        <Route path="/learning-areas" element={<LearningAreas />} />
-                        <Route path="/exam-types" element={<ExamTypes />} />
-                        <Route path="/staff" element={<Staff />} />
-                        <Route path="/staff/:id" element={<StaffProfile />} />
-                        <Route path="/staff/registration" element={<StaffRegistration />} />
-                        <Route path="/communication" element={<Communication />} />
-                        <Route path="/notices" element={<Notices />} />
-                        <Route path="/calendar" element={<SchoolCalendar />} />
-                        <Route path="/timetable" element={<Timetable />} />
-                        <Route path="/registration" element={<Registration />} />
-                        <Route path="/attendance" element={<Attendance />} />
-                        <Route path="/assessments" element={<Assessments />} />
-                        <Route path="/portfolio" element={<Portfolio />} />
-                        <Route path="/library" element={<Library />} />
-                        <Route path="/inventory" element={<Inventory />} />
-                        <Route path="/fees" element={<Fees />} />
-                        <Route path="/reports" element={<ReportCards />} />
-                        <Route path="/settings" element={<Settings />} />
-                        <Route path="/profile" element={<AdminProfile />} />
-                        <Route path="*" element={<NotFound />} />
-                      </Routes>
-                    </Layout>
-                  </ProtectedRoute>
-                }
-              />
+              <Route path="/" element={<Dashboard />} />
+              <Route path="/index" element={<Index />} />
+              <Route path="/students" element={<Students />} />
+              <Route path="/students/:id" element={<StudentProfile />} />
+              <Route path="/grades" element={<GradesStreams />} />
+              <Route path="/learning-areas" element={<LearningAreas />} />
+              <Route path="/exam-types" element={<ExamTypes />} />
+              <Route path="/staff" element={<Staff />} />
+              <Route path="/staff/:id" element={<StaffProfile />} />
+              <Route path="/staff/registration" element={<StaffRegistration />} />
+              <Route path="/communication" element={<Communication />} />
+              <Route path="/notices" element={<Notices />} />
+              <Route path="/calendar" element={<SchoolCalendar />} />
+              <Route path="/timetable" element={<Timetable />} />
+              <Route path="/registration" element={<Registration />} />
+              <Route path="/attendance" element={<Attendance />} />
+              <Route path="/assessments" element={<Assessments />} />
+              <Route path="/portfolio" element={<Portfolio />} />
+              <Route path="/library" element={<Library />} />
+              <Route path="/inventory" element={<Inventory />} />
+              <Route path="/fees" element={<Fees />} />
+              <Route path="/reports" element={<ReportCards />} />
+              <Route path="/settings" element={<Settings />} />
+              <Route path="/profile" element={<AdminProfile />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
-          </BrowserRouter>
-        </AuthProvider>
+          </Layout>
+        </BrowserRouter>
       </TooltipProvider>
     </ThemeProvider>
   </QueryClientProvider>

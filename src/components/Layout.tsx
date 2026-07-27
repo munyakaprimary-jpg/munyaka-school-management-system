@@ -1,5 +1,5 @@
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   ClipboardCheck, 
@@ -22,38 +22,14 @@ import {
   CalendarDays,
   Layers,
   BookOpen,
-  Award,
-  LogOut,
-  User
+  Award
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { useAuth, UserRole } from "@/context/AuthContext";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleSignOut = () => {
-    logout();
-    navigate('/login');
-  };
-
-  const getRoleBadge = (role?: UserRole) => {
-    switch (role) {
-      case 'admin':
-        return <Badge className="bg-purple-100 text-purple-700 border-purple-200 font-bold text-[10px]">ADMINISTRATOR</Badge>;
-      case 'teacher':
-        return <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 font-bold text-[10px]">TEACHER</Badge>;
-      case 'staff':
-        return <Badge className="bg-blue-100 text-blue-700 border-blue-200 font-bold text-[10px]">SUPPORT STAFF</Badge>;
-      default:
-        return <Badge variant="outline" className="text-[10px]">USER</Badge>;
-    }
-  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -135,8 +111,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        {/* Top Header Bar */}
-        <header className="h-16 bg-white border-b flex items-center justify-between px-6 shrink-0 shadow-sm z-30">
+        <header className="h-14 bg-white border-b flex items-center justify-between px-6 shrink-0">
           <div className="flex items-center gap-3">
             <Button 
               variant="ghost" 
@@ -156,22 +131,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
           
-          {/* Top Right User Profile & High-Visibility Sign Out */}
           <div className="flex items-center gap-3">
-            {user && (
-              <div className="hidden sm:flex items-center gap-2.5 bg-slate-50 border border-slate-200/80 px-3 py-1.5 rounded-xl">
-                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span className="text-xs font-bold text-slate-700">{user.email}</span>
-                {getRoleBadge(user.role)}
-              </div>
-            )}
-
-            <Button 
-              onClick={handleSignOut}
-              className="rounded-xl h-9 px-4 text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-sm gap-2 transition-all shrink-0"
-            >
-              <LogOut size={15} /> Sign Out
+            <Button variant="ghost" size="icon" className="rounded-lg text-slate-400 hover:bg-slate-50 h-8 w-8">
+              <Bell size={16} />
             </Button>
+            <div className="w-[1px] h-5 bg-slate-100 mx-0.5" />
+            <Link to="/profile">
+              <div className="flex items-center gap-2.5 hover:opacity-80 transition-opacity">
+                <div className="text-right hidden sm:block">
+                  <p className="text-xs font-bold text-slate-900 leading-tight">Administrator</p>
+                  <p className="text-[8px] font-bold text-indigo-500 uppercase tracking-widest">Master Control</p>
+                </div>
+                <div className="w-8 h-8 rounded-lg bg-indigo-50 flex items-center justify-center font-bold text-xs text-indigo-600 shadow-sm">
+                  AD
+                </div>
+              </div>
+            </Link>
           </div>
         </header>
 
