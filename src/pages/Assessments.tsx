@@ -18,6 +18,83 @@ interface StudentMark {
   comment: string;
 }
 
+interface LearningArea {
+  id: string;
+  name: string;
+  periodsPerWeek: number;
+  type: 'Core' | 'Elective';
+  description?: string;
+}
+
+interface ClusterData {
+  id: string;
+  name: string;
+  description: string;
+  learningAreas: LearningArea[];
+}
+
+const FALLBACK_CLUSTERS: ClusterData[] = [
+  {
+    id: "pre-primary",
+    name: "Pre-Primary",
+    description: "Early childhood development learning areas (PP1 & PP2)",
+    learningAreas: [
+      { id: "pp-1", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "pp-2", name: "Language Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "pp-3", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
+      { id: "pp-4", name: "Psychomotor and Creative Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "pp-5", name: "Religious Education Activities", periodsPerWeek: 2, type: "Core" }
+    ]
+  },
+  {
+    id: "lower-primary",
+    name: "Lower Primary",
+    description: "Foundational learning areas for Grades 1, 2, and 3",
+    learningAreas: [
+      { id: "lp-1", name: "Mathematics Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "lp-2", name: "English Language Activities", periodsPerWeek: 5, type: "Core" },
+      { id: "lp-3", name: "Kiswahili Language Activities / KSL", periodsPerWeek: 4, type: "Core" },
+      { id: "lp-4", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
+      { id: "lp-5", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core" },
+      { id: "lp-6", name: "Movement and Creative Activities", periodsPerWeek: 4, type: "Core" },
+      { id: "lp-7", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core" }
+    ]
+  },
+  {
+    id: "upper-primary",
+    name: "Upper Primary",
+    description: "Intermediate learning areas for Grades 4, 5, and 6",
+    learningAreas: [
+      { id: "up-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
+      { id: "up-2", name: "English", periodsPerWeek: 5, type: "Core" },
+      { id: "up-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
+      { id: "up-4", name: "Science and Technology", periodsPerWeek: 4, type: "Core" },
+      { id: "up-5", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core" },
+      { id: "up-6", name: "Creative Arts (Art, Craft & Music)", periodsPerWeek: 3, type: "Core" },
+      { id: "up-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
+      { id: "up-8", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 2, type: "Core" }
+    ]
+  },
+  {
+    id: "junior-school",
+    name: "Junior School",
+    description: "Secondary preparation learning areas for Grades 7, 8, and 9",
+    learningAreas: [
+      { id: "js-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
+      { id: "js-2", name: "English", periodsPerWeek: 5, type: "Core" },
+      { id: "js-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
+      { id: "js-4", name: "Integrated Science", periodsPerWeek: 5, type: "Core" },
+      { id: "js-5", name: "Health Education", periodsPerWeek: 2, type: "Core" },
+      { id: "js-6", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core" },
+      { id: "js-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
+      { id: "js-8", name: "Agriculture", periodsPerWeek: 3, type: "Core" },
+      { id: "js-9", name: "Business Studies", periodsPerWeek: 3, type: "Core" },
+      { id: "js-10", name: "Computer Science", periodsPerWeek: 3, type: "Elective" },
+      { id: "js-11", name: "Foreign Languages (French/German)", periodsPerWeek: 3, type: "Elective" }
+    ]
+  }
+];
+
 const Assessments = () => {
   const performanceLevels = [
     { code: "EE", label: "Exceeding Expectation", color: "bg-emerald-100 text-emerald-700" },
@@ -40,6 +117,12 @@ const Assessments = () => {
     return saved ? JSON.parse(saved) : GRADES_DATA;
   });
 
+  // Load dynamic learning areas
+  const [clusters, setClusters] = useState<ClusterData[]>(() => {
+    const saved = localStorage.getItem('munyaka_learning_areas');
+    return saved ? JSON.parse(saved) : FALLBACK_CLUSTERS;
+  });
+
   // Dropdown states
   const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
     return gradesList.length > 0 ? gradesList[0].id : "";
@@ -48,13 +131,32 @@ const Assessments = () => {
   const [examType, setExamType] = useState("summative");
   const [year, setYear] = useState("2024");
   const [term, setTerm] = useState("term1");
-  const [subject, setSubject] = useState("math");
+  const [subject, setSubject] = useState<string>("");
 
   // Get streams for the currently selected grade
   const currentGrade = gradesList.find(g => g.id === selectedGradeId);
   const availableStreams = currentGrade ? currentGrade.streams : [];
 
-  // Automatically select the first stream when grade changes
+  // Get learning areas filtered by selected grade's category
+  const getFilteredLearningAreas = (): LearningArea[] => {
+    if (!currentGrade) return [];
+    const category = currentGrade.category; // 'Pre-Primary' | 'Primary' | 'Junior School'
+
+    let matchedClusters: ClusterData[] = [];
+    if (category === 'Pre-Primary') {
+      matchedClusters = clusters.filter(c => c.id === 'pre-primary');
+    } else if (category === 'Primary') {
+      matchedClusters = clusters.filter(c => c.id === 'lower-primary' || c.id === 'upper-primary');
+    } else if (category === 'Junior School') {
+      matchedClusters = clusters.filter(c => c.id === 'junior-school');
+    }
+
+    return matchedClusters.flatMap(c => c.learningAreas);
+  };
+
+  const filteredLearningAreas = getFilteredLearningAreas();
+
+  // Automatically select the first stream and first learning area when grade changes
   useEffect(() => {
     if (availableStreams.length > 0) {
       setSelectedStreamId(availableStreams[0].id);
@@ -62,6 +164,15 @@ const Assessments = () => {
       setSelectedStreamId("");
     }
   }, [selectedGradeId, gradesList]);
+
+  useEffect(() => {
+    const areas = getFilteredLearningAreas();
+    if (areas.length > 0) {
+      setSubject(areas[0].id);
+    } else {
+      setSubject("");
+    }
+  }, [selectedGradeId, clusters]);
 
   // Helper to automatically determine performance level based on score (0-100)
   const getPerformanceFromScore = (scoreStr: string): string => {
@@ -224,15 +335,14 @@ const Assessments = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
-            <Select value={subject} onValueChange={setSubject}>
+            <Select value={subject} onValueChange={setSubject} disabled={filteredLearningAreas.length === 0}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Learning Area" />
+                <SelectValue placeholder={filteredLearningAreas.length === 0 ? "No Learning Areas" : "Select Learning Area"} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="math">Mathematics</SelectItem>
-                <SelectItem value="english">English Language</SelectItem>
-                <SelectItem value="kiswahili">Kiswahili</SelectItem>
-                <SelectItem value="science">Science & Tech</SelectItem>
+                {filteredLearningAreas.map(area => (
+                  <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
