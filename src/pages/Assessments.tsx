@@ -145,6 +145,10 @@ const Assessments = () => {
     return saved ? JSON.parse(saved) : FALLBACK_EXAM_TYPES;
   });
 
+  // Generate dynamic years
+  const currentYear = new Date().getFullYear();
+  const academicYears = Array.from({ length: 11 }, (_, i) => (currentYear - 5 + i).toString());
+
   // Dropdown states
   const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
     return gradesList.length > 0 ? gradesList[0].id : "";
@@ -153,7 +157,7 @@ const Assessments = () => {
   const [examType, setExamType] = useState<string>(() => {
     return examTypes.length > 0 ? examTypes[0].code : "SUMMATIVE";
   });
-  const [year, setYear] = useState("2024");
+  const [year, setYear] = useState(currentYear.toString());
   const [term, setTerm] = useState("term1");
   const [subject, setSubject] = useState<string>("");
 
@@ -346,9 +350,9 @@ const Assessments = () => {
                 <SelectValue placeholder="Select Year" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="2023">2023</SelectItem>
-                <SelectItem value="2024">2024</SelectItem>
-                <SelectItem value="2025">2025</SelectItem>
+                {academicYears.map(yr => (
+                  <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
