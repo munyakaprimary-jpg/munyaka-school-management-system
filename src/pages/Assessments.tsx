@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Info, Save } from "lucide-react";
+import { Info, Save, Loader2 } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
@@ -133,11 +133,30 @@ const Assessments = () => {
     return saved ? JSON.parse(saved) : GRADES_DATA;
   });
 
-  // Load dynamic learning areas
+  // Load dynamic learning areas from same source as Learning Areas settings page
   const [clusters, setClusters] = useState<ClusterData[]>(() => {
     const saved = localStorage.getItem('munyaka_learning_areas');
     return saved ? JSON.parse(saved) : FALLBACK_CLUSTERS;
   });
+
+  // Loading state for learning areas fetch
+  const [isLoadingAreas, setIsLoadingAreas] = useState<boolean>(true);
+
+  // Simulate async fetch from database on mount and when grade changes
+  useEffect(() => {
+    setIsLoadingAreas(true);
+    const timer = setTimeout(() => {
+      const saved = localStorage.getItem('munyaka_learning_areas');
+      if (saved) {
+        setClusters(JSON.parse(saved));
+      } else {
+        setClusters(FALLBACK_CLUSTERS);
+      }
+      setIsLoadingAreas(false);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, []);
 
   // Load dynamic exam types
   const [examTypes, setExamTypes] = useState<ExamType[]>(() => {
@@ -375,14 +394,36 @@ const Assessments = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
           <div className="space-y-1.5">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
-            <Select value={subject} onValueChange={setSubject} disabled={filteredLearningAreas.length === 0}>
+            <Select 
+              value={subject} 
+              onValueChange={setSubject} 
+              disabled={filteredLearningAreas.length === 0 || isLoadingAreas}
+            >
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder={filteredLearningAreas.length === 0 ? "No Learning Areas" : "Select Learning Area"} />
+                {isLoadingAreas ? (
+                  <div className="flex items-center gap-2">
+                    <Loader2 className="animate-spin text-slate-400" size={16} />
+                    <span className="text-xs font-normal text-slate-400">Loading learning areas...</span>
+                  </div>
+                ) : (
+                  <SelectValue placeholder={filteredLearningAreas.length === 0 ? "No Learning Areas" : "Select Learning Area"} />
+                )}
               </SelectTrigger>
               <SelectContent>
-                {filteredLearningAreas.map(area => (
-                  <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-                ))}
+                {isLoadingAreas ? (
+                  <div className="flex items-center gap-2 px-2 py-3 text-xs text-slate-400">
+                    <Loader2 className="animate-spin" size={14} />
+                    Loading learning areas...
+                  </div>
+                ) : filteredLearningAreas.length === 0 ? (
+                  <SelectItem value="" disabled className="text-slate-400 italic cursor-default">
+                    No learning areas configured for this grade
+                  </SelectItem>
+                ) : (
+                  filteredLearningAreas.map(area => (
+                    <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
