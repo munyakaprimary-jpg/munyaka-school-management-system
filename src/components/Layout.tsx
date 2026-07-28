@@ -54,6 +54,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Megaphone, label: 'Notice Board', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: UserPlus, label: 'Registration', path: '/registration', roles: ['super_admin', 'head_teacher'] },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
