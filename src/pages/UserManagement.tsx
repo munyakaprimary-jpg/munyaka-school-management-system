@@ -10,6 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { 
+  Users, 
   UserPlus, 
   Shield, 
   Trash2, 
@@ -19,17 +20,18 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
-import { showSuccess } from '@/utils/toast';
-import { format, isValid } from 'date-fns';
+import { showSuccess, showError } from '@/utils/toast';
+import { format } from 'date-fns';
 
 const UserManagement = () => {
-  const { users, createUser, updateUser, deleteUser } = useAuth();
+  const { users, createUser, updateUser, deleteUser, user: currentUser } = useAuth();
   
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteOpen, setIsDeleteOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [userToDelete, setUserToDelete] = useState<User | null>(null);
 
+  // Form state
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<'admin' | 'staff'>('staff');
@@ -77,12 +79,6 @@ const UserManagement = () => {
     showSuccess(`Password reset to: ${tempPass}`);
   };
 
-  const formatDateSafely = (dateString?: string) => {
-    if (!dateString) return "N/A";
-    const date = new Date(dateString);
-    return isValid(date) ? format(date, 'MMM dd, yyyy') : "N/A";
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -116,10 +112,10 @@ const UserManagement = () => {
                     <td className="px-8 py-6">
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-indigo-600">
-                          {u.name?.split(' ').map(n => n[0]).join('') || "?"}
+                          {u.name.split(' ').map(n => n[0]).join('')}
                         </div>
                         <div>
-                          <p className="font-bold text-slate-900">{u.name || "Unknown"}</p>
+                          <p className="font-bold text-slate-900">{u.name}</p>
                           <p className="text-xs text-slate-400 flex items-center gap-1">
                             <Mail size={12} /> {u.email}
                           </p>
@@ -133,13 +129,13 @@ const UserManagement = () => {
                           : "bg-emerald-50 text-emerald-700 border-none font-bold"
                       }>
                         <Shield size={12} className="mr-1.5" />
-                        {(u.role || 'staff').toUpperCase()}
+                        {u.role.toUpperCase()}
                       </Badge>
                     </td>
                     <td className="px-8 py-6 text-slate-500">
                       <div className="flex items-center gap-1.5">
                         <Calendar size={14} />
-                        {formatDateSafely(u.createdAt)}
+                        {format(new Date(u.createdAt), 'MMM dd, yyyy')}
                       </div>
                     </td>
                     <td className="px-8 py-6 text-right">

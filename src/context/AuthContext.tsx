@@ -39,35 +39,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    try {
-      // Load current session
-      const savedUser = localStorage.getItem('munyaka_auth_user');
-      if (savedUser) {
-        setUser(JSON.parse(savedUser));
-      }
-
-      // Load user database from localStorage
-      const savedUsers = localStorage.getItem('munyaka_user_db');
-      if (savedUsers) {
-        const parsedUsers: User[] = JSON.parse(savedUsers);
-        // Data Migration: Ensure all users have a createdAt field to prevent formatting crashes
-        const migratedUsers = parsedUsers.map(u => ({
-          ...u,
-          createdAt: u.createdAt || new Date().toISOString()
-        }));
-        setUsers(migratedUsers);
-      } else {
-        const initialUsers = [DEFAULT_ADMIN];
-        setUsers(initialUsers);
-        localStorage.setItem('munyaka_user_db', JSON.stringify(initialUsers));
-      }
-    } catch (error) {
-      console.error("Auth initialization error:", error);
-      // Fallback to defaults on corruption
-      setUsers([DEFAULT_ADMIN]);
-    } finally {
-      setIsLoading(false);
+    // Load current session
+    const savedUser = localStorage.getItem('munyaka_auth_user');
+    if (savedUser) {
+      setUser(JSON.parse(savedUser));
     }
+
+    // Load user database from localStorage
+    const savedUsers = localStorage.getItem('munyaka_user_db');
+    if (savedUsers) {
+      setUsers(JSON.parse(savedUsers));
+    } else {
+      // Initialize with default admin if no DB exists
+      const initialUsers = [DEFAULT_ADMIN];
+      setUsers(initialUsers);
+      localStorage.setItem('munyaka_user_db', JSON.stringify(initialUsers));
+    }
+    
+    setIsLoading(false);
   }, []);
 
   // Persist user DB changes
@@ -78,6 +67,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [users, isLoading]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
+    // Basic mock check: password is email + '123' or 'admin123'
     const foundUser = users.find(u => u.email === email);
     if (foundUser && (password === 'admin123' || password === email.split('@')[0] + '123')) {
       setUser(foundUser);
@@ -109,6 +99,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.removeItem('munyaka_auth_user');
   };
 
+  // Admin Operations
   const createUser = (userData: Omit<User, 'id' | 'createdAt'>) => {
     const newUser: User = {
       ...userData,
@@ -120,14 +111,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const updateUser = (id: string, updates: Partial<User>) => {
     setUsers(prev => prev.map(u => u.id === id ? { ...u, ...updates } : u));
+    // If updating currently logged in user, refresh session
     if (user?.id === id) {
-      const updated = { ...user, ...updates } as User;
+      const updated = { ...user, ...updates };
       setUser(updated);
       localStorage.setItem('munyaka_auth_user', JSON.stringify(updated));
     }
   };
 
   const deleteUser = (id: string) => {
+    // Prevent deleting the primary admin
     if (id === 'admin-01') return;
     setUsers(prev => prev.filter(u => u.id !== id));
   };
