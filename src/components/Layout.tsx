@@ -1,7 +1,5 @@
-"use client";
-
 import React from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   UserPlus, 
@@ -27,24 +25,14 @@ import {
   Layers,
   BookOpen,
   Award,
-  LogOut
+  User
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useAuth } from '@/context/AuthContext';
-import { showSuccess } from '@/utils/toast';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
-  const { user, logout } = useAuth();
-
-  const handleLogout = () => {
-    logout();
-    showSuccess("You have been signed out successfully.");
-    navigate('/login');
-  };
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
@@ -67,9 +55,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FileText, label: 'Report Cards', path: '/reports' },
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
-
-  // Don't show layout on login page
-  if (location.pathname === '/login') return <>{children}</>;
 
   return (
     <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
@@ -116,7 +101,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             ))}
           </nav>
 
-          <div className="mt-auto pt-6 border-t border-slate-50 space-y-4">
+          <div className="mt-auto pt-6 border-t border-slate-50">
             <div className="bg-slate-50 p-4 rounded-2xl">
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Academic Year</p>
               <div className="flex justify-between items-center">
@@ -124,16 +109,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm" />
               </div>
             </div>
-            
-            {user && (
-              <Button 
-                onClick={handleLogout}
-                variant="ghost" 
-                className="w-full justify-start gap-3 rounded-xl h-11 font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600"
-              >
-                <LogOut size={16} /> Sign Out
-              </Button>
-            )}
           </div>
         </div>
       </aside>
@@ -168,11 +143,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <Link to="/profile">
               <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs font-black text-slate-900">{user?.name || "Guest"}</p>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role === 'admin' ? 'Master Control' : 'Personnel'}</p>
+                  <p className="text-xs font-black text-slate-900">Administrator</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Master Control</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600 shadow-sm">
-                  {user?.name?.split(' ').map(n => n[0]).join('') || "G"}
+                  AD
                 </div>
               </div>
             </Link>
