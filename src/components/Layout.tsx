@@ -27,7 +27,8 @@ import {
   Layers,
   BookOpen,
   Award,
-  LogOut
+  LogOut,
+  UserCog
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -52,6 +53,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Layers, label: 'Grades & Streams', path: '/grades' },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
     { icon: Award, label: 'Exam Types', path: '/exam-types' },
+    // Only show User Management to Admins
+    ...(user?.role === 'admin' ? [{ icon: UserCog, label: 'User Management', path: '/users' }] : []),
     { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },

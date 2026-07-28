@@ -32,6 +32,7 @@ import AdminProfile from "./pages/AdminProfile";
 import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
+import UserManagement from "./pages/UserManagement";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -56,6 +57,7 @@ const App = () => (
                 <Route path="/grades" element={<ProtectedRoute><GradesStreams /></ProtectedRoute>} />
                 <Route path="/learning-areas" element={<ProtectedRoute><LearningAreas /></ProtectedRoute>} />
                 <Route path="/exam-types" element={<ProtectedRoute><ExamTypes /></ProtectedRoute>} />
+                <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
                 <Route path="/staff" element={<ProtectedRoute><Staff /></ProtectedRoute>} />
                 <Route path="/staff/:id" element={<ProtectedRoute><StaffProfile /></ProtectedRoute>} />
                 <Route path="/staff/registration" element={<ProtectedRoute><StaffRegistration /></ProtectedRoute>} />
