@@ -7,18 +7,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { School, ShieldAlert, LogIn, Eye, EyeOff, UserPlus } from 'lucide-react';
+import { School, ShieldAlert, LogIn, Eye, EyeOff } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Login = () => {
-  const [isLogin, setIsLogin] = useState(true);
-  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  const { login, signup } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -29,22 +26,12 @@ const Login = () => {
     setIsSubmitting(true);
     
     try {
-      if (isLogin) {
-        const success = await login(email, password);
-        if (success) {
-          showSuccess("Welcome back! Login successful.");
-          navigate(from, { replace: true });
-        } else {
-          showError("Invalid email or password.");
-        }
+      const success = await login(email, password);
+      if (success) {
+        showSuccess("Welcome back! Login successful.");
+        navigate(from, { replace: true });
       } else {
-        const success = await signup(name, email, password);
-        if (success) {
-          showSuccess("Account created successfully!");
-          navigate(from, { replace: true });
-        } else {
-          showError("Email already in use.");
-        }
+        showError("Invalid email or password. Please try again.");
       }
     } catch (err) {
       showError("An unexpected error occurred.");
@@ -67,27 +54,13 @@ const Login = () => {
         <Card className="border-none shadow-2xl shadow-slate-200/50 rounded-[2.5rem] bg-white overflow-hidden">
           <CardContent className="p-10">
             <form onSubmit={handleSubmit} className="space-y-6">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
-                  <Input 
-                    type="text" 
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Jane Doe"
-                    className="h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 ring-indigo-100 font-bold"
-                    required
-                  />
-                </div>
-              )}
-
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Email Address</Label>
                 <Input 
                   type="email" 
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@munyaka.sc.ke"
+                  placeholder="admin@munyaka.sc.ke"
                   className="h-14 rounded-2xl bg-slate-50 border-none focus:ring-2 ring-indigo-100 font-bold"
                   required
                 />
@@ -96,7 +69,7 @@ const Login = () => {
               <div className="space-y-2">
                 <div className="flex justify-between items-center">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                  {isLogin && <button type="button" className="text-[10px] font-black text-indigo-600 uppercase tracking-wider hover:underline">Forgot?</button>}
+                  <button type="button" className="text-[10px] font-black text-indigo-600 uppercase tracking-wider hover:underline">Forgot?</button>
                 </div>
                 <div className="relative">
                   <Input 
@@ -125,29 +98,25 @@ const Login = () => {
                 {isSubmitting ? (
                   <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
                 ) : (
-                  isLogin ? <><LogIn size={20} /> Sign In</> : <><UserPlus size={20} /> Create Account</>
+                  <><LogIn size={20} /> Sign In</>
                 )}
               </Button>
-
-              <button 
-                type="button"
-                onClick={() => setIsLogin(!isLogin)}
-                className="w-full text-center text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors"
-              >
-                {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-              </button>
             </form>
 
             <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
               <div className="flex gap-3">
                 <ShieldAlert className="text-amber-500 shrink-0" size={18} />
                 <div className="text-[11px] leading-relaxed text-slate-500 font-medium">
-                  <span className="font-bold text-slate-700">Admin Login:</span> admin@munyaka.sc.ke / admin123
+                  <span className="font-bold text-slate-700">Demo Access:</span> Use <code className="bg-white px-1 py-0.5 rounded border">admin@munyaka.sc.ke</code> and <code className="bg-white px-1 py-0.5 rounded border">admin123</code> to access the system.
                 </div>
               </div>
             </div>
           </CardContent>
         </Card>
+
+        <p className="text-center text-xs font-bold text-slate-400 uppercase tracking-widest">
+          &copy; 2024 Munyaka School District
+        </p>
       </div>
     </div>
   );
