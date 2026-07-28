@@ -1,7 +1,7 @@
-import Dashboard from "./Dashboard";
+import TaskFlow from "./TaskFlow";
 
 const Index = () => {
-  return <Dashboard />;
+  return <TaskFlow />;
 };
 
 export default Index;
