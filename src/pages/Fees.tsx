@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2 } from 'lucide-react';
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -40,11 +40,12 @@ const Fees = () => {
     ];
   });
 
-  // Modal States
+  // Modal & Async States
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   
   // Config States
   const [configGrade, setConfigGrade] = useState<string>("all");
@@ -79,6 +80,14 @@ const Fees = () => {
       totalPending: Math.max(0, totalPossible - totalCollected) 
     };
   }, [calculatedFees, currentTermFee]);
+
+  // Download Handler
+  const handleDownloadFeeStatement = async () => {
+    setIsDownloading(true);
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    setIsDownloading(false);
+    showSuccess("Fee statement downloaded successfully!");
+  };
 
   // Modal Handlers
   const handleOpenConfigModal = () => {
@@ -185,10 +194,25 @@ const Fees = () => {
       />
 
       <Tabs defaultValue="balances" className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
-          <TabsTrigger value="balances" className="rounded-xl px-8 h-full font-bold text-xs">Fee Records</TabsTrigger>
-          <TabsTrigger value="ledger" className="rounded-xl px-8 h-full font-bold text-xs">Transaction Ledger</TabsTrigger>
-        </TabsList>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12">
+            <TabsTrigger value="balances" className="rounded-xl px-8 h-full font-bold text-xs">Fee Records</TabsTrigger>
+            <TabsTrigger value="ledger" className="rounded-xl px-8 h-full font-bold text-xs">Transaction Ledger</TabsTrigger>
+          </TabsList>
+
+          <Button 
+            onClick={handleDownloadFeeStatement}
+            disabled={isDownloading}
+            className="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-2xl h-12 px-6 font-bold text-xs shadow-md gap-2 transition-all shrink-0"
+          >
+            {isDownloading ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <FileDown size={16} />
+            )}
+            Download Fee Statement
+          </Button>
+        </div>
 
         <TabsContent value="balances">
           <Card className="rounded-[2rem] bg-white border-none shadow-sm overflow-hidden">
