@@ -27,13 +27,148 @@ import {
   Layers,
   BookOpen,
   Award,
-  LogOut
+  LogOut,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  Moon,
+  X,
+  UserCircle,
+  GraduationCap,
+  Clock,
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Filter,
+  Download,
+  Plus,
+  Printer,
+  RefreshCw,
+  ArrowUpDown,
+  MoreHorizontal,
+  Eye,
+  Mail,
+  Phone,
+  MapPin,
+  Calendar as CalendarIcon,
+  Search as SearchIcon,
+  Activity,
+  BarChart3,
+  PieChart,
+  LineChart,
+  Target,
+  Zap,
+  Award as AwardIcon,
+  BookOpen as BookOpenIcon,
+  ClipboardList,
+  ShoppingCart,
+  DollarSign,
+  Percent,
+  TrendingUp as TrendingUpIcon,
+  Users as UsersIcon,
+  UserCheck,
+  Clock as ClockIcon,
+  Wallet as WalletIcon,
+  Settings as SettingsIcon,
+  LogOut as LogOutIcon,
+  Menu as MenuIcon,
+  X as XIcon,
+  ChevronDown,
+  ChevronUp,
+  Home,
+  ArrowLeft,
+  Bell as BellIcon,
+  Moon as MoonIcon,
+  Sun as SunIcon,
+  Search as SearchIcon2,
+  Filter as FilterIcon,
+  Download as DownloadIcon,
+  Printer as PrinterIcon,
+  RefreshCw as RefreshCwIcon,
+  ArrowUpDown as ArrowUpDownIcon,
+  MoreHorizontal as MoreHorizontalIcon,
+  Eye as EyeIcon,
+  Mail as MailIcon,
+  Phone as PhoneIcon,
+  MapPin as MapPinIcon,
+  Calendar as CalendarIcon2,
+  Activity as ActivityIcon,
+  BarChart3 as BarChart3Icon,
+  PieChart as PieChartIcon,
+  LineChart as LineChartIcon,
+  Target as TargetIcon,
+  Zap as ZapIcon,
+  AwardIcon as AwardIcon2,
+  BookOpenIcon as BookOpenIcon2,
+  ClipboardList as ClipboardListIcon,
+  ShoppingCart as ShoppingCartIcon,
+  DollarSign as DollarSignIcon,
+  Percent as PercentIcon,
+  TrendingUpIcon as TrendingUpIcon2,
+  UsersIcon as UsersIcon2,
+  UserCheck as UserCheckIcon,
+  ClockIcon as ClockIcon2,
+  WalletIcon as WalletIcon2,
+  SettingsIcon as SettingsIcon2,
+  LogOutIcon as LogOutIcon2,
+  MenuIcon as MenuIcon2,
+  XIcon as XIcon2,
+  ChevronDown as ChevronDownIcon,
+  ChevronUp as ChevronUpIcon,
+  Home as HomeIcon,
+  ArrowLeft as ArrowLeftIcon,
+  BellIcon as BellIcon2,
+  MoonIcon as MoonIcon2,
+  SunIcon as SunIcon2,
+  SearchIcon2 as SearchIcon3,
+  FilterIcon as FilterIcon2,
+  DownloadIcon as DownloadIcon2,
+  PrinterIcon as PrinterIcon2,
+  RefreshCwIcon as RefreshCwIcon2,
+  ArrowUpDownIcon as ArrowUpDownIcon2,
+  MoreHorizontalIcon as MoreHorizontalIcon2,
+  EyeIcon as EyeIcon2,
+  MailIcon as MailIcon2,
+  PhoneIcon as PhoneIcon2,
+  MapPinIcon as MapPinIcon2,
+  CalendarIcon2 as CalendarIcon3,
+  ActivityIcon as ActivityIcon2,
+  BarChart3Icon as BarChart3Icon2,
+  PieChartIcon as PieChartIcon2,
+  LineChartIcon as LineChartIcon2,
+  TargetIcon as TargetIcon2,
+  ZapIcon as ZapIcon2,
+  AwardIcon2 as AwardIcon3,
+  BookOpenIcon2 as BookOpenIcon3,
+  ClipboardListIcon as ClipboardListIcon2,
+  ShoppingCartIcon as ShoppingCartIcon2,
+  DollarSignIcon as DollarSignIcon2,
+  PercentIcon as PercentIcon2,
+  TrendingUpIcon2 as TrendingUpIcon3,
+  UsersIcon2 as UsersIcon3,
+  UserCheckIcon as UserCheckIcon2,
+  ClockIcon2 as ClockIcon3,
+  WalletIcon2 as WalletIcon3,
+  SettingsIcon2 as SettingsIcon3,
+  LogOutIcon2 as LogOutIcon3,
+  MenuIcon2 as MenuIcon3,
+  XIcon2 as XIcon3,
+  ChevronDownIcon as ChevronDownIcon2,
+  ChevronUpIcon as ChevronUpIcon2,
+  HomeIcon as HomeIcon2,
+  ArrowLeftIcon as ArrowLeftIcon2,
+  BellIcon2 as BellIcon3,
+  MoonIcon2 as MoonIcon3,
+  SunIcon2 as SunIcon3,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -44,31 +179,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Students', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['super_admin', 'head_teacher'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
-    { icon: Contact2, label: 'Staff & Personnel', path: '/staff', roles: ['super_admin', 'head_teacher'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Megaphone, label: 'Notice Board', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: UserPlus, label: 'Registration', path: '/registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
+    { icon: LayoutDashboard, label: 'Overview', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: UsersIcon, label: 'Student Directory', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Contact2, label: 'Staff & Teachers', path: '/staff', roles: ['super_admin', 'head_teacher'] },
+    { icon: ClipboardCheck, label: 'Attendance & Registers', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: Layers, label: 'Classes & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
+    { icon: FileSpreadsheet, label: 'Examinations & Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: WalletIcon, label: 'Finance & Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: SettingsIcon, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
   ];
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
   return (
-    <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
+    <div className={cn("flex h-screen overflow-hidden", isDarkMode ? "dark" : "")}>
       {/* Mobile Menu Backdrop */}
       {isOpen && (
         <div 
@@ -79,70 +203,98 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-all duration-300 ease-in-out flex flex-col",
+        isCollapsed ? "w-16" : "w-64",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
+        {/* Sidebar Header */}
+        <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center">
+                <School className="text-white" size={20} />
+              </div>
+              <div>
+                <h1 className="font-black text-sm tracking-tight text-slate-900 dark:text-white">MUNYAKA</h1>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Primary & Junior</p>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center mx-auto">
               <School className="text-white" size={20} />
             </div>
-            <div>
-              <h1 className="font-black text-base tracking-tight leading-none text-slate-900">MUNYAKA</h1>
-              <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Primary & Junior</p>
-            </div>
-          </div>
-
-          <nav className="space-y-1 h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
-            {filteredMenu.map((item) => (
-              <Link 
-                key={item.path} 
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
-                  location.pathname === item.path 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
-                )}
-              >
-                <item.icon size={16} className={cn(location.pathname === item.path ? "text-white" : "text-slate-400")} />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          )}
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        <div className="mt-auto p-6 space-y-4 border-t border-slate-50 bg-slate-50/30">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600">
-                {user?.avatar || 'U'}
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
+          {filteredMenu.map((item) => (
+            <Link 
+              key={item.path} 
+              to={item.path}
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+                location.pathname === item.path 
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:bg-indigo-700" 
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400"
+              )}
+            >
+              <item.icon size={18} className={cn(
+                "shrink-0",
+                location.pathname === item.path ? "text-white" : "text-slate-400 group-hover:text-indigo-600"
+              )} />
+              {!isCollapsed && <span>{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Profile Card */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-4">
+            <div className="flex items-center gap-3 mb-3">
+              <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center font-black text-sm text-indigo-600 dark:text-indigo-400">
+                {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
               </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-black text-slate-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Guest'}</p>
-              </div>
+              {!isCollapsed && (
+                <div className="overflow-hidden">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{user?.name || 'Admin'}</p>
+                  <p className="text-[10px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                </div>
+              )}
             </div>
             <Button 
               variant="ghost" 
               onClick={handleLogout}
-              className="w-full justify-start gap-3 rounded-xl h-10 text-xs font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600 p-3"
+              className={cn(
+                "w-full justify-start gap-2 rounded-xl h-9 text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20",
+                isCollapsed && "px-2"
+              )}
             >
-              <LogOut size={14} /> Sign Out
+              <LogOut size={14} />
+              {!isCollapsed && <span>Sign Out</span>}
             </Button>
-          </div>
-          
-          <div className="px-1 flex justify-between items-center">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Term 1 • 2024</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b flex items-center justify-between px-8 shrink-0">
+        {/* Top Header */}
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-8 shrink-0">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -152,36 +304,56 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             >
               <Menu size={20} />
             </Button>
-            <div className="relative hidden md:block">
+            <div className="relative hidden md:block flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search anything..." 
-                className="bg-slate-50 border-none rounded-xl pl-9 pr-4 py-2 text-xs w-72 focus:ring-2 ring-indigo-100 outline-none transition-all"
+                placeholder="Search students by name, ADM number, or staff ID..." 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all"
               />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md">
+                Ctrl K
+              </span>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="rounded-xl text-slate-400 hover:bg-slate-50 h-9 w-9">
-              <Bell size={18} />
-            </Button>
-            <div className="w-[1px] h-6 bg-slate-100 mx-1" />
-            <Link to="/profile">
-              <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-black text-slate-900">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role?.replace('_', ' ') || 'Master Control'}</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600 shadow-sm">
-                  {user?.avatar || 'AD'}
-                </div>
+          <div className="flex items-center gap-3">
+            {/* Term Selector */}
+            <select className="hidden sm:block px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 ring-indigo-100">
+              <option>Term 1 • 2024</option>
+              <option>Term 2 • 2024</option>
+              <option>Term 3 • 2024</option>
+            </select>
+
+            {/* Dark Mode Toggle */}
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-400" />}
+            </button>
+
+            {/* Notifications */}
+            <button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Bell size={18} className="text-slate-400" />
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
+            </button>
+
+            {/* Profile */}
+            <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-700">
+              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center font-black text-xs text-indigo-600 dark:text-indigo-400">
+                {user?.avatar || 'AD'}
               </div>
-            </Link>
+              <div className="hidden md:block">
+                <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name || 'Admin'}</p>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role?.replace('_', ' ') || 'Master Control'}</p>
+              </div>
+            </div>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 bg-[#fbfcfd]">
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 bg-slate-50 dark:bg-slate-950">
           {children}
         </div>
       </main>
