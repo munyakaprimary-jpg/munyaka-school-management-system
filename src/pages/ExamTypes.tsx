@@ -157,84 +157,91 @@ const ExamTypes = () => {
 
       {/* Add Exam Type Dialog */}
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-md rounded-3xl p-8 relative">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-4 top-4 rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
-            onClick={() => setIsOpen(false)}
-          >
-            <X size={16} />
-          </Button>
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-bold">Add Exam Type</DialogTitle>
-            <DialogDescription>
-              Create a new assessment type for grading and report cards.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleAddExamType} className="space-y-4 py-2">
-            <div className="space-y-2">
-              <Label>Exam Type Name</Label>
-              <Input 
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. End Term Exam, Continuous Assessment"
-                required
-                className="rounded-xl h-12"
-              />
+        <DialogContent className="w-full max-w-lg max-h-[90vh] flex flex-col p-0 bg-white border-none shadow-2xl">
+          <form onSubmit={handleAddExamType} className="flex flex-col h-full overflow-hidden">
+            {/* Fixed Header */}
+            <div className="p-6 border-b shrink-0 flex items-center justify-between">
+              <DialogHeader>
+                <DialogTitle className="text-2xl font-bold">Add Exam Type</DialogTitle>
+                <DialogDescription>
+                  Create a new assessment type for grading.
+                </DialogDescription>
+              </DialogHeader>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="rounded-full h-8 w-8 text-slate-400 hover:text-slate-600"
+                onClick={() => setIsOpen(false)}
+              >
+                <X size={16} />
+              </Button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            {/* Scrollable Body */}
+            <div className="flex-1 overflow-y-auto p-6 space-y-4">
               <div className="space-y-2">
-                <Label>Unique Code</Label>
+                <Label>Exam Type Name</Label>
                 <Input 
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="e.g. ENDTERM"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. End Term Exam, Continuous Assessment"
                   required
-                  className="rounded-xl h-12 uppercase"
+                  className="rounded-xl h-12"
                 />
               </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Unique Code</Label>
+                  <Input 
+                    value={code}
+                    onChange={(e) => setCode(e.target.value)}
+                    placeholder="e.g. ENDTERM"
+                    required
+                    className="rounded-xl h-12 uppercase"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select value={category} onValueChange={(val: any) => setCategory(val)}>
+                    <SelectTrigger className="rounded-xl h-12">
+                      <SelectValue placeholder="Select Category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Formative">Formative</SelectItem>
+                      <SelectItem value="Summative">Summative</SelectItem>
+                      <SelectItem value="Other">Other / Diagnostic</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Category</Label>
-                <Select value={category} onValueChange={(val: any) => setCategory(val)}>
-                  <SelectTrigger className="rounded-xl h-12">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Formative">Formative</SelectItem>
-                    <SelectItem value="Summative">Summative</SelectItem>
-                    <SelectItem value="Other">Other / Diagnostic</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Label>Report Card Weight (%)</Label>
+                <Input 
+                  type="number"
+                  value={weight}
+                  onChange={(e) => setWeight(e.target.value)}
+                  placeholder="e.g. 60"
+                  required
+                  className="rounded-xl h-12"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Description (Optional)</Label>
+                <Input 
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. Final comprehensive exam at the end of term"
+                  className="rounded-xl h-12"
+                />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Report Card Weight (%)</Label>
-              <Input 
-                type="number"
-                value={weight}
-                onChange={(e) => setWeight(e.target.value)}
-                placeholder="e.g. 60"
-                required
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label>Description (Optional)</Label>
-              <Input 
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="e.g. Final comprehensive exam at the end of term"
-                className="rounded-xl h-12"
-              />
-            </div>
-
-            <DialogFooter className="pt-4">
+            {/* Sticky Footer */}
+            <div className="p-4 border-t bg-slate-50 flex justify-end gap-3 shrink-0">
               <Button 
                 type="button" 
                 variant="ghost" 
@@ -249,7 +256,7 @@ const ExamTypes = () => {
               >
                 Add Exam Type
               </Button>
-            </DialogFooter>
+            </div>
           </form>
         </DialogContent>
       </Dialog>
