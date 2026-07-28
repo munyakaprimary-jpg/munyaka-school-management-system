@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from '@/components/ui/Modal';
+import BackButton from '@/components/ui/BackButton';
 import { useAuth } from '@/context/AuthContext';
 import { Shield, Key, LogOut, Camera, Save, Loader2, Eye, EyeOff } from 'lucide-react';
 
@@ -71,6 +72,14 @@ const AdminProfile = () => {
 
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex items-center gap-3">
+        <BackButton fallback="/" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Admin Account</h1>
+          <p className="text-muted-foreground">Manage system administrator credentials and security settings.</p>
+        </div>
+      </div>
+
       <div className="flex flex-col md:flex-row gap-8 items-start">
         {/* Sidebar Info Card */}
         <Card className="w-full md:w-80 border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden p-8 text-center shrink-0">

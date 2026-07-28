@@ -1,21 +1,25 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
-import { Book, Search, Plus, Bookmark, BookOpen, Layers } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
+import { Book, Search, Plus, BookOpen } from 'lucide-react';
 import { BOOKS } from '@/lib/mock-data';
 
 const Library = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Library & E-Resources</h1>
-          <p className="text-muted-foreground">Manage textbooks, supplementary materials, and digital learning assets.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Library & E-Resources</h1>
+            <p className="text-muted-foreground">Manage textbooks, supplementary materials, and digital learning assets.</p>
+          </div>
         </div>
         <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
           <Plus size={18} /> Register New Book

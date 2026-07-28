@@ -7,23 +7,22 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import BackButton from '@/components/ui/BackButton';
 import { 
   Settings as SettingsIcon, 
-  Shield, 
-  Bell, 
-  School, 
-  Users, 
-  BookOpen,
-  Plus,
+  Plus, 
   Trash2
 } from 'lucide-react';
 
 const Settings = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight text-slate-900">System Configuration</h1>
-        <p className="text-muted-foreground">Tailor the system to Munyaka Primary's specific needs and academic structure.</p>
+      <div className="flex items-center gap-3">
+        <BackButton fallback="/" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">System Configuration</h1>
+          <p className="text-muted-foreground">Tailor the system to Munyaka Primary's specific needs and academic structure.</p>
+        </div>
       </div>
 
       <Tabs defaultValue="general" className="w-full">

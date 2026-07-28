@@ -1,21 +1,25 @@
 "use client";
 
 import React from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Package, Box, RefreshCw, MoreVertical, History, UserCheck, Clock } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
+import { Search, Package, Box, RefreshCw, MoreVertical, UserCheck, Clock } from 'lucide-react';
 import { INVENTORY, ASSET_LOGS } from '@/lib/mock-data';
 
 const Inventory = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Tools & Resources</h1>
-          <p className="text-muted-foreground">Manage school assets, CBC learning materials, and kits.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Tools & Resources</h1>
+            <p className="text-muted-foreground">Manage school assets, CBC learning materials, and kits.</p>
+          </div>
         </div>
         <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-emerald-100 bg-emerald-600 hover:bg-emerald-700">
           <Package size={18} /> Add New Asset

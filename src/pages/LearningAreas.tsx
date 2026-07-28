@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
+import BackButton from '@/components/ui/BackButton';
 import { Plus, Trash2, GraduationCap } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 
@@ -64,9 +65,12 @@ const LearningAreas = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Area Manager</h1>
-          <p className="text-muted-foreground">Manage CBC subjects and lesson classifications.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learning Area Manager</h1>
+            <p className="text-muted-foreground">Manage CBC subjects and lesson classifications.</p>
+          </div>
         </div>
         <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => { setSelectedClusterId(activeTab); setIsOpen(true); }}>
           <Plus size={18} /> Add Learning Area

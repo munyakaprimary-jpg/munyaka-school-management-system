@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
-import { ArrowLeft, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import BackButton from '@/components/ui/BackButton';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -24,15 +25,8 @@ const Registration = () => {
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-full" 
-            onClick={() => navigate('/students')}
-          >
-            <ArrowLeft size={20} />
-          </Button>
+        <div className="flex items-center gap-3">
+          <BackButton to="/students" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight">Student Registration</h1>
             <p className="text-muted-foreground">Register new students for the current academic year.</p>

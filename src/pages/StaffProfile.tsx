@@ -1,36 +1,28 @@
 "use client";
 
 import React from 'react';
-import { useParams, Link } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import BackButton from '@/components/ui/BackButton';
 import { 
-  UserCircle, 
-  ArrowLeft, 
   Mail, 
   Phone, 
   Calendar,
   Briefcase,
   GraduationCap,
   FileText,
-  ShieldCheck,
-  MoreHorizontal
+  ShieldCheck
 } from 'lucide-react';
 import { STAFF } from '@/lib/mock-data';
 
 const StaffProfile = () => {
-  // In a real app, we'd find by ID. Using first index for demo.
   const member = STAFF[0]; 
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex items-center gap-4">
-        <Link to="/staff">
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ArrowLeft size={20} />
-          </Button>
-        </Link>
+      <div className="flex items-center gap-3">
+        <BackButton to="/staff" />
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">{member.name}</h1>
           <p className="text-muted-foreground">Personnel record and academic assignments.</p>

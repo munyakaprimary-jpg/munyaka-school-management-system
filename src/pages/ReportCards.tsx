@@ -3,14 +3,18 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Printer, Download, School } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import BackButton from '@/components/ui/BackButton';
 
 const ReportCards = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Report Cards</h1>
-          <p className="text-muted-foreground">Preview and print summative assessment reports.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Report Cards</h1>
+            <p className="text-muted-foreground">Preview and print summative assessment reports.</p>
+          </div>
         </div>
         <div className="flex gap-2 print:hidden">
           <Button variant="outline" className="rounded-xl">

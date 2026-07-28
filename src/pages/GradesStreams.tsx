@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
+import BackButton from '@/components/ui/BackButton';
 import { Layers, Plus, Users, User, Trash2 } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
@@ -62,9 +63,12 @@ const GradesStreams = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Grades & Streams</h1>
-          <p className="text-muted-foreground">Configure school classes, streams, and assign class teachers.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Grades & Streams</h1>
+            <p className="text-muted-foreground">Configure school classes, streams, and assign class teachers.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => setIsStreamOpen(true)}>
