@@ -45,9 +45,10 @@ const Fees = () => {
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
   
-  // Form States
+  // Form & Config States
   const [selectedStudentId, setSelectedStudentId] = useState("");
   const [paymentAmount, setPaymentAmount] = useState("");
+  const [configGrade, setConfigGrade] = useState<string>("all");
   const [configAmount, setConfigAmount] = useState("");
 
   useEffect(() => {
@@ -80,20 +81,69 @@ const Fees = () => {
     };
   }, [calculatedFees, currentTermFee]);
 
-  // Handlers
+  // Modal Handlers
+  const handleOpenConfigModal = () => {
+    setConfigGrade("all");
+    setConfigAmount(currentTermFee.toString());
+    setIsConfigOpen(true);
+  };
+
+  const handleModalGradeChange = (gradeId: string) => {
+    setConfigGrade(gradeId);
+    if (gradeId === "all") {
+      setConfigAmount(currentTermFee ? currentTermFee.toString() : "0");
+    } else {
+      const existing = feeStructures.find(
+        f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId
+      );
+      setConfigAmount(existing ? existing.amount.toString() : "0");
+    }
+  };
+
   const handleUpdateConfig = () => {
     const amountNum = parseFloat(configAmount);
     if (isNaN(amountNum)) return;
-    const existingIndex = feeStructures.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === selectedGrade);
-    if (existingIndex > -1) {
-      const updated = [...feeStructures];
-      updated[existingIndex].amount = amountNum;
-      setFeeStructures(updated);
+
+    // Payload prepared for backend API / database sync
+    const payload = {
+      year: selectedYear,
+      term: selectedTerm,
+      grade_id: configGrade,
+      fee_amount: amountNum,
+    };
+    console.log("Saving fee structure payload:", payload);
+
+    if (configGrade === "all") {
+      // Bulk update fee structure for all grades in the selected term/year
+      setFeeStructures(prev => {
+        let updated = [...prev];
+        GRADES_DATA.forEach(g => {
+          const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === g.id);
+          if (idx > -1) {
+            updated[idx] = { ...updated[idx], amount: amountNum };
+          } else {
+            updated.push({ year: selectedYear, term: selectedTerm, gradeId: g.id, amount: amountNum });
+          }
+        });
+        return updated;
+      });
     } else {
-      setFeeStructures([...feeStructures, { year: selectedYear, term: selectedTerm, gradeId: selectedGrade, amount: amountNum }]);
+      // Update fee structure for selected grade
+      setFeeStructures(prev => {
+        const idx = prev.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === configGrade);
+        if (idx > -1) {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], amount: amountNum };
+          return updated;
+        } else {
+          return [...prev, { year: selectedYear, term: selectedTerm, gradeId: configGrade, amount: amountNum }];
+        }
+      });
     }
+
     setIsConfigOpen(false);
-    showSuccess("Fee structure updated");
+    const targetLabel = configGrade === "all" ? "all grades" : GRADES_DATA.find(g => g.id === configGrade)?.name || "selected grade";
+    showSuccess(`Fee structure updated for ${targetLabel}`);
   };
 
   const handleRecordPayment = () => {
@@ -113,6 +163,8 @@ const Fees = () => {
     showSuccess("Payment recorded");
   };
 
+  const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
@@ -121,7 +173,7 @@ const Fees = () => {
           <p className="text-muted-foreground font-medium">Manage dynamic structures and student ledgers.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-2xl gap-2 border-slate-200 bg-white" onClick={() => { setConfigAmount(currentTermFee.toString()); setIsConfigOpen(true); }}>
+          <Button variant="outline" className="rounded-2xl gap-2 border-slate-200 bg-white" onClick={handleOpenConfigModal}>
             <Settings2 size={18} /> Set Term Fees
           </Button>
           <Button className="rounded-2xl gap-2 bg-indigo-600 shadow-lg shadow-indigo-100" onClick={() => setIsRecordOpen(true)}>
@@ -222,17 +274,59 @@ const Fees = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Modals */}
-      <Modal isOpen={isConfigOpen} onClose={() => setIsConfigOpen(false)} title="Set Term Fees" footer={<div className="flex gap-3"><Button variant="ghost" onClick={() => setIsConfigOpen(false)}>Discard</Button><Button onClick={handleUpdateConfig} className="bg-indigo-600"><Save size={16} className="mr-2" /> Save</Button></div>}>
+      {/* Set Term Fees Modal */}
+      <Modal 
+        isOpen={isConfigOpen} 
+        onClose={() => setIsConfigOpen(false)} 
+        title="Set Term Fees" 
+        footer={
+          <div className="flex gap-3">
+            <Button variant="ghost" onClick={() => setIsConfigOpen(false)}>Discard</Button>
+            <Button onClick={handleUpdateConfig} className="bg-indigo-600">
+              <Save size={16} className="mr-2" /> Save
+            </Button>
+          </div>
+        }
+      >
         <div className="space-y-4">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Fee Amount (KES)</Label>
-          <Input type="number" value={configAmount} onChange={(e) => setConfigAmount(e.target.value)} className="rounded-xl h-12 bg-slate-50 border-none font-black text-lg" />
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
+            <Select value={configGrade} onValueChange={handleModalGradeChange}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                <SelectValue placeholder="Select Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades (Bulk Set)</SelectItem>
+                {GRADES_DATA.map(g => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Fee Amount (KES)</Label>
+            <Input 
+              type="number" 
+              value={configAmount} 
+              onChange={(e) => setConfigAmount(e.target.value)} 
+              className="rounded-xl h-12 bg-slate-50 border-none font-black text-lg" 
+              placeholder="0"
+            />
+          </div>
+
           <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 items-start text-xs text-amber-700">
-            <Calculator size={18} /> <p>Updating this will recalculate balances for the selected academic context.</p>
+            <Calculator size={18} className="shrink-0 mt-0.5" /> 
+            <p>
+              {configGrade === "all" 
+                ? "Updating this will recalculate balances for all students across all grades in this academic context." 
+                : `Updating this will recalculate balances for ${selectedGradeObj?.name || "the selected grade"} in this academic context.`}
+            </p>
           </div>
         </div>
       </Modal>
 
+      {/* Record Payment Modal */}
       <Modal isOpen={isRecordOpen} onClose={() => setIsRecordOpen(false)} title="Record Payment" footer={<><Button variant="ghost" onClick={() => setIsRecordOpen(false)}>Cancel</Button><Button onClick={handleRecordPayment} className="bg-indigo-600">Post</Button></>}>
         <div className="space-y-4">
           <Label>Student</Label>
@@ -245,6 +339,7 @@ const Fees = () => {
         </div>
       </Modal>
 
+      {/* Statement Preview Modal */}
       <Modal isOpen={isStatementOpen} onClose={() => setIsStatementOpen(false)} title="Statement Preview" maxWidth="max-w-3xl" footer={<div className="flex gap-3"><Button variant="ghost" onClick={() => setIsStatementOpen(false)}>Close</Button><Button className="bg-indigo-600" onClick={() => showSuccess("Downloading...")}><FileDown size={18} className="mr-2" /> Download PDF</Button></div>}>
         {activeStudent && (
           <FeeStatement 
