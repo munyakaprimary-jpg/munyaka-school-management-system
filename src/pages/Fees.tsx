@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator } from 'lucide-react';
-import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA } from '@/lib/mock-data';
+import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 
@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils";
 import FeeStats from '@/components/fees/FeeStats';
 import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
+import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { FeeStructure, Transaction } from '@/types/fees';
 
 const Fees = () => {
@@ -45,9 +46,7 @@ const Fees = () => {
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
   
-  // Form & Config States
-  const [selectedStudentId, setSelectedStudentId] = useState("");
-  const [paymentAmount, setPaymentAmount] = useState("");
+  // Config States
   const [configGrade, setConfigGrade] = useState<string>("all");
   const [configAmount, setConfigAmount] = useState("");
 
@@ -104,17 +103,7 @@ const Fees = () => {
     const amountNum = parseFloat(configAmount);
     if (isNaN(amountNum)) return;
 
-    // Payload prepared for backend API / database sync
-    const payload = {
-      year: selectedYear,
-      term: selectedTerm,
-      grade_id: configGrade,
-      fee_amount: amountNum,
-    };
-    console.log("Saving fee structure payload:", payload);
-
     if (configGrade === "all") {
-      // Bulk update fee structure for all grades in the selected term/year
       setFeeStructures(prev => {
         let updated = [...prev];
         GRADES_DATA.forEach(g => {
@@ -128,7 +117,6 @@ const Fees = () => {
         return updated;
       });
     } else {
-      // Update fee structure for selected grade
       setFeeStructures(prev => {
         const idx = prev.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === configGrade);
         if (idx > -1) {
@@ -146,10 +134,12 @@ const Fees = () => {
     showSuccess(`Fee structure updated for ${targetLabel}`);
   };
 
-  const handleRecordPayment = () => {
-    if (!selectedStudentId || !paymentAmount) return;
-    const amountNum = parseFloat(paymentAmount);
-    setFeesList(prev => prev.map(fee => fee.id === selectedStudentId ? { ...fee, paid: fee.paid + amountNum } : fee));
+  const handleRecordPayment = (studentId: string, amountNum: number) => {
+    setFeesList(prev => prev.map(fee => fee.id === studentId ? { ...fee, paid: fee.paid + amountNum } : fee));
+    
+    const matchedStudent = STUDENTS.find(s => s.id === studentId);
+    const studentName = matchedStudent ? matchedStudent.name : "Learner";
+
     setTransactionsList([{ 
       id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
       date: new Date().toLocaleDateString(), 
@@ -158,9 +148,8 @@ const Fees = () => {
       ref: "AUTO-GEN", 
       category: "Tuition" 
     }, ...transactionsList]);
-    setIsRecordOpen(false);
-    setPaymentAmount("");
-    showSuccess("Payment recorded");
+
+    showSuccess(`Recorded KES ${amountNum.toLocaleString()} payment for ${studentName}`);
   };
 
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
@@ -326,18 +315,14 @@ const Fees = () => {
         </div>
       </Modal>
 
-      {/* Record Payment Modal */}
-      <Modal isOpen={isRecordOpen} onClose={() => setIsRecordOpen(false)} title="Record Payment" footer={<><Button variant="ghost" onClick={() => setIsRecordOpen(false)}>Cancel</Button><Button onClick={handleRecordPayment} className="bg-indigo-600">Post</Button></>}>
-        <div className="space-y-4">
-          <Label>Student</Label>
-          <Select value={selectedStudentId} onValueChange={setSelectedStudentId}>
-            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none"><SelectValue placeholder="Choose student" /></SelectTrigger>
-            <SelectContent>{feesList.map(fee => <SelectItem key={fee.id} value={fee.id}>{fee.student}</SelectItem>)}</SelectContent>
-          </Select>
-          <Label>Amount (KES)</Label>
-          <Input type="number" value={paymentAmount} onChange={(e) => setPaymentAmount(e.target.value)} className="rounded-xl h-12 bg-slate-50 border-none" />
-        </div>
-      </Modal>
+      {/* Record Payment Modal with Cascading Dropdowns */}
+      <RecordPaymentModal
+        isOpen={isRecordOpen}
+        onClose={() => setIsRecordOpen(false)}
+        onSubmitPayment={handleRecordPayment}
+        gradesData={GRADES_DATA}
+        studentsData={STUDENTS}
+      />
 
       {/* Statement Preview Modal */}
       <Modal isOpen={isStatementOpen} onClose={() => setIsStatementOpen(false)} title="Statement Preview" maxWidth="max-w-3xl" footer={<div className="flex gap-3"><Button variant="ghost" onClick={() => setIsStatementOpen(false)}>Close</Button><Button className="bg-indigo-600" onClick={() => showSuccess("Downloading...")}><FileDown size={18} className="mr-2" /> Download PDF</Button></div>}>
