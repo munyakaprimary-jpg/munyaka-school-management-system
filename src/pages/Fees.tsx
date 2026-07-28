@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -164,28 +164,38 @@ const Fees = () => {
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      {/* Page Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">Finance & Fees</h1>
-          <p className="text-muted-foreground font-medium">Manage dynamic structures and student ledgers.</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Finance & Fees</h1>
+          <p className="text-sm text-slate-500">Manage fee structures and student account ledgers.</p>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-2xl gap-2 border-slate-200 bg-white" onClick={handleOpenConfigModal}>
-            <Settings2 size={18} /> Set Term Fees
+        <div className="flex items-center gap-2">
+          <Button 
+            variant="outline" 
+            className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50" 
+            onClick={handleOpenConfigModal}
+          >
+            <Settings2 size={16} /> Set Term Fees
           </Button>
-          <Button className="rounded-2xl gap-2 bg-indigo-600 shadow-lg shadow-indigo-100" onClick={() => setIsRecordOpen(true)}>
-            <CreditCard size={18} /> Record Payment
+          <Button 
+            className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm" 
+            onClick={() => setIsRecordOpen(true)}
+          >
+            <CreditCard size={16} /> Record Payment
           </Button>
         </div>
       </div>
 
+      {/* Filter Controls */}
       <FeeFilters 
         year={selectedYear} setYear={setSelectedYear} 
         term={selectedTerm} setTerm={setSelectedTerm} 
         grade={selectedGrade} setGrade={setSelectedGrade} 
       />
 
+      {/* Summary Metrics */}
       <FeeStats 
         currentTermFee={currentTermFee} 
         totalCollected={stats.totalCollected} 
@@ -193,17 +203,22 @@ const Fees = () => {
         totalPending={stats.totalPending} 
       />
 
-      <Tabs defaultValue="balances" className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-          <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12">
-            <TabsTrigger value="balances" className="rounded-xl px-8 h-full font-bold text-xs">Fee Records</TabsTrigger>
-            <TabsTrigger value="ledger" className="rounded-xl px-8 h-full font-bold text-xs">Transaction Ledger</TabsTrigger>
+      {/* Navigation Tabs & Header Actions */}
+      <Tabs defaultValue="balances" className="w-full space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <TabsList className="bg-slate-100/80 p-1 rounded-lg h-10 border border-slate-200/60 inline-flex">
+            <TabsTrigger value="balances" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+              Fee Records
+            </TabsTrigger>
+            <TabsTrigger value="ledger" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+              Transaction Ledger
+            </TabsTrigger>
           </TabsList>
 
           <Button 
             onClick={handleDownloadFeeStatement}
             disabled={isDownloading}
-            className="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-2xl h-12 px-6 font-bold text-xs shadow-md gap-2 transition-all shrink-0"
+            className="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-lg h-10 px-4 text-sm font-medium shadow-sm gap-2 transition-all shrink-0"
           >
             {isDownloading ? (
               <Loader2 className="animate-spin" size={16} />
@@ -214,43 +229,64 @@ const Fees = () => {
           </Button>
         </div>
 
-        <TabsContent value="balances">
-          <Card className="rounded-[2rem] bg-white border-none shadow-sm overflow-hidden">
+        {/* Fee Records Table */}
+        <TabsContent value="balances" className="m-0">
+          <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-slate-50 border-b">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50/80 border-b border-slate-200/80">
                   <tr>
-                    <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest">Student Details</th>
-                    <th className="px-8 py-5 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">Term Fee</th>
-                    <th className="px-8 py-5 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">Fee Paid</th>
-                    <th className="px-8 py-5 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">Balance</th>
-                    <th className="px-8 py-5 text-center font-black text-slate-400 text-[10px] uppercase tracking-widest">Status</th>
-                    <th className="px-8 py-5 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest">Actions</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Details</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Term Fee</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Paid</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y">
+                <tbody className="divide-y divide-slate-100">
                   {calculatedFees.map((fee) => (
-                    <tr key={fee.id} className="hover:bg-slate-50/50 transition-colors group">
-                      <td className="px-8 py-6">
-                        <p className="font-bold text-slate-900">{fee.student}</p>
-                        <p className="text-[10px] font-medium text-slate-400 uppercase">Assessment: A8273{fee.id}</p>
+                    <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
+                      <td className="px-5 py-3.5">
+                        <p className="font-semibold text-slate-900">{fee.student}</p>
+                        <p className="text-xs text-slate-400">Assessment: A8273{fee.id}</p>
                       </td>
-                      <td className="px-8 py-6 text-center font-bold text-slate-600">KES {fee.total.toLocaleString()}</td>
-                      <td className="px-8 py-6 text-center"><p className="font-black text-emerald-600">KES {fee.paid.toLocaleString()}</p></td>
-                      <td className="px-8 py-6 text-center">
-                        <p className={cn("font-black", fee.balance > 0 ? "text-rose-500" : "text-slate-300")}>
+                      <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
+                      <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
+                      <td className="px-5 py-3.5 text-center font-semibold">
+                        <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
                           {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
-                        </p>
+                        </span>
                       </td>
-                      <td className="px-8 py-6 text-center">
-                        <Badge className={cn("rounded-lg border-none px-3 font-bold", fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-500")}>
+                      <td className="px-5 py-3.5 text-center">
+                        <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
+                          fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
+                          fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
+                          "bg-slate-100 text-slate-600"
+                        )}>
                           {fee.status}
                         </Badge>
                       </td>
-                      <td className="px-8 py-6 text-right">
-                        <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button variant="ghost" size="icon" className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}><Eye size={16} /></Button>
-                          <Button variant="ghost" size="icon" className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" onClick={() => showSuccess("Downloading...")}><FileDown size={16} /></Button>
+                      <td className="px-5 py-3.5 text-right">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                            onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
+                            title="View Statement"
+                          >
+                            <Eye size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                            onClick={() => showSuccess("Downloading...")}
+                            title="Download PDF"
+                          >
+                            <FileDown size={16} />
+                          </Button>
                         </div>
                       </td>
                     </tr>
@@ -261,24 +297,29 @@ const Fees = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="ledger">
-          <Card className="rounded-[2rem] bg-white border-none shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b">
+        {/* Transaction Ledger Table */}
+        <TabsContent value="ledger" className="m-0">
+          <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
+            <table className="w-full text-sm text-left">
+              <thead className="bg-slate-50/80 border-b border-slate-200/80">
                 <tr>
-                  <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest">Ref ID</th>
-                  <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest">Date</th>
-                  <th className="px-8 py-5 text-left font-black text-slate-400 text-[10px] uppercase tracking-widest">Method</th>
-                  <th className="px-8 py-5 text-right font-black text-slate-400 text-[10px] uppercase tracking-widest">Amount</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ref ID</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+                  <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Method</th>
+                  <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Amount</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
+              <tbody className="divide-y divide-slate-100">
                 {transactionsList.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-6 font-bold text-indigo-600">{tx.id}</td>
-                    <td className="px-8 py-6 font-medium text-slate-600">{tx.date}</td>
-                    <td className="px-8 py-6"><Badge variant="outline" className="rounded-lg">{tx.method}</Badge></td>
-                    <td className="px-8 py-6 text-right font-black text-emerald-600">KES {tx.amount.toLocaleString()} <ArrowUpRight size={14} className="inline ml-1" /></td>
+                  <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
+                    <td className="px-5 py-3.5 font-semibold text-indigo-600">{tx.id}</td>
+                    <td className="px-5 py-3.5 font-medium text-slate-600">{tx.date}</td>
+                    <td className="px-5 py-3.5">
+                      <Badge variant="outline" className="rounded-md border-slate-200 text-xs text-slate-600">{tx.method}</Badge>
+                    </td>
+                    <td className="px-5 py-3.5 text-right font-semibold text-emerald-600">
+                      KES {tx.amount.toLocaleString()} <ArrowUpRight size={14} className="inline ml-1" />
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -293,19 +334,19 @@ const Fees = () => {
         onClose={() => setIsConfigOpen(false)} 
         title="Set Term Fees" 
         footer={
-          <div className="flex gap-3">
-            <Button variant="ghost" onClick={() => setIsConfigOpen(false)}>Discard</Button>
-            <Button onClick={handleUpdateConfig} className="bg-indigo-600">
-              <Save size={16} className="mr-2" /> Save
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" className="rounded-lg h-10 px-4 text-sm font-medium" onClick={() => setIsConfigOpen(false)}>Discard</Button>
+            <Button onClick={handleUpdateConfig} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-10 px-5 text-sm font-medium gap-2">
+              <Save size={16} /> Save
             </Button>
           </div>
         }
       >
         <div className="space-y-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade Level</Label>
+            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade Level</Label>
             <Select value={configGrade} onValueChange={handleModalGradeChange}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+              <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
@@ -318,18 +359,18 @@ const Fees = () => {
           </div>
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Fee Amount (KES)</Label>
+            <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Amount (KES)</Label>
             <Input 
               type="number" 
               value={configAmount} 
               onChange={(e) => setConfigAmount(e.target.value)} 
-              className="rounded-xl h-12 bg-slate-50 border-none font-black text-lg" 
+              className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-semibold" 
               placeholder="0"
             />
           </div>
 
-          <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 items-start text-xs text-amber-700">
-            <Calculator size={18} className="shrink-0 mt-0.5" /> 
+          <div className="p-3 bg-amber-50/80 rounded-lg border border-amber-200/80 flex gap-2.5 items-start text-xs text-amber-800">
+            <Calculator size={16} className="shrink-0 mt-0.5" /> 
             <p>
               {configGrade === "all" 
                 ? "Updating this will recalculate balances for all students across all grades in this academic context." 
@@ -349,7 +390,20 @@ const Fees = () => {
       />
 
       {/* Statement Preview Modal */}
-      <Modal isOpen={isStatementOpen} onClose={() => setIsStatementOpen(false)} title="Statement Preview" maxWidth="max-w-3xl" footer={<div className="flex gap-3"><Button variant="ghost" onClick={() => setIsStatementOpen(false)}>Close</Button><Button className="bg-indigo-600" onClick={() => showSuccess("Downloading...")}><FileDown size={18} className="mr-2" /> Download PDF</Button></div>}>
+      <Modal 
+        isOpen={isStatementOpen} 
+        onClose={() => setIsStatementOpen(false)} 
+        title="Statement Preview" 
+        maxWidth="max-w-3xl" 
+        footer={
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" className="rounded-lg h-10 px-4 text-sm font-medium" onClick={() => setIsStatementOpen(false)}>Close</Button>
+            <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg h-10 px-5 text-sm font-medium gap-2" onClick={() => showSuccess("Downloading...")}>
+              <FileDown size={16} /> Download PDF
+            </Button>
+          </div>
+        }
+      >
         {activeStudent && (
           <FeeStatement 
             student={activeStudent} 
