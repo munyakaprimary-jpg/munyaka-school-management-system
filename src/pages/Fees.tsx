@@ -21,16 +21,32 @@ import FeeStatement from '@/components/fees/FeeStatement';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { FeeStructure, Transaction } from '@/types/fees';
 
+interface ExtendedTransaction extends Transaction {
+  studentId?: string;
+  grade?: string;
+}
+
+const GRADE_LEVEL_OPTIONS = [
+  { value: "all", label: "All Grade Levels" },
+  ...Array.from({ length: 12 }, (_, i) => ({
+    value: `${i + 1}`,
+    label: `Grade ${i + 1}`,
+  })),
+];
+
 const Fees = () => {
-  // Filter States
+  // Global Academic Context Filter States
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedTerm, setSelectedTerm] = useState("term1");
   const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0].id);
 
+  // Tab Grade Level View Filter
+  const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
+
   // Data States
   const [feesList, setFeesList] = useState(initialFees);
-  const [transactionsList, setTransactionsList] = useState<Transaction[]>(initialTransactions as Transaction[]);
+  const [transactionsList, setTransactionsList] = useState<ExtendedTransaction[]>(initialTransactions as ExtendedTransaction[]);
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>(() => {
     const saved = localStorage.getItem('munyaka_fee_structures');
     return saved ? JSON.parse(saved) : [
@@ -71,6 +87,25 @@ const Fees = () => {
     });
   }, [feesList, currentTermFee]);
 
+  // Filter calculated fees by Tab Grade Level Filter
+  const filteredCalculatedFees = useMemo(() => {
+    if (tabGradeFilter === "all") return calculatedFees;
+    return calculatedFees.filter(fee => {
+      const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
+      return studentObj && studentObj.grade === tabGradeFilter;
+    });
+  }, [calculatedFees, tabGradeFilter]);
+
+  // Filter transaction ledger by Tab Grade Level Filter
+  const filteredTransactions = useMemo(() => {
+    if (tabGradeFilter === "all") return transactionsList;
+    return transactionsList.filter(tx => {
+      if (tx.grade) return tx.grade === tabGradeFilter;
+      // Default sample mapping for initial transactions
+      return true;
+    });
+  }, [transactionsList, tabGradeFilter]);
+
   const stats = useMemo(() => {
     const totalPossible = calculatedFees.length * currentTermFee;
     const totalCollected = calculatedFees.reduce((acc, curr) => acc + curr.paid, 0);
@@ -81,12 +116,14 @@ const Fees = () => {
     };
   }, [calculatedFees, currentTermFee]);
 
-  // Download Handler
+  // Download Handler respecting active Grade Level filter
   const handleDownloadFeeStatement = async () => {
     setIsDownloading(true);
     await new Promise((resolve) => setTimeout(resolve, 1200));
     setIsDownloading(false);
-    showSuccess("Fee statement downloaded successfully!");
+    
+    const activeGradeLabel = GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "Selected Grade";
+    showSuccess(`Fee statement for ${activeGradeLabel} downloaded successfully!`);
   };
 
   // Modal Handlers
@@ -148,6 +185,7 @@ const Fees = () => {
     
     const matchedStudent = STUDENTS.find(s => s.id === studentId);
     const studentName = matchedStudent ? matchedStudent.name : "Learner";
+    const studentGrade = matchedStudent ? matchedStudent.grade : "";
 
     setTransactionsList([{ 
       id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
@@ -155,7 +193,9 @@ const Fees = () => {
       amount: amountNum, 
       method: "M-Pesa", 
       ref: "AUTO-GEN", 
-      category: "Tuition" 
+      category: "Tuition",
+      studentId,
+      grade: studentGrade,
     }, ...transactionsList]);
 
     showSuccess(`Recorded KES ${amountNum.toLocaleString()} payment for ${studentName}`);
@@ -206,14 +246,30 @@ const Fees = () => {
       {/* Navigation Tabs & Header Actions */}
       <Tabs defaultValue="balances" className="w-full space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <TabsList className="bg-slate-100/80 p-1 rounded-lg h-10 border border-slate-200/60 inline-flex">
-            <TabsTrigger value="balances" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
-              Fee Records
-            </TabsTrigger>
-            <TabsTrigger value="ledger" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
-              Transaction Ledger
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex flex-wrap items-center gap-3">
+            <TabsList className="bg-slate-100/80 p-1 rounded-lg h-10 border border-slate-200/60 inline-flex">
+              <TabsTrigger value="balances" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+                Fee Records
+              </TabsTrigger>
+              <TabsTrigger value="ledger" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+                Transaction Ledger
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Grade Level Dropdown Filter */}
+            <Select value={tabGradeFilter} onValueChange={setTabGradeFilter}>
+              <SelectTrigger className="w-[180px] rounded-lg h-10 px-3 bg-white border border-slate-200 text-sm font-medium text-slate-800 shadow-sm focus:ring-1 ring-slate-200">
+                <SelectValue placeholder="Grade Filter" />
+              </SelectTrigger>
+              <SelectContent>
+                {GRADE_LEVEL_OPTIONS.map(opt => (
+                  <SelectItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button 
             onClick={handleDownloadFeeStatement}
@@ -245,52 +301,60 @@ const Fees = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {calculatedFees.map((fee) => (
-                    <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="px-5 py-3.5">
-                        <p className="font-semibold text-slate-900">{fee.student}</p>
-                        <p className="text-xs text-slate-400">Assessment: A8273{fee.id}</p>
-                      </td>
-                      <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
-                      <td className="px-5 py-3.5 text-center font-semibold">
-                        <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
-                          {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3.5 text-center">
-                        <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
-                          fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
-                          fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
-                          "bg-slate-100 text-slate-600"
-                        )}>
-                          {fee.status}
-                        </Badge>
-                      </td>
-                      <td className="px-5 py-3.5 text-right">
-                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
-                            onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
-                            title="View Statement"
-                          >
-                            <Eye size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
-                            onClick={() => showSuccess("Downloading...")}
-                            title="Download PDF"
-                          >
-                            <FileDown size={16} />
-                          </Button>
-                        </div>
+                  {filteredCalculatedFees.length > 0 ? (
+                    filteredCalculatedFees.map((fee) => (
+                      <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-5 py-3.5">
+                          <p className="font-semibold text-slate-900">{fee.student}</p>
+                          <p className="text-xs text-slate-400">Assessment: A8273{fee.id}</p>
+                        </td>
+                        <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
+                        <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
+                        <td className="px-5 py-3.5 text-center font-semibold">
+                          <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
+                            {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-3.5 text-center">
+                          <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
+                            fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
+                            fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
+                            "bg-slate-100 text-slate-600"
+                          )}>
+                            {fee.status}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3.5 text-right">
+                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                              onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
+                              title="View Statement"
+                            >
+                              <Eye size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                              onClick={() => showSuccess("Downloading...")}
+                              title="Download PDF"
+                            >
+                              <FileDown size={16} />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-400">
+                        No fee records found for the selected Grade Level.
                       </td>
                     </tr>
-                  ))}
+                  )}
                 </tbody>
               </table>
             </div>
@@ -310,18 +374,26 @@ const Fees = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {transactionsList.map((tx) => (
-                  <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="px-5 py-3.5 font-semibold text-indigo-600">{tx.id}</td>
-                    <td className="px-5 py-3.5 font-medium text-slate-600">{tx.date}</td>
-                    <td className="px-5 py-3.5">
-                      <Badge variant="outline" className="rounded-md border-slate-200 text-xs text-slate-600">{tx.method}</Badge>
-                    </td>
-                    <td className="px-5 py-3.5 text-right font-semibold text-emerald-600">
-                      KES {tx.amount.toLocaleString()} <ArrowUpRight size={14} className="inline ml-1" />
+                {filteredTransactions.length > 0 ? (
+                  filteredTransactions.map((tx) => (
+                    <tr key={tx.id} className="hover:bg-slate-50/60 transition-colors">
+                      <td className="px-5 py-3.5 font-semibold text-indigo-600">{tx.id}</td>
+                      <td className="px-5 py-3.5 font-medium text-slate-600">{tx.date}</td>
+                      <td className="px-5 py-3.5">
+                        <Badge variant="outline" className="rounded-md border-slate-200 text-xs text-slate-600">{tx.method}</Badge>
+                      </td>
+                      <td className="px-5 py-3.5 text-right font-semibold text-emerald-600">
+                        KES {tx.amount.toLocaleString()} <ArrowUpRight size={14} className="inline ml-1" />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-5 py-8 text-center text-sm text-slate-400">
+                      No transactions recorded for the selected Grade Level.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </Card>
