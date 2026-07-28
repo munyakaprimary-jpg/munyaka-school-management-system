@@ -2,7 +2,6 @@
 
 import React from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, 
   UserPlus, 
@@ -27,19 +26,23 @@ import {
   Layers,
   BookOpen,
   Award,
-  LogOut
+  LogOut,
+  UserCog
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from '@/context/AuthContext';
+import { showSuccess } from '@/utils/toast';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
-  const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
+  const { user, logout, isLoading } = useAuth();
 
   const handleLogout = () => {
     logout();
+    showSuccess("You have been signed out successfully.");
     navigate('/login');
   };
 
@@ -49,6 +52,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Layers, label: 'Grades & Streams', path: '/grades' },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
     { icon: Award, label: 'Exam Types', path: '/exam-types' },
+    // Only show User Management to Admins
+    ...(user?.role === 'admin' ? [{ icon: UserCog, label: 'User Management', path: '/users' }] : []),
     { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
     { icon: MessageSquare, label: 'Communication', path: '/communication' },
     { icon: Megaphone, label: 'Notice Board', path: '/notices' },
@@ -65,6 +70,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Settings, label: 'Settings', path: '/settings' },
   ];
 
+  // Don't show layout on login page
+  if (location.pathname === '/login') return <>{children}</>;
+
+  // Show a blank or static state during initial auth load to prevent null access errors
+  if (isLoading) return <div className="h-screen w-screen bg-white" />;
+
   return (
     <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
       {/* Mobile Menu Backdrop */}
@@ -77,10 +88,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex flex-col",
+        "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
-        <div className="p-6">
+        <div className="flex flex-col h-full p-6">
           <div className="flex items-center gap-3 mb-8">
             <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
               <School className="text-white" size={20} />
@@ -91,7 +102,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             </div>
           </div>
 
-          <nav className="space-y-1 h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
+          <nav className="space-y-1 flex-1 overflow-y-auto pr-1 custom-scrollbar">
             {menuItems.map((item) => (
               <Link 
                 key={item.path} 
@@ -109,31 +120,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </Link>
             ))}
           </nav>
-        </div>
 
-        <div className="mt-auto p-6 space-y-4 border-t border-slate-50 bg-slate-50/30">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600">
-                {user?.avatar || 'U'}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-black text-slate-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role || 'Guest'}</p>
+          <div className="mt-auto pt-6 border-t border-slate-50 space-y-4">
+            <div className="bg-slate-50 p-4 rounded-2xl">
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-2">Academic Year</p>
+              <div className="flex justify-between items-center">
+                <span className="font-black text-xs text-slate-900">2024 - Term 1</span>
+                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-sm" />
               </div>
             </div>
-            <Button 
-              variant="ghost" 
-              onClick={handleLogout}
-              className="w-full justify-start gap-3 rounded-xl h-10 text-xs font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600 p-3"
-            >
-              <LogOut size={14} /> Sign Out
-            </Button>
-          </div>
-          
-          <div className="px-1 flex justify-between items-center">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Term 1 • 2024</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            
+            {user && (
+              <Button 
+                onClick={handleLogout}
+                variant="ghost" 
+                className="w-full justify-start gap-3 rounded-xl h-11 font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+              >
+                <LogOut size={16} /> Sign Out
+              </Button>
+            )}
           </div>
         </div>
       </aside>
@@ -168,11 +173,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             <Link to="/profile">
               <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="text-right hidden sm:block">
-                  <p className="text-xs font-black text-slate-900">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role || 'Master Control'}</p>
+                  <p className="text-xs font-black text-slate-900">{user?.name || "Guest"}</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role === 'admin' ? 'Master Control' : 'Personnel'}</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600 shadow-sm">
-                  {user?.avatar || 'AD'}
+                  {user?.name?.split(' ').map(n => n[0]).join('') || "G"}
                 </div>
               </div>
             </Link>
