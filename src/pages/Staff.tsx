@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import BackButton from '@/components/ui/BackButton';
 import { UserPlus, Phone, Briefcase, MoreHorizontal } from 'lucide-react';
 import { STAFF } from '@/lib/mock-data';
 
@@ -13,12 +12,9 @@ const Staff = () => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Staff & Personnel</h1>
-            <p className="text-sm text-slate-500">Manage teachers, administrators, and support personnel.</p>
-          </div>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Staff & Personnel</h1>
+          <p className="text-sm text-slate-500">Manage teachers, administrators, and support personnel.</p>
         </div>
         <Link to="/staff/registration">
           <Button className="h-10 px-4 rounded-lg gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium shadow-sm">
