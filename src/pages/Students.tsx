@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
+import BackButton from '@/components/ui/BackButton';
 import { Search, Filter, MoreVertical, UserCircle, Phone, GraduationCap, Plus, UserPlus } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { STUDENTS as initialStudents } from '@/lib/mock-data';
@@ -42,9 +43,12 @@ const Students = () => {
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Directory</h1>
-          <p className="text-sm text-slate-500">Manage learner profiles and class allocations.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Student Directory</h1>
+            <p className="text-sm text-slate-500">Manage learner profiles and class allocations.</p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium">Export CSV</Button>
