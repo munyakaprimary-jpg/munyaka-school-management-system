@@ -274,7 +274,7 @@ const Fees = () => {
           <Button 
             onClick={handleDownloadFeeStatement}
             disabled={isDownloading}
-            className="bg-slate-900 hover:bg-slate-800 active:scale-95 text-white rounded-lg h-10 px-4 text-sm font-medium shadow-sm gap-2 transition-all shrink-0"
+            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg h-10 px-4 text-sm font-medium shadow-sm gap-2 transition-all shrink-0"
           >
             {isDownloading ? (
               <Loader2 className="animate-spin" size={16} />
