@@ -3,12 +3,14 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 
+export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+
 interface User {
   id: string;
   name: string;
   email: string;
   phone?: string;
-  role: 'admin' | 'staff' | 'parent';
+  role: UserRole;
   avatar?: string;
 }
 
@@ -33,7 +35,7 @@ const DEFAULT_ADMIN = {
     name: 'System Admin',
     email: 'admin@munyaka.sc.ke',
     phone: '+254 700 000 000',
-    role: 'admin' as const,
+    role: 'super_admin' as UserRole,
     avatar: 'AD'
   }
 };
