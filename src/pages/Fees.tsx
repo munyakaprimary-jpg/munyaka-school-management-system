@@ -13,6 +13,7 @@ import Modal from '@/components/ui/Modal';
 import { Wallet, CreditCard, Receipt, TrendingUp, History, Download, ArrowUpRight, Settings2, Calculator, Save } from 'lucide-react';
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
+import { cn } from "@/lib/utils";
 
 interface FeeStructure {
   year: string;
@@ -326,7 +327,7 @@ const Fees = () => {
             />
           </div>
           <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex gap-3 items-start">
-            < calculadora className="text-amber-600 mt-0.5" size={18} />
+            <Calculator className="text-amber-600 mt-0.5" size={18} />
             <p className="text-xs text-amber-700 font-medium leading-relaxed">
               Updating this value will immediately recalculate the balances for all students in this grade for the selected year and term.
             </p>
