@@ -44,26 +44,28 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
-    { icon: Users, label: 'Students', path: '/students' },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades' },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas' },
-    { icon: Award, label: 'Exam Types', path: '/exam-types' },
-    { icon: Contact2, label: 'Staff & Personnel', path: '/staff' },
-    { icon: MessageSquare, label: 'Communication', path: '/communication' },
-    { icon: Megaphone, label: 'Notice Board', path: '/notices' },
-    { icon: CalendarDays, label: 'School Calendar', path: '/calendar' },
-    { icon: Calendar, label: 'Timetable', path: '/timetable' },
-    { icon: UserPlus, label: 'Registration', path: '/registration' },
-    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance' },
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments' },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio' },
-    { icon: Library, label: 'Library & E-Resources', path: '/library' },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory' },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees' },
-    { icon: FileText, label: 'Report Cards', path: '/reports' },
-    { icon: Settings, label: 'Settings', path: '/settings' },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Students', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['super_admin', 'head_teacher'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
+    { icon: Contact2, label: 'Staff & Personnel', path: '/staff', roles: ['super_admin', 'head_teacher'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Megaphone, label: 'Notice Board', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: UserPlus, label: 'Registration', path: '/registration', roles: ['super_admin', 'head_teacher'] },
+    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
   ];
+
+  const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
   return (
     <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
@@ -92,7 +94,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
 
           <nav className="space-y-1 h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
-            {menuItems.map((item) => (
+            {filteredMenu.map((item) => (
               <Link 
                 key={item.path} 
                 to={item.path}
@@ -119,7 +121,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </div>
               <div className="overflow-hidden">
                 <p className="text-xs font-black text-slate-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role || 'Guest'}</p>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Guest'}</p>
               </div>
             </div>
             <Button 
@@ -169,7 +171,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
                 <div className="text-right hidden sm:block">
                   <p className="text-xs font-black text-slate-900">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role || 'Master Control'}</p>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role?.replace('_', ' ') || 'Master Control'}</p>
                 </div>
                 <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600 shadow-sm">
                   {user?.avatar || 'AD'}
