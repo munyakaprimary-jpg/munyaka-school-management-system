@@ -1,4 +1,3 @@
-Stream -> Learner dropdowns">
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
@@ -8,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, AlertCircle } from 'lucide-react';
-import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
+import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
 
 interface StudentItem {
   id: string;
@@ -224,7 +223,6 @@ const RecordPaymentModal = ({
                   </SelectItem>
                 ))
               ) : (
-                // Fallback option in case student data format is broader
                 studentsData.map(student => (
                   <SelectItem key={student.id} value={student.id}>
                     {student.name} (Grade {student.grade} - {student.stream})
