@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/context/AuthContext';
-import { Shield, Key, LogOut, Camera, Save, Loader2 } from 'lucide-react';
+import { Shield, Key, LogOut, Camera, Save, Loader2, Eye, EyeOff } from 'lucide-react';
 
 const AdminProfile = () => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
@@ -24,6 +24,11 @@ const AdminProfile = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isPassUpdating, setIsPassUpdating] = useState(false);
+
+  // Visibility toggles
+  const [showOldPass, setShowOldPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -58,6 +63,9 @@ const AdminProfile = () => {
       setOldPassword("");
       setNewPassword("");
       setConfirmPassword("");
+      setShowOldPass(false);
+      setShowNewPass(false);
+      setShowConfirmPass(false);
     }
   };
 
@@ -186,33 +194,60 @@ const AdminProfile = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Current Password</Label>
-            <Input 
-              type="password" 
-              value={oldPassword} 
-              onChange={(e) => setOldPassword(e.target.value)} 
-              placeholder="••••••••" 
-              className="rounded-xl h-12"
-            />
+            <div className="relative">
+              <Input 
+                type={showOldPass ? "text" : "password"} 
+                value={oldPassword} 
+                onChange={(e) => setOldPassword(e.target.value)} 
+                placeholder="••••••••" 
+                className="rounded-xl h-12 pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowOldPass(!showOldPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+              >
+                {showOldPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>New Password</Label>
-            <Input 
-              type="password" 
-              value={newPassword} 
-              onChange={(e) => setNewPassword(e.target.value)} 
-              placeholder="••••••••" 
-              className="rounded-xl h-12"
-            />
+            <div className="relative">
+              <Input 
+                type={showNewPass ? "text" : "password"} 
+                value={newPassword} 
+                onChange={(e) => setNewPassword(e.target.value)} 
+                placeholder="••••••••" 
+                className="rounded-xl h-12 pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowNewPass(!showNewPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+              >
+                {showNewPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
           <div className="space-y-2">
             <Label>Confirm New Password</Label>
-            <Input 
-              type="password" 
-              value={confirmPassword} 
-              onChange={(e) => setConfirmPassword(e.target.value)} 
-              placeholder="••••••••" 
-              className="rounded-xl h-12"
-            />
+            <div className="relative">
+              <Input 
+                type={showConfirmPass ? "text" : "password"} 
+                value={confirmPassword} 
+                onChange={(e) => setConfirmPassword(e.target.value)} 
+                placeholder="••••••••" 
+                className="rounded-xl h-12 pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowConfirmPass(!showConfirmPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
+              >
+                {showConfirmPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
           </div>
         </div>
       </Modal>
