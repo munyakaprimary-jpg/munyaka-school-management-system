@@ -12,7 +12,6 @@ import {
   Wallet,
   School,
   Menu,
-  X,
   Search,
   Bell,
   Users,
@@ -39,7 +38,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading } = useAuth();
 
   const handleLogout = () => {
     logout();
@@ -73,6 +72,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   // Don't show layout on login page
   if (location.pathname === '/login') return <>{children}</>;
+
+  // Show a blank or static state during initial auth load to prevent null access errors
+  if (isLoading) return <div className="h-screen w-screen bg-white" />;
 
   return (
     <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
