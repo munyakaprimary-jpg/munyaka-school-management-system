@@ -243,11 +243,88 @@ const Assessments = () => {
   };
 
   const handleExport = () => {
+    if (filteredStudents.length === 0) {
+      showSuccess("No learners found to export.");
+      return;
+    }
+
     setIsExporting(true);
+
     setTimeout(() => {
-      showSuccess("Exporting class performance report...");
+      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+      const row2 = "P.O. BOX 5239-30100,ELDORET";
+      const row3 = "MOTTO: KNOWLEDGE POWER";
+
+      const currentYear = new Date().getFullYear().toString();
+      const gradeName = currentGrade ? currentGrade.name : "All Grades";
+
+      const streamObj = availableStreams.find(s => s.id === selectedStreamId);
+      const streamName = selectedStreamId === "all" ? "All Streams" : (streamObj ? streamObj.name : "All Streams");
+
+      const formattedTerm = term === "term1" ? "Term 1" : term === "term2" ? "Term 2" : "Term 3";
+
+      const row4 = `GRADE: ${gradeName}, STREAM: ${streamName}`;
+      const row5 = `YEAR: ${currentYear}, TERM: ${formattedTerm}`;
+
+      const headers = ["Learner Name", "Assessment ID", ...filteredLearningAreas.map(a => a.name), "Total"];
+
+      const studentRows = filteredStudents.map(student => {
+        const studentMarks = marksMatrix[student.id] || {};
+        let hasMarks = false;
+        const scores = filteredLearningAreas.map(area => {
+          const val = studentMarks[area.id];
+          if (val !== undefined && val !== "") {
+            hasMarks = true;
+            return val;
+          }
+          return "—";
+        });
+
+        const totalMarks = filteredLearningAreas.reduce((sum, area) => {
+          const val = studentMarks[area.id];
+          if (val !== undefined && val !== "") {
+            const num = parseInt(val, 10);
+            return sum + (isNaN(num) ? 0 : num);
+          }
+          return sum;
+        }, 0);
+
+        return [
+          `"${student.name.replace(/"/g, '""')}"`,
+          `"${student.assessment.replace(/"/g, '""')}"`,
+          ...scores.map(s => `"${s}"`),
+          `"${hasMarks ? totalMarks : '—'}"`
+        ];
+      });
+
+      const csvContent = [
+        row1,
+        row2,
+        row3,
+        row4,
+        row5,
+        "",
+        headers.map(h => `"${h}"`).join(","),
+        ...studentRows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      const safeGrade = gradeName.toLowerCase().replace(/\s+/g, '_');
+      const safeStream = streamName.toLowerCase().replace(/\s+/g, '_');
+      const fileName = `marks_${safeGrade}_${safeStream}_${formattedTerm.toLowerCase().replace(/\s+/g, '')}.csv`;
+
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
       setIsExporting(false);
-    }, 1000);
+      showSuccess(`Exported marks sheet for ${filteredStudents.length} learners.`);
+    }, 800);
   };
 
   return (
@@ -258,8 +335,8 @@ const Assessments = () => {
           <p className="text-sm text-slate-500">Record results for all learners in the selected class.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl h-10 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm" onClick={handleExport} disabled={isExporting}>
-            <FileDown size={16} /> Export CSV
+          <Button variant="outline" className="rounded-xl h-10 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50" onClick={handleExport} disabled={isExporting}>
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Export CSV
           </Button>
           <Button className="rounded-xl h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2" onClick={handleSave} disabled={isSaving}>
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All
