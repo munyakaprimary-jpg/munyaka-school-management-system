@@ -50,11 +50,9 @@ const GradesStreams = () => {
         return categories[a.category] - categories[b.category];
       }
       
-      // Extract numbers for comparison (e.g., "Grade 4" -> 4)
       const getNum = (name: string) => {
         const match = name.match(/\d+/);
         if (match) return parseInt(match[0]);
-        // Handle PP1 and PP2 if no number found
         if (name.toUpperCase().includes('PP1')) return 1;
         if (name.toUpperCase().includes('PP2')) return 2;
         return 0;
@@ -66,7 +64,15 @@ const GradesStreams = () => {
 
   const handleAddGrade = () => {
     if (!newGradeName.trim()) return;
-    const newGrade: Grade = { id: `g-${Date.now()}`, name: newGradeName, category: newGradeCategory, streams: [] };
+
+    // Duplicate check for Grades
+    const exists = grades.some(g => g.name.toLowerCase() === newGradeName.trim().toLowerCase());
+    if (exists) {
+      showError(`The grade "${newGradeName}" already exists.`);
+      return;
+    }
+
+    const newGrade: Grade = { id: `g-${Date.now()}`, name: newGradeName.trim(), category: newGradeCategory, streams: [] };
     setGrades([...grades, newGrade]);
     setIsGradeOpen(false);
     setNewGradeName("");
@@ -75,14 +81,26 @@ const GradesStreams = () => {
 
   const handleAddStream = () => {
     if (!selectedGradeId || !newStreamName.trim()) return;
+
+    // Find the grade first to check for duplicate streams within it
+    const parentGrade = grades.find(g => g.id === selectedGradeId);
+    if (parentGrade) {
+      const streamExists = parentGrade.streams.some(s => s.name.toLowerCase() === newStreamName.trim().toLowerCase());
+      if (streamExists) {
+        showError(`A stream named "${newStreamName}" already exists in ${parentGrade.name}.`);
+        return;
+      }
+    }
+
     const studentsCount = parseInt(newStreamStudents) || 0;
     const updatedGrades = grades.map(grade => {
       if (grade.id === selectedGradeId) {
-        const newStream: Stream = { id: `s-${Date.now()}`, name: newStreamName, teacher: newStreamTeacher || "Unassigned", studentsCount };
+        const newStream: Stream = { id: `s-${Date.now()}`, name: newStreamName.trim(), teacher: newStreamTeacher || "Unassigned", studentsCount };
         return { ...grade, streams: [...grade.streams, newStream] };
       }
       return grade;
     });
+    
     setGrades(updatedGrades);
     setIsStreamOpen(false);
     setSelectedGradeId("");
