@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,28 @@ const GradesStreams = () => {
 
   useEffect(() => {
     localStorage.setItem('munyaka_grades', JSON.stringify(grades));
+  }, [grades]);
+
+  // Logical sorting for grades
+  const sortedGrades = useMemo(() => {
+    return [...grades].sort((a, b) => {
+      const categories = { 'Pre-Primary': 1, 'Primary': 2, 'Junior School': 3 };
+      if (categories[a.category] !== categories[b.category]) {
+        return categories[a.category] - categories[b.category];
+      }
+      
+      // Extract numbers for comparison (e.g., "Grade 4" -> 4)
+      const getNum = (name: string) => {
+        const match = name.match(/\d+/);
+        if (match) return parseInt(match[0]);
+        // Handle PP1 and PP2 if no number found
+        if (name.toUpperCase().includes('PP1')) return 1;
+        if (name.toUpperCase().includes('PP2')) return 2;
+        return 0;
+      };
+      
+      return getNum(a.name) - getNum(b.name);
+    });
   }, [grades]);
 
   const handleAddGrade = () => {
@@ -84,7 +106,6 @@ const GradesStreams = () => {
     }
 
     setIsVerifying(true);
-    // Simulate verification delay
     await new Promise(r => setTimeout(r, 800));
 
     if (authPassword === ADMIN_PASSWORD) {
@@ -134,7 +155,7 @@ const GradesStreams = () => {
       </div>
 
       <div className="grid grid-cols-1 gap-8">
-        {grades.map((grade) => (
+        {sortedGrades.map((grade) => (
           <Card key={grade.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden group">
             <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-4">
               <div>
@@ -245,7 +266,7 @@ const GradesStreams = () => {
                 <SelectValue placeholder="Choose grade" />
               </SelectTrigger>
               <SelectContent>
-                {grades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
