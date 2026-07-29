@@ -36,6 +36,7 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -148,7 +149,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Profile Card */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800">
           <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3">
-            <div className="flex items-center gap-3 mb-2">
+            <div className="flex items-center justify-between mb-2">
               <Link to="/profile" className="shrink-0">
                 <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center font-black text-xs text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-opacity">
                   {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
@@ -157,23 +158,31 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {!isCollapsed && (
                 <div className="overflow-hidden flex-1">
                   <Link to="/profile">
-                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate hover:text-indigo-600 transition-colors">{user?.name || 'Admin'}</p>
+                    <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p>
                   </Link>
                   <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
                 </div>
               )}
             </div>
-            <Button 
-              variant="ghost" 
-              onClick={handleLogout}
-              className={cn(
-                "w-full justify-start gap-2 rounded-xl h-8 text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 p-2",
-                isCollapsed && "justify-center p-0"
+            <div className="flex justify-between gap-2">
+              {!isCollapsed && (
+                <Button 
+                  variant="ghost" 
+                  className="flex-1 justify-start gap-2 rounded-xl h-8 text-xs font-bold text-slate-500 hover:text-indigo-600 dark:hover:text-indigo-400 p-1"
+                  onClick={() => setIsOpen(true)}
+                >
+                  <Bell size={14} />
+                  <NotificationBell />
+                </Button>
               )}
-            >
-              <LogOut size={14} />
-              {!isCollapsed && <span>Sign Out</span>}
-            </Button>
+              <Button 
+                variant="ghost" 
+                className="rounded-xl h-8 w-8 text-slate-400 hover:text-red-500 dark:hover:text-red-400"
+                onClick={logout}
+              >
+                <LogOut size={16} />
+              </Button>
+            </div>
           </div>
         </div>
       </aside>
@@ -202,20 +211,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           </div>
           
           <div className="flex items-center gap-3">
-            <select className="hidden sm:block px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none">
-              <option>Term 1 • 2024</option>
-            </select>
-
+            <NotificationBell />
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
               {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-400" />}
-            </button>
-
-            <button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-              <Bell size={18} className="text-slate-400" />
-              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
             </button>
           </div>
         </header>
