@@ -1,24 +1,24 @@
-"use client";
-
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowLeft } from 'lucide-react';
+import { ChevronLeft } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 
 interface BackButtonProps {
-  to?: string;
   fallback?: string;
+  to?: string;
   className?: string;
 }
 
-const BackButton: React.FC<BackButtonProps> = ({ to, fallback = '/', className }) => {
+const BackButton: React.FC<BackButtonProps> = ({ 
+  fallback = '/', 
+  to, 
+  className 
+}) => {
   const navigate = useNavigate();
 
   const handleBack = () => {
     if (to) {
       navigate(to);
-    } else if (window.history.state && window.history.state.idx > 0) {
-      navigate(-1);
     } else {
       navigate(fallback);
     }
@@ -26,15 +26,16 @@ const BackButton: React.FC<BackButtonProps> = ({ to, fallback = '/', className }
 
   return (
     <Button
-      type="button"
       variant="ghost"
-      size="icon"
+      size="sm"
       onClick={handleBack}
-      className={`rounded-xl h-10 w-10 text-slate-500 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 ${className || ''}`}
-      title="Go back"
-      aria-label="Go back"
+      className={cn(
+        "rounded-xl h-10 px-3 text-sm font-medium text-slate-600 hover:text-indigo-600 hover:bg-indigo-50",
+        className
+      )}
     >
-      <ArrowLeft size={20} />
+      <ChevronLeft size={16} className="mr-1" />
+      Back
     </Button>
   );
 };
