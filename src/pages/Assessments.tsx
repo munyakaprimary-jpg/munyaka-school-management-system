@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Info, Save } from "lucide-react";
+import { Info, Save, Users, CheckCircle, XCircle } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
@@ -40,6 +40,14 @@ interface ExamType {
   weight: number;
   category: string;
   description?: string;
+}
+
+interface SubjectScore {
+  subjectId: string;
+  subjectName: string;
+  score: string;
+  performance: string;
+  comment: string;
 }
 
 const FALLBACK_CLUSTERS: ClusterData[] = [
@@ -116,7 +124,7 @@ const Assessments = () => {
     { code: "EE", label: "Exceeding Expectation", color: "bg-emerald-100 text-emerald-700" },
     { code: "ME", label: "Meeting Expectation", color: "bg-blue-100 text-blue-700" },
     { code: "AE", label: "Approaching Expectation", color: "bg-amber-100 text-amber-700" },
-    { code: "BE", label: "Below Expectation", color: "bg-red-100 text-red-700" },
+    { code: "BE", label: "Below Expectation", color: "bg-rose-100 text-rose-700" },
   ];
 
   const [studentMarks, setStudentMarks] = useState<StudentMark[]>([
@@ -154,12 +162,15 @@ const Assessments = () => {
     return gradesList.length > 0 ? gradesList[0].id : "";
   });
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
+  const [selectedStudentId, setSelectedStudentId] = useState<number>(1);
   const [examType, setExamType] = useState<string>(() => {
     return examTypes.length > 0 ? examTypes[0].code : "SUMMATIVE";
   });
   const [year, setYear] = useState(currentYear.toString());
   const [term, setTerm] = useState("term1");
-  const [subject, setSubject] = useState<string>("");
+
+  // Subject scores state for individual learner
+  const [subjectScores, setSubjectScores] = useState<SubjectScore[]>([]);
 
   // Get streams for the currently selected grade
   const currentGrade = gradesList.find(g => g.id === selectedGradeId);
@@ -198,7 +209,23 @@ const Assessments = () => {
 
   const filteredLearningAreas = getFilteredLearningAreas();
 
-  // Automatically select the first stream and first learning area when grade changes
+  // Initialize subject scores when learning areas change
+  useEffect(() => {
+    const areas = getFilteredLearningAreas();
+    if (areas.length > 0) {
+      setSubjectScores(areas.map(area => ({
+        subjectId: area.id,
+        subjectName: area.name,
+        score: "",
+        performance: "",
+        comment: ""
+      })));
+    } else {
+      setSubjectScores([]);
+    }
+  }, [selectedGradeId, clusters]);
+
+  // Automatically select the first stream when grade changes
   useEffect(() => {
     if (availableStreams.length > 0) {
       setSelectedStreamId(availableStreams[0].id);
@@ -206,15 +233,6 @@ const Assessments = () => {
       setSelectedStreamId("");
     }
   }, [selectedGradeId, gradesList]);
-
-  useEffect(() => {
-    const areas = getFilteredLearningAreas();
-    if (areas.length > 0) {
-      setSubject(areas[0].id);
-    } else {
-      setSubject("");
-    }
-  }, [selectedGradeId, clusters]);
 
   // Helper to automatically determine performance level based on score (0-100)
   const getPerformanceFromScore = (scoreStr: string): string => {
@@ -226,7 +244,7 @@ const Assessments = () => {
     return "BE";
   };
 
-  const handleScoreChange = (id: number, scoreVal: string) => {
+  const handleScoreChange = (subjectId: string, scoreVal: string) => {
     let cleanScore = scoreVal.replace(/[^0-9]/g, '');
     if (cleanScore !== '') {
       const num = parseInt(cleanScore);
@@ -236,38 +254,68 @@ const Assessments = () => {
 
     const autoPerformance = getPerformanceFromScore(cleanScore);
 
-    setStudentMarks(prev => prev.map(student => {
-      if (student.id === id) {
+    setSubjectScores(prev => prev.map(subject => {
+      if (subject.subjectId === subjectId) {
         return {
-          ...student,
+          ...subject,
           score: cleanScore,
-          performance: autoPerformance || student.performance
+          performance: autoPerformance || subject.performance
         };
       }
-      return student;
+      return subject;
     }));
   };
 
-  const handlePerformanceChange = (id: number, perfVal: string) => {
-    setStudentMarks(prev => prev.map(student => {
-      if (student.id === id) {
-        return { ...student, performance: perfVal };
+  const handlePerformanceChange = (subjectId: string, perfVal: string) => {
+    setSubjectScores(prev => prev.map(subject => {
+      if (subject.subjectId === subjectId) {
+        return { ...subject, performance: perfVal };
       }
-      return student;
+      return subject;
     }));
   };
 
-  const handleCommentChange = (id: number, commentVal: string) => {
-    setStudentMarks(prev => prev.map(student => {
-      if (student.id === id) {
-        return { ...student, comment: commentVal };
+  const handleCommentChange = (subjectId: string, commentVal: string) => {
+    setSubjectScores(prev => prev.map(subject => {
+      if (subject.subjectId === subjectId) {
+        return { ...subject, comment: commentVal };
       }
-      return student;
+      return subject;
     }));
   };
 
-  const handleSubmit = () => {
-    showSuccess('Marks submitted and saved successfully!');
+  // Set all subjects to a default score
+  const handleSetAllScores = () => {
+    const defaultScore = "75";
+    const autoPerformance = getPerformanceFromScore(defaultScore);
+    setSubjectScores(prev => prev.map(subject => ({
+      ...subject,
+      score: defaultScore,
+      performance: autoPerformance
+    })));
+  };
+
+  // Clear all subject scores
+  const handleClearAllScores = () => {
+    setSubjectScores(prev => prev.map(subject => ({
+      ...subject,
+      score: "",
+      performance: "",
+      comment: ""
+    })));
+  };
+
+  const handleSubmitAll = () => {
+    // Validate that at least one subject has a score
+    const hasScores = subjectScores.some(s => s.score.trim() !== "");
+    if (!hasScores) {
+      showSuccess("Please enter at least one subject score before saving.");
+      return;
+    }
+
+    // In a real app, this would send all scores to the backend
+    const savedCount = subjectScores.filter(s => s.score.trim() !== "").length;
+    showSuccess(`${savedCount} subject scores saved successfully for ${studentMarks.find(s => s.id === selectedStudentId)?.name || 'selected student'}!`);
   };
 
   return (
@@ -275,10 +323,10 @@ const Assessments = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">CBC Marksheet</h1>
-          <p className="text-muted-foreground">Grade students based on specific learning outcomes and scores.</p>
+          <p className="text-muted-foreground">Enter scores for all subjects for an individual learner.</p>
         </div>
-        <Button size="lg" className="rounded-2xl px-8 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 gap-2" onClick={handleSubmit}>
-          <Save size={18} /> Submit Marks
+        <Button size="lg" className="rounded-2xl px-8 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 gap-2" onClick={handleSubmitAll}>
+          <Save size={18} /> Save All Subjects
         </Button>
       </div>
 
@@ -302,7 +350,7 @@ const Assessments = () => {
       <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
         <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Grade Level</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Grade Level</label>
             <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Grade" />
@@ -316,9 +364,9 @@ const Assessments = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Stream</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Stream</label>
             <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={availableStreams.length === 0}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
                 <SelectValue placeholder={availableStreams.length === 0 ? "No Streams" : "Select Stream"} />
               </SelectTrigger>
               <SelectContent>
@@ -330,7 +378,21 @@ const Assessments = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Exam Type</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Learner</label>
+            <Select value={selectedStudentId.toString()} onValueChange={(val) => setSelectedStudentId(parseInt(val))}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Learner" />
+              </SelectTrigger>
+              <SelectContent>
+                {studentMarks.map(s => (
+                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Exam Type" />
@@ -344,7 +406,7 @@ const Assessments = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Year</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Year</label>
             <Select value={year} onValueChange={setYear}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Year" />
@@ -356,9 +418,11 @@ const Assessments = () => {
               </SelectContent>
             </Select>
           </div>
+        </div>
 
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
           <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Term</label>
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Term</label>
             <Select value={term} onValueChange={setTerm}>
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Term" />
@@ -370,86 +434,101 @@ const Assessments = () => {
               </SelectContent>
             </Select>
           </div>
-        </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-          <div className="space-y-1.5">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Learning Area</label>
-            <Select value={subject} onValueChange={setSubject} disabled={filteredLearningAreas.length === 0}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder={filteredLearningAreas.length === 0 ? "No Learning Areas" : "Select Learning Area"} />
-              </SelectTrigger>
-              <SelectContent>
-                {filteredLearningAreas.map(area => (
-                  <SelectItem key={area.id} value={area.id}>{area.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5 md:col-span-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
+          <div className="md:col-span-2 space-y-1.5">
+            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
             <Input placeholder="Search or enter assessment task (e.g., Fractions, Oral Narrative)..." className="rounded-xl h-11 bg-slate-50 border-none text-sm" />
           </div>
         </div>
       </Card>
 
-      {/* Marksheet Table */}
+      {/* Multi-Subject Score Entry Section */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+        <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+          <CardTitle className="text-lg">
+            Enter Scores for: {studentMarks.find(s => s.id === selectedStudentId)?.name || 'Selected Student'}
+          </CardTitle>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl text-xs font-bold"
+              onClick={handleSetAllScores}
+            >
+              <CheckCircle size={14} className="mr-1" /> Set All to 75
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              className="rounded-xl text-xs font-bold text-rose-600 border-rose-200"
+              onClick={handleClearAllScores}
+            >
+              <XCircle size={14} className="mr-1" /> Clear All
+            </Button>
+          </div>
+        </CardHeader>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
             <table className="w-full text-sm text-left">
               <thead className="bg-slate-50/50 border-b">
                 <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500">Student Name</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-40">Score (0-100)</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-56">Performance Level</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-1/3">Learning Area</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-1/6">Score (0-100)</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 w-1/6">Performance Level</th>
                   <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500">Teacher's Comment</th>
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {studentMarks.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900 text-base">{student.name}</td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2">
+                {subjectScores.length > 0 ? (
+                  subjectScores.map((subject) => (
+                    <tr key={subject.subjectId} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-8 py-5 font-bold text-slate-900 text-base">{subject.subjectName}</td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2">
+                          <Input 
+                            type="text"
+                            value={subject.score}
+                            onChange={(e) => handleScoreChange(subject.subjectId, e.target.value)}
+                            className="w-20 h-11 rounded-xl text-center font-bold text-slate-800 bg-slate-50 border-slate-100 focus:bg-white"
+                            placeholder="0"
+                          />
+                          <span className="text-xs font-bold text-slate-400">%</span>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <Select 
+                          value={subject.performance} 
+                          onValueChange={(val) => handlePerformanceChange(subject.subjectId, val)}
+                        >
+                          <SelectTrigger className="w-44 h-11 rounded-xl bg-slate-50 border-slate-100 font-bold">
+                            <SelectValue placeholder="Select Level" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {performanceLevels.map(lvl => (
+                              <SelectItem key={lvl.code} value={lvl.code}>
+                                <span className="font-bold">{lvl.code}</span> - {lvl.label.split(' ')[0]}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                      <td className="px-8 py-5">
                         <Input 
-                          type="text"
-                          value={student.score}
-                          onChange={(e) => handleScoreChange(student.id, e.target.value)}
-                          className="w-20 h-11 rounded-xl text-center font-bold text-slate-800 bg-slate-50 border-slate-100 focus:bg-white"
-                          placeholder="0"
+                          value={subject.comment}
+                          onChange={(e) => handleCommentChange(subject.subjectId, e.target.value)}
+                          className="h-11 rounded-xl bg-slate-50 border-slate-100 focus:bg-white text-sm" 
+                          placeholder="e.g. Consistent effort" 
                         />
-                        <span className="text-xs font-bold text-slate-400">%</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <Select 
-                        value={student.performance} 
-                        onValueChange={(val) => handlePerformanceChange(student.id, val)}
-                      >
-                        <SelectTrigger className="w-44 h-11 rounded-xl bg-slate-50 border-slate-100 font-bold">
-                          <SelectValue placeholder="Select Level" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {performanceLevels.map(lvl => (
-                            <SelectItem key={lvl.code} value={lvl.code}>
-                              <span className="font-bold">{lvl.code}</span> - {lvl.label.split(' ')[0]}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-8 py-5">
-                      <Input 
-                        value={student.comment}
-                        onChange={(e) => handleCommentChange(student.id, e.target.value)}
-                        className="h-11 rounded-xl bg-slate-50 border-slate-100 focus:bg-white text-sm" 
-                        placeholder="e.g. Consistent effort" 
-                      />
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={4} className="px-8 py-12 text-center text-slate-400">
+                      No learning areas found for the selected grade level.
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
