@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Filter, MoreVertical, UserCircle, Phone, GraduationCap, Plus, UserPlus } from 'lucide-react';
+import { Search, Filter, MoreVertical, UserCircle, Phone, GraduationCap, Plus, UserPlus, Download, Loader2 } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { STUDENTS as initialStudents } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
@@ -19,6 +19,7 @@ const Students = () => {
   const [studentsList, setStudentsList] = useState(initialStudents);
   const [searchTerm, setSearchTerm] = useState("");
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
 
   const [fullName, setFullName] = useState("");
@@ -29,15 +30,65 @@ const Students = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
 
-  const filteredStudents = studentsList.filter(s => s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase()));
+  const filteredStudents = studentsList.filter(s => 
+    s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    s.assessment.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim()) return;
-    const newStudent = { id: (studentsList.length + 1).toString(), name: fullName.trim(), assessment: assessmentNo.trim().toUpperCase(), grade: gradeLevel, stream: stream, gender: "M", dob: "2014-01-01", guardian: guardianName.trim(), phone: phone.trim(), email: "g@email.com", health: "None", needs: "None" };
+    const newStudent = { 
+      id: (studentsList.length + 1).toString(), 
+      name: fullName.trim(), 
+      assessment: assessmentNo.trim().toUpperCase(), 
+      grade: gradeLevel, 
+      stream: stream, 
+      gender: "M", 
+      dob: "2014-01-01", 
+      guardian: guardianName.trim(), 
+      phone: phone.trim(), 
+      email: "g@email.com", 
+      health: "None", 
+      needs: "None" 
+    };
     setStudentsList([newStudent, ...studentsList]);
     setIsRegisterOpen(false);
     setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
     showSuccess(`Student ${newStudent.name} registered!`);
+  };
+
+  const handleExportCSV = () => {
+    setIsExporting(true);
+    
+    // Simulate a brief delay for UX
+    setTimeout(() => {
+      const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
+      const rows = studentsList.map(s => [
+        s.name,
+        s.assessment,
+        `Grade ${s.grade}`,
+        s.stream,
+        s.guardian,
+        s.phone
+      ]);
+
+      const csvContent = [
+        headers.join(","),
+        ...rows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `munyaka_learners_list_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      setIsExporting(false);
+      showSuccess("Learners list exported as CSV");
+    }, 800);
   };
 
   return (
@@ -51,7 +102,15 @@ const Students = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium">Export CSV</Button>
+          <Button 
+            variant="outline" 
+            className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2"
+            onClick={handleExportCSV}
+            disabled={isExporting}
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            Export CSV
+          </Button>
           <Button className="h-10 px-4 rounded-lg shadow-sm bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2" onClick={() => setIsRegisterOpen(true)}>
             <Plus size={16} /> Add Student
           </Button>
