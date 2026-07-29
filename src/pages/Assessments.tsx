@@ -270,10 +270,6 @@ const Assessments = () => {
     setSubjectScores(prev => prev.map(s => s.subjectId === subjectId ? { ...s, comment: commentVal } : s));
   };
 
-  const handleClearAllScores = () => {
-    setSubjectScores(prev => prev.map(s => ({ ...s, score: "", performance: "", comment: "" })));
-  };
-
   const handleSubmitAll = () => {
     const hasScores = subjectScores.some(s => s.score.trim() !== "");
     if (!hasScores) {
@@ -403,15 +399,10 @@ const Assessments = () => {
 
       {/* Scores Table */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between">
+        <CardHeader className="p-8 border-b bg-slate-50/50">
           <CardTitle className="text-lg">
             Scores: {STUDENTS.find(s => s.id === selectedStudentId)?.name || 'Please select a learner'}
           </CardTitle>
-          <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold text-rose-600 border-rose-200" onClick={handleClearAllScores}>
-              <XCircle size={14} className="mr-1" /> Clear All
-            </Button>
-          </div>
         </CardHeader>
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
