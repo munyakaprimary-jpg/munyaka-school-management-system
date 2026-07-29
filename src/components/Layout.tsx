@@ -5,162 +5,22 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, 
-  UserPlus, 
   ClipboardCheck, 
   FileSpreadsheet, 
-  FileText,
-  FolderHeart,
-  Wallet,
   School,
   Menu,
   Search,
   Bell,
-  Users,
-  Settings,
-  Calendar,
-  Contact2,
-  Megaphone,
-  Box,
-  Library,
-  MessageSquare,
-  CalendarDays,
+  Users as UsersIcon,
+  Settings as SettingsIcon,
   Layers,
-  BookOpen,
-  Award,
+  Wallet as WalletIcon,
   LogOut,
   ChevronLeft,
   ChevronRight,
   Sun,
   Moon,
-  X,
-  UserCircle,
-  GraduationCap,
-  Clock,
-  TrendingUp,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Filter,
-  Download,
-  Plus,
-  Printer,
-  RefreshCw,
-  ArrowUpDown,
-  MoreHorizontal,
-  Eye,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar as CalendarIcon,
-  Search as SearchIcon,
-  Activity,
-  BarChart3,
-  PieChart,
-  LineChart,
-  Target,
-  Zap,
-  Award as AwardIcon,
-  BookOpen as BookOpenIcon,
-  ClipboardList,
-  ShoppingCart,
-  DollarSign,
-  Percent,
-  TrendingUp as TrendingUpIcon,
-  Users as UsersIcon,
-  UserCheck,
-  Clock as ClockIcon,
-  Wallet as WalletIcon,
-  Settings as SettingsIcon,
-  LogOut as LogOutIcon,
-  Menu as MenuIcon,
-  X as XIcon,
-  ChevronDown,
-  ChevronUp,
-  Home,
-  ArrowLeft,
-  Bell as BellIcon,
-  Moon as MoonIcon,
-  Sun as SunIcon,
-  Search as SearchIcon2,
-  Filter as FilterIcon,
-  Download as DownloadIcon,
-  Printer as PrinterIcon,
-  RefreshCw as RefreshCwIcon,
-  ArrowUpDown as ArrowUpDownIcon,
-  MoreHorizontal as MoreHorizontalIcon,
-  Eye as EyeIcon,
-  Mail as MailIcon,
-  Phone as PhoneIcon,
-  MapPin as MapPinIcon,
-  Calendar as CalendarIcon2,
-  Activity as ActivityIcon,
-  BarChart3 as BarChart3Icon,
-  PieChart as PieChartIcon,
-  LineChart as LineChartIcon,
-  Target as TargetIcon,
-  Zap as ZapIcon,
-  AwardIcon as AwardIcon2,
-  BookOpenIcon as BookOpenIcon2,
-  ClipboardList as ClipboardListIcon,
-  ShoppingCart as ShoppingCartIcon,
-  DollarSign as DollarSignIcon,
-  Percent as PercentIcon,
-  TrendingUpIcon as TrendingUpIcon2,
-  UsersIcon as UsersIcon2,
-  UserCheck as UserCheckIcon,
-  ClockIcon as ClockIcon2,
-  WalletIcon as WalletIcon2,
-  SettingsIcon as SettingsIcon2,
-  LogOutIcon as LogOutIcon2,
-  MenuIcon as MenuIcon2,
-  XIcon as XIcon2,
-  ChevronDown as ChevronDownIcon,
-  ChevronUp as ChevronUpIcon,
-  Home as HomeIcon,
-  ArrowLeft as ArrowLeftIcon,
-  BellIcon as BellIcon2,
-  MoonIcon as MoonIcon2,
-  SunIcon as SunIcon2,
-  SearchIcon2 as SearchIcon3,
-  FilterIcon as FilterIcon2,
-  DownloadIcon as DownloadIcon2,
-  PrinterIcon as PrinterIcon2,
-  RefreshCwIcon as RefreshCwIcon2,
-  ArrowUpDownIcon as ArrowUpDownIcon2,
-  MoreHorizontalIcon as MoreHorizontalIcon2,
-  EyeIcon as EyeIcon2,
-  MailIcon as MailIcon2,
-  PhoneIcon as PhoneIcon2,
-  MapPinIcon as MapPinIcon2,
-  CalendarIcon2 as CalendarIcon3,
-  ActivityIcon as ActivityIcon2,
-  BarChart3Icon as BarChart3Icon2,
-  PieChartIcon as PieChartIcon2,
-  LineChartIcon as LineChartIcon2,
-  TargetIcon as TargetIcon2,
-  ZapIcon as ZapIcon2,
-  AwardIcon2 as AwardIcon3,
-  BookOpenIcon2 as BookOpenIcon3,
-  ClipboardListIcon as ClipboardListIcon2,
-  ShoppingCartIcon as ShoppingCartIcon2,
-  DollarSignIcon as DollarSignIcon2,
-  PercentIcon as PercentIcon2,
-  TrendingUpIcon2 as TrendingUpIcon3,
-  UsersIcon2 as UsersIcon3,
-  UserCheckIcon as UserCheckIcon2,
-  ClockIcon2 as ClockIcon3,
-  WalletIcon2 as WalletIcon3,
-  SettingsIcon2 as SettingsIcon3,
-  LogOutIcon2 as LogOutIcon3,
-  MenuIcon2 as MenuIcon3,
-  XIcon2 as XIcon3,
-  ChevronDownIcon as ChevronDownIcon2,
-  ChevronUpIcon as ChevronUpIcon2,
-  HomeIcon as HomeIcon2,
-  ArrowLeftIcon as ArrowLeftIcon2,
-  BellIcon2 as BellIcon3,
-  MoonIcon2 as MoonIcon3,
-  SunIcon2 as SunIcon3,
+  X
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -181,10 +41,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     { icon: LayoutDashboard, label: 'Overview', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: UsersIcon, label: 'Student Directory', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Contact2, label: 'Staff & Teachers', path: '/staff', roles: ['super_admin', 'head_teacher'] },
-    { icon: ClipboardCheck, label: 'Attendance & Registers', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Layers, label: 'Classes & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
-    { icon: FileSpreadsheet, label: 'Examinations & Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: ClipboardCheck, label: 'Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
+    { icon: FileSpreadsheet, label: 'Marks & Exams', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: WalletIcon, label: 'Finance & Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: SettingsIcon, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
   ];
@@ -216,7 +75,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               </div>
               <div>
                 <h1 className="font-black text-sm tracking-tight text-slate-900 dark:text-white">MUNYAKA</h1>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Primary & Junior</p>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Primary & JS</p>
               </div>
             </div>
           )}
@@ -308,24 +167,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search students by name, ADM number, or staff ID..." 
+                placeholder="Quick search..." 
                 className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-700 px-1.5 py-0.5 rounded-md">
-                Ctrl K
-              </span>
             </div>
           </div>
           
           <div className="flex items-center gap-3">
-            {/* Term Selector */}
-            <select className="hidden sm:block px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none focus:ring-2 ring-indigo-100">
+            <select className="hidden sm:block px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none">
               <option>Term 1 • 2024</option>
-              <option>Term 2 • 2024</option>
-              <option>Term 3 • 2024</option>
             </select>
 
-            {/* Dark Mode Toggle */}
             <button 
               onClick={() => setIsDarkMode(!isDarkMode)}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
@@ -333,22 +185,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-400" />}
             </button>
 
-            {/* Notifications */}
             <button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
               <Bell size={18} className="text-slate-400" />
               <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
             </button>
-
-            {/* Profile */}
-            <div className="flex items-center gap-2 pl-3 border-l border-slate-200 dark:border-slate-700">
-              <div className="w-8 h-8 rounded-lg bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center font-black text-xs text-indigo-600 dark:text-indigo-400">
-                {user?.avatar || 'AD'}
-              </div>
-              <div className="hidden md:block">
-                <p className="text-xs font-bold text-slate-900 dark:text-white">{user?.name || 'Admin'}</p>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role?.replace('_', ' ') || 'Master Control'}</p>
-              </div>
-            </div>
           </div>
         </header>
 
