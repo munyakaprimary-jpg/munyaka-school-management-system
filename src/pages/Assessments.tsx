@@ -295,7 +295,7 @@ const Assessments = () => {
                 <SelectItem value="all">All Streams</SelectItem>
                 {availableStreams.map((s: Stream) => (
                   <SelectItem key={s.id} value={s.id}>
-                    Stream {s.name} ({s.teacher})
+                    Stream {s.name}
                   </SelectItem>
                 ))}
               </SelectContent>
