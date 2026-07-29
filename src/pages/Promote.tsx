@@ -1,9 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { GraduationCap } from 'lucide-react';
-import { cn } from "@/lib/utils";
 import { showSuccess } from '@/utils/toast';
 import PromoteStudentsModal from '@/components/ui/PromoteStudentsModal';
 
@@ -79,13 +77,15 @@ const Promote = () => {
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
 
   // Filter students based on search and filters
-  const filteredStudents = students.filter(student => {
-    const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesGrade = !filterGrade || student.grade === filterGrade;
-    const matchesStream = !filterStream || student.stream === filterStream;
-    const matchesStatus = !filterStatus || student.status === filterStatus;
-    return matchesSearch && matchesGrade && matchesStream && matchesStatus;
-  });
+  const filteredStudents = useMemo(() => {
+    return students.filter(student => {
+      const matchesSearch = student.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesGrade = !filterGrade || student.grade === filterGrade;
+      const matchesStream = !filterStream || student.stream === filterStream;
+      const matchesStatus = !filterStatus || student.status === filterStatus;
+      return matchesSearch && matchesGrade && matchesStream && matchesStatus;
+    });
+  }, [students, searchTerm, filterGrade, filterStream, filterStatus]);
 
   // Helper functions
   const getNextGrade = (currentGrade: string): string => {
