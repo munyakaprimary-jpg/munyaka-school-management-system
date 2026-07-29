@@ -2,25 +2,15 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AttendanceRecord } from '@/types/attendance';
-import { 
-  calculateDistance, 
-  SCHOOL_COORDINATES, 
-  GEOFENCE_RADIUS_METERS, 
-  isEarlyDeparture 
-} from '@/lib/attendance-utils';
+import { calculateDistance } from '@/lib/geofence';
+import { isWithinGeofence, SCHOOL_COORDINATES } from '@/lib/geofence';
+import { validateDeparture } from '@/lib/attendance-utils';
 import { showSuccess, showError } from '@/utils/toast';
 
 export const useTeacherAttendance = (currentLocation: { lat: number; lng: number } | null) => {
   const { user } = useAuth();
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  // Calculate distance to school reactively
-  const distance = currentLocation 
-    ? calculateDistance(currentLocation.lat, currentLocation.lng, SCHOOL_COORDINATES.lat, SCHOOL_COORDINATES.lng)
-    : null;
-
-  const isWithinBounds = distance !== null && distance <= GEOFENCE_RADIUS_METERS;
+  const [loading, setLoading] = useState<boolean>(false);
 
   const fetchTodayRecord = async () => {
     if (!user) return;
@@ -44,7 +34,8 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
 
   const clockIn = async () => {
     if (!user || !currentLocation) return;
-    if (!isWithinBounds) {
+    const { lat, lng } = currentLocation;
+    if (!isWithinGeofence(lat, lng)) {
       showError('You must be within 100m of the school to clock in.');
       return;
     }
@@ -54,8 +45,8 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       .upsert({
         teacher_id: user.id,
         arrival_time: new Date().toISOString(),
-        verified_lat: currentLocation.lat,
-        verified_lng: currentLocation.lng,
+        verified_lat: lat,
+        verified_lng: lng,
       })
       .select()
       .single();
@@ -70,14 +61,15 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
 
   const clockOut = async (reason: string = '') => {
     if (!user || !currentLocation || !record) return;
-    if (!isWithinBounds) {
+    const { lat, lng } = currentLocation;
+    if (!isWithinGeofence(lat, lng)) {
       showError('You must be within 100m of the school to clock out.');
       return;
     }
 
-    const early = isEarlyDeparture();
-    if (early && reason.length < 10) {
-      showError('Early departure requires a reason (min 10 characters).');
+    const validation = validateDeparture(new Date(), reason);
+    if (!validation.valid) {
+      showError(validation.message!);
       return;
     }
 
@@ -85,9 +77,9 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       .from('teacher_attendance')
       .update({
         departure_time: new Date().toISOString(),
-        early_departure_reason: early ? reason : null,
-        verified_lat: currentLocation.lat,
-        verified_lng: currentLocation.lng,
+        early_departure_reason: validation.valid ? reason : null,
+        verified_lat: lat,
+        verified_lng: lng,
       })
       .eq('id', record.id)
       .select()
@@ -101,5 +93,5 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
     }
   };
 
-  return { record, distance, isWithinBounds, loading, clockIn, clockOut };
+  return { record, loading, clockIn, clockOut };
 };
