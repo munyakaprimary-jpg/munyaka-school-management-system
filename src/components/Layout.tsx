@@ -5,35 +5,41 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
   LayoutDashboard, 
-  UserPlus, 
+  Users, 
+  Layers, 
+  BookOpen, 
+  Award, 
+  Contact2, 
+  MessageSquare, 
+  Megaphone, 
+  CalendarDays, 
+  Calendar, 
   ClipboardCheck, 
   FileSpreadsheet, 
-  FileText,
-  FolderHeart,
-  Wallet,
-  School,
-  Menu,
-  Search,
-  Bell,
-  Users,
-  Settings,
-  Calendar,
-  Contact2,
-  Megaphone,
-  Box,
-  Library,
-  MessageSquare,
-  CalendarDays,
-  Layers,
-  BookOpen,
-  Award,
-  LogOut
+  FolderHeart, 
+  Library, 
+  Box, 
+  Wallet, 
+  FileText, 
+  Settings, 
+  School, 
+  Menu, 
+  Search, 
+  Bell, 
+  LogOut, 
+  ChevronLeft, 
+  ChevronRight, 
+  Sun, 
+  Moon, 
+  X 
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isDarkMode, setIsDarkMode] = React.useState(false);
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -54,7 +60,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Megaphone, label: 'Notice Board', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: UserPlus, label: 'Registration', path: '/registration', roles: ['super_admin', 'head_teacher'] },
     { icon: ClipboardCheck, label: 'Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
@@ -68,7 +73,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
   return (
-    <div className="flex h-screen bg-[#fbfcfd] overflow-hidden">
+    <div className={cn("flex h-screen overflow-hidden", isDarkMode ? "dark" : "")}>
       {/* Mobile Menu Backdrop */}
       {isOpen && (
         <div 
@@ -79,70 +84,102 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
       {/* Sidebar */}
       <aside className={cn(
-        "fixed inset-y-0 left-0 z-50 w-72 bg-white border-r transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 flex flex-col",
-        isOpen ? "translate-x-0" : "-translate-x-full"
+        "fixed left-0 top-0 h-full bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 z-50 transform transition-all duration-300 ease-in-out flex flex-col",
+        isCollapsed ? "w-16" : "w-64",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
       )}>
-        <div className="p-6">
-          <div className="flex items-center gap-3 mb-8">
-            <div className="bg-indigo-600 p-2 rounded-xl shadow-lg shadow-indigo-200">
+        {/* Sidebar Header */}
+        <div className="p-4 flex items-center justify-between border-b border-slate-100 dark:border-slate-800">
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center">
+                <School className="text-white" size={20} />
+              </div>
+              <div>
+                <h1 className="font-black text-sm tracking-tight text-slate-900 dark:text-white">MUNYAKA</h1>
+                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">Primary & JS</p>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-10 h-10 bg-indigo-600 rounded-xl shadow-lg shadow-indigo-200 flex items-center justify-center mx-auto">
               <School className="text-white" size={20} />
             </div>
-            <div>
-              <h1 className="font-black text-base tracking-tight leading-none text-slate-900">MUNYAKA</h1>
-              <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest mt-1">Primary & Junior</p>
-            </div>
-          </div>
-
-          <nav className="space-y-1 h-[calc(100vh-280px)] overflow-y-auto pr-1 custom-scrollbar">
-            {filteredMenu.map((item) => (
-              <Link 
-                key={item.path} 
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200",
-                  location.pathname === item.path 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100" 
-                    : "text-slate-500 hover:bg-slate-50 hover:text-indigo-600"
-                )}
-              >
-                <item.icon size={16} className={cn(location.pathname === item.path ? "text-white" : "text-slate-400")} />
-                {item.label}
-              </Link>
-            ))}
-          </nav>
+          )}
+          <button 
+            onClick={() => setIsCollapsed(!isCollapsed)}
+            className="hidden lg:flex p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-500 dark:text-slate-400"
+          >
+            {isCollapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+          <button 
+            onClick={() => setIsOpen(false)}
+            className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400"
+          >
+            <X size={16} />
+          </button>
         </div>
 
-        <div className="mt-auto p-6 space-y-4 border-t border-slate-50 bg-slate-50/30">
-          <div className="bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600">
-                {user?.avatar || 'U'}
-              </div>
-              <div className="overflow-hidden">
-                <p className="text-xs font-black text-slate-900 truncate">{user?.name || 'User'}</p>
-                <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Guest'}</p>
-              </div>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1 custom-scrollbar">
+          {filteredMenu.map((item) => (
+            <Link 
+              key={item.path} 
+              to={item.path}
+              onClick={() => setIsOpen(false)}
+              className={cn(
+                "flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 group",
+                location.pathname === item.path 
+                  ? "bg-indigo-600 text-white shadow-lg shadow-indigo-100 dark:bg-indigo-700" 
+                  : "text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-indigo-600 dark:hover:text-indigo-400"
+              )}
+            >
+              <item.icon size={18} className={cn(
+                "shrink-0",
+                location.pathname === item.path ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+              )} />
+              {!isCollapsed && <span className="truncate">{item.label}</span>}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Profile Card */}
+        <div className="p-4 border-t border-slate-100 dark:border-slate-800">
+          <div className="bg-slate-50 dark:bg-slate-800 rounded-2xl p-3">
+            <div className="flex items-center gap-3 mb-2">
+              <Link to="/profile" className="shrink-0">
+                <div className="w-9 h-9 rounded-xl bg-indigo-100 dark:bg-indigo-900 flex items-center justify-center font-black text-xs text-indigo-600 dark:text-indigo-400 hover:opacity-80 transition-opacity">
+                  {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
+                </div>
+              </Link>
+              {!isCollapsed && (
+                <div className="overflow-hidden flex-1">
+                  <Link to="/profile">
+                    <p className="text-xs font-bold text-slate-900 dark:text-white truncate hover:text-indigo-600 transition-colors">{user?.name || 'Admin'}</p>
+                  </Link>
+                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p>
+                </div>
+              )}
             </div>
             <Button 
               variant="ghost" 
               onClick={handleLogout}
-              className="w-full justify-start gap-3 rounded-xl h-10 text-xs font-bold text-rose-500 hover:bg-rose-50 hover:text-rose-600 p-3"
+              className={cn(
+                "w-full justify-start gap-2 rounded-xl h-8 text-xs font-bold text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-900/20 p-2",
+                isCollapsed && "justify-center p-0"
+              )}
             >
-              <LogOut size={14} /> Sign Out
+              <LogOut size={14} />
+              {!isCollapsed && <span>Sign Out</span>}
             </Button>
-          </div>
-          
-          <div className="px-1 flex justify-between items-center">
-            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Term 1 • 2024</span>
-            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
           </div>
         </div>
       </aside>
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <header className="h-16 bg-white border-b flex items-center justify-between px-8 shrink-0">
+        {/* Top Header */}
+        <header className="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between px-4 lg:px-8 shrink-0">
           <div className="flex items-center gap-4">
             <Button 
               variant="ghost" 
@@ -152,36 +189,37 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             >
               <Menu size={20} />
             </Button>
-            <div className="relative hidden md:block">
+            <div className="relative hidden md:block flex-1 max-w-md">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
-                placeholder="Search anything..." 
-                className="bg-slate-50 border-none rounded-xl pl-9 pr-4 py-2 text-xs w-72 focus:ring-2 ring-indigo-100 outline-none transition-all"
+                placeholder="Quick search..." 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl pl-10 pr-4 py-2 text-sm focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white"
               />
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="rounded-xl text-slate-400 hover:bg-slate-50 h-9 w-9">
-              <Bell size={18} />
-            </Button>
-            <div className="w-[1px] h-6 bg-slate-100 mx-1" />
-            <Link to="/profile">
-              <div className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <div className="text-right hidden sm:block">
-                  <p className="text-xs font-black text-slate-900">{user?.name || 'Admin'}</p>
-                  <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest">{user?.role?.replace('_', ' ') || 'Master Control'}</p>
-                </div>
-                <div className="w-9 h-9 rounded-xl bg-indigo-50 flex items-center justify-center font-black text-xs text-indigo-600 shadow-sm">
-                  {user?.avatar || 'AD'}
-                </div>
-              </div>
-            </Link>
+          <div className="flex items-center gap-3">
+            <select className="hidden sm:block px-3 py-1.5 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-600 dark:text-slate-300 outline-none">
+              <option>Term 1 • 2024</option>
+            </select>
+
+            <button 
+              onClick={() => setIsDarkMode(!isDarkMode)}
+              className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-400" />}
+            </button>
+
+            <button className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+              <Bell size={18} className="text-slate-400" />
+              <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">3</span>
+            </button>
           </div>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 bg-[#fbfcfd]">
+        {/* Page Content */}
+        <div className="flex-1 overflow-y-auto p-4 lg:p-8 bg-slate-50 dark:bg-slate-950">
           {children}
         </div>
       </main>
