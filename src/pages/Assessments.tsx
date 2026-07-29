@@ -287,9 +287,6 @@ const Assessments = () => {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Marks Entry</h1>
           <p className="text-muted-foreground">Enter scores for all subjects for an individual learner.</p>
         </div>
-        <Button size="lg" className="rounded-2xl px-8 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100 gap-2" onClick={handleSubmitAll}>
-          <Save size={18} /> Save All Subjects
-        </Button>
       </div>
 
       {/* Performance Levels Info */}
@@ -462,6 +459,12 @@ const Assessments = () => {
           </div>
         </CardContent>
       </Card>
+
+      <div className="flex justify-end pt-4">
+        <Button size="lg" className="rounded-2xl px-12 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={handleSubmitAll}>
+          <Save size={18} /> Save All Subjects
+        </Button>
+      </div>
     </div>
   );
 };
