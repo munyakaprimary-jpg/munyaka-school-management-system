@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2 } from 'lucide-react';
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 
 const Students = () => {
   const [studentsList, setStudentsList] = useState(initialStudents);
@@ -23,6 +23,13 @@ const Students = () => {
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
+
+  // Admin Auth Deletion State
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
 
   // Registration Form State
   const [fullName, setFullName] = useState("");
@@ -70,6 +77,38 @@ const Students = () => {
     setIsRegisterOpen(false);
     setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
     showSuccess(`Student ${newStudent.name} registered!`);
+  };
+
+  const requestDeleteStudent = (student: { id: string; name: string }) => {
+    setStudentToDelete(student);
+    setAuthPassword("");
+    setAuthError("");
+    setIsAuthOpen(true);
+  };
+
+  const handleVerifyAuth = async () => {
+    if (!authPassword) {
+      setAuthError("Password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    await new Promise(r => setTimeout(r, 600));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (authPassword === currentAdminPass) {
+      if (studentToDelete) {
+        setStudentsList(prev => prev.filter(s => s.id !== studentToDelete.id));
+        showSuccess(`Student "${studentToDelete.name}" deleted successfully.`);
+      }
+      setIsAuthOpen(false);
+      setStudentToDelete(null);
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+    }
+    setIsVerifying(false);
   };
 
   const handleExportCSV = () => {
@@ -258,6 +297,7 @@ const Students = () => {
                           variant="ghost" 
                           size="icon" 
                           className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
                           title="Delete Record"
                         >
                           <Trash2 size={18} />
@@ -282,6 +322,7 @@ const Students = () => {
         </CardContent>
       </Card>
 
+      {/* Register Modal */}
       <Modal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} title="Register New Student" description="Enroll learner into the academic system." footer={<><Button variant="ghost" className="rounded-xl h-12 px-6 font-bold" onClick={() => setIsRegisterOpen(false)}>Cancel</Button><Button className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100" onClick={handleRegisterStudent}><UserPlus size={18} /> Register Student</Button></>} maxWidth="max-w-xl">
         <div className="space-y-6">
           <div className="grid grid-cols-2 gap-4">
@@ -332,6 +373,49 @@ const Students = () => {
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Physical Location</Label>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin Verification Modal for Deletion */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Admin Authorization Required"
+        description={`Enter your admin password to delete learner record for "${studentToDelete?.name}".`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold">Cancel</Button>
+            <Button 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+            >
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Authorize Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={14} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
+            </div>
           </div>
         </div>
       </Modal>
