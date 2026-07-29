@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
 import { 
   Users, 
   Clock, 
@@ -73,15 +74,6 @@ const Dashboard = () => {
     { id: 10, name: 'Helen Moraa', admission: 'A827370', grade: '8 Alpha', status: 'Late', parentContact: '+254 712 000 000' },
   ]);
   
-  // Mock data for recent transactions
-  const [recentTransactions] = useState([
-    { id: 1, student: 'Brian Kiptoo', amount: 5000, method: 'M-Pesa', date: 'Today 08:30', status: 'Paid' },
-    { id: 2, student: 'Mary Atieno', amount: 3000, method: 'Bank Transfer', date: 'Today 09:15', status: 'Pending' },
-    { id: 3, student: 'Emmanuel Maina', amount: 5000, method: 'M-Pesa', date: 'Yesterday 16:45', status: 'Paid' },
-    { id: 4, student: 'Sheila Chepkoech', amount: 2500, method: 'Cash', date: 'Yesterday 14:20', status: 'Pending' },
-    { id: 5, student: 'David Mutua', amount: 5000, method: 'M-Pesa', date: '2 days ago 11:10', status: 'Paid' },
-  ]);
-  
   const filteredStudents = allStudents
     .filter(s => 
       s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -90,8 +82,6 @@ const Dashboard = () => {
     .filter(s => !filterGrade || s.grade.includes(filterGrade))
     .filter(s => !filterStatus || s.status === filterStatus)
     .slice((page - 1) * studentsPerPage, page * studentsPerPage);
-  
-  const totalPages = Math.ceil(allStudents.length / studentsPerPage);
   
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
