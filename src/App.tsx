@@ -17,6 +17,7 @@ import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
 import Assessments from "./pages/Assessments";
 import ReportCards from "./pages/ReportCards";
+import ReportCard from "./pages/ReportCard";
 import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
@@ -74,6 +75,7 @@ const App = () => (
                 <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
                 <Route path="/fees" element={<ProtectedRoute><Layout><Fees /></Layout></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Layout><ReportCards /></Layout></ProtectedRoute>} />
+                <Route path="/report-card" element={<ProtectedRoute><Layout><ReportCard /></Layout></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
                 <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
