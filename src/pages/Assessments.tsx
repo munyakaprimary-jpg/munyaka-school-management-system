@@ -1,96 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Info, Save, FileDown, Loader2, Search } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
+import { ExamTypeOption } from '@/types/assessments';
+import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
 
-interface LearningArea {
-  id: string;
-  name: string;
-  type: 'Core' | 'Elective';
-}
-
-interface ClusterData {
-  id: string;
-  name: string;
-  learningAreas: LearningArea[];
-}
-
-interface ExamTypeOption {
-  id: string;
-  name: string;
-  code: string;
-  weight: number;
-  category: string;
-}
-
-const DEFAULT_EXAM_TYPES: ExamTypeOption[] = [
-  { id: "et-1", name: "Formative Assessment", code: "FORMATIVE", weight: 40, category: "Formative" },
-  { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative" },
-  { id: "et-3", name: "Opener Exam", code: "OPENER", weight: 0, category: "Other" },
-  { id: "et-4", name: "Mid-Term Exam", code: "MIDTERM", weight: 0, category: "Other" }
-];
-
-const FALLBACK_CLUSTERS: ClusterData[] = [
-  {
-    id: "pre-primary",
-    name: "Pre-Primary",
-    learningAreas: [
-      { id: "pp-1", name: "Math", type: "Core" },
-      { id: "pp-2", name: "Language", type: "Core" },
-      { id: "pp-3", name: "Env", type: "Core" },
-      { id: "pp-4", name: "Creative", type: "Core" },
-      { id: "pp-5", name: "Religious", type: "Core" }
-    ]
-  },
-  {
-    id: "lower-primary",
-    name: "Lower Primary",
-    learningAreas: [
-      { id: "lp-1", name: "Math", type: "Core" },
-      { id: "lp-2", name: "English", type: "Core" },
-      { id: "lp-3", name: "Kiswahili", type: "Core" },
-      { id: "lp-4", name: "Env", type: "Core" },
-      { id: "lp-5", name: "Hygiene", type: "Core" },
-      { id: "lp-6", name: "Creative", type: "Core" },
-      { id: "lp-7", name: "Religious", type: "Core" }
-    ]
-  },
-  {
-    id: "upper-primary",
-    name: "Upper Primary",
-    learningAreas: [
-      { id: "up-1", name: "Math", type: "Core" },
-      { id: "up-2", name: "English", type: "Core" },
-      { id: "up-3", name: "Kiswahili", type: "Core" },
-      { id: "up-4", name: "Science", type: "Core" },
-      { id: "up-5", name: "Agri", type: "Core" },
-      { id: "up-6", name: "Arts", type: "Core" },
-      { id: "up-7", name: "Social", type: "Core" },
-      { id: "up-8", name: "Religious", type: "Core" }
-    ]
-  },
-  {
-    id: "junior-school",
-    name: "Junior School",
-    learningAreas: [
-      { id: "js-1", name: "Math", type: "Core" },
-      { id: "js-2", name: "English", type: "Core" },
-      { id: "js-3", name: "Kiswahili", type: "Core" },
-      { id: "js-4", name: "Science", type: "Core" },
-      { id: "js-5", name: "Health", type: "Core" },
-      { id: "js-6", name: "Pre-Tech", type: "Core" },
-      { id: "js-7", name: "Social", type: "Core" },
-      { id: "js-8", name: "Agri", type: "Core" },
-      { id: "js-9", name: "Business", type: "Core" }
-    ]
-  }
-];
+// Sub-components
+import AssessmentHeader from '@/components/assessments/AssessmentHeader';
+import AssessmentFilters from '@/components/assessments/AssessmentFilters';
+import MarksTable from '@/components/assessments/MarksTable';
+import AssessmentInstructions from '@/components/assessments/AssessmentInstructions';
 
 const Assessments = () => {
   // Dynamically load grades and streams
@@ -124,7 +44,7 @@ const Assessments = () => {
     });
   }, []);
 
-  // Dynamically load exam types configured in Exam Types setter menu
+  // Dynamically load exam types
   const examTypesList = useMemo<ExamTypeOption[]>(() => {
     const saved = localStorage.getItem('munyaka_exam_types');
     if (saved) {
@@ -159,7 +79,7 @@ const Assessments = () => {
     }
   }, [gradesList, selectedGradeId]);
 
-  // Set default selected exam type from loaded exam types list
+  // Set default selected exam type
   useEffect(() => {
     if (!examType && examTypesList.length > 0) {
       setExamType(examTypesList[0].code || examTypesList[0].id);
@@ -329,187 +249,37 @@ const Assessments = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Marks Entry</h1>
-          <p className="text-sm text-slate-500">Record results for all learners in the selected class.</p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="rounded-xl h-10 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50" onClick={handleExport} disabled={isExporting}>
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Export CSV
-          </Button>
-          <Button className="rounded-xl h-10 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2" onClick={handleSave} disabled={isSaving}>
-            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All
-          </Button>
-        </div>
-      </div>
+      <AssessmentHeader 
+        onExport={handleExport}
+        onSave={handleSave}
+        isSaving={isSaving}
+        isExporting={isExporting}
+      />
 
-      <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Grade Level Selector */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
-            <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {gradesList.map((g: Grade) => (
-                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <AssessmentFilters 
+        gradesList={gradesList}
+        selectedGradeId={selectedGradeId}
+        setSelectedGradeId={setSelectedGradeId}
+        availableStreams={availableStreams}
+        selectedStreamId={selectedStreamId}
+        setSelectedStreamId={setSelectedStreamId}
+        examTypesList={examTypesList}
+        examType={examType}
+        setExamType={setExamType}
+        term={term}
+        setTerm={setTerm}
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+      />
 
-          {/* Dynamic Stream Selector */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
-            <Select value={selectedStreamId} onValueChange={setSelectedStreamId}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Streams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Streams</SelectItem>
-                {availableStreams.map((s: Stream) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Dynamic Exam Type Selector */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
-            <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Exam Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {examTypesList.map((et: ExamTypeOption) => (
-                  <SelectItem key={et.id} value={et.code}>
-                    {et.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Term Selector */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
-            <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="term1">Term 1</SelectItem>
-                <SelectItem value="term2">Term 2</SelectItem>
-                <SelectItem value="term3">Term 3</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Search Box */}
-          <div className="space-y-1">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <Input 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="Name/ID..." 
-                className="pl-9 h-10 rounded-xl bg-slate-50 border-none font-bold text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      {/* Marks Matrix Table */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm text-left border-collapse">
-            <thead className="bg-slate-50 border-b">
-              <tr>
-                <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64">
-                  Learner Details
-                </th>
-                {filteredLearningAreas.map(area => (
-                  <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px]">
-                    {area.name}
-                  </th>
-                ))}
-                <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center bg-indigo-50/50 min-w-[90px]">
-                  Total
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filteredStudents.length > 0 ? (
-                filteredStudents.map((student) => {
-                  const studentMarks = marksMatrix[student.id] || {};
-                  let hasMarks = false;
-                  const totalMarks = filteredLearningAreas.reduce((sum, area) => {
-                    const rawVal = studentMarks[area.id];
-                    if (rawVal !== undefined && rawVal !== "") {
-                      hasMarks = true;
-                      const num = parseInt(rawVal, 10);
-                      return sum + (isNaN(num) ? 0 : num);
-                    }
-                    return sum;
-                  }, 0);
-
-                  return (
-                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
-                        <p className="font-bold text-slate-900 truncate">{student.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                          ID: {student.assessment} • Stream: {student.stream}
-                        </p>
-                      </td>
-                      {filteredLearningAreas.map(area => (
-                        <td key={area.id} className="px-2 py-3 border-r text-center">
-                          <Input 
-                            value={marksMatrix[student.id]?.[area.id] || ""}
-                            onChange={(e) => handleMarkChange(student.id, area.id, e.target.value)}
-                            placeholder="—"
-                            className="w-16 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
-                          />
-                        </td>
-                      ))}
-                      <td className="px-4 py-3 text-center bg-indigo-50/30 font-black text-sm text-indigo-600">
-                        {hasMarks ? totalMarks : "—"}
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={filteredLearningAreas.length + 2} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-slate-50 rounded-full text-slate-300"><Search size={32} /></div>
-                      <p className="text-slate-500 font-bold">No learners found for the selected Grade and Stream.</p>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </Card>
+      <MarksTable 
+        filteredLearningAreas={filteredLearningAreas}
+        filteredStudents={filteredStudents}
+        marksMatrix={marksMatrix}
+        onMarkChange={handleMarkChange}
+      />
       
-      <div className="bg-indigo-50/50 p-6 rounded-3xl border border-indigo-100 flex items-start gap-4">
-        <Info className="text-indigo-600 shrink-0 mt-1" size={20} />
-        <div className="space-y-1">
-          <p className="text-sm font-bold text-indigo-900">Sheet Instructions</p>
-          <p className="text-xs text-indigo-700/80 leading-relaxed">
-            Enter numerical scores (0-100) in the boxes. The system automatically calculates total marks per learner in real time. 
-            Levels (EE, ME, etc.) will be calculated automatically on save based on the school's configured grading scale.
-          </p>
-        </div>
-      </div>
+      <AssessmentInstructions />
     </div>
   );
 };
