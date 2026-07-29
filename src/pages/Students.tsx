@@ -120,17 +120,20 @@ const Students = () => {
     setIsExporting(true);
     
     setTimeout(() => {
+      const titleHeader = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
       const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
-        s.name,
-        s.assessment,
-        `Grade ${s.grade}`,
-        s.stream,
-        s.guardian,
-        s.phone
+        `"${s.name.replace(/"/g, '""')}"`,
+        `"${s.assessment.replace(/"/g, '""')}"`,
+        `"Grade ${s.grade}"`,
+        `"${s.stream.replace(/"/g, '""')}"`,
+        `"${s.guardian.replace(/"/g, '""')}"`,
+        `"${s.phone.replace(/"/g, '""')}"`
       ]);
 
       const csvContent = [
+        titleHeader,
+        "",
         headers.join(","),
         ...rows.map(r => r.join(","))
       ].join("\n");
