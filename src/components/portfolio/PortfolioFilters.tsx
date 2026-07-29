@@ -37,18 +37,7 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
   return (
     <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* Learner & Artifact Search Box */}
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input 
-            placeholder="Search learner name, ID, or title..." 
-            className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium text-sm focus:bg-white transition-colors"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* Grade Level Dropdown */}
+        {/* 1. Grade Level Dropdown */}
         <Select value={selectedGrade} onValueChange={setSelectedGrade}>
           <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-700 text-sm">
             <SelectValue placeholder="All Grades" />
@@ -63,7 +52,7 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
           </SelectContent>
         </Select>
 
-        {/* Stream Dropdown */}
+        {/* 2. Stream Dropdown */}
         <Select value={selectedStream} onValueChange={setSelectedStream}>
           <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-700 text-sm">
             <SelectValue placeholder="All Streams" />
@@ -76,7 +65,7 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
           </SelectContent>
         </Select>
 
-        {/* Learning Area Dropdown */}
+        {/* 3. Learning Area Dropdown */}
         <Select value={selectedArea} onValueChange={setSelectedArea}>
           <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-700 text-sm">
             <SelectValue placeholder="All Learning Areas" />
@@ -91,6 +80,17 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
             <SelectItem value="Agriculture">Agriculture</SelectItem>
           </SelectContent>
         </Select>
+
+        {/* 4. Learner & Artifact Search Box */}
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Input 
+            placeholder="Search learner name, ID, or title..." 
+            className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium text-sm focus:bg-white transition-colors"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
       </div>
 
       {hasActiveFilters && (
