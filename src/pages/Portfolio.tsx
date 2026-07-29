@@ -25,7 +25,6 @@ import {
   Paperclip, 
   CheckCircle2, 
   File, 
-  ExternalLink, 
   Download,
   Maximize2
 } from 'lucide-react';
@@ -215,13 +214,38 @@ const Portfolio = () => {
     showSuccess(`Removed "${artifactTitle}"`);
   };
 
-  const openDocumentInNewTab = (url?: string, filename?: string) => {
+  // View document in a new window/tab without triggering a file download
+  const openDocumentInNewTab = (url?: string) => {
     if (!url) return;
     
-    // Create an anchor tag and trigger direct click to handle both Data URLs and web links safely
+    try {
+      if (url.startsWith('data:')) {
+        // Convert Base64 Data URL to a Blob URL so the browser opens it directly in a new tab
+        const arr = url.split(',');
+        const mimeMatch = arr[0].match(/:(.*?);/);
+        const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+          u8arr[n] = bstr.charCodeAt(n);
+        }
+        const blob = new Blob([u8arr], { type: mime });
+        const blobUrl = URL.createObjectURL(blob);
+        window.open(blobUrl, '_blank');
+      } else {
+        window.open(url, '_blank');
+      }
+    } catch (err) {
+      window.open(url, '_blank');
+    }
+  };
+
+  // Explicit download handler
+  const downloadDocument = (url?: string, filename?: string) => {
+    if (!url) return;
     const link = document.createElement('a');
     link.href = url;
-    link.target = '_blank';
     if (filename) link.download = filename;
     document.body.appendChild(link);
     link.click();
@@ -541,14 +565,14 @@ const Portfolio = () => {
             {selectedArtifact?.fileUrl ? (
               <div className="flex gap-2">
                 <Button 
-                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
+                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl)}
                   className="rounded-xl font-bold gap-2 text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
                 >
                   <Maximize2 size={16} /> Open Document in New Window
                 </Button>
                 <Button 
                   variant="outline" 
-                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
+                  onClick={() => downloadDocument(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
                   className="rounded-xl font-bold gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100"
                 >
                   <Download size={16} /> Download
