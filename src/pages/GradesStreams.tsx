@@ -9,17 +9,27 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Layers, Plus, Users, User, Trash2 } from 'lucide-react';
-import { showSuccess } from '@/utils/toast';
+import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
+
+const ADMIN_PASSWORD = 'admin123';
 
 const GradesStreams = () => {
   const [grades, setGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
     return saved ? JSON.parse(saved) : GRADES_DATA;
   });
+  
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const [isStreamOpen, setIsStreamOpen] = useState(false);
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  
+  // Auth state
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<{ type: 'grade' | 'stream', gradeId: string, streamId?: string } | null>(null);
 
   const [newGradeName, setNewGradeName] = useState("");
   const [newGradeCategory, setNewGradeCategory] = useState<'Pre-Primary' | 'Primary' | 'Junior School'>("Primary");
@@ -60,6 +70,49 @@ const GradesStreams = () => {
     showSuccess(`Successfully added ${newStreamName} stream!`);
   };
 
+  const requestDelete = (type: 'grade' | 'stream', gradeId: string, streamId?: string) => {
+    setPendingDelete({ type, gradeId, streamId });
+    setAuthPassword("");
+    setAuthError("");
+    setIsAuthOpen(true);
+  };
+
+  const handleVerifyAuth = async () => {
+    if (!authPassword) {
+      setAuthError("Password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    // Simulate verification delay
+    await new Promise(r => setTimeout(r, 800));
+
+    if (authPassword === ADMIN_PASSWORD) {
+      executeDelete();
+      setIsAuthOpen(false);
+      showSuccess(`${pendingDelete?.type === 'grade' ? 'Grade' : 'Stream'} deleted successfully.`);
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+    }
+    setIsVerifying(false);
+  };
+
+  const executeDelete = () => {
+    if (!pendingDelete) return;
+
+    if (pendingDelete.type === 'grade') {
+      setGrades(grades.filter(g => g.id !== pendingDelete.gradeId));
+    } else if (pendingDelete.type === 'stream' && pendingDelete.streamId) {
+      setGrades(grades.map(g => 
+        g.id === pendingDelete.gradeId 
+          ? { ...g, streams: g.streams.filter(s => s.id !== pendingDelete.streamId) } 
+          : g
+      ));
+    }
+    setPendingDelete(null);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -82,7 +135,7 @@ const GradesStreams = () => {
 
       <div className="grid grid-cols-1 gap-8">
         {grades.map((grade) => (
-          <Card key={grade.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <Card key={grade.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden group">
             <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3">
@@ -93,22 +146,29 @@ const GradesStreams = () => {
                   Total Streams: {grade.streams.length} • Total Learners: {grade.streams.reduce((acc, s) => acc + s.studentsCount, 0)}
                 </CardDescription>
               </div>
-              <Button variant="ghost" size="sm" className="text-indigo-600 font-bold rounded-xl hover:bg-indigo-50" onClick={() => { setSelectedGradeId(grade.id); setIsStreamOpen(true); }}>
-                <Plus size={16} className="mr-1" /> Add Stream
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" className="text-indigo-600 font-bold rounded-xl hover:bg-indigo-50" onClick={() => { setSelectedGradeId(grade.id); setIsStreamOpen(true); }}>
+                  <Plus size={16} className="mr-1" /> Add Stream
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-xl text-slate-300 hover:text-red-500 hover:bg-red-50 h-9 w-9 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={() => requestDelete('grade', grade.id)}
+                >
+                  <Trash2 size={16} />
+                </Button>
+              </div>
             </CardHeader>
             <CardContent className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {grade.streams.map((stream) => (
-                  <div key={stream.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group">
+                  <div key={stream.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group/stream">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="text-lg font-bold text-slate-900">{stream.name} Stream</h4>
                       </div>
-                      <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity" onClick={() => {
-                        setGrades(grades.map(g => g.id === grade.id ? { ...g, streams: g.streams.filter(s => s.id !== stream.id) } : g));
-                        showSuccess("Stream removed successfully.");
-                      }}>
+                      <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover/stream:opacity-100 transition-opacity" onClick={() => requestDelete('stream', grade.id, stream.id)}>
                         <Trash2 size={16} />
                       </Button>
                     </div>
@@ -130,6 +190,7 @@ const GradesStreams = () => {
         ))}
       </div>
 
+      {/* Grade Modal */}
       <Modal
         isOpen={isGradeOpen}
         onClose={() => setIsGradeOpen(false)}
@@ -163,6 +224,7 @@ const GradesStreams = () => {
         </div>
       </Modal>
 
+      {/* Stream Modal */}
       <Modal
         isOpen={isStreamOpen}
         onClose={() => setIsStreamOpen(false)}
@@ -198,6 +260,49 @@ const GradesStreams = () => {
           <div className="space-y-2">
             <Label>Initial Student Count</Label>
             <Input type="number" value={newStreamStudents} onChange={(e) => setNewStreamStudents(e.target.value)} placeholder="e.g. 40" className="rounded-xl h-12" />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Auth Modal for Deletion */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Admin Verification"
+        description={`Please enter the admin password to delete this ${pendingDelete?.type}.`}
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold">Cancel</Button>
+            <Button 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+            >
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Authorize Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={14} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
+            </div>
           </div>
         </div>
       </Modal>
