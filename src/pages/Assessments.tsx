@@ -312,7 +312,7 @@ const Assessments = () => {
               <SelectContent>
                 {examTypesList.map((et: ExamTypeOption) => (
                   <SelectItem key={et.id} value={et.code}>
-                    {et.name} ({et.code})
+                    {et.name}
                   </SelectItem>
                 ))}
               </SelectContent>
