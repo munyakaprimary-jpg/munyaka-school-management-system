@@ -16,9 +16,6 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
   const [isVerifying, setIsVerifying] = useState(false);
   const [authError, setAuthError] = useState('');
 
-  // Admin password - in production this would be from secure storage/env
-  const ADMIN_PASSWORD = 'admin123';
-
   const handleStartPromotion = () => {
     setAuthError('');
     setPassword('');
@@ -39,7 +36,10 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
     // Simulate async verification
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    if (password === ADMIN_PASSWORD) {
+    // Get the actual set password from storage to match current super admin credentials
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (password === currentAdminPass) {
       setIsAuthModalOpen(false);
       setPassword('');
       showSuccess('Admin verified. Starting promotion process...');
@@ -61,7 +61,6 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
@@ -78,7 +77,6 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
         </Button>
       </div>
 
-      {/* Admin Password Verification Modal */}
       {isAuthModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
           <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
@@ -88,7 +86,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Admin Verification Required</h3>
-                <p className="text-sm text-slate-500">Enter admin password to authorize student promotion</p>
+                <p className="text-sm text-slate-500">Enter your current password to authorize this action.</p>
               </div>
             </div>
 
@@ -110,7 +108,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
                       setPassword(e.target.value);
                       if (authError) setAuthError('');
                     }}
-                    placeholder="Enter admin password"
+                    placeholder="Enter your current password"
                     className="w-full h-12 pl-4 pr-12 rounded-xl bg-slate-50 border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none font-medium text-lg"
                     disabled={isVerifying}
                     autoFocus
@@ -155,10 +153,6 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
                 </Button>
               </div>
             </form>
-
-            <p className="mt-4 text-center text-xs text-slate-400">
-              Default password: <code className="bg-slate-100 px-1.5 py-0.5 rounded font-mono text-slate-600">admin123</code>
-            </p>
           </div>
         </div>
       )}

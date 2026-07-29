@@ -13,8 +13,6 @@ import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'l
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
-const ADMIN_PASSWORD = 'admin123';
-
 const GradesStreams = () => {
   const [grades, setGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
@@ -126,7 +124,10 @@ const GradesStreams = () => {
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 800));
 
-    if (authPassword === ADMIN_PASSWORD) {
+    // Get the current set password from storage to match AuthContext security
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (authPassword === currentAdminPass) {
       executeDelete();
       setIsAuthOpen(false);
       showSuccess(`${pendingDelete?.type === 'grade' ? 'Grade' : 'Stream'} deleted successfully.`);
