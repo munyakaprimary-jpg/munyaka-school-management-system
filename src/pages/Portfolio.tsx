@@ -1,128 +1,25 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import React, { useState, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { 
-  Search, 
-  Plus, 
-  Image as ImageIcon, 
-  FileText, 
-  Music, 
-  Video, 
-  Calendar, 
-  User, 
-  Upload, 
-  Eye, 
-  Trash2, 
-  Paperclip, 
-  CheckCircle2, 
-  File, 
-  Download,
-  Maximize2
-} from 'lucide-react';
-import { STUDENTS } from '@/lib/mock-data';
-import { showSuccess, showError } from '@/utils/toast';
-
-interface Artifact {
-  id: string;
-  student: string;
-  title: string;
-  type: 'Image' | 'Audio' | 'Document' | 'Video';
-  learningArea: string;
-  date: string;
-  grade: 'EE' | 'ME' | 'AE' | 'BE';
-  description?: string;
-  fileName?: string;
-  fileUrl?: string;
-  fileSize?: string;
-}
-
-const INITIAL_ARTIFACTS: Artifact[] = [
-  { 
-    id: "1", 
-    student: "Brian Kiptoo", 
-    title: "Clay Modeling: Animals", 
-    type: "Image", 
-    learningArea: "Creative Arts", 
-    date: "Oct 12, 2023", 
-    grade: "EE", 
-    description: "Created an intricate lion sculpture using local clay and natural dyes.", 
-    fileName: "clay_sculpture_lion.jpg", 
-    fileSize: "1.2 MB",
-    fileUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80"
-  },
-  { 
-    id: "2", 
-    student: "Mary Atieno", 
-    title: "Oral Narrative Audio", 
-    type: "Audio", 
-    learningArea: "English", 
-    date: "Oct 15, 2023", 
-    grade: "ME", 
-    description: "Recited a 2-minute original story with clear diction and expressions.", 
-    fileName: "oral_narrative_recording.mp3", 
-    fileSize: "3.4 MB",
-    fileUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
-  },
-  { 
-    id: "3", 
-    student: "Emmanuel Maina", 
-    title: "Recycling Project Report", 
-    type: "Document", 
-    learningArea: "Science", 
-    date: "Oct 18, 2023", 
-    grade: "EE", 
-    description: "Documented step-by-step process of making a toy car from plastic bottles.", 
-    fileName: "recycling_project.pdf", 
-    fileSize: "850 KB",
-    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
-  },
-  { 
-    id: "4", 
-    student: "Sheila Chepkoech", 
-    title: "Traditional Dance Performance", 
-    type: "Video", 
-    learningArea: "Creative Arts", 
-    date: "Nov 02, 2023", 
-    grade: "EE", 
-    description: "Demonstrated folk dance rhythm and costume coordination.", 
-    fileName: "folk_dance_clip.mp4", 
-    fileSize: "14.8 MB",
-    fileUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-  },
-];
+import { Plus, Upload } from 'lucide-react';
+import { Artifact } from '@/types/portfolio';
+import { INITIAL_ARTIFACTS } from '@/lib/portfolio-data';
+import { PortfolioFilters } from '@/components/portfolio/PortfolioFilters';
+import { PortfolioCard } from '@/components/portfolio/PortfolioCard';
+import { UploadArtifactModal } from '@/components/portfolio/UploadArtifactModal';
+import { ArtifactViewerModal } from '@/components/portfolio/ArtifactViewerModal';
+import { showSuccess } from '@/utils/toast';
 
 const Portfolio = () => {
   const [artifacts, setArtifacts] = useState<Artifact[]>(INITIAL_ARTIFACTS);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedArea, setSelectedArea] = useState("all");
   
-  // Upload Modal State
   const [isUploadOpen, setIsUploadOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(STUDENTS[0]?.name || "");
-  const [title, setTitle] = useState("");
-  const [type, setType] = useState<'Image' | 'Audio' | 'Document' | 'Video'>("Image");
-  const [learningArea, setLearningArea] = useState("Creative Arts");
-  const [grade, setGrade] = useState<'EE' | 'ME' | 'AE' | 'BE'>("EE");
-  const [description, setDescription] = useState("");
-
-  // Computer Storage File State
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement | null>(null);
-
-  // View Details Modal State
   const [selectedArtifact, setSelectedArtifact] = useState<Artifact | null>(null);
 
-  // Filtered Artifacts
   const filteredArtifacts = useMemo(() => {
     return artifacts.filter(art => {
       const matchesSearch = art.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -132,146 +29,20 @@ const Portfolio = () => {
     });
   }, [artifacts, searchTerm, selectedArea]);
 
-  // Handle local file selection from computer storage
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSelectedFile(file);
-
-    // Read file as Data URL for persistent inline rendering
-    const reader = new FileReader();
-    reader.onload = (event) => {
-      if (event.target?.result) {
-        setFilePreviewUrl(event.target.result as string);
-      }
-    };
-    reader.readAsDataURL(file);
-
-    // Auto-detect artifact type based on MIME type / extension
-    if (file.type.startsWith('image/')) {
-      setType('Image');
-    } else if (file.type.startsWith('audio/')) {
-      setType('Audio');
-    } else if (file.type.startsWith('video/')) {
-      setType('Video');
-    } else {
-      setType('Document');
-    }
-
-    // Auto-fill title if title is empty
-    if (!title) {
-      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
-      setTitle(nameWithoutExt);
-    }
-  };
-
-  const formatFileSize = (bytes: number): string => {
-    if (bytes < 1024) return bytes + ' B';
-    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
-    else return (bytes / 1048576).toFixed(1) + ' MB';
-  };
-
-  const handleUpload = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) {
-      showError("Please enter an artifact title.");
-      return;
-    }
-
-    const newArtifact: Artifact = {
-      id: `art-${Date.now()}`,
-      student: selectedStudent,
-      title: title.trim(),
-      type,
-      learningArea,
-      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      grade,
-      description: description.trim() || "Uploaded from computer storage.",
-      fileName: selectedFile ? selectedFile.name : undefined,
-      fileUrl: filePreviewUrl || undefined,
-      fileSize: selectedFile ? formatFileSize(selectedFile.size) : undefined
-    };
-
+  const handleUploadArtifact = (newArtifact: Artifact) => {
     setArtifacts([newArtifact, ...artifacts]);
-    setIsUploadOpen(false);
-    
-    // Reset Form
-    setTitle("");
-    setDescription("");
-    setType("Image");
-    setGrade("EE");
-    setSelectedFile(null);
-    setFilePreviewUrl(null);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-    
-    showSuccess(`Uploaded artifact "${newArtifact.title}" for ${selectedStudent}!`);
+    showSuccess(`Uploaded artifact "${newArtifact.title}" for ${newArtifact.student}!`);
   };
 
-  const handleDelete = (id: string, artifactTitle: string) => {
+  const handleDeleteArtifact = (id: string, artifactTitle: string) => {
     setArtifacts(prev => prev.filter(a => a.id !== id));
     if (selectedArtifact?.id === id) setSelectedArtifact(null);
     showSuccess(`Removed "${artifactTitle}"`);
   };
 
-  // View document in a new window/tab without triggering a file download
-  const openDocumentInNewTab = (url?: string) => {
-    if (!url) return;
-    
-    try {
-      if (url.startsWith('data:')) {
-        // Convert Base64 Data URL to a Blob URL so the browser opens it directly in a new tab
-        const arr = url.split(',');
-        const mimeMatch = arr[0].match(/:(.*?);/);
-        const mime = mimeMatch ? mimeMatch[1] : 'application/pdf';
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-          u8arr[n] = bstr.charCodeAt(n);
-        }
-        const blob = new Blob([u8arr], { type: mime });
-        const blobUrl = URL.createObjectURL(blob);
-        window.open(blobUrl, '_blank');
-      } else {
-        window.open(url, '_blank');
-      }
-    } catch (err) {
-      window.open(url, '_blank');
-    }
-  };
-
-  // Explicit download handler
-  const downloadDocument = (url?: string, filename?: string) => {
-    if (!url) return;
-    const link = document.createElement('a');
-    link.href = url;
-    if (filename) link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  const getTypeIcon = (artifactType: Artifact['type']) => {
-    switch (artifactType) {
-      case 'Image': return <ImageIcon size={32} className="text-indigo-500" />;
-      case 'Audio': return <Music size={32} className="text-purple-500" />;
-      case 'Video': return <Video size={32} className="text-rose-500" />;
-      default: return <FileText size={32} className="text-emerald-500" />;
-    }
-  };
-
-  const getGradeBadge = (gradeLevel: Artifact['grade']) => {
-    switch (gradeLevel) {
-      case 'EE': return "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50";
-      case 'ME': return "bg-blue-50 text-blue-700 border-blue-100 hover:bg-blue-50";
-      case 'AE': return "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-50";
-      default: return "bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-50";
-    }
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
@@ -288,107 +59,24 @@ const Portfolio = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="md:col-span-3 relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input 
-            placeholder="Search by student name or artifact title..." 
-            className="pl-11 rounded-2xl h-12 bg-white border-none shadow-sm font-medium"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-        <select 
-          className="rounded-2xl h-12 bg-white border-none shadow-sm px-4 text-sm font-bold text-slate-700 outline-none cursor-pointer"
-          value={selectedArea}
-          onChange={(e) => setSelectedArea(e.target.value)}
-        >
-          <option value="all">All Learning Areas</option>
-          <option value="Creative Arts">Creative Arts</option>
-          <option value="English">English</option>
-          <option value="Science">Science</option>
-          <option value="Kiswahili">Kiswahili</option>
-          <option value="Mathematics">Mathematics</option>
-        </select>
-      </div>
+      {/* Filters */}
+      <PortfolioFilters 
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        selectedArea={selectedArea}
+        setSelectedArea={setSelectedArea}
+      />
 
+      {/* Artifact Grid */}
       {filteredArtifacts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredArtifacts.map((art) => (
-            <Card key={art.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-3xl overflow-hidden bg-white flex flex-col justify-between">
-              <div>
-                <div 
-                  className="aspect-video bg-slate-50 flex items-center justify-center relative overflow-hidden cursor-pointer"
-                  onClick={() => setSelectedArtifact(art)}
-                >
-                  {art.fileUrl && art.type === 'Image' ? (
-                    <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  ) : art.fileUrl && art.type === 'Video' ? (
-                    <video src={art.fileUrl} className="w-full h-full object-cover" />
-                  ) : art.fileUrl && art.type === 'Audio' ? (
-                    <div className="p-4 w-full flex flex-col items-center gap-2">
-                      <Music size={32} className="text-purple-500 animate-pulse" />
-                      <audio controls src={art.fileUrl} className="w-11/12 h-8" onClick={(e) => e.stopPropagation()} />
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 p-4 text-center">
-                      {getTypeIcon(art.type)}
-                      {art.fileName && (
-                        <span className="text-[11px] font-bold text-slate-500 max-w-[180px] truncate bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                          {art.fileName}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  <Badge variant="outline" className="absolute top-3 left-3 rounded-lg bg-white/90 backdrop-blur-sm text-[10px] uppercase font-black tracking-wider border-none shadow-sm z-10">
-                    {art.type}
-                  </Badge>
-                </div>
-
-                <CardContent className="p-6">
-                  <div className="flex justify-between items-start mb-2">
-                    <Badge variant="outline" className="rounded-lg bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-                      {art.learningArea}
-                    </Badge>
-                    <Badge className={getGradeBadge(art.grade)}>{art.grade}</Badge>
-                  </div>
-                  <h3 
-                    className="font-bold text-lg mb-1 leading-tight cursor-pointer group-hover:text-indigo-600 transition-colors"
-                    onClick={() => setSelectedArtifact(art)}
-                  >
-                    {art.title}
-                  </h3>
-                  <p className="text-sm text-slate-600 font-bold flex items-center gap-1.5 mt-2">
-                    <User size={14} className="text-slate-400" /> {art.student}
-                  </p>
-                </CardContent>
-              </div>
-
-              <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-slate-50 mt-4">
-                <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-                  <Calendar size={12} /> {art.date}
-                </span>
-                <div className="flex gap-1">
-                  <Button 
-                    variant="ghost" 
-                    size="sm" 
-                    className="text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl h-8 px-3"
-                    onClick={() => setSelectedArtifact(art)}
-                  >
-                    <Eye size={14} className="mr-1" /> View Content
-                  </Button>
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl h-8 w-8"
-                    onClick={() => handleDelete(art.id, art.title)}
-                  >
-                    <Trash2 size={14} />
-                  </Button>
-                </div>
-              </div>
-            </Card>
+            <PortfolioCard 
+              key={art.id}
+              art={art}
+              onSelect={setSelectedArtifact}
+              onDelete={handleDeleteArtifact}
+            />
           ))}
         </div>
       ) : (
@@ -407,254 +95,18 @@ const Portfolio = () => {
         </div>
       )}
 
-      {/* Upload Modal with File Chooser */}
-      <Modal
+      {/* Upload Modal */}
+      <UploadArtifactModal 
         isOpen={isUploadOpen}
-        onClose={() => {
-          setIsUploadOpen(false);
-          setSelectedFile(null);
-          setFilePreviewUrl(null);
-        }}
-        title="Upload Learner Artifact"
-        description="Select a file from your computer storage (Downloads, Documents, Photos, Videos)."
-        footer={
-          <div className="flex justify-end gap-2 w-full">
-            <Button variant="ghost" onClick={() => { setIsUploadOpen(false); setSelectedFile(null); setFilePreviewUrl(null); }} className="rounded-xl font-bold">
-              Cancel
-            </Button>
-            <Button onClick={handleUpload} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2">
-              <Upload size={16} /> Save Artifact
-            </Button>
-          </div>
-        }
-      >
-        <form onSubmit={handleUpload} className="space-y-4">
-          {/* File Picker Input Area */}
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Browse Computer Storage / Downloads</Label>
-            <input 
-              type="file" 
-              ref={fileInputRef} 
-              onChange={handleFileChange} 
-              accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
-              className="hidden" 
-              id="computer-file-input"
-            />
-            <label 
-              htmlFor="computer-file-input" 
-              className="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-colors group"
-            >
-              <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
-                <Paperclip className="text-indigo-600" size={24} />
-              </div>
-              <p className="text-sm font-bold text-slate-800">
-                {selectedFile ? selectedFile.name : "Click to select a file from your Downloads or Device"}
-              </p>
-              <p className="text-xs text-slate-400 mt-1">
-                {selectedFile ? `${formatFileSize(selectedFile.size)} • ${selectedFile.type || 'File'}` : "Supports Photos, Audio, Video clips, PDF & Documents"}
-              </p>
-            </label>
+        onClose={() => setIsUploadOpen(false)}
+        onUpload={handleUploadArtifact}
+      />
 
-            {/* Local Image Preview if image selected */}
-            {filePreviewUrl && type === 'Image' && (
-              <div className="relative w-full h-32 rounded-xl overflow-hidden border border-slate-200 mt-2">
-                <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
-                <Badge className="absolute bottom-2 right-2 bg-emerald-600 text-white font-bold gap-1 text-[10px]">
-                  <CheckCircle2 size={12} /> Image Ready
-                </Badge>
-              </div>
-            )}
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
-            <Select value={selectedStudent} onValueChange={setSelectedStudent}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue placeholder="Choose student..." />
-              </SelectTrigger>
-              <SelectContent>
-                {STUDENTS.map(s => (
-                  <SelectItem key={s.id} value={s.name}>
-                    {s.name} (Grade {s.grade} - {s.stream})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Artifact Title</Label>
-            <Input 
-              value={title} 
-              onChange={(e) => setTitle(e.target.value)} 
-              placeholder="e.g. Clay Modeling: Farm Animals" 
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Artifact Type</Label>
-              <Select value={type} onValueChange={(val: any) => setType(val)}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Image">Image / Photo</SelectItem>
-                  <SelectItem value="Audio">Audio Recording</SelectItem>
-                  <SelectItem value="Document">PDF / Report Document</SelectItem>
-                  <SelectItem value="Video">Video Recording</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Learning Area</Label>
-              <Select value={learningArea} onValueChange={setLearningArea}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Creative Arts">Creative Arts</SelectItem>
-                  <SelectItem value="English">English Language</SelectItem>
-                  <SelectItem value="Kiswahili">Kiswahili</SelectItem>
-                  <SelectItem value="Science">Science & Tech</SelectItem>
-                  <SelectItem value="Mathematics">Mathematics</SelectItem>
-                  <SelectItem value="Agriculture">Agriculture</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Performance Rating</Label>
-            <Select value={grade} onValueChange={(val: any) => setGrade(val)}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EE">EE - Exceeding Expectation</SelectItem>
-                <SelectItem value="ME">ME - Meeting Expectation</SelectItem>
-                <SelectItem value="AE">AE - Approaching Expectation</SelectItem>
-                <SelectItem value="BE">BE - Below Expectation</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Observations / Remarks</Label>
-            <Textarea 
-              value={description} 
-              onChange={(e) => setDescription(e.target.value)} 
-              placeholder="Describe the learner's evidence or teacher remarks..." 
-              className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-            />
-          </div>
-        </form>
-      </Modal>
-
-      {/* Interactive Full Media & Document Viewer Modal */}
-      <Modal
-        isOpen={!!selectedArtifact}
+      {/* Media & Document Viewer Modal */}
+      <ArtifactViewerModal 
+        artifact={selectedArtifact}
         onClose={() => setSelectedArtifact(null)}
-        title={selectedArtifact?.title || "Artifact Evidence"}
-        description={`Learner: ${selectedArtifact?.student}`}
-        maxWidth="max-w-3xl"
-        footer={
-          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 w-full">
-            {selectedArtifact?.fileUrl ? (
-              <div className="flex gap-2">
-                <Button 
-                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl)}
-                  className="rounded-xl font-bold gap-2 text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
-                >
-                  <Maximize2 size={16} /> Open Document in New Window
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => downloadDocument(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
-                  className="rounded-xl font-bold gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100"
-                >
-                  <Download size={16} /> Download
-                </Button>
-              </div>
-            ) : <div />}
-            <Button variant="ghost" onClick={() => setSelectedArtifact(null)} className="rounded-xl font-bold">
-              Close
-            </Button>
-          </div>
-        }
-      >
-        {selectedArtifact && (
-          <div className="space-y-5">
-            {/* Interactive Viewer Section */}
-            <div className="min-h-[260px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 overflow-hidden relative p-1">
-              {selectedArtifact.fileUrl && selectedArtifact.type === 'Image' ? (
-                <img 
-                  src={selectedArtifact.fileUrl} 
-                  alt={selectedArtifact.title} 
-                  className="w-full h-auto max-h-[400px] object-contain rounded-lg" 
-                />
-              ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Video' ? (
-                <video 
-                  src={selectedArtifact.fileUrl} 
-                  controls 
-                  autoPlay 
-                  className="w-full h-auto max-h-[400px] rounded-lg" 
-                />
-              ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Audio' ? (
-                <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
-                  <div className="w-16 h-16 rounded-full bg-indigo-600/30 flex items-center justify-center">
-                    <Music size={36} className="text-indigo-400 animate-pulse" />
-                  </div>
-                  <p className="text-sm font-bold text-slate-300">{selectedArtifact.fileName || selectedArtifact.title}</p>
-                  <audio controls src={selectedArtifact.fileUrl} className="w-full max-w-md h-12" />
-                </div>
-              ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Document' ? (
-                <div className="w-full h-[420px] flex flex-col items-center bg-slate-950 rounded-xl overflow-hidden relative">
-                  {/* Inline Embedded PDF Viewer Frame */}
-                  <iframe 
-                    src={selectedArtifact.fileUrl} 
-                    title={selectedArtifact.title}
-                    className="w-full h-full border-0 rounded-xl bg-white"
-                  />
-                </div>
-              ) : (
-                <div className="flex flex-col items-center gap-2 p-8 text-center text-slate-400">
-                  {getTypeIcon(selectedArtifact.type)}
-                  <p className="text-sm font-bold text-slate-300 mt-2">{selectedArtifact.fileName || selectedArtifact.title}</p>
-                </div>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl">
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Learning Area</p>
-                <p className="text-sm font-bold text-slate-900">{selectedArtifact.learningArea}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rating</p>
-                <Badge className={getGradeBadge(selectedArtifact.grade)}>{selectedArtifact.grade}</Badge>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Date Added</p>
-                <p className="text-xs font-bold text-slate-700">{selectedArtifact.date}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Format / Type</p>
-                <p className="text-xs font-bold text-slate-700">{selectedArtifact.type}</p>
-              </div>
-            </div>
-
-            <div>
-              <p className="text-xs font-black uppercase text-slate-400 tracking-widest mb-1">Teacher Remarks</p>
-              <p className="text-sm text-slate-700 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200 italic">
-                "{selectedArtifact.description}"
-              </p>
-            </div>
-          </div>
-        )}
-      </Modal>
+      />
     </div>
   );
 };

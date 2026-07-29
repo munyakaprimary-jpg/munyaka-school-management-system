@@ -1,0 +1,248 @@
+"use client";
+
+import React, { useState, useRef } from 'react';
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Modal from '@/components/ui/Modal';
+import { Upload, Paperclip, CheckCircle2 } from 'lucide-react';
+import { STUDENTS } from '@/lib/mock-data';
+import { Artifact } from '@/types/portfolio';
+import { showError } from '@/utils/toast';
+
+interface UploadArtifactModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onUpload: (artifact: Artifact) => void;
+}
+
+export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
+  isOpen,
+  onClose,
+  onUpload
+}) => {
+  const [selectedStudent, setSelectedStudent] = useState(STUDENTS[0]?.name || "");
+  const [title, setTitle] = useState("");
+  const [type, setType] = useState<'Image' | 'Audio' | 'Document' | 'Video'>("Image");
+  const [learningArea, setLearningArea] = useState("Creative Arts");
+  const [grade, setGrade] = useState<'EE' | 'ME' | 'AE' | 'BE'>("EE");
+  const [description, setDescription] = useState("");
+
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return bytes + ' B';
+    else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+    else return (bytes / 1048576).toFixed(1) + ' MB';
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setSelectedFile(file);
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setFilePreviewUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
+
+    if (file.type.startsWith('image/')) setType('Image');
+    else if (file.type.startsWith('audio/')) setType('Audio');
+    else if (file.type.startsWith('video/')) setType('Video');
+    else setType('Document');
+
+    if (!title) {
+      const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+      setTitle(nameWithoutExt);
+    }
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      showError("Please enter an artifact title.");
+      return;
+    }
+
+    const newArtifact: Artifact = {
+      id: `art-${Date.now()}`,
+      student: selectedStudent,
+      title: title.trim(),
+      type,
+      learningArea,
+      date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      grade,
+      description: description.trim() || "Uploaded from computer storage.",
+      fileName: selectedFile ? selectedFile.name : undefined,
+      fileUrl: filePreviewUrl || undefined,
+      fileSize: selectedFile ? formatFileSize(selectedFile.size) : undefined
+    };
+
+    onUpload(newArtifact);
+    resetForm();
+    onClose();
+  };
+
+  const resetForm = () => {
+    setTitle("");
+    setDescription("");
+    setType("Image");
+    setGrade("EE");
+    setSelectedFile(null);
+    setFilePreviewUrl(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  return (
+    <Modal
+      isOpen={isOpen}
+      onClose={() => {
+        resetForm();
+        onClose();
+      }}
+      title="Upload Learner Artifact"
+      description="Select a file from your computer storage (Downloads, Documents, Photos, Videos)."
+      footer={
+        <div className="flex justify-end gap-2 w-full">
+          <Button variant="ghost" onClick={() => { resetForm(); onClose(); }} className="rounded-xl font-bold">
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2">
+            <Upload size={16} /> Save Artifact
+          </Button>
+        </div>
+      }
+    >
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Browse Computer Storage / Downloads</Label>
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileChange} 
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
+            className="hidden" 
+            id="computer-file-input"
+          />
+          <label 
+            htmlFor="computer-file-input" 
+            className="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-colors group"
+          >
+            <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
+              <Paperclip className="text-indigo-600" size={24} />
+            </div>
+            <p className="text-sm font-bold text-slate-800">
+              {selectedFile ? selectedFile.name : "Click to select a file from your Downloads or Device"}
+            </p>
+            <p className="text-xs text-slate-400 mt-1">
+              {selectedFile ? `${formatFileSize(selectedFile.size)} • ${selectedFile.type || 'File'}` : "Supports Photos, Audio, Video clips, PDF & Documents"}
+            </p>
+          </label>
+
+          {filePreviewUrl && type === 'Image' && (
+            <div className="relative w-full h-32 rounded-xl overflow-hidden border border-slate-200 mt-2">
+              <img src={filePreviewUrl} alt="Preview" className="w-full h-full object-cover" />
+              <Badge className="absolute bottom-2 right-2 bg-emerald-600 text-white font-bold gap-1 text-[10px]">
+                <CheckCircle2 size={12} /> Image Ready
+              </Badge>
+            </div>
+          )}
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
+          <Select value={selectedStudent} onValueChange={setSelectedStudent}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectValue placeholder="Choose student..." />
+            </SelectTrigger>
+            <SelectContent>
+              {STUDENTS.map(s => (
+                <SelectItem key={s.id} value={s.name}>
+                  {s.name} (Grade {s.grade} - {s.stream})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Artifact Title</Label>
+          <Input 
+            value={title} 
+            onChange={(e) => setTitle(e.target.value)} 
+            placeholder="e.g. Clay Modeling: Farm Animals" 
+            className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+          />
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Artifact Type</Label>
+            <Select value={type} onValueChange={(val: any) => setType(val)}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Image">Image / Photo</SelectItem>
+                <SelectItem value="Audio">Audio Recording</SelectItem>
+                <SelectItem value="Document">PDF / Report Document</SelectItem>
+                <SelectItem value="Video">Video Recording</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Learning Area</Label>
+            <Select value={learningArea} onValueChange={setLearningArea}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Creative Arts">Creative Arts</SelectItem>
+                <SelectItem value="English">English Language</SelectItem>
+                <SelectItem value="Kiswahili">Kiswahili</SelectItem>
+                <SelectItem value="Science">Science & Tech</SelectItem>
+                <SelectItem value="Mathematics">Mathematics</SelectItem>
+                <SelectItem value="Agriculture">Agriculture</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Performance Rating</Label>
+          <Select value={grade} onValueChange={(val: any) => setGrade(val)}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="EE">EE - Exceeding Expectation</SelectItem>
+              <SelectItem value="ME">ME - Meeting Expectation</SelectItem>
+              <SelectItem value="AE">AE - Approaching Expectation</SelectItem>
+              <SelectItem value="BE">BE - Below Expectation</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Observations / Remarks</Label>
+          <Textarea 
+            value={description} 
+            onChange={(e) => setDescription(e.target.value)} 
+            placeholder="Describe the learner's evidence or teacher remarks..." 
+            className="rounded-xl bg-slate-50 border-none min-h-[80px]"
+          />
+        </div>
+      </form>
+    </Modal>
+  );
+};
