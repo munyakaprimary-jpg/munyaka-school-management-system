@@ -60,32 +60,64 @@ const GradesStreams = () => {
     });
   }, [grades]);
 
-  const handleAddGrade = () => {
-    if (!newGradeName.trim()) return;
+  // Helper function to normalize grade names for duplicate detection (e.g., "Grade 1" vs "1" or "grade 1")
+  const normalizeGradeKey = (name: string) => {
+    return name.trim().toLowerCase().replace(/^grade\s*/i, '');
+  };
 
-    // Duplicate check for Grades
-    const exists = grades.some(g => g.name.toLowerCase() === newGradeName.trim().toLowerCase());
-    if (exists) {
-      showError(`The grade "${newGradeName}" already exists.`);
+  const handleAddGrade = () => {
+    const trimmedName = newGradeName.trim();
+    if (!trimmedName) {
+      showError("Please enter a grade name.");
       return;
     }
 
-    const newGrade: Grade = { id: `g-${Date.now()}`, name: newGradeName.trim(), category: newGradeCategory, streams: [] };
+    // Normalized duplicate check for Grades
+    const normalizedKey = normalizeGradeKey(trimmedName);
+    const exists = grades.some(g => normalizeGradeKey(g.name) === normalizedKey);
+    
+    if (exists) {
+      showError(`A grade matching "${trimmedName}" already exists.`);
+      return;
+    }
+
+    const formattedName = /^grade\s/i.test(trimmedName) || /^(pp\d)/i.test(trimmedName)
+      ? trimmedName 
+      : `Grade ${trimmedName}`;
+
+    const newGrade: Grade = { 
+      id: `g-${Date.now()}`, 
+      name: formattedName, 
+      category: newGradeCategory, 
+      streams: [] 
+    };
+    
     setGrades([...grades, newGrade]);
     setIsGradeOpen(false);
     setNewGradeName("");
-    showSuccess(`Successfully created ${newGradeName}!`);
+    showSuccess(`Successfully created ${formattedName}!`);
   };
 
   const handleAddStream = () => {
-    if (!selectedGradeId || !newStreamName.trim()) return;
+    const trimmedStreamName = newStreamName.trim();
+    
+    if (!selectedGradeId) {
+      showError("Please select a grade level.");
+      return;
+    }
+    if (!trimmedStreamName) {
+      showError("Please enter a stream name.");
+      return;
+    }
 
-    // Find the grade first to check for duplicate streams within it
+    // Find parent grade and check for duplicate stream within it
     const parentGrade = grades.find(g => g.id === selectedGradeId);
     if (parentGrade) {
-      const streamExists = parentGrade.streams.some(s => s.name.toLowerCase() === newStreamName.trim().toLowerCase());
+      const streamExists = parentGrade.streams.some(
+        s => s.name.trim().toLowerCase() === trimmedStreamName.toLowerCase()
+      );
       if (streamExists) {
-        showError(`A stream named "${newStreamName}" already exists in ${parentGrade.name}.`);
+        showError(`Stream "${trimmedStreamName}" already exists in ${parentGrade.name}.`);
         return;
       }
     }
@@ -93,7 +125,12 @@ const GradesStreams = () => {
     const studentsCount = parseInt(newStreamStudents) || 0;
     const updatedGrades = grades.map(grade => {
       if (grade.id === selectedGradeId) {
-        const newStream: Stream = { id: `s-${Date.now()}`, name: newStreamName.trim(), teacher: newStreamTeacher || "Unassigned", studentsCount };
+        const newStream: Stream = { 
+          id: `s-${Date.now()}`, 
+          name: trimmedStreamName, 
+          teacher: newStreamTeacher.trim() || "Unassigned", 
+          studentsCount 
+        };
         return { ...grade, streams: [...grade.streams, newStream] };
       }
       return grade;
@@ -105,7 +142,7 @@ const GradesStreams = () => {
     setNewStreamName("");
     setNewStreamTeacher("");
     setNewStreamStudents("");
-    showSuccess(`Successfully added ${newStreamName} stream!`);
+    showSuccess(`Successfully added ${trimmedStreamName} stream to ${parentGrade?.name}!`);
   };
 
   const requestDelete = (type: 'grade' | 'stream', gradeId: string, streamId?: string) => {
@@ -224,6 +261,11 @@ const GradesStreams = () => {
                     </div>
                   </div>
                 ))}
+                {grade.streams.length === 0 && (
+                  <div className="col-span-full py-6 text-center border border-dashed border-slate-200 rounded-3xl text-slate-400 text-sm font-medium">
+                    No streams created yet for {grade.name}. Click "Add Stream" to add one.
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -246,7 +288,12 @@ const GradesStreams = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Grade Name</Label>
-            <Input value={newGradeName} onChange={(e) => setNewGradeName(e.target.value)} placeholder="e.g. Grade 9, PP1" className="rounded-xl h-12" />
+            <Input 
+              value={newGradeName} 
+              onChange={(e) => setNewGradeName(e.target.value)} 
+              placeholder="e.g. Grade 9, PP1" 
+              className="rounded-xl h-12" 
+            />
           </div>
           <div className="space-y-2">
             <Label>Category</Label>
@@ -294,12 +341,12 @@ const GradesStreams = () => {
             <Input value={newStreamName} onChange={(e) => setNewStreamName(e.target.value)} placeholder="e.g. Blue" className="rounded-xl h-12" />
           </div>
           <div className="space-y-2">
-            <Label>Class Teacher</Label>
+            <Label>Class Teacher (Optional)</Label>
             <Input value={newStreamTeacher} onChange={(e) => setNewStreamTeacher(e.target.value)} placeholder="e.g. Jane Mwangi" className="rounded-xl h-12" />
           </div>
           <div className="space-y-2">
             <Label>Initial Student Count</Label>
-            <Input type="number" value={newStreamStudents} onChange={(e) => setNewStreamStudents(e.target.value)} placeholder="e.g. 40" className="rounded-xl h-12" />
+            <Input type="number" min="0" value={newStreamStudents} onChange={(e) => setNewStreamStudents(e.target.value)} placeholder="e.g. 40" className="rounded-xl h-12" />
           </div>
         </div>
       </Modal>
