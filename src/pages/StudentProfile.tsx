@@ -13,53 +13,14 @@ import {
   FileText,
   CreditCard,
   ArrowLeft,
-  History,
-  UserX
+  History
 } from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
-import TransferSetupModal from '@/components/transfer/TransferSetupModal';
-import ClearanceCertificate from '@/components/transfer/ClearanceCertificate';
-import { TransferStudent, TransferSetupData, ClearanceCertificateData } from '@/types/transfer';
 
 const StudentProfile = () => {
-  const student = STUDENTS[0] as TransferStudent; 
+  const student = STUDENTS[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-  const [showCertificate, setShowCertificate] = useState(false);
-  const [transferData, setTransferData] = useState<TransferSetupData | null>(null);
-
-  const handleTransferSubmit = (data: TransferSetupData) => {
-    setTransferData(data);
-    setIsTransferModalOpen(false);
-    
-    // Update student status
-    const updatedStudent = { ...student, status: 'Transferred' as const };
-    
-    // Generate clearance certificate data
-    const certificateData: ClearanceCertificateData = {
-      serialNumber: `CERT-${Date.now()}`,
-      studentName: updatedStudent.name,
-      gender: updatedStudent.gender,
-      admissionDate: updatedStudent.admissionDate,
-      lastGrade: updatedStudent.grade,
-      stream: updatedStudent.stream,
-      feeClearanceStatus: data.isFeeCleared ? 'CLEARED' : 'PENDING',
-      balance: data.feeBalance,
-      bursarSignature: true,
-      headteacherSignature: true,
-      coCurricularActivities: "Active member of Science Club and Basketball Team",
-      headteacherRemarks: "A well-behaved and diligent student. We wish them success in their future endeavors.",
-      transferDate: data.exitDate,
-      destinationSchool: data.destinationSchool
-    };
-    
-    setShowCertificate(true);
-  };
-
-  const handlePrintCertificate = () => {
-    window.print();
-  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -71,21 +32,13 @@ const StudentProfile = () => {
             <p className="text-muted-foreground">Detailed learner profile and history.</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
-            onClick={() => setIsHistoryModalOpen(true)}
-          >
-            <History size={18} /> View History
-          </Button>
-          <Button 
-            className="rounded-xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white"
-            onClick={() => setIsTransferModalOpen(true)}
-          >
-            <UserX size={18} /> Transfer Student
-          </Button>
-        </div>
+        <Button 
+          variant="outline" 
+          className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+          onClick={() => setIsHistoryModalOpen(true)}
+        >
+          <History size={18} /> View History
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -99,11 +52,6 @@ const StudentProfile = () => {
             <div className="flex justify-center gap-2 mb-8">
               <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
               <Badge variant="outline">{student.stream}</Badge>
-              <Badge className={cn(
-                student.status === 'Active' ? "bg-emerald-100 text-emerald-700" : "bg-slate-100 text-slate-600"
-              )}>
-                {student.status}
-              </Badge>
             </div>
             <div className="space-y-4 text-left border-t pt-8">
               <div className="flex items-center gap-3 text-sm text-slate-600">
@@ -186,7 +134,7 @@ const StudentProfile = () => {
                 </div>
                 <CardTitle className="text-lg">Fee Balance</CardTitle>
               </div>
-              <p className="text-3xl font-black text-slate-900 mb-2">KES {student.feeBalance.toLocaleString()}</p>
+              <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
               <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800">Record Payment</Button>
             </Card>
@@ -213,47 +161,12 @@ const StudentProfile = () => {
         </div>
       </div>
 
-      {/* Transfer Workflow */}
-      {showCertificate && transferData && (
-        <div className="mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <h2 className="text-2xl font-bold text-slate-900 mb-6 text-center">Transfer & Clearance Certificate</h2>
-          <ClearanceCertificate 
-            data={{
-              ...transferData,
-              serialNumber: `CERT-${Date.now()}`,
-              studentName: student.name,
-              gender: student.gender,
-              admissionDate: student.admissionDate,
-              lastGrade: student.grade,
-              stream: student.stream,
-              feeClearanceStatus: transferData.isFeeCleared ? 'CLEARED' : 'PENDING',
-              balance: transferData.feeBalance,
-              bursarSignature: true,
-              headteacherSignature: true,
-              coCurricularActivities: "Active member of Science Club and Basketball Team",
-              headteacherRemarks: "A well-behaved and diligent student. We wish them success in their future endeavors.",
-              transferDate: transferData.exitDate,
-              destinationSchool: transferData.destinationSchool
-            }}
-            onPrint={handlePrintCertificate}
-          />
-        </div>
-      )}
-
       {/* Academic History Modal */}
       <AcademicHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
         studentId={student.id}
         studentName={student.name}
-      />
-
-      {/* Transfer Setup Modal */}
-      <TransferSetupModal
-        isOpen={isTransferModalOpen}
-        onClose={() => setIsTransferModalOpen(false)}
-        onSubmit={handleTransferSubmit}
-        student={student}
       />
     </div>
   );

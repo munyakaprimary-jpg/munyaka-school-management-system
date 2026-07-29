@@ -1,4 +1,15 @@
+"use client";
+
 import React from 'react';
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogDescription, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter 
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
 import { X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -12,55 +23,59 @@ interface ModalProps {
   maxWidth?: string;
 }
 
-const Modal: React.FC<ModalProps> = ({
-  isOpen,
-  onClose,
-  title,
-  description,
-  children,
+const Modal = ({ 
+  isOpen, 
+  onClose, 
+  title, 
+  description, 
+  children, 
   footer,
-  maxWidth = 'max-w-2xl'
-}) => {
-  if (!isOpen) return null;
-
+  maxWidth = "max-w-lg"
+}: ModalProps) => {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-      <div 
-        className={cn(
-          "bg-white rounded-3xl shadow-2xl w-full max-h-[90vh] overflow-hidden flex flex-col",
-          maxWidth
-        )}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Modal Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-100">
-          <div>
-            <h2 className="text-xl font-bold text-slate-900">{title}</h2>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className={cn(
+        "w-full max-h-[90vh] flex flex-col p-0 bg-white dark:bg-slate-900 border-none shadow-2xl",
+        maxWidth
+      )}>
+        {/* Fixed Header */}
+        <div className="p-6 border-b border-gray-100 dark:border-gray-800 shrink-0 flex items-center justify-between">
+          <DialogHeader className="space-y-1">
+            <DialogTitle className="text-2xl font-bold text-slate-900 dark:text-white leading-none">
+              {title}
+            </DialogTitle>
             {description && (
-              <p className="text-sm text-slate-500 mt-1">{description}</p>
+              <DialogDescription className="text-slate-500 dark:text-slate-400">
+                {description}
+              </DialogDescription>
             )}
-          </div>
-          <button
+          </DialogHeader>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="rounded-full h-8 w-8 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
             onClick={onClose}
-            className="p-2 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors"
           >
-            <X size={20} />
-          </button>
+            <X size={18} />
+          </Button>
         </div>
 
-        {/* Modal Content */}
-        <div className="flex-1 overflow-y-auto p-6">
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
           {children}
         </div>
 
-        {/* Modal Footer */}
+        {/* Sticky Footer */}
         {footer && (
-          <div className="border-t border-slate-100 p-6 bg-slate-50/50">
-            {footer}
+          <div className="p-4 border-t border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-slate-800/50 shrink-0">
+            <DialogFooter className="flex gap-3 sm:justify-end">
+              {footer}
+            </DialogFooter>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 };
 
