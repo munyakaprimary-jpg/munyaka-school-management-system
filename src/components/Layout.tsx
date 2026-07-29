@@ -31,7 +31,8 @@ import {
   ChevronRight, 
   Sun, 
   Moon, 
-  X 
+  X,
+  GraduationCap
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -68,6 +69,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
+    { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
   ];
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
