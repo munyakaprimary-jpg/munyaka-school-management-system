@@ -26,7 +26,8 @@ import {
   CheckCircle2, 
   File, 
   ExternalLink, 
-  Download 
+  Download,
+  Maximize2
 } from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
@@ -138,8 +139,15 @@ const Portfolio = () => {
     if (!file) return;
 
     setSelectedFile(file);
-    const objectUrl = URL.createObjectURL(file);
-    setFilePreviewUrl(objectUrl);
+
+    // Read file as Data URL for persistent inline rendering
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      if (event.target?.result) {
+        setFilePreviewUrl(event.target.result as string);
+      }
+    };
+    reader.readAsDataURL(file);
 
     // Auto-detect artifact type based on MIME type / extension
     if (file.type.startsWith('image/')) {
@@ -205,6 +213,19 @@ const Portfolio = () => {
     setArtifacts(prev => prev.filter(a => a.id !== id));
     if (selectedArtifact?.id === id) setSelectedArtifact(null);
     showSuccess(`Removed "${artifactTitle}"`);
+  };
+
+  const openDocumentInNewTab = (url?: string, filename?: string) => {
+    if (!url) return;
+    
+    // Create an anchor tag and trigger direct click to handle both Data URLs and web links safely
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    if (filename) link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   const getTypeIcon = (artifactType: Artifact['type']) => {
@@ -508,26 +529,31 @@ const Portfolio = () => {
         </form>
       </Modal>
 
-      {/* Interactive Full Media Viewer Modal */}
+      {/* Interactive Full Media & Document Viewer Modal */}
       <Modal
         isOpen={!!selectedArtifact}
         onClose={() => setSelectedArtifact(null)}
         title={selectedArtifact?.title || "Artifact Evidence"}
         description={`Learner: ${selectedArtifact?.student}`}
-        maxWidth="max-w-2xl"
+        maxWidth="max-w-3xl"
         footer={
-          <div className="flex justify-between items-center w-full">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-2 w-full">
             {selectedArtifact?.fileUrl ? (
-              <a 
-                href={selectedArtifact.fileUrl} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                download={selectedArtifact.fileName || selectedArtifact.title}
-              >
-                <Button variant="outline" className="rounded-xl font-bold gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100">
-                  <ExternalLink size={16} /> Open / Download File
+              <div className="flex gap-2">
+                <Button 
+                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
+                  className="rounded-xl font-bold gap-2 text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm"
+                >
+                  <Maximize2 size={16} /> Open Document in New Window
                 </Button>
-              </a>
+                <Button 
+                  variant="outline" 
+                  onClick={() => openDocumentInNewTab(selectedArtifact.fileUrl, selectedArtifact.fileName || selectedArtifact.title)}
+                  className="rounded-xl font-bold gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100"
+                >
+                  <Download size={16} /> Download
+                </Button>
+              </div>
             ) : <div />}
             <Button variant="ghost" onClick={() => setSelectedArtifact(null)} className="rounded-xl font-bold">
               Close
@@ -538,19 +564,19 @@ const Portfolio = () => {
         {selectedArtifact && (
           <div className="space-y-5">
             {/* Interactive Viewer Section */}
-            <div className="min-h-[220px] max-h-[400px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 overflow-hidden relative p-2">
+            <div className="min-h-[260px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 overflow-hidden relative p-1">
               {selectedArtifact.fileUrl && selectedArtifact.type === 'Image' ? (
                 <img 
                   src={selectedArtifact.fileUrl} 
                   alt={selectedArtifact.title} 
-                  className="w-full h-auto max-h-[360px] object-contain rounded-lg" 
+                  className="w-full h-auto max-h-[400px] object-contain rounded-lg" 
                 />
               ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Video' ? (
                 <video 
                   src={selectedArtifact.fileUrl} 
                   controls 
                   autoPlay 
-                  className="w-full h-auto max-h-[360px] rounded-lg" 
+                  className="w-full h-auto max-h-[400px] rounded-lg" 
                 />
               ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Audio' ? (
                 <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
@@ -561,18 +587,13 @@ const Portfolio = () => {
                   <audio controls src={selectedArtifact.fileUrl} className="w-full max-w-md h-12" />
                 </div>
               ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Document' ? (
-                <div className="w-full h-[320px] flex flex-col items-center justify-center bg-slate-800 rounded-lg p-6 text-center text-white">
-                  <FileText size={56} className="text-emerald-400 mb-3" />
-                  <p className="text-base font-bold text-white mb-1">{selectedArtifact.fileName || selectedArtifact.title}</p>
-                  <p className="text-xs text-slate-400 mb-6">{selectedArtifact.fileSize || "Document File"}</p>
-                  <a 
-                    href={selectedArtifact.fileUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-sm shadow-lg transition-colors"
-                  >
-                    <Download size={18} /> View / Download Document
-                  </a>
+                <div className="w-full h-[420px] flex flex-col items-center bg-slate-950 rounded-xl overflow-hidden relative">
+                  {/* Inline Embedded PDF Viewer Frame */}
+                  <iframe 
+                    src={selectedArtifact.fileUrl} 
+                    title={selectedArtifact.title}
+                    className="w-full h-full border-0 rounded-xl bg-white"
+                  />
                 </div>
               ) : (
                 <div className="flex flex-col items-center gap-2 p-8 text-center text-slate-400">
@@ -582,7 +603,7 @@ const Portfolio = () => {
               )}
             </div>
 
-            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-2xl">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl">
               <div>
                 <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Learning Area</p>
                 <p className="text-sm font-bold text-slate-900">{selectedArtifact.learningArea}</p>
