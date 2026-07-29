@@ -270,12 +270,6 @@ const Assessments = () => {
     setSubjectScores(prev => prev.map(s => s.subjectId === subjectId ? { ...s, comment: commentVal } : s));
   };
 
-  const handleSetAllScores = () => {
-    const defaultScore = "75";
-    const autoPerformance = getPerformanceFromScore(defaultScore);
-    setSubjectScores(prev => prev.map(s => ({ ...s, score: defaultScore, performance: autoPerformance })));
-  };
-
   const handleClearAllScores = () => {
     setSubjectScores(prev => prev.map(s => ({ ...s, score: "", performance: "", comment: "" })));
   };
@@ -414,9 +408,6 @@ const Assessments = () => {
             Scores: {STUDENTS.find(s => s.id === selectedStudentId)?.name || 'Please select a learner'}
           </CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold" onClick={handleSetAllScores}>
-              <CheckCircle size={14} className="mr-1" /> Set All (75)
-            </Button>
             <Button variant="outline" size="sm" className="rounded-xl text-xs font-bold text-rose-600 border-rose-200" onClick={handleClearAllScores}>
               <XCircle size={14} className="mr-1" /> Clear All
             </Button>
