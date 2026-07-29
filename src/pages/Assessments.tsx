@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Info, Save, FileDown, Loader2, Search } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
-import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 
 interface LearningArea {
   id: string;
@@ -78,7 +78,7 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
 ];
 
 const Assessments = () => {
-  // Logically sort grade levels in ascending order
+  // Dynamically load grades and streams from localStorage or default data
   const gradesList = useMemo(() => {
     const saved = localStorage.getItem('munyaka_grades');
     const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
@@ -111,7 +111,7 @@ const Assessments = () => {
 
   // Filter States
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
-  const [selectedStreamId, setSelectedStreamId] = useState<string>("");
+  const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
   const [examType, setExamType] = useState<string>("SUMMATIVE");
   const [term, setTerm] = useState("term1");
   const [searchTerm, setSearchTerm] = useState("");
@@ -121,15 +121,30 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Set default selected grade to the first sorted grade
+  // Set default selected grade to the first sorted grade on initial load
   useEffect(() => {
     if (!selectedGradeId && gradesList.length > 0) {
       setSelectedGradeId(gradesList[0].id);
     }
   }, [gradesList, selectedGradeId]);
 
-  const currentGrade = useMemo(() => gradesList.find((g: Grade) => g.id === selectedGradeId), [selectedGradeId, gradesList]);
-  const availableStreams = useMemo(() => currentGrade ? currentGrade.streams : [], [currentGrade]);
+  // Reset stream to 'all' whenever Grade Level changes
+  useEffect(() => {
+    if (selectedGradeId) {
+      setSelectedStreamId("all");
+    }
+  }, [selectedGradeId]);
+
+  const currentGrade = useMemo(() => 
+    gradesList.find((g: Grade) => g.id === selectedGradeId), 
+    [selectedGradeId, gradesList]
+  );
+
+  // Streams derived dynamically from the selected Grade
+  const availableStreams = useMemo(() => 
+    currentGrade ? currentGrade.streams : [], 
+    [currentGrade]
+  );
 
   const filteredLearningAreas = useMemo(() => {
     if (!currentGrade) return [];
@@ -142,29 +157,37 @@ const Assessments = () => {
     return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
   }, [currentGrade]);
 
+  // Dynamically filter students based on Grade, Stream, and Search term
   const filteredStudents = useMemo(() => {
-    if (!currentGrade || !selectedStreamId) return [];
-    const streamObj = availableStreams.find((s: any) => s.id === selectedStreamId);
-    if (!streamObj) return [];
+    if (!currentGrade) return [];
     
     const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
+
     return STUDENTS.filter(s => {
-      const matchesClass = (s.grade === gradeNum || s.grade === currentGrade.name) && 
-                          s.stream.toLowerCase() === streamObj.name.toLowerCase();
-      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesClass && matchesSearch;
+      // Match Grade
+      const matchesGrade = 
+        s.grade === gradeNum || 
+        s.grade === currentGrade.name ||
+        `Grade ${s.grade}` === currentGrade.name;
+
+      // Match Stream
+      let matchesStream = true;
+      if (selectedStreamId !== "all") {
+        const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId);
+        if (streamObj) {
+          matchesStream = s.stream.toLowerCase() === streamObj.name.toLowerCase();
+        }
+      }
+
+      // Match Search Query
+      const matchesSearch = 
+        !searchTerm.trim() ||
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+
+      return matchesGrade && matchesStream && matchesSearch;
     });
   }, [currentGrade, selectedStreamId, availableStreams, searchTerm]);
-
-  // Sync stream when grade changes
-  useEffect(() => {
-    if (availableStreams.length > 0) {
-      setSelectedStreamId(availableStreams[0].id);
-    } else {
-      setSelectedStreamId("");
-    }
-  }, [availableStreams]);
 
   const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
     let clean = value.replace(/[^0-9]/g, '');
@@ -213,10 +236,13 @@ const Assessments = () => {
 
       <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          {/* Grade Level Selector */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
             <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Select Grade" />
+              </SelectTrigger>
               <SelectContent>
                 {gradesList.map((g: Grade) => (
                   <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
@@ -224,17 +250,32 @@ const Assessments = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Dynamic Stream Selector */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
-            <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={availableStreams.length === 0}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue placeholder="Stream" /></SelectTrigger>
-              <SelectContent>{availableStreams.map((s: any) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+            <Select value={selectedStreamId} onValueChange={setSelectedStreamId}>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                {availableStreams.map((s: Stream) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    Stream {s.name} ({s.teacher})
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
+
+          {/* Exam Type Selector */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="FORMATIVE">Formative Task</SelectItem>
                 <SelectItem value="SUMMATIVE">Summative Exam</SelectItem>
@@ -242,10 +283,14 @@ const Assessments = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Term Selector */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
             <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="term1">Term 1</SelectItem>
                 <SelectItem value="term2">Term 2</SelectItem>
@@ -253,6 +298,8 @@ const Assessments = () => {
               </SelectContent>
             </Select>
           </div>
+
+          {/* Search Box */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
             <div className="relative">
@@ -268,12 +315,15 @@ const Assessments = () => {
         </div>
       </Card>
 
+      {/* Marks Matrix Table */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse">
             <thead className="bg-slate-50 border-b">
               <tr>
-                <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64">Learner Details</th>
+                <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64">
+                  Learner Details
+                </th>
                 {filteredLearningAreas.map(area => (
                   <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px]">
                     {area.name}
@@ -287,7 +337,9 @@ const Assessments = () => {
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                     <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
                       <p className="font-bold text-slate-900 truncate">{student.name}</p>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">ID: {student.assessment}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                        ID: {student.assessment} • Stream: {student.stream}
+                      </p>
                     </td>
                     {filteredLearningAreas.map(area => (
                       <td key={area.id} className="px-2 py-3 border-r text-center">
@@ -306,7 +358,7 @@ const Assessments = () => {
                   <td colSpan={filteredLearningAreas.length + 1} className="px-8 py-20 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 bg-slate-50 rounded-full text-slate-300"><Search size={32} /></div>
-                      <p className="text-slate-500 font-bold">No learners found for the current selection.</p>
+                      <p className="text-slate-500 font-bold">No learners found for the selected Grade and Stream.</p>
                     </div>
                   </td>
                 </tr>
