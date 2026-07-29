@@ -120,8 +120,18 @@ const Students = () => {
     setIsExporting(true);
     
     setTimeout(() => {
-      const titleHeader = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const subHeader = "P.O. BOX 5239-30100, ELDORET, MOTTO: Knowledge is Power";
+      // Requested Header Format
+      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+      const row2 = "P.O. BOX 5239-30100,ELDORET";
+      const row3 = "MOTTO: KNOWLEDGE POWER";
+      
+      const currentYear = new Date().getFullYear().toString();
+      const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
+      const activeStream = filterStream !== "all" ? filterStream : "All Streams";
+      const activeTerm = "Term 1";
+
+      const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${currentYear}, TERM ${activeTerm}`;
+
       const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
         `"${s.name.replace(/"/g, '""')}"`,
@@ -133,8 +143,10 @@ const Students = () => {
       ]);
 
       const csvContent = [
-        titleHeader,
-        subHeader,
+        row1,
+        row2,
+        row3,
+        row4,
         "",
         headers.join(","),
         ...rows.map(r => r.join(","))
