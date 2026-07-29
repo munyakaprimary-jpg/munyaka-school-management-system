@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,47 +9,8 @@ import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
 import { Book, Search, Plus, BookOpen } from 'lucide-react';
 import { BOOKS } from '@/lib/mock-data';
-import Modal from '@/components/ui/Modal';
-import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { showSuccess } from '@/utils/toast';
 
 const Library = () => {
-  const [books, setBooks] = useState(BOOKS);
-  const [isOpen, setIsOpen] = useState(false);
-  const [title, setTitle] = useState('');
-  const [author, setAuthor] = useState('');
-  const [isbn, setIsbn] = useState('');
-  const [category, setCategory] = useState('Core Text');
-  const [stock, setStock] = useState('');
-  const [borrowed, setBorrowed] = useState('');
-
-  const handleAddBook = () => {
-    if (!title.trim() || !author.trim() || !isbn.trim() || !stock.trim()) {
-      showError('Please fill in all required fields');
-      return;
-    }
-    const newBook = {
-      id: Date.now().toString(),
-      title: title.trim(),
-      author: author.trim(),
-      isbn: isbn.trim(),
-      category,
-      stock: parseInt(stock),
-      borrowed: borrowed ? parseInt(borrowed) : 0,
-    };
-    setBooks(prev => [...prev, newBook]);
-    setIsOpen(false);
-    // reset form
-    setTitle('');
-    setAuthor('');
-    setIsbn('');
-    setCategory('Core Text');
-    setStock('');
-    setBorrowed('');
-    showSuccess('Book added successfully!');
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -60,7 +21,7 @@ const Library = () => {
             <p className="text-muted-foreground">Manage textbooks, supplementary materials, and digital learning assets.</p>
           </div>
         </div>
-        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsOpen(true)}>
+        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
           <Plus size={18} /> Register New Book
         </Button>
       </div>
@@ -79,7 +40,7 @@ const Library = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {books.map((book) => (
+        {BOOKS.map((book) => (
           <Card key={book.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
             <CardContent className="p-0 flex h-full">
               <div className="w-32 bg-slate-50 flex items-center justify-center border-r shrink-0">
@@ -125,59 +86,6 @@ const Library = () => {
           </Card>
         ))}
       </div>
-
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title="Register New Book"
-        description="Add a new book to the library catalog."
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsOpen(false)} className="rounded-xl font-bold">Cancel</Button>
-            <Button onClick={handleAddBook} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8">
-              Register Book
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          <div className="space-y-2">
-            <Label>Title</Label>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Book title" className="rounded-xl h-12" />
-          </div>
-          <div className="space-y-2">
-            <Label>Author</Label>
-            <Input value={author} onChange={(e) => setAuthor(e.target.value)} placeholder="Author name" className="rounded-xl h-12" />
-          </div>
-          <div className="space-y-2">
-            <Label>ISBN</Label>
-            <Input value={isbn} onChange={(e) => setIsbn(e.target.value)} placeholder="ISBN number" className="rounded-xl h-12" />
-          </div>
-          <div className="space-y-2">
-            <Label>Category</Label>
-            <Select value={category} onValueChange={(val) => setCategory(val)}>
-              <SelectTrigger className="rounded-xl h-12">
-                <SelectValue placeholder="Select category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Core Text">Core Text</SelectItem>
-                <SelectItem value="Reference">Reference</SelectItem>
-                <SelectItem value="Supplementary">Supplementary</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Stock Quantity</Label>
-              <Input type="number" value={stock} onChange={(e) => setStock(e.target.value)} placeholder="e.g. 20" className="rounded-xl h-12" />
-            </div>
-            <div className="space-y-2">
-              <Label>Currently Borrowed (Optional)</Label>
-              <Input type="number" value={borrowed} onChange={(e) => setBorrowed(e.target.value)} placeholder="e.g. 5" className="rounded-xl h-12" />
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
