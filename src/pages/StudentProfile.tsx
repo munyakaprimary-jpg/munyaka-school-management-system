@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -12,21 +12,33 @@ import {
   Calendar,
   FileText,
   CreditCard,
-  ArrowLeft
+  ArrowLeft,
+  History
 } from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
+import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 
 const StudentProfile = () => {
   const student = STUDENTS[0]; 
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center gap-3">
-        <BackButton to="/students" />
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
-          <p className="text-muted-foreground">Detailed learner profile and history.</p>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <BackButton to="/students" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
+            <p className="text-muted-foreground">Detailed learner profile and history.</p>
+          </div>
         </div>
+        <Button 
+          variant="outline" 
+          className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+          onClick={() => setIsHistoryModalOpen(true)}
+        >
+          <History size={18} /> View History
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -123,7 +135,7 @@ const StudentProfile = () => {
                 <CardTitle className="text-lg">Fee Balance</CardTitle>
               </div>
               <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6">Total Term Fee: KES 15,000</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
               <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800">Record Payment</Button>
             </Card>
 
@@ -148,6 +160,14 @@ const StudentProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Academic History Modal */}
+      <AcademicHistoryModal
+        isOpen={isHistoryModalOpen}
+        onClose={() => setIsHistoryModalOpen(false)}
+        studentId={student.id}
+        studentName={student.name}
+      />
     </div>
   );
 };
