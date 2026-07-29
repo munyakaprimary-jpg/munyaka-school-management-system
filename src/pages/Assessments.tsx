@@ -21,6 +21,21 @@ interface ClusterData {
   learningAreas: LearningArea[];
 }
 
+interface ExamTypeOption {
+  id: string;
+  name: string;
+  code: string;
+  weight: number;
+  category: string;
+}
+
+const DEFAULT_EXAM_TYPES: ExamTypeOption[] = [
+  { id: "et-1", name: "Formative Assessment", code: "FORMATIVE", weight: 40, category: "Formative" },
+  { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative" },
+  { id: "et-3", name: "Opener Exam", code: "OPENER", weight: 0, category: "Other" },
+  { id: "et-4", name: "Mid-Term Exam", code: "MIDTERM", weight: 0, category: "Other" }
+];
+
 const FALLBACK_CLUSTERS: ClusterData[] = [
   {
     id: "pre-primary",
@@ -78,7 +93,7 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
 ];
 
 const Assessments = () => {
-  // Dynamically load grades and streams from localStorage or default data
+  // Dynamically load grades and streams
   const gradesList = useMemo(() => {
     const saved = localStorage.getItem('munyaka_grades');
     const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
@@ -109,10 +124,26 @@ const Assessments = () => {
     });
   }, []);
 
+  // Dynamically load exam types configured in Exam Types setter menu
+  const examTypesList = useMemo<ExamTypeOption[]>(() => {
+    const saved = localStorage.getItem('munyaka_exam_types');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error("Error parsing saved exam types:", e);
+      }
+    }
+    return DEFAULT_EXAM_TYPES;
+  }, []);
+
   // Filter States
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
-  const [examType, setExamType] = useState<string>("SUMMATIVE");
+  const [examType, setExamType] = useState<string>("");
   const [term, setTerm] = useState("term1");
   const [searchTerm, setSearchTerm] = useState("");
   
@@ -121,12 +152,19 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  // Set default selected grade to the first sorted grade on initial load
+  // Set default selected grade
   useEffect(() => {
     if (!selectedGradeId && gradesList.length > 0) {
       setSelectedGradeId(gradesList[0].id);
     }
   }, [gradesList, selectedGradeId]);
+
+  // Set default selected exam type from loaded exam types list
+  useEffect(() => {
+    if (!examType && examTypesList.length > 0) {
+      setExamType(examTypesList[0].code || examTypesList[0].id);
+    }
+  }, [examTypesList, examType]);
 
   // Reset stream to 'all' whenever Grade Level changes
   useEffect(() => {
@@ -140,7 +178,6 @@ const Assessments = () => {
     [selectedGradeId, gradesList]
   );
 
-  // Streams derived dynamically from the selected Grade
   const availableStreams = useMemo(() => 
     currentGrade ? currentGrade.streams : [], 
     [currentGrade]
@@ -157,20 +194,17 @@ const Assessments = () => {
     return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
   }, [currentGrade]);
 
-  // Dynamically filter students based on Grade, Stream, and Search term
   const filteredStudents = useMemo(() => {
     if (!currentGrade) return [];
     
     const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
 
     return STUDENTS.filter(s => {
-      // Match Grade
       const matchesGrade = 
         s.grade === gradeNum || 
         s.grade === currentGrade.name ||
         `Grade ${s.grade}` === currentGrade.name;
 
-      // Match Stream
       let matchesStream = true;
       if (selectedStreamId !== "all") {
         const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId);
@@ -179,7 +213,6 @@ const Assessments = () => {
         }
       }
 
-      // Match Search Query
       const matchesSearch = 
         !searchTerm.trim() ||
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -269,17 +302,19 @@ const Assessments = () => {
             </Select>
           </div>
 
-          {/* Exam Type Selector */}
+          {/* Dynamic Exam Type Selector */}
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
               <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue />
+                <SelectValue placeholder="Select Exam Type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="FORMATIVE">Formative Task</SelectItem>
-                <SelectItem value="SUMMATIVE">Summative Exam</SelectItem>
-                <SelectItem value="OPENER">Opener Exam</SelectItem>
+                {examTypesList.map((et: ExamTypeOption) => (
+                  <SelectItem key={et.id} value={et.code}>
+                    {et.name} ({et.code})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
