@@ -1,15 +1,23 @@
+export type AttendanceStatus = 'present' | 'absent' | 'late' | 'excused';
+
 export interface AttendanceRecord {
   id?: string;
-  teacher_id: string;
+  student_id: string;
   date: string;
-  arrival_time: string | null;
-  departure_time: string | null;
-  early_departure_reason: string | null;
-  verified_lat: number;
-  verified_lng: number;
+  status: AttendanceStatus;
+  arrival_time?: string | null;
+  departure_time?: string | null;
+  notes?: string | null;
+  verified_lat?: number | null;
+  verified_lng?: number | null;
 }
 
-export interface GeofenceResult {
-  distance: number;
-  isWithinBounds: boolean;
+export interface AttendanceSession {
+  status: AttendanceStatus;
+  time: string;
+}
+
+export interface StudentAttendance {
+  morning?: AttendanceSession;
+  afternoon?: AttendanceSession;
 }
