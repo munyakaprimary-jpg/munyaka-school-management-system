@@ -13,7 +13,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { STUDENTS as initialStudents } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 import { TransferStudent } from '@/types/transfer';
-import { cn } from '@/lib/utils'; // Import cn utility
+import { cn } from '@/lib/utils';
 
 const Students = () => {
   const [studentsList, setStudentsList] = useState<TransferStudent[]>(initialStudents as TransferStudent[]);
@@ -101,7 +101,6 @@ const Students = () => {
         </Button>
       </div>
 
-      {/* Compact Responsive Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
         {filteredStudents.map((student) => (
           <Card key={student.id} className="rounded-xl bg-white border border-slate-200/80 shadow-sm hover:border-slate-300 transition-all group overflow-hidden">
@@ -159,7 +158,6 @@ const Students = () => {
         ))}
       </div>
 
-      {/* Register Modal */}
       <Modal isOpen={isRegisterOpen} onClose={() => setIsRegisterOpen(false)} title="Register New Student" description="Enroll learner into the academic system." footer={<><Button variant="ghost" className="rounded-lg h-10 px-4 text-sm font-medium" onClick={() => setIsRegisterOpen(false)}>Cancel</Button><Button className="rounded-lg h-10 px-5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2" onClick={handleRegisterStudent}><UserPlus size={16} /> Register Student</Button></>} maxWidth="max-w-xl">
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4"><div className="space-y-1.5"><Label className="text-xs font-medium">Full Name</Label><Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" className="rounded-lg h-10 text-sm" /></div><div className="space-y-1.5"><Label className="text-xs font-medium">Assessment No.</Label><Input value={assessmentNo} onChange={(e) => setAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-lg h-10 text-sm" /></div></div>
