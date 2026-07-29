@@ -121,6 +121,7 @@ const Students = () => {
     
     setTimeout(() => {
       const titleHeader = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+      const subHeader = "P.O. BOX 5239-30100, ELDORET, MOTTO: Knowledge is Power";
       const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
         `"${s.name.replace(/"/g, '""')}"`,
@@ -133,6 +134,7 @@ const Students = () => {
 
       const csvContent = [
         titleHeader,
+        subHeader,
         "",
         headers.join(","),
         ...rows.map(r => r.join(","))
