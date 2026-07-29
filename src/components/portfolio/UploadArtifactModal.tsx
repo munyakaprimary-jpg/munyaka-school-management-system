@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Upload, Paperclip, CheckCircle2 } from 'lucide-react';
-import { STUDENTS } from '@/lib/mock-data';
+import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { Artifact } from '@/types/portfolio';
 import { showError } from '@/utils/toast';
 
@@ -24,6 +24,9 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
   onClose,
   onUpload
 }) => {
+  const [filterGrade, setFilterGrade] = useState("all");
+  const [filterStream, setFilterStream] = useState("all");
+  
   const [selectedStudent, setSelectedStudent] = useState(STUDENTS[0]?.name || "");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<'Image' | 'Audio' | 'Document' | 'Video'>("Image");
@@ -34,6 +37,21 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const uniqueStreams = useMemo(() => {
+    const streams = new Set<string>();
+    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
+    return Array.from(streams).sort();
+  }, []);
+
+  const filteredStudents = useMemo(() => {
+    return STUDENTS.filter(s => {
+      const matchesGrade = filterGrade === "all" || s.grade === filterGrade || s.grade === filterGrade.replace(/[^0-9]/g, '');
+      const matchesStream = filterStream === "all" || s.stream.toLowerCase() === filterStream.toLowerCase();
+      return matchesGrade && matchesStream;
+    });
+  }, [filterGrade, filterStream]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
@@ -97,6 +115,8 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
     setDescription("");
     setType("Image");
     setGrade("EE");
+    setFilterGrade("all");
+    setFilterStream("all");
     setSelectedFile(null);
     setFilePreviewUrl(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
@@ -123,6 +143,7 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
       }
     >
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* File Picker Input Area */}
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Browse Computer Storage / Downloads</Label>
           <input 
@@ -158,6 +179,41 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
           )}
         </div>
 
+        {/* Learner Filtering Controls */}
+        <div className="grid grid-cols-2 gap-3 pt-2">
+          <div className="space-y-1">
+            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filter Grade</Label>
+            <Select value={filterGrade} onValueChange={setFilterGrade}>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800 text-xs">
+                <SelectValue placeholder="All Grades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Grades</SelectItem>
+                {GRADES_DATA.map(g => (
+                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1">
+            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Filter Stream</Label>
+            <Select value={filterStream} onValueChange={setFilterStream}>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800 text-xs">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Streams</SelectItem>
+                {uniqueStreams.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
           <Select value={selectedStudent} onValueChange={setSelectedStudent}>
@@ -165,11 +221,15 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
               <SelectValue placeholder="Choose student..." />
             </SelectTrigger>
             <SelectContent>
-              {STUDENTS.map(s => (
-                <SelectItem key={s.id} value={s.name}>
-                  {s.name} (Grade {s.grade} - {s.stream})
-                </SelectItem>
-              ))}
+              {filteredStudents.length > 0 ? (
+                filteredStudents.map(s => (
+                  <SelectItem key={s.id} value={s.name}>
+                    {s.name} (Grade {s.grade} - {s.stream})
+                  </SelectItem>
+                ))
+              ) : (
+                <SelectItem value="none" disabled>No students match class filter</SelectItem>
+              )}
             </SelectContent>
           </Select>
         </div>
