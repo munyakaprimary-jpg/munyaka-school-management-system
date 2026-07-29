@@ -17,7 +17,6 @@ import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
 import Assessments from "./pages/Assessments";
 import ReportCards from "./pages/ReportCards";
-import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
 import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
@@ -35,6 +34,7 @@ import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
+import PrintReportCards from "./pages/PrintReportCards";
 
 const queryClient = new QueryClient();
 
@@ -76,7 +76,8 @@ const App = () => (
                 <Route path="/reports" element={<ProtectedRoute><Layout><ReportCards /></Layout></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
-                <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
+                <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} 
+                <Route path="/print-report-cards" element={<ProtectedRoute><Layout><PrintReportCards /></Layout></ProtectedRoute>} 
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
