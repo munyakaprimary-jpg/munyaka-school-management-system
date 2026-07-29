@@ -33,6 +33,7 @@ import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
+import Promote from "./pages/Promote";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +74,7 @@ const App = () => (
               <Route path="/reports" element={<ProtectedRoute><Layout><ReportCards /></Layout></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
               <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
+              <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
               
               <Route path="*" element={<NotFound />} />
             </Routes>
