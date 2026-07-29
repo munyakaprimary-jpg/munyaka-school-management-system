@@ -1,11 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
 import { Info, Save, FileDown, Loader2, Search } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
@@ -79,8 +78,39 @@ const FALLBACK_CLUSTERS: ClusterData[] = [
 ];
 
 const Assessments = () => {
+  // Logically sort grade levels in ascending order
+  const gradesList = useMemo(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
+
+    return [...rawList].sort((a, b) => {
+      const categoryRank: Record<string, number> = {
+        'Pre-Primary': 1,
+        'Primary': 2,
+        'Junior School': 3
+      };
+      
+      const rankA = categoryRank[a.category] || 99;
+      const rankB = categoryRank[b.category] || 99;
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      const extractNumber = (name: string) => {
+        const match = name.match(/\d+/);
+        if (match) return parseInt(match[0], 10);
+        if (name.toUpperCase().includes('PP1')) return 1;
+        if (name.toUpperCase().includes('PP2')) return 2;
+        return 0;
+      };
+
+      return extractNumber(a.name) - extractNumber(b.name);
+    });
+  }, []);
+
   // Filter States
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[0]?.id || "");
+  const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
   const [examType, setExamType] = useState<string>("SUMMATIVE");
   const [term, setTerm] = useState("term1");
@@ -91,10 +121,12 @@ const Assessments = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
 
-  const gradesList = useMemo(() => {
-    const saved = localStorage.getItem('munyaka_grades');
-    return saved ? JSON.parse(saved) : GRADES_DATA;
-  }, []);
+  // Set default selected grade to the first sorted grade
+  useEffect(() => {
+    if (!selectedGradeId && gradesList.length > 0) {
+      setSelectedGradeId(gradesList[0].id);
+    }
+  }, [gradesList, selectedGradeId]);
 
   const currentGrade = useMemo(() => gradesList.find((g: Grade) => g.id === selectedGradeId), [selectedGradeId, gradesList]);
   const availableStreams = useMemo(() => currentGrade ? currentGrade.streams : [], [currentGrade]);
@@ -136,7 +168,7 @@ const Assessments = () => {
 
   const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
     let clean = value.replace(/[^0-9]/g, '');
-    if (clean !== '' && parseInt(clean) > 100) clean = "100";
+    if (clean !== '' && parseInt(clean, 10) > 100) clean = "100";
     
     setMarksMatrix(prev => ({
       ...prev,
@@ -184,8 +216,12 @@ const Assessments = () => {
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
             <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
-              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue /></SelectTrigger>
-              <SelectContent>{gradesList.map((g: any) => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}</SelectContent>
+              <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700"><SelectValue placeholder="Select Grade" /></SelectTrigger>
+              <SelectContent>
+                {gradesList.map((g: Grade) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="space-y-1">
