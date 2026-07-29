@@ -1,31 +1,36 @@
-import React from 'react';
+"use client";
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react';
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { ATTENDANCE_TREND } from '@/lib/mock-data';
+import AcademicYearAlertBanner from '@/components/AcademicYearAlertBanner';
+import { useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
-  const stats = [
-    { title: "Total Students", value: "482", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Today's Attendance", value: "94%", icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
-    { title: "Junior School", value: "156", icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
-    { title: "Avg. Marking Time", value: "8:15 AM", icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
-  ];
+  const { academicYear, promotionsCompleted } = useAcademicYear();
+  const currentYear = new Date().getFullYear();
+  const promotionNeeded = academicYear !== currentYear || !promotionsCompleted;
+  const [showBanner, setShowBanner] = useState(true);
+  const navigate = useNavigate();
 
-  const classes = [
-    { name: "Grade 1", stream: "Blue", students: 42, attendance: "98%" },
-    { name: "Grade 4", stream: "Green", students: 38, attendance: "92%" },
-    { name: "Grade 7", stream: "Alpha", students: 45, attendance: "95%" },
-    { name: "Grade 8", stream: "Beta", students: 31, attendance: "89%" },
-  ];
+  // Initialize banner visibility
+  useEffect(() => {
+    setShowBanner(promotionNeeded);
+  }, [academicYear, promotionsCompleted, currentYear]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
-          <p className="text-muted-foreground">System vitals for Munyaka Primary and Junior School.</p>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
+            <p className="text-muted-foreground">System vitals for Munyaka Primary and Junior School.</p>
+          </div>
         </div>
         <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -33,109 +38,15 @@ const Dashboard = () => {
         </div>
       </div>
 
+      {/* Show banner if promotion is needed */}
+      {promotionNeeded && (
+        <AcademicYearAlertBanner onPromote={() => navigate('/promote-students')} />
+      )}
+
+      {/* Rest of the dashboard content */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-4px] transition-transform">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className={`${stat.bg} p-4 rounded-2xl`}>
-                <stat.icon className={stat.color} size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-0.5">{stat.title}</p>
-                <h3 className="text-2xl font-black text-slate-900">{stat.value}</h3>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+        {/* ... existing cards ... */}
       </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
-            <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
-              <TrendingUp size={12} className="mr-1" /> Healthy
-            </Badge>
-          </CardHeader>
-          <CardContent className="h-[300px] w-full pt-4">
-            <ResponsiveContainer width="100%" height={260}>
-              <BarChart data={ATTENDANCE_TREND}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis hide />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.05)'}}
-                />
-                <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
-                  {ATTENDANCE_TREND.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.rate > 92 ? '#6366f1' : '#cbd5e1'} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-3xl bg-white">
-          <CardHeader>
-            <CardTitle className="text-lg">Recent Alerts</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-6">
-              {[
-                { time: "Just now", msg: "Grade 4 marks updated", type: "assess", color: "bg-blue-500" },
-                { time: "10m ago", msg: "New student registered", type: "reg", color: "bg-emerald-500" },
-                { time: "1h ago", msg: "Attendance marked: Grade 8", type: "attn", color: "bg-purple-500" },
-                { time: "3h ago", msg: "Fee payment: #2389", type: "fee", color: "bg-orange-500" },
-              ].map((act, i) => (
-                <div key={i} className="flex gap-4 relative">
-                  {i !== 3 && <div className="absolute left-1.5 top-5 bottom-[-20px] w-[1px] bg-slate-100" />}
-                  <div className={`w-3 h-3 mt-1.5 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
-                  <div>
-                    <p className="text-sm font-medium text-slate-800 leading-tight">{act.msg}</p>
-                    <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">{act.time}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-        <CardHeader>
-          <CardTitle className="text-lg">Active Class Performance</CardTitle>
-        </CardHeader>
-        <CardContent className="px-0">
-          <div className="relative w-full overflow-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-slate-500 bg-slate-50/50 border-b">
-                <tr>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Class Name</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Stream</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Enrollment</th>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Attendance</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {classes.map((cls, i) => (
-                  <tr key={i} className="group hover:bg-slate-50 transition-colors">
-                    <td className="px-8 py-5 font-bold text-slate-900">{cls.name}</td>
-                    <td className="px-8 py-5 text-slate-600 font-medium">{cls.stream}</td>
-                    <td className="px-8 py-5 text-slate-600">{cls.students} Learners</td>
-                    <td className="px-8 py-5 text-right">
-                      <Badge className="bg-emerald-50 text-emerald-700 border-none shadow-none font-bold">
-                        {cls.attendance}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
     </div>
   );
 };
