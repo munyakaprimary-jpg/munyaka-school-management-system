@@ -10,7 +10,24 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Image as ImageIcon, FileText, Music, Video, Calendar, User, Upload, Eye, Trash2, Paperclip, CheckCircle2, File } from 'lucide-react';
+import { 
+  Search, 
+  Plus, 
+  Image as ImageIcon, 
+  FileText, 
+  Music, 
+  Video, 
+  Calendar, 
+  User, 
+  Upload, 
+  Eye, 
+  Trash2, 
+  Paperclip, 
+  CheckCircle2, 
+  File, 
+  ExternalLink, 
+  Download 
+} from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -29,10 +46,58 @@ interface Artifact {
 }
 
 const INITIAL_ARTIFACTS: Artifact[] = [
-  { id: "1", student: "Brian Kiptoo", title: "Clay Modeling: Animals", type: "Image", learningArea: "Creative Arts", date: "Oct 12, 2023", grade: "EE", description: "Created an intricate lion sculpture using local clay and natural dyes.", fileName: "clay_sculpture_lion.jpg", fileSize: "1.2 MB" },
-  { id: "2", student: "Mary Atieno", title: "Oral Narrative Audio", type: "Audio", learningArea: "English", date: "Oct 15, 2023", grade: "ME", description: "Recited a 2-minute original story with clear diction and expressions.", fileName: "oral_narrative_recording.mp3", fileSize: "3.4 MB" },
-  { id: "3", student: "Emmanuel Maina", title: "Recycling Project Report", type: "Document", learningArea: "Science", date: "Oct 18, 2023", grade: "EE", description: "Documented step-by-step process of making a toy car from plastic bottles.", fileName: "recycling_project.pdf", fileSize: "850 KB" },
-  { id: "4", student: "Sheila Chepkoech", title: "Traditional Dance Performance", type: "Video", learningArea: "Creative Arts", date: "Nov 02, 2023", grade: "EE", description: "Demonstrated folk dance rhythm and costume coordination.", fileName: "folk_dance_clip.mp4", fileSize: "14.8 MB" },
+  { 
+    id: "1", 
+    student: "Brian Kiptoo", 
+    title: "Clay Modeling: Animals", 
+    type: "Image", 
+    learningArea: "Creative Arts", 
+    date: "Oct 12, 2023", 
+    grade: "EE", 
+    description: "Created an intricate lion sculpture using local clay and natural dyes.", 
+    fileName: "clay_sculpture_lion.jpg", 
+    fileSize: "1.2 MB",
+    fileUrl: "https://images.unsplash.com/photo-1579783902614-a3fb3927b675?auto=format&fit=crop&w=800&q=80"
+  },
+  { 
+    id: "2", 
+    student: "Mary Atieno", 
+    title: "Oral Narrative Audio", 
+    type: "Audio", 
+    learningArea: "English", 
+    date: "Oct 15, 2023", 
+    grade: "ME", 
+    description: "Recited a 2-minute original story with clear diction and expressions.", 
+    fileName: "oral_narrative_recording.mp3", 
+    fileSize: "3.4 MB",
+    fileUrl: "https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3"
+  },
+  { 
+    id: "3", 
+    student: "Emmanuel Maina", 
+    title: "Recycling Project Report", 
+    type: "Document", 
+    learningArea: "Science", 
+    date: "Oct 18, 2023", 
+    grade: "EE", 
+    description: "Documented step-by-step process of making a toy car from plastic bottles.", 
+    fileName: "recycling_project.pdf", 
+    fileSize: "850 KB",
+    fileUrl: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf"
+  },
+  { 
+    id: "4", 
+    student: "Sheila Chepkoech", 
+    title: "Traditional Dance Performance", 
+    type: "Video", 
+    learningArea: "Creative Arts", 
+    date: "Nov 02, 2023", 
+    grade: "EE", 
+    description: "Demonstrated folk dance rhythm and costume coordination.", 
+    fileName: "folk_dance_clip.mp4", 
+    fileSize: "14.8 MB",
+    fileUrl: "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+  },
 ];
 
 const Portfolio = () => {
@@ -73,20 +138,18 @@ const Portfolio = () => {
     if (!file) return;
 
     setSelectedFile(file);
+    const objectUrl = URL.createObjectURL(file);
+    setFilePreviewUrl(objectUrl);
 
     // Auto-detect artifact type based on MIME type / extension
     if (file.type.startsWith('image/')) {
       setType('Image');
-      setFilePreviewUrl(URL.createObjectURL(file));
     } else if (file.type.startsWith('audio/')) {
       setType('Audio');
-      setFilePreviewUrl(null);
     } else if (file.type.startsWith('video/')) {
       setType('Video');
-      setFilePreviewUrl(URL.createObjectURL(file));
     } else {
       setType('Document');
-      setFilePreviewUrl(null);
     }
 
     // Auto-fill title if title is empty
@@ -209,23 +272,35 @@ const Portfolio = () => {
           {filteredArtifacts.map((art) => (
             <Card key={art.id} className="group border-none shadow-sm hover:shadow-md transition-all rounded-3xl overflow-hidden bg-white flex flex-col justify-between">
               <div>
-                <div className="aspect-video bg-slate-50 flex items-center justify-center group-hover:scale-105 transition-transform duration-500 relative overflow-hidden">
+                <div 
+                  className="aspect-video bg-slate-50 flex items-center justify-center relative overflow-hidden cursor-pointer"
+                  onClick={() => setSelectedArtifact(art)}
+                >
                   {art.fileUrl && art.type === 'Image' ? (
-                    <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover" />
+                    <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  ) : art.fileUrl && art.type === 'Video' ? (
+                    <video src={art.fileUrl} className="w-full h-full object-cover" />
+                  ) : art.fileUrl && art.type === 'Audio' ? (
+                    <div className="p-4 w-full flex flex-col items-center gap-2">
+                      <Music size={32} className="text-purple-500 animate-pulse" />
+                      <audio controls src={art.fileUrl} className="w-11/12 h-8" onClick={(e) => e.stopPropagation()} />
+                    </div>
                   ) : (
-                    <div className="flex flex-col items-center gap-2">
+                    <div className="flex flex-col items-center gap-2 p-4 text-center">
                       {getTypeIcon(art.type)}
                       {art.fileName && (
-                        <span className="text-[11px] font-bold text-slate-400 max-w-[180px] truncate">
+                        <span className="text-[11px] font-bold text-slate-500 max-w-[180px] truncate bg-white px-2 py-0.5 rounded-md border border-slate-200">
                           {art.fileName}
                         </span>
                       )}
                     </div>
                   )}
-                  <Badge variant="outline" className="absolute top-3 left-3 rounded-lg bg-white/90 backdrop-blur-sm text-[10px] uppercase font-black tracking-wider border-none shadow-sm">
+
+                  <Badge variant="outline" className="absolute top-3 left-3 rounded-lg bg-white/90 backdrop-blur-sm text-[10px] uppercase font-black tracking-wider border-none shadow-sm z-10">
                     {art.type}
                   </Badge>
                 </div>
+
                 <CardContent className="p-6">
                   <div className="flex justify-between items-start mb-2">
                     <Badge variant="outline" className="rounded-lg bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
@@ -233,7 +308,10 @@ const Portfolio = () => {
                     </Badge>
                     <Badge className={getGradeBadge(art.grade)}>{art.grade}</Badge>
                   </div>
-                  <h3 className="font-bold text-lg mb-1 leading-tight group-hover:text-indigo-600 transition-colors">
+                  <h3 
+                    className="font-bold text-lg mb-1 leading-tight cursor-pointer group-hover:text-indigo-600 transition-colors"
+                    onClick={() => setSelectedArtifact(art)}
+                  >
                     {art.title}
                   </h3>
                   <p className="text-sm text-slate-600 font-bold flex items-center gap-1.5 mt-2">
@@ -253,7 +331,7 @@ const Portfolio = () => {
                     className="text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl h-8 px-3"
                     onClick={() => setSelectedArtifact(art)}
                   >
-                    <Eye size={14} className="mr-1" /> View Details
+                    <Eye size={14} className="mr-1" /> View Content
                   </Button>
                   <Button 
                     variant="ghost" 
@@ -430,36 +508,76 @@ const Portfolio = () => {
         </form>
       </Modal>
 
-      {/* View Details Modal */}
+      {/* Interactive Full Media Viewer Modal */}
       <Modal
         isOpen={!!selectedArtifact}
         onClose={() => setSelectedArtifact(null)}
         title={selectedArtifact?.title || "Artifact Evidence"}
         description={`Learner: ${selectedArtifact?.student}`}
+        maxWidth="max-w-2xl"
         footer={
-          <Button variant="ghost" onClick={() => setSelectedArtifact(null)} className="rounded-xl font-bold">
-            Close
-          </Button>
+          <div className="flex justify-between items-center w-full">
+            {selectedArtifact?.fileUrl ? (
+              <a 
+                href={selectedArtifact.fileUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                download={selectedArtifact.fileName || selectedArtifact.title}
+              >
+                <Button variant="outline" className="rounded-xl font-bold gap-2 text-indigo-600 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100">
+                  <ExternalLink size={16} /> Open / Download File
+                </Button>
+              </a>
+            ) : <div />}
+            <Button variant="ghost" onClick={() => setSelectedArtifact(null)} className="rounded-xl font-bold">
+              Close
+            </Button>
+          </div>
         }
       >
         {selectedArtifact && (
           <div className="space-y-5">
-            <div className="aspect-video bg-slate-50 rounded-2xl flex flex-col items-center justify-center border border-slate-100 overflow-hidden relative">
+            {/* Interactive Viewer Section */}
+            <div className="min-h-[220px] max-h-[400px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 overflow-hidden relative p-2">
               {selectedArtifact.fileUrl && selectedArtifact.type === 'Image' ? (
-                <img src={selectedArtifact.fileUrl} alt={selectedArtifact.title} className="w-full h-full object-contain" />
+                <img 
+                  src={selectedArtifact.fileUrl} 
+                  alt={selectedArtifact.title} 
+                  className="w-full h-auto max-h-[360px] object-contain rounded-lg" 
+                />
               ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Video' ? (
-                <video src={selectedArtifact.fileUrl} controls className="w-full h-full" />
+                <video 
+                  src={selectedArtifact.fileUrl} 
+                  controls 
+                  autoPlay 
+                  className="w-full h-auto max-h-[360px] rounded-lg" 
+                />
+              ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Audio' ? (
+                <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
+                  <div className="w-16 h-16 rounded-full bg-indigo-600/30 flex items-center justify-center">
+                    <Music size={36} className="text-indigo-400 animate-pulse" />
+                  </div>
+                  <p className="text-sm font-bold text-slate-300">{selectedArtifact.fileName || selectedArtifact.title}</p>
+                  <audio controls src={selectedArtifact.fileUrl} className="w-full max-w-md h-12" />
+                </div>
+              ) : selectedArtifact.fileUrl && selectedArtifact.type === 'Document' ? (
+                <div className="w-full h-[320px] flex flex-col items-center justify-center bg-slate-800 rounded-lg p-6 text-center text-white">
+                  <FileText size={56} className="text-emerald-400 mb-3" />
+                  <p className="text-base font-bold text-white mb-1">{selectedArtifact.fileName || selectedArtifact.title}</p>
+                  <p className="text-xs text-slate-400 mb-6">{selectedArtifact.fileSize || "Document File"}</p>
+                  <a 
+                    href={selectedArtifact.fileUrl} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 font-bold text-white text-sm shadow-lg transition-colors"
+                  >
+                    <Download size={18} /> View / Download Document
+                  </a>
+                </div>
               ) : (
-                <div className="flex flex-col items-center gap-2 p-6 text-center">
+                <div className="flex flex-col items-center gap-2 p-8 text-center text-slate-400">
                   {getTypeIcon(selectedArtifact.type)}
-                  {selectedArtifact.fileName && (
-                    <p className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
-                      <File size={16} /> {selectedArtifact.fileName}
-                    </p>
-                  )}
-                  {selectedArtifact.fileSize && (
-                    <p className="text-xs text-slate-400 font-medium">{selectedArtifact.fileSize}</p>
-                  )}
+                  <p className="text-sm font-bold text-slate-300 mt-2">{selectedArtifact.fileName || selectedArtifact.title}</p>
                 </div>
               )}
             </div>
