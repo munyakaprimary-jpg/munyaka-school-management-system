@@ -10,8 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, MoreVertical, UserCircle, Phone, GraduationCap, Plus, UserPlus, Download, Loader2, X, Eye, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2 } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 
@@ -197,76 +196,6 @@ const Students = () => {
         </div>
       </Card>
 
-      {/* Grid View */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
-        {filteredStudents.length > 0 ? (
-          filteredStudents.map((student) => (
-            <Card key={student.id} className="rounded-[2rem] bg-white border-none shadow-sm hover:shadow-md transition-all group overflow-hidden">
-              <CardContent className="p-6">
-                <div className="flex justify-between items-start mb-4">
-                  <div className="w-14 h-14 rounded-2xl bg-indigo-50 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300">
-                    <UserCircle size={32} />
-                  </div>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="ghost" size="icon" className="h-10 w-10 rounded-full text-slate-300 hover:text-slate-600 hover:bg-slate-100">
-                        <MoreVertical size={20} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[160px]">
-                      <DropdownMenuItem onClick={() => navigate(`/students/${student.id}`)} className="rounded-xl gap-2 font-bold cursor-pointer">
-                        <Eye size={16} /> View Profile
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-xl gap-2 font-bold text-rose-500 cursor-pointer">
-                        <Trash2 size={16} /> Delete Record
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-
-                <div className="mb-4">
-                  <h3 className="text-lg font-black text-slate-900 leading-tight truncate">{student.name}</h3>
-                  <p className="text-xs font-bold text-slate-400 mt-1 uppercase tracking-wider">Assessment ID: {student.assessment}</p>
-                </div>
-
-                <div className="flex flex-wrap gap-2 mb-6">
-                  <Badge className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg bg-indigo-50 text-indigo-700 border-none">
-                    Grade {student.grade}
-                  </Badge>
-                  <Badge className="text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-lg bg-slate-50 text-slate-600 border-none">
-                    {student.stream} Stream
-                  </Badge>
-                </div>
-
-                <div className="pt-6 border-t border-slate-50 space-y-3">
-                  <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                      <Phone size={14} />
-                    </div>
-                    <span className="truncate">{student.phone}</span>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs font-bold text-slate-500">
-                    <div className="w-8 h-8 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400">
-                      <GraduationCap size={14} />
-                    </div>
-                    <span className="truncate">Guardian: {student.guardian}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        ) : (
-          <div className="col-span-full py-20 text-center bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-            <UserCircle size={64} className="mx-auto text-slate-200 mb-6" />
-            <h3 className="text-2xl font-black text-slate-900 mb-2">No learners found</h3>
-            <p className="text-slate-500 max-w-xs mx-auto font-medium">Try adjusting your filters or checking your search spelling.</p>
-            <Button variant="ghost" className="mt-6 font-black text-indigo-600 hover:bg-transparent" onClick={clearFilters}>
-              Reset all filters
-            </Button>
-          </div>
-        )}
-      </div>
-
       {/* Learners Table Section */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
@@ -339,8 +268,11 @@ const Students = () => {
                 ))}
                 {filteredStudents.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-8 py-10 text-center text-slate-400 italic">
-                      No records match the current criteria.
+                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400">
+                      <div className="flex flex-col items-center gap-2">
+                        <Search size={32} className="text-slate-200" />
+                        <p className="font-bold">No records match the current criteria.</p>
+                      </div>
                     </td>
                   </tr>
                 )}
