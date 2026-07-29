@@ -2,6 +2,7 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ChevronLeft } from 'lucide-react';
 import { Button } from "@/components/ui/button";
+import { cn } from '@/lib/utils';
 
 interface BackButtonProps {
   fallback?: string;
