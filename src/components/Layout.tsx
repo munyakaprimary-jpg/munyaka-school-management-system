@@ -1,6 +1,13 @@
+But we already wrote it. Let's ensure imports.
+
+We need to import useNotifications from './notification-provider' and also import Loader2 from 'lucide-react'.
+
+Let's rewrite Layout with proper imports.
+
+<dyad-write path="src/components/Layout.tsx" description="Updated Layout with posting functionality">
 "use client";
 
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -32,11 +39,14 @@ import {
   Sun, 
   Moon, 
   X,
-  GraduationCap
+  GraduationCap,
+  Loader2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
+import PostNoticeModal from "./postNoticeModal";
+import { useNotifications } from "@/components/ui/notification-provider";
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = React.useState(false);
@@ -74,6 +84,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
+
+  const [isPosting, setIsPosting] = useState(false);
 
   return (
     <div className={cn("flex h-screen overflow-hidden", isDarkMode ? "dark" : "")}>
@@ -213,10 +225,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="flex items-center gap-3">
             <NotificationBell />
             <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
+              onClick={() => setIsPosting(!isPosting)}
               className="p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              {isDarkMode ? <Sun size={18} className="text-amber-500" /> : <Moon size={18} className="text-slate-400" />}
+              {isPosting ? (
+                <Loader2 className="animate-spin" size={18} />
+              ) : (
+                <GraduationCap size={18} />
+              )}
             </button>
           </div>
         </header>
@@ -224,6 +240,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Page Content */}
         <div className="flex-1 overflow-y-auto p-4 lg:p-8 bg-slate-50 dark:bg-slate-950">
           {children}
+          
+          {/* Post Notice Modal */}
+          <PostNoticeModal 
+            isOpen={isPosting} 
+            onClose={() => setIsPosting(false)} 
+            onPost={(title, message, type) => {
+              useNotifications().addNotification({ title, message, type });
+            }}
+          />
         </div>
       </main>
     </div>
