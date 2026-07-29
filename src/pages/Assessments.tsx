@@ -7,194 +7,70 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Info, Save, Users, CheckCircle, XCircle } from "lucide-react";
-import { showSuccess } from '@/utils/toast';
-import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
-
-interface StudentMark {
-  id: number;
-  name: string;
-  score: string;
-  performance: string;
-  comment: string;
-}
-
-interface LearningArea {
-  id: string;
-  name: string;
-  periodsPerWeek: number;
-  type: 'Core' | 'Elective';
-  description?: string;
-}
-
-interface ClusterData {
-  id: string;
-  name: string;
-  description: string;
-  learningAreas: LearningArea[];
-}
-
-interface ExamType {
-  id: string;
-  name: string;
-  code: string;
-  weight: number;
-  category: string;
-  description?: string;
-}
-
-interface SubjectScore {
-  subjectId: string;
-  subjectName: string;
-  score: string;
-  performance: string;
-  comment: string;
-}
-
-const FALLBACK_CLUSTERS: ClusterData[] = [
-  {
-    id: "pre-primary",
-    name: "Pre-Primary",
-    description: "Early childhood development learning areas (PP1 & PP2)",
-    learningAreas: [
-      { id: "pp-1", name: "Mathematical Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "pp-2", name: "Language Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "pp-3", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "pp-4", name: "Psychomotor and Creative Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "pp-5", name: "Religious Education Activities", periodsPerWeek: 2, type: "Core" }
-    ]
-  },
-  {
-    id: "lower-primary",
-    name: "Lower Primary",
-    description: "Foundational learning areas for Grades 1, 2, and 3",
-    learningAreas: [
-      { id: "lp-1", name: "Mathematics Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "lp-2", name: "English Language Activities", periodsPerWeek: 5, type: "Core" },
-      { id: "lp-3", name: "Kiswahili Language Activities / KSL", periodsPerWeek: 4, type: "Core" },
-      { id: "lp-4", name: "Environmental Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "lp-5", name: "Hygiene and Nutrition Activities", periodsPerWeek: 2, type: "Core" },
-      { id: "lp-6", name: "Movement and Creative Activities", periodsPerWeek: 4, type: "Core" },
-      { id: "lp-7", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 3, type: "Core" }
-    ]
-  },
-  {
-    id: "upper-primary",
-    name: "Upper Primary",
-    description: "Intermediate learning areas for Grades 4, 5, and 6",
-    learningAreas: [
-      { id: "up-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
-      { id: "up-2", name: "English", periodsPerWeek: 5, type: "Core" },
-      { id: "up-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
-      { id: "up-4", name: "Science and Technology", periodsPerWeek: 4, type: "Core" },
-      { id: "up-5", name: "Agriculture and Nutrition", periodsPerWeek: 4, type: "Core" },
-      { id: "up-6", name: "Creative Arts (Art, Craft & Music)", periodsPerWeek: 3, type: "Core" },
-      { id: "up-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "up-8", name: "Religious Education (CRE/IRE/HRE)", periodsPerWeek: 2, type: "Core" }
-    ]
-  },
-  {
-    id: "junior-school",
-    name: "Junior School",
-    description: "Secondary preparation learning areas for Grades 7, 8, and 9",
-    learningAreas: [
-      { id: "js-1", name: "Mathematics", periodsPerWeek: 5, type: "Core" },
-      { id: "js-2", name: "English", periodsPerWeek: 5, type: "Core" },
-      { id: "js-3", name: "Kiswahili / Kenya Sign Language", periodsPerWeek: 4, type: "Core" },
-      { id: "js-4", name: "Integrated Science", periodsPerWeek: 5, type: "Core" },
-      { id: "js-5", name: "Health Education", periodsPerWeek: 2, type: "Core" },
-      { id: "js-6", name: "Pre-Technical Studies", periodsPerWeek: 4, type: "Core" },
-      { id: "js-7", name: "Social Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "js-8", name: "Agriculture", periodsPerWeek: 3, type: "Core" },
-      { id: "js-9", name: "Business Studies", periodsPerWeek: 3, type: "Core" },
-      { id: "js-10", name: "Computer Science", periodsPerWeek: 3, type: "Elective" },
-      { id: "js-11", name: "Foreign Languages (French/German)", periodsPerWeek: 3, type: "Elective" }
-    ]
-  }
-];
-
-const FALLBACK_EXAM_TYPES: ExamType[] = [
-  { id: "et-1", name: "Formative Assessment", code: "FORMATIVE", weight: 40, category: "Formative" },
-  { id: "et-2", name: "Summative Assessment", code: "SUMMATIVE", weight: 60, category: "Summative" },
-  { id: "et-3", name: "Opener Exam", code: "OPENER", weight: 0, category: "Other" },
-  { id: "et-4", name: "Mid-Term Exam", code: "MIDTERM", weight: 0, category: "Other" }
-];
+import { showSuccess } from "@/utils/toast";
+import { PerformanceLevels } from "@/components/assessments/PerformanceLevels";
+import { GradeSelectors } from "@/components/assessments/GradeSelectors";
+import { SubjectScoreRow } from "@/components/assessments/SubjectScoreRow";
+import { SubjectScore, PerformanceLevel, StudentMark } from "@/components/assessments/types";
+import { GRADES_DATA, Grade } from "@/lib/mock-data";
+import { FALLBACK_CLUSTERS, ClusterData } from "@/components/assessments/Clusters";
+import { performanceLevels } from "@/components/assessments/PerformanceLevels";
 
 const Assessments = () => {
-  const performanceLevels = [
-    { code: "EE", label: "Exceeding Expectation", color: "bg-emerald-100 text-emerald-700" },
-    { code: "ME", label: "Meeting Expectation", color: "bg-blue-100 text-blue-700" },
-    { code: "AE", label: "Approaching Expectation", color: "bg-amber-100 text-amber-700" },
-    { code: "BE", label: "Below Expectation", color: "bg-rose-100 text-rose-700" },
-  ];
-
-  const [studentMarks, setStudentMarks] = useState<StudentMark[]>([
-    { id: 1, name: "Brian Kiptoo", score: "", performance: "", comment: "" },
-    { id: 2, name: "Mary Atieno", score: "", performance: "", comment: "" },
-    { id: 3, name: "Emmanuel Maina", score: "", performance: "", comment: "" },
-    { id: 4, name: "Sheila Chepkoech", score: "", performance: "", comment: "" },
-    { id: 5, name: "David Mutua", score: "", performance: "", comment: "" },
-  ]);
-
-  // Load dynamic grades and streams
-  const [gradesList, setGradesList] = useState<Grade[]>(() => {
-    const saved = localStorage.getItem('munyaka_grades');
-    return saved ? JSON.parse(saved) : GRADES_DATA;
-  });
-
-  // Load dynamic learning areas
-  const [clusters, setClusters] = useState<ClusterData[]>(() => {
-    const saved = localStorage.getItem('munyaka_learning_areas');
-    return saved ? JSON.parse(saved) : FALLBACK_CLUSTERS;
-  });
-
-  // Load dynamic exam types
-  const [examTypes, setExamTypes] = useState<ExamType[]>(() => {
-    const saved = localStorage.getItem('munyaka_exam_types');
-    return saved ? JSON.parse(saved) : FALLBACK_EXAM_TYPES;
-  });
-
-  // Generate dynamic years
-  const currentYear = new Date().getFullYear();
-  const academicYears = Array.from({ length: 11 }, (_, i) => (currentYear - 5 + i).toString());
-
-  // Dropdown states
+  // State
   const [selectedGradeId, setSelectedGradeId] = useState<string>(() => {
-    return gradesList.length > 0 ? gradesList[0].id : "";
+    const saved = localStorage.getItem('selectedGradeId');
+    return saved ? saved : GRADES_DATA[0].id;
   });
-  const [selectedStreamId, setSelectedStreamId] = useState<string>("");
+  const [selectedStreamId, setSelectedStreamId] = useState<string>('');
   const [selectedStudentId, setSelectedStudentId] = useState<number>(1);
   const [examType, setExamType] = useState<string>(() => {
-    return examTypes.length > 0 ? examTypes[0].code : "SUMMATIVE";
+    const saved = localStorage.getItem('examType');
+    return saved ? saved : 'SUMMATIVE';
   });
-  const [year, setYear] = useState(currentYear.toString());
-  const [term, setTerm] = useState("term1");
-
-  // Subject scores state for individual learner
+  const [year, setYear] = useState<string>(new Date().getFullYear().toString());
+  const [term, setTerm] = useState('term1');
   const [subjectScores, setSubjectScores] = useState<SubjectScore[]>([]);
 
-  // Get streams for the currently selected grade
-  const currentGrade = gradesList.find(g => g.id === selectedGradeId);
-  const availableStreams = currentGrade ? currentGrade.streams : [];
+  // Load student names
+  const [studentNames, setStudentNames] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    const mockStudents = [
+      { id: 1, name: 'Brian Kiptoo' },
+      { id: 2, name: 'Mary Atieno' },
+      { id: 3, name: 'Emmanuel Maina' },
+      { id: 4, name: 'Sheila Chepkoech' },
+      { id: 5, name: 'David Mutua' },
+    ];
+    setStudentNames(mockStudents);
+  }, []);
 
-  // Get learning areas filtered by selected grade's category and specific grade level
-  const getFilteredLearningAreas = (): LearningArea[] => {
+  // Get streams for the currently selected grade
+  const currentGrade = useMemo(() => {
+    return gradesList.find(g => g.id === selectedGradeId);
+  }, [selectedGradeId, gradesList]);
+
+  const availableStreams = useMemo(() => {
+    return currentGrade ? currentGrade.streams : [];
+  }, [currentGrade]);
+
+  // Get filtered learning areas
+  const getFilteredLearningAreas = () => {
     if (!currentGrade) return [];
     const gradeName = currentGrade.name.toLowerCase();
     const category = currentGrade.category;
 
     let matchedClusters: ClusterData[] = [];
 
-    // Precise mapping of grade levels to their exact CBC clusters
-    if (gradeName.includes("grade 1") || gradeName.includes("grade 2") || gradeName.includes("grade 3")) {
+    if (gradeName.includes('grade 1') || gradeName.includes('grade 2') || gradeName.includes('grade 3')) {
       matchedClusters = clusters.filter(c => c.id === 'lower-primary');
-    } else if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) {
+    } else if (gradeName.includes('grade 4') || gradeName.includes('grade 5') || gradeName.includes('grade 6')) {
       matchedClusters = clusters.filter(c => c.id === 'upper-primary');
-    } else if (gradeName.includes("pp") || category === 'Pre-Primary') {
+    } else if (gradeName.includes('pp') || category === 'Pre-Primary') {
       matchedClusters = clusters.filter(c => c.id === 'pre-primary');
-    } else if (category === 'Junior School' || gradeName.includes("grade 7") || gradeName.includes("grade 8") || gradeName.includes("grade 9")) {
+    } else if (category === 'Junior School' || gradeName.includes('grade 7') || gradeName.includes('grade 8') || gradeName.includes('grade 9')) {
       matchedClusters = clusters.filter(c => c.id === 'junior-school');
     } else {
-      // Fallback to category matching
       if (category === 'Pre-Primary') {
         matchedClusters = clusters.filter(c => c.id === 'pre-primary');
       } else if (category === 'Primary') {
@@ -203,11 +79,10 @@ const Assessments = () => {
         matchedClusters = clusters.filter(c => c.id === 'junior-school');
       }
     }
-
     return matchedClusters.flatMap(c => c.learningAreas);
   };
 
-  const filteredLearningAreas = getFilteredLearningAreas();
+  const filteredLearningAreas = useMemo(() => getFilteredLearningAreas(), [selectedGradeId, clusters]);
 
   // Initialize subject scores when learning areas change
   useEffect(() => {
@@ -216,110 +91,111 @@ const Assessments = () => {
       setSubjectScores(areas.map(area => ({
         subjectId: area.id,
         subjectName: area.name,
-        score: "",
-        performance: "",
-        comment: ""
+        score: '',
+        performance: '',
+        comment: ''
       })));
     } else {
       setSubjectScores([]);
     }
   }, [selectedGradeId, clusters]);
 
-  // Automatically select the first stream when grade changes
+  // Load student names
   useEffect(() => {
-    if (availableStreams.length > 0) {
-      setSelectedStreamId(availableStreams[0].id);
-    } else {
-      setSelectedStreamId("");
-    }
-  }, [selectedGradeId, gradesList]);
+    const mockStudents = [
+      { id: 1, name: 'Brian Kiptoo' },
+      { id: 2, name: 'Mary Atieno' },
+      { id: 3, name: 'Emmanuel Maina' },
+      { id: 4, name: 'Sheila Chepkoech' },
+      { id: 5, name: 'David Mutua' },
+    ];
+    setStudentNames(mockStudents);
+  }, []);
 
-  // Helper to automatically determine performance level based on score (0-100)
+  // Helper functions
   const getPerformanceFromScore = (scoreStr: string): string => {
     const score = parseInt(scoreStr);
-    if (isNaN(score)) return "";
-    if (score >= 80) return "EE";
-    if (score >= 50) return "ME";
-    if (score >= 30) return "AE";
-    return "BE";
+    if (isNaN(score)) return '';
+    if (score >= 80) return 'EE';
+    if (score >= 50) return 'ME';
+    if (score >= 30) return 'AE';
+    return 'BE';
   };
 
   const handleScoreChange = (subjectId: string, scoreVal: string) => {
     let cleanScore = scoreVal.replace(/[^0-9]/g, '');
     if (cleanScore !== '') {
       const num = parseInt(cleanScore);
-      if (num > 100) cleanScore = "100";
-      if (num < 0) cleanScore = "0";
+      if (num > 100) cleanScore = '100';
+      if (num < 0) cleanScore = '0';
     }
-
     const autoPerformance = getPerformanceFromScore(cleanScore);
-
-    setSubjectScores(prev => prev.map(subject => {
-      if (subject.subjectId === subjectId) {
-        return {
-          ...subject,
-          score: cleanScore,
-          performance: autoPerformance || subject.performance
-        };
+    setSubjectScores(prev => prev.map(s => {
+      if (s.subjectId === subjectId) {
+        return { ...s, score: cleanScore, performance: autoPerformance || s.performance };
       }
-      return subject;
+      return s;
     }));
   };
 
   const handlePerformanceChange = (subjectId: string, perfVal: string) => {
-    setSubjectScores(prev => prev.map(subject => {
-      if (subject.subjectId === subjectId) {
-        return { ...subject, performance: perfVal };
+    setSubjectScores(prev => prev.map(s => {
+      if (s.subjectId === subjectId) {
+        return { ...s, performance: perfVal };
       }
-      return subject;
+      return s;
     }));
   };
 
   const handleCommentChange = (subjectId: string, commentVal: string) => {
-    setSubjectScores(prev => prev.map(subject => {
-      if (subject.subjectId === subjectId) {
-        return { ...subject, comment: commentVal };
+    setSubjectScores(prev => prev.map(s => {
+      if (s.subjectId === subjectId) {
+        return { ...s, comment: commentVal };
       }
-      return subject;
+      return s;
     }));
   };
 
-  // Set all subjects to a default score
   const handleSetAllScores = () => {
-    const defaultScore = "75";
-    const autoPerformance = getPerformanceFromScore(defaultScore);
-    setSubjectScores(prev => prev.map(subject => ({
-      ...subject,
+    const defaultScore = '75';
+    const autoPerformance = 'ME';
+    setSubjectScores(prev => prev.map(s => ({
+      ...s,
       score: defaultScore,
       performance: autoPerformance
     })));
   };
 
-  // Clear all subject scores
   const handleClearAllScores = () => {
-    setSubjectScores(prev => prev.map(subject => ({
-      ...subject,
-      score: "",
-      performance: "",
-      comment: ""
+    setSubjectScores(prev => prev.map(s => ({
+      ...s,
+      score: '',
+      performance: '',
+      comment: ''
     })));
   };
 
   const handleSubmitAll = () => {
-    // Validate that at least one subject has a score
-    const hasScores = subjectScores.some(s => s.score.trim() !== "");
+    const hasScores = subjectScores.some(s => s.score.trim() !== '');
     if (!hasScores) {
-      showSuccess("Please enter at least one subject score before saving.");
+      showSuccess('Please enter at least one subject score before saving.');
       return;
     }
-
-    // In a real app, this would send all scores to the backend
-    const savedCount = subjectScores.filter(s => s.score.trim() !== "").length;
+    const savedCount = subjectScores.filter(s => s.score.trim() !== '').length;
     showSuccess(`${savedCount} subject scores saved successfully for ${studentMarks.find(s => s.id === selectedStudentId)?.name || 'selected student'}!`);
+  };
+
+  // Get student marks for display (optional)
+  const studentMarks = useMemo(() => {
+    if (selectedStudentId) {
+      return studentMarks.filter(m => m.id === selectedStudentId);
+    }
+    return [];
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">CBC Marksheet</h1>
@@ -330,119 +206,31 @@ const Assessments = () => {
         </Button>
       </div>
 
-      {/* Performance Levels Info */}
-      <Card className="border-none bg-indigo-50/50 shadow-none rounded-3xl overflow-hidden border border-indigo-100">
-        <CardContent className="p-6 flex items-center gap-4">
-          <Info className="text-indigo-600 shrink-0" size={24} />
-          <div className="flex flex-wrap gap-4 items-center">
-            <span className="text-xs font-black text-indigo-800 uppercase tracking-wider">Performance Levels:</span>
-            {performanceLevels.map(lvl => (
-              <div key={lvl.code} className="flex items-center gap-2">
-                <Badge className={`${lvl.color} font-bold shadow-none rounded-lg px-2.5 py-0.5`}>{lvl.code}</Badge>
-                <span className="text-xs font-bold text-slate-600">{lvl.label}</span>
-              </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+      {/* Performance Levels */}
+      <PerformanceLevels levels={performanceLevels} />
 
-      {/* Dropdown Selectors Grid */}
-      <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Grade Level</label>
-            <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                {gradesList.map(g => (
-                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      {/* Grade and Learner Selectors */}
+      <GradeSelectors
+        selectedGradeId={selectedGradeId}
+        onGradeChange={setSelectedGradeId}
+        selectedStreamId={selectedStreamId}
+        onStreamChange={setSelectedStreamId}
+        availableStreams={availableStreams}
+        selectedStudentId={selectedStudentId}
+        onStudentChange={setSelectedStudentId}
+        studentNames={studentNames}
+        examType={examType}
+        onExamTypeChange={setExamType}
+        examTypes={examTypes}
+        year={year}
+        onYearChange={setYear}
+        academicYears={academicYears}
+        term={term}
+        onTermChange={setTerm}
+        gradesList={gradesList}
+      />
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Stream</label>
-            <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={availableStreams.length === 0}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed">
-                <SelectValue placeholder={availableStreams.length === 0 ? "No Streams" : "Select Stream"} />
-              </SelectTrigger>
-              <SelectContent>
-                {availableStreams.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Learner</label>
-            <Select value={selectedStudentId.toString()} onValueChange={(val) => setSelectedStudentId(parseInt(val))}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Learner" />
-              </SelectTrigger>
-              <SelectContent>
-                {studentMarks.map(s => (
-                  <SelectItem key={s.id} value={s.id.toString()}>{s.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Exam Type</label>
-            <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Exam Type" />
-              </SelectTrigger>
-              <SelectContent>
-                {examTypes.map(et => (
-                  <SelectItem key={et.id} value={et.code}>{et.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Year</label>
-            <Select value={year} onValueChange={setYear}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Year" />
-              </SelectTrigger>
-              <SelectContent>
-                {academicYears.map(yr => (
-                  <SelectItem key={yr} value={yr}>{yr}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6 pt-6 border-t border-slate-100">
-          <div className="space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Term</label>
-            <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="Select Term" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="term1">Term 1</SelectItem>
-                <SelectItem value="term2">Term 2</SelectItem>
-                <SelectItem value="term3">Term 3</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="md:col-span-2 space-y-1.5">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-wider">Assessment Task / Topic</label>
-            <Input placeholder="Search or enter assessment task (e.g., Fractions, Oral Narrative)..." className="rounded-xl h-11 bg-slate-50 border-none text-sm" />
-          </div>
-        </div>
-      </Card>
-
-      {/* Multi-Subject Score Entry Section */}
+      {/* Subject Scores */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between">
           <CardTitle className="text-lg">
@@ -481,46 +269,14 @@ const Assessments = () => {
               <tbody className="divide-y">
                 {subjectScores.length > 0 ? (
                   subjectScores.map((subject) => (
-                    <tr key={subject.subjectId} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-5 font-bold text-slate-900 text-base">{subject.subjectName}</td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2">
-                          <Input 
-                            type="text"
-                            value={subject.score}
-                            onChange={(e) => handleScoreChange(subject.subjectId, e.target.value)}
-                            className="w-20 h-11 rounded-xl text-center font-bold text-slate-800 bg-slate-50 border-slate-100 focus:bg-white"
-                            placeholder="0"
-                          />
-                          <span className="text-xs font-bold text-slate-400">%</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5">
-                        <Select 
-                          value={subject.performance} 
-                          onValueChange={(val) => handlePerformanceChange(subject.subjectId, val)}
-                        >
-                          <SelectTrigger className="w-44 h-11 rounded-xl bg-slate-50 border-slate-100 font-bold">
-                            <SelectValue placeholder="Select Level" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {performanceLevels.map(lvl => (
-                              <SelectItem key={lvl.code} value={lvl.code}>
-                                <span className="font-bold">{lvl.code}</span> - {lvl.label.split(' ')[0]}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </td>
-                      <td className="px-8 py-5">
-                        <Input 
-                          value={subject.comment}
-                          onChange={(e) => handleCommentChange(subject.subjectId, e.target.value)}
-                          className="h-11 rounded-xl bg-slate-50 border-slate-100 focus:bg-white text-sm" 
-                          placeholder="e.g. Consistent effort" 
-                        />
-                      </td>
-                    </tr>
+                    <SubjectScoreRow
+                      key={subject.subjectId}
+                      subject={subject}
+                      onScoreChange={(sid, val) => handleScoreChange(sid, val)}
+                      onPerformanceChange={(sid, val) => handlePerformanceChange(sid, val)}
+                      onCommentChange={(sid, val) => handleCommentChange(sid, val)}
+                      performanceLevels={performanceLevels}
+                    />
                   ))
                 ) : (
                   <tr>
