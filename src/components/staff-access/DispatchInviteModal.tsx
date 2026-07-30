@@ -13,6 +13,8 @@ interface DispatchInviteModalProps {
   onConfirm: () => void;
 }
 
+const SENDER_EMAIL = "munyakaprimary@gmail.com";
+
 const DispatchInviteModal = ({ isOpen, onClose, staff, onConfirm }: DispatchInviteModalProps) => {
   if (!staff) return null;
 
@@ -38,6 +40,15 @@ const DispatchInviteModal = ({ isOpen, onClose, staff, onConfirm }: DispatchInvi
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <Mail size={14} className="text-slate-400" />
             <span>{staff.email}</span>
+          </div>
+        </div>
+
+        <div className="p-4 bg-indigo-50/60 rounded-2xl border border-indigo-100 space-y-2">
+          <p className="text-xs font-black uppercase text-indigo-500 tracking-widest">Sender</p>
+          <div className="flex items-center gap-2 text-xs text-slate-600">
+            <Mail size={14} className="text-slate-400" />
+            <span className="font-bold text-indigo-700">{SENDER_EMAIL}</span>
+            <span className="text-slate-400">(Automatic)</span>
           </div>
         </div>
 
