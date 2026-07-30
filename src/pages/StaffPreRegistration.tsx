@@ -7,8 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
-import BackButton from '@/components/ui/BackButton';
+import Modal from "@/components/ui/Modal";
+import BackButton from "@/components/ui/BackButton";
 import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
@@ -66,7 +66,7 @@ const StaffPreRegistration = () => {
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim()) return;
     const newStudent = { 
-      id: (studentsList.length + 1).toString(), 
+      id: (staffList.length + 1).toString(), 
       name: fullName.trim(), 
       assessment: assessmentNo.trim().toUpperCase(), 
       grade: regGrade, 
@@ -79,7 +79,7 @@ const StaffPreRegistration = () => {
       health: "None", 
       needs: "None" 
     };
-    setStudentsList([newStudent, ...studentsList]);
+    setStaffList([newStudent, ...staffList]);
     setIsRegisterOpen(false);
     setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
     showSuccess(`Student ${newStudent.name} registered!`);
@@ -190,7 +190,10 @@ const StaffPreRegistration = () => {
             {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
             Export CSV
           </Button>
-          <Button className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95" onClick={() => setIsAddModalOpen(true)}>
+          <Button 
+            className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95"
+            onClick={() => setIsAddModalOpen(true)}
+          >
             <Plus size={18} /> Add Staff
           </Button>
         </div>
@@ -285,16 +288,18 @@ const StaffPreRegistration = () => {
                         <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
                       </td>
                       <td className="px-8 py-5">
-                        <Badge className={cn("rounded-xl font-bold border text-xs px-3 py-1", roleInfo.badgeBg, roleInfo.color)}>{roleInfo.label}</Badge>
+                        <Badge className={cn("rounded-xl font-bold border text-xs px-3 py-1", roleInfo.badgeBg, roleInfo.color)}>
+                          {roleInfo.label}
+                        </Badge>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2 text-slate-700">
                           <Mail size={14} className="text-slate-400 shrink-0" />
-                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
+                          <span className="font-medium">{staff.email}</span>
                         </div>
                       </td>
                       <td className="px-8 py-5 text-center">
-                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => navigator.clipboard.writeText(staff.tempAccessCode)}>
+                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl cursor-pointer" onClick={() => navigator.clipboard.writeText(staff.tempAccessCode)}>
                           <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
                           <Copy size={13} className="text-slate-400 cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(staff.tempAccessCode); }} />
                         </div>
@@ -348,55 +353,8 @@ const StaffPreRegistration = () => {
           </div>
         </CardContent>
       </Card>
-
-      {/* Admin Auth Modal for Deletion */}
-      <Modal
-        isOpen={isDeleteAuthOpen}
-        onClose={() => setIsDeleteAuthOpen(false)}
-        title="Admin Authorization Required"
-        description={`Enter your admin password to delete "${deleteTarget?.name}".`}
-        footer={
-          <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
-            <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-            >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Authorize Delete
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={14} /> {authError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                autoFocus
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
-
-// Import missing icons
-import { Mail, Copy, Send } from 'lucide-react';
-import { cn } from "@/lib/utils";
 
 export default StaffPreRegistration;
