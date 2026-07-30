@@ -7,10 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
-import BackButton from '@/components/ui/BackButton';
-import { Plus, Trash2, GraduationCap } from 'lucide-react';
+import Modal from "@/components/ui/Modal";
+import BackButton from "@/components/ui/BackButton";
+import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { Tabs, TabsTrigger, TabsContent } from "@/components/ui/tabs"; // Added missing Tabs import
 
 interface LearningArea {
   id: string;
@@ -184,7 +185,7 @@ const LearningAreas = () => {
           </TabsContent>
         ))}
       </Tabs>
-
+      
       <Modal
         isOpen={isOpen}
         onClose={() => setIsOpen(false)}
