@@ -30,7 +30,7 @@ const Settings = () => {
           <TabsTrigger value="general" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">General</TabsTrigger>
           <TabsTrigger value="academic" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Academic Setup</TabsTrigger>
           <TabsTrigger value="users" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Users & Roles</TabsTrigger>
-          <TabsTrigger value="notifications" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Security</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-xl px-6 h-full data-[state=active]:bg-indigo-600 data-[state=active]:text-white font-bold text-xs">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -129,11 +129,125 @@ const Settings = () => {
         </TabsContent>
       </Tabs>
 
-      <div className="flex justify-end pt-4">
-        <Button className="rounded-2xl px-10 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700">
-          Apply All Changes
-        </Button>
-      </div>
+      <TabsContent value="security" className="space-y-6">
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <CardHeader className="p-8 border-b">
+            <CardTitle>Security Settings</CardTitle>
+            <CardDescription>Configure system security policies and access controls.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-8 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Password Policy</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Minimum Password Length</Label>
+                    <Input defaultValue="8" className="w-20 rounded-xl h-10 bg-slate-50/50 border-slate-100" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Require Special Characters</Label>
+                    <Switch />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Require Numbers</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Require Uppercase Letters</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Require Lowercase Letters</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Prevent Password Reuse</Label>
+                    <Switch defaultChecked />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <h3 className="text-lg font-bold text-slate-900">Account Security</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <Label>Two-Factor Authentication (2FA)</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Session Timeout (minutes)</Label>
+                    <Input defaultValue="30" className="w-20 rounded-xl h-10 bg-slate-50/50 border-slate-100" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Maximum Login Attempts</Label>
+                    <Input defaultValue="5" className="w-20 rounded-xl h-10 bg-slate-50/50 border-slate-100" />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Lock Account After Failed Attempts</Label>
+                    <Switch defaultChecked />
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <Label>Password Expiration (days)</Label>
+                    <Input defaultValue="90" className="w-20 rounded-xl h-10 bg-slate-50/50 border-slate-100" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Security Alerts & Monitoring</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Alert on Suspicious Login Attempts</Label>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Alert on Password Change</Label>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Alert on New Device Login</Label>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Real-time Security Monitoring</Label>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t border-slate-100">
+              <h3 className="text-lg font-bold text-slate-900">Data Protection</h3>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <Label>Encrypt Sensitive Data</Label>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Backup Encryption</Label>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <Label>Secure API Communications</Label>
+                  <Switch defaultChecked />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <CardTitle className="text-lg">Security Status</CardTitle>
+              <p className="text-sm text-muted-foreground">Current system security posture and compliance status.</p>
+            </div>
+            <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold">
+              <ShieldCheck size={16} className="mr-1" /> All Systems Secure
+            </Badge>
+          </div>
+        </Card>
+      </TabsContent>
     </div>
   );
 };
