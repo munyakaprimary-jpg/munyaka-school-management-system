@@ -4,9 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { BackButton } from "@/components/ui/BackButton";
+import BackButton from '@/components/ui/BackButton';
 import { 
   UserCircle, 
   Mail, 
@@ -17,14 +15,12 @@ import {
   ArrowLeft,
   History
 } from 'lucide-react';
-import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 
 const StudentProfile = () => {
   const student = STUDENTS[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [locationLat, setLocationLat] = useState("");
-  const [locationLng, setLocationLng] = useState("");
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -91,88 +87,77 @@ const StudentProfile = () => {
                 <div className="bg-indigo-500 h-full w-[85%]" />
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <CardTitle className="text-lg mb-6">Quick Stats</CardTitle>
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-500">Attendance</span>
-                <span className="text-sm font-bold text-emerald-600">96%</span>
-              </div>
-              <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full w-[96%]" />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-500">Assessments</span>
-                <span className="text-sm font-bold text-indigo-600">Exceeding</span>
-              </div>
-              <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                <div className="bg-indigo-500 h-full w-[85%]" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="space-y-8">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <CardTitle className="text-lg mb-6">Location</CardTitle>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Latitude</Label>
-              <Input 
-                type="text" 
-                value={locationLat} 
-                onChange={(e) => setLocationLat(e.target.value)} 
-                placeholder="e.g. 0.0" 
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-              />
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Longitude</Label>
-                <Input 
-                  type="text" 
-                  value={locationLng} 
-                  onChange={(e) => setLocationLng(e.target.value)} 
-                  placeholder="e.g. 36.8" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                />
-              </div>
-            </div>
           </Card>
         </div>
 
         <div className="lg:col-span-2 space-y-8">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
-                <CreditCard size={24} />
-              </div>
-              <CardTitle className="text-lg">Fee Balance</CardTitle>
-            </div>
-            <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
-            <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800">Record Payment</Button>
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="px-8 pt-8 border-b pb-4">
+              <CardTitle className="text-lg">Academic Performance</CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-slate-50/50 text-slate-400 uppercase tracking-widest text-[10px]">
+                    <th className="px-8 py-4 text-left font-bold">Learning Area</th>
+                    <th className="px-8 py-4 text-center font-bold">Score</th>
+                    <th className="px-8 py-4 text-right font-bold">Level</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {[
+                    { subject: "Mathematics", score: "88%", lvl: "EE" },
+                    { subject: "English", score: "75%", lvl: "ME" },
+                    { subject: "Science & Tech", score: "92%", lvl: "EE" },
+                    { subject: "Agriculture", score: "84%", lvl: "EE" },
+                  ].map((row, i) => (
+                    <tr key={i}>
+                      <td className="px-8 py-5 font-bold text-slate-900">{row.subject}</td>
+                      <td className="px-8 py-5 text-center font-medium text-slate-600">{row.score}</td>
+                      <td className="px-8 py-5 text-right">
+                        <Badge variant="outline" className={row.lvl === 'EE' ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-blue-50 text-blue-700 border-blue-100"}>
+                          {row.lvl}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                <FileText size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-orange-50 text-orange-600 rounded-2xl">
+                  <CreditCard size={24} />
+                </div>
+                <CardTitle className="text-lg">Fee Balance</CardTitle>
               </div>
-              <CardTitle className="text-lg">Documents</CardTitle>
-            </div>
-            <div className="space-y-3">
-              <Button variant="ghost" className="w-full justify-between rounded-xl h-12 bg-slate-50 border-none group">
-                <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Term 3 2023 Report</span>
-                <ArrowLeft size={16} className="rotate-180 text-slate-300" />
-              </Button>
-              <Button variant="ghost" className="w-full justify-between rounded-xl h-12 bg-slate-50 border-none group">
-                <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Birth Certificate</span>
-                <ArrowLeft size={16} className="rotate-180 text-slate-300" />
+              <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
+              <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800">Record Payment</Button>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <FileText size={24} />
+                </div>
+                <CardTitle className="text-lg">Documents</CardTitle>
               </div>
-            </div>
-          </Card>
+              <div className="space-y-3">
+                <Button variant="ghost" className="w-full justify-between rounded-xl h-12 bg-slate-50 border-none group">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Term 3 2023 Report</span>
+                  <ArrowLeft size={16} className="rotate-180 text-slate-300" />
+                </Button>
+                <Button variant="ghost" className="w-full justify-between rounded-xl h-12 bg-slate-50 border-none group">
+                  <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-600 transition-colors">Birth Certificate</span>
+                  <ArrowLeft size={16} className="rotate-180 text-slate-300" />
+                </Button>
+              </div>
+            </Card>
+          </div>
         </div>
       </div>
 
