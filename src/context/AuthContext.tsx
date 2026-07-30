@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
+import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+import { PreRegisteredStaff } from '@/types/staff-access';
 
 export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -53,20 +55,66 @@ const DEFAULT_ADMIN = {
 // Simulated user storage (in a real app, this would be a database)
 const USERS_STORAGE_KEY = 'munyaka_users';
 
-// Initialize users storage with default admin if empty
-const initializeUsersStorage = () => {
-  const existingUsers = localStorage.getItem(USERS_STORAGE_KEY);
-  if (!existingUsers) {
-    const initialUsers = {
-      [DEFAULT_ADMIN.email.toLowerCase()]: {
-        ...DEFAULT_ADMIN.user,
-        password: DEFAULT_ADMIN.password,
-        isActive: true,
-        emailConfirmed: true
-      }
-    };
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
+// Helper to map staff systemRole to auth UserRole
+const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
+  switch (systemRole) {
+    case 'head_teacher':
+      return 'head_teacher';
+    case 'bursar':
+      return 'bursar';
+    case 'support_admin':
+      return 'super_admin';
+    case 'senior_teacher':
+    case 'class_teacher':
+    case 'subject_teacher':
+    default:
+      return 'teacher';
   }
+};
+
+// Initialize users storage with default admin and sync with pre-registered staff ledger
+const initializeUsersStorage = () => {
+  const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
+  const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
+
+  // 1. Ensure default admin is present
+  const adminEmailKey = DEFAULT_ADMIN.email.toLowerCase();
+  if (!users[adminEmailKey]) {
+    users[adminEmailKey] = {
+      ...DEFAULT_ADMIN.user,
+      password: DEFAULT_ADMIN.password,
+      isActive: true,
+      emailConfirmed: true
+    };
+  }
+
+  // 2. Fetch the current pre-registered staff ledger (from localStorage or mock database fallback)
+  const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
+  const staffLedger: PreRegisteredStaff[] = savedLedgerJson 
+    ? JSON.parse(savedLedgerJson) 
+    : INITIAL_PRE_REGISTERED_STAFF;
+
+  // 3. Sync all pre-registered staff as valid default loggable users
+  staffLedger.forEach((staff) => {
+    const emailKey = staff.email.toLowerCase();
+    
+    // We update or insert the credentials
+    users[emailKey] = {
+      id: staff.id,
+      name: staff.fullName,
+      email: staff.email.toLowerCase(),
+      phone: staff.phone,
+      role: mapSystemRoleToUserRole(staff.systemRole),
+      avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+      // Pre-registered staff can log in using either their temporary access key OR their national ID, or default admin123
+      password: staff.tempAccessCode, 
+      alternativePasswords: [staff.nationalId, 'admin123'],
+      isActive: staff.status !== 'Suspended', // Active if not suspended
+      emailConfirmed: true
+    };
+  });
+
+  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 };
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
@@ -90,6 +138,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Normalize email input
     const normalizedEmail = email.trim().toLowerCase();
     
+    // Always sync with the latest ledger on every login attempt to capture newly pre-registered staff dynamically
+    initializeUsersStorage();
+
     // Get users from storage
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
     const users = usersJson ? JSON.parse(usersJson) : {};
@@ -97,31 +148,37 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     // Check if user exists and credentials match
     const foundUser = users[normalizedEmail];
     
-    if (foundUser && foundUser.password === pass) {
-      // Check if user is active
-      if (!foundUser.isActive) {
-        showError("Your account is inactive. Please contact the administrator.");
-        return false;
+    if (foundUser) {
+      const isPasswordValid = 
+        foundUser.password === pass || 
+        (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(pass));
+
+      if (isPasswordValid) {
+        // Check if user is active
+        if (!foundUser.isActive) {
+          showError("Your account is inactive. Please contact the administrator.");
+          return false;
+        }
+        
+        // Check if email is confirmed
+        if (!foundUser.emailConfirmed) {
+          showError("Please confirm your email address.");
+          return false;
+        }
+        
+        const userData = {
+          id: foundUser.id,
+          name: foundUser.name,
+          email: foundUser.email,
+          phone: foundUser.phone,
+          role: foundUser.role,
+          avatar: foundUser.avatar
+        };
+        
+        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        setUser(userData);
+        return true;
       }
-      
-      // Check if email is confirmed (bypass for now, but check flag)
-      if (!foundUser.emailConfirmed) {
-        showError("Please confirm your email address.");
-        return false;
-      }
-      
-      const userData = {
-        id: foundUser.id,
-        name: foundUser.name,
-        email: foundUser.email,
-        phone: foundUser.phone,
-        role: foundUser.role,
-        avatar: foundUser.avatar
-      };
-      
-      localStorage.setItem('munyaka_session', JSON.stringify(userData));
-      setUser(userData);
-      return true;
     }
     return false;
   };
@@ -151,9 +208,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       phone: userData.phone,
       role: userData.role,
       avatar: userData.fullName.substring(0, 2).toUpperCase(),
-      password: userData.password, // In a real app, this would be hashed on the backend
+      password: userData.password,
       isActive: true,
-      emailConfirmed: true, // Auto-confirm for simplicity
+      emailConfirmed: true,
       department: userData.department,
       createdAt: new Date().toISOString()
     };
