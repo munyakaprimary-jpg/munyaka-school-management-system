@@ -12,6 +12,8 @@ import AssessmentFilters from '@/components/assessments/AssessmentFilters';
 import MarksTable from '@/components/assessments/MarksTable';
 import AssessmentInstructions from '@/components/assessments/AssessmentInstructions';
 
+const STORAGE_KEY = 'munyaka_marks_records';
+
 const Assessments = () => {
   // Dynamically load grades and streams
   const gradesList = useMemo(() => {
@@ -72,6 +74,28 @@ const Assessments = () => {
   const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  // Load saved marks from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setMarksMatrix(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading saved marks:", e);
+      }
+    }
+  }, []);
+
+  // Persist marks to localStorage whenever they change
+  useEffect(() => {
+    if (Object.keys(marksMatrix).length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(marksMatrix));
+    }
+  }, [marksMatrix]);
 
   // Set default selected grade
   useEffect(() => {
@@ -159,8 +183,12 @@ const Assessments = () => {
   const handleSave = async () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 1000));
+    
+    // Persist to localStorage as permanent record
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(marksMatrix));
+    
     setIsSaving(false);
-    showSuccess("Marks saved successfully for the selected class.");
+    showSuccess("Marks saved permanently! Records will persist across sessions.");
   };
 
   const handleExport = () => {
