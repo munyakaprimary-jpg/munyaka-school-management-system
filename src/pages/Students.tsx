@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
-import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { STUDENTS as initialStudents } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 
 const Students = () => {
@@ -40,13 +40,50 @@ const Students = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
 
-  // Get unique streams for the filter dropdown
-  const uniqueStreams = useMemo(() => {
-    const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    return Array.from(streams).sort();
+  // Dynamically load grades and streams from saved settings
+  const [gradesList, setGradesList] = useState<typeof initialStudents["0"]["grade"]>();
+  const [uniqueStreams, setUniqueStreams] = useState<string[]>([]);
+
+  // Load grades and streams from saved settings on mount
+  useEffect(() => {
+    const savedGradesJson = localStorage.getItem('munyaka_grades');
+    if (savedGradesJson) {
+      try {
+        const savedGrades = JSON.parse(savedGradesJson);
+        setGradesList(savedGrades);
+        
+        // Extract all unique stream names across all grades
+        const streamsSet = new Set<string>();
+        savedGrades.forEach((grade: any) => {
+          if (grade.streams) {
+            grade.streams.forEach((stream: any) => {
+              streamsSet.add(stream.name);
+            });
+          }
+        });
+        setUniqueStreams(Array.from(streamsSet).sort());
+      } catch (e) {
+        console.error("Error loading grades from storage:", e);
+      }
+    }
   }, []);
 
+  // Get unique streams for the filter dropdown (recomputed when grades change)
+  useEffect(() => {
+    if (!gradesList) return;
+    
+    const streamsSet = new Set<string>();
+    gradesList.forEach((grade: any) => {
+      if (grade.streams) {
+        grade.streams.forEach((stream: any) => {
+          streamsSet.add(stream.name);
+        });
+      }
+    });
+    setUniqueStreams(Array.from(streamsSet).sort());
+  }, [gradesList]);
+
+  // Get filtered students based on current filters
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -175,6 +212,25 @@ const Students = () => {
     setFilterStream("all");
   };
 
+  // Populate grade filter options from saved grades
+  useEffect(() => {
+    if (!gradesList) return;
+    
+    // Extract unique grade names (including "Grade X" format)
+    const gradeOptions = gradesList.map((grade: any) => grade.name);
+    // Set default selection to first grade if none selected
+    if (!filterGrade || !gradeOptions.includes(filterGrade)) {
+      setFilterGrade(gradeOptions[0] || "Grade 1");
+    }
+  }, [gradesList, filterGrade]);
+
+  // Keep regGrade in sync with selected filterGrade for new registrations
+  useEffect(() => {
+    if (filterGrade !== "all" && regGrade === "4") {
+      setRegGrade(filterGrade);
+    }
+  }, [filterGrade, regGrade]);
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -221,10 +277,14 @@ const Students = () => {
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All Grade Levels</SelectItem>
-                {GRADES_DATA.map(g => (
-                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                    {g.name}
+                {filterGrade !== "all" ? (
+                  <SelectItem value={filterGrade}>{filterGrade}</SelectItem>
+                ) : (
+                  <SelectItem value="all">All Grade Levels</SelectItem>
+                )}
+                {gradesList.map((grade: any) => (
+                  <SelectItem key={grade.name} value={grade.name}>
+                    {grade.name}
                   </SelectItem>
                 ))}
               </SelectContent>
