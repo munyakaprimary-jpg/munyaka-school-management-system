@@ -5,7 +5,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
 
-export type UserRole = 'super_admin' | 'head_teacher' | 'senior_teacher' | 'class_teacher' | 'subject_teacher' | 'bursar' | 'support_admin' | 'parent' | 'student';
+export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -60,16 +60,15 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
     case 'head_teacher':
       return 'head_teacher';
-    case 'senior_teacher':
-    case 'class_teacher':
-    case 'subject_teacher':
-      return 'teacher';
     case 'bursar':
       return 'bursar';
     case 'support_admin':
       return 'super_admin';
+    case 'senior_teacher':
+    case 'class_teacher':
+    case 'subject_teacher':
     default:
-      return 'student';
+      return 'teacher';
   }
 };
 
@@ -81,8 +80,12 @@ const initializeUsersStorage = () => {
   // 1. Ensure default admin is present
   const adminEmailKey = DEFAULT_ADMIN.email.toLowerCase();
   if (!users[adminEmailKey]) {
-    const adminUser = { ...DEFAULT_ADMIN.user, password: DEFAULT_ADMIN.password, isActive: true, emailConfirmed: true };
-    users[adminEmailKey] = adminUser;
+    users[adminEmailKey] = {
+      ...DEFAULT_ADMIN.user,
+      password: DEFAULT_ADMIN.password,
+      isActive: true,
+      emailConfirmed: true
+    };
   }
 
   // 2. Fetch the current pre-registered staff ledger (from localStorage or mock database fallback)
@@ -95,22 +98,20 @@ const initializeUsersStorage = () => {
   staffLedger.forEach((staff) => {
     const emailKey = staff.email.toLowerCase();
     
-    // Only set password if this staff is marked as support_admin (admin)
-    if (staff.systemRole === 'support_admin') {
-      users[emailKey] = {
-        ...users[emailKey] || {},
-        id: staff.id,
-        name: staff.fullName,
-        email: emailKey,
-        phone: staff.phone,
-        role: mapSystemRoleToUserRole(staff.systemRole),
-        avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-        password: staff.tempAccessCode, // Use tempAccessCode as initial password
-        alternativePasswords: [staff.nationalId, 'admin123'],
-        isActive: staff.status !== 'Suspended', // Active if not suspended
-        emailConfirmed: true
-      };
-    }
+    // We update or insert the credentials
+    users[emailKey] = {
+      id: staff.id,
+      name: staff.fullName,
+      email: staff.email.toLowerCase(),
+      phone: staff.phone,
+      role: mapSystemRoleToUserRole(staff.systemRole),
+      avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+      // Pre-registered staff can log in using either their temporary access key OR their national ID, or default admin123
+      password: staff.tempAccessCode, 
+      alternativePasswords: [staff.nationalId, 'admin123'],
+      isActive: staff.status !== 'Suspended', // Active if not suspended
+      emailConfirmed: true
+    };
   });
 
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
@@ -184,7 +185,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const register = async (userData: RegisterData): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     // Normalize email
     const normalizedEmail = userData.email.trim().toLowerCase();
     
@@ -218,11 +219,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     users[normalizedEmail] = newUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
-    // If this is a support_admin (admin), update the admin password storage
-    if (userData.role === 'super_admin') {
-      localStorage.setItem('munyaka_admin_pass', newUser.password);
-    }
-    
     showSuccess(`Teacher ${userData.fullName} registered successfully!`);
     return true;
   };
@@ -242,10 +238,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    // Check if we're updating the admin password
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
     
-    if (oldPass !== storedAdminPass) {
+    if (oldPass !== storedPass) {
       showError("Incorrect current password");
       return false;
     }
