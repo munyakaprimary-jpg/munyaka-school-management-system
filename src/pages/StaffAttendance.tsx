@@ -20,7 +20,7 @@ import {
   Shield,
   Home,
   Wifi,
-  GpsFixed
+  Navigation
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTeacherAttendance } from '@/hooks/useTeacherAttendance';
@@ -115,7 +115,7 @@ const StaffAttendance = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <div className="flex items-center gap-4 p-4 bg-slate-50 rounded-2xl">
               <div className="p-3 bg-indigo-100 text-indigo-600 rounded-xl">
-                <GpsFixed size={24} />
+                <Navigation size={24} />
               </div>
               <div>
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Your Location</p>
