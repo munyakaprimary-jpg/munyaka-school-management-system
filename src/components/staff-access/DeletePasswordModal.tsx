@@ -13,7 +13,7 @@ interface DeletePasswordModalProps {
   onConfirm: () => void;
 }
 
-export const DeletePasswordModal: React.FC<DeletePasswordModalProps> = ({
+const DeletePasswordModal: React.FC<DeletePasswordModalProps> = ({
   isOpen,
   onClose,
   staff,
@@ -54,3 +54,5 @@ export const DeletePasswordModal: React.FC<DeletePasswordModalProps> = ({
     </Modal>
   );
 };
+
+export default DeletePasswordModal;
