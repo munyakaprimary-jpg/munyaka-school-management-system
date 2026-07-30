@@ -159,8 +159,10 @@ const StaffPreRegistration = () => {
           <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">{filteredStaff.length} Entries</Badge>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+          {/* Horizontal scroll container with custom scrollbar styling */}
+          <div className="overflow-x-auto custom-scrollbar">
+            {/* enforcing a minimum width to trigger the scrollbar on mobile/narrow screens */}
+            <table className="w-full text-sm text-left min-w-[1000px]">
               <thead className="bg-slate-50/60 border-b">
                 <tr>
                   <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff Credentials</th>
