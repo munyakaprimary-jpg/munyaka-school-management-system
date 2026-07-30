@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Copy, Send, Ban, Check, Trash2 } from 'lucide-react';
+import { Search, Copy, Send, Ban, Check, Trash2, Mail } from 'lucide-react';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { showSuccess, showError } from '@/utils/toast';
@@ -39,7 +39,7 @@ const StaffPreRegistration = () => {
   const filteredStaff = useMemo(() => {
     return staffList.filter(s => {
       const query = searchTerm.toLowerCase();
-      const matchesSearch = s.fullName.toLowerCase().includes(query) || s.nationalId.toLowerCase().includes(query) || s.tempAccessCode.toLowerCase().includes(query);
+      const matchesSearch = s.fullName.toLowerCase().includes(query) || s.nationalId.toLowerCase().includes(query) || s.tempAccessCode.toLowerCase().includes(query) || s.email.toLowerCase().includes(query);
       const matchesRole = roleFilter === 'all' || s.systemRole === roleFilter;
       const matchesStatus = statusFilter === 'all' || s.status === statusFilter;
       return matchesSearch && matchesRole && matchesStatus;
@@ -153,7 +153,7 @@ const StaffPreRegistration = () => {
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         {/* Scrollable Header & Table Container */}
         <div className="overflow-x-auto custom-scrollbar">
-          <div className="min-w-[1000px]">
+          <div className="min-w-[1100px]">
             {/* Header Section - Scrolls with Table */}
             <div className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-4">
               <div>
@@ -165,11 +165,12 @@ const StaffPreRegistration = () => {
 
             {/* Table Section */}
             <div className="p-0">
-              <table className="w-full text-sm text-left min-w-[1000px]">
+              <table className="w-full text-sm text-left min-w-[1100px]">
                 <thead className="bg-slate-50/60 border-b sticky top-0 z-10">
                   <tr>
                     <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff Credentials</th>
                     <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">System Role</th>
+                    <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Registered Email</th>
                     <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Temp Access Key</th>
                     <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
                     <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
@@ -186,6 +187,12 @@ const StaffPreRegistration = () => {
                         </td>
                         <td className="px-6 py-5">
                           <Badge className={cn("rounded-xl font-bold border text-xs px-3 py-1", roleInfo.badgeBg, roleInfo.color)}>{roleInfo.label}</Badge>
+                        </td>
+                        <td className="px-6 py-5">
+                          <div className="flex items-center gap-2 text-slate-700">
+                            <Mail size={14} className="text-slate-400 shrink-0" />
+                            <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
+                          </div>
                         </td>
                         <td className="px-6 py-5 text-center">
                           <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => handleCopyAccessCode(staff.tempAccessCode, staff.fullName)}>
