@@ -18,10 +18,20 @@ interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
+  register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
   updateProfile: (data: Partial<User>) => void;
   updatePassword: (oldPass: string, newPass: string) => Promise<boolean>;
   isLoading: boolean;
+}
+
+interface RegisterData {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  role: UserRole;
+  department: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -40,11 +50,33 @@ const DEFAULT_ADMIN = {
   }
 };
 
+// Simulated user storage (in a real app, this would be a database)
+const USERS_STORAGE_KEY = 'munyaka_users';
+
+// Initialize users storage with default admin if empty
+const initializeUsersStorage = () => {
+  const existingUsers = localStorage.getItem(USERS_STORAGE_KEY);
+  if (!existingUsers) {
+    const initialUsers = {
+      [DEFAULT_ADMIN.email.toLowerCase()]: {
+        ...DEFAULT_ADMIN.user,
+        password: DEFAULT_ADMIN.password,
+        isActive: true,
+        emailConfirmed: true
+      }
+    };
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(initialUsers));
+  }
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Initialize users storage on mount
   useEffect(() => {
+    initializeUsersStorage();
+    
     const savedUser = localStorage.getItem('munyaka_session');
     if (savedUser) {
       setUser(JSON.parse(savedUser));
@@ -55,20 +87,83 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, pass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Check if credentials match (checking updated credentials in localStorage first)
-    const storedEmail = localStorage.getItem('munyaka_admin_email') || DEFAULT_ADMIN.email;
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || DEFAULT_ADMIN.password;
-
-    if (email === storedEmail && pass === storedPass) {
-      const userData = localStorage.getItem('munyaka_session') 
-        ? JSON.parse(localStorage.getItem('munyaka_session')!) 
-        : DEFAULT_ADMIN.user;
+    // Normalize email input
+    const normalizedEmail = email.trim().toLowerCase();
+    
+    // Get users from storage
+    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+    const users = usersJson ? JSON.parse(usersJson) : {};
+    
+    // Check if user exists and credentials match
+    const foundUser = users[normalizedEmail];
+    
+    if (foundUser && foundUser.password === pass) {
+      // Check if user is active
+      if (!foundUser.isActive) {
+        showError("Your account is inactive. Please contact the administrator.");
+        return false;
+      }
+      
+      // Check if email is confirmed (bypass for now, but check flag)
+      if (!foundUser.emailConfirmed) {
+        showError("Please confirm your email address.");
+        return false;
+      }
+      
+      const userData = {
+        id: foundUser.id,
+        name: foundUser.name,
+        email: foundUser.email,
+        phone: foundUser.phone,
+        role: foundUser.role,
+        avatar: foundUser.avatar
+      };
       
       localStorage.setItem('munyaka_session', JSON.stringify(userData));
       setUser(userData);
       return true;
     }
     return false;
+  };
+
+  const register = async (userData: RegisterData): Promise<boolean> => {
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Normalize email
+    const normalizedEmail = userData.email.trim().toLowerCase();
+    
+    // Get users from storage
+    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+    const users = usersJson ? JSON.parse(usersJson) : {};
+    
+    // Check if user already exists
+    if (users[normalizedEmail]) {
+      showError("A user with this email already exists.");
+      return false;
+    }
+    
+    // Create new user
+    const newUserId = `user-${Date.now()}`;
+    const newUser = {
+      id: newUserId,
+      name: userData.fullName.trim(),
+      email: normalizedEmail,
+      phone: userData.phone,
+      role: userData.role,
+      avatar: userData.fullName.substring(0, 2).toUpperCase(),
+      password: userData.password, // In a real app, this would be hashed on the backend
+      isActive: true,
+      emailConfirmed: true, // Auto-confirm for simplicity
+      department: userData.department,
+      createdAt: new Date().toISOString()
+    };
+    
+    // Save user to storage
+    users[normalizedEmail] = newUser;
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    
+    showSuccess(`Teacher ${userData.fullName} registered successfully!`);
+    return true;
   };
 
   const updateProfile = (data: Partial<User>) => {
@@ -79,13 +174,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     // If email changed, update the login credential
     if (data.email) {
-      localStorage.setItem('munyaka_admin_email', data.email);
+      const normalizedEmail = data.email.trim().toLowerCase();
+      localStorage.setItem('munyaka_admin_email', normalizedEmail);
     }
     showSuccess("Profile updated successfully");
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || DEFAULT_ADMIN.password;
+    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
     
     if (oldPass !== storedPass) {
       showError("Incorrect current password");
@@ -103,7 +199,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, logout, updateProfile, updatePassword, isLoading }}>
+    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updateProfile, updatePassword, isLoading }}>
       {children}
     </AuthContext.Provider>
   );
