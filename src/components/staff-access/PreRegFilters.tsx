@@ -15,7 +15,7 @@ interface PreRegFiltersProps {
   setStatusFilter: (value: string) => void;
 }
 
-const PreRegFilters: React.FC<PreRegFiltersProps> = ({
+export const PreRegFilters: React.FC<PreRegFiltersProps> = ({
   searchTerm,
   setSearchTerm,
   roleFilter,
@@ -61,5 +61,3 @@ const PreRegFilters: React.FC<PreRegFiltersProps> = ({
     </div>
   );
 };
-
-export default PreRegFilters;
