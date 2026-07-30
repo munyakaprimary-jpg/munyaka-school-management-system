@@ -23,6 +23,7 @@ import Settings from "./pages/Settings";
 import Staff from "./pages/Staff";
 import StaffProfile from "./pages/StaffProfile";
 import StaffRegistration from "./pages/StaffRegistration";
+import StaffPreRegistration from "./pages/StaffPreRegistration";
 import Timetable from "./pages/Timetable";
 import Notices from "./pages/Notices";
 import Inventory from "./pages/Inventory";
@@ -62,6 +63,7 @@ const App = () => (
                 <Route path="/staff" element={<ProtectedRoute><Layout><Staff /></Layout></ProtectedRoute>} />
                 <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
                 <Route path="/staff/registration" element={<ProtectedRoute><Layout><StaffRegistration /></Layout></ProtectedRoute>} />
+                <Route path="/staff/pre-registration" element={<ProtectedRoute><Layout><StaffPreRegistration /></Layout></ProtectedRoute>} />
                 <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
                 <Route path="/notices" element={<ProtectedRoute><Layout><Notices /></Layout></ProtectedRoute>} />
                 <Route path="/calendar" element={<ProtectedRoute><Layout><SchoolCalendar /></Layout></ProtectedRoute>} />
