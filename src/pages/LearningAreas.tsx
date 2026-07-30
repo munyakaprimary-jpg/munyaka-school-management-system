@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,10 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
-import BackButton from '@/components/ui/BackButton';
-import { Plus, Trash2, GraduationCap } from 'lucide-react';
-import { showSuccess } from '@/utils/toast';
+import Modal from "@/components/ui/Modal";
+import BackButton from "@/components/ui/BackButton";
+import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { showSuccess, showError } from '@/utils/toast';
 
 interface LearningArea {
   id: string;
@@ -43,6 +43,13 @@ const LearningAreas = () => {
   const [activeTab, setActiveTab] = useState<string>("pre-primary");
   const [isOpen, setIsOpen] = useState(false);
 
+  // Admin auth state for deletion
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [learningAreaToDelete, setLearningAreaToDelete] = useState<{ id: string; name: string; clusterId: string } | null>(null);
+
   const [selectedClusterId, setSelectedClusterId] = useState<string>("pre-primary");
   const [name, setName] = useState("");
   const [periods, setPeriods] = useState("4");
@@ -56,11 +63,60 @@ const LearningAreas = () => {
   const handleAddLearningArea = () => {
     if (!name.trim()) return;
     const newArea: LearningArea = { id: `la-${Date.now()}`, name: name.trim(), periodsPerWeek: parseInt(periods) || 4, type, description: description.trim() || undefined };
-    setClusters(clusters.map(c => c.id === selectedClusterId ? { ...c, learningAreas: [...c.learningAreas, newArea] } : c));
+    setClusters(prev => prev.map(c => c.id === selectedClusterId ? { ...c, learningAreas: [...c.learningAreas, newArea] } : c));
     setIsOpen(false);
     setName(""); setDescription(""); setPeriods("4"); setType("Core");
     showSuccess(`Successfully added "${newArea.name}"!`);
   };
+
+  // Use useCallback to ensure stable function reference
+  const requestDeleteLearningArea = useCallback((area: LearningArea, clusterId: string) => {
+    setLearningAreaToDelete({ id: area.id, name: area.name, clusterId });
+    setAuthPassword("");
+    setAuthError("");
+    setIsAuthOpen(true);
+  }, []);
+
+  const handleVerifyAuth = useCallback(async () => {
+    if (!authPassword.trim()) {
+      setAuthError("Password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    setAuthError("");
+    
+    // Simulate async verification
+    await new Promise(r => setTimeout(r, 600));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (authPassword === currentAdminPass) {
+      if (learningAreaToDelete) {
+        setClusters(prev => prev.map(c => 
+          c.id === learningAreaToDelete.clusterId 
+            ? { ...c, learningAreas: c.learningAreas.filter(la => la.id !== learningAreaToDelete.id) } 
+            : c
+        ));
+        showSuccess(`Removed "${learningAreaToDelete.name}" successfully.`);
+      }
+      setIsAuthOpen(false);
+      setLearningAreaToDelete(null);
+      setAuthPassword("");
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+      setAuthPassword("");
+    }
+    setIsVerifying(false);
+  }, [authPassword, learningAreaToDelete]);
+
+  const handleAuthClose = useCallback(() => {
+    setIsAuthOpen(false);
+    setLearningAreaToDelete(null);
+    setAuthPassword("");
+    setAuthError("");
+  }, []);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -94,17 +150,23 @@ const LearningAreas = () => {
                     <div>
                       <div className="flex justify-between items-start mb-4">
                         <Badge className={area.type === 'Core' ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-amber-50 text-amber-700 font-bold"}>{area.type}</Badge>
-                        <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100" onClick={() => {
-                          setClusters(clusters.map(c => c.id === cluster.id ? { ...c, learningAreas: c.learningAreas.filter(la => la.id !== area.id) } : c));
-                          showSuccess(`Removed "${area.name}"`);
-                        }}><Trash2 size={16} /></Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-9 w-9"
+                          onClick={() => requestDeleteLearningArea(area, cluster.id)}
+                        >
+                          <Trash2 size={16} />
+                        </Button>
                       </div>
-                      <h4 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">{area.name}</h4>
+                      <h4 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">
+                        {area.name}
+                      </h4>
                       {area.description && <p className="text-xs text-slate-500 leading-relaxed mb-4">{area.description}</p>}
                     </div>
                     <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Lessons / Week</span>
-                      <Badge variant="outline" className="rounded-lg font-black text-slate-700 bg-slate-50 px-2.5 py-1">{area.periodsPerWeek} Periods</Badge>
+                      <Badge variant="outline" className="rounded-lg font-bold text-slate-700 bg-slate-50 px-2.5 py-1">{area.periodsPerWeek} Periods</Badge>
                     </div>
                   </CardContent>
                 </Card>
@@ -154,6 +216,49 @@ const LearningAreas = () => {
           <div className="space-y-2">
             <Label>Description / Scope (Optional)</Label>
             <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Basic programming" className="rounded-xl h-12" />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin Auth Modal for Deletion */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={handleAuthClose}
+        title="Admin Authorization Required"
+        description={`Enter your admin password to delete "${learningAreaToDelete?.name}".`}
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={handleAuthClose}>Cancel</Button>
+            <Button 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+            >
+              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              Authorize Delete
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={14} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
+            </div>
           </div>
         </div>
       </Modal>
