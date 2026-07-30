@@ -120,17 +120,15 @@ const Students = () => {
     setIsExporting(true);
     
     setTimeout(() => {
-      // Requested Header Format
       const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
       const row2 = "P.O. BOX 5239-30100,ELDORET";
       const row3 = "MOTTO: KNOWLEDGE POWER";
       
-      const currentYear = new Date().getFullYear().toString();
       const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
       const activeStream = filterStream !== "all" ? filterStream : "All Streams";
       const activeTerm = "Term 1";
 
-      const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${currentYear}, TERM ${activeTerm}`;
+      const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
 
       const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
@@ -206,7 +204,7 @@ const Students = () => {
       {/* Filters Card */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
+          <div className="relative md:col-span-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input 
               placeholder="Search by name/ID..." 
@@ -216,31 +214,37 @@ const Students = () => {
             />
           </div>
           
-          <Select value={filterGrade} onValueChange={setFilterGrade}>
-            <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 font-bold text-slate-700">
-              <SelectValue placeholder="All Grades" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Grade Levels</SelectItem>
-              {GRADES_DATA.map(g => (
-                <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                  {g.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
+            <Select value={filterGrade} onValueChange={setFilterGrade}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Grades" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="all">All Grade Levels</SelectItem>
+                {GRADES_DATA.map(g => (
+                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+                    {g.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={filterStream} onValueChange={setFilterStream}>
-            <SelectTrigger className="h-12 rounded-2xl border-none bg-slate-50 font-bold text-slate-700">
-              <SelectValue placeholder="All Streams" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Streams</SelectItem>
-              {uniqueStreams.map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
+            <Select value={filterStream} onValueChange={setFilterStream}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="all">All Streams</SelectItem>
+                {uniqueStreams.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
           <Button 
             variant="ghost" 
@@ -266,7 +270,7 @@ const Students = () => {
         <CardContent className="p-0">
           <div className="overflow-x-auto">
             <table className="w-full text-sm text-left">
-              <thead className="bg-slate-50/50 border-b">
+              <thead className="text-slate-500 bg-slate-50/50 border-b">
                 <tr>
                   <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Learner Name</th>
                   <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Assessment ID</th>
@@ -278,7 +282,7 @@ const Students = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-5">
                       <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{student.name}</p>
                     </td>
@@ -325,10 +329,10 @@ const Students = () => {
                 ))}
                 {filteredStudents.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center text-slate-400">
-                      <div className="flex flex-col items-center gap-2">
+                    <td colSpan={6} className="px-8 py-20 text-center">
+                      <div className="flex flex-col items-center gap-3">
                         <Search size={32} className="text-slate-200" />
-                        <p className="font-bold">No records match the current criteria.</p>
+                        <p className="text-slate-500 font-bold">No records match the current criteria.</p>
                       </div>
                     </td>
                   </tr>
