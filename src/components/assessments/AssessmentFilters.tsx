@@ -22,6 +22,8 @@ interface AssessmentFiltersProps {
   setTerm: (val: string) => void;
   searchTerm: string;
   setSearchTerm: (val: string) => void;
+  academicYear: string;
+  setAcademicYear: (val: string) => void;
 }
 
 const AssessmentFilters = ({
@@ -37,11 +39,31 @@ const AssessmentFilters = ({
   term,
   setTerm,
   searchTerm,
-  setSearchTerm
+  setSearchTerm,
+  academicYear,
+  setAcademicYear
 }: AssessmentFiltersProps) => {
+  // Generate years from 2020 to current year + 1
+  const currentYear = new Date().getFullYear();
+  const years = Array.from({ length: currentYear - 2019 }, (_, i) => (2020 + i).toString());
+
   return (
     <Card className="border-none shadow-sm rounded-2xl bg-white p-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="space-y-1">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
+          <Select value={academicYear} onValueChange={setAcademicYear}>
+            <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectValue placeholder="Select Year" />
+            </SelectTrigger>
+            <SelectContent>
+              {years.map((year) => (
+                <SelectItem key={year} value={year}>{year}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         <div className="space-y-1">
           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
           <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>

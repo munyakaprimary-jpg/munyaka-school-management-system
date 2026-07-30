@@ -66,6 +66,7 @@ const Assessments = () => {
   const [examType, setExamType] = useState<string>("");
   const [term, setTerm] = useState("term1");
   const [searchTerm, setSearchTerm] = useState("");
+  const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
   
   // Data States
   const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
@@ -270,6 +271,8 @@ const Assessments = () => {
         setTerm={setTerm}
         searchTerm={searchTerm}
         setSearchTerm={setSearchTerm}
+        academicYear={academicYear}
+        setAcademicYear={setAcademicYear}
       />
 
       <MarksTable 
