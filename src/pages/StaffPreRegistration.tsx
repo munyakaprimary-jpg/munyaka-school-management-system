@@ -117,40 +117,19 @@ const StaffPreRegistration = () => {
     showSuccess("Master CSV exported.");
   };
 
+  const handleToggleStatus = (id: string, currentStatus: AccessStatus) => {
+    const nextStatus: AccessStatus = currentStatus === 'Active' ? 'Suspended' : 'Active';
+    setStaffList(prev => prev.map(s => s.id === id ? { ...s, status: nextStatus } : s));
+    showSuccess(`Account updated to ${nextStatus}.`);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <PreRegHeader onExport={handleExportCSV} onAddClick={() => setIsAddModalOpen(true)} />
       
       <PreRegMetrics metrics={metrics} />
 
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input placeholder="Search staff or keys..." className="pl-11 h-12 rounded-2xl bg-slate-50 border-none font-medium" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} />
-          </div>
-          <Select value={roleFilter} onValueChange={setRoleFilter}>
-            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 text-sm"><SelectValue placeholder="All Roles" /></SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All System Roles</SelectItem>
-              {Object.keys(SYSTEM_ROLE_LABELS).map(role => (
-                <SelectItem key={role} value={role}>{SYSTEM_ROLE_LABELS[role as keyof typeof SYSTEM_ROLE_LABELS].label}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 text-sm"><SelectValue placeholder="All Status" /></SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
-              <SelectItem value="Active">Active</SelectItem>
-              <SelectItem value="Suspended">Suspended</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </Card>
-
-      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-6">
         <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
           <div>
             <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Access Master Ledger</CardTitle>
@@ -158,10 +137,14 @@ const StaffPreRegistration = () => {
           </div>
           <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">{filteredStaff.length} Entries</Badge>
         </CardHeader>
+        
+        {/* Additional horizontal scroll bar under the title */}
+        <div className="overflow-x-auto min-w-[1000px] mt-4">
+          {/* This scrollable area can contain supplementary information or additional tables */}
+        </div>
+
         <CardContent className="p-0">
-          {/* Horizontal scroll container with custom scrollbar styling */}
           <div className="overflow-x-auto custom-scrollbar">
-            {/* enforcing a minimum width to trigger the scrollbar on mobile/narrow screens */}
             <table className="w-full text-sm text-left min-w-[1000px]">
               <thead className="bg-slate-50/60 border-b">
                 <tr>
