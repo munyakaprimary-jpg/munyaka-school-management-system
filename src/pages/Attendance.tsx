@@ -1,12 +1,12 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Check, X, Clock, Sun, Sunset, AlertCircle } from "lucide-react";
+import { Check, X, Clock, Sun, Sunset, AlertCircle, Download, Loader2 } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
 
 interface SessionAttendance {
@@ -21,6 +21,8 @@ interface StudentAttendance {
 
 const Attendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
+  const [selectedGrade, setSelectedGrade] = useState("grade4");
+  const [isExporting, setIsExporting] = useState(false);
 
   const students = [
     { id: 1, name: "Brian Kiptoo", assessment: "A827361" },
@@ -43,6 +45,69 @@ const Attendance = () => {
 
   const handleSave = () => {
     showSuccess("Attendance register saved successfully!");
+  };
+
+  const handleExportCSV = () => {
+    setIsExporting(true);
+
+    setTimeout(() => {
+      // Official document headers
+      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+      const row2 = "P.O. BOX 5239-30100, ELDORET";
+      const row3 = "MOTTO: KNOWLEDGE POWER";
+      
+      const gradeLabel = selectedGrade === "grade4" ? "Grade 4 - Blue" : "Grade 5 - Green";
+      const currentDateStr = format(new Date(), "PP");
+      const row4 = `CLASS ATTENDANCE REGISTER - ${gradeLabel.toUpperCase()} - DATE: ${currentDateStr}`;
+
+      const headers = ["Learner Name", "Assessment ID", "Morning Session", "Morning Time", "Afternoon Session", "Afternoon Time"];
+
+      const rows = students.map(student => {
+        const record = markedStudents[student.id] || {};
+        
+        const getStatusLabel = (status?: string) => {
+          if (status === 'P') return "Present";
+          if (status === 'A') return "Absent";
+          if (status === 'L') return "Late";
+          return "Not Marked";
+        };
+
+        return [
+          `"${student.name.replace(/"/g, '""')}"`,
+          `"${student.assessment.replace(/"/g, '""')}"`,
+          `"${getStatusLabel(record.morning?.status)}"`,
+          `"${record.morning?.time || '—'}"`,
+          `"${getStatusLabel(record.afternoon?.status)}"`,
+          `"${record.afternoon?.time || '—'}"`
+        ];
+      });
+
+      const csvContent = [
+        row1,
+        row2,
+        row3,
+        row4,
+        "",
+        headers.join(","),
+        ...rows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      const safeGrade = gradeLabel.toLowerCase().replace(/\s+/g, '_').replace(/-+/g, '');
+      const safeDate = format(new Date(), "yyyy_MM_dd");
+      link.setAttribute("download", `attendance_${safeGrade}_${safeDate}.csv`);
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      setIsExporting(false);
+      showSuccess(`Attendance register exported successfully!`);
+    }, 1000);
   };
 
   const getStatusBadge = (sessionData?: SessionAttendance) => {
@@ -84,8 +149,8 @@ const Attendance = () => {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Class Attendance</h1>
           <p className="text-muted-foreground">Mark morning and afternoon roll calls with real-time timestamps.</p>
         </div>
-        <div className="flex gap-2">
-          <Select defaultValue="grade4">
+        <div className="flex flex-wrap gap-2">
+          <Select value={selectedGrade} onValueChange={setSelectedGrade}>
             <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200">
               <SelectValue placeholder="Grade" />
             </SelectTrigger>
@@ -96,6 +161,15 @@ const Attendance = () => {
           </Select>
           <Button variant="outline" className="rounded-xl bg-white border-slate-200 font-bold text-slate-700">
             {format(new Date(), "PP")}
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleExportCSV}
+            disabled={isExporting}
+            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm"
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            Export Register
           </Button>
         </div>
       </div>
