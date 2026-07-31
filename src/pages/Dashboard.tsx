@@ -29,11 +29,12 @@ const Dashboard = () => {
     return "8:15 AM";
   }, []);
 
-  // Active class performance from actual grades data
+  // Active class performance from actual grades data - using factual stream student counts
   const activeClasses = useMemo(() => {
     return GRADES_DATA.map(grade => {
+      // Use actual stream student counts from grades data
       const totalStudentsInGrade = grade.streams.reduce((sum, stream) => sum + stream.studentsCount, 0);
-      // Find attendance for this grade from mock data or calculate
+      // Use attendance trend for the class
       const gradeAttendance = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
       return {
         name: grade.name,
