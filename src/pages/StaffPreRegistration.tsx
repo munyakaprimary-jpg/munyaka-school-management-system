@@ -90,7 +90,7 @@ const StaffPreRegistration = () => {
     
     await new Promise(r => setTimeout(r, 600));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (authPassword === currentAdminPass) {
       if (deleteTarget) {

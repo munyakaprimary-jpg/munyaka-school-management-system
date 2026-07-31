@@ -75,7 +75,7 @@ const Login = () => {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="newemail@munyaka.sc.ke"
+                    placeholder="munyakaprimary@gmail.com"
                     autoComplete="off"
                     className="h-14 pl-12 rounded-2xl bg-slate-50 border-none focus:ring-2 ring-indigo-100 font-bold"
                     required
@@ -116,7 +116,7 @@ const Login = () => {
         <div className="mt-8 p-6 bg-amber-50/50 border border-amber-100 rounded-3xl text-center">
           <p className="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Development Notice</p>
           <p className="text-xs text-amber-600 font-medium">Use default admin credentials to test the system.</p>
-          <p className="text-xs font-bold text-slate-900 mt-2">ID: newemail@munyaka.sc.ke | PW: NewSecurePassword123!</p>
+          <p className="text-xs font-bold text-slate-900 mt-2">ID: munyakaprimary@gmail.com | PW: munyaka5239</p>
         </div>
       </div>
     </div>

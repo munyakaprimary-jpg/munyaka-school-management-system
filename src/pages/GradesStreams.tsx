@@ -157,7 +157,7 @@ const GradesStreams = () => {
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 800));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (authPassword === currentAdminPass) {
       executeDelete();

@@ -40,12 +40,12 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Updated Admin Credentials
 const DEFAULT_ADMIN = {
-  email: 'newemail@munyaka.sc.ke',
-  password: 'NewSecurePassword123!',
+  email: 'munyakaprimary@gmail.com',
+  password: 'munyaka5239',
   user: {
     id: 'admin-001',
     name: 'System Admin',
-    email: 'newemail@munyaka.sc.ke',
+    email: 'munyakaprimary@gmail.com',
     phone: '+254 700 000 000',
     role: 'super_admin' as UserRole,
     avatar: 'AD'
@@ -101,7 +101,7 @@ const initializeUsersStorage = () => {
       role: mapSystemRoleToUserRole(staff.systemRole),
       avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
       password: staff.tempAccessCode, 
-      alternativePasswords: [staff.nationalId, 'NewSecurePassword123!'],
+      alternativePasswords: [staff.nationalId, 'munyaka5239'],
       isActive: staff.status !== 'Suspended',
       emailConfirmed: true
     };
@@ -218,7 +218,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
+    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
     
     if (oldPass !== storedPass) {
       showError("Incorrect current password");

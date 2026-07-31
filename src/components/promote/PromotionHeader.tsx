@@ -35,7 +35,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
 
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (password === currentAdminPass) {
       setIsAuthModalOpen(false);

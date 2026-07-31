@@ -188,7 +188,7 @@ const Settings = () => {
 
     await new Promise(r => setTimeout(r, 600));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (authPassword === currentAdminPass) {
       setIsAuthorized(true);
@@ -361,7 +361,7 @@ const Settings = () => {
   };
 
   const handleUpdateMasterPin = async () => {
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
+    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
     
     if (pinForm.currentPin !== storedAdminPass) {
       showError("Current Admin PIN/Password is incorrect.");
@@ -503,7 +503,7 @@ const Settings = () => {
 
             <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Admin Security Notice</p>
-              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">NewSecurePassword123!</strong></p>
+              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">munyaka5239</strong></p>
             </div>
           </CardContent>
         </Card>
