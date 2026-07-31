@@ -9,13 +9,27 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from "@/components/ui/Modal";
-import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, Search, Info } from 'lucide-react';
+import { 
+  Users, 
+  TrendingUp, 
+  MapPin, 
+  UserCheck, 
+  Settings2, 
+  Save, 
+  Map, 
+  Search, 
+  Info, 
+  Lock, 
+  AlertCircle, 
+  Loader2,
+  ShieldCheck
+} from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { StaffAttendanceRegister } from '@/components/attendance/StaffAttendanceRegister';
 import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { format } from "date-fns";
 
@@ -28,7 +42,12 @@ const StaffAttendancePage = () => {
     weeklyTrend 
   } = useStaffAttendance(location);
 
-  // Geofence Config State
+  // Security & Config State
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [config, setConfig] = useState<GeofenceConfig>(getGeofenceConfig());
 
@@ -37,7 +56,6 @@ const StaffAttendancePage = () => {
     s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
   ).length;
 
-  // Calculate current average turnout from trend
   const currentWeekAverage = weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length > 0
     ? Math.round(weeklyTrend.reduce((acc, t) => acc + (t.rate || 0), 0) / weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length)
     : 0;
@@ -48,6 +66,38 @@ const StaffAttendancePage = () => {
     { title: "Weekly Turnout", value: `${currentWeekAverage}%`, icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
     { title: "Allowed Radius", value: `${config.radius}m`, icon: MapPin, color: "text-purple-600", bg: "bg-purple-50" },
   ];
+
+  const handleOpenSettings = () => {
+    setAuthPassword("");
+    setAuthError("");
+    setIsAuthOpen(true);
+  };
+
+  const handleVerifyAuth = async () => {
+    if (!authPassword.trim()) {
+      setAuthError("Admin password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    setAuthError("");
+    
+    // Simulate verification delay
+    await new Promise(r => setTimeout(r, 800));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (authPassword === currentAdminPass) {
+      setIsAuthOpen(false);
+      setIsConfigOpen(true);
+      showSuccess("Access authorized. Loading geofence configuration...");
+    } else {
+      setAuthError("Unauthorized Access: Incorrect Password");
+      showError("Authentication failed");
+      setAuthPassword("");
+    }
+    setIsVerifying(false);
+  };
 
   const handleSaveConfig = () => {
     setGeofenceConfig(config);
@@ -72,10 +122,10 @@ const StaffAttendancePage = () => {
         <div className="flex gap-2">
           <Button 
             variant="outline" 
-            className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600"
-            onClick={() => setIsConfigOpen(true)}
+            className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600 shadow-sm"
+            onClick={handleOpenSettings}
           >
-            <Settings2 size={18} /> Geofence Settings
+            <Lock size={16} className="text-slate-400" /> Geofence Settings
           </Button>
         </div>
       </div>
@@ -99,7 +149,6 @@ const StaffAttendancePage = () => {
 
       {totalStaffCount > 0 ? (
         <div className="space-y-8">
-          {/* Attendance Trend Chart */}
           <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
             <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
               <div>
@@ -156,7 +205,6 @@ const StaffAttendancePage = () => {
             </CardContent>
           </Card>
 
-          {/* Master Register View */}
           <StaffAttendanceRegister
             masterRegister={masterRegister}
             onAdminMark={adminMarkStaff}
@@ -178,6 +226,49 @@ const StaffAttendancePage = () => {
         </div>
       )}
 
+      {/* Administrative Verification Modal */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Admin Authorization"
+        description="Please enter the school security password to modify geofence coordinates."
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
+            <Button 
+              onClick={handleVerifyAuth} 
+              disabled={isVerifying}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2"
+            >
+              {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
+              Verify Identity
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={16} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Security PIN / Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
+                placeholder="••••••••"
+                className="pl-12 rounded-xl h-12 bg-slate-50 border-none font-bold text-lg"
+                autoFocus
+              />
+            </div>
+          </div>
+        </div>
+      </Modal>
+
       {/* Geofence Configuration Modal */}
       <Modal
         isOpen={isConfigOpen}
@@ -186,7 +277,7 @@ const StaffAttendancePage = () => {
         description="Set the precise GPS coordinates and allowed radius for staff attendance validation."
         footer={
           <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsConfigOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
+            <Button variant="ghost" onClick={() => setIsConfigOpen(false)} className="rounded-xl font-bold px-6 h-12">Discard</Button>
             <Button onClick={handleSaveConfig} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2">
               <Save size={18} /> Update School Location
             </Button>
@@ -194,10 +285,10 @@ const StaffAttendancePage = () => {
         }
       >
         <div className="space-y-5">
-          <div className="p-4 bg-indigo-50/50 rounded-2xl border border-indigo-100 flex items-start gap-4">
-            <Map className="text-indigo-600 shrink-0 mt-1" size={20} />
-            <p className="text-xs text-indigo-700/80 leading-relaxed">
-              Staff will only be allowed to mark attendance if their device GPS reports a position within the specified radius of these coordinates.
+          <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-start gap-4">
+            <Map className="text-emerald-600 shrink-0 mt-1" size={20} />
+            <p className="text-xs text-emerald-800/80 leading-relaxed font-medium">
+              Verified access enabled. Staff must be within the specified radius of these coordinates for their check-in to be valid.
             </p>
           </div>
 
