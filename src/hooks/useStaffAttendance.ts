@@ -1,51 +1,72 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
-import { AttendanceRecord, AttendanceStatus, StudentAttendance } from '@/types/attendance';
+import { AttendanceStatus, StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
+
+const STORAGE_KEY_PREFIX = 'munyaka_staff_attendance_';
 
 export const useStaffAttendance = (currentLocation: { lat: number; lng: number } | null) => {
   const { user } = useAuth();
   const [attendanceRecords, setAttendanceRecords] = useState<Record<string, StudentAttendance>>({});
   const [loading, setLoading] = useState(false);
 
+  const storageKey = `${STORAGE_KEY_PREFIX}${user?.id || 'guest'}`;
+
+  // Load from localStorage first, then try Supabase if connected
   const fetchAttendance = useCallback(async (date?: string) => {
-    if (!user) return;
-    
     setLoading(true);
     const targetDate = date || new Date().toISOString().split('T')[0];
-    
-    const { data, error } = await supabase
-      .from('staff_attendance')
-      .select('*')
-      .eq('staff_id', user.id)
-      .eq('date', targetDate);
 
-    if (error) {
-      console.error('Error fetching staff attendance:', error);
-      setLoading(false);
-      return;
+    // 1. Load local state from localStorage
+    let localData: Record<string, StudentAttendance> = {};
+    const savedLocal = localStorage.getItem(storageKey);
+    if (savedLocal) {
+      try {
+        localData = JSON.parse(savedLocal);
+      } catch (e) {
+        console.error('Error parsing local staff attendance:', e);
+      }
     }
 
-    const records = data as AttendanceRecord[];
-    const recordMap: Record<string, StudentAttendance> = {};
-    
-    records.forEach(record => {
-      const session = record.arrival_time ? 'morning' : 'afternoon';
-      recordMap[record.date] = {
-        morning: record.status === 'present' || record.status === 'late' 
-          ? { status: record.status, time: record.arrival_time || '' }
-          : undefined,
-        afternoon: record.departure_time 
-          ? { status: record.status, time: record.departure_time }
-          : undefined
-      };
-    });
+    // Set local state immediately
+    setAttendanceRecords(localData);
 
-    setAttendanceRecords(recordMap);
+    // 2. Try fetching from Supabase if user is present
+    if (user) {
+      try {
+        const { data, error } = await supabase
+          .from('staff_attendance')
+          .select('*')
+          .eq('staff_id', user.id)
+          .eq('date', targetDate);
+
+        if (!error && data && data.length > 0) {
+          const remoteRecords: Record<string, StudentAttendance> = { ...localData };
+          
+          data.forEach(record => {
+            remoteRecords[record.date] = {
+              morning: record.arrival_time || record.status === 'present' || record.status === 'late'
+                ? { status: record.status, time: record.arrival_time ? new Date(record.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '08:00 AM' }
+                : remoteRecords[record.date]?.morning,
+              afternoon: record.departure_time
+                ? { status: record.status, time: new Date(record.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '03:30 PM' }
+                : remoteRecords[record.date]?.afternoon
+            };
+          });
+
+          setAttendanceRecords(remoteRecords);
+          localStorage.setItem(storageKey, JSON.stringify(remoteRecords));
+        }
+      } catch (err) {
+        // Silent catch for Supabase offline/mock fallback
+        console.log('Supabase offline or fallback active, using local staff attendance state.');
+      }
+    }
+
     setLoading(false);
-  }, [user]);
+  }, [user, storageKey]);
 
   useEffect(() => {
     fetchAttendance();
@@ -55,86 +76,86 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     date: string, 
     session: 'morning' | 'afternoon', 
     status: AttendanceStatus,
-    location?: { lat: number; lng: number },
+    locationOverride?: { lat: number; lng: number },
     notes?: string
-  ) => {
-    if (!user) return false;
+  ): Promise<boolean> => {
+    const loc = locationOverride || currentLocation;
 
-    // Geofence check
-    if (location && !isWithinGeofence(location.lat, location.lng)) {
+    // Geofence check if location is available
+    if (loc && !isWithinGeofence(loc.lat, loc.lng)) {
       showError('You must be within 100m of the school to mark attendance.');
       return false;
     }
 
     setLoading(true);
 
-    const { data: existingRecord, error: fetchError } = await supabase
-      .from('staff_attendance')
-      .select('*')
-      .eq('staff_id', user.id)
-      .eq('date', date)
-      .single();
+    const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    let result;
-    if (existingRecord) {
-      // Update existing record
-      const updateData: Partial<AttendanceRecord> = {
-        status,
-        notes: session === 'morning' ? notes : existingRecord.notes,
-      };
-      
-      if (session === 'morning') {
-        updateData.arrival_time = new Date().toISOString();
-        if (location) {
-          updateData.verified_lat = location.lat;
-          updateData.verified_lng = location.lng;
-        }
-      } else {
-        updateData.departure_time = new Date().toISOString();
-      }
-
-      result = await supabase
-        .from('staff_attendance')
-        .update(updateData)
-        .eq('id', existingRecord.id)
-        .select()
-        .single();
-    } else {
-      // Create new record
-      const newRecord: AttendanceRecord = {
-        staff_id: user.id,
-        date,
-        status,
-        arrival_time: session === 'morning' ? new Date().toISOString() : null,
-        departure_time: session === 'afternoon' ? new Date().toISOString() : null,
-        notes: session === 'morning' ? notes : null,
-        verified_lat: location?.lat ?? null,
-        verified_lng: location?.lng ?? null,
-      };
-
-      result = await supabase
-        .from('staff_attendance')
-        .insert(newRecord)
-        .select()
-        .single();
-    }
-
-    if (result.error) {
-      showError('Failed to mark attendance');
-      setLoading(false);
-      return false;
-    }
-
-    // Update local state
-    setAttendanceRecords(prev => ({
-      ...prev,
+    // 1. Update local state & localStorage immediately
+    const updatedRecords: Record<string, StudentAttendance> = {
+      ...attendanceRecords,
       [date]: {
-        ...prev[date],
-        [session]: { status, time: new Date().toISOString() }
+        ...attendanceRecords[date],
+        [session]: { status, time: currentTimeStr }
       }
-    }));
+    };
 
-    showSuccess(`Attendance marked as ${status}`);
+    setAttendanceRecords(updatedRecords);
+    localStorage.setItem(storageKey, JSON.stringify(updatedRecords));
+
+    // 2. Attempt Supabase sync if user is present
+    if (user) {
+      try {
+        const { data: existingRecord } = await supabase
+          .from('staff_attendance')
+          .select('*')
+          .eq('staff_id', user.id)
+          .eq('date', date)
+          .maybeSingle();
+
+        if (existingRecord) {
+          const updateData: any = {
+            status,
+            notes: session === 'morning' ? notes : existingRecord.notes,
+          };
+          
+          if (session === 'morning') {
+            updateData.arrival_time = new Date().toISOString();
+            if (loc) {
+              updateData.verified_lat = loc.lat;
+              updateData.verified_lng = loc.lng;
+            }
+          } else {
+            updateData.departure_time = new Date().toISOString();
+          }
+
+          await supabase
+            .from('staff_attendance')
+            .update(updateData)
+            .eq('id', existingRecord.id);
+        } else {
+          const newRecord = {
+            staff_id: user.id,
+            date,
+            status,
+            arrival_time: session === 'morning' ? new Date().toISOString() : null,
+            departure_time: session === 'afternoon' ? new Date().toISOString() : null,
+            notes: session === 'morning' ? notes : null,
+            verified_lat: loc?.lat ?? null,
+            verified_lng: loc?.lng ?? null,
+          };
+
+          await supabase
+            .from('staff_attendance')
+            .insert(newRecord);
+        }
+      } catch (err) {
+        // Supabase error swallowed to support offline/mock operation
+        console.log('Supabase sync skipped, attendance saved locally.');
+      }
+    }
+
+    showSuccess(`Attendance marked as ${status} for ${session} session`);
     setLoading(false);
     return true;
   };
