@@ -1,21 +1,40 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Sparkles } from "lucide-react";
+import { RefreshCw, Sparkles, Search, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
+import { STAFF, StaffMember } from '@/lib/mock-data';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 interface AddPreRegModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: Partial<PreRegisteredStaff>) => void;
+  existingPreRegistered?: PreRegisteredStaff[];
 }
 
-const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
+const mapRoleToSystemRole = (role: string): SystemRole => {
+  const normalized = role.toLowerCase();
+  if (normalized.includes('head') || normalized.includes('principal')) return 'head_teacher';
+  if (normalized.includes('senior')) return 'senior_teacher';
+  if (normalized.includes('class')) return 'class_teacher';
+  if (normalized.includes('bursar') || normalized.includes('account')) return 'bursar';
+  if (normalized.includes('admin')) return 'support_admin';
+  return 'subject_teacher';
+};
+
+const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] }: AddPreRegModalProps) => {
+  const [comboboxOpen, setComboboxOpen] = useState(false);
+  const [selectedStaffId, setSelectedStaffId] = useState<string>("");
+  const [searchQuery, setSearchQuery] = useState("");
+
   const [formData, setFormData] = useState({
     fullName: "",
     nationalId: "",
@@ -28,17 +47,71 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
     tempAccessCode: ""
   });
 
+  // Get available directory staff members from localStorage or STAFF
+  const directoryStaffList = useMemo<StaffMember[]>(() => {
+    const saved = localStorage.getItem('munyaka_staff_directory');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+    }
+    return STAFF;
+  }, [isOpen]);
+
+  // Exclude staff members who ALREADY have a pre-registration record
+  const availableStaff = useMemo(() => {
+    const preRegEmailSet = new Set(existingPreRegistered.map(s => s.email.toLowerCase()));
+    const preRegNatIdSet = new Set(existingPreRegistered.map(s => s.nationalId));
+
+    return directoryStaffList.filter(s => 
+      !preRegEmailSet.has(s.email.toLowerCase()) && 
+      !preRegNatIdSet.has(s.id_no)
+    );
+  }, [directoryStaffList, existingPreRegistered]);
+
   const generateRandomKey = () => {
     const randDigits = Math.floor(1000 + Math.random() * 9000);
     setFormData(prev => ({ ...prev, tempAccessCode: `MUNYAKA-${randDigits}` }));
   };
 
   useEffect(() => {
-    if (isOpen) generateRandomKey();
+    if (isOpen) {
+      generateRandomKey();
+      setSelectedStaffId("");
+      setSearchQuery("");
+      setFormData({
+        fullName: "",
+        nationalId: "",
+        tscNumber: "",
+        email: "",
+        phone: "",
+        systemRole: "subject_teacher",
+        department: "Languages & Humanities",
+        assignedSubjects: "Mathematics, Science & Tech",
+        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`
+      });
+    }
   }, [isOpen]);
+
+  // Handle Selection from Combobox: AUTOFILL
+  const handleSelectStaff = (staff: StaffMember) => {
+    setSelectedStaffId(staff.id);
+    setComboboxOpen(false);
+
+    setFormData(prev => ({
+      ...prev,
+      fullName: staff.name,
+      nationalId: staff.id_no,
+      tscNumber: staff.tsc_no || "",
+      email: staff.email,
+      phone: staff.phone,
+      systemRole: mapRoleToSystemRole(staff.role),
+      department: staff.department || "Languages & Humanities",
+      assignedSubjects: staff.subjects ? staff.subjects.join(", ") : "Mathematics, Science & Tech"
+    }));
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData.fullName.trim() || !formData.email.trim()) return;
     onSubmit(formData);
   };
 
@@ -47,7 +120,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
       isOpen={isOpen}
       onClose={onClose}
       title="Pre-Register Staff for System Access"
-      description="Authorize new teacher credentials and pre-assign system roles."
+      description="Select staff member from Directory to autofill credentials or enter details manually."
       maxWidth="max-w-2xl"
       footer={
         <div className="flex gap-2 justify-end w-full">
@@ -58,27 +131,118 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
         </div>
       }
     >
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-5">
+        
+        {/* Searchable Combobox Selection */}
+        <div className="space-y-2 bg-indigo-50/50 p-4 rounded-2xl border border-indigo-100">
+          <div className="flex justify-between items-center">
+            <Label className="text-xs font-black uppercase tracking-widest text-indigo-900">
+              1. Search Staff Directory (Autofill)
+            </Label>
+            {selectedStaffId && (
+              <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 size={13} /> Autofilled from Directory
+              </span>
+            )}
+          </div>
+
+          <Popover open={comboboxOpen} onOpenChange={setComboboxOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={comboboxOpen}
+                className="w-full justify-between h-12 rounded-xl bg-white border-slate-200 text-left font-bold text-slate-800"
+              >
+                {selectedStaffId ? (
+                  <div className="flex items-center gap-2 truncate">
+                    <User size={16} className="text-indigo-600 shrink-0" />
+                    <span>{formData.fullName} ({formData.nationalId})</span>
+                  </div>
+                ) : (
+                  <span className="text-slate-400 font-normal">Type staff name or National ID to search...</span>
+                )}
+                <ChevronsUpDown size={16} className="ml-2 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[500px] p-0 rounded-2xl shadow-xl border-slate-200" align="start">
+              <Command>
+                <CommandInput placeholder="Search by name, ID or role..." className="h-12 font-medium" />
+                <CommandList className="max-h-60 p-1">
+                  <CommandEmpty className="py-6 text-center text-xs font-bold text-slate-400">
+                    No eligible staff found in Directory.
+                  </CommandEmpty>
+                  <CommandGroup heading="Available Staff Members">
+                    {availableStaff.map((staff) => (
+                      <CommandItem
+                        key={staff.id}
+                        value={`${staff.name} ${staff.id_no} ${staff.email}`}
+                        onSelect={() => handleSelectStaff(staff)}
+                        className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                      >
+                        <div>
+                          <p className="font-bold text-slate-900 text-sm">{staff.name}</p>
+                          <p className="text-xs text-slate-500 font-medium">ID: {staff.id_no} • {staff.role} • {staff.email}</p>
+                        </div>
+                        <Check
+                          className={cn(
+                            "h-4 w-4 text-indigo-600",
+                            selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+
+          {availableStaff.length === 0 && (
+            <p className="text-[11px] text-amber-700 font-medium flex items-center gap-1 mt-1">
+              <Info size={12} /> All staff members in the directory already have pre-registered access records.
+            </p>
+          )}
+        </div>
+
+        {/* Form Inputs (Autofilled or Manual) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
-            <Input value={formData.fullName} onChange={e => setFormData({...formData, fullName: e.target.value})} placeholder="e.g. Jane Mwangi" className="rounded-xl h-12 bg-slate-50 border-none font-bold" required />
+            <Input 
+              value={formData.fullName} 
+              onChange={e => setFormData({...formData, fullName: e.target.value})} 
+              placeholder="e.g. Jane Mwangi" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID Number *</Label>
-            <Input value={formData.nationalId} onChange={e => setFormData({...formData, nationalId: e.target.value})} placeholder="e.g. 28374615" className="rounded-xl h-12 bg-slate-50 border-none font-bold" required />
+            <Input 
+              value={formData.nationalId} 
+              onChange={e => setFormData({...formData, nationalId: e.target.value})} 
+              placeholder="e.g. 28374615" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
           </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-            <Input value={formData.tscNumber} onChange={e => setFormData({...formData, tscNumber: e.target.value})} placeholder="e.g. 482910" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            <Input 
+              value={formData.tscNumber} 
+              onChange={e => setFormData({...formData, tscNumber: e.target.value})} 
+              placeholder="e.g. TSC-482910" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
             <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
                 <SelectItem value="class_teacher">Class Teacher</SelectItem>
@@ -94,11 +258,24 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Official Email *</Label>
-            <Input type="email" value={formData.email} onChange={e => setFormData({...formData, email: e.target.value})} placeholder="e.g. jane@email.com" className="rounded-xl h-12 bg-slate-50 border-none font-bold" required />
+            <Input 
+              type="email" 
+              value={formData.email} 
+              onChange={e => setFormData({...formData, email: e.target.value})} 
+              placeholder="e.g. jane@email.com" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number *</Label>
-            <Input value={formData.phone} onChange={e => setFormData({...formData, phone: e.target.value})} placeholder="+254..." className="rounded-xl h-12 bg-slate-50 border-none font-bold" required />
+            <Input 
+              value={formData.phone} 
+              onChange={e => setFormData({...formData, phone: e.target.value})} 
+              placeholder="+254..." 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
           </div>
         </div>
 
@@ -106,7 +283,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
             <Select value={formData.department} onValueChange={val => setFormData({...formData, department: val})}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="Mathematics & Science">Mathematics & Science</SelectItem>
                 <SelectItem value="Languages & Humanities">Languages & Humanities</SelectItem>
@@ -119,7 +296,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit }: AddPreRegModalProps) => {
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
             <div className="flex gap-2">
-              <Input value={formData.tempAccessCode} readOnly className="rounded-xl h-12 bg-slate-50 border-none font-black text-center" />
+              <Input value={formData.tempAccessCode} readOnly className="rounded-xl h-12 bg-slate-50 border-none font-black text-center text-indigo-700" />
               <Button type="button" variant="outline" className="h-12 px-3 rounded-xl border-slate-200" onClick={generateRandomKey}><RefreshCw size={16} /></Button>
             </div>
           </div>

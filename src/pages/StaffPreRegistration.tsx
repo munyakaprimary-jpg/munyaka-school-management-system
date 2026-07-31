@@ -9,8 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
-import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
@@ -36,22 +35,6 @@ const StaffPreRegistration = () => {
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // Registration Form State
-  const [fullName, setFullName] = useState("");
-  const [assessmentNo, setAssessmentNo] = useState("");
-  const [regGrade, setRegGrade] = useState("4");
-  const [regStream, setRegStream] = useState("Blue");
-  const [guardianName, setGuardianName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-
-  // Get unique streams for the filter dropdown
-  const uniqueStreams = useMemo(() => {
-    const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    return Array.from(streams).sort();
-  }, []);
-
   const filteredStaff = useMemo(() => {
     return staffList.filter(s => {
       const matchesSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -63,28 +46,6 @@ const StaffPreRegistration = () => {
       return matchesSearch && matchesRole && matchesStatus;
     });
   }, [staffList, searchTerm, roleFilter, statusFilter]);
-
-  const handleRegisterStudent = () => {
-    if (!fullName.trim() || !assessmentNo.trim()) return;
-    const newStudent = { 
-      id: (staffList.length + 1).toString(), 
-      name: fullName.trim(), 
-      assessment: assessmentNo.trim().toUpperCase(), 
-      grade: regGrade, 
-      stream: regStream, 
-      gender: "M", 
-      dob: "2014-01-01", 
-      guardian: guardianName.trim(), 
-      phone: phone.trim(), 
-      email: "g@email.com", 
-      health: "None", 
-      needs: "None" 
-    };
-    setStaffList([newStudent as any, ...staffList]);
-    setIsAddModalOpen(false);
-    setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
-    showSuccess(`Student ${newStudent.name} registered!`);
-  };
 
   const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
     const newStaff: PreRegisteredStaff = {
@@ -103,7 +64,10 @@ const StaffPreRegistration = () => {
       status: "Pre-Registered" as AccessStatus,
       datePreRegistered: new Date().toISOString().split('T')[0],
     };
-    setStaffList([newStaff, ...staffList]);
+
+    const updatedList = [newStaff, ...staffList];
+    setStaffList(updatedList);
+    localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
     setIsAddModalOpen(false);
     showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
   };
@@ -130,7 +94,9 @@ const StaffPreRegistration = () => {
 
     if (authPassword === currentAdminPass) {
       if (deleteTarget) {
-        setStaffList(prev => prev.filter(s => s.id !== deleteTarget.id));
+        const updatedList = staffList.filter(s => s.id !== deleteTarget.id);
+        setStaffList(updatedList);
+        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
         showSuccess(`Staff "${deleteTarget.name}" deleted successfully.`);
       }
       setIsDeleteAuthOpen(false);
@@ -317,9 +283,12 @@ const StaffPreRegistration = () => {
                         </div>
                       </td>
                       <td className="px-8 py-5 text-center">
-                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => navigator.clipboard.writeText(staff.tempAccessCode)}>
+                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
+                          navigator.clipboard.writeText(staff.tempAccessCode);
+                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
+                        }}>
                           <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
-                          <Copy size={13} className="text-slate-400 cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(staff.tempAccessCode); }} />
+                          <Copy size={13} className="text-slate-400" />
                         </div>
                       </td>
                       <td className="px-8 py-5 text-center">
@@ -331,23 +300,16 @@ const StaffPreRegistration = () => {
                             variant="ghost" 
                             size="sm" 
                             className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                            onClick={() => {}}
+                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
                           >
                             <Send size={14} /> Send Key
                           </Button>
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all"
+                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                             onClick={() => requestDelete(staff)}
-                          >
-                            <Lock size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                            onClick={() => {}}
+                            title="Delete Pre-Registration"
                           >
                             <Trash2 size={16} />
                           </Button>
@@ -361,7 +323,7 @@ const StaffPreRegistration = () => {
                     <td colSpan={6} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
                         <Search size={32} className="text-slate-200" />
-                        <p className="text-slate-500 font-bold">No records match the current criteria.</p>
+                        <p className="text-slate-500 font-bold">No pre-registration records match the current criteria.</p>
                       </div>
                     </td>
                   </tr>
@@ -377,6 +339,7 @@ const StaffPreRegistration = () => {
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddStaff}
+        existingPreRegistered={staffList}
       />
 
       {/* Admin Auth Modal for Deletion */}
@@ -424,9 +387,5 @@ const StaffPreRegistration = () => {
     </div>
   );
 };
-
-// Import missing icons
-import { Mail, Copy, Send } from 'lucide-react';
-import { cn } from "@/lib/utils";
 
 export default StaffPreRegistration;

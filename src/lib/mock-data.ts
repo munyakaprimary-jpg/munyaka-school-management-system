@@ -53,7 +53,7 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 4",
     category: "Primary",
     streams: [
-      { id: "s3", name: "Blue", teacher: "Unassigned", studentsCount: 42 },
+      { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
       { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 38 }
     ]
   },
@@ -62,7 +62,7 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 5",
     category: "Primary",
     streams: [
-      { id: "s5", name: "Alpha", teacher: "Unassigned", studentsCount: 40 },
+      { id: "s5", name: "Alpha", teacher: "John Kamau", studentsCount: 40 },
       { id: "s6", name: "Beta", teacher: "Unassigned", studentsCount: 36 }
     ]
   },
@@ -71,7 +71,7 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 7",
     category: "Junior School",
     streams: [
-      { id: "s7", name: "Alpha", teacher: "Unassigned", studentsCount: 45 },
+      { id: "s7", name: "Alpha", teacher: "Peter Omondi", studentsCount: 45 },
       { id: "s8", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
     ]
   },
@@ -127,7 +127,87 @@ export const ASSET_LOGS = [
   { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", status: "In Use" },
 ];
 
-export const STAFF = []; // Cleared mock staff
+export interface StaffMember {
+  id: string;
+  id_no: string;
+  tsc_no?: string;
+  name: string;
+  role: string;
+  subjects: string[];
+  phone: string;
+  email: string;
+  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  joined: string;
+  department: string;
+}
+
+export const STAFF: StaffMember[] = [
+  {
+    id: "ST-101",
+    id_no: "28374615",
+    tsc_no: "TSC-482910",
+    name: "Jane Mwangi",
+    role: "Class Teacher",
+    subjects: ["Mathematics", "Science & Tech"],
+    phone: "+254 712 345 678",
+    email: "jane.mwangi@munyaka.sc.ke",
+    status: "Active",
+    joined: "Jan 2022",
+    department: "Mathematics & Science"
+  },
+  {
+    id: "ST-102",
+    id_no: "31948201",
+    tsc_no: "TSC-592014",
+    name: "John Kamau",
+    role: "Senior Teacher",
+    subjects: ["English", "Social Studies"],
+    phone: "+254 722 987 654",
+    email: "john.kamau@munyaka.sc.ke",
+    status: "Active",
+    joined: "Mar 2021",
+    department: "Languages & Humanities"
+  },
+  {
+    id: "ST-103",
+    id_no: "25839102",
+    tsc_no: "TSC-382910",
+    name: "Peter Omondi",
+    role: "Subject Teacher",
+    subjects: ["Pre-Technical", "Computer Science"],
+    phone: "+254 733 456 789",
+    email: "peter.omondi@munyaka.sc.ke",
+    status: "Pre-Registered",
+    joined: "Jan 2024",
+    department: "Technical & Vocational"
+  },
+  {
+    id: "ST-104",
+    id_no: "29482019",
+    tsc_no: "TSC-610293",
+    name: "Sarah Chebet",
+    role: "Class Teacher",
+    subjects: ["Kiswahili", "CRE"],
+    phone: "+254 701 112 233",
+    email: "sarah.chebet@munyaka.sc.ke",
+    status: "Active",
+    joined: "Sep 2022",
+    department: "Languages & Humanities"
+  },
+  {
+    id: "ST-105",
+    id_no: "30291847",
+    tsc_no: "TSC-719203",
+    name: "Grace Njeri",
+    role: "Head Teacher",
+    subjects: ["Administration"],
+    phone: "+254 700 000 111",
+    email: "grace.njeri@munyaka.sc.ke",
+    status: "Active",
+    joined: "Jan 2020",
+    department: "School Administration"
+  }
+];
 
 export const EVENTS = [
   { id: 1, title: "Staff Meeting", date: "2024-10-25", time: "02:00 PM", type: "Internal" },
