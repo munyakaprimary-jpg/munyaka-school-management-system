@@ -4,7 +4,7 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Clock } from "lucide-react";
+import { Check, X, Clock, Lock } from "lucide-react";
 
 interface SessionAttendance {
   status: string;
@@ -26,9 +26,10 @@ interface AttendanceTableProps {
   students: Student[];
   markedStudents: Record<number, StudentAttendance>;
   onMarkAttendance: (id: number, session: 'morning' | 'afternoon', status: string) => void;
+  isEditing: boolean;
 }
 
-const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: AttendanceTableProps) => {
+const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing }: AttendanceTableProps) => {
   const getStatusBadge = (sessionData?: SessionAttendance) => {
     if (!sessionData) {
       return <span className="text-xs text-slate-400 italic">Not marked</span>;
@@ -39,13 +40,13 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: Attenda
     let label = "";
 
     if (status === 'P') {
-      badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-50";
+      badgeClass = "bg-emerald-50 text-emerald-700 border-emerald-100";
       label = "Present";
     } else if (status === 'A') {
-      badgeClass = "bg-rose-50 text-rose-700 border-rose-100 hover:bg-rose-50";
+      badgeClass = "bg-rose-50 text-rose-700 border-rose-100";
       label = "Absent";
     } else {
-      badgeClass = "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-50";
+      badgeClass = "bg-amber-50 text-amber-700 border-amber-100";
       label = "Late";
     }
 
@@ -73,35 +74,44 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: Attenda
           <div className="w-24 flex justify-center">
             {getStatusBadge(sessionData)}
           </div>
-          <div className="flex gap-1.5">
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => onMarkAttendance(studentId, session, 'P')}
-              className={`rounded-xl h-9 w-9 p-0 ${sessionData?.status === 'P' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "hover:bg-emerald-50 hover:text-emerald-600 text-slate-400"}`}
-              title="Mark Present"
-            >
-              <Check size={16} />
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => onMarkAttendance(studentId, session, 'L')}
-              className={`rounded-xl h-9 w-9 p-0 font-bold text-xs ${sessionData?.status === 'L' ? "bg-amber-500 text-white hover:bg-amber-600" : "hover:bg-amber-50 hover:text-amber-600 text-slate-400"}`}
-              title="Mark Late"
-            >
-              L
-            </Button>
-            <Button 
-              size="sm" 
-              variant="ghost" 
-              onClick={() => onMarkAttendance(studentId, session, 'A')}
-              className={`rounded-xl h-9 w-9 p-0 ${sessionData?.status === 'A' ? "bg-rose-600 text-white hover:bg-rose-700" : "hover:bg-rose-50 hover:text-rose-600 text-slate-400"}`}
-              title="Mark Absent"
-            >
-              <X size={16} />
-            </Button>
-          </div>
+          
+          {isEditing && (
+            <div className="flex gap-1.5 animate-in fade-in zoom-in-95 duration-200">
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onMarkAttendance(studentId, session, 'P')}
+                className={`rounded-xl h-9 w-9 p-0 ${sessionData?.status === 'P' ? "bg-emerald-600 text-white hover:bg-emerald-700" : "hover:bg-emerald-50 hover:text-emerald-600 text-slate-400"}`}
+                title="Mark Present"
+              >
+                <Check size={16} />
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onMarkAttendance(studentId, session, 'L')}
+                className={`rounded-xl h-9 w-9 p-0 font-bold text-xs ${sessionData?.status === 'L' ? "bg-amber-500 text-white hover:bg-amber-600" : "hover:bg-amber-50 hover:text-amber-600 text-slate-400"}`}
+                title="Mark Late"
+              >
+                L
+              </Button>
+              <Button 
+                size="sm" 
+                variant="ghost" 
+                onClick={() => onMarkAttendance(studentId, session, 'A')}
+                className={`rounded-xl h-9 w-9 p-0 ${sessionData?.status === 'A' ? "bg-rose-600 text-white hover:bg-rose-700" : "hover:bg-rose-50 hover:text-rose-600 text-slate-400"}`}
+                title="Mark Absent"
+              >
+                <X size={16} />
+              </Button>
+            </div>
+          )}
+          
+          {!isEditing && (
+            <div className="w-[102px] flex justify-center opacity-40">
+              <Lock size={14} className="text-slate-300" />
+            </div>
+          )}
         </div>
       </td>
     );

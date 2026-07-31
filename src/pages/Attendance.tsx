@@ -11,6 +11,7 @@ import { useAttendance } from '@/hooks/useAttendance';
 const Attendance = () => {
   const [selectedGrade, setSelectedGrade] = useState("grade4");
   const [isExporting, setIsExporting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   
   const { students, markedStudents, markAttendance, exportToCSV } = useAttendance();
 
@@ -24,6 +25,7 @@ const Attendance = () => {
   };
 
   const handleSave = () => {
+    setIsEditing(false);
     showSuccess("Attendance register saved successfully!");
   };
 
@@ -34,6 +36,8 @@ const Attendance = () => {
         setSelectedGrade={setSelectedGrade}
         isExporting={isExporting}
         onExport={handleExport}
+        isEditing={isEditing}
+        setIsEditing={setIsEditing}
       />
 
       <AttendanceStats 
@@ -45,12 +49,15 @@ const Attendance = () => {
         students={students}
         markedStudents={markedStudents}
         onMarkAttendance={markAttendance}
+        isEditing={isEditing}
       />
       
       <div className="flex justify-end">
-        <Button size="lg" className="rounded-2xl px-12 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={handleSave}>
-          Save Register
-        </Button>
+        {isEditing && (
+          <Button size="lg" className="rounded-2xl px-12 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={handleSave}>
+            Save Changes
+          </Button>
+        )}
       </div>
     </div>
   );
