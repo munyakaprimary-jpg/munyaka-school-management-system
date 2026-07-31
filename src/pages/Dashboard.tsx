@@ -4,7 +4,7 @@ import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { STUDENTS, ATTENDANCE_TREND, FEES_DATA, TRANSACTIONS } from '@/lib/mock-data';
-import { GRADES_DATA } from '@/lib/mock-data'; // fallback
+import { GRADES_DATA } from '@/lib/mock-data';
 
 const Dashboard = () => {
   // Use the actual student list as the source of truth for total student count
@@ -29,20 +29,31 @@ const Dashboard = () => {
     return "8:15 AM";
   }, []);
 
-  // Active class performance from actual grades data - using factual stream student counts
+  // Active class performance from actual student data - using factual stream student counts
   const activeClasses = useMemo(() => {
-    return GRADES_DATA.map(grade => {
-      // Use actual stream student counts from grades data
-      const totalStudentsInGrade = grade.streams.reduce((sum, stream) => sum + stream.studentsCount, 0);
-      // Use attendance trend for the class
-      const gradeAttendance = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
-      return {
-        name: grade.name,
-        stream: grade.streams.map(s => s.name).join(', '),
-        students: totalStudentsInGrade,
-        attendance: `${Math.round(gradeAttendance)}%`
-      };
+    // Group students by grade and stream
+    const studentGroups = {};
+    STUDENTS.forEach(student => {
+      const grade = student.grade; // e.g., "4"
+      const stream = student.stream; // e.g., "Blue"
+      const key = `${grade}-${stream}`;
+      if (!studentGroups[key]) {
+        studentGroups[key] = { name: `Grade ${grade}`, stream, students: 0 };
+      }
+      studentGroups[key].students += 1;
     });
+
+    // Compute average attendance from ATTENDANCE_TREND
+    const avgAttendance = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
+    const attendanceStr = `${Math.round(avgAttendance)}%`;
+
+    // Create entries for each unique grade/stream combination
+    return Object.values(studentGroups).map(group => ({
+      name: group.name,
+      stream: group.stream,
+      students: group.students,
+      attendance: attendanceStr
+    }));
   }, []);
 
   // Recent alerts from actual system data
@@ -192,7 +203,7 @@ const Dashboard = () => {
               </thead>
               <tbody className="divide-y">
                 {activeClasses.map((cls, i) => (
-                  <tr key={i} className="group hover:bg-slate-50 transition-colors">
+                  <tr key={i} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-5 font-bold text-slate-900">{cls.name}</td>
                     <td className="px-8 py-5 text-slate-600 font-medium">{cls.stream}</td>
                     <td className="px-8 py-5 text-slate-600">{cls.students} Learners</td>
