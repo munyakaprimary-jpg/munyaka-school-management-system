@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2 } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
 interface LearningArea {
@@ -41,14 +41,17 @@ const LearningAreas = () => {
     return saved ? JSON.parse(saved) : DEFAULT_CLUSTERS;
   });
   const [activeTab, setActiveTab] = useState<string>("pre-primary");
-  const [isOpen, setIsOpen] = useState(false);
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Admin auth state for deletion
+  // Admin auth state for deletion and editing
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
-  const [learningAreaToDelete, setLearningAreaToDelete] = useState<{ id: string; name: string; clusterId: string } | null>(null);
+  const [actionToPerform, setActionToPerform] = useState<'delete' | 'edit' | null>(null);
+  const [targetLearningArea, setTargetLearningArea] = useState<{ id: string; name: string; clusterId: string } | null>(null);
+  const [targetClusterId, setTargetClusterId] = useState<string>("");
 
   const [selectedClusterId, setSelectedClusterId] = useState<string>("pre-primary");
   const [name, setName] = useState("");
@@ -60,18 +63,84 @@ const LearningAreas = () => {
     localStorage.setItem('munyaka_learning_areas', JSON.stringify(clusters));
   }, [clusters]);
 
+  // Prevent duplicate learning area names within the same cluster
+  const isNameUniqueInCluster = (clusterId: string, proposedName: string, excludeId?: string) => {
+    const selectedCluster = clusters.find(c => c.id === clusterId);
+    if (!selectedCluster) return true;
+    return !selectedCluster.learningAreas.some(la => 
+      la.name.toLowerCase() === proposedName.toLowerCase() && la.id !== excludeId
+    );
+  };
+
   const handleAddLearningArea = () => {
-    if (!name.trim()) return;
+    if (!name.trim()) {
+      showError("Please enter a learning area name.");
+      return;
+    }
+
+    if (!isNameUniqueInCluster(selectedClusterId, name.trim())) {
+      showError(`A learning area named "${name.trim()}" already exists in ${clusters.find(c => c.id === selectedClusterId)?.name}.`);
+      return;
+    }
+
     const newArea: LearningArea = { id: `la-${Date.now()}`, name: name.trim(), periodsPerWeek: parseInt(periods) || 4, type, description: description.trim() || undefined };
     setClusters(prev => prev.map(c => c.id === selectedClusterId ? { ...c, learningAreas: [...c.learningAreas, newArea] } : c));
-    setIsOpen(false);
-    setName(""); setDescription(""); setPeriods("4"); setType("Core");
+    setIsAddOpen(false);
+    setName("");
+    setDescription("");
+    setPeriods("4");
+    setType("Core");
     showSuccess(`Successfully added "${newArea.name}"!`);
   };
 
-  // Use useCallback to ensure stable function reference
+  const handleEditLearningArea = () => {
+    if (!name.trim()) {
+      showError("Please enter a learning area name.");
+      return;
+    }
+
+    if (!isNameUniqueInCluster(targetClusterId, name.trim(), targetLearningArea?.id)) {
+      showError(`A learning area named "${name.trim()}" already exists in ${clusters.find(c => c.id === targetClusterId)?.name}.`);
+      return;
+    }
+
+    if (targetLearningArea) {
+      setClusters(prev => prev.map(c => 
+        c.id === targetClusterId 
+          ? { 
+              ...c, 
+              learningAreas: c.learningAreas.map(la => 
+                la.id === targetLearningArea.id 
+                  ? { ...la, name: name.trim(), periodsPerWeek: parseInt(periods) || 4, type, description: description.trim() || undefined } 
+                  : la
+              ) 
+            } 
+          : c
+      ));
+      showSuccess(`Successfully updated "${name.trim()}"!`);
+    }
+    setIsEditOpen(false);
+    setTargetLearningArea(null);
+    setTargetClusterId("");
+    setName("");
+    setDescription("");
+    setPeriods("4");
+    setType("Core");
+  };
+
+  const requestEditLearningArea = useCallback((area: LearningArea, clusterId: string) => {
+    setTargetLearningArea({ id: area.id, name: area.name, clusterId });
+    setTargetClusterId(clusterId);
+    setName(area.name);
+    setPeriods(area.periodsPerWeek.toString());
+    setType(area.type);
+    setDescription(area.description || "");
+    setIsEditOpen(true);
+  }, []);
+
   const requestDeleteLearningArea = useCallback((area: LearningArea, clusterId: string) => {
-    setLearningAreaToDelete({ id: area.id, name: area.name, clusterId });
+    setTargetLearningArea({ id: area.id, name: area.name, clusterId });
+    setActionToPerform('delete');
     setAuthPassword("");
     setAuthError("");
     setIsAuthOpen(true);
@@ -92,16 +161,18 @@ const LearningAreas = () => {
     const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
 
     if (authPassword === currentAdminPass) {
-      if (learningAreaToDelete) {
+      if (actionToPerform === 'delete' && targetLearningArea) {
         setClusters(prev => prev.map(c => 
-          c.id === learningAreaToDelete.clusterId 
-            ? { ...c, learningAreas: c.learningAreas.filter(la => la.id !== learningAreaToDelete.id) } 
+          c.id === targetLearningArea.clusterId 
+            ? { ...c, learningAreas: c.learningAreas.filter(la => la.id !== targetLearningArea.id) } 
             : c
         ));
-        showSuccess(`Removed "${learningAreaToDelete.name}" successfully.`);
+        showSuccess(`Removed "${targetLearningArea.name}" successfully.`);
       }
       setIsAuthOpen(false);
-      setLearningAreaToDelete(null);
+      setTargetLearningArea(null);
+      setTargetClusterId("");
+      setActionToPerform(null);
       setAuthPassword("");
     } else {
       setAuthError("Invalid admin password");
@@ -109,11 +180,13 @@ const LearningAreas = () => {
       setAuthPassword("");
     }
     setIsVerifying(false);
-  }, [authPassword, learningAreaToDelete]);
+  }, [authPassword, actionToPerform, targetLearningArea]);
 
   const handleAuthClose = useCallback(() => {
     setIsAuthOpen(false);
-    setLearningAreaToDelete(null);
+    setTargetLearningArea(null);
+    setTargetClusterId("");
+    setActionToPerform(null);
     setAuthPassword("");
     setAuthError("");
   }, []);
@@ -128,7 +201,7 @@ const LearningAreas = () => {
             <p className="text-muted-foreground">Manage CBC subjects and lesson classifications.</p>
           </div>
         </div>
-        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => { setSelectedClusterId(activeTab); setIsOpen(true); }}>
+        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => { setSelectedClusterId(activeTab); setIsAddOpen(true); }}>
           <Plus size={18} /> Add Learning Area
         </Button>
       </div>
@@ -150,14 +223,24 @@ const LearningAreas = () => {
                     <div>
                       <div className="flex justify-between items-start mb-4">
                         <Badge className={area.type === 'Core' ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-amber-50 text-amber-700 font-bold"}>{area.type}</Badge>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-9 w-9"
-                          onClick={() => requestDeleteLearningArea(area, cluster.id)}
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-9 w-9"
+                            onClick={() => requestEditLearningArea(area, cluster.id)}
+                          >
+                            <Edit size={16} />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-9 w-9"
+                            onClick={() => requestDeleteLearningArea(area, cluster.id)}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
                       </div>
                       <h4 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">
                         {area.name}
@@ -176,14 +259,15 @@ const LearningAreas = () => {
         ))}
       </Tabs>
 
+      {/* Add Learning Area Modal */}
       <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
+        isOpen={isAddOpen}
+        onClose={() => setIsAddOpen(false)}
         title="Add Learning Area"
         description="Create a new subject or learning area."
         footer={
           <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsAddOpen(false)}>Cancel</Button>
             <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100" onClick={handleAddLearningArea}>Add Learning Area</Button>
           </>
         }
@@ -220,12 +304,73 @@ const LearningAreas = () => {
         </div>
       </Modal>
 
-      {/* Admin Auth Modal for Deletion */}
+      {/* Edit Learning Area Modal */}
+      <Modal
+        isOpen={isEditOpen}
+        onClose={() => {
+          setIsEditOpen(false);
+          setTargetLearningArea(null);
+          setTargetClusterId("");
+          setName("");
+          setDescription("");
+          setPeriods("4");
+          setType("Core");
+        }}
+        title="Edit Learning Area"
+        description="Modify the learning area details."
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => {
+              setIsEditOpen(false);
+              setTargetLearningArea(null);
+              setTargetClusterId("");
+              setName("");
+              setDescription("");
+              setPeriods("4");
+              setType("Core");
+            }}>Cancel</Button>
+            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100" onClick={handleEditLearningArea}>Update Learning Area</Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label>CBC Cluster</Label>
+            <Select value={targetClusterId} onValueChange={setTargetClusterId}>
+              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Cluster" /></SelectTrigger>
+              <SelectContent>{clusters.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-2">
+            <Label>Learning Area Name</Label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Creative Arts" className="rounded-xl h-12" />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Periods per Week</Label>
+              <Input type="number" value={periods} onChange={(e) => setPeriods(e.target.value)} placeholder="e.g. 4" className="rounded-xl h-12" />
+            </div>
+            <div className="space-y-2">
+              <Label>Classification</Label>
+              <Select value={type} onValueChange={(val: any) => setType(val)}>
+                <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Type" /></SelectTrigger>
+                <SelectContent><SelectItem value="Core">Core Subject</SelectItem><SelectItem value="Elective">Elective Subject</SelectItem></SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label>Description / Scope (Optional)</Label>
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Basic programming" className="rounded-xl h-12" />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Admin Auth Modal for Deletion and Editing */}
       <Modal
         isOpen={isAuthOpen}
         onClose={handleAuthClose}
         title="Admin Authorization Required"
-        description={`Enter your admin password to delete "${learningAreaToDelete?.name}".`}
+        description={`Enter your admin password to ${actionToPerform === 'delete' ? 'delete' : 'edit'} "${targetLearningArea?.name}".`}
         footer={
           <>
             <Button variant="ghost" className="rounded-xl font-bold" onClick={handleAuthClose}>Cancel</Button>
@@ -235,7 +380,7 @@ const LearningAreas = () => {
               disabled={isVerifying}
             >
               {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Authorize Delete
+              Authorize Action
             </Button>
           </>
         }
