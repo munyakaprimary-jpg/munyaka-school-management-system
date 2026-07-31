@@ -1,9 +1,30 @@
-export const SCHOOL_COORDINATES = {
-  lat: -1.2921,
-  lng: 36.8219,
+export interface GeofenceConfig {
+  lat: number;
+  lng: number;
+  radius: number;
+}
+
+const DEFAULT_CONFIG: GeofenceConfig = {
+  lat: 0.5142,
+  lng: 35.2698,
+  radius: 150, // Updated to 150 meters as requested
 };
 
-export const GEOFENCE_RADIUS_METERS = 100;
+export const getGeofenceConfig = (): GeofenceConfig => {
+  const saved = localStorage.getItem('munyaka_geofence_config');
+  if (saved) {
+    try {
+      return JSON.parse(saved);
+    } catch (e) {
+      console.error('Error parsing geofence config:', e);
+    }
+  }
+  return DEFAULT_CONFIG;
+};
+
+export const setGeofenceConfig = (config: GeofenceConfig) => {
+  localStorage.setItem('munyaka_geofence_config', JSON.stringify(config));
+};
 
 export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number): number => {
   const R = 6371e3; // Earth radius in meters
@@ -21,6 +42,7 @@ export const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2
 };
 
 export const isWithinGeofence = (lat: number, lng: number): boolean => {
-  const distance = calculateDistance(lat, lng, SCHOOL_COORDINATES.lat, SCHOOL_COORDINATES.lng);
-  return distance <= GEOFENCE_RADIUS_METERS;
+  const config = getGeofenceConfig();
+  const distance = calculateDistance(lat, lng, config.lat, config.lng);
+  return distance <= config.radius;
 };
