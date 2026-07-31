@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from "@/components/ui/Modal";
-import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, UserPlus, Search } from 'lucide-react';
+import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, UserPlus, Search, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -23,31 +23,28 @@ const StaffAttendancePage = () => {
   const { location } = useGeolocation();
   const { 
     masterRegister, 
-    adminMarkStaff 
+    adminMarkStaff,
+    weeklyTrend 
   } = useStaffAttendance(location);
 
   // Geofence Config State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [config, setConfig] = useState<GeofenceConfig>(getGeofenceConfig());
 
-  // Attendance Trend Chart Data
-  const attendanceTrendData = [
-    { day: "Mon", rate: 95 },
-    { day: "Tue", rate: 92 },
-    { day: "Wed", rate: 88 },
-    { day: "Thu", rate: 94 },
-    { day: "Fri", rate: 91 },
-  ];
-
   const totalStaffCount = Object.keys(masterRegister).length;
   const presentStaffCount = Object.values(masterRegister).filter(
     s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
   ).length;
 
+  // Calculate current average turnout from trend
+  const currentWeekAverage = weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length > 0
+    ? Math.round(weeklyTrend.reduce((acc, t) => acc + (t.rate || 0), 0) / weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length)
+    : 0;
+
   const stats = [
     { title: "Total Personnel", value: totalStaffCount.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
     { title: "Present Today", value: presentStaffCount.toString(), icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "Weekly Turnout", value: "94%", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { title: "Weekly Turnout", value: `${currentWeekAverage}%`, icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
     { title: "Allowed Radius", value: `${config.radius}m`, icon: MapPin, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
@@ -56,6 +53,8 @@ const StaffAttendancePage = () => {
     setIsConfigOpen(false);
     showSuccess("School Geofence coordinates updated successfully!");
   };
+
+  const hasTrendData = weeklyTrend.some(t => t.rate > 0);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -110,40 +109,55 @@ const StaffAttendancePage = () => {
             <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
-                <p className="text-xs text-slate-400">Aggregated turn-out percentages for current term</p>
+                <p className="text-xs text-slate-400">Factual turnout calculated from Mon–Fri check-ins</p>
               </div>
               <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
-                <TrendingUp size={12} className="mr-1" /> Live Analytics
+                <TrendingUp size={12} className="mr-1" /> Factual Data
               </Badge>
             </div>
             <CardContent className="h-[240px] w-full pt-4">
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={attendanceTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                  <YAxis domain={[0, 100]} hide />
-                  <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
-                            <p className="text-base font-black text-indigo-600">{data.rate}% Turnout</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
-                    {attendanceTrendData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill="#6366f1" />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {hasTrendData ? (
+                <ResponsiveContainer width="100%" height={200}>
+                  <BarChart data={weeklyTrend}>
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                    <YAxis domain={[0, 100]} hide />
+                    <Tooltip 
+                      cursor={{fill: '#f8fafc'}}
+                      content={({ active, payload }) => {
+                        if (active && payload && payload.length) {
+                          const data = payload[0].payload;
+                          return (
+                            <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
+                              <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
+                              <p className="text-base font-black text-indigo-600">
+                                {data.isFuture ? 'Future' : `${data.rate}% Turnout`}
+                              </p>
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
+                      {weeklyTrend.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={entry.day === format(new Date(), "EEE") ? "#6366f1" : "#e2e8f0"} 
+                        />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="h-full flex flex-col items-center justify-center text-center space-y-2 pb-8">
+                  <div className="p-3 bg-slate-50 rounded-full text-slate-300">
+                    <Info size={32} />
+                  </div>
+                  <p className="text-slate-500 font-bold">No check-in data recorded for this week.</p>
+                  <p className="text-xs text-slate-400">Trend data will appear as staff mark their daily arrival.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
 

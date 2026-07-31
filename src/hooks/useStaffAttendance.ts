@@ -1,10 +1,11 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AttendanceStatus, StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff } from '@/types/staff-access';
+import { startOfWeek, addDays, format, isAfter } from 'date-fns';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
 const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
@@ -18,13 +19,21 @@ export interface StaffAttendanceRecord {
   date: string;
 }
 
+export interface WeeklyTrendItem {
+  day: string;
+  rate: number;
+  isFuture: boolean;
+}
+
 export const useStaffAttendance = (currentLocation: { lat: number; lng: number } | null) => {
   const { user } = useAuth();
   const [personalRecords, setPersonalRecords] = useState<Record<string, StudentAttendance>>({});
   const [masterRegister, setMasterRegister] = useState<Record<string, StaffAttendanceRecord>>({});
+  const [weeklyTrend, setWeeklyTrend] = useState<WeeklyTrendItem[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const todayStr = new Date().toISOString().split('T')[0];
+  const today = new Date();
+  const todayStr = format(today, 'yyyy-MM-dd');
   const personalKey = `${PERSONAL_STORAGE_PREFIX}${user?.id || 'guest'}`;
   const masterKey = `${MASTER_REGISTER_PREFIX}${todayStr}`;
 
@@ -40,8 +49,9 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     }
   }, [personalKey]);
 
-  // 2. Fetch Master Register for All Staff
-  const fetchMasterRegister = useCallback(() => {
+  // 2. Fetch Master Register for All Staff & Calculate Trends
+  const fetchMasterData = useCallback(() => {
+    // A. Fetch Today's Master Register
     const savedMaster = localStorage.getItem(masterKey);
     let currentMaster: Record<string, StaffAttendanceRecord> = {};
 
@@ -56,6 +66,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     // Dynamic Fetch: Populate register from the actual staff ledger
     const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
     const staffLedger: PreRegisteredStaff[] = savedLedgerJson ? JSON.parse(savedLedgerJson) : [];
+    const totalActiveStaff = staffLedger.length;
 
     staffLedger.forEach(staff => {
       if (!currentMaster[staff.id]) {
@@ -69,12 +80,53 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     });
 
     setMasterRegister(currentMaster);
-  }, [masterKey, todayStr]);
+
+    // B. Calculate Weekly Trend (Mon-Fri)
+    const mon = startOfWeek(today, { weekStartsOn: 1 });
+    const trend: WeeklyTrendItem[] = [];
+    const dayNames = ["Mon", "Tue", "Wed", "Thu", "Fri"];
+
+    for (let i = 0; i < 5; i++) {
+      const dayDate = addDays(mon, i);
+      const dayKey = format(dayDate, 'yyyy-MM-dd');
+      const isFuture = isAfter(dayDate, today) && dayKey !== todayStr;
+      
+      let rate = 0;
+      if (!isFuture) {
+        const historyJson = localStorage.getItem(`${MASTER_REGISTER_PREFIX}${dayKey}`);
+        if (historyJson && totalActiveStaff > 0) {
+          try {
+            const history: Record<string, StaffAttendanceRecord> = JSON.parse(historyJson);
+            const presentCount = Object.values(history).filter(
+              s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
+            ).length;
+            rate = Math.round((presentCount / totalActiveStaff) * 100);
+          } catch (e) {
+            rate = 0;
+          }
+        } else if (dayKey === todayStr && totalActiveStaff > 0) {
+           // Use current state for today
+           const presentCount = Object.values(currentMaster).filter(
+             s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
+           ).length;
+           rate = Math.round((presentCount / totalActiveStaff) * 100);
+        }
+      }
+
+      trend.push({
+        day: dayNames[i],
+        rate: isFuture ? 0 : rate,
+        isFuture
+      });
+    }
+
+    setWeeklyTrend(trend);
+  }, [masterKey, todayStr, today]);
 
   useEffect(() => {
     fetchPersonalAttendance();
-    fetchMasterRegister();
-  }, [fetchPersonalAttendance, fetchMasterRegister]);
+    fetchMasterData();
+  }, [fetchPersonalAttendance, fetchMasterData]);
 
   const selfMarkAttendance = async (
     session: 'morning' | 'afternoon',
@@ -92,7 +144,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     }
 
     setLoading(true);
-    const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentTimeStr = format(new Date(), "hh:mm a");
 
     const updatedPersonal: Record<string, StudentAttendance> = {
       ...personalRecords,
@@ -124,6 +176,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
 
     showSuccess(`Successfully Recorded at ${currentTimeStr}`);
     setLoading(false);
+    fetchMasterData(); // Trigger trend refresh
     return true;
   };
 
@@ -132,7 +185,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     session: 'morning' | 'afternoon',
     status: AttendanceStatus
   ) => {
-    const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const currentTimeStr = format(new Date(), "hh:mm a");
     const currentMaster = { ...masterRegister };
     
     if (currentMaster[staffId]) {
@@ -144,16 +197,18 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       setMasterRegister(currentMaster);
       localStorage.setItem(masterKey, JSON.stringify(currentMaster));
       showSuccess(`Updated attendance for ${currentMaster[staffId].staffName}`);
+      fetchMasterData(); // Trigger trend refresh
     }
   };
 
   return {
     personalRecords,
     masterRegister,
+    weeklyTrend,
     loading,
     selfMarkAttendance,
     adminMarkStaff,
     fetchPersonalAttendance,
-    fetchMasterRegister,
+    fetchMasterRegister: fetchMasterData,
   };
 };
