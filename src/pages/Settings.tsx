@@ -98,7 +98,6 @@ const getPasswordStrength = (pass: string) => {
 };
 
 const Settings = () => {
-  // Page-Level Admin Lock Authorization State
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -107,15 +106,12 @@ const Settings = () => {
 
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
 
-  // Loading & Hydration State
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  // Tab State
   const [activeTab, setActiveTab] = useState('roles');
 
-  // --- 1. General Config State ---
   const [generalConfig, setGeneralConfig] = useState({
     schoolName: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
     motto: "KNOWLEDGE IS POWER",
@@ -126,7 +122,6 @@ const Settings = () => {
     maintenanceMode: false
   });
 
-  // --- 2. Academic Config State ---
   const [academicConfig, setAcademicConfig] = useState({
     activeYear: "2026",
     activeTerm: "term1",
@@ -140,7 +135,6 @@ const Settings = () => {
     ]
   });
 
-  // --- 3. Roles & Permissions State ---
   const [expandedRole, setExpandedRole] = useState<string | null>('super_admin');
   const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => {
     const initialState: Record<string, PermissionState> = {};
@@ -158,7 +152,6 @@ const Settings = () => {
     return initialState;
   });
 
-  // --- 4. Security Tab State ---
   const [pinForm, setPinForm] = useState({
     currentPin: "",
     newPin: "",
@@ -183,7 +176,6 @@ const Settings = () => {
 
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
 
-  // Authorize Access Handler
   const handleAuthorizeSettings = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!authPassword.trim()) {
@@ -196,7 +188,7 @@ const Settings = () => {
 
     await new Promise(r => setTimeout(r, 600));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
 
     if (authPassword === currentAdminPass) {
       setIsAuthorized(true);
@@ -217,12 +209,10 @@ const Settings = () => {
     showSuccess("Configuration console locked.");
   };
 
-  // --- EXPLICIT DATABASE SELECT QUERY ON MOUNT ---
   const fetchSettingsFromDatabase = useCallback(async () => {
     setIsLoadingSettings(true);
 
     try {
-      // 1. Try Supabase Fetch
       const { data, error } = await supabase
         .from('system_settings')
         .select('*')
@@ -262,7 +252,6 @@ const Settings = () => {
         if (data.audit_logs) setAuditLogs(data.audit_logs);
 
       } else {
-        // Fallback to local storage if Supabase row does not exist yet
         const savedMaster = localStorage.getItem(SETTINGS_MASTER_KEY);
         if (savedMaster) {
           const parsed = JSON.parse(savedMaster);
@@ -291,7 +280,6 @@ const Settings = () => {
     fetchSettingsFromDatabase();
   }, [fetchSettingsFromDatabase]);
 
-  // --- EXPLICIT UPSERT/UPDATE SAVE QUERY ON CLICK ---
   const handleSaveAllSettings = async () => {
     setIsSaving(true);
 
@@ -321,7 +309,6 @@ const Settings = () => {
     };
 
     try {
-      // 1. Database Query
       const { error } = await supabase
         .from('system_settings')
         .upsert(payload, { onConflict: 'id' });
@@ -330,7 +317,6 @@ const Settings = () => {
         console.warn("Supabase upsert warning:", error.message);
       }
 
-      // 2. Client Cache Fallback Sync
       const masterLocal = {
         general: generalConfig,
         academic: academicConfig,
@@ -353,7 +339,6 @@ const Settings = () => {
     }
   };
 
-  // --- DISCARD / RESET HANDLER ---
   const handleDiscardChanges = async () => {
     showSuccess("Discarded uncommitted changes. Re-fetching committed record...");
     await fetchSettingsFromDatabase();
@@ -376,7 +361,7 @@ const Settings = () => {
   };
 
   const handleUpdateMasterPin = async () => {
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
     
     if (pinForm.currentPin !== storedAdminPass) {
       showError("Current Admin PIN/Password is incorrect.");
@@ -441,7 +426,6 @@ const Settings = () => {
   const strength = useMemo(() => getPasswordStrength(pinForm.newPin), [pinForm.newPin]);
   const isPinMatching = pinForm.confirmPin.length > 0 && pinForm.newPin === pinForm.confirmPin;
 
-  // --- RENDER 1: ADMIN AUTHORIZATION LOCK GATE ---
   if (!isAuthorized) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
@@ -519,7 +503,7 @@ const Settings = () => {
 
             <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
               <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Admin Security Notice</p>
-              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">admin123</strong></p>
+              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">NewSecurePassword123!</strong></p>
             </div>
           </CardContent>
         </Card>
@@ -536,11 +520,9 @@ const Settings = () => {
     );
   }
 
-  // --- RENDER 2: UNLOCKED SYSTEM CONFIGURATION CONSOLE ---
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       
-      {/* Top Action Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
@@ -591,7 +573,6 @@ const Settings = () => {
         </div>
       </div>
 
-      {/* Main Tabs Navigation */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex overflow-x-auto">
           <TabsTrigger value="general" className="rounded-xl px-8 h-full font-bold text-xs">General</TabsTrigger>
@@ -600,7 +581,6 @@ const Settings = () => {
           <TabsTrigger value="security" className="rounded-xl px-8 h-full font-bold text-xs">Security</TabsTrigger>
         </TabsList>
 
-        {/* ==================== TAB 1: GENERAL CONFIGURATION ==================== */}
         <TabsContent value="general" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
@@ -657,7 +637,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* ==================== TAB 2: ACADEMIC SETUP ==================== */}
         <TabsContent value="academic" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b">
@@ -710,7 +689,6 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
-        {/* ==================== TAB 3: USERS & ROLES ==================== */}
         <TabsContent value="roles" className="space-y-6">
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
@@ -806,10 +784,8 @@ const Settings = () => {
           </div>
         </TabsContent>
 
-        {/* ==================== TAB 4: SECURITY & SYSTEM PARAMETERS ==================== */}
         <TabsContent value="security" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
           
-          {/* SECTION 1: Administrative Master Password / PIN Settings */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
@@ -829,7 +805,6 @@ const Settings = () => {
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 
-                {/* Current PIN */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Current Admin PIN / Password</Label>
                   <div className="relative">
@@ -850,7 +825,6 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* New PIN & Strength Meter */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Admin PIN / Password</Label>
                   <div className="relative">
@@ -870,7 +844,6 @@ const Settings = () => {
                     </button>
                   </div>
 
-                  {/* Password Strength Meter */}
                   {pinForm.newPin && (
                     <div className="space-y-1 pt-1">
                       <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
@@ -884,7 +857,6 @@ const Settings = () => {
                   )}
                 </div>
 
-                {/* Confirm PIN & Matching Indicator */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Confirm New PIN / Password</Label>
                   <div className="relative">
@@ -904,7 +876,6 @@ const Settings = () => {
                     </button>
                   </div>
 
-                  {/* Validation Matching Text */}
                   {pinForm.confirmPin && (
                     <p className={`text-xs font-bold flex items-center gap-1 ${isPinMatching ? 'text-emerald-600' : 'text-rose-600'}`}>
                       {isPinMatching ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
@@ -927,7 +898,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* SECTION 2: Geofence & Location Security Rules */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
@@ -940,7 +910,6 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Master Geofence Toggle */}
               <div className="flex items-center gap-3 bg-indigo-50/60 p-3 px-5 rounded-2xl border border-indigo-100">
                 <Label htmlFor="geofence-master-toggle" className="text-xs font-black uppercase tracking-widest text-indigo-900 cursor-pointer">
                   Geofence Enforcement
@@ -955,8 +924,6 @@ const Settings = () => {
 
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
-                {/* Latitude Input */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Target School Latitude</Label>
                   <Input 
@@ -972,7 +939,6 @@ const Settings = () => {
                   />
                 </div>
 
-                {/* Longitude Input */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Target School Longitude</Label>
                   <Input 
@@ -988,7 +954,6 @@ const Settings = () => {
                   />
                 </div>
 
-                {/* Auto-detect Location Button */}
                 <div className="space-y-2 flex flex-col justify-end">
                   <Button
                     type="button"
@@ -1003,7 +968,6 @@ const Settings = () => {
                 </div>
               </div>
 
-              {/* Allowed Radius Limit */}
               <div className="space-y-4 pt-4 border-t">
                 <div className="flex justify-between items-center">
                   <div>
@@ -1024,7 +988,6 @@ const Settings = () => {
                   </div>
                 </div>
 
-                {/* Range Slider for Radius */}
                 <input 
                   type="range"
                   min="50"
@@ -1039,7 +1002,6 @@ const Settings = () => {
                 />
               </div>
 
-              {/* Dev / Localhost Bypass Toggle */}
               <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-2xl flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <AlertTriangle className="text-amber-600 shrink-0" size={20} />
@@ -1056,7 +1018,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* SECTION 3: Session & Access Security */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
             <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">
@@ -1072,8 +1033,6 @@ const Settings = () => {
 
             <CardContent className="px-0 pt-6 space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                
-                {/* Idle Session Timeout */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Idle Session Timeout</Label>
                   <Select 
@@ -1095,7 +1054,6 @@ const Settings = () => {
                   </Select>
                 </div>
 
-                {/* Force First Login Password Change */}
                 <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
                   <div>
                     <p className="font-bold text-slate-900 text-sm">Force First-Login Password Reset</p>
@@ -1113,7 +1071,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* SECTION 4: System Security Audit Log (Read-Only) */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30 flex flex-row items-center justify-between">
               <div className="flex items-center gap-3">

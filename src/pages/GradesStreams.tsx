@@ -40,7 +40,6 @@ const GradesStreams = () => {
     localStorage.setItem('munyaka_grades', JSON.stringify(grades));
   }, [grades]);
 
-  // Logical sorting for grades
   const sortedGrades = useMemo(() => {
     return [...grades].sort((a, b) => {
       const categories = { 'Pre-Primary': 1, 'Primary': 2, 'Junior School': 3 };
@@ -60,7 +59,6 @@ const GradesStreams = () => {
     });
   }, [grades]);
 
-  // Helper function to normalize grade names for duplicate detection (e.g., "Grade 1" vs "1" or "grade 1")
   const normalizeGradeKey = (name: string) => {
     return name.trim().toLowerCase().replace(/^grade\s*/i, '');
   };
@@ -72,7 +70,6 @@ const GradesStreams = () => {
       return;
     }
 
-    // Normalized duplicate check for Grades
     const normalizedKey = normalizeGradeKey(trimmedName);
     const exists = grades.some(g => normalizeGradeKey(g.name) === normalizedKey);
     
@@ -110,7 +107,6 @@ const GradesStreams = () => {
       return;
     }
 
-    // Find parent grade and check for duplicate stream within it
     const parentGrade = grades.find(g => g.id === selectedGradeId);
     if (parentGrade) {
       const streamExists = parentGrade.streams.some(
@@ -161,8 +157,7 @@ const GradesStreams = () => {
     setIsVerifying(true);
     await new Promise(r => setTimeout(r, 800));
 
-    // Get the current set password from storage to match AuthContext security
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
 
     if (authPassword === currentAdminPass) {
       executeDelete();

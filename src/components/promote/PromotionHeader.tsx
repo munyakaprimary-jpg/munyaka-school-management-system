@@ -33,11 +33,9 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
     setIsVerifying(true);
     setAuthError('');
 
-    // Simulate async verification
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Get the actual set password from storage to match current super admin credentials
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
 
     if (password === currentAdminPass) {
       setIsAuthModalOpen(false);

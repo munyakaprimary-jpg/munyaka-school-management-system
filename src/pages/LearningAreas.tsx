@@ -44,7 +44,6 @@ const LearningAreas = () => {
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
-  // Admin auth state for deletion and editing
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -63,7 +62,6 @@ const LearningAreas = () => {
     localStorage.setItem('munyaka_learning_areas', JSON.stringify(clusters));
   }, [clusters]);
 
-  // Prevent duplicate learning area names within the same cluster
   const isNameUniqueInCluster = (clusterId: string, proposedName: string, excludeId?: string) => {
     const selectedCluster = clusters.find(c => c.id === clusterId);
     if (!selectedCluster) return true;
@@ -155,10 +153,9 @@ const LearningAreas = () => {
     setIsVerifying(true);
     setAuthError("");
     
-    // Simulate async verification
     await new Promise(r => setTimeout(r, 600));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
 
     if (authPassword === currentAdminPass) {
       if (actionToPerform === 'delete' && targetLearningArea) {
@@ -365,7 +362,7 @@ const LearningAreas = () => {
         </div>
       </Modal>
 
-      {/* Admin Auth Modal for Deletion and Editing */}
+      {/* Admin Auth Modal */}
       <Modal
         isOpen={isAuthOpen}
         onClose={handleAuthClose}

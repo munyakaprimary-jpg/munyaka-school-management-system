@@ -38,24 +38,22 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock Users Database (Simulating a DB)
+// Updated Admin Credentials
 const DEFAULT_ADMIN = {
-  email: 'admin@munyaka.sc.ke',
-  password: 'admin123',
+  email: 'newemail@munyaka.sc.ke',
+  password: 'NewSecurePassword123!',
   user: {
     id: 'admin-001',
     name: 'System Admin',
-    email: 'admin@munyaka.sc.ke',
+    email: 'newemail@munyaka.sc.ke',
     phone: '+254 700 000 000',
     role: 'super_admin' as UserRole,
     avatar: 'AD'
   }
 };
 
-// Simulated user storage (in a real app, this would be a database)
 const USERS_STORAGE_KEY = 'munyaka_users';
 
-// Helper to map staff systemRole to auth UserRole
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
     case 'head_teacher':
@@ -72,33 +70,29 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   }
 };
 
-// Initialize users storage with default admin and sync with pre-registered staff ledger
 const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
-  // 1. Ensure default admin is present
+  // Ensure default admin with updated credentials is generated & active
   const adminEmailKey = DEFAULT_ADMIN.email.toLowerCase();
-  if (!users[adminEmailKey]) {
-    users[adminEmailKey] = {
-      ...DEFAULT_ADMIN.user,
-      password: DEFAULT_ADMIN.password,
-      isActive: true,
-      emailConfirmed: true
-    };
-  }
+  users[adminEmailKey] = {
+    ...DEFAULT_ADMIN.user,
+    password: DEFAULT_ADMIN.password,
+    alternativePasswords: [DEFAULT_ADMIN.password],
+    isActive: true,
+    emailConfirmed: true
+  };
 
-  // 2. Fetch the current pre-registered staff ledger (from localStorage or mock database fallback)
+  // Sync pre-registered staff as valid default loggable users
   const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
   const staffLedger: PreRegisteredStaff[] = savedLedgerJson 
     ? JSON.parse(savedLedgerJson) 
     : INITIAL_PRE_REGISTERED_STAFF;
 
-  // 3. Sync all pre-registered staff as valid default loggable users
   staffLedger.forEach((staff) => {
     const emailKey = staff.email.toLowerCase();
     
-    // We update or insert the credentials
     users[emailKey] = {
       id: staff.id,
       name: staff.fullName,
@@ -106,10 +100,9 @@ const initializeUsersStorage = () => {
       phone: staff.phone,
       role: mapSystemRoleToUserRole(staff.systemRole),
       avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-      // Pre-registered staff can log in using either their temporary access key OR their national ID, or default admin123
       password: staff.tempAccessCode, 
-      alternativePasswords: [staff.nationalId, 'admin123'],
-      isActive: staff.status !== 'Suspended', // Active if not suspended
+      alternativePasswords: [staff.nationalId, 'NewSecurePassword123!'],
+      isActive: staff.status !== 'Suspended',
       emailConfirmed: true
     };
   });
@@ -121,7 +114,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Initialize users storage on mount
   useEffect(() => {
     initializeUsersStorage();
     
@@ -135,17 +127,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, pass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Normalize email input
     const normalizedEmail = email.trim().toLowerCase();
     
-    // Always sync with the latest ledger on every login attempt to capture newly pre-registered staff dynamically
     initializeUsersStorage();
 
-    // Get users from storage
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
     const users = usersJson ? JSON.parse(usersJson) : {};
     
-    // Check if user exists and credentials match
     const foundUser = users[normalizedEmail];
     
     if (foundUser) {
@@ -154,13 +142,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(pass));
 
       if (isPasswordValid) {
-        // Check if user is active
         if (!foundUser.isActive) {
           showError("Your account is inactive. Please contact the administrator.");
           return false;
         }
         
-        // Check if email is confirmed
         if (!foundUser.emailConfirmed) {
           showError("Please confirm your email address.");
           return false;
@@ -186,20 +172,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (userData: RegisterData): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    // Normalize email
     const normalizedEmail = userData.email.trim().toLowerCase();
     
-    // Get users from storage
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
     const users = usersJson ? JSON.parse(usersJson) : {};
     
-    // Check if user already exists
     if (users[normalizedEmail]) {
       showError("A user with this email already exists.");
       return false;
     }
     
-    // Create new user
     const newUserId = `user-${Date.now()}`;
     const newUser = {
       id: newUserId,
@@ -215,7 +197,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       createdAt: new Date().toISOString()
     };
     
-    // Save user to storage
     users[normalizedEmail] = newUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
@@ -229,7 +210,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
     
-    // If email changed, update the login credential
     if (data.email) {
       const normalizedEmail = data.email.trim().toLowerCase();
       localStorage.setItem('munyaka_admin_email', normalizedEmail);
@@ -238,7 +218,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
     
     if (oldPass !== storedPass) {
       showError("Incorrect current password");

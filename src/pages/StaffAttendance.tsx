@@ -42,7 +42,6 @@ const StaffAttendancePage = () => {
     weeklyTrend 
   } = useStaffAttendance(location);
 
-  // Security & Config State
   const [isAuthOpen, setIsAuthOpen] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
@@ -82,10 +81,9 @@ const StaffAttendancePage = () => {
     setIsVerifying(true);
     setAuthError("");
     
-    // Simulate verification delay
     await new Promise(r => setTimeout(r, 800));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'NewSecurePassword123!';
 
     if (authPassword === currentAdminPass) {
       setIsAuthOpen(false);
@@ -109,7 +107,6 @@ const StaffAttendancePage = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
@@ -130,7 +127,6 @@ const StaffAttendancePage = () => {
         </div>
       </div>
 
-      {/* Overview Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-white rounded-3xl">
