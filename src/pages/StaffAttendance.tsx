@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -8,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from "@/components/ui/Modal";
-import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map } from 'lucide-react';
+import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, UserPlus, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -18,6 +19,7 @@ import { showSuccess } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 
 const StaffAttendancePage = () => {
+  const navigate = useNavigate();
   const { location } = useGeolocation();
   const { 
     masterRegister, 
@@ -37,7 +39,7 @@ const StaffAttendancePage = () => {
     { day: "Fri", rate: 91 },
   ];
 
-  const totalStaffCount = Object.keys(masterRegister).length || 4;
+  const totalStaffCount = Object.keys(masterRegister).length;
   const presentStaffCount = Object.values(masterRegister).filter(
     s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
   ).length;
@@ -67,13 +69,21 @@ const StaffAttendancePage = () => {
           </div>
         </div>
 
-        <Button 
-          variant="outline" 
-          className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600"
-          onClick={() => setIsConfigOpen(true)}
-        >
-          <Settings2 size={18} /> Geofence Settings
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600"
+            onClick={() => setIsConfigOpen(true)}
+          >
+            <Settings2 size={18} /> Geofence Settings
+          </Button>
+          <Button 
+            className="rounded-xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-black"
+            onClick={() => navigate('/staff/pre-registration')}
+          >
+            <UserPlus size={18} /> Register New Staff
+          </Button>
+        </div>
       </div>
 
       {/* Overview Stats Cards */}
@@ -93,55 +103,71 @@ const StaffAttendancePage = () => {
         ))}
       </div>
 
-      <div className="space-y-8">
-        {/* Attendance Trend Chart */}
-        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-          <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
-            <div>
-              <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
-              <p className="text-xs text-slate-400">Aggregated turn-out percentages for current term</p>
+      {totalStaffCount > 0 ? (
+        <div className="space-y-8">
+          {/* Attendance Trend Chart */}
+          <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+            <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
+                <p className="text-xs text-slate-400">Aggregated turn-out percentages for current term</p>
+              </div>
+              <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
+                <TrendingUp size={12} className="mr-1" /> Live Analytics
+              </Badge>
             </div>
-            <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
-              <TrendingUp size={12} className="mr-1" /> Live Analytics
-            </Badge>
-          </div>
-          <CardContent className="h-[240px] w-full pt-4">
-            <ResponsiveContainer width="100%" height={200}>
-              <BarChart data={attendanceTrendData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip 
-                  cursor={{fill: '#f8fafc'}}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const data = payload[0].payload;
-                      return (
-                        <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
-                          <p className="text-base font-black text-indigo-600">{data.rate}% Turnout</p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
-                  {attendanceTrendData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill="#6366f1" />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
+            <CardContent className="h-[240px] w-full pt-4">
+              <ResponsiveContainer width="100%" height={200}>
+                <BarChart data={attendanceTrendData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip 
+                    cursor={{fill: '#f8fafc'}}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const data = payload[0].payload;
+                        return (
+                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
+                            <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
+                            <p className="text-base font-black text-indigo-600">{data.rate}% Turnout</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
+                    {attendanceTrendData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill="#6366f1" />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
 
-        {/* Master Register View */}
-        <StaffAttendanceRegister
-          masterRegister={masterRegister}
-          onAdminMark={adminMarkStaff}
-        />
-      </div>
+          {/* Master Register View */}
+          <StaffAttendanceRegister
+            masterRegister={masterRegister}
+            onAdminMark={adminMarkStaff}
+          />
+        </div>
+      ) : (
+        <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
+          <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
+            <Users size={40} />
+          </div>
+          <h3 className="text-xl font-bold text-slate-900 mb-2">No staff records found</h3>
+          <p className="text-slate-400 max-w-xs mx-auto mb-6">Register your staff members to start tracking their daily attendance.</p>
+          <Button 
+            className="rounded-2xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black"
+            onClick={() => navigate('/staff/pre-registration')}
+          >
+            Go to Registration
+          </Button>
+        </div>
+      )}
 
       {/* Geofence Configuration Modal */}
       <Modal

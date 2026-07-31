@@ -26,8 +26,8 @@ export const GRADES_DATA: Grade[] = [
     name: "PP1",
     category: "Pre-Primary",
     streams: [
-      { id: "spp1a", name: "Yellow", teacher: "Jane Mwangi", studentsCount: 30 },
-      { id: "spp1b", name: "Green", teacher: "Peter Kamau", studentsCount: 28 }
+      { id: "spp1a", name: "Yellow", teacher: "Unassigned", studentsCount: 30 },
+      { id: "spp1b", name: "Green", teacher: "Unassigned", studentsCount: 28 }
     ]
   },
   {
@@ -35,8 +35,8 @@ export const GRADES_DATA: Grade[] = [
     name: "PP2",
     category: "Pre-Primary",
     streams: [
-      { id: "spp2a", name: "Yellow", teacher: "Jane Mwangi", studentsCount: 32 },
-      { id: "spp2b", name: "Green", teacher: "Sarah Chebet", studentsCount: 29 }
+      { id: "spp2a", name: "Yellow", teacher: "Unassigned", studentsCount: 32 },
+      { id: "spp2b", name: "Green", teacher: "Unassigned", studentsCount: 29 }
     ]
   },
   {
@@ -44,8 +44,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 1",
     category: "Primary",
     streams: [
-      { id: "s1", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-      { id: "s2", name: "Green", teacher: "Peter Kamau", studentsCount: 38 }
+      { id: "s1", name: "Blue", teacher: "Unassigned", studentsCount: 42 },
+      { id: "s2", name: "Green", teacher: "Unassigned", studentsCount: 38 }
     ]
   },
   {
@@ -53,8 +53,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 4",
     category: "Primary",
     streams: [
-      { id: "s3", name: "Blue", teacher: "Jane Mwangi", studentsCount: 42 },
-      { id: "s4", name: "Green", teacher: "Sarah Chebet", studentsCount: 38 }
+      { id: "s3", name: "Blue", teacher: "Unassigned", studentsCount: 42 },
+      { id: "s4", name: "Green", teacher: "Unassigned", studentsCount: 38 }
     ]
   },
   {
@@ -62,8 +62,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 5",
     category: "Primary",
     streams: [
-      { id: "s5", name: "Alpha", teacher: "Peter Kamau", studentsCount: 40 },
-      { id: "s6", name: "Beta", teacher: "Sarah Chebet", studentsCount: 36 }
+      { id: "s5", name: "Alpha", teacher: "Unassigned", studentsCount: 40 },
+      { id: "s6", name: "Beta", teacher: "Unassigned", studentsCount: 36 }
     ]
   },
   {
@@ -71,8 +71,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 7",
     category: "Junior School",
     streams: [
-      { id: "s7", name: "Alpha", teacher: "Peter Kamau", studentsCount: 45 },
-      { id: "s8", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
+      { id: "s7", name: "Alpha", teacher: "Unassigned", studentsCount: 45 },
+      { id: "s8", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
     ]
   },
   {
@@ -80,8 +80,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 8",
     category: "Junior School",
     streams: [
-      { id: "s9", name: "Alpha", teacher: "John Onyango", studentsCount: 35 },
-      { id: "s10", name: "Beta", teacher: "Sarah Chebet", studentsCount: 31 }
+      { id: "s9", name: "Alpha", teacher: "Unassigned", studentsCount: 35 },
+      { id: "s10", name: "Beta", teacher: "Unassigned", studentsCount: 31 }
     ]
   },
   {
@@ -89,8 +89,8 @@ export const GRADES_DATA: Grade[] = [
     name: "Grade 9",
     category: "Junior School",
     streams: [
-      { id: "s11", name: "Alpha", teacher: "John Onyango", studentsCount: 30 },
-      { id: "s12", name: "Beta", teacher: "Sarah Chebet", studentsCount: 28 }
+      { id: "s11", name: "Alpha", teacher: "Unassigned", studentsCount: 30 },
+      { id: "s12", name: "Beta", teacher: "Unassigned", studentsCount: 28 }
     ]
   }
 ];
@@ -122,17 +122,12 @@ export const INVENTORY = [
 ];
 
 export const ASSET_LOGS = [
-  { id: 1, item: "Science Kit #04", issuedTo: "Jane Mwangi", date: "Oct 18, 2024", status: "In Use" },
+  { id: 1, item: "Science Kit #04", issuedTo: "Unassigned", date: "Oct 18, 2024", status: "In Use" },
   { id: 2, item: "Music Keyboard #01", issuedTo: "Brian Kiptoo", date: "Oct 17, 2024", status: "Returned" },
   { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", status: "In Use" },
 ];
 
-export const STAFF = [
-  { id: "1", name: "Jane Mwangi", role: "Class Teacher", subjects: ["Math", "Science"], status: "Active", joined: "Jan 2020", id_no: "28374615", phone: "+254 700 111 222", email: "j.mwangi@munyaka.sc.ke" },
-  { id: "2", name: "Peter Kamau", role: "Senior Teacher", subjects: ["English", "CRE"], status: "Active", joined: "May 2018", id_no: "24556122", phone: "+254 700 333 444", email: "p.kamau@munyaka.sc.ke" },
-  { id: "3", name: "Sarah Chebet", role: "Junior School Lead", subjects: ["Pre-Tech", "Agri"], status: "On Leave", joined: "Feb 2021", id_no: "30112233", phone: "+254 700 555 666", email: "s.chebet@munyaka.sc.ke" },
-  { id: "4", name: "John Onyango", role: "Head Teacher", subjects: ["Administration"], status: "Active", joined: "Jan 2015", id_no: "12334455", phone: "+254 700 777 888", email: "headteacher@munyaka.sc.ke" },
-];
+export const STAFF = []; // Cleared mock staff
 
 export const EVENTS = [
   { id: 1, title: "Staff Meeting", date: "2024-10-25", time: "02:00 PM", type: "Internal" },

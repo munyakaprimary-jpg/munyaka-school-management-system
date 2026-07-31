@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { AttendanceStatus, StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
 import { showSuccess, showError } from '@/utils/toast';
-import { STAFF } from '@/lib/mock-data';
+import { PreRegisteredStaff } from '@/types/staff-access';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
 const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
@@ -53,13 +53,16 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       }
     }
 
-    // Ensure all staff from STAFF mock data are populated with default records
-    STAFF.forEach(staff => {
+    // Dynamic Fetch: Populate register from the actual staff ledger
+    const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
+    const staffLedger: PreRegisteredStaff[] = savedLedgerJson ? JSON.parse(savedLedgerJson) : [];
+
+    staffLedger.forEach(staff => {
       if (!currentMaster[staff.id]) {
         currentMaster[staff.id] = {
           staffId: staff.id,
-          staffName: staff.name,
-          role: staff.role,
+          staffName: staff.fullName,
+          role: staff.systemRole.replace('_', ' '),
           date: todayStr,
         };
       }
@@ -73,7 +76,6 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     fetchMasterRegister();
   }, [fetchPersonalAttendance, fetchMasterRegister]);
 
-  // Self-Marking Attendance Handler
   const selfMarkAttendance = async (
     session: 'morning' | 'afternoon',
     status: AttendanceStatus = 'present',
@@ -84,16 +86,14 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       return false;
     }
 
-    // Geofence check
     if (currentLocation && !isWithinGeofence(currentLocation.lat, currentLocation.lng)) {
-      showError('Geofence Error: You must be within 100m of Munyaka School to clock in/out.');
+      showError('Geofence Error: You must be within school grounds to mark attendance.');
       return false;
     }
 
     setLoading(true);
     const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-    // Update Personal Log
     const updatedPersonal: Record<string, StudentAttendance> = {
       ...personalRecords,
       [date]: {
@@ -104,7 +104,6 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     setPersonalRecords(updatedPersonal);
     localStorage.setItem(personalKey, JSON.stringify(updatedPersonal));
 
-    // Update Master Register
     const currentMaster = { ...masterRegister };
     const staffRecord = currentMaster[user.id] || {
       staffId: user.id,
@@ -114,47 +113,20 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     };
 
     if (session === 'morning') {
-      staffRecord.morning = {
-        status,
-        time: currentTimeStr,
-        verifiedLat: currentLocation?.lat,
-        verifiedLng: currentLocation?.lng
-      };
+      staffRecord.morning = { status, time: currentTimeStr };
     } else {
-      staffRecord.afternoon = {
-        status,
-        time: currentTimeStr,
-        verifiedLat: currentLocation?.lat,
-        verifiedLng: currentLocation?.lng
-      };
+      staffRecord.afternoon = { status, time: currentTimeStr };
     }
 
     currentMaster[user.id] = staffRecord;
     setMasterRegister(currentMaster);
     localStorage.setItem(masterKey, JSON.stringify(currentMaster));
 
-    // Attempt Supabase Sync
-    try {
-      await supabase
-        .from('staff_attendance')
-        .upsert({
-          staff_id: user.id,
-          date,
-          status,
-          [session === 'morning' ? 'arrival_time' : 'departure_time']: new Date().toISOString(),
-          verified_lat: currentLocation?.lat,
-          verified_lng: currentLocation?.lng,
-        });
-    } catch (err) {
-      console.log('Supabase sync bypassed, attendance recorded locally.');
-    }
-
-    showSuccess(`Successfully ${session === 'morning' ? 'Clocked In' : 'Clocked Out'} at ${currentTimeStr}`);
+    showSuccess(`Successfully Recorded at ${currentTimeStr}`);
     setLoading(false);
     return true;
   };
 
-  // Admin Override Handler
   const adminMarkStaff = (
     staffId: string,
     session: 'morning' | 'afternoon',
@@ -162,26 +134,17 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
   ) => {
     const currentTimeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     const currentMaster = { ...masterRegister };
-    const staffObj = STAFF.find(s => s.id === staffId);
     
-    const staffRecord = currentMaster[staffId] || {
-      staffId,
-      staffName: staffObj?.name || 'Staff Member',
-      role: staffObj?.role || 'Teacher',
-      date: todayStr,
-    };
-
-    if (session === 'morning') {
-      staffRecord.morning = { status, time: currentTimeStr };
-    } else {
-      staffRecord.afternoon = { status, time: currentTimeStr };
+    if (currentMaster[staffId]) {
+      if (session === 'morning') {
+        currentMaster[staffId].morning = { status, time: currentTimeStr };
+      } else {
+        currentMaster[staffId].afternoon = { status, time: currentTimeStr };
+      }
+      setMasterRegister(currentMaster);
+      localStorage.setItem(masterKey, JSON.stringify(currentMaster));
+      showSuccess(`Updated attendance for ${currentMaster[staffId].staffName}`);
     }
-
-    currentMaster[staffId] = staffRecord;
-    setMasterRegister(currentMaster);
-    localStorage.setItem(masterKey, JSON.stringify(currentMaster));
-
-    showSuccess(`Updated attendance for ${staffRecord.staffName}`);
   };
 
   return {
