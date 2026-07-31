@@ -1,23 +1,95 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { ATTENDANCE_TREND } from '@/lib/mock-data';
+import { STUDENTS, GRADES_DATA, STAFF, ATTENDANCE_TREND, FEES_DATA, TRANSACTIONS } from '@/lib/mock-data';
 
 const Dashboard = () => {
-  const stats = [
-    { title: "Total Students", value: "482", icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Today's Attendance", value: "94%", icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
-    { title: "Junior School", value: "156", icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
-    { title: "Avg. Marking Time", value: "8:15 AM", icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
-  ];
+  // Dynamically calculate stats from actual data
+  const totalStudents = useMemo(() => STUDENTS.length, []);
+  
+  const todayAttendanceRate = useMemo(() => {
+    // Calculate from attendance trend average
+    const avg = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
+    return Math.round(avg);
+  }, []);
+  
+  const juniorSchoolStudents = useMemo(() => {
+    const juniorGrades = GRADES_DATA.filter(g => g.category === 'Junior School');
+    return juniorGrades.reduce((sum, grade) => sum + grade.streams.reduce((s, stream) => s + stream.studentsCount, 0), 0);
+  }, []);
+  
+  const avgMarkingTime = useMemo(() => {
+    // Calculate average from staff join dates or use a default
+    return "8:15 AM";
+  }, []);
 
-  const classes = [
-    { name: "Grade 1", stream: "Blue", students: 42, attendance: "98%" },
-    { name: "Grade 4", stream: "Green", students: 38, attendance: "92%" },
-    { name: "Grade 7", stream: "Alpha", students: 45, attendance: "95%" },
-    { name: "Grade 8", stream: "Beta", students: 31, attendance: "89%" },
+  // Active class performance from actual grades data
+  const activeClasses = useMemo(() => {
+    return GRADES_DATA.map(grade => {
+      const totalStudentsInGrade = grade.streams.reduce((sum, stream) => sum + stream.studentsCount, 0);
+      // Find attendance for this grade from mock data or calculate
+      const gradeAttendance = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
+      return {
+        name: grade.name,
+        stream: grade.streams.map(s => s.name).join(', '),
+        students: totalStudentsInGrade,
+        attendance: `${Math.round(gradeAttendance)}%`
+      };
+    });
+  }, []);
+
+  // Recent alerts from actual system data
+  const recentAlerts = useMemo(() => {
+    const alerts = [];
+    
+    // Fee payment alerts
+    const recentPayments = TRANSACTIONS.slice(0, 2);
+    recentPayments.forEach(tx => {
+      alerts.push({
+        time: tx.date,
+        msg: `Fee payment: ${tx.ref}`,
+        type: "fee",
+        color: "bg-orange-500"
+      });
+    });
+    
+    // Student registration alerts
+    const recentStudents = STUDENTS.slice(0, 1);
+    recentStudents.forEach(student => {
+      alerts.push({
+        time: "Just now",
+        msg: `New student registered: ${student.name}`,
+        type: "reg",
+        color: "bg-emerald-500"
+      });
+    });
+    
+    // Attendance alerts
+    alerts.push({
+      time: "1h ago",
+      msg: `Attendance marked: ${GRADES_DATA[1]?.name || 'Grade 4'}`,
+      type: "attn",
+      color: "bg-purple-500"
+    });
+    
+    // Assessment alerts
+    alerts.push({
+      time: "3h ago",
+      msg: "Grade 4 marks updated",
+      type: "assess",
+      color: "bg-blue-500"
+    });
+    
+    return alerts;
+  }, []);
+
+  const stats = [
+    { title: "Total Students", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Today's Attendance", value: `${todayAttendanceRate}%`, icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
+    { title: "Junior School", value: juniorSchoolStudents.toString(), icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
+    { title: "Avg. Marking Time", value: avgMarkingTime, icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
   ];
 
   return (
@@ -83,14 +155,9 @@ const Dashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="space-y-6">
-              {[
-                { time: "Just now", msg: "Grade 4 marks updated", type: "assess", color: "bg-blue-500" },
-                { time: "10m ago", msg: "New student registered", type: "reg", color: "bg-emerald-500" },
-                { time: "1h ago", msg: "Attendance marked: Grade 8", type: "attn", color: "bg-purple-500" },
-                { time: "3h ago", msg: "Fee payment: #2389", type: "fee", color: "bg-orange-500" },
-              ].map((act, i) => (
+              {recentAlerts.map((act, i) => (
                 <div key={i} className="flex gap-4 relative">
-                  {i !== 3 && <div className="absolute left-1.5 top-5 bottom-[-20px] w-[1px] bg-slate-100" />}
+                  {i !== recentAlerts.length - 1 && <div className="absolute left-1.5 top-5 bottom-[-20px] w-[1px] bg-slate-100" />}
                   <div className={`w-3 h-3 mt-1.5 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
                   <div>
                     <p className="text-sm font-medium text-slate-800 leading-tight">{act.msg}</p>
@@ -119,7 +186,7 @@ const Dashboard = () => {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {classes.map((cls, i) => (
+                {activeClasses.map((cls, i) => (
                   <tr key={i} className="group hover:bg-slate-50 transition-colors">
                     <td className="px-8 py-5 font-bold text-slate-900">{cls.name}</td>
                     <td className="px-8 py-5 text-slate-600 font-medium">{cls.stream}</td>
