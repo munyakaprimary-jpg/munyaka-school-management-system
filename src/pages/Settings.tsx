@@ -41,7 +41,12 @@ import {
   Clock,
   History,
   AlertTriangle,
-  Monitor
+  Monitor,
+  Users as UsersIcon,
+  ShieldAlert,
+  UserCheck,
+  UserCog,
+  CheckCircle2
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -51,6 +56,7 @@ import { cn } from '@/lib/utils';
 const SETTINGS_STORAGE_KEY = 'munyaka_system_config';
 const ACADEMIC_STORAGE_KEY = 'munyaka_academic_config';
 const SECURITY_STORAGE_KEY = 'munyaka_security_config';
+const ROLES_STORAGE_KEY = 'munyaka_roles_config';
 
 const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
@@ -96,7 +102,16 @@ const Settings = () => {
     ]
   });
 
-  // 3. Security Settings State
+  // 3. Roles & Permissions State
+  const [rolesConfig, setRolesConfig] = useState([
+    { id: 'super_admin', name: 'Super Admin', users: 1, permissions: ['All Access', 'System Config', 'Financials'], color: 'text-rose-600', bg: 'bg-rose-50' },
+    { id: 'head_teacher', name: 'Head Teacher', users: 1, permissions: ['Manage Staff', 'View All Marks', 'Reports'], color: 'text-purple-600', bg: 'bg-purple-50' },
+    { id: 'bursar', name: 'Bursar', users: 1, permissions: ['Manage Fees', 'Financial Reports'], color: 'text-amber-600', bg: 'bg-amber-50' },
+    { id: 'teacher', name: 'Class Teacher', users: 12, permissions: ['Mark Attendance', 'Enter Marks', 'Student Profiles'], color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { id: 'student', name: 'Student / Parent', users: 450, permissions: ['View Results', 'View Fees', 'Notice Board'], color: 'text-emerald-600', bg: 'bg-emerald-50' },
+  ]);
+
+  // 4. Security Settings State
   const [securityConfig, setSecurityConfig] = useState({
     geofenceEnabled: true,
     lat: 0.5304,
@@ -118,10 +133,12 @@ const Settings = () => {
     const savedGeneral = localStorage.getItem(SETTINGS_STORAGE_KEY);
     const savedAcademic = localStorage.getItem(ACADEMIC_STORAGE_KEY);
     const savedSecurity = localStorage.getItem(SECURITY_STORAGE_KEY);
+    const savedRoles = localStorage.getItem(ROLES_STORAGE_KEY);
     
     if (savedGeneral) setGeneralConfig(prev => ({ ...prev, ...JSON.parse(savedGeneral) }));
     if (savedAcademic) setAcademicConfig(prev => ({ ...prev, ...JSON.parse(savedAcademic) }));
     if (savedSecurity) setSecurityConfig(prev => ({ ...prev, ...JSON.parse(savedSecurity) }));
+    if (savedRoles) setRolesConfig(JSON.parse(savedRoles));
   }, []);
 
   const handleSaveAll = async () => {
@@ -131,6 +148,7 @@ const Settings = () => {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(generalConfig));
     localStorage.setItem(ACADEMIC_STORAGE_KEY, JSON.stringify(academicConfig));
     localStorage.setItem(SECURITY_STORAGE_KEY, JSON.stringify(securityConfig));
+    localStorage.setItem(ROLES_STORAGE_KEY, JSON.stringify(rolesConfig));
     
     // Sync geofence specific helper lib
     setGeofenceConfig({
@@ -140,7 +158,7 @@ const Settings = () => {
     });
     
     setIsSaving(false);
-    showSuccess("Security settings and System configuration updated successfully!");
+    showSuccess("System configuration updated successfully!");
   };
 
   const handleUpdatePin = async () => {
@@ -153,7 +171,6 @@ const Settings = () => {
       return;
     }
     
-    // In a real app, verify current PIN against backend/hash
     const storedPin = localStorage.getItem('munyaka_admin_pass') || 'admin123';
     if (pinForm.currentPin !== storedPin) {
       showError("Incorrect current Admin PIN.");
@@ -204,7 +221,7 @@ const Settings = () => {
           <BackButton fallback="/" />
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">System Configuration</h1>
-            <p className="text-muted-foreground">Manage institutional identity and security policies.</p>
+            <p className="text-muted-foreground">Manage institutional identity, academic setup, and security policies.</p>
           </div>
         </div>
         <Button 
@@ -221,6 +238,7 @@ const Settings = () => {
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
           <TabsTrigger value="general" className="rounded-xl px-8 h-full font-bold text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">General</TabsTrigger>
           <TabsTrigger value="academic" className="rounded-xl px-8 h-full font-bold text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">Academic Setup</TabsTrigger>
+          <TabsTrigger value="roles" className="rounded-xl px-8 h-full font-bold text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">Users & Roles</TabsTrigger>
           <TabsTrigger value="security" className="rounded-xl px-8 h-full font-bold text-xs data-[state=active]:bg-indigo-600 data-[state=active]:text-white transition-all">Security & Access</TabsTrigger>
         </TabsList>
 
@@ -312,7 +330,6 @@ const Settings = () => {
 
         {/* --- ACADEMIC SETUP TAB --- */}
         <TabsContent value="academic" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
-          {/* Calendar & Term Section */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2 border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
               <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -388,7 +405,6 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* Grades & Streams Section */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center justify-between">
@@ -429,7 +445,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* CBC Grading Section */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
@@ -483,10 +498,94 @@ const Settings = () => {
           </Card>
         </TabsContent>
 
+        {/* --- USERS & ROLES TAB --- */}
+        <TabsContent value="roles" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <Card className="lg:col-span-3 border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+              <CardHeader className="p-8 border-b bg-slate-50/30">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+                    <UserCog size={24} />
+                  </div>
+                  <div>
+                    <CardTitle className="text-xl">System Roles & Access Policy</CardTitle>
+                    <CardDescription>Manage user categories and their functional access levels.</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="bg-slate-50/50 border-b">
+                      <tr>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">System Role</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Permissions / Capability</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Active Users</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {rolesConfig.map((role) => (
+                        <tr key={role.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className={cn("w-2 h-2 rounded-full", role.id === 'super_admin' ? 'bg-rose-500' : 'bg-indigo-500')} />
+                              <span className="font-bold text-slate-900">{role.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex flex-wrap gap-1.5">
+                              {role.permissions.map(p => (
+                                <Badge key={p} variant="outline" className="rounded-lg bg-white border-slate-200 text-slate-500 text-[10px] px-2 py-0.5">
+                                  {p}
+                                </Badge>
+                              ))}
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-center font-bold text-slate-600">{role.users}</td>
+                          <td className="px-8 py-5 text-right">
+                            <Button variant="ghost" size="sm" className="text-indigo-600 font-bold rounded-xl hover:bg-indigo-50">
+                              Edit Policy
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </CardContent>
+            </Card>
+
+            <div className="space-y-6">
+              <Card className="border-none shadow-sm rounded-[2.5rem] bg-indigo-900 text-white p-8 relative overflow-hidden">
+                <div className="relative z-10 space-y-4">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-white/10 rounded-lg"><ShieldAlert size={18} /></div>
+                    <h3 className="font-bold">Role Safeguard</h3>
+                  </div>
+                  <p className="text-xs text-indigo-200 leading-relaxed">
+                    Changing permissions for established roles may affect core functionality. All role modifications are logged in the security audit trail.
+                  </p>
+                  <Button className="w-full h-11 bg-white/10 hover:bg-white/20 border-white/10 text-white font-bold rounded-xl shadow-lg">
+                    Audit All Permissions
+                  </Button>
+                </div>
+                <div className="absolute right-[-20px] top-[-20px] opacity-10 pointer-events-none"><ShieldCheck size={120} /></div>
+              </Card>
+
+              <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mb-4">
+                  <UserCheck size={32} />
+                </div>
+                <h4 className="font-bold text-slate-900">Privilege Review</h4>
+                <p className="text-xs text-slate-400 mt-1">Next required audit: Jan 2025</p>
+              </Card>
+            </div>
+          </div>
+        </TabsContent>
+
         {/* --- SECURITY TAB --- */}
         <TabsContent value="security" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
-          
-          {/* 1. Administrative Master PIN Settings */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
@@ -550,7 +649,6 @@ const Settings = () => {
             </CardContent>
           </Card>
 
-          {/* 2. Geofence & Location Rules */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="lg:col-span-2 border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
               <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -616,9 +714,6 @@ const Settings = () => {
                         step={10}
                         className="py-4"
                       />
-                      <p className="text-[10px] text-slate-400 leading-relaxed font-medium">
-                        Increasing the radius makes check-in easier but less accurate for physical presence verification.
-                      </p>
                     </div>
 
                     <div className="p-4 bg-amber-50 rounded-2xl border border-amber-100 flex items-center justify-between">
@@ -684,7 +779,6 @@ const Settings = () => {
             </div>
           </div>
 
-          {/* 3. System Security Audit Log */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
@@ -725,11 +819,6 @@ const Settings = () => {
                     ))}
                   </tbody>
                 </table>
-              </div>
-              <div className="p-4 border-t text-center">
-                <Button variant="ghost" className="text-xs font-black uppercase text-indigo-600 tracking-widest">
-                  View Full Audit Trail <ChevronRight size={14} className="ml-1" />
-                </Button>
               </div>
             </CardContent>
           </Card>
