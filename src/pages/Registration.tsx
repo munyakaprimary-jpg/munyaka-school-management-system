@@ -5,13 +5,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast";
+import { useToast } from "@/hooks/use-toast";
 import { X } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { GRADES_DATA } from '@/lib/mock-data';
 
 const Registration = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  // Dynamically extract grade levels from GRADES_DATA (PP1, PP2, Grade 1-9)
+  const gradeLevels = GRADES_DATA.map(g => g.name);
+
+  // Dynamically extract unique streams from all grades
+  const streams = GRADES_DATA.reduce((acc, grade) => {
+    grade.streams.forEach(stream => {
+      if (!acc.includes(stream.name)) {
+        acc.push(stream.name);
+      }
+    });
+    return acc;
+  }, [] as string[]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -60,13 +74,11 @@ const Registration = () => {
               <Label>Grade Level</Label>
               <Select required>
                 <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select Grade" />
+                  <SelectValue placeholder="Select Grade Level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="pp1">PP1</SelectItem>
-                  <SelectItem value="pp2">PP2</SelectItem>
-                  {[1,2,3,4,5,6,7,8,9].map(n => (
-                    <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                  {gradeLevels.map(grade => (
+                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -78,10 +90,9 @@ const Registration = () => {
                   <SelectValue placeholder="Select Stream" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="blue">Blue</SelectItem>
-                  <SelectItem value="green">Green</SelectItem>
-                  <SelectItem value="yellow">Yellow</SelectItem>
-                  <SelectItem value="alpha">Alpha</SelectItem>
+                  {streams.map(stream => (
+                    <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -115,7 +126,7 @@ const Registration = () => {
             >
               Cancel
             </Button>
-            <Button type="submit" size="lg" className="rounded-xl px-8 shadow-lg shadow-primary/20 bg-indigo-600 hover:bg-indigo-700">
+            <Button type="submit" size="lg" className="rounded-xl px-8 h-14 bg-indigo-600 shadow-xl shadow-indigo-100">
               Register Student
             </Button>
           </div>
