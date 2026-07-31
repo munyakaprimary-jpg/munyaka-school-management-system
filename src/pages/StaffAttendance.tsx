@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import Modal from "@/components/ui/Modal";
-import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, Contact2, Search, Info } from 'lucide-react';
+import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map, Search, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -76,12 +76,6 @@ const StaffAttendancePage = () => {
             onClick={() => setIsConfigOpen(true)}
           >
             <Settings2 size={18} /> Geofence Settings
-          </Button>
-          <Button 
-            className="rounded-xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 font-black"
-            onClick={() => navigate('/staff')}
-          >
-            <Contact2 size={18} /> Manage Staff Directory
           </Button>
         </div>
       </div>
