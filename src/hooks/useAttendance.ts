@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
+import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 
 interface SessionAttendance {
   status: string;
@@ -12,26 +13,21 @@ interface StudentAttendance {
 }
 
 interface Student {
-  id: number;
+  id: string;
   name: string;
   assessment: string;
+  grade: string;
+  stream: string;
 }
 
 const STORAGE_KEY = 'munyaka_attendance_records';
-const DEFAULT_STUDENTS: Student[] = [
-  { id: 1, name: "Brian Kiptoo", assessment: "A827361" },
-  { id: 2, name: "Mary Atieno", assessment: "A827362" },
-  { id: 3, name: "Emmanuel Maina", assessment: "A827363" },
-  { id: 4, name: "Sheila Chepkoech", assessment: "A827364" },
-  { id: 5, name: "David Mutua", assessment: "A827365" },
-];
 
 // Generate default attendance with all students marked as Present
-const generateDefaultAttendance = (): Record<number, StudentAttendance> => {
-  const defaultRecord: Record<number, StudentAttendance> = {};
+const generateDefaultAttendance = (students: Student[]): Record<string, StudentAttendance> => {
+  const defaultRecord: Record<string, StudentAttendance> = {};
   const timestamp = format(new Date(), "HH:mm");
   
-  DEFAULT_STUDENTS.forEach(student => {
+  students.forEach(student => {
     defaultRecord[student.id] = {
       morning: { status: 'P', time: timestamp },
       afternoon: { status: 'P', time: timestamp }
@@ -41,12 +37,20 @@ const generateDefaultAttendance = (): Record<number, StudentAttendance> => {
   return defaultRecord;
 };
 
-export const useAttendance = () => {
-  const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
-  const [students] = useState<Student[]>(DEFAULT_STUDENTS);
+export const useAttendance = (selectedGrade: string, selectedStream: string) => {
+  const [markedStudents, setMarkedStudents] = useState<Record<string, StudentAttendance>>({});
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load saved attendance from localStorage on mount, or initialize with defaults
+  // Get filtered students based on selected grade and stream
+  const filteredStudents = useMemo(() => {
+    return STUDENTS.filter(s => {
+      const matchesGrade = !selectedGrade || s.grade === selectedGrade.replace(/[^0-9]/g, '');
+      const matchesStream = !selectedStream || s.stream === selectedStream;
+      return matchesGrade && matchesStream;
+    });
+  }, [selectedGrade, selectedStream]);
+
+  // Load saved attendance from localStorage on mount
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -55,28 +59,26 @@ export const useAttendance = () => {
         if (parsed && typeof parsed === 'object') {
           setMarkedStudents(parsed);
         } else {
-          // If parsed data is invalid, use defaults
-          setMarkedStudents(generateDefaultAttendance());
+          setMarkedStudents(generateDefaultAttendance(filteredStudents));
         }
       } catch (e) {
         console.error("Error loading saved attendance:", e);
-        setMarkedStudents(generateDefaultAttendance());
+        setMarkedStudents(generateDefaultAttendance(filteredStudents));
       }
     } else {
-      // No saved data - initialize with all students present
-      setMarkedStudents(generateDefaultAttendance());
+      setMarkedStudents(generateDefaultAttendance(filteredStudents));
     }
     setIsInitialized(true);
-  }, []);
+  }, [filteredStudents]);
 
-  // Persist attendance to localStorage whenever it changes (after initialization)
+  // Persist attendance to localStorage whenever it changes
   useEffect(() => {
     if (isInitialized && Object.keys(markedStudents).length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(markedStudents));
     }
   }, [markedStudents, isInitialized]);
 
-  const markAttendance = (id: number, session: 'morning' | 'afternoon', status: string) => {
+  const markAttendance = (id: string, session: 'morning' | 'afternoon', status: string) => {
     const timestamp = format(new Date(), "HH:mm");
     setMarkedStudents(prev => ({
       ...prev,
@@ -87,8 +89,10 @@ export const useAttendance = () => {
     }));
   };
 
-  const exportToCSV = (selectedGrade: string) => {
-    const gradeLabel = selectedGrade === "grade4" ? "Grade 4 - Blue" : "Grade 5 - Green";
+  const exportToCSV = () => {
+    const gradeObj = GRADES_DATA.find(g => g.id === selectedGrade);
+    const streamObj = gradeObj?.streams.find(s => s.id === selectedStream);
+    const gradeLabel = gradeObj ? `${gradeObj.name} - ${streamObj?.name || 'All Streams'}` : "All Grades";
     const currentDateStr = format(new Date(), "PP");
     
     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
@@ -105,7 +109,7 @@ export const useAttendance = () => {
       return "Not Marked";
     };
 
-    const rows = students.map(student => {
+    const rows = filteredStudents.map(student => {
       const record = markedStudents[student.id] || {};
       return [
         `"${student.name.replace(/"/g, '""')}"`,
@@ -140,7 +144,7 @@ export const useAttendance = () => {
   };
 
   return {
-    students,
+    students: filteredStudents,
     markedStudents,
     markAttendance,
     exportToCSV,
