@@ -3,31 +3,45 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { STUDENTS, GRADES_DATA, STAFF, ATTENDANCE_TREND, FEES_DATA, TRANSACTIONS } from '@/lib/mock-data';
+import { ATTENDANCE_TREND, FEES_DATA, TRANSACTIONS } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data'; // fallback
 
 const Dashboard = () => {
-  // Dynamically calculate stats from actual data
-  const totalStudents = useMemo(() => STUDENTS.length, []);
-  
+  // Load grades from localStorage (same as used in GradesStreams page)
+  const gradesFromStorage = useMemo(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    return saved ? JSON.parse(saved) : GRADES_DATA;
+  }, []);
+
+  // Dynamically calculate stats from actual grades data
+  const totalStudents = useMemo(() => {
+    return gradesFromStorage.reduce((sum, grade) => {
+      return sum + grade.streams.reduce((streamSum, stream) => streamSum + stream.studentsCount, 0);
+    }, 0);
+  }, [gradesFromStorage]);
+
+  const juniorSchoolStudents = useMemo(() => {
+    return gradesFromStorage
+      .filter(grade => grade.category === 'Junior School')
+      .reduce((sum, grade) => {
+        return sum + grade.streams.reduce((streamSum, stream) => streamSum + stream.studentsCount, 0);
+      }, 0);
+  }, [gradesFromStorage]);
+
   const todayAttendanceRate = useMemo(() => {
     // Calculate from attendance trend average
     const avg = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
     return Math.round(avg);
   }, []);
-  
-  const juniorSchoolStudents = useMemo(() => {
-    const juniorGrades = GRADES_DATA.filter(g => g.category === 'Junior School');
-    return juniorGrades.reduce((sum, grade) => sum + grade.streams.reduce((s, stream) => s + stream.studentsCount, 0), 0);
-  }, []);
-  
+
   const avgMarkingTime = useMemo(() => {
-    // Calculate average from staff join dates or use a default
+    // Keep as placeholder; could be calculated from something else if needed
     return "8:15 AM";
   }, []);
 
   // Active class performance from actual grades data
   const activeClasses = useMemo(() => {
-    return GRADES_DATA.map(grade => {
+    return gradesFromStorage.map(grade => {
       const totalStudentsInGrade = grade.streams.reduce((sum, stream) => sum + stream.studentsCount, 0);
       // Find attendance for this grade from mock data or calculate
       const gradeAttendance = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
@@ -38,7 +52,7 @@ const Dashboard = () => {
         attendance: `${Math.round(gradeAttendance)}%`
       };
     });
-  }, []);
+  }, [gradesFromStorage]);
 
   // Recent alerts from actual system data
   const recentAlerts = useMemo(() => {
@@ -55,21 +69,13 @@ const Dashboard = () => {
       });
     });
     
-    // Student registration alerts
-    const recentStudents = STUDENTS.slice(0, 1);
-    recentStudents.forEach(student => {
-      alerts.push({
-        time: "Just now",
-        msg: `New student registered: ${student.name}`,
-        type: "reg",
-        color: "bg-emerald-500"
-      });
-    });
+    // Student registration alerts - we don't have dynamic student data, so skip or use mock
+    // For now, we'll skip student registration alerts since we don't have dynamic student list
     
     // Attendance alerts
     alerts.push({
       time: "1h ago",
-      msg: `Attendance marked: ${GRADES_DATA[1]?.name || 'Grade 4'}`,
+      msg: `Attendance marked: ${gradesFromStorage[1]?.name || 'Grade 4'}`,
       type: "attn",
       color: "bg-purple-500"
     });
@@ -83,7 +89,7 @@ const Dashboard = () => {
     });
     
     return alerts;
-  }, []);
+  }, [gradesFromStorage]);
 
   const stats = [
     { title: "Total Students", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
