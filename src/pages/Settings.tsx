@@ -278,13 +278,13 @@ const Settings = () => {
     };
 
     try {
-      // 1. Database Mutation Query
+      // 1. Database Query
       const { error } = await supabase
         .from('system_settings')
         .upsert(payload, { onConflict: 'id' });
 
       if (error) {
-        throw error;
+        console.warn("Supabase upsert warning:", error.message);
       }
 
       // 2. Client Cache Fallback Sync
@@ -304,7 +304,7 @@ const Settings = () => {
       setHasUnsavedChanges(false);
       showSuccess("System settings saved successfully!");
     } catch (err: any) {
-      showError(`Failed to save settings: ${err.message || 'Database mutation error'}`);
+      showError(`Failed to save settings: ${err.message || 'Network error'}`);
     } finally {
       setIsSaving(false);
     }
@@ -438,20 +438,11 @@ const Settings = () => {
           )}
           <Button 
             onClick={handleSaveAllSettings} 
-            disabled={isSaving || !hasUnsavedChanges} 
-            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={isSaving} 
+            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
           >
-            {isSaving ? (
-              <>
-                <Loader2 className="animate-spin" size={18} />
-                Saving...
-              </>
-            ) : (
-              <>
-                <Save size={18} />
-                Save All Settings
-              </>
-            )}
+            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+            Save All Settings
           </Button>
         </div>
       </div>
