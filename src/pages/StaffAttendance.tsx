@@ -17,6 +17,7 @@ import { StaffAttendanceRegister } from '@/components/attendance/StaffAttendance
 import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
 import { showSuccess } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
+import { format } from "date-fns";
 
 const StaffAttendancePage = () => {
   const navigate = useNavigate();
