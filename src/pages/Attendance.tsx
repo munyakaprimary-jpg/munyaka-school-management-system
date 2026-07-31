@@ -14,6 +14,18 @@ const Attendance = () => {
   
   const { students, markedStudents, markAttendance, exportToCSV } = useAttendance();
 
+  // Edit state handling
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const handleEdit = (id: number) => {
+    setEditingId(id);
+    // For now, just log; could open a modal to adjust attendance
+    console.log(`Editing attendance for student id ${id}`);
+  };
+
+  const handleSave = () => {
+    showSuccess("Attendance register saved successfully!");
+  };
+
   const handleExport = () => {
     setIsExporting(true);
     setTimeout(() => {
@@ -21,10 +33,6 @@ const Attendance = () => {
       setIsExporting(false);
       showSuccess(`Attendance register exported successfully!`);
     }, 500);
-  };
-
-  const handleSave = () => {
-    showSuccess("Attendance register saved successfully!");
   };
 
   return (
@@ -45,6 +53,7 @@ const Attendance = () => {
         students={students}
         markedStudents={markedStudents}
         onMarkAttendance={markAttendance}
+        onEdit={handleEdit}
       />
       
       <div className="flex justify-end">
