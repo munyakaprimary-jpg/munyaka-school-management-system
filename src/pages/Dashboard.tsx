@@ -190,7 +190,7 @@ const Dashboard = () => {
 
       <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
         <CardHeader>
-          <CardTitle className="text-lg">Class Attendance Register Summary</CardTitle>
+          <CardTitle className="text-lg">Factual Class Participation</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
           <div className="relative w-full overflow-auto custom-scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
