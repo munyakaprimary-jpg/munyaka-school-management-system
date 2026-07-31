@@ -36,6 +36,7 @@ import LearningAreas from "./pages/LearningAreas";
 import ExamTypes from "./pages/ExamTypes";
 import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
+import StaffAttendancePage from "./pages/StaffAttendance";
 
 const queryClient = new QueryClient();
 
@@ -61,10 +62,14 @@ const App = () => (
                 <Route path="/grades" element={<ProtectedRoute><Layout><GradesStreams /></Layout></ProtectedRoute>} />
                 <Route path="/learning-areas" element={<ProtectedRoute><Layout><LearningAreas /></Layout></ProtectedRoute>} />
                 <Route path="/exam-types" element={<ProtectedRoute><Layout><ExamTypes /></Layout></ProtectedRoute>} />
+                
+                {/* Staff Routes - Specific paths must come before dynamic :id */}
                 <Route path="/staff" element={<ProtectedRoute><Layout><Staff /></Layout></ProtectedRoute>} />
-                <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
                 <Route path="/staff/registration" element={<ProtectedRoute><Layout><StaffRegistration /></Layout></ProtectedRoute>} />
                 <Route path="/staff/pre-registration" element={<ProtectedRoute><Layout><StaffPreRegistration /></Layout></ProtectedRoute>} />
+                <Route path="/staff/attendance" element={<ProtectedRoute><Layout><StaffAttendancePage /></Layout></ProtectedRoute>} />
+                <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
+                
                 <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
                 <Route path="/notices" element={<ProtectedRoute><Layout><Notices /></Layout></ProtectedRoute>} />
                 <Route path="/calendar" element={<ProtectedRoute><Layout><SchoolCalendar /></Layout></ProtectedRoute>} />
