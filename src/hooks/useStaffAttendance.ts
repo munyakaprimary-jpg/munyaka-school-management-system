@@ -46,21 +46,30 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
           const remoteRecords: Record<string, StudentAttendance> = { ...localData };
           
           data.forEach(record => {
-            remoteRecords[record.date] = {
-              morning: record.arrival_time || record.status === 'present' || record.status === 'late'
-                ? { status: record.status, time: record.arrival_time ? new Date(record.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '08:00 AM' }
-                : remoteRecords[record.date]?.morning,
-              afternoon: record.departure_time
-                ? { status: record.status, time: new Date(record.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '03:30 PM' }
-                : remoteRecords[record.date]?.afternoon
-            };
+            const dateKey = record.date;
+            const existingForDate = remoteRecords[dateKey] || {};
+
+            let morning = existingForDate.morning;
+            if (record.arrival_time || record.status === 'present' || record.status === 'late') {
+              const formattedTime = record.arrival_time 
+                ? new Date(record.arrival_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                : '08:00 AM';
+              morning = { status: record.status as AttendanceStatus, time: formattedTime };
+            }
+
+            let afternoon = existingForDate.afternoon;
+            if (record.departure_time) {
+              const formattedTime = new Date(record.departure_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              afternoon = { status: record.status as AttendanceStatus, time: formattedTime };
+            }
+
+            remoteRecords[dateKey] = { morning, afternoon };
           });
 
           setAttendanceRecords(remoteRecords);
           localStorage.setItem(storageKey, JSON.stringify(remoteRecords));
         }
       } catch (err) {
-        // Silent catch for Supabase offline/mock fallback
         console.log('Supabase offline or fallback active, using local staff attendance state.');
       }
     }
@@ -114,7 +123,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
           .maybeSingle();
 
         if (existingRecord) {
-          const updateData: any = {
+          const updateData: Record<string, any> = {
             status,
             notes: session === 'morning' ? notes : existingRecord.notes,
           };
@@ -141,8 +150,8 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
             arrival_time: session === 'morning' ? new Date().toISOString() : null,
             departure_time: session === 'afternoon' ? new Date().toISOString() : null,
             notes: session === 'morning' ? notes : null,
-            verified_lat: loc?.lat ?? null,
-            verified_lng: loc?.lng ?? null,
+            verified_lat: loc ? loc.lat : null,
+            verified_lng: loc ? loc.lng : null,
           };
 
           await supabase
@@ -150,7 +159,6 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
             .insert(newRecord);
         }
       } catch (err) {
-        // Supabase error swallowed to support offline/mock operation
         console.log('Supabase sync skipped, attendance saved locally.');
       }
     }
