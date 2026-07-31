@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Check, X, Clock, Lock, MapPin, AlertCircle } from 'lucide-react';
+import { Check, X, Clock, Lock, MapPin, AlertCircle, Download, Loader2 } from 'lucide-react';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { format } from "date-fns";
