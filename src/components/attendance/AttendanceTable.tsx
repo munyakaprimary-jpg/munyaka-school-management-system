@@ -17,15 +17,15 @@ interface StudentAttendance {
 }
 
 interface Student {
-  id: string;
+  id: number;
   name: string;
   assessment: string;
 }
 
 interface AttendanceTableProps {
   students: Student[];
-  markedStudents: Record<string, StudentAttendance>;
-  onMarkAttendance: (id: string, session: 'morning' | 'afternoon', status: string) => void;
+  markedStudents: Record<number, StudentAttendance>;
+  onMarkAttendance: (id: number, session: 'morning' | 'afternoon', status: string) => void;
 }
 
 const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: AttendanceTableProps) => {
@@ -64,7 +64,7 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: Attenda
   const renderSessionColumn = (
     record: StudentAttendance | undefined,
     session: 'morning' | 'afternoon',
-    studentId: string
+    studentId: number
   ) => {
     const sessionData = record?.[session];
     return (
@@ -142,74 +142,3 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: Attenda
 };
 
 export default AttendanceTable;
-</dyadwrite>
-
-<dyad-write path="src/pages/Attendance.tsx" description="Refactored Attendance page with grade and stream filtering">
-"use client";
-
-import React, { useState, useEffect } from 'react';
-import { Button } from "@/components/ui/button";
-import { showSuccess } from '@/utils/toast';
-import AttendanceHeader from '@/components/attendance/AttendanceHeader';
-import AttendanceStats from '@/components/attendance/AttendanceStats';
-import AttendanceTable from '@/components/attendance/AttendanceTable';
-import { useAttendance } from '@/hooks/useAttendance';
-import { GRADES_DATA } from '@/lib/mock-data';
-
-const Attendance = () => {
-  const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0]?.id || "");
-  const [selectedStream, setSelectedStream] = useState("");
-  const [isExporting, setIsExporting] = useState(false);
-  
-  const { students, markedStudents, markAttendance, exportToCSV } = useAttendance(selectedGrade, selectedStream);
-
-  // Reset stream when grade changes
-  useEffect(() => {
-    setSelectedStream("");
-  }, [selectedGrade]);
-
-  const handleExport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      exportToCSV();
-      setIsExporting(false);
-      showSuccess(`Attendance register exported successfully!`);
-    }, 500);
-  };
-
-  const handleSave = () => {
-    showSuccess("Attendance register saved successfully!");
-  };
-
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <AttendanceHeader 
-        selectedGrade={selectedGrade}
-        setSelectedGrade={setSelectedGrade}
-        selectedStream={selectedStream}
-        setSelectedStream={setSelectedStream}
-        isExporting={isExporting}
-        onExport={handleExport}
-      />
-
-      <AttendanceStats 
-        students={students}
-        markedStudents={markedStudents}
-      />
-
-      <AttendanceTable 
-        students={students}
-        markedStudents={markedStudents}
-        onMarkAttendance={markAttendance}
-      />
-      
-      <div className="flex justify-end">
-        <Button size="lg" className="rounded-2xl px-12 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={handleSave}>
-          Save Register
-        </Button>
-      </div>
-    </div>
-  );
-};
-
-export default Attendance;
