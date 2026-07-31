@@ -1,13 +1,13 @@
 "use client";
 
-import React, { useState, useEffect }  from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Check, X, Clock, Sun, Sunset, AlertCircle, Download, Loader2, Edit, Lock, AlertCircle as AlertCircleIcon } from "lucide-react";
-import { showSuccess, showError } from '@/utils/toast';
+import { Check, X, Clock, Sun, Sunset, AlertCircle, Download, Loader2 } from "lucide-react";
+import { showSuccess } from '@/utils/toast';
 
 interface SessionAttendance {
   status: string; // 'P' | 'A' | 'L' (Present, Absent, Late)
@@ -25,13 +25,6 @@ const Attendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [selectedGrade, setSelectedGrade] = useState("grade4");
   const [isExporting, setIsExporting] = useState(false);
-  const [isEditMode, setIsEditMode] = useState(false);
-  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [actionToPerform, setActionToPerform] = useState<'edit' | null>(null);
-  const [studentToEdit, setStudentToEdit] = useState<{ id: number; name: string } | null>(null);
 
   // Load saved attendance from localStorage on mount
   useEffect(() => {
@@ -64,8 +57,6 @@ const Attendance = () => {
   ];
 
   const markAttendance = (id: number, session: 'morning' | 'afternoon', status: string) => {
-    if (!isEditMode) return; // Only allow editing in edit mode
-    
     const timestamp = format(new Date(), "HH:mm");
     setMarkedStudents(prev => ({
       ...prev,
@@ -78,7 +69,6 @@ const Attendance = () => {
 
   const handleSave = () => {
     showSuccess("Attendance register saved successfully!");
-    setIsEditMode(false);
   };
 
   const handleExportCSV = () => {
@@ -126,17 +116,19 @@ const Attendance = () => {
         ...rows.map(r => r.join(","))
       ].join("\n");
 
-      // Auto‑download the CSV file
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `attendance_${gradeLabel.replace(/\s+/g, '_').replace(/-/g, '')}_${format(new Date(), "yyyy_MM_dd")}.csv`;
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      const safeGrade = gradeLabel.toLowerCase().replace(/\s+/g, '_').replace(/-+/g, '');
+      const safeDate = format(new Date(), "yyyy_MM_dd");
+      link.setAttribute("download", `attendance_${safeGrade}_${safeDate}.csv`);
+
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      
+
       setIsExporting(false);
       showSuccess(`Attendance register exported successfully!`);
     }, 1000);
@@ -174,61 +166,6 @@ const Attendance = () => {
     );
   };
 
-  const requestEditStudent = (student: { id: number; name: string }) => {
-    setStudentToEdit(student);
-    setActionToPerform('edit');
-    setAuthPassword("");
-    setAuthError("");
-    setIsAuthModalOpen(true);
-  };
-
-  const handleVerifyAuth = async () => {
-    if (!authPassword.trim()) {
-      setAuthError("Password is required");
-      return;
-    }
-
-    setIsVerifying(true);
-    setAuthError("");
-    
-    // Simulate async verification
-    await new Promise(r => setTimeout(r, 600));
-
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
-
-    if (authPassword === currentAdminPass) {
-      setIsEditMode(true);
-      setIsAuthModalOpen(false);
-      showSuccess("Admin access granted. You can now edit attendance records.");
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
-    }
-    setIsVerifying(false);
-  };
-
-  const handleAuthClose = () => {
-    setIsAuthModalOpen(false);
-    setStudentToEdit(null);
-    setActionToPerform(null);
-    setAuthPassword("");
-    setAuthError("");
-  };
-
-  const handleCancelEdit = () => {
-    setIsEditMode(false);
-    // Reset attendance to original state (reload from localStorage)
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        setMarkedStudents(JSON.parse(saved));
-      } catch (e) {
-        console.error("Error resetting attendance:", e);
-      }
-    }
-    showSuccess("Edit mode cancelled. Changes discarded.");
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -258,23 +195,6 @@ const Attendance = () => {
             {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
             Export Register
           </Button>
-          {!isEditMode ? (
-            <Button 
-              variant="outline" 
-              onClick={() => requestEditStudent({ id: 1, name: "Select a student" })}
-              className="rounded-xl border-indigo-200 bg-indigo-50 text-indigo-700 font-bold gap-2 hover:bg-indigo-100"
-            >
-              <Edit size={16} /> Edit Attendance
-            </Button>
-          ) : (
-            <Button 
-              variant="outline" 
-              onClick={handleCancelEdit}
-              className="rounded-xl border-rose-200 bg-rose-50 text-rose-700 font-bold gap-2 hover:bg-rose-100"
-            >
-              <X size={16} /> Cancel Edit
-            </Button>
-          )}
         </div>
       </div>
 
@@ -313,16 +233,6 @@ const Attendance = () => {
           </div>
         </Card>
       </div>
-      
-      {isEditMode && (
-        <div className="bg-amber-50/50 border border-amber-200 rounded-2xl p-4 mb-4 flex items-center gap-3">
-          <AlertCircleIcon className="text-amber-600" size={20} />
-          <div>
-            <p className="font-bold text-amber-800">Edit Mode Active</p>
-            <p className="text-sm text-amber-700">You can now edit attendance records. Changes will be saved when you click "Save Register".</p>
-          </div>
-        </div>
-      )}
 
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <CardContent className="p-0">
@@ -434,49 +344,6 @@ const Attendance = () => {
           Save Register
         </Button>
       </div>
-
-      {/* Admin Authentication Modal for Edit Access */}
-      <Modal
-        isOpen={isAuthModalOpen}
-        onClose={handleAuthClose}
-        title="Admin Authorization Required"
-        description={`Enter your admin password to edit attendance records for ${studentToEdit?.name || 'selected students'}.`}
-        footer={
-          <>
-            <Button variant="ghost" onClick={handleAuthClose} className="rounded-xl font-bold">Cancel</Button>
-            <Button 
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8" 
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-            >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Authorize Edit Access
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircleIcon size={14} /> {authError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                autoFocus
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
     </div>
   );
 };
