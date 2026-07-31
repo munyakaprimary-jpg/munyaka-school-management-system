@@ -10,10 +10,15 @@ const Dashboard = () => {
   // Use the actual student list as the source of truth for total student count
   const totalStudents = useMemo(() => STUDENTS.length, []);
   
+  // Calculate today's attendance rate based on day of week (Mon-Fri) from ATTENDANCE_TREND
   const todayAttendanceRate = useMemo(() => {
-    // Calculate from attendance trend average
-    const avg = ATTENDANCE_TREND.reduce((sum, day) => sum + day.rate, 0) / ATTENDANCE_TREND.length;
-    return Math.round(avg);
+    const today = new Date().getDay(); // 0=Sunday, 1=Monday, ..., 6=Saturday
+    if (today >= 1 && today <= 5) {
+      // Monday to Friday: index in ATTENDANCE_TREND is today-1
+      return ATTENDANCE_TREND[today - 1].rate;
+    }
+    // Weekend: no data available
+    return null;
   }, []);
   
   const juniorSchoolStudents = useMemo(() => {
@@ -109,7 +114,7 @@ const Dashboard = () => {
   const stats = [
     { title: "Total Students", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
     { title: "Total Teachers", value: totalTeachers.toString(), icon: User, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { title: "Today's Attendance", value: `${todayAttendanceRate}%`, icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
+    { title: "Today's Attendance", value: todayAttendanceRate !== null ? `${todayAttendanceRate}%` : 'N/A', icon: UserCheck, color: todayAttendanceRate !== null ? "text-green-600" : "text-slate-500", bg: todayAttendanceRate !== null ? "bg-green-50" : "bg-slate-50" },
     { title: "Junior School", value: juniorSchoolStudents.toString(), icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
     { title: "Avg. Marking Time", value: avgMarkingTime, icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
   ];
