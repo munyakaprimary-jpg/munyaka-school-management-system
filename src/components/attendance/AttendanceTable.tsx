@@ -26,15 +26,9 @@ interface AttendanceTableProps {
   students: Student[];
   markedStudents: Record<number, StudentAttendance>;
   onMarkAttendance: (id: number, session: 'morning' | 'afternoon', status: string) => void;
-  onEdit?: (id: number) => void; // New prop for edit action
 }
 
-const AttendanceTable = ({ 
-  students, 
-  markedStudents, 
-  onMarkAttendance, 
-  onEdit 
-}: AttendanceTableProps) => {
+const AttendanceTable = ({ students, markedStudents, onMarkAttendance }: AttendanceTableProps) => {
   const getStatusBadge = (sessionData?: SessionAttendance) => {
     if (!sessionData) {
       return <span className="text-xs text-slate-400 italic">Not marked</span>;
@@ -107,18 +101,6 @@ const AttendanceTable = ({
             >
               <X size={16} />
             </Button>
-            {/* EDIT ICON */}
-            {onEdit && (
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="ml-2 rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                onClick={() => onEdit(studentId)}
-                title="Edit Attendance"
-              >
-                <Edit size={16} className="text-indigo-600" />
-              </Button>
-            )}
           </div>
         </div>
       </td>
