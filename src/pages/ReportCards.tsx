@@ -17,7 +17,8 @@ import {
   Save, 
   Loader2, 
   Layers,
-  ChevronDown
+  ChevronDown,
+  FileSpreadsheet
 } from 'lucide-react';
 import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
