@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -19,10 +19,34 @@ interface StudentAttendance {
   afternoon?: SessionAttendance;
 }
 
+const STORAGE_KEY = 'munyaka_attendance_records';
+
 const Attendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [selectedGrade, setSelectedGrade] = useState("grade4");
   const [isExporting, setIsExporting] = useState(false);
+
+  // Load saved attendance from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setMarkedStudents(parsed);
+        }
+      } catch (e) {
+        console.error("Error loading saved attendance:", e);
+      }
+    }
+  }, []);
+
+  // Persist attendance to localStorage whenever it changes
+  useEffect(() => {
+    if (Object.keys(markedStudents).length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(markedStudents));
+    }
+  }, [markedStudents]);
 
   const students = [
     { id: 1, name: "Brian Kiptoo", assessment: "A827361" },
