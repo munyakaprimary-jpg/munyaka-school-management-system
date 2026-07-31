@@ -1,10 +1,10 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, GraduationCap, Clock, TrendingUp } from 'lucide-react';
+import { Users, UserCheck, GraduationCap, Clock, TrendingUp, User } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { STUDENTS, ATTENDANCE_TREND, FEES_DATA, TRANSACTIONS } from '@/lib/mock-data';
-import { GRADES_DATA } from '@/lib/mock-data';
+import { GRADES_DATA, STAFF } from '@/lib/mock-data';
 
 const Dashboard = () => {
   // Use the actual student list as the source of truth for total student count
@@ -22,6 +22,11 @@ const Dashboard = () => {
       const gradeNum = parseInt(s.grade);
       return gradeNum >= 7;
     }).length;
+  }, []);
+  
+  const totalTeachers = useMemo(() => {
+    // Count actual teachers from staff data
+    return STAFF.filter(s => s.role.includes('Teacher')).length;
   }, []);
   
   const avgMarkingTime = useMemo(() => {
@@ -103,6 +108,7 @@ const Dashboard = () => {
 
   const stats = [
     { title: "Total Students", value: totalStudents.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Total Teachers", value: totalTeachers.toString(), icon: User, color: "text-indigo-600", bg: "bg-indigo-50" },
     { title: "Today's Attendance", value: `${todayAttendanceRate}%`, icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
     { title: "Junior School", value: juniorSchoolStudents.toString(), icon: GraduationCap, color: "text-purple-600", bg: "bg-purple-50" },
     { title: "Avg. Marking Time", value: avgMarkingTime, icon: Clock, color: "text-orange-600", bg: "bg-orange-50" },
@@ -121,7 +127,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
         {stats.map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-4px] transition-transform">
             <CardContent className="p-6 flex items-center gap-4">
