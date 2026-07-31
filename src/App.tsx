@@ -16,6 +16,7 @@ import StudentProfile from "./pages/StudentProfile";
 import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
 import Assessments from "./pages/Assessments";
+import ResultsAnalysis from "./pages/ResultsAnalysis";
 import ReportCards from "./pages/ReportCards";
 import Portfolio from "./pages/Portfolio";
 import Fees from "./pages/Fees";
@@ -64,7 +65,7 @@ const App = () => (
                 <Route path="/learning-areas" element={<ProtectedRoute><Layout><LearningAreas /></Layout></ProtectedRoute>} />
                 <Route path="/exam-types" element={<ProtectedRoute><Layout><ExamTypes /></Layout></ProtectedRoute>} />
                 
-                {/* Staff Routes - Specific paths must come before dynamic :id */}
+                {/* Staff Routes */}
                 <Route path="/staff" element={<ProtectedRoute><Layout><Staff /></Layout></ProtectedRoute>} />
                 <Route path="/staff/registration" element={<ProtectedRoute><Layout><StaffRegistration /></Layout></ProtectedRoute>} />
                 <Route path="/staff/pre-registration" element={<ProtectedRoute><Layout><StaffPreRegistration /></Layout></ProtectedRoute>} />
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/registration" element={<ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>} />
                 <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />
                 <Route path="/assessments" element={<ProtectedRoute><Layout><Assessments /></Layout></ProtectedRoute>} />
+                <Route path="/analysis" element={<ProtectedRoute><Layout><ResultsAnalysis /></Layout></ProtectedRoute>} />
                 <Route path="/portfolio" element={<ProtectedRoute><Layout><Portfolio /></Layout></ProtectedRoute>} />
                 <Route path="/library" element={<ProtectedRoute><Layout><Library /></Layout></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
