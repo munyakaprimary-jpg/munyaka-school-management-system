@@ -34,7 +34,8 @@ import {
   Sun, 
   Moon, 
   X,
-  GraduationCap
+  GraduationCap,
+  LogIn
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,7 +67,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Clock, label: 'Staff Attendance', path: '/staff/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    
+    // Split Staff Attendance into Self Check-In and Admin Management
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['super_admin', 'head_teacher'] },
+    
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },

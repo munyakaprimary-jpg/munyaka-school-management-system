@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -13,24 +12,18 @@ import { Users, TrendingUp, MapPin, UserCheck, Settings2, Save, Map } from 'luci
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { PersonalCheckInCard } from '@/components/attendance/PersonalCheckInCard';
 import { StaffAttendanceRegister } from '@/components/attendance/StaffAttendanceRegister';
 import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
 import { showSuccess } from '@/utils/toast';
+import BackButton from '@/components/ui/BackButton';
 
 const StaffAttendancePage = () => {
-  const { user } = useAuth();
   const { location } = useGeolocation();
   const { 
-    personalRecords, 
     masterRegister, 
-    selfMarkAttendance, 
     adminMarkStaff 
   } = useStaffAttendance(location);
 
-  const isAdmin = user?.role === 'super_admin' || user?.role === 'head_teacher';
-  const [activeTab, setActiveTab] = useState<'checkin' | 'register'>(isAdmin ? 'register' : 'checkin');
-  
   // Geofence Config State
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [config, setConfig] = useState<GeofenceConfig>(getGeofenceConfig());
@@ -50,9 +43,9 @@ const StaffAttendancePage = () => {
   ).length;
 
   const stats = [
-    { title: "Total Registered Staff", value: totalStaffCount.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Checked In Today", value: presentStaffCount.toString(), icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "Overall Attendance Rate", value: "94%", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
+    { title: "Total Personnel", value: totalStaffCount.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
+    { title: "Present Today", value: presentStaffCount.toString(), icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { title: "Weekly Turnout", value: "94%", icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
     { title: "Allowed Radius", value: `${config.radius}m`, icon: MapPin, color: "text-purple-600", bg: "bg-purple-50" },
   ];
 
@@ -60,50 +53,33 @@ const StaffAttendancePage = () => {
     setGeofenceConfig(config);
     setIsConfigOpen(false);
     showSuccess("School Geofence coordinates updated successfully!");
-    // Force a reload of the location check by slightly ticking a state if needed, 
-    // but the next render of components using getGeofenceConfig() will pick it up.
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Attendance & Geofencing</h1>
-          <p className="text-muted-foreground">Self check-in and master attendance tracking for Munyaka School staff.</p>
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Attendance Management</h1>
+            <p className="text-muted-foreground">Monitor live check-in timestamps and system-wide analytics.</p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          {isAdmin && (
-            <Button 
-              variant="outline" 
-              className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600"
-              onClick={() => setIsConfigOpen(true)}
-            >
-              <Settings2 size={18} /> Geofence Settings
-            </Button>
-          )}
-          
-          {/* Tab Selector for Admins */}
-          {isAdmin && (
-            <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as any)}>
-              <TabsList className="bg-white p-1 rounded-2xl shadow-sm border border-slate-200 h-12">
-                <TabsTrigger value="register" className="rounded-xl px-6 h-full font-bold text-xs">
-                  Staff Master Register
-                </TabsTrigger>
-                <TabsTrigger value="checkin" className="rounded-xl px-6 h-full font-bold text-xs">
-                  My Check-In Card
-                </TabsTrigger>
-              </TabsList>
-            </Tabs>
-          )}
-        </div>
+        <Button 
+          variant="outline" 
+          className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600"
+          onClick={() => setIsConfigOpen(true)}
+        >
+          <Settings2 size={18} /> Geofence Settings
+        </Button>
       </div>
 
       {/* Overview Stats Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-2px] transition-transform">
+          <Card key={i} className="border-none shadow-sm bg-white rounded-3xl">
             <CardContent className="p-6 flex items-center gap-4">
               <div className={`${stat.bg} p-4 rounded-2xl`}>
                 <stat.icon className={stat.color} size={24} />
@@ -117,65 +93,55 @@ const StaffAttendancePage = () => {
         ))}
       </div>
 
-      {/* Main View Area */}
-      {activeTab === 'checkin' || !isAdmin ? (
-        <PersonalCheckInCard
-          staffName={user?.name || 'Staff Member'}
-          roleName={user?.role?.replace('_', ' ') || 'Teacher'}
-          onCheckIn={selfMarkAttendance}
-          personalHistory={personalRecords}
-        />
-      ) : (
-        <div className="space-y-8">
-          {/* Attendance Trend Chart */}
-          <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-            <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
-                <p className="text-xs text-slate-400">Aggregated turn-out percentages for current term</p>
-              </div>
-              <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
-                <TrendingUp size={12} className="mr-1" /> Live Analytics
-              </Badge>
+      <div className="space-y-8">
+        {/* Attendance Trend Chart */}
+        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+          <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
+            <div>
+              <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
+              <p className="text-xs text-slate-400">Aggregated turn-out percentages for current term</p>
             </div>
-            <CardContent className="h-[240px] w-full pt-4">
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={attendanceTrendData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                  <YAxis domain={[0, 100]} hide />
-                  <Tooltip 
-                    cursor={{fill: '#f8fafc'}}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const data = payload[0].payload;
-                        return (
-                          <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
-                            <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
-                            <p className="text-base font-black text-indigo-600">{data.rate}% Turnout</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
-                    {attendanceTrendData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill="#6366f1" />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </CardContent>
-          </Card>
+            <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
+              <TrendingUp size={12} className="mr-1" /> Live Analytics
+            </Badge>
+          </div>
+          <CardContent className="h-[240px] w-full pt-4">
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={attendanceTrendData}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+                <YAxis domain={[0, 100]} hide />
+                <Tooltip 
+                  cursor={{fill: '#f8fafc'}}
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
+                          <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
+                          <p className="text-base font-black text-indigo-600">{data.rate}% Turnout</p>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
+                  {attendanceTrendData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill="#6366f1" />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </CardContent>
+        </Card>
 
-          {/* Master Register View */}
-          <StaffAttendanceRegister
-            masterRegister={masterRegister}
-            onAdminMark={adminMarkStaff}
-          />
-        </div>
-      )}
+        {/* Master Register View */}
+        <StaffAttendanceRegister
+          masterRegister={masterRegister}
+          onAdminMark={adminMarkStaff}
+        />
+      </div>
 
       {/* Geofence Configuration Modal */}
       <Modal
