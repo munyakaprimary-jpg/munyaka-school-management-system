@@ -41,7 +41,9 @@ import {
   MapPin,
   Eye,
   EyeOff,
-  RefreshCw
+  RefreshCw,
+  Unlock,
+  ShieldAlert
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -96,6 +98,13 @@ const getPasswordStrength = (pass: string) => {
 };
 
 const Settings = () => {
+  // Page-Level Admin Lock Authorization State
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
+  const [showAuthPass, setShowAuthPass] = useState(false);
+
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
 
   // Loading & Hydration State
@@ -173,6 +182,40 @@ const Settings = () => {
   });
 
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
+
+  // Authorize Access Handler
+  const handleAuthorizeSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!authPassword.trim()) {
+      setAuthError("Please enter your admin password.");
+      return;
+    }
+
+    setIsVerifyingAuth(true);
+    setAuthError("");
+
+    await new Promise(r => setTimeout(r, 600));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
+
+    if (authPassword === currentAdminPass) {
+      setIsAuthorized(true);
+      setAuthPassword("");
+      showSuccess("Admin authorization granted. Opening System Configuration...");
+    } else {
+      setAuthError("Invalid Admin Password. Access denied.");
+      setAuthPassword("");
+      showError("Authentication failed");
+    }
+    setIsVerifyingAuth(false);
+  };
+
+  const handleLockSettings = () => {
+    setIsAuthorized(false);
+    setAuthPassword("");
+    setAuthError("");
+    showSuccess("Configuration console locked.");
+  };
 
   // --- EXPLICIT DATABASE SELECT QUERY ON MOUNT ---
   const fetchSettingsFromDatabase = useCallback(async () => {
@@ -398,6 +441,92 @@ const Settings = () => {
   const strength = useMemo(() => getPasswordStrength(pinForm.newPin), [pinForm.newPin]);
   const isPinMatching = pinForm.confirmPin.length > 0 && pinForm.newPin === pinForm.confirmPin;
 
+  // --- RENDER 1: ADMIN AUTHORIZATION LOCK GATE ---
+  if (!isAuthorized) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex items-center gap-3 mb-6">
+          <BackButton fallback="/" />
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h1>
+            <p className="text-xs text-slate-500 font-medium">Restricted Administrative Settings</p>
+          </div>
+        </div>
+
+        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden p-2">
+          <CardContent className="p-8 sm:p-10">
+            <div className="text-center mb-8">
+              <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-rose-100">
+                <Lock size={36} />
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin Authorization Required</h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                Enter your administrative PIN / password to access system configuration, RBAC permissions, and security parameters.
+              </p>
+            </div>
+
+            <form onSubmit={handleAuthorizeSettings} className="space-y-6">
+              {authError && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                  <ShieldAlert size={18} className="shrink-0" />
+                  <span>{authError}</span>
+                </div>
+              )}
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Admin PIN / Password</Label>
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Input 
+                    type={showAuthPass ? "text" : "password"}
+                    value={authPassword}
+                    onChange={(e) => {
+                      setAuthPassword(e.target.value);
+                      if (authError) setAuthError("");
+                    }}
+                    placeholder="••••••••"
+                    className="h-14 pl-12 pr-12 rounded-2xl bg-slate-50 border-none font-bold text-lg focus:bg-white focus:ring-2 ring-indigo-100"
+                    autoFocus
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAuthPass(!showAuthPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showAuthPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Verifying Credentials...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Authorize Access
+                  </>
+                )}
+              </Button>
+            </form>
+
+            <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Admin Security Notice</p>
+              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">admin123</strong></p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   if (isLoadingSettings) {
     return (
       <div className="max-w-7xl mx-auto p-12 flex flex-col items-center justify-center min-h-[600px] space-y-4">
@@ -407,6 +536,7 @@ const Settings = () => {
     );
   }
 
+  // --- RENDER 2: UNLOCKED SYSTEM CONFIGURATION CONSOLE ---
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       
@@ -415,7 +545,12 @@ const Settings = () => {
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">System Configuration</h1>
+            <div className="flex items-center gap-2">
+              <h1 className="text-3xl font-black tracking-tight text-slate-900">System Configuration</h1>
+              <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold text-[10px] px-2.5 py-0.5">
+                <ShieldCheck size={12} className="mr-1 inline" /> Unlocked
+              </Badge>
+            </div>
             <p className="text-muted-foreground">Master console for institutional policy, RBAC roles, and security parameters.</p>
           </div>
         </div>
@@ -436,6 +571,15 @@ const Settings = () => {
               </Button>
             </>
           )}
+          
+          <Button 
+            variant="outline"
+            onClick={handleLockSettings}
+            className="rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-14 px-6 gap-2"
+          >
+            <Lock size={16} /> Lock Console
+          </Button>
+
           <Button 
             onClick={handleSaveAllSettings} 
             disabled={isSaving} 
