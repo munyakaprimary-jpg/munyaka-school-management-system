@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Modal } from "@/components/ui/modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -49,18 +49,40 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
   onRegister
 }) => {
   // Dynamically get streams for the selected grade from GRADES_DATA
-  const availableStreams = React.useMemo(() => {
+  const availableStreams = useMemo(() => {
     if (!regGrade) return [];
     const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
     return grade ? grade.streams.map(s => s.name) : [];
   }, [regGrade]);
 
-  // Reset stream when grade changes and no longer matches
-  React.useEffect(() => {
+  // Reset stream when grade changes and no longer matches available streams
+  useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
       setRegStream(availableStreams[0]);
     }
   }, [regGrade, availableStreams, regStream, setRegStream]);
+
+  // Set default grade when modal opens
+  useEffect(() => {
+    if (isOpen) {
+      // Default to Grade 4 (PP1/PP2/Grade 1-12) if no grade is selected
+      setRegGrade("4");
+    }
+  }, [isOpen]);
+
+  // Reset stream when grade changes and no longer matches available streams
+  useEffect(() => {
+    if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
+      setRegStream(availableStreams[0]);
+    }
+  }, [regGrade, availableStreams, regStream, setRegStream]);
+
+  // Get unique streams for the filter dropdown
+  const uniqueStreams = useMemo(() => {
+    const streams = new Set<string>();
+    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    return Array.from(streams).sort();
+  }, []);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Register New Student" description="Enroll learner into the academic system." footer={<><Button variant="ghost" className="rounded-xl h-12 px-6 font-bold" onClick={onClose}>Cancel</Button><Button className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100" onClick={onRegister}><UserPlus size={18} /> Register Student</Button></>} maxWidth="max-w-xl">
@@ -120,7 +142,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
           <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
         </div>
       </div>
-    </Modal>
+    </div>
   );
 };
 
