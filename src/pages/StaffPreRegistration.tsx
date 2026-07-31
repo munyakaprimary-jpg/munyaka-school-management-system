@@ -2,18 +2,22 @@
 
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
-import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { Search, Plus, Download, Loader2, X } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { PreRegisteredStaff, AccessStatus } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+
+// Modular sub-components
+import PreRegHeader from '@/components/staff-access/PreRegHeader';
+import PreRegMetrics from '@/components/staff-access/PreRegMetrics';
+import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
+import DispatchInviteModal from '@/components/staff-access/DispatchInviteModal';
+import StaffPreRegTable from '@/components/staff-access/StaffPreRegTable';
+import StaffPreRegFilters from '@/components/staff-access/StaffPreRegFilters';
+import AuthModal from '@/components/staff-access/AuthModal';
 
 const StaffPreRegistration = () => {
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
@@ -29,27 +33,16 @@ const StaffPreRegistration = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isSuspendAuthOpen, setIsSuspendAuthOpen] = useState(false);
+  const [suspendTarget, setSuspendTarget] = useState<{ id: string; name: string } | null>(null);
+  const [isSendKeyOpen, setIsSendKeyOpen] = useState(false);
+  const [sendKeyTarget, setSendKeyTarget] = useState<PreRegisteredStaff | null>(null);
   
-  // Auth state for deletion
+  // Auth state for deletion and suspension
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
-
-  // Registration Form State
-  const [fullName, setFullName] = useState("");
-  const [assessmentNo, setAssessmentNo] = useState("");
-  const [regGrade, setRegGrade] = useState("4");
-  const [regStream, setRegStream] = useState("Blue");
-  const [guardianName, setGuardianName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-
-  // Get unique streams for the filter dropdown
-  const uniqueStreams = useMemo(() => {
-    const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    return Array.from(streams).sort();
-  }, []);
+  const [authAction, setAuthAction] = useState<'delete' | 'suspend' | null>(null);
 
   const filteredStaff = useMemo(() => {
     return staffList.filter(s => {
@@ -63,33 +56,63 @@ const StaffPreRegistration = () => {
     });
   }, [staffList, searchTerm, roleFilter, statusFilter]);
 
-  const handleRegisterStudent = () => {
-    if (!fullName.trim() || !assessmentNo.trim()) return;
-    const newStudent = { 
-      id: (studentsList.length + 1).toString(), 
-      name: fullName.trim(), 
-      assessment: assessmentNo.trim().toUpperCase(), 
-      grade: regGrade, 
-      stream: regStream, 
-      gender: "M", 
-      dob: "2014-01-01", 
-      guardian: guardianName.trim(), 
-      phone: phone.trim(), 
-      email: "g@email.com", 
-      health: "None", 
-      needs: "None" 
+  const metrics = useMemo(() => ({
+    total: staffList.length,
+    active: staffList.filter(s => s.status === 'Active').length,
+    pending: staffList.filter(s => s.status === 'Pending Invite').length,
+    suspended: staffList.filter(s => s.status === 'Suspended').length,
+  }), [staffList]);
+
+  const handleAddStaff = (data: Partial<PreRegisteredStaff>) => {
+    const newStaff: PreRegisteredStaff = {
+      id: `PR-${Date.now()}`,
+      fullName: data.fullName || "",
+      nationalId: data.nationalId || "",
+      tscNumber: data.tscNumber,
+      email: data.email || "",
+      phone: data.phone || "",
+      systemRole: data.systemRole || "subject_teacher",
+      department: data.department || "",
+      assignedSubjects: data.assignedSubjects || "",
+      tempAccessCode: data.tempAccessCode || "",
+      status: "Pre-Registered" as AccessStatus,
+      datePreRegistered: new Date().toLocaleDateString(),
     };
-    setStudentsList([newStudent, ...studentsList]);
-    setIsRegisterOpen(false);
-    setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
-    showSuccess(`Student ${newStudent.name} registered!`);
+    setStaffList([newStaff, ...staffList]);
+    setIsAddModalOpen(false);
+    showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
+  };
+
+  const handleSendKey = (staff: PreRegisteredStaff) => {
+    setSendKeyTarget(staff);
+    setIsSendKeyOpen(true);
+  };
+
+  const handleConfirmDispatch = () => {
+    if (sendKeyTarget) {
+      setStaffList(prev => prev.map(s => 
+        s.id === sendKeyTarget.id ? { ...s, status: 'Pending Invite' as AccessStatus } : s
+      ));
+      showSuccess(`Invitation dispatched to ${sendKeyTarget.fullName}!`);
+    }
+    setIsSendKeyOpen(false);
+    setSendKeyTarget(null);
   };
 
   const requestDelete = (staff: PreRegisteredStaff) => {
     setDeleteTarget({ id: staff.id, name: staff.fullName });
     setAuthPassword("");
     setAuthError("");
+    setAuthAction('delete');
     setIsDeleteAuthOpen(true);
+  };
+
+  const requestSuspend = (staff: PreRegisteredStaff) => {
+    setSuspendTarget({ id: staff.id, name: staff.fullName });
+    setAuthPassword("");
+    setAuthError("");
+    setAuthAction('suspend');
+    setIsSuspendAuthOpen(true);
   };
 
   const handleVerifyAuth = async () => {
@@ -106,12 +129,21 @@ const StaffPreRegistration = () => {
     const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
 
     if (authPassword === currentAdminPass) {
-      if (deleteTarget) {
+      if (authAction === 'delete' && deleteTarget) {
         setStaffList(prev => prev.filter(s => s.id !== deleteTarget.id));
         showSuccess(`Staff "${deleteTarget.name}" deleted successfully.`);
+      } else if (authAction === 'suspend' && suspendTarget) {
+        setStaffList(prev => prev.map(s => 
+          s.id === suspendTarget.id 
+            ? { ...s, status: s.status === 'Suspended' ? 'Active' : 'Suspended' }
+            : s
+        ));
+        showSuccess(`Staff "${suspendTarget.name}" status updated.`);
       }
       setIsDeleteAuthOpen(false);
+      setIsSuspendAuthOpen(false);
       setDeleteTarget(null);
+      setSuspendTarget(null);
       setAuthPassword("");
     } else {
       setAuthError("Invalid admin password");
@@ -172,86 +204,20 @@ const StaffPreRegistration = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Pre-Registration</h1>
-            <p className="text-muted-foreground">Pre-authorize teacher system access credentials and manage activation keys.</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="h-11 px-6 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
-            onClick={handleExportCSV}
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Export CSV
-          </Button>
-          <Button className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={18} /> Add Staff
-          </Button>
-        </div>
-      </div>
+      <PreRegHeader onExport={handleExportCSV} onAddClick={() => setIsAddModalOpen(true)} />
 
-      {/* Filters Card */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Search by name/ID..." 
-              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
-            />
-          </div>
-          
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Role</Label>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All System Roles</SelectItem>
-                {Object.keys(SYSTEM_ROLE_LABELS).map(role => (
-                  <SelectItem key={role} value={role}>
-                    {SYSTEM_ROLE_LABELS[role as keyof typeof SYSTEM_ROLE_LABELS].label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+      <PreRegMetrics metrics={metrics} />
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Suspended">Suspended</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+      <StaffPreRegFilters
+        searchTerm={searchTerm}
+        setSearchTerm={setSearchTerm}
+        roleFilter={roleFilter}
+        setRoleFilter={setRoleFilter}
+        statusFilter={statusFilter}
+        setStatusFilter={setStatusFilter}
+        onClearFilters={clearFilters}
+      />
 
-          <Button 
-            variant="ghost" 
-            className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
-            onClick={clearFilters}
-          >
-            <X size={18} /> Clear Filters
-          </Button>
-        </div>
-      </Card>
-
-      {/* Staff Table Section */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
           <div>
@@ -263,140 +229,45 @@ const StaffPreRegistration = () => {
           </Badge>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-slate-500 bg-slate-50/50 border-b">
-                <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff Credentials</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">System Role</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Registered Email</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Temp Access Key</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y">
-                {filteredStaff.map((staff) => {
-                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
-                  return (
-                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-5">
-                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{staff.fullName}</p>
-                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
-                      </td>
-                      <td className="px-8 py-5">
-                        <Badge className={cn("rounded-xl font-bold border text-xs px-3 py-1", roleInfo.badgeBg, roleInfo.color)}>{roleInfo.label}</Badge>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Mail size={14} className="text-slate-400 shrink-0" />
-                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => navigator.clipboard.writeText(staff.tempAccessCode)}>
-                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
-                          <Copy size={13} className="text-slate-400 cursor-pointer" onClick={(e) => { e.stopPropagation(); navigator.clipboard.writeText(staff.tempAccessCode); }} />
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <Badge className={cn("rounded-xl border-none font-bold text-xs px-3 py-1", staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>{staff.status}</Badge>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                            onClick={() => {}}
-                          >
-                            <Send size={14} /> Send Key
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all"
-                            onClick={() => requestDelete(staff)}
-                          >
-                            <Lock size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 transition-all"
-                            onClick={() => {}}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredStaff.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <Search size={32} className="text-slate-200" />
-                        <p className="text-slate-500 font-bold">No records match the current criteria.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <StaffPreRegTable
+            staffList={staffList}
+            filteredStaff={filteredStaff}
+            onSendKey={handleSendKey}
+            onDelete={requestDelete}
+          />
         </CardContent>
       </Card>
 
-      {/* Admin Auth Modal for Deletion */}
-      <Modal
+      {/* Add Staff Modal */}
+      <AddPreRegModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddStaff}
+      />
+
+      {/* Dispatch Invite Modal */}
+      <DispatchInviteModal
+        isOpen={isSendKeyOpen}
+        onClose={() => { setIsSendKeyOpen(false); setSendKeyTarget(null); }}
+        staff={sendKeyTarget}
+        onConfirm={handleConfirmDispatch}
+      />
+
+      {/* Auth Modal for Deletion */}
+      <AuthModal
         isOpen={isDeleteAuthOpen}
-        onClose={() => setIsDeleteAuthOpen(false)}
-        title="Admin Authorization Required"
-        description={`Enter your admin password to delete "${deleteTarget?.name}".`}
-        footer={
-          <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
-            <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
-            >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Authorize Delete
-            </Button>
-          </>
-        }
-      >
-        <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={14} /> {authError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                autoFocus
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
+        onClose={() => { setIsDeleteAuthOpen(false); setDeleteTarget(null); setAuthPassword(""); setAuthError(""); }}
+        authPassword={authPassword}
+        setAuthPassword={setAuthPassword}
+        authError={authError}
+        setAuthError={setAuthError}
+        isVerifying={isVerifying}
+        onVerify={handleVerifyAuth}
+        targetName={deleteTarget?.name || null}
+        actionType="delete"
+      />
     </div>
   );
 };
-
-// Import missing icons
-import { Mail, Copy, Send } from 'lucide-react';
-import { cn } from "@/lib/utils";
 
 export default StaffPreRegistration;
