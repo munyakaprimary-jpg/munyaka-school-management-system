@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState } from 'react';
+import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,6 +17,7 @@ import { MESSAGES as initialMessages } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
 
 const Communication = () => {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("outreach");
   const [messagesList, setMessagesList] = useState(initialMessages);
   const [isOpen, setIsOpen] = useState(false);
@@ -22,6 +25,11 @@ const Communication = () => {
   const [recipient, setRecipient] = useState("All Parents");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+
+  // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
+  if (user?.role !== 'super_admin') {
+    return <Navigate to="/" replace />;
+  }
 
   const handleOpenCompose = (type: 'SMS' | 'Email') => {
     setMsgType(type);
