@@ -6,11 +6,8 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
-import { Check, X, Clock, Sun, Sunset, AlertCircle, Download, Loader2, Edit } from "lucide-react";
+import { Check, X, Clock, Sun, Sunset, AlertCircle, Download, Loader2 } from "lucide-react";
 import { showSuccess } from '@/utils/toast';
-import Modal from '@/components/ui/Modal';
-import Input from '@/components/ui/input';
-import Label from '@/components/ui/label';
 
 interface SessionAttendance {
   status: string; // 'P' | 'A' | 'L' (Present, Absent, Late)
@@ -28,16 +25,6 @@ const Attendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [selectedGrade, setSelectedGrade] = useState("grade4");
   const [isExporting, setIsExporting] = useState(false);
-  
-  // Edit attendance modal states
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editAuthPassword, setEditAuthPassword] = useState("");
-  const [editAuthError, setEditAuthError] = useState("");
-  const [isEditVerifying, setIsEditVerifying] = useState(false);
-  const [editStudentId, setEditStudentId] = useState<number | null>(null);
-  const [editSession, setEditSession] = useState<'morning' | 'afternoon'>('morning');
-  const [editStatus, setEditStatus] = useState<'P' | 'A' | 'L'>('P');
-  const [editTime, setEditTime] = useState("");
 
   // Load saved attendance from localStorage on mount
   useEffect(() => {
@@ -129,25 +116,22 @@ const Attendance = () => {
         ...rows.map(r => r.join(","))
       ].join("\n");
 
-      // Auto‑download the CSV file
-      triggerDownload(csvContent, `attendance_${gradeLabel.replace(/\s+/g, '_').replace(/-/g, '')}_${format(new Date(), "yyyy_MM_dd")}.csv`);
-      
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      const safeGrade = gradeLabel.toLowerCase().replace(/\s+/g, '_').replace(/-+/g, '');
+      const safeDate = format(new Date(), "yyyy_MM_dd");
+      link.setAttribute("download", `attendance_${safeGrade}_${safeDate}.csv`);
+
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
       setIsExporting(false);
       showSuccess(`Attendance register exported successfully!`);
     }, 1000);
-  };
-
-  // Trigger download helper
-  const triggerDownload = (csvContent: string, filename: string) => {
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;               // forces download to default Downloads folder
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
   };
 
   const getStatusBadge = (sessionData?: SessionAttendance) => {
@@ -182,53 +166,6 @@ const Attendance = () => {
     );
   };
 
-  const handleEditSubmit = () => {
-    if (editStudentId === null) return;
-    // Update the attendance record with edited values
-    setMarkedStudents(prev => ({
-      ...prev,
-      [editStudentId]: {
-        ...prev[editStudentId],
-        [editSession]: { status: editStatus, time: editTime }
-      }
-    }));
-    // Close modal and reset form
-    setIsEditModalOpen(false);
-    setEditAuthPassword("");
-    setEditAuthError("");
-    setIsEditVerifying(false);
-    setEditStudentId(null);
-    setEditSession('morning');
-    setEditStatus('P');
-    setEditTime("");
-    showSuccess("Attendance record updated successfully!");
-  };
-
-  const handleEditVerify = async () => {
-    if (!editAuthPassword.trim()) {
-      setEditAuthError("Password is required");
-      return;
-    }
-
-    setIsEditVerifying(true);
-    setEditAuthError("");
-    
-    // Simulate async verification
-    await new Promise(r => setTimeout(r, 600));
-
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'admin123';
-
-    if (editAuthPassword === currentAdminPass) {
-      setIsEditVerifying(false);
-      // Password correct, proceed to show edit form (we'll rely on conditional rendering)
-    } else {
-      setEditAuthError("Invalid admin password");
-      showError("Authorization failed");
-      setEditAuthPassword("");
-    }
-    setIsEditVerifying(false);
-  };
-
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -258,18 +195,9 @@ const Attendance = () => {
             {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
             Export Register
           </Button>
-          {/* Edit Attendance Button */}
-          <Button 
-            variant="outline"
-            onClick={() => setIsEditModalOpen(true)}
-            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50"
-          >
-            <Edit size={16} className="mr-2" /> Edit Attendance
-          </Button>
         </div>
       </div>
 
-      {/* Toolbar stats cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <Card className="border-none shadow-sm bg-white rounded-3xl p-6 flex items-center gap-4">
           <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
@@ -305,7 +233,7 @@ const Attendance = () => {
           </div>
         </Card>
       </div>
-      
+
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="relative w-full overflow-auto">
@@ -416,137 +344,6 @@ const Attendance = () => {
           Save Register
         </Button>
       </div>
-
-      {/* Edit Attendance Modal */}
-      <Modal
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        title="Edit Attendance Record"
-        description="Modify attendance status and time for a student."
-        maxWidth="max-w-md"
-        footer={
-          <>
-            <Button variant="ghost" onClick={() => setIsEditModalOpen(false)} className="rounded-xl font-bold">
-              Cancel
-            </Button>
-            {isEditVerifying ? null : (
-              <Button 
-                onClick={handleEditSubmit}
-                disabled={editStudentId === null || !editTime}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8"
-              >
-                Update Record
-              </Button>
-            )}
-          </>
-        }
-      >
-        {/* Step 1: Admin Password Verification */}
-        {!isEditVerifying && editAuthPassword === "" && (
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Admin Password</Label>
-              <div className="relative">
-                <Input 
-                  type="password" 
-                  value={editAuthPassword} 
-                  onChange={(e) => { setEditAuthPassword(e.target.value); setEditAuthError(""); }} 
-                  placeholder="••••••••" 
-                  className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  autoFocus
-                />
-              </div>
-            </div>
-            {editAuthError && (
-              <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
-                <AlertCircle size={14} /> {editAuthError}
-              </div>
-            )}
-            <div className="flex justify-end pt-2">
-              <Button 
-                onClick={handleEditVerify}
-                disabled={!editAuthPassword.trim()}
-                className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8"
-              >
-                {isEditVerifying ? (
-                  <>
-                    <Loader2 className="animate-spin" size={16} />
-                    Verifying...
-                  </>
-                ) : (
-                  "Verify"
-                )}
-              </Button>
-            </div>
-          </div>
-        )}
-        
-        {/* Step 2: Edit Form (shown after password verification) */}
-        {isEditVerifying && (
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <Label>Student</Label>
-              <Select 
-                value={editStudentId} 
-                onValueChange={(val) => setEditStudentId(Number(val))}
-                placeholder="Select student"
-              >
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select student" />
-                </SelectTrigger>
-                <SelectContent>
-                  {students.map(s => (
-                    <SelectItem key={s.id} value={s.id.toString()}>
-                      {s.name} ({s.assessment})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Session</Label>
-              <Select 
-                value={editSession} 
-                onValueChange={setEditSession}
-              >
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select session" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="morning">Morning</SelectItem>
-                  <SelectItem value="afternoon">Afternoon</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Status</Label>
-              <Select 
-                value={editStatus} 
-                onValueChange={setEditStatus}
-              >
-                <SelectTrigger className="rounded-xl h-12">
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="P">Present</SelectItem>
-                  <SelectItem value="A">Absent</SelectItem>
-                  <SelectItem value="L">Late</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Time (HH:MM)</Label>
-              <Input 
-                type="time" 
-                value={editTime} 
-                onChange={(e) => setEditTime(e.target.value)} 
-                placeholder="e.g. 08:30"
-                className="rounded-xl h-12"
-              />
-            </div>
-          </div>
-        )}
-      </Modal>
     </div>
   );
 };
