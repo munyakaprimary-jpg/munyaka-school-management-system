@@ -5,10 +5,11 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Loader2, Edit3, Check } from "lucide-react";
+import { GRADES_DATA } from '@/lib/mock-data';
 
 interface AttendanceHeaderProps {
-  selectedGrade: string;
-  setSelectedGrade: (val: string) => void;
+  selectedGradeId: string;
+  setSelectedGradeId: (val: string) => void;
   isExporting: boolean;
   onExport: () => void;
   isEditing: boolean;
@@ -16,8 +17,8 @@ interface AttendanceHeaderProps {
 }
 
 const AttendanceHeader = ({ 
-  selectedGrade, 
-  setSelectedGrade, 
+  selectedGradeId, 
+  setSelectedGradeId, 
   isExporting, 
   onExport,
   isEditing,
@@ -30,13 +31,16 @@ const AttendanceHeader = ({
         <p className="text-muted-foreground">Mark morning and afternoon roll calls with real-time timestamps.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-          <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200">
-            <SelectValue placeholder="Grade" />
+        <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
+          <SelectTrigger className="w-[220px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
+            <SelectValue placeholder="Select Grade" />
           </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="grade4">Grade 4 - Blue</SelectItem>
-            <SelectItem value="grade5">Grade 5 - Green</SelectItem>
+          <SelectContent className="rounded-2xl">
+            {GRADES_DATA.map((grade) => (
+              <SelectItem key={grade.id} value={grade.id} className="rounded-xl">
+                {grade.name} - {grade.category}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         
@@ -49,7 +53,7 @@ const AttendanceHeader = ({
           {isEditing ? "Finish Editing" : "Edit Register"}
         </Button>
 
-        <Button variant="outline" className="rounded-xl bg-white border-slate-200 font-bold text-slate-700">
+        <Button variant="outline" className="rounded-xl bg-white border-slate-200 font-bold text-slate-700 cursor-default">
           {format(new Date(), "PP")}
         </Button>
         
@@ -57,7 +61,7 @@ const AttendanceHeader = ({
           variant="outline" 
           onClick={onExport}
           disabled={isExporting}
-          className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm"
+          className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm transition-all active:scale-95"
         >
           {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
           Export

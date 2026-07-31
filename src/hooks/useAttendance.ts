@@ -1,5 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
+import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 
 interface SessionAttendance {
   status: string;
@@ -11,70 +12,68 @@ interface StudentAttendance {
   afternoon?: SessionAttendance;
 }
 
-interface Student {
-  id: number;
-  name: string;
-  assessment: string;
-}
+const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
 
-const STORAGE_KEY = 'munyaka_attendance_records';
-const DEFAULT_STUDENTS: Student[] = [
-  { id: 1, name: "Brian Kiptoo", assessment: "A827361" },
-  { id: 2, name: "Mary Atieno", assessment: "A827362" },
-  { id: 3, name: "Emmanuel Maina", assessment: "A827363" },
-  { id: 4, name: "Sheila Chepkoech", assessment: "A827364" },
-  { id: 5, name: "David Mutua", assessment: "A827365" },
-];
+export const useAttendance = (selectedGradeId: string) => {
+  // Source of truth: Students filtered by grade
+  const learnersInGrade = useMemo(() => {
+    const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
+    if (!gradeObj) return [];
+    
+    const gradeNum = gradeObj.name.replace(/[^0-9]/g, '');
+    
+    return STUDENTS.filter(s => 
+      s.grade === gradeNum || s.grade === gradeObj.name
+    ).map(s => ({
+      id: parseInt(s.id),
+      name: s.name,
+      assessment: s.assessment
+    }));
+  }, [selectedGradeId]);
 
-// Generate default attendance with all students marked as Present
-const generateDefaultAttendance = (): Record<number, StudentAttendance> => {
-  const defaultRecord: Record<number, StudentAttendance> = {};
-  const timestamp = format(new Date(), "HH:mm");
-  
-  DEFAULT_STUDENTS.forEach(student => {
-    defaultRecord[student.id] = {
-      morning: { status: 'P', time: timestamp },
-      afternoon: { status: 'P', time: timestamp }
-    };
-  });
-  
-  return defaultRecord;
-};
-
-export const useAttendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
-  const [students] = useState<Student[]>(DEFAULT_STUDENTS);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load saved attendance from localStorage on mount, or initialize with defaults
+  // Storage key is specific to the grade to keep records separate
+  const currentStorageKey = `${STORAGE_KEY_PREFIX}${selectedGradeId}`;
+
+  // Load/Initialize attendance for the current grade
   useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
+    setIsInitialized(false);
+    const saved = localStorage.getItem(currentStorageKey);
+    
     if (saved) {
       try {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          setMarkedStudents(parsed);
-        } else {
-          // If parsed data is invalid, use defaults
-          setMarkedStudents(generateDefaultAttendance());
-        }
+        setMarkedStudents(JSON.parse(saved));
       } catch (e) {
-        console.error("Error loading saved attendance:", e);
-        setMarkedStudents(generateDefaultAttendance());
+        console.error("Error loading attendance:", e);
+        initializeDefaults();
       }
     } else {
-      // No saved data - initialize with all students present
-      setMarkedStudents(generateDefaultAttendance());
+      initializeDefaults();
     }
     setIsInitialized(true);
-  }, []);
+  }, [selectedGradeId, learnersInGrade]);
 
-  // Persist attendance to localStorage whenever it changes (after initialization)
+  const initializeDefaults = () => {
+    const defaultRecord: Record<number, StudentAttendance> = {};
+    const timestamp = format(new Date(), "HH:mm");
+    
+    learnersInGrade.forEach(learner => {
+      defaultRecord[learner.id] = {
+        morning: { status: 'P', time: timestamp },
+        afternoon: { status: 'P', time: timestamp }
+      };
+    });
+    setMarkedStudents(defaultRecord);
+  };
+
+  // Persist changes
   useEffect(() => {
     if (isInitialized && Object.keys(markedStudents).length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(markedStudents));
+      localStorage.setItem(currentStorageKey, JSON.stringify(markedStudents));
     }
-  }, [markedStudents, isInitialized]);
+  }, [markedStudents, isInitialized, currentStorageKey]);
 
   const markAttendance = (id: number, session: 'morning' | 'afternoon', status: string) => {
     const timestamp = format(new Date(), "HH:mm");
@@ -87,8 +86,9 @@ export const useAttendance = () => {
     }));
   };
 
-  const exportToCSV = (selectedGrade: string) => {
-    const gradeLabel = selectedGrade === "grade4" ? "Grade 4 - Blue" : "Grade 5 - Green";
+  const exportToCSV = () => {
+    const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
+    const gradeLabel = gradeObj ? gradeObj.name : "Selected Grade";
     const currentDateStr = format(new Date(), "PP");
     
     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
@@ -105,11 +105,11 @@ export const useAttendance = () => {
       return "Not Marked";
     };
 
-    const rows = students.map(student => {
-      const record = markedStudents[student.id] || {};
+    const rows = learnersInGrade.map(learner => {
+      const record = markedStudents[learner.id] || {};
       return [
-        `"${student.name.replace(/"/g, '""')}"`,
-        `"${student.assessment.replace(/"/g, '""')}"`,
+        `"${learner.name.replace(/"/g, '""')}"`,
+        `"${learner.assessment.replace(/"/g, '""')}"`,
         `"${getStatusLabel(record.morning?.status)}"`,
         `"${record.morning?.time || '—'}"`,
         `"${getStatusLabel(record.afternoon?.status)}"`,
@@ -117,22 +117,13 @@ export const useAttendance = () => {
       ];
     });
 
-    const csvContent = [
-      row1,
-      row2,
-      row3,
-      row4,
-      "",
-      headers.join(","),
-      ...rows.map(r => r.join(","))
-    ].join("\n");
+    const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
-    // Auto-download
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `attendance_${gradeLabel.replace(/\s+/g, '_').replace(/-/g, '')}_${format(new Date(), "yyyy_MM_dd")}.csv`;
+    link.download = `attendance_${gradeLabel.replace(/\s+/g, '_')}_${format(new Date(), "yyyy_MM_dd")}.csv`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -140,7 +131,7 @@ export const useAttendance = () => {
   };
 
   return {
-    students,
+    students: learnersInGrade,
     markedStudents,
     markAttendance,
     exportToCSV,
