@@ -193,11 +193,11 @@ const Dashboard = () => {
           <CardTitle className="text-lg">Factual Class Participation</CardTitle>
         </CardHeader>
         <CardContent className="px-0">
-          <div className="relative w-full overflow-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-slate-500 bg-slate-50/50 border-b">
+          <div className="relative w-full overflow-auto custom-scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
+            <table className="w-full text-sm text-left min-w-[800px]">
+              <thead className="text-slate-500 bg-slate-50/50 border-b sticky left-0">
                 <tr>
-                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Class Name</th>
+                  <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px] sticky left-0 bg-slate-50/50 z-10">Class Name</th>
                   <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Enrollment</th>
                   <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px] text-right">Today's Status</th>
                 </tr>
