@@ -26,11 +26,27 @@ const DEFAULT_STUDENTS: Student[] = [
   { id: 5, name: "David Mutua", assessment: "A827365" },
 ];
 
+// Generate default attendance with all students marked as Present
+const generateDefaultAttendance = (): Record<number, StudentAttendance> => {
+  const defaultRecord: Record<number, StudentAttendance> = {};
+  const timestamp = format(new Date(), "HH:mm");
+  
+  DEFAULT_STUDENTS.forEach(student => {
+    defaultRecord[student.id] = {
+      morning: { status: 'P', time: timestamp },
+      afternoon: { status: 'P', time: timestamp }
+    };
+  });
+  
+  return defaultRecord;
+};
+
 export const useAttendance = () => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [students] = useState<Student[]>(DEFAULT_STUDENTS);
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load saved attendance from localStorage on mount
+  // Load saved attendance from localStorage on mount, or initialize with defaults
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
@@ -38,19 +54,27 @@ export const useAttendance = () => {
         const parsed = JSON.parse(saved);
         if (parsed && typeof parsed === 'object') {
           setMarkedStudents(parsed);
+        } else {
+          // If parsed data is invalid, use defaults
+          setMarkedStudents(generateDefaultAttendance());
         }
       } catch (e) {
         console.error("Error loading saved attendance:", e);
+        setMarkedStudents(generateDefaultAttendance());
       }
+    } else {
+      // No saved data - initialize with all students present
+      setMarkedStudents(generateDefaultAttendance());
     }
+    setIsInitialized(true);
   }, []);
 
-  // Persist attendance to localStorage whenever it changes
+  // Persist attendance to localStorage whenever it changes (after initialization)
   useEffect(() => {
-    if (Object.keys(markedStudents).length > 0) {
+    if (isInitialized && Object.keys(markedStudents).length > 0) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(markedStudents));
     }
-  }, [markedStudents]);
+  }, [markedStudents, isInitialized]);
 
   const markAttendance = (id: number, session: 'morning' | 'afternoon', status: string) => {
     const timestamp = format(new Date(), "HH:mm");
