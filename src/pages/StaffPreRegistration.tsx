@@ -14,6 +14,7 @@ import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
 
 const StaffPreRegistration = () => {
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
@@ -66,7 +67,7 @@ const StaffPreRegistration = () => {
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim()) return;
     const newStudent = { 
-      id: (studentsList.length + 1).toString(), 
+      id: (staffList.length + 1).toString(), 
       name: fullName.trim(), 
       assessment: assessmentNo.trim().toUpperCase(), 
       grade: regGrade, 
@@ -79,10 +80,32 @@ const StaffPreRegistration = () => {
       health: "None", 
       needs: "None" 
     };
-    setStudentsList([newStudent, ...studentsList]);
-    setIsRegisterOpen(false);
+    setStaffList([newStudent as any, ...staffList]);
+    setIsAddModalOpen(false);
     setFullName(""); setAssessmentNo(""); setGuardianName(""); setPhone("");
     showSuccess(`Student ${newStudent.name} registered!`);
+  };
+
+  const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
+    const newStaff: PreRegisteredStaff = {
+      id: `PR-${Date.now()}`,
+      fullName: staffData.fullName || "",
+      nationalId: staffData.nationalId || "",
+      tscNumber: staffData.tscNumber,
+      email: staffData.email || "",
+      phone: staffData.phone || "",
+      systemRole: staffData.systemRole || "subject_teacher",
+      department: staffData.department || "",
+      assignedGrade: staffData.assignedGrade,
+      assignedStream: staffData.assignedStream,
+      assignedSubjects: staffData.assignedSubjects || [],
+      tempAccessCode: staffData.tempAccessCode || "",
+      status: "Pre-Registered" as AccessStatus,
+      datePreRegistered: new Date().toISOString().split('T')[0],
+    };
+    setStaffList([newStaff, ...staffList]);
+    setIsAddModalOpen(false);
+    showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
   };
 
   const requestDelete = (staff: PreRegisteredStaff) => {
@@ -285,7 +308,7 @@ const StaffPreRegistration = () => {
                         <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
                       </td>
                       <td className="px-8 py-5">
-                        <Badge className={cn("rounded-xl font-bold border text-xs px-3 py-1", roleInfo.badgeBg, roleInfo.color)}>{roleInfo.label}</Badge>
+                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{roleInfo.label}</Badge>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2 text-slate-700">
@@ -300,7 +323,7 @@ const StaffPreRegistration = () => {
                         </div>
                       </td>
                       <td className="px-8 py-5 text-center">
-                        <Badge className={cn("rounded-xl border-none font-bold text-xs px-3 py-1", staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>{staff.status}</Badge>
+                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
                       </td>
                       <td className="px-8 py-5 text-right">
                         <div className="flex items-center justify-end gap-1.5">
@@ -348,6 +371,13 @@ const StaffPreRegistration = () => {
           </div>
         </CardContent>
       </Card>
+
+      {/* Add Staff Modal */}
+      <AddPreRegModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSubmit={handleAddStaff}
+      />
 
       {/* Admin Auth Modal for Deletion */}
       <Modal
