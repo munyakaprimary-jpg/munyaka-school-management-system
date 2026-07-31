@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -46,10 +46,12 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 // Persistent Storage Keys
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
+const SETTINGS_ROW_ID = 'default';
 
 // Permission Types
 type Action = 'read' | 'create' | 'edit' | 'delete';
@@ -148,7 +150,6 @@ const Settings = () => {
   });
 
   // --- 4. Security Tab State ---
-  // Master PIN/Password
   const [pinForm, setPinForm] = useState({
     currentPin: "",
     newPin: "",
@@ -158,7 +159,6 @@ const Settings = () => {
   const [showNewPin, setShowNewPin] = useState(false);
   const [showConfirmPin, setShowConfirmPin] = useState(false);
 
-  // Geofence & Location Security Rules
   const [geofenceConfig, setGeofenceState] = useState<GeofenceConfig>({
     lat: 0.5304,
     lng: 35.3077,
@@ -167,24 +167,61 @@ const Settings = () => {
   const [geofenceEnabled, setGeofenceEnabled] = useState(true);
   const [devBypass, setDevBypass] = useState(false);
 
-  // Session & Access Security
   const [sessionSecurity, setSessionSecurity] = useState({
     idleTimeout: "30m",
     requirePasswordOnFirstLogin: true
   });
 
-  // Security Audit Logs
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
 
-  // --- HYDRATION ON MOUNT ---
-  useEffect(() => {
-    const loadSettings = async () => {
-      setIsLoadingSettings(true);
-      await new Promise(r => setTimeout(r, 400)); // Smooth UX delay
+  // --- EXPLICIT DATABASE SELECT QUERY ON MOUNT ---
+  const fetchSettingsFromDatabase = useCallback(async () => {
+    setIsLoadingSettings(true);
 
-      const savedMaster = localStorage.getItem(SETTINGS_MASTER_KEY);
-      if (savedMaster) {
-        try {
+    try {
+      // 1. Try Supabase Fetch
+      const { data, error } = await supabase
+        .from('system_settings')
+        .select('*')
+        .eq('id', SETTINGS_ROW_ID)
+        .single();
+
+      if (!error && data) {
+        setGeneralConfig({
+          schoolName: data.school_name || "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+          motto: data.motto || "KNOWLEDGE IS POWER",
+          postalAddress: data.postal_address || "P.O. BOX 5239-30100 ELDORET",
+          phone: data.phone || "+254 712 345 678",
+          email: data.email || "info@munyaka.sc.ke",
+          location: data.location || "Munyaka, Eldoret East, Uasin Gishu County",
+          maintenanceMode: !!data.maintenance_mode
+        });
+
+        setAcademicConfig({
+          activeYear: data.active_year || "2026",
+          activeTerm: data.active_term || "term1",
+          termStartDate: data.term_start_date || "2026-01-05",
+          termEndDate: data.term_end_date || "2026-04-10",
+          gradingScale: data.grading_scale || academicConfig.gradingScale
+        });
+
+        if (data.rbac_permissions) setPermissions(data.rbac_permissions);
+        if (data.geofence_lat !== undefined && data.geofence_lng !== undefined) {
+          setGeofenceState({
+            lat: data.geofence_lat,
+            lng: data.geofence_lng,
+            radius: data.geofence_radius || 150
+          });
+        }
+        if (data.geofence_enabled !== undefined) setGeofenceEnabled(!!data.geofence_enabled);
+        if (data.dev_bypass !== undefined) setDevBypass(!!data.dev_bypass);
+        if (data.session_security) setSessionSecurity(data.session_security);
+        if (data.audit_logs) setAuditLogs(data.audit_logs);
+
+      } else {
+        // Fallback to local storage if Supabase row does not exist yet
+        const savedMaster = localStorage.getItem(SETTINGS_MASTER_KEY);
+        if (savedMaster) {
           const parsed = JSON.parse(savedMaster);
           if (parsed.general) setGeneralConfig(parsed.general);
           if (parsed.academic) setAcademicConfig(parsed.academic);
@@ -194,51 +231,91 @@ const Settings = () => {
           if (parsed.devBypass !== undefined) setDevBypass(parsed.devBypass);
           if (parsed.sessionSecurity) setSessionSecurity(parsed.sessionSecurity);
           if (parsed.auditLogs) setAuditLogs(parsed.auditLogs);
-        } catch (e) {
-          console.error("Failed to parse saved system configuration:", e);
+        } else {
+          const geoConf = getGeofenceConfig();
+          setGeofenceState(geoConf);
         }
-      } else {
-        // Hydrate geofence from local geofence utility if master key doesn't exist
-        const geoConf = getGeofenceConfig();
-        setGeofenceState(geoConf);
       }
-
+    } catch (err) {
+      console.warn("Supabase fetch fallback to local state:", err);
+    } finally {
       setIsLoadingSettings(false);
       setHasUnsavedChanges(false);
-    };
-
-    loadSettings();
+    }
   }, []);
 
-  // --- SAVE ALL SETTINGS FUNCTION ---
+  useEffect(() => {
+    fetchSettingsFromDatabase();
+  }, [fetchSettingsFromDatabase]);
+
+  // --- EXPLICIT UPSERT/UPDATE SAVE QUERY ON CLICK ---
   const handleSaveAllSettings = async () => {
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 800));
 
-    // Prepare master payload
-    const masterData = {
-      general: generalConfig,
-      academic: academicConfig,
-      permissions,
-      geofence: geofenceConfig,
-      geofenceEnabled,
-      devBypass,
-      sessionSecurity,
-      auditLogs
+    const payload = {
+      id: SETTINGS_ROW_ID,
+      school_name: generalConfig.schoolName,
+      motto: generalConfig.motto,
+      postal_address: generalConfig.postalAddress,
+      phone: generalConfig.phone,
+      email: generalConfig.email,
+      location: generalConfig.location,
+      maintenance_mode: generalConfig.maintenanceMode,
+      active_year: academicConfig.activeYear,
+      active_term: academicConfig.activeTerm,
+      term_start_date: academicConfig.termStartDate,
+      term_end_date: academicConfig.termEndDate,
+      grading_scale: academicConfig.gradingScale,
+      rbac_permissions: permissions,
+      geofence_lat: geofenceConfig.lat,
+      geofence_lng: geofenceConfig.lng,
+      geofence_radius: geofenceConfig.radius,
+      geofence_enabled: geofenceEnabled,
+      dev_bypass: devBypass,
+      session_security: sessionSecurity,
+      audit_logs: auditLogs,
+      updated_at: new Date().toISOString()
     };
 
-    // Save to localStorage master key
-    localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterData));
+    try {
+      // 1. Database Query
+      const { error } = await supabase
+        .from('system_settings')
+        .upsert(payload, { onConflict: 'id' });
 
-    // Also sync app-wide geofence utility so staff attendance uses exact coordinates
-    setGeofenceConfig(geofenceConfig);
+      if (error) {
+        console.warn("Supabase upsert warning:", error.message);
+      }
 
-    setIsSaving(false);
-    setHasUnsavedChanges(false);
-    showSuccess("System configuration and security parameters saved successfully!");
+      // 2. Client Cache Fallback Sync
+      const masterLocal = {
+        general: generalConfig,
+        academic: academicConfig,
+        permissions,
+        geofence: geofenceConfig,
+        geofenceEnabled,
+        devBypass,
+        sessionSecurity,
+        auditLogs
+      };
+      localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
+      setGeofenceConfig(geofenceConfig);
+
+      setHasUnsavedChanges(false);
+      showSuccess("System settings saved successfully!");
+    } catch (err: any) {
+      showError(`Failed to save settings: ${err.message || 'Network error'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
 
-  // --- HANDLERS FOR SECURITY TAB ---
+  // --- DISCARD / RESET HANDLER ---
+  const handleDiscardChanges = async () => {
+    showSuccess("Discarded uncommitted changes. Re-fetching committed record...");
+    await fetchSettingsFromDatabase();
+  };
+
   const handleUseCurrentLocation = () => {
     if (currentGeoLoc) {
       setGeofenceState(prev => ({
@@ -278,7 +355,6 @@ const Settings = () => {
 
     localStorage.setItem('munyaka_admin_pass', pinForm.newPin);
 
-    // Append to Audit Logs
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
       admin: "System Admin",
@@ -290,10 +366,10 @@ const Settings = () => {
 
     setPinForm({ currentPin: "", newPin: "", confirmPin: "" });
     setIsSaving(false);
+    setHasUnsavedChanges(true);
     showSuccess("Administrative Master PIN updated successfully!");
   };
 
-  // Permissions helpers
   const togglePermission = (roleId: string, modId: string, action: Action) => {
     setPermissions(prev => ({
       ...prev,
@@ -321,13 +397,12 @@ const Settings = () => {
 
   const strength = useMemo(() => getPasswordStrength(pinForm.newPin), [pinForm.newPin]);
   const isPinMatching = pinForm.confirmPin.length > 0 && pinForm.newPin === pinForm.confirmPin;
-  const isPinMismatch = pinForm.confirmPin.length > 0 && pinForm.newPin !== pinForm.confirmPin;
 
   if (isLoadingSettings) {
     return (
       <div className="max-w-7xl mx-auto p-12 flex flex-col items-center justify-center min-h-[600px] space-y-4">
         <Loader2 className="animate-spin text-indigo-600" size={48} />
-        <p className="text-slate-500 font-bold text-sm">Hydrating system configuration and security parameters...</p>
+        <p className="text-slate-500 font-bold text-sm">Executing database fetch for system settings...</p>
       </div>
     );
   }
@@ -347,9 +422,19 @@ const Settings = () => {
 
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
-            <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
-              <AlertTriangle size={14} className="mr-1.5" /> Pending Unsaved Changes
-            </Badge>
+            <>
+              <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
+                <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
+              </Badge>
+              <Button 
+                variant="outline"
+                onClick={handleDiscardChanges}
+                disabled={isSaving}
+                className="rounded-2xl border-slate-200 text-slate-600 font-bold h-14 px-6 hover:bg-slate-50"
+              >
+                <RotateCcw size={16} className="mr-2" /> Discard
+              </Button>
+            </>
           )}
           <Button 
             onClick={handleSaveAllSettings} 
