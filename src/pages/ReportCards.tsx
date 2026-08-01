@@ -341,7 +341,7 @@ const ReportCards = () => {
             <p className="text-[9.5px] text-slate-500 font-medium mb-[12px]">
               MOTTO: Knowledge is Power
             </p>
-            <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded border border-slate-200">
+            <h3 className="font.black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded border border-slate-200">
               COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
             </h3>
           </div>
@@ -349,20 +349,20 @@ const ReportCards = () => {
           {/* Metadata Header */}
           <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-5">
             <div className="flex items-center justify-between">
-              <span className="font-black uppercase text-slate-500 text-[9px]">Name</span>
-              <span className="font-bold text-slate-900 text-[11px]">{s.name}</span>
+              <span className="font.black uppercase text-slate-500 text-[9px]">Name</span>
+              <span className="font.bold text-slate-900 text-[11px]">{s.name}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-black uppercase text-slate-500 text-[9px]">ULI / Assessment No</span>
-              <span className="font-black text-slate-900 text-[11px]">{s.assessment}</span>
+              <span className="font.black uppercase text-slate-500 text-[9px]">ULI / Assessment No</span>
+              <span className="font.black text-slate-900 text-[11px]">{s.assessment}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-black uppercase text-slate-500 text-[9px]">Grade / Stream</span>
-              <span className="font-bold text-slate-900 text-[11px]">{s.grade} — {s.stream}</span>
+              <span className="font.black uppercase text-slate-500 text-[9px]">Grade / Stream</span>
+              <span className="font.bold text-slate-900 text-[11px]">{s.grade} — {s.stream}</span>
             </div>
             <div className="flex items-center justify-between">
-              <span className="font-black uppercase text-slate-500 text-[9px]">Overall Rank</span>
-              <span className="font-black text-indigo-600 text-[11px]">#{idx + 1} of {filteredStudents.length}</span>
+              <span className="font.black uppercase text-slate-500 text-[9px]">Overall Rank</span>
+              <span className="font.black text-indigo-600 text-[11px]">#{idx + 1} of {filteredStudents.length}</span>
             </div>
           </div>
 
@@ -403,34 +403,34 @@ const ReportCards = () => {
                   );
                 })}
               </tbody>
-            </div>
-          </Card>
-
-          {/* Remarks & Footer Section - Pushed to bottom */}
-          <div className="remarks-section mt-[16px] p-4 bg-slate-50/50 rounded-lg border border-slate-200">
-            <div className="flex items-start gap-3">
-              <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <FileText size={24} />
-              </div>
-              <div className="flex items-center gap-2">
-                <p className="text-sm font-bold text-slate-900">Class Teacher's Remarks</p>
-                <p className="text-sm text-slate-600 leading-relaxed">{s.description || "No remarks provided."}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between mt-4">
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-500">Date:</span>
-                <span className="text-sm text-slate-400">{new Date().toLocaleDateString()}</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm text-slate-400">Teacher:</span>
-                <span className="text-slate-600">{s.teacher ?? "Unassigned"}</span>
-              </div>
-            </div>
+            </table>
           </div>
         </Card>
-      </div>
+
+        {/* Remarks & Footer Section - Pushed to bottom */}
+        <div className="remarks-section mt-[16px] p-4 bg-slate-50/50 rounded-lg border border-slate-200">
+          <div className="flex items-start gap-3">
+            <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+              <FileText size={24} />
+            </div>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-bold text-slate-900">Class Teacher's Remarks</p>
+              <p className="text-sm text-slate-600 leading-relaxed">{s.description || "No remarks provided."}</p>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-500">Date:</span>
+              <span className="text-sm text-slate-400">{new Date().toLocaleDateString()}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-slate-400">Teacher:</span>
+              <span className="text-slate-600">{s.teacher ?? "Unassigned"}</span>
+            </div>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 };
