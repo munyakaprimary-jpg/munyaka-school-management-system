@@ -93,27 +93,34 @@ const Library = () => {
     });
   }, [books, searchQuery, selectedCategory]);
 
-  // Issue Book Action Handler
-  const handleIssueBook = async (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string) => {
+  // Issue Book Action Handler (Supports multi-copy quantity)
+  const handleIssueBook = async (
+    bookId: string, 
+    borrowerName: string, 
+    borrowerType: 'Student' | 'Staff', 
+    dueDate: string,
+    quantity: number = 1
+  ) => {
     // Artificial delay for smooth UX transition
     await new Promise(r => setTimeout(r, 600));
 
     const book = books.find(b => b.id === bookId);
     if (!book) return;
 
-    if (book.stock - book.borrowed <= 0) {
-      showError("Book is out of stock!");
+    const available = book.stock - book.borrowed;
+    if (available < quantity) {
+      showError(`Only ${available} copies available!`);
       return;
     }
 
-    // 1. Increment borrowed count
-    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, borrowed: b.borrowed + 1 } : b));
+    // 1. Increment borrowed count by quantity
+    setBooks(prev => prev.map(b => b.id === bookId ? { ...b, borrowed: b.borrowed + quantity } : b));
 
     // 2. Create history log entry
     const newLog: BorrowLog = {
       id: `log-${Date.now()}`,
       bookId,
-      bookTitle: book.title,
+      bookTitle: `${book.title}${quantity > 1 ? ` (${quantity} copies)` : ''}`,
       borrowerName,
       borrowerType,
       issuedDate: new Date().toISOString().split('T')[0],
@@ -122,7 +129,7 @@ const Library = () => {
     };
 
     setHistoryLogs(prev => [newLog, ...prev]);
-    showSuccess(`Issued "${book.title}" to ${borrowerName}!`);
+    showSuccess(`Issued ${quantity} copy${quantity > 1 ? 'ies' : ''} of "${book.title}" to ${borrowerName}!`);
   };
 
   // Return Book Action Handler from History Modal
