@@ -241,36 +241,37 @@ const Inventory = () => {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {filteredAssets.map((item) => (
-              <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
-                <CardContent className="p-8">
-                  <div className="flex justify-between items-start mb-6">
-                    <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
-                    <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
-                  </div>
-                  <div className="space-y-1 mb-6">
-                    <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
-                    <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
-                  </div>
-                  <div className="flex items-end justify-between pt-6 border-t border-slate-50">
-                    <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
-                    <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
-                      item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
-                      item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
-                      {item.status}
-                    </Badge>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+          <div className="overflow-x-auto custom-scrollbar pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px] lg:min-w-0">
+              {filteredAssets.map((item) => (
+                <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
+                  <CardContent className="p-8">
+                    <div className="flex justify-between items-start mb-6">
+                      <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
+                      <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
+                    </div>
+                    <div className="space-y-1 mb-6">
+                      <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
+                    </div>
+                    <div className="flex items-end justify-between pt-6 border-t border-slate-50">
+                      <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
+                      <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
+                        item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
+                        item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
+                        {item.status}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         </TabsContent>
 
         <TabsContent value="logs">
           <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
             <CardContent className="p-0">
-              {/* Added horizontal scroll container with custom scrollbar */}
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm min-w-[800px]">
                   <thead>
@@ -323,11 +324,11 @@ const Inventory = () => {
       <Modal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} title="Register New Asset" footer={<div className="flex gap-3 justify-end w-full"><Button variant="ghost" onClick={() => setIsAddAssetOpen(false)} className="rounded-xl font-bold h-11 px-6">Cancel</Button><Button onClick={handleAddAsset} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2 text-white"><Save size={18} /> Add Asset</Button></div>}>
         <div className="space-y-4">
           {assetError && <div className="p-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs">{assetError}</div>}
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
           <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Category</Label>
             <Select onValueChange={setNewAssetCategory}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent><SelectItem value="Agriculture">Agriculture</SelectItem><SelectItem value="Science & Tech">Science & Tech</SelectItem><SelectItem value="Creative Arts">Creative Arts</SelectItem><SelectItem value="Sports">Sports</SelectItem></SelectContent></Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
         </div>
       </Modal>
 
