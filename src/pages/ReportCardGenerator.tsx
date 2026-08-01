@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +15,24 @@ interface RecordCardData {
   contact: string;
   photoUrl?: string;
 }
+
+const gradeOrder = [
+  "playgroup",
+  "pp1",
+  "pp2",
+  "grade 1",
+  "grade 2",
+  "grade 3",
+  "grade 4",
+  "grade 6",
+  "grade 9"
+];
+
+const getGradeRank = (gradeName: string) => {
+  const normalized = gradeName.toLowerCase().trim();
+  const index = gradeOrder.findIndex((g) => normalized.includes(g));
+  return index !== -1 ? index : 999; // Unknown grades go to the end
+};
 
 const ReportCardGenerator = () => {
   const [formData, setFormData] = useState<RecordCardData>({
@@ -79,7 +95,7 @@ const ReportCardGenerator = () => {
     return gradeObj && Array.isArray(gradeObj.streams) 
       ? gradeObj.streams.map((s) => ({ name: s.name }))
       : [];
-    };
+  }, [storedGrades, formData.grade]);
 
   // Reset stream selection when grade changes
   useEffect(() => {
@@ -184,56 +200,31 @@ const ReportCardGenerator = () => {
                         "grade 3",
                         "grade 4",
                         "grade 5",
-                        "grade 5",
                         "grade 6",
-                        "grade 7",
                         "grade 8",
                         "grade 9"
                       ];
+                      
                       const getRank = (name: string) => {
                         const normalized = name.toLowerCase().trim();
                         const index = gradeOrder.findIndex(g => normalized.includes(g));
                         return index !== -1 ? index : 999;
                       };
+                      
                       const sortedGrades = [...storedGrades].sort((a, b) => {
                         const nameA = typeof a === 'string' ? a : a.name || a.grade_name || '';
                         const nameB = typeof b === 'string' ? b : b.name || b.grade_name || '';
                         return getRank(nameA) - getRank(nameB);
                       });
+                      
                       return sortedGrades.map(g => (
                         <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                           {g.name}
                         </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="stream">Stream</Label>
-                  <Select 
-                    id="stream"
-                    name="stream"
-                    value={formData.stream}
-                    onChange={handleChange}
-                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableStreams.length > 0 ? (
-                        availableStreams.map((s) => (
-                          <SelectItem key={s.name} value={s.name}>
-                            {s.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem disabled value="none">
-                          No streams found in Grades & Streams
-                        </SelectItem>
-                      </SelectItem>
-                    </Select>
-                  </Select>
-                </div>
+                      ));
+                    })();
+                  </SelectContent>
+                </Select>
               </div>
             </div>
             <div className="space-y-2">
@@ -244,7 +235,8 @@ const ReportCardGenerator = () => {
                 value={formData.guardianName}
                 onChange={handleChange}
                 placeholder="Enter guardian name"
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+                required
               />
             </div>
             <div className="space-y-2">
@@ -277,35 +269,36 @@ const ReportCardGenerator = () => {
                 Generate Preview
               </Button>
             </div>
-          </CardContent>
+          </div>
         </Card>
+      </div>
 
-        {/* Preview Section */}
-        {preview && (
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-            <CardHeader className="p-6 border-b">
-              <CardTitle>Preview</CardTitle>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex flex-col items-center space-y-4">
-                {preview.photoUrl ? (
-                  <img 
-                    src={preview.photoUrl} 
-                    alt="Photo" 
-                    className="w-24 h-24 rounded-full border-2 border-indigo-200 object-cover"
-                  />
-                ) : (
-                  <div className="w-24 h-24 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
-                    {preview.fullName.charAt(0)}
-                  </div>
-                )}
-                <div className="text-center space-y-2">
-                  <h2 className="text-xl font-bold text-slate-900">{preview.fullName}</h2>
-                  <p className="text-sm text-slate-500">ID: {preview.studentId}</p>
+      {/* Preview Section */}
+      {preview && (
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <CardHeader className="p-6 border-b">
+            <CardTitle>Preview</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center space-y-4">
+              {preview.photoUrl ? (
+                <img 
+                  src={preview.photoUrl} 
+                  alt="Photo" 
+                  className="w-24 h-24 rounded-full border-2 border-indigo-200 object-cover"
+                />
+              ) : (
+                <div className="w-24 h-24 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                  {preview.fullName.charAt(0)}
                 </div>
-                <div className="grid grid-cols-2 gap-4 text-sm text-slate-600">
-                  <div>
-                    <span className="font-medium">Grade:</span> <span>{preview.grade}</span>
+              )}
+              <div className="text-center space-y-2">
+                <h2 className="text-xl font-bold text-slate-900">{preview.fullName}</h2>
+                <p className="text-sm text-slate-500">ID: {preview.studentId}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm text-slate-600">
+                <div>
+                  <span className="font-bold">Grade:</span> <span>{preview.grade}</span>
                   </div>
                   <div>
                     <span className="font-medium">Stream:</span> <span>{preview.stream}</span>
@@ -318,7 +311,7 @@ const ReportCardGenerator = () => {
                   </div>
                 </div>
               </div>
-            </CardContent>
+            </div>
           </Card>
         )}
       </div>
