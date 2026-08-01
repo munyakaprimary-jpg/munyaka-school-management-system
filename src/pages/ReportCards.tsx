@@ -244,11 +244,11 @@ const ReportCards = () => {
                 </div>
               </div>
 
-              {/* Metadata Grid - 2x2 Compact */}
+              {/* Metadata Grid - 2x2 Compact with Fixed Widths */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
                 <div className="flex justify-between items-center">
                   <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Name</span>
-                  <span className="font-bold text-sm text-slate-900 truncate max-w-[180px]">{s.name}</span>
+                  <span className="font-bold text-sm text-slate-900" style={{ minWidth: '120px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">ULI</span>
