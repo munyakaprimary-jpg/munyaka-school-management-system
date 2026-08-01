@@ -428,86 +428,89 @@ const ReportCards = () => {
           return (
             <Card 
               key={s.id} 
-              className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-4 space-y-3 border border-slate-200"
+              className="report-card bg-white w-full max-w-[190mm] h-[267mm] max-h-[267mm] shadow-sm rounded-sm p-4 border border-slate-200 flex flex-col justify-between box-border overflow-hidden"
             >
-              {/* 1. Header Letterhead */}
-              <div className="text-center space-y-0.5 border-b border-slate-200 pb-2 pt-1">
-                <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-tight">
-                  MUNYAKA PRIMARY AND JUNIOR SCHOOL
-                </h2>
-                <p className="font-bold text-[10px] text-slate-600 leading-none">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-[9.5px] text-slate-500 font-medium leading-none">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-0.5 px-2.5 inline-block rounded mt-1">
-                  <p className="font-black text-[8.5px] uppercase tracking-tighter text-indigo-900 leading-none">
-                    Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
-                  </p>
+              {/* Top Block: Header, Metadata, Table */}
+              <div className="space-y-3 flex-1 flex flex-col justify-start">
+                {/* 1. Header Letterhead */}
+                <div className="text-center space-y-0.5 border-b border-slate-200 pb-2 pt-1">
+                  <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-tight">
+                    MUNYAKA PRIMARY AND JUNIOR SCHOOL
+                  </h2>
+                  <p className="font-bold text-[10px] text-slate-600 leading-none">P.O.BOX 5239-30100, ELDORET</p>
+                  <p className="italic text-[9.5px] text-slate-500 font-medium leading-none">MOTTO: Knowledge is Power</p>
+                  <div className="bg-slate-100 py-0.5 px-2.5 inline-block rounded mt-1">
+                    <p className="font-black text-[8.5px] uppercase tracking-tighter text-indigo-900 leading-none">
+                      Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
+                    </p>
+                  </div>
+                </div>
+
+                {/* 2. Metadata Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-md border border-slate-100 text-[10px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
+                    <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
+                    <span className="font-black font-mono text-slate-900">{s.assessment}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>
+                    <span className="font-bold text-slate-900">Grade {s.grade} — {s.stream}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Overall Rank</span>
+                    <span className="font-black text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
+                  </div>
+                </div>
+
+                {/* 3. Grading Table */}
+                <div className="overflow-hidden border border-slate-300 rounded">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-100 border-b border-slate-300">
+                      <tr className="text-[8.5px] font-black uppercase">
+                        <th className="px-2.5 py-1 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">Mid</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">End</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
+                        <th className="px-2.5 py-1 text-center w-[19%]">Rubric</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {subjects.map((sub, i) => {
+                        const mid = 70 + (i % 25);
+                        const end = 72 + (i % 20);
+                        const avg = Math.round((mid + end) / 2);
+                        const r = getRubric(avg);
+                        return (
+                          <tr key={i} className="text-[9px]">
+                            <td className="px-2.5 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{mid}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{end}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
+                            <td className="px-2.5 py-1 text-center font-black text-[8.5px]">
+                              <Badge variant="outline" className={cn(
+                                "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
+                                r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
+                                r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
+                                r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
+                              )}>
+                                {r.code} — {r.label}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* 2. Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-md border border-slate-100 text-[10px]">
-                <div className="flex justify-between items-center">
-                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
-                  <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
-                  <span className="font-black font-mono text-slate-900">{s.assessment}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>
-                  <span className="font-bold text-slate-900">Grade {s.grade} — {s.stream}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Overall Rank</span>
-                  <span className="font-black text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
-                </div>
-              </div>
-
-              {/* 3. Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-300">
-                    <tr className="text-[8.5px] font-black uppercase">
-                      <th className="px-2.5 py-1 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
-                      <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">Mid</th>
-                      <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">End</th>
-                      <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
-                      <th className="px-2.5 py-1 text-center w-[19%]">Rubric</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
-                      return (
-                        <tr key={i} className="text-[9px]">
-                          <td className="px-2.5 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{mid}</td>
-                          <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{end}</td>
-                          <td className="px-1.5 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                          <td className="px-2.5 py-1 text-center font-black text-[8.5px]">
-                            <Badge variant="outline" className={cn(
-                              "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
-                              r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                              r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                              r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                            )}>
-                              {r.code} — {r.label}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 4. Remarks & Signatures Section (Rendered immediately beneath the table in natural document flow) */}
-              <div className="remarks-block space-y-2 pt-2 border-t border-slate-200">
+              {/* Bottom Remarks & Signatures Section */}
+              <div className="remarks-block space-y-2 pt-2 border-t border-slate-200 shrink-0">
                 <div className="grid grid-cols-2 gap-2.5">
                   {/* Class Teacher's Remarks */}
                   <div className="space-y-0.5 p-1.5 bg-slate-50/70 rounded-md border border-slate-200">
