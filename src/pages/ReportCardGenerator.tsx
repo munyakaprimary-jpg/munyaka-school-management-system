@@ -1,14 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Upload } from 'lucide-react';
-import { cn } from "@/lib/utils";
-import { GRADES_DATA } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
 
 interface RecordCardData {
   fullName: string;
@@ -33,57 +29,55 @@ const ReportCardGenerator = () => {
 
   const [preview, setPreview] = useState<RecordCardData | null>(null);
 
-  // Helper to get streams from localStorage
-  const getStoredGrades = (): any[] => {
-    try {
-      const stored = localStorage.getItem('munyaka_grades');
-      return stored ? JSON.parse(stored) : [];
-    } catch (e) {
-      console.error('Failed to parse stored grades', e);
-      return [];
-    }
-  };
+  // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
+  const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    return saved ? JSON.parse(saved) : GRADES_DATA;
+  });
 
-  // Get available streams based on selected grade
-  const getAvailableStreams = (selectedGrade: string) => {
-    const storedGrades = getStoredGrades();
-    if (!storedGrades || storedGrades.length === 0) {
-      // Fallback to default GRADES_DATA if nothing in storage
-      if (selectedGrade === 'all') {
-        // Return all unique stream names from default data
-        const streamNames = new Set<string>();
-        GRADES_DATA.forEach(g => {
-          g.streams.forEach(s => streamNames.add(s.name));
-        });
-        return Array.from(streamNames).map(name => ({ name }));
-      }
-      const gradeObj = GRADES_DATA.find(g => 
-        g.name === `Grade ${selectedGrade}` || g.name === selectedGrade
-      );
-      return gradeObj ? gradeObj.streams.map(s => ({ name: s.name })) : [];
-    }
-
-    if (selectedGrade === 'all') {
-      // Collect all unique stream names from stored grades
-      const streamNames = new Set<string>();
-      storedGrades.forEach((g: any) => {
-        if (g.streams && Array.isArray(g.streams)) {
-          g.streams.forEach((s: any) => {
-            if (s && s.name) streamNames.add(s.name);
-          });
+  // Listen for changes in localStorage to keep streams synced in real time
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      const saved = localStorage.getItem('munyaka_grades');
+      if (saved) {
+        try {
+          setStoredGrades(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse grades from storage", e);
         }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('focus', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('focus', handleStorageUpdate);
+    };
+  }, []);
+
+  // Compute available streams dynamically based on selected grade
+  const availableStreams = useMemo(() => {
+    if (!storedGrades || storedGrades.length === 0) return [];
+
+    if (!formData.grade || formData.grade === 'all') {
+      const streamNames = new Set<string>();
+      storedGrades.forEach((g: Grade) => {
+        g.streams?.forEach((s) => streamNames.add(s.name));
       });
-      return Array.from(streamNames).map(name => ({ name }));
+      return Array.from(streamNames).sort().map(name => ({ name }));
     }
 
-    // Find the specific grade object
-    const gradeObj = storedGrades.find((g: any) => 
-      g.name === `Grade ${selectedGrade}` || g.name === selectedGrade
+    const gradeObj = storedGrades.find((g: Grade) => 
+      g.name === `Grade ${formData.grade}` || 
+      g.name === formData.grade || 
+      g.name.replace(/[^0-9]/g, '') === formData.grade
     );
+
     return gradeObj && Array.isArray(gradeObj.streams) 
-      ? gradeObj.streams.map((s: any) => ({ name: s.name }))
+      ? gradeObj.streams.map((s) => ({ name: s.name }))
       : [];
-  };
+  }, [storedGrades, formData.grade]);
 
   // Reset stream selection when grade changes
   useEffect(() => {
@@ -99,7 +93,6 @@ const ReportCardGenerator = () => {
   };
 
   const handleGenerate = () => {
-    // Basic validation
     if (!formData.fullName || !formData.studentId || !formData.grade || !formData.stream || !formData.guardianName || !formData.contact) {
       alert('Please fill in all required fields');
       return;
@@ -179,11 +172,11 @@ const ReportCardGenerator = () => {
                     <SelectValue placeholder="Select grade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
-                      <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                    {storedGrades.map(g => (
+                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                        {g.name}
+                      </SelectItem>
                     ))}
-                    <SelectItem value="PP1">PP1</SelectItem>
-                    <SelectItem value="PP2">PP2</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -199,12 +192,17 @@ const ReportCardGenerator = () => {
                     <SelectValue placeholder="Select stream" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Dynamically generate stream options based on selected grade and localStorage */}
-                    {getAvailableStreams(formData.grade).map((stream: { name: string }) => (
-                      <SelectItem key={stream.name} value={stream.name}>
-                        {stream.name}
+                    {availableStreams.length > 0 ? (
+                      availableStreams.map((s) => (
+                        <SelectItem key={s.name} value={s.name}>
+                          {s.name}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem disabled value="none">
+                        No streams found in Grades & Streams
                       </SelectItem>
-                    ))}
+                    )}
                   </SelectContent>
                 </Select>
               </div>

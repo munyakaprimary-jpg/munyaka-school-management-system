@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BackButton from '@/components/ui/BackButton';
 import { 
@@ -17,7 +16,7 @@ import {
   Layers,
   FileSpreadsheet
 } from 'lucide-react';
-import { STUDENTS } from '@/lib/mock-data';
+import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
@@ -59,7 +58,62 @@ const ReportCards = () => {
   const [isExporting, setIsExporting] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Derived Data
+  // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
+  const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    return saved ? JSON.parse(saved) : GRADES_DATA;
+  });
+
+  // Re-read localStorage whenever the page gains focus or storage changes
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      const saved = localStorage.getItem('munyaka_grades');
+      if (saved) {
+        try {
+          setStoredGrades(JSON.parse(saved));
+        } catch (e) {
+          console.error("Failed to parse grades from storage", e);
+        }
+      }
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('focus', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('focus', handleStorageUpdate);
+    };
+  }, []);
+
+  // Compute available streams dynamically from storedGrades according to selected grade
+  const availableStreams = useMemo(() => {
+    if (!storedGrades || storedGrades.length === 0) return [];
+
+    if (grade === 'all') {
+      const streamNames = new Set<string>();
+      storedGrades.forEach(g => {
+        g.streams?.forEach(s => streamNames.add(s.name));
+      });
+      return Array.from(streamNames).sort().map(name => ({ name }));
+    }
+
+    const gradeObj = storedGrades.find(g => 
+      g.name === `Grade ${grade}` || 
+      g.name === grade || 
+      g.name.replace(/[^0-9]/g, '') === grade
+    );
+
+    return gradeObj && Array.isArray(gradeObj.streams) 
+      ? gradeObj.streams.map(s => ({ name: s.name }))
+      : [];
+  }, [storedGrades, grade]);
+
+  // Reset stream selection to "all" when grade changes
+  useEffect(() => {
+    setStream("all");
+  }, [grade]);
+
+  // Derived Filtered Students
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
       const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
@@ -69,7 +123,7 @@ const ReportCards = () => {
     });
   }, [searchTerm, grade, stream]);
 
-  const downloadPDF = async (mode: 'current' | 'all') => {
+  const downloadPDF = async () => {
     setIsExporting(true);
     const element = wrapperRef.current;
     if (!element) return;
@@ -103,33 +157,8 @@ const ReportCards = () => {
           }
           body {
             background: white !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
           }
           .no-print { display: none !important; }
-          .report-card {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-            page-break-after: always;
-            max-width: 100% !important;
-            margin: 0 !important;
-            padding: 10mm !important;
-            box-shadow: none !important;
-            border: 1px solid #e2e8f0 !important;
-          }
-          .report-card:last-child {
-            page-break-after: auto;
-          }
-          .report-card table, .report-card tr, .report-card td, .report-card th {
-            page-break-inside: avoid !important;
-            break-inside: avoid !important;
-          }
-          .reports-print-wrapper {
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 0 !important;
-            align-items: center !important;
-          }
         }
       `}</style>
 
@@ -139,16 +168,18 @@ const ReportCards = () => {
         <div className="w-full lg:w-72 space-y-6">
           <div className="flex gap-2">
             <Button 
-              onClick={() => downloadPDF('current')}
+              onClick={downloadPDF}
               className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+              disabled={isExporting}
             >
-              <Download size={16} /> Download Current
+              {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+              Download PDF
             </Button>
             <Button 
-              onClick={() => downloadPDF('all')}
               className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
             >
-              <FileSpreadsheet size={16} /> Download All
+              <FileSpreadsheet size={16} />
+              Download CSV
             </Button>
           </div>
 
@@ -160,24 +191,45 @@ const ReportCards = () => {
                 <SelectContent><SelectItem value="2026">2026</SelectItem><SelectItem value="2025">2025</SelectItem></SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Grade Level</Label>
               <Select value={grade} onValueChange={setGrade}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  <SelectItem value="PP1">PP1</SelectItem><SelectItem value="PP2">PP2</SelectItem>
-                  {[1,2,3,4,5,6,7,8,9].map(n => <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>)}
+                  {storedGrades.map(g => (
+                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                      {g.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
               <Select value={stream} onValueChange={setStream}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Streams</SelectItem><SelectItem value="A">Stream A</SelectItem><SelectItem value="B">Stream B</SelectItem></SelectContent>
+                <SelectTrigger className="rounded-xl h-10 border-slate-200">
+                  <SelectValue placeholder="All Streams" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Streams</SelectItem>
+                  {availableStreams.length > 0 ? (
+                    availableStreams.map(s => (
+                      <SelectItem key={s.name} value={s.name}>
+                        {s.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem disabled value="none">
+                      No streams found in Grades & Streams
+                    </SelectItem>
+                  )}
+                </SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Active Term</Label>
               <Select value={term} onValueChange={setTerm}>
@@ -185,6 +237,7 @@ const ReportCards = () => {
                 <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
               </Select>
             </div>
+
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
               <Select value={type} onValueChange={setType}>
@@ -192,6 +245,7 @@ const ReportCards = () => {
                 <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
               </Select>
             </div>
+
             <div className="pt-2">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
@@ -244,7 +298,7 @@ const ReportCards = () => {
                 </div>
               </div>
 
-              {/* Metadata Grid - 2x2 Compact with Fixed Widths */}
+              {/* Metadata Grid */}
               <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
                 <div className="flex justify-between items-center">
                   <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Name</span>
@@ -358,17 +412,18 @@ const ReportCards = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={() => downloadPDF('current')}
+            onClick={downloadPDF}
             variant="outline"
             className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
+            disabled={isExporting}
           >
-            Download Current
+            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+            Download PDF
           </Button>
           <Button 
-            onClick={() => downloadPDF('all')}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
           >
-            <Download size={16} /> Download All ({filteredStudents.length})
+            <FileSpreadsheet size={16} /> Download CSV
           </Button>
         </div>
       </div>
