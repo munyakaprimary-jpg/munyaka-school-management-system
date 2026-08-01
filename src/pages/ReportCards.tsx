@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -85,7 +85,7 @@ const ReportCards = () => {
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
+  // Dynamic Stored Grades State
   const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
     return saved ? JSON.parse(saved) : GRADES_DATA;
@@ -160,7 +160,6 @@ const ReportCards = () => {
   }, [searchTerm, grade, stream]);
 
   // Handler: "Download Current"
-  // Generates/exports reports strictly for the individual learner searched in the search box
   const handleDownloadCurrent = async () => {
     if (!searchTerm.trim()) {
       showError("Please type a learner's name or ULI/Assessment No in the search box to download an individual report card.");
@@ -181,18 +180,17 @@ const ReportCards = () => {
 
       if (element) {
         const opt = {
-          margin: [10, 10, 10, 10],
+          margin: [6, 6, 6, 6],
           filename: `report_card_${safeLearnerName}_${year}_${term}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+          pagebreak: { mode: ['avoid-all', 'css'] }
         };
 
         await html2pdf().set(opt).from(element).save();
-        showSuccess(`Generated individual report card for ${targetLearner.name}!`);
+        showSuccess(`Generated individual 1-page report card for ${targetLearner.name}!`);
       } else {
-        // Fallback text export for searched learner
         const content = [
           `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
           `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
@@ -224,7 +222,6 @@ const ReportCards = () => {
   };
 
   // Handler: "Download All"
-  // Bulk exports a combined dataset report across all available records and grade levels
   const handleDownloadAll = async () => {
     setIsDownloadingAll(true);
 
@@ -278,12 +275,18 @@ const ReportCards = () => {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 10mm;
+            margin: 6mm;
           }
           body {
             background: white !important;
           }
           .no-print { display: none !important; }
+        }
+
+        .report-card {
+          page-break-inside: avoid !important;
+          page-break-after: avoid !important;
+          box-sizing: border-box !important;
         }
       `}</style>
 
@@ -294,7 +297,7 @@ const ReportCards = () => {
           <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
-          {/* Button 1: Download Current (Single Learner Search) */}
+          {/* Button 1: Download Current */}
           <Button 
             onClick={handleDownloadCurrent}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
@@ -408,10 +411,10 @@ const ReportCards = () => {
         </div>
       </div>
 
-      {/* A4 Portrait Reports Wrapper */}
+      {/* A4 Single-Page Report Cards Container */}
       <div 
         ref={wrapperRef} 
-        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[794px] mx-auto"
+        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[210mm] mx-auto"
       >
         {filteredStudents.map((s, idx) => {
           const cat = getCategory(s.grade);
@@ -420,115 +423,118 @@ const ReportCards = () => {
           return (
             <Card 
               key={s.id} 
-              className="report-card bg-white w-full max-w-[210mm] min-h-[297mm] shadow-sm rounded-sm p-6 space-y-4"
+              className="report-card bg-white w-full max-w-[210mm] h-[282mm] max-h-[282mm] shadow-sm rounded-sm p-4 space-y-2.5 overflow-hidden flex flex-col justify-between border border-slate-200"
             >
-              {/* Header Letterhead - Stacked & Centered */}
-              <div className="text-center space-y-1 border-b border-slate-200 pb-3">
-                <h2 className="font-black text-base uppercase tracking-tight text-slate-900 leading-tight">
-                  MUNYAKA PRIMARY AND JUNIOR SCHOOL
-                </h2>
-                <p className="font-bold text-xs text-slate-600">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-xs text-slate-500 font-medium">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-1 px-3 inline-block rounded-md mt-2">
-                  <p className="font-black text-[9px] uppercase tracking-tighter text-indigo-900">
-                    Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
-                  </p>
+              {/* Top Block: Header, Metadata, Table */}
+              <div className="space-y-2.5 flex-1 overflow-hidden">
+                {/* Header Letterhead - Stacked & Centered */}
+                <div className="text-center space-y-0.5 border-b border-slate-200 pb-2">
+                  <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-tight">
+                    MUNYAKA PRIMARY AND JUNIOR SCHOOL
+                  </h2>
+                  <p className="font-bold text-[10px] text-slate-600 leading-none">P.O.BOX 5239-30100, ELDORET</p>
+                  <p className="italic text-[9.5px] text-slate-500 font-medium leading-none">MOTTO: Knowledge is Power</p>
+                  <div className="bg-slate-100 py-0.5 px-2.5 inline-block rounded mt-1">
+                    <p className="font-black text-[8.5px] uppercase tracking-tighter text-indigo-900 leading-none">
+                      Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Metadata Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px]">
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
+                    <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
+                    <span className="font-black font-mono text-slate-900">{s.assessment}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>
+                    <span className="font-bold text-slate-900">Grade {s.grade} — {s.stream}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Overall Rank</span>
+                    <span className="font-black text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
+                  </div>
+                </div>
+
+                {/* Grading Table */}
+                <div className="overflow-hidden border border-slate-300 rounded">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-100 border-b border-slate-300">
+                      <tr className="text-[8.5px] font-black uppercase">
+                        <th className="px-2.5 py-1 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">Mid</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%]">End</th>
+                        <th className="px-1.5 py-1 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
+                        <th className="px-2.5 py-1 text-center w-[19%]">Rubric</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {subjects.map((sub, i) => {
+                        const mid = 70 + (i % 25);
+                        const end = 72 + (i % 20);
+                        const avg = Math.round((mid + end) / 2);
+                        const r = getRubric(avg);
+                        return (
+                          <tr key={i} className="text-[9px]">
+                            <td className="px-2.5 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{mid}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-medium">{end}</td>
+                            <td className="px-1.5 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
+                            <td className="px-2.5 py-1 text-center font-black text-[8.5px]">
+                              <Badge variant="outline" className={cn(
+                                "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
+                                r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                                r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
+                                r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
+                                r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
+                              )}>
+                                {r.code} — {r.label}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
                 </div>
               </div>
 
-              {/* Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Name</span>
-                  <span className="font-bold text-sm text-slate-900" style={{ minWidth: '120px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">ULI</span>
-                  <span className="font-black font-mono text-sm text-slate-900">{s.assessment}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Grade / Stream</span>
-                  <span className="font-bold text-sm text-slate-900">Grade {s.grade} — {s.stream}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Overall Rank</span>
-                  <span className="font-black text-sm text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
-                </div>
-              </div>
-
-              {/* Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-300">
-                    <tr className="text-[9px] font-black uppercase">
-                      <th className="px-3 py-2 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%]">Mid</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%]">End</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
-                      <th className="px-3 py-2 text-center w-[19%]">Rubric</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
-                      return (
-                        <tr key={i} className="text-[10px]">
-                          <td className="px-3 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-medium">{mid}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-medium">{end}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                          <td className="px-3 py-1.5 text-center font-black text-[9px]">
-                            <Badge variant="outline" className={cn(
-                              "rounded-md border-none font-black text-[9px] px-2 py-0.5",
-                              r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                              r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                              r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                            )}>
-                              {r.code} — {r.label}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Bottom Remarks Section */}
-              <div className="space-y-3 pt-3 border-t border-slate-100">
-                <div className="grid grid-cols-2 gap-4">
+              {/* Bottom Remarks & Signatures Section (Anchored to Bottom of 1-Page A4) */}
+              <div className="space-y-2 pt-2 border-t border-slate-200 shrink-0">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Class Teacher's Remarks */}
-                  <div className="space-y-1.5 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1">
+                      <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
+                      <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
                         <Save size={8} /> Save
                       </Button>
                     </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Excellent performance. Very disciplined learner." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign: .......................................</p>
+                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[8.5px] italic text-slate-600 resize-none outline-none font-medium leading-tight" defaultValue="Excellent performance. Very disciplined learner." />
+                    <p className="text-[7.5px] font-bold text-slate-400 pt-0.5">Sign: .......................................</p>
                   </div>
 
                   {/* HOI Remarks */}
-                  <div className="space-y-1.5 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
+                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
                     <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1">
+                      <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
+                      <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
                         <Save size={8} /> Save
                       </Button>
                     </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Maintain the same effort in Term 2." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign & Stamp: .............................</p>
+                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[8.5px] italic text-slate-600 resize-none outline-none font-medium leading-tight" defaultValue="Maintain the same effort in Term 2." />
+                    <p className="text-[7.5px] font-bold text-slate-400 pt-0.5">Sign & Stamp: .............................</p>
                   </div>
                 </div>
 
-                {/* Footer Zone */}
-                <div className="flex items-center justify-between text-[8px] font-bold text-slate-500 bg-slate-100/50 p-2 rounded">
-                  <div className="flex gap-4">
+                {/* Footer Dates & System Info */}
+                <div className="flex items-center justify-between text-[7.5px] font-bold text-slate-500 bg-slate-100/70 p-1.5 rounded">
+                  <div className="flex gap-3">
                     <span>Closing Date: <span className="text-slate-900 font-black">10/04/2026</span></span>
                     <span>Opening Date: <span className="text-slate-900 font-black">04/05/2026</span></span>
                   </div>
@@ -548,7 +554,7 @@ const ReportCards = () => {
           <Layers size={16} className="text-indigo-600" />
           <span>
             {searchTerm.trim() 
-              ? `Ready to download individual report for ${filteredStudents[0]?.name || 'searched learner'}` 
+              ? `Ready to download individual 1-page report for ${filteredStudents[0]?.name || 'searched learner'}` 
               : `Type a learner's name in search to download their individual report card`}
           </span>
         </div>
