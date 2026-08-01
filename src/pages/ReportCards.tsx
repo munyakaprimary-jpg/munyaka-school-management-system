@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
-import { Card } from "@/components/ui/card";
+import React, { useState, useMemo, useRef } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
@@ -18,7 +18,7 @@ import {
 } from 'lucide-react';
 import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn } from "@/lib/utils";
+import { cn } from '@/lib/utils';
 import html2pdf from 'html2pdf.js';
 
 // Rubric Logic
@@ -46,7 +46,6 @@ const getCategory = (grade: string) => {
   return 'Junior';
 };
 
-// Define the order we want grades to appear
 const GRADE_ORDER = [
   'playgroup',
   'pp1',
@@ -65,10 +64,9 @@ const GRADE_ORDER = [
   'grade 12'
 ];
 
-// Helper function to get the sort index for a grade name
 const getGradeSortIndex = (gradeName: string): number => {
   const normalized = gradeName.toLowerCase().trim();
-  const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
+  const match = GRADE_ORDER.findIndex(g => normalized.includes(g));
   return index !== -1 ? index : 999;
 };
 
@@ -83,37 +81,8 @@ const ReportCards = () => {
   
   const [isExportingCurrent, setIsExportingCurrent] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
-  const wrapperRef = useRef<HTMLDivElement>(null);
-
-  // Dynamic Stored Grades State
-  const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
-    const saved = localStorage.getItem('munyaka_grades');
-    return saved ? JSON.parse(saved) : GRADES_DATA;
-  });
-
-  // Re-read localStorage whenever the page gains focus or storage changes
-  useEffect(() => {
-    const handleStorageUpdate = () => {
-      const saved = localStorage.getItem('munyaka_grades');
-      if (saved) {
-        try {
-          setStoredGrades(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse grades from storage", e);
-        }
-      }
-    };
-
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('focus', handleStorageUpdate);
-    return () => {
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('focus', handleStorageUpdate);
-    };
-  }, []);
-
-  // Sort grades logically
-  const sortedGrades = useMemo(() => {
+  const [filteredStudents, setFilteredStudents] = useState([]);
+  const [sortedGrades] = useMemo(() => {
     return [...storedGrades].sort((a, b) => {
       const nameA = a.name || '';
       const nameB = b.name || '';
@@ -121,35 +90,24 @@ const ReportCards = () => {
     });
   }, [storedGrades]);
 
-  // Compute available streams dynamically from storedGrades according to selected grade
+  // Dynamic Streams
   const availableStreams = useMemo(() => {
     if (!storedGrades || storedGrades.length === 0) return [];
-
     if (grade === 'all') {
-      const streamNames = new Set<string>();
-      storedGrades.forEach(g => {
-        g.streams?.forEach(s => streamNames.add(s.name));
-      });
+      const names = new Set<string>();
+      storedGrades.forEach(g => g.streams?.forEach(s => streamNames.add(s.name)));
       return Array.from(streamNames).sort().map(name => ({ name }));
     }
-
+    
     const gradeObj = storedGrades.find(g => 
       g.name === `Grade ${grade}` || 
       g.name === grade || 
       g.name.replace(/[^0-9]/g, '') === grade
     );
-
-    return gradeObj && Array.isArray(gradeObj.streams) 
-      ? gradeObj.streams.map(s => ({ name: s.name }))
-      : [];
+    return gradeObj?.streams?.map(s => ({ name: s.name })) || [];
   }, [storedGrades, grade]);
 
-  // Reset stream selection to "all" when grade changes
-  useEffect(() => {
-    setStream("all");
-  }, [grade]);
-
-  // Derived Filtered Students based on current Academic Year & Grade/Stream/Search filters
+  // Filtered Students
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
       const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
@@ -159,20 +117,18 @@ const ReportCards = () => {
     });
   }, [searchTerm, grade, stream]);
 
-  // Handler: "Download Current"
+  // Export Handlers
   const handleDownloadCurrent = async () => {
     if (!searchTerm.trim()) {
       showError("Please type a learner's name or ULI/Assessment No in the search box to download an individual report card.");
       return;
     }
-
     if (filteredStudents.length === 0) {
       showError(`No learner found matching "${searchTerm}".`);
       return;
     }
 
     setIsExportingCurrent(true);
-
     try {
       const element = wrapperRef.current;
       const targetLearner = filteredStudents[0];
@@ -192,406 +148,288 @@ const ReportCards = () => {
         showSuccess(`Generated individual 1-page portrait report card for ${targetLearner.name}!`);
       } else {
         const content = [
-          `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
+          "MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT",
           `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
           `Grade: Grade ${targetLearner.grade} — ${targetLearner.stream} Stream`,
           `Academic Year: ${year} | Term: ${term.toUpperCase()}`,
           `Generated: ${new Date().toLocaleString()}`,
-          `--------------------------------------------------`,
+          "--------------------------------------------------",
           `Guardian: ${targetLearner.guardian} | Contact: ${targetLearner.phone}`
         ].join('\n');
 
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
-        link.href = url;
-        link.download = `report_card_${safeLearnerName}_${year}.txt`;
+        link.setAttribute("href", url);
+        link.setAttribute("download", `report_card_${safeLearnerName}_${year}.txt`);
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
         showSuccess(`Exported individual report card for ${targetLearner.name}`);
+      } finally {
+        setIsExportingCurrent(false);
       }
-    } catch (err) {
-      console.error("Error generating report:", err);
-      showError("Failed to generate individual learner report card.");
-    } finally {
-      setIsExportingCurrent(false);
+    }, 800);
+
+    const handleDownloadAll = async () => {
+      setIsDownloadingAll(true);
+      try {
+        await new Promise(r => setTimeout(r, 600));
+        const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+        const row2 = "P.O. BOX 5239-30100, ELDORET";
+        const row3 = "MOTTO: KNOWLEDGE POWER";
+        const row4 = `GRADE ${grade}, STREAM ${stream}, YEAR ${year}, TERM ${term.toUpperCase()}`;
+        const row5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${filteredStudents.length}`;
+        const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone Contact", "Email"];
+        const rows = filteredStudents.map(s => [
+          `"${s.name.replace(/"/g, '""')}"`,
+          `"${s.assessment.replace(/"/g, '""')}"`,
+          `"Grade ${s.grade}"`,
+          `"${s.stream.replace(/"/g, '""')}"`,
+          `"${s.guardian.replace(/"/g, '""')}"`,
+          `"${s.phone.replace(/"/g, '""')}"`,
+          `"${s.email.replace(/"/g, '""')}"`
+        ]);
+        const csvContent = [
+          row1,
+          row2,
+          row3,
+          row4,
+          row5,
+          "",
+          headers.join(","),
+          ...rows.map(r => r.join(","))
+        ].join("\n");
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
+      } catch (err) {
+        console.error("Export error:", err);
+        showError("Failed to generate bulk report.");
+      } finally {
+        setIsDownloadingAll(false);
+      }
+    };
+
+  // Export Handlers
+  const handleDownloadCurrent = async () => {
+    if (!searchTerm.trim()) {
+      showError("Please type a learner's name or ULI/Assessment No in the search box to download an individual report card.");
+      return;
     }
+    if (filteredStudents.length === 0) {
+      showError(`No learner found matching "${searchTerm}".`);
+      return;
+    }
+
+    setIsExportingCurrent(true);
+    await handleDownloadCurrent();
   };
 
-  // Handler: "Download All"
   const handleDownloadAll = async () => {
     setIsDownloadingAll(true);
-
     try {
-      await new Promise(r => setTimeout(r, 600));
-
-      const headers = ["Student Name", "Assessment No (ULI)", "Grade Level", "Stream", "Guardian", "Phone Contact", "Email"];
-      
-      const rows = STUDENTS.map(s => [
-        `"${s.name.replace(/"/g, '""')}"`,
-        `"${s.assessment.replace(/"/g, '""')}"`,
-        `"Grade ${s.grade}"`,
-        `"${s.stream.replace(/"/g, '""')}"`,
-        `"${s.guardian.replace(/"/g, '""')}"`,
-        `"${s.phone.replace(/"/g, '""')}"`,
-        `"${s.email.replace(/"/g, '""')}"`
-      ]);
-
-      const csvContent = [
-        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
-        `Generated: ${new Date().toLocaleString()}`,
-        `Total Records Included: ${STUDENTS.length}`,
-        "",
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
-      showSuccess(`Bulk export completed! Downloaded all ${STUDENTS.length} student records across all grades.`);
+      await handleDownloadAll();
     } catch (err) {
-      console.error("Error during bulk export:", err);
+      console.error("Bulk export error:", err);
       showError("Failed to generate bulk report.");
     } finally {
       setIsDownloadingAll(false);
     }
   };
 
+  // Derived Values
+  const sortedGrades = useMemo(() => {
+    return [...storedGrades].sort((a, b) => {
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      return getGradeSortIndex(nameA) - getGradeSortIndex(nameB);
+    });
+  }, [storedGrades]);
+
+  const selectedStreams = useMemo(() => {
+    if (grade === 'all') {
+      const names = new Set<string>();
+      storedGrades.forEach(g => g.streams?.forEach(s => streamNames.add(s.name)));
+      return Array.from(streamNames).sort().map(name => ({ name }));
+    }
+    const gradeObj = storedGrades.find(g => 
+      g.name === `Grade ${grade}` || 
+      g.name === grade || 
+      g.name.replace(/[^0-9]/g, '') === grade
+    );
+    return gradeObj?.streams?.map(s => ({ name: s.name })) || [];
+  }, [storedGrades, grade]);
+
+  const classMeanScore = useMemo(() => {
+    if (filteredStudents.length === 0) return 0;
+    const total = filteredStudents.reduce((sum, s) => sum + s.meanScore, 0);
+    return Math.round((total / filteredStudents.length) * 10) / 10;
+  }, [filteredStudents]);
+
+  // Student Details for Export
+  const selectedStudent = useMemo(() => filteredStudents[0], [filteredStudents]);
+
+  // Print Styles (hidden on screen, visible when printing)
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+    <div className="reports-print-wrapper">
+      {/* Print Styles */}
       <style>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 8mm;
-          }
-          body {
-            background: white !important;
-          }
-          .no-print { display: none !important; }
-        }
-
         .report-card {
-          page-break-inside: avoid !important;
-          page-break-after: avoid !important;
-          box-sizing: border-box !important;
+          width: 100%;
+          max-width: 190mm;
+          margin: 0 auto;
+          padding: 1rem;
+          box-sizing: border-box;
+          display: flex;
+          flex-direction: column;
+          justify-content: space-between;
+          min-height: 297mm; /* A4 height */
+          min-width: 210mm;
+          box-sizing: border-box;
         }
 
-        .remarks-block {
-          page-break-inside: avoid !important;
-          break-inside: avoid !important;
+        .no-print {
+          display: none;
+        }
+
+        @media print {
+          .report-card {
+            width: 100% !important;
+            height: 297mm !important;
+            margin: 0 !important;
+            padding: 1rem !important;
+            box-sizing: border-box !important;
+          }
+          .no-print {
+            display: none !important;
+          }
+          .report-card {
+            width: 100% !important;
+            height: 100% !important;
+            padding: 1rem !important;
+            box-sizing: border-box !important;
+          }
         }
       `}</style>
 
-      {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
-        </div>
-        <div className="flex gap-2">
-          {/* Button 1: Download Current */}
-          <Button 
-            onClick={handleDownloadCurrent}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-            disabled={isExportingCurrent}
-          >
-            {isExportingCurrent ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            Download Current
-          </Button>
+      {/* Main Container - ensures full A4 height */}
+      <div className="report-page">
+        <Card className="report-card">
+          {/* Header Section */}
+          <div className="metadata-header">
+            <div className="flex items-center gap-3">
+              <BackButton fallback="/" />
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+                MUNYAKA PRIMARY AND JUNIOR SCHOOL
+              </h1>
+            </div>
+            <p className="text-sm text-slate-600">
+              P.O. BOX 5239-30100, ELDORET
+            </p>
+            <p className="text-[9.5px] text-slate-500 font-medium mb-[12px]">
+              MOTTO: Knowledge is Power
+            </p>
+            <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded border border-slate-200">
+              COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
+            </h3>
+          </div>
 
-          {/* Button 2: Download All */}
-          <Button 
-            onClick={handleDownloadAll}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-            disabled={isDownloadingAll}
-          >
-            {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
-            Download All
-          </Button>
-        </div>
-      </div>
+          {/* Metadata Header */}
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 mt-5">
+            <div className="flex items-center justify-between">
+              <span className="font-black uppercase text-slate-500 text-[9px]">Name</span>
+              <span className="font-bold text-slate-900 text-[11px]">{s.name}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-black uppercase text-slate-500 text-[9px]">ULI / Assessment No</span>
+              <span className="font-black text-slate-900 text-[11px]">{s.assessment}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-black uppercase text-slate-500 text-[9px]">Grade / Stream</span>
+              <span className="font-bold text-slate-900 text-[11px]">{s.grade} — {s.stream}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="font-black uppercase text-slate-500 text-[9px]">Overall Rank</span>
+              <span className="font-black text-indigo-600 text-[11px]">#{idx + 1} of {filteredStudents.length}</span>
+            </div>
+          </div>
 
-      {/* Filters & Info Section */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start no-print">
-        {/* Left Side: Filters Stack */}
-        <div className="w-full lg:w-72 space-y-6">
-          <div className="space-y-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Academic Year</Label>
-              <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="2026">2026</SelectItem><SelectItem value="2025">2025</SelectItem></SelectContent>
-              </Select>
+          {/* 3. Grading Table */}
+          <div className="overflow-hidden border border-slate-300 rounded-sm mt-4">
+            <table className="w-full text-left text-[8.5px]">
+              <thead className="bg-slate-100 border-b">
+                <tr className="text-slate-400 uppercase tracking-wider">
+                  <th className="px-2.5 py-1.5">Subject / Learning Area</th>
+                  <th className="px-1.5 py-1.5 text-center border-r border-slate-300">Mid</th>
+                  <th className="px-1.5 py-1.5 text-center border-r border-slate-300 w-[12%]">End</th>
+                  <th className="px-1.5 py-1.5 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
+                  <th className="px-2.5 py-1.5 text-center w-[19%]">Rubric</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {subjects.map((sub, i) => {
+                  const mid = 70 + (i % 25);
+                  const end = 72 + (i % 20);
+                  const avg = Math.round((mid + end) / 2);
+                  const r = getRubric(avg);
+                  return (
+                    <tr className="text-[9px] hover:bg-slate-50/50 transition-colors">
+                      <td className="px-2.5 py-1.5 border-r">{sub}</td>
+                      <td className="px-1.5 py-1.5 text-center border-r">{mid}</td>
+                      <td className="px-1.5 py-1.5 text-center border-r border-slate-300">{end}</td>
+                      <td className="px-1.5 py-1.5 text-center bg-indigo-50/20 font-black">{avg}%</td>
+                      <td className="px-2.5 py-1.5 text-center">
+                        <Badge variant="outline" className={cn(
+                          "rounded border-none text-[8px]",
+                          r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
+                          r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
+                          r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
+                          r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
+                        )}>{r.code} — {r.label}</Badge>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </div>
+          </Card>
+
+          {/* Remarks & Footer Section - Pushed to bottom */}
+          <div className="remarks-section mt-[16px] p-4 bg-slate-50/50 rounded-lg border border-slate-200">
+            <div className="flex items-start gap-3">
+              <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <FileText size={24} />
+              </div>
+              <div className="flex items-center gap-2">
+                <p className="text-sm font-bold text-slate-900">Class Teacher's Remarks</p>
+                <p className="text-sm text-slate-600 leading-relaxed">{s.description || "No remarks provided."}</p>
+              </div>
             </div>
 
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Grade Level</Label>
-              <Select value={grade} onValueChange={setGrade}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
-                  {sortedGrades.map(g => (
-                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
-              <Select value={stream} onValueChange={setStream}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200">
-                  <SelectValue placeholder="All Streams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Streams</SelectItem>
-                  {availableStreams.length > 0 ? (
-                    availableStreams.map(s => (
-                      <SelectItem key={s.name} value={s.name}>
-                        {s.name}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled value="none">
-                      No streams found in Grades & Streams
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Active Term</Label>
-              <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Exam Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
-              </Select>
-            </div>
-
-            <div className="pt-2 space-y-1">
-              <Label className="text-[10px] font.black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input 
-                  placeholder="Type Learner Name / ULI..." 
-                  className="pl-9 h-10 rounded-xl bg-slate-50 border-indigo-200 text-xs font-bold focus:bg-white"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
+            <div className="flex items-center justify-between mt-4">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-500">Date:</span>
+                <span className="text-sm text-slate-400">{new Date().toLocaleDateString()}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-slate-400">Teacher:</span>
+                <span className="text-slate-600">{s.teacher ?? "Unassigned"}</span>
               </div>
             </div>
           </div>
-        </div>
-
-        {/* Right Side: Page Info */}
-        <div className="flex-1 space-y-2">
-          <p className="text-slate-500 text-sm font-medium">
-            {searchTerm.trim() 
-              ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.` 
-              : `Previewing ${filteredStudents.length} report cards for Grade ${grade} (${year}). Type a learner's name in the search box to download an individual report.`}
-          </p>
-        </div>
-      </div>
-
-      {/* A4 Single-Page Report Cards Container */}
-      <div 
-        ref={wrapperRef} 
-        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[190mm] mx-auto"
-      >
-        {filteredStudents.map((s, idx) => {
-          const cat = getCategory(s.grade);
-          const subjects = SUBJECT_MAP[cat];
-
-          return (
-            <Card 
-              key={s.id} 
-              className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-6 border border-slate-200 space-y-4 box-border"
-            >
-              {/* 1. Header Letterhead - Standard Vertical Stack */}
-              <div className="w-full flex flex-col items-center text-center border-b border-slate-200 pb-3 overflow-visible">
-                <h2 className="font-bold text-sm uppercase tracking-tight text-slate-900 mb-[4px] leading-normal">
-                  MUNYAKA PRIMARY AND JUNIOR SCHOOL
-                </h2>
-                <p className="font-bold text-[10px] text-slate-600 mb-[2px] leading-normal">
-                  P.O. BOX 5239-30100, ELDORET
-                </p>
-                <p className="italic text-[9.5px] text-slate-500 font-medium mb-[12px] leading-normal">
-                  MOTTO: Knowledge is Power
-                </p>
-                <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded mb-[16px] block border border-slate-200 leading-normal">
-                  COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
-                </h3>
-              </div>
-
-              {/* 2. Learner Metadata Header */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs mt-5 mb-4 leading-normal overflow-visible">
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font-black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Name</span>
-                  <span className="font-bold text-slate-900 text-[11px] leading-normal truncate">{s.name}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">ULI / Assessment No</span>
-                  <span className="font-black font-mono text-slate-900 text-[11px] leading-normal">{s.assessment}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Grade / Stream</span>
-                  <span className="font-bold text-slate-900 text-[11px] leading-normal">Grade {s.grade} — {s.stream}</span>
-                </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Overall Rank</span>
-                  <span className="font-black text-indigo-600 text-[11px] leading-normal">#{idx + 1} of {filteredStudents.length}</span>
-                </div>
-              </div>
-
-              {/* 3. Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded mb-2">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-300">
-                    <tr className="text-[8.5px] font-black uppercase">
-                      <th className="px-2.5 py-1.5 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
-                      <th className="px-1.5 py-1.5 text-center border-r border-slate-300 w-[12%]">Mid</th>
-                      <th className="px-1.5 py-1.5 text-center border-r border-slate-300 w-[12%]">End</th>
-                      <th className="px-1.5 py-1.5 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
-                      <th className="px-2.5 py-1.5 text-center w-[19%]">Rubric</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
-                      return (
-                        <tr key={i} className="text-[9px]">
-                          <td className="px-2.5 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{mid}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-medium">{end}</td>
-                          <td className="px-1.5 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                          <td className="px-2.5 py-1.5 text-center font-black text-[8.5px]">
-                            <Badge variant="outline" className={cn(
-                              "rounded border-none font-black text-[8px] px-1.5 py-0.5 leading-none",
-                              r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                              r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                              r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                            )}>
-                              {r.code} — {r.label}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* 4. Remarks & Signatures Section */}
-              <div className="remarks-block space-y-4 pt-4 border-t border-slate-200 mt-6 overflow-visible">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Class Teacher's Remarks */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
-                    <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">Class Teacher's Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1 shrink-0">
-                        <Save size={10} /> Save
-                      </Button>
-                    </div>
-                    <textarea 
-                      rows={2} 
-                      className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
-                      defaultValue="Excellent performance. Very disciplined learner." 
-                    />
-                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign: .......................................</p>
-                  </div>
-
-                  {/* HOI Remarks */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
-                    <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font.bold text-[7.5px] rounded gap-1 shrink-0">
-                        <Save size={10} /> Save
-                      </Button>
-                    </div>
-                    <textarea 
-                      rows={2} 
-                      className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
-                      defaultValue="Maintain the same effort in Term 2." 
-                    />
-                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign & Stamp: .............................</p>
-                  </div>
-                </div>
-
-                {/* Footer Dates & System Info */}
-                <div className="flex items-center justify-between text-[8px] font.bold text-slate-600 bg-slate-100/80 px-3 py-2 rounded-md border border-slate-200/80 mt-3 leading-normal overflow-visible">
-                  <div className="flex gap-4">
-                    <span>Closing Date: <span className="text-slate-900 font.black">10/04/2026</span></span>
-                    <span>Opening Date: <span className="text-slate-900 font.black">04/05/2026</span></span>
-                  </div>
-                  <div className="text-right italic font.black text-slate-400">
-                    System Powered by Jamlyan Analytics
-                  </div>
-                </div>
-              </div>
-            </Card>
-          );
-        })}
-      </div>
-
-      {/* Bottom Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200 no-print">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-          <Layers size={16} className="text-indigo-600" />
-          <span>
-            {searchTerm.trim() 
-              ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}` 
-              : `Type a learner's name in search to download their individual report card`}
-          </span>
-        </div>
-        <div className="flex gap-2">
-          {/* Button 1: Download Current */}
-          <Button 
-            onClick={handleDownloadCurrent}
-            variant="outline"
-            className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
-            disabled={isExportingCurrent}
-          >
-            {isExportingCurrent ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Download Current
-          </Button>
-
-          {/* Button 2: Download All */}
-          <Button 
-            onClick={handleDownloadAll}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
-            disabled={isDownloadingAll}
-          >
-            {isDownloadingAll ? <Loader2 className="animate-spin" size={18} /> : <FileSpreadsheet size={18} />}
-            Download All
-          </Button>
-        </div>
+        </Card>
       </div>
     </div>
   );
