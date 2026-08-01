@@ -189,7 +189,7 @@ const ReportCards = () => {
         };
 
         await html2pdf().set(opt).from(element).save();
-        showSuccess(`Generated individual 1-page report card for ${targetLearner.name}!`);
+        showSuccess(`Generated individual 1-page portrait report card for ${targetLearner.name}!`);
       } else {
         const content = [
           `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
@@ -554,7 +554,7 @@ const ReportCards = () => {
           <Layers size={16} className="text-indigo-600" />
           <span>
             {searchTerm.trim() 
-              ? `Ready to download individual 1-page report for ${filteredStudents[0]?.name || 'searched learner'}` 
+              ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}` 
               : `Type a learner's name in search to download their individual report card`}
           </span>
         </div>
