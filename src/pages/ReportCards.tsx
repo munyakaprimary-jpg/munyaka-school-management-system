@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -8,15 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  Download, 
-  Search, 
-  Save, 
-  Loader2, 
-  Layers,
-  FileSpreadsheet
-} from 'lucide-react';
-import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
+import { Download, Search, Save, Loader2, Layers, FileSpreadsheet } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
@@ -46,389 +38,599 @@ const getCategory = (grade: string) => {
   return 'Junior';
 };
 
+// Helper to get filtered students
+const getFilteredStudents = (storedGrades: Grade[], searchTerm: string, gradeId: string, streamId: string) => {
+  return storedGrades.filter(s => {
+    const matchesSearch = !searchTerm || 
+      s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesGrade = gradeId === 'all' || s.grade === gradeId;
+    const matchesStream = streamId === 'all' || s.stream.toLowerCase() === streamId.toLowerCase();
+    return matchesSearch && matchesGrade && matchesStream;
+  });
+};
+
+// Helper to get next grade name for ranking
+const getGradeRank = (name: string) => {
+  const match = name.match(/\d+/);
+  if (match) return parseInt(match[0], 10);
+  if (name.toUpperCase().includes('PP1')) return 1;
+  if (name.toUpperCase().includes('PP2')) return 2;
+  return 0;
+};
+
+// Main Component
 const ReportCards = () => {
-  // Filters State
+  // State Management
   const [year, setYear] = useState("2026");
   const [grade, setGrade] = useState("4");
   const [stream, setStream] = useState("all");
   const [term, setTerm] = useState("term1");
   const [type, setType] = useState("endterm");
   const [searchTerm, setSearchTerm] = useState("");
-  
   const [isExporting, setIsExporting] = useState(false);
+  const [selectedLearner, setSelectedLearner] = useState<string | null>(null);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
+  // Load stored grades from localStorage
   const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
     return saved ? JSON.parse(saved) : GRADES_DATA;
   });
 
-  // Re-read localStorage whenever the page gains focus or storage changes
+  // Sync localStorage on changes
   useEffect(() => {
-    const handleStorageUpdate = () => {
-      const saved = localStorage.getItem('munyaka_grades');
-      if (saved) {
-        try {
-          setStoredGrades(JSON.parse(saved));
-        } catch (e) {
-          console.error("Failed to parse grades from storage", e);
-        }
-      }
-    };
+    localStorage.setItem('munyaka_grades', JSON.stringify(storedGrades));
+  }, [storedGrades]);
 
-    window.addEventListener('storage', handleStorageUpdate);
-    window.addEventListener('focus', handleStorageUpdate);
-    return () => {
-      window.removeEventListener('storage', handleStorageUpdate);
-      window.removeEventListener('focus', handleStorageUpdate);
-    };
-  }, []);
+  // Compute filtered students based on current filters
+  const filteredStudents = useMemo(() => {
+    return getFilteredStudents(storedGrades, searchTerm, grade, stream);
+  }, [storedGrades, searchTerm, grade, stream]);
 
-  // Compute available streams dynamically from storedGrades according to selected grade
+  // Compute available streams for current grade
   const availableStreams = useMemo(() => {
-    if (!storedGrades || storedGrades.length === 0) return [];
-
-    if (grade === 'all') {
-      const streamNames = new Set<string>();
-      storedGrades.forEach(g => {
-        g.streams?.forEach(s => streamNames.add(s.name));
-      });
-      return Array.from(streamNames).sort().map(name => ({ name }));
-    }
-
-    const gradeObj = storedGrades.find(g => 
-      g.name === `Grade ${grade}` || 
-      g.name === grade || 
-      g.name.replace(/[^0-9]/g, '') === grade
-    );
-
-    return gradeObj && Array.isArray(gradeObj.streams) 
-      ? gradeObj.streams.map(s => ({ name: s.name }))
-      : [];
+    if (!storedGrades || grade === 'all') return [];
+    const gradeObj = storedGrades.find(g => g.name === `Grade ${grade}` || g.name === grade);
+    return gradeObj?.streams?.map(s => s.name) || [];
   }, [storedGrades, grade]);
 
-  // Reset stream selection to "all" when grade changes
-  useEffect(() => {
-    setStream("all");
-  }, [grade]);
-
-  // Derived Filtered Students
-  const filteredStudents = useMemo(() => {
-    return STUDENTS.filter(s => {
-      const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = grade === "all" || s.grade === grade;
-      const matchesStream = stream === "all" || s.stream.toLowerCase() === stream.toLowerCase();
-      return matchesSearch && matchesGrade && matchesStream;
+  // Compute grade ranking for sorting
+  const sortedGrades = useMemo(() => {
+    return [...storedGrades].sort((a, b) => {
+      const rankA = getGradeRank(a.name);
+      const rankB = getGradeRank(b.name);
+      if (rankA !== rankB) return rankA - rankB;
+      const numA = a.name.replace(/[^0-9]/g, '') || 0;
+      const numB = b.name.replace(/[^0-9]/g, '') || 0;
+      return numA - numB;
     });
-  }, [searchTerm, grade, stream]);
+  }, [storedGrades]);
 
-  const downloadPDF = async () => {
+  // Compute grade distribution for stats
+  const gradeDistribution = useMemo(() => {
+    const counts = { EE: 0, ME: 0, AE: 0, BE: 0 };
+    filteredStudents.forEach(s => {
+      const score = getScoreForStudentSubject(s.id, 'any', storedGrades);
+      if (score >= 80) counts.EE++;
+      else if (score >= 50) counts.ME++;
+      else if (score >= 30) counts.AE++;
+      else counts.BE++;
+    });
+    return counts;
+  }, [filteredStudents]);
+
+  // Calculate class mean score
+  const classMeanScore = useMemo(() => {
+    if (filteredStudents.length === 0) return 0;
+    const total = filteredStudents.reduce((sum, s) => sum + getScoreForStudentSubject(s.id, 'any', storedGrades), 0);
+    return Math.round((total / filteredStudents.length) * 10) / 10;
+  }, [filteredStudents.length, storedGrades]);
+
+  // Download PDF handler
+  const handleDownloadPDF = () => {
     setIsExporting(true);
     const element = wrapperRef.current;
-    if (!element) return;
-
+    if (!element) {
+      setIsExporting(false);
+      return;
+    }
     const opt = {
       margin: [10, 10, 10, 10],
-      filename: `munyaka_reports_${grade}_${term}.pdf`,
+      filename: `munyaka_report_${grade}_${term}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
     };
-
-    try {
-      await html2pdf().set(opt).from(element).save();
-      showSuccess("PDF generated successfully!");
-    } catch (err) {
-      showError("Export failed.");
-    } finally {
-      setIsExporting(false);
-    }
+    html2pdf().set(opt).from(element).save();
+    setIsExporting(false);
   };
 
-  return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
-      <style>{`
-        @media print {
-          @page {
-            size: A4 portrait;
-            margin: 10mm;
-          }
-          body {
-            background: white !important;
-          }
-          .no-print { display: none !important; }
-        }
-      `}</style>
+  // Download CSV handler
+  const handleDownloadCSV = () => {
+    if (filteredStudents.length === 0) {
+      showSuccess("No learners found for the current filters.");
+      return;
+    }
+    setIsExporting(true);
+    setTimeout(() => {
+      const headers = [
+        "Rank", "Assessment No", "Student Name", "Stream", "Grade", "Term", "Total Marks", "Mean Score", "Level"
+      ];
+      const rows = filteredStudents.map((s, idx) => {
+        const scores = getScoresForStudent(s.id, storedGrades);
+        const total = scores.reduce((a, b) => a + b, 0);
+        const mean = Math.round((total / subjectsCount) * 10) / 10;
+        const level = getRubric(mean);
+        return [
+          `${idx + 1}`,
+          `"${s.assessment}"`,
+          `"${s.name}"`,
+          `"${s.stream}"`,
+          `"Grade ${s.grade}"`,
+          `"${term}"`,
+          `${total}`,
+          `${mean}%`,
+          `${level}`
+        ];
+      });
+      const csvContent = [headers.join(","), ...rows].join("\n");
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      const fileName = `munyaka_report_${grade}_${term}_${year}.csv`;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setIsExporting(false);
+      showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
+    }, 800);
+  };
 
-      {/* Header Section - CBC Report Generator title above buttons */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
+  // Download current learner data
+  const downloadCurrentLearner = (learnerId: string) => {
+    const learner = filteredStudents.find(l => l.id === learnerId);
+    if (!learner) {
+      showError("Learner not found");
+      return;
+    }
+    const csvContent = [
+      "Learner ID,Name,Assessment No,Grade,Stream,Term,Total Marks,Mean Score,Level",
+      `"${learner.id}","${learner.name}","${learner.assessment}","${learner.grade}","${learner.stream}","${term}","${learner.totalMarks}","${learner.meanScore}%","${learner.level}"`
+    ].split('\n').join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${learner.name}_current.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showSuccess(`Downloaded ${learner.name}'s data`);
+  };
+
+  // Helper to get scores for a student
+  const getScoresForStudent = (studentId: string) => {
+    const scores: Record<string, number> = {};
+    filteredStudents.forEach(s => {
+      if (s.id === studentId) {
+        storedGrades.forEach(g => {
+          if (g.id === s.grade) {
+            g.learningAreas.forEach(area => {
+              const score = getScoreForStudentSubject(studentId, area.id, storedGrades);
+              if (score !== undefined) scores[area.id] = score;
+            });
+          }
+        });
+      }
+    });
+    return scores;
+  };
+
+  // Helper to get total marks for a student
+  const getScoreForStudentSubject = (studentId: string, subjectId: string, grades: Grade[]) => {
+    if (!storedGrades) return 0;
+    const student = filteredStudents.find(s => s.id === studentId);
+    if (!student) return 0;
+    const gradeObj = storedGrades.find(g => g.id === student.grade);
+    if (!gradeObj) return 0;
+    const score = getScoreForStudentSubject(studentId, subjectId, storedGrades);
+    return score;
+  };
+
+  // Get total marks for a student
+  const getStudentTotal = (studentId: string) => {
+    const scores = getScoresForStudent(studentId);
+    return Object.values(scores).reduce((a, b) => a + b, 0);
+  };
+
+  // Get learner data for a specific ID
+  const getLearnerData = (learnerId: string) => {
+    const learner = filteredStudents.find(l => l.id === learnerId);
+    if (!learner) return null;
+    return {
+      id: learner.id,
+      name: learner.name,
+      assessment: learner.assessment,
+      grade: learner.grade,
+      stream: learner.stream,
+      totalMarks: getStudentTotal(learnerId),
+      meanScore: getStudentMean(learnerId),
+      level: getLevel(learnerId)
+    };
+  };
+
+  // Helper functions
+  const getStudentMean = (studentId: string) => {
+    const scores = getScoresForStudent(studentId);
+    const total = Object.values(scores).reduce((a, b) => a + b, 0);
+    return total / Object.keys(scores).length;
+  };
+
+  const getStudentMean = (studentId: string) => {
+    const scores = getScoresForStudent(studentId);
+    const total = Object.values(scores).reduce((a, b) => a + b, 0);
+    return total / Object.keys(scores).length;
+  };
+
+  const getLevel = (score: number) => {
+    if (score >= 80) return 'EE';
+    if (score >= 50) return 'ME';
+    if (score >= 30) return 'AE';
+    return 'BE';
+  };
+
+  // Download current learner data
+  const downloadCurrentLearner = (learnerId: string) => {
+    const learner = filteredStudents.find(l => l.id === learnerId);
+    if (!learner) {
+      showError("Learner not found");
+      return;
+    }
+    const csvContent = [
+      "Learner ID,Name,Assessment No,Grade,Stream,Term,Total Marks,Mean Score,Level",
+      `"${learner.id}","${learner.name}","${learner.assessment}","${learner.grade}","${learner.stream}","${term}","${learner.totalMarks}","${learner.meanScore}%","${learner.level}"`
+    ].split('\n').join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${learner.name}_current.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    showSuccess(`Downloaded ${learner.name}'s data`);
+  };
+
+  // Render learner selection modal
+  const [isLearnerModalOpen, setIsLearnerModalOpen] = useState(false);
+  const [selectedLearner, setSelectedLearner] = useState<string | null>(null);
+
+  const openLearnerModal = () => {
+    setSelectedLearner(null);
+    setIsLearnerModalOpen(true);
+  };
+
+  const handleLearnerSelect = (id: string) => {
+    setSelectedLearner(id);
+  };
+
+  // Modal content
+  const learnerModal = (
+    <Modal
+      isOpen={isLearnerModalOpen}
+      onClose={() => setIsLearnerModalOpen(false)}
+      title="Select Learner to Download"
+      description="Choose a learner from the filtered list."
+      footer={
+        <>
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400">Learner</Label>
+            <Select value={selectedLearner} onValueChange={setSelectedLearner}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue placeholder="Select learner..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {filteredStudents.map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.name}
+                  </SelectItem>
+                ))}
+          </SelectContent>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={downloadPDF}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            Download PDF
+        <div className="flex justify-end gap-2 mt-4">
+          <Button variant="ghost" onClick={() => setIsLearnerModalOpen(false)} className="rounded-xl font-bold">
+            Cancel
           </Button>
           <Button 
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8"
+            onClick={() => selectedLearner && downloadCurrentLearner(selectedLearner)}
           >
-            <FileSpreadsheet size={16} />
+            Download
+          </Button>
+        </div>
+      </footer>
+    </>
+  );
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header Section with New Button */}
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">CBC Report Generator</h1>
+        </div>
+        <div className="flex items-center gap-2">
+          {/* Download Current Button */}
+          <Button 
+            variant="outline"
+            onClick={handleOpenLearnerModal}
+            disabled={!selectedLearner}
+            className="rounded-2xl h-11 px-6 bg-slate-200 hover:bg-slate-300 text-slate-600 font-medium gap-2 shadow-sm"
+          >
+            <Plus size={18} /> Download Current
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadCSV}
+            className="rounded-xl h-12 px-5 border-slate-200 bg-white gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />}
             Download CSV
+          </Button>
+          <Button 
+            variant="outline" 
+            onClick={handleDownloadPDF}
+            className="rounded-xl h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2"
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />}
+            Export PDF
           </Button>
         </div>
       </div>
 
-      {/* Filters & Info Section */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start no-print">
-        {/* Left Side: Filters Stack */}
-        <div className="w-full lg:w-72 space-y-6">
-          <div className="space-y-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Academic Year</Label>
-              <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="2026">2026</SelectItem><SelectItem value="2025">2025</SelectItem></SelectContent>
-              </Select>
-            </div>
+      {/* Filters Section */}
+      <div className="flex flex-col lg:flex-row gap-6">
+        <div className="w-full lg:w-1/3">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4">
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Academic Year</Label>
+                <Select value={year} onValueChange={setYear}>
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue placeholder="Select Year" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {["2024", "2025", "2026"].map(y => (
+                      <SelectItem key={y} value={y}>{y}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Grade Level</Label>
-              <Select value={grade} onValueChange={setGrade}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Grades</SelectItem>
-                  {storedGrades.map(g => (
-                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
-              <Select value={stream} onValueChange={setStream}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200">
-                  <SelectValue placeholder="All Streams" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Streams</SelectItem>
-                  {availableStreams.length > 0 ? (
-                    availableStreams.map(s => (
-                      <SelectItem key={s.name} value={s.name}>
-                        {s.name}
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Grade Level</Label>
+                <Select value={grade} onValueChange={setGrade}>
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue placeholder="Select Grade" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {storedGrades.map(g => (
+                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                        {g.name}
                       </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem disabled value="none">
-                      No streams found in Grades & Streams
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Active Term</Label>
-              <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
+                <Select value={stream} onValueChange={setStream}>
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue placeholder="All Streams" />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {availableStreams.map(s => (
+                      <SelectItem key={s} value={s}>
+                        {s}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
-              <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
-              </Select>
-            </div>
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Term</Label>
+                <Select value={term} onValueChange={setTerm}>
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="term1">Term 1</SelectItem>
+                    <SelectItem value="term2">Term 2</SelectItem>
+                    <SelectItem value="term3">Term 3</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="pt-2">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
+                <Select value={type} onValueChange={setType}>
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="opener">Opener</SelectItem>
+                    <SelectItem value="midterm">Midterm</SelectItem>
+                    <SelectItem value="endterm">Endterm</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Search Learner</Label>
                 <Input 
-                  placeholder="Search Learner..." 
-                  className="pl-9 h-10 rounded-xl bg-slate-50 border-none text-xs font-bold"
+                  placeholder="Search by name/ID..." 
+                  className="pl-11 rounded-2xl h-12 bg-slate-50 border-none font-medium"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Side: Page Info */}
-        <div className="flex-1 space-y-2">
-          <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in A4 Portrait layout.</p>
-        </div>
-      </div>
-
-      {/* A4 Portrait Reports Wrapper */}
-      <div 
-        ref={wrapperRef} 
-        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[794px] mx-auto"
-      >
-        {filteredStudents.map((s, idx) => {
-          const cat = getCategory(s.grade);
-          const subjects = SUBJECT_MAP[cat];
-
-          return (
-            <Card 
-              key={s.id} 
-              className="report-card bg-white w-full max-w-[210mm] min-h-[297mm] shadow-sm rounded-sm p-6 space-y-4"
-            >
-              {/* Header Letterhead - Stacked & Centered */}
-              <div className="text-center space-y-1 border-b border-slate-200 pb-3">
-                <h2 className="font-black text-base uppercase tracking-tight text-slate-900 leading-tight">
-                  MUNYAKA PRIMARY AND JUNIOR SCHOOL
-                </h2>
-                <p className="font-bold text-xs text-slate-600">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-xs text-slate-500 font-medium">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-1 px-3 inline-block rounded-md mt-2">
-                  <p className="font-black text-[9px] uppercase tracking-tighter text-indigo-900">
-                    Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
-                  </p>
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-none shadow-sm bg-indigo-600 text-white p-5">
+              <CardContent>
+                <p className="text-xs text-white uppercase tracking-widest">Total Students</p>
+                <h3 className="text-2xl font-black text-white">{filteredStudents.length}</h3>
+              </CardContent>
+            </Card>
+            <Card className="border-none shadow-sm bg-white p-5">
+              <div className="flex items-center gap-2">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Users size={24} />
                 </div>
-              </div>
-
-              {/* Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2 bg-slate-50 p-3 rounded-lg border border-slate-100">
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Name</span>
-                  <span className="font-bold text-sm text-slate-900" style={{ minWidth: '120px', maxWidth: '120px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.name}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">ULI</span>
-                  <span className="font-black font-mono text-sm text-slate-900">{s.assessment}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Grade / Stream</span>
-                  <span className="font-bold text-sm text-slate-900">Grade {s.grade} — {s.stream}</span>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="font-black text-[9px] uppercase tracking-widest text-slate-400">Overall Rank</span>
-                  <span className="font-black text-sm text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
-                </div>
-              </div>
-
-              {/* Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-300">
-                    <tr className="text-[9px] font-black uppercase">
-                      <th className="px-3 py-2 border-r border-slate-300 text-left min-w-[45%]">Subject / Learning Area</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%]">Mid</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%]">End</th>
-                      <th className="px-2 py-2 text-center border-r border-slate-300 w-[12%] bg-indigo-50/50">Avg</th>
-                      <th className="px-3 py-2 text-center w-[19%]">Rubric</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
-                      return (
-                        <tr key={i} className="text-[10px]">
-                          <td className="px-3 py-1.5 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-medium">{mid}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-medium">{end}</td>
-                          <td className="px-2 py-1.5 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                          <td className="px-3 py-1.5 text-center font-black text-[9px]">
-                            <Badge variant="outline" className={cn(
-                              "rounded-md border-none font-black text-[9px] px-2 py-0.5",
-                              r.code === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200",
-                              r.code === 'ME' && "bg-blue-50 text-blue-700 border-blue-200",
-                              r.code === 'AE' && "bg-amber-50 text-amber-700 border-amber-200",
-                              r.code === 'BE' && "bg-rose-50 text-rose-700 border-rose-200"
-                            )}>
-                              {r.code} — {r.label}
-                            </Badge>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Bottom Remarks Section */}
-              <div className="space-y-3 pt-3 border-t border-slate-100">
-                <div className="grid grid-cols-2 gap-4">
-                  {/* Class Teacher's Remarks */}
-                  <div className="space-y-1.5 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1">
-                        <Save size={8} /> Save
-                      </Button>
-                    </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Excellent performance. Very disciplined learner." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign: .......................................</p>
-                  </div>
-
-                  {/* HOI Remarks */}
-                  <div className="space-y-1.5 p-3 bg-slate-50/50 rounded-lg border border-slate-100">
-                    <div className="flex justify-between items-center">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1">
-                        <Save size={8} /> Save
-                      </Button>
-                    </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Maintain the same effort in Term 2." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign & Stamp: .............................</p>
-                  </div>
-                </div>
-
-                {/* Footer Zone */}
-                <div className="flex items-center justify-between text-[8px] font-bold text-slate-500 bg-slate-100/50 p-2 rounded">
-                  <div className="flex gap-4">
-                    <span>Closing Date: <span className="text-slate-900 font-black">10/04/2026</span></span>
-                    <span>Opening Date: <span className="text-slate-900 font-black">04/05/2026</span></span>
-                  </div>
-                  <div className="text-right italic font-black text-slate-400">
-                    System Powered by Jamlyan Analytics
-                  </div>
+                <div>
+                  <p className="text-sm text-indigo-500">Total Students</p>
+                  <h3 className="text-2xl font-black text-white">{filteredStudents.length}</h3>
                 </div>
               </div>
             </Card>
-          );
-        })}
+          </div>
+        </div>
       </div>
 
-      {/* Bottom Action Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200 no-print">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-          <Layers size={16} className="text-indigo-600" />
-          <span>Ready to export {filteredStudents.length} records. Format: A4 Portrait</span>
+      {/* Main Content Area */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {filteredStudents.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredStudents.map((student, index) => (
+              <Card key={student.id} className="border-none shadow-sm hover:shadow-md rounded-[2rem] bg-white overflow-hidden group">
+                <CardContent className="p-6">
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center">
+                      <Box size={28} />
+                    </div>
+                    <div className="p-4 space-y-2">
+                      <h3 className="text-lg font-bold text-slate-900">{student.name}</h3>
+                      <p className="text-sm text-slate-500">ID: {student.assessment}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="rounded-lg border-none text-xs font-bold text-slate-400">
+                        {student.grade}
+                      </Badge>
+                      <Badge variant="outline" className="border-slate-200 text-slate-600">
+                        {student.stream}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div className="space-y-4">
+                    <p className="text-sm font-black text-slate-400">Score: {student.scores[0]} / 100</p>
+                    <p className="text-sm text-slate-400">Status: {learnerLevel(learner.id)}</p>
+                  </div>
+                </div>
+              </CardContent>
+            ))}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            onClick={downloadPDF}
-            variant="outline"
-            className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Download PDF
-          </Button>
-          <Button 
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
-          >
-            <FileSpreadsheet size={16} /> Download CSV
-          </Button>
+      </div>
+
+      {/* Modal for Learner Selection */}
+      <Modal
+        isOpen={isLearnerModalOpen}
+        onClose={() => setIsLearnerModalOpen(false)}
+        title="Select Learner to Download"
+        description="Choose a learner from the filtered list."
+        maxWidth="max-w-xl"
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400">Learner</Label>
+            <Select value={selectedLearner} onValueChange={setSelectedLearner}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+                <SelectValue placeholder="Select learner..." />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {filteredStudents.map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 mt-4">
+            <Button 
+              variant="ghost" 
+              onClick={() => setIsLearnerModalOpen(false)} 
+              className="rounded-xl font-bold h-11 px-6"
+            >
+              Cancel
+            </Button>
+            <Button 
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8"
+              onClick={() => selectedLearner && downloadCurrentLearner(selectedLearner)}
+            >
+              <Button size={16} /> Download
+            </Button>
+          </div>
         </div>
+      </Modal>
+
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="border-none shadow-sm bg-indigo-600 text-white p-5">
+          <CardContent>
+            <p className="text-xs font-black text-slate-400 uppercase">Class Mean Score</p>
+            <h2 className="text-3xl font-black text-white">{classMeanScore}%</h3>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white p-5">
+          <CardContent>
+            <p className="text-xs text-slate-500">Total Students</p>
+            <h3 className="text-2xl font-black text-slate-900">{filteredStudents.length}</h3>
+          </CardContent>
+        </Card>
+        <Card className="border-none shadow-sm bg-white p-5">
+          <CardContent>
+            <p className="text-xs text-slate-500">Highest Grade</p>
+            <h3 className="text-2xl font-black text-rose-600">{studentResults[0]?.name}</h3>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Media Viewer Modal */}
+      <ArtifactViewerModal 
+        artifact={selectedArtifact} 
+        onClose={() => setSelectedArtifact(null)} 
+      />
+
+      {/* Export Controls */}
+      <div className="flex justify-end gap-2 mt-4">
+        <Button 
+          variant="ghost" 
+          onClick={handleDownloadCSV}
+          disabled={isExporting}
+          className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold h-11 px-6 gap-2"
+        >
+          {isExporting ? <Loader2 className="animate-spin" size={18} /> : <FileDown size={16} />}
+          Download CSV
+        </Button>
+        <Button 
+          onClick={handleDownloadPDF}
+          className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-12 px-8 shadow-lg shadow-indigo-100 gap-2"
+        >
+          {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />}
+          Download PDF
+        </Button>
       </div>
     </div>
   );
