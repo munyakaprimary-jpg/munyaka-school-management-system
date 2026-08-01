@@ -216,7 +216,7 @@ const ReportCards = () => {
     } catch (err) {
       console.error("Error generating report:", err);
       showError("Failed to generate individual learner report card.");
-    } fontally {
+    } finally {
       setIsExportingCurrent(false);
     }
   };
@@ -376,7 +376,7 @@ const ReportCards = () => {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Active Term</Label>
+              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Active Term</Label>
               <Select value={term} onValueChange={setTerm}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
@@ -384,7 +384,7 @@ const ReportCards = () => {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
+              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Exam Type</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
@@ -392,7 +392,7 @@ const ReportCards = () => {
             </div>
 
             <div className="pt-2 space-y-1">
-              <Label className="text-[10px] font-black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
+              <Label className="text-[10px] font.black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <Input 
@@ -453,15 +453,15 @@ const ReportCards = () => {
                   <span className="font-bold text-slate-900 text-[11px] leading-normal truncate">{s.name}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font-black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">ULI / Assessment No</span>
+                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">ULI / Assessment No</span>
                   <span className="font-black font-mono text-slate-900 text-[11px] leading-normal">{s.assessment}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font-black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Grade / Stream</span>
+                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Grade / Stream</span>
                   <span className="font-bold text-slate-900 text-[11px] leading-normal">Grade {s.grade} — {s.stream}</span>
                 </div>
                 <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font-black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Overall Rank</span>
+                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Overall Rank</span>
                   <span className="font-black text-indigo-600 text-[11px] leading-normal">#{idx + 1} of {filteredStudents.length}</span>
                 </div>
               </div>
@@ -514,7 +514,7 @@ const ReportCards = () => {
                   {/* Class Teacher's Remarks */}
                   <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
                     <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 leading-normal">Class Teacher's Remarks</span>
+                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">Class Teacher's Remarks</span>
                       <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1 shrink-0">
                         <Save size={10} /> Save
                       </Button>
@@ -524,14 +524,14 @@ const ReportCards = () => {
                       className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
                       defaultValue="Excellent performance. Very disciplined learner." 
                     />
-                    <p className="text-[8px] font-bold text-slate-500 pt-1 leading-normal">Sign: .......................................</p>
+                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign: .......................................</p>
                   </div>
 
                   {/* HOI Remarks */}
                   <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
                     <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-500 leading-normal">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1 shrink-0">
+                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">HOI Remarks</span>
+                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font.bold text-[7.5px] rounded gap-1 shrink-0">
                         <Save size={10} /> Save
                       </Button>
                     </div>
@@ -540,17 +540,17 @@ const ReportCards = () => {
                       className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
                       defaultValue="Maintain the same effort in Term 2." 
                     />
-                    <p className="text-[8px] font-bold text-slate-500 pt-1 leading-normal">Sign & Stamp: .............................</p>
+                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign & Stamp: .............................</p>
                   </div>
                 </div>
 
                 {/* Footer Dates & System Info */}
-                <div className="flex items-center justify-between text-[8px] font-bold text-slate-600 bg-slate-100/80 px-3 py-2 rounded-md border border-slate-200/80 mt-3 leading-normal overflow-visible">
+                <div className="flex items-center justify-between text-[8px] font.bold text-slate-600 bg-slate-100/80 px-3 py-2 rounded-md border border-slate-200/80 mt-3 leading-normal overflow-visible">
                   <div className="flex gap-4">
-                    <span>Closing Date: <span className="text-slate-900 font-black">10/04/2026</span></span>
-                    <span>Opening Date: <span className="text-slate-900 font-black">04/05/2026</span></span>
+                    <span>Closing Date: <span className="text-slate-900 font.black">10/04/2026</span></span>
+                    <span>Opening Date: <span className="text-slate-900 font.black">04/05/2026</span></span>
                   </div>
-                  <div className="text-right italic font-black text-slate-400">
+                  <div className="text-right italic font.black text-slate-400">
                     System Powered by Jamlyan Analytics
                   </div>
                 </div>
