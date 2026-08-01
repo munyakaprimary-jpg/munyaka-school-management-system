@@ -16,6 +16,7 @@ import { INVENTORY, ASSET_LOGS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
+import { cn } from '@/lib/utils';
 
 export interface AssetItem {
   id: string;
@@ -255,7 +256,7 @@ const Inventory = () => {
                   <div className="flex items-end justify-between pt-6 border-t border-slate-50">
                     <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
                     <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
-                      item.status === 'Available' ? "bg-emerald-50 text-emerald-700" : 
+                      item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
                       item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
                       {item.status}
                     </Badge>
