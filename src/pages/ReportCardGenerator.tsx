@@ -1,10 +1,12 @@
+"use client";
+
 import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { cn } from "@/lib/utils";
 
 interface RecordCardData {
   fullName: string;
@@ -77,7 +79,7 @@ const ReportCardGenerator = () => {
     return gradeObj && Array.isArray(gradeObj.streams) 
       ? gradeObj.streams.map((s) => ({ name: s.name }))
       : [];
-  }, [storedGrades, formData.grade]);
+    };
 
   // Reset stream selection when grade changes
   useEffect(() => {
@@ -172,39 +174,66 @@ const ReportCardGenerator = () => {
                     <SelectValue placeholder="Select grade" />
                   </SelectTrigger>
                   <SelectContent>
-                    {storedGrades.map(g => (
-                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="stream">Stream</Label>
-                <Select 
-                  id="stream"
-                  name="stream"
-                  value={formData.stream}
-                  onChange={handleChange}
-                >
-                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
-                    <SelectValue placeholder="Select stream" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableStreams.length > 0 ? (
-                      availableStreams.map((s) => (
-                        <SelectItem key={s.name} value={s.name}>
-                          {s.name}
+                    {(() => {
+                      const gradeOrder = [
+                        "playgroup",
+                        "pp1",
+                        "pp2",
+                        "grade 1",
+                        "grade 2",
+                        "grade 3",
+                        "grade 4",
+                        "grade 5",
+                        "grade 5",
+                        "grade 6",
+                        "grade 7",
+                        "grade 8",
+                        "grade 9"
+                      ];
+                      const getRank = (name: string) => {
+                        const normalized = name.toLowerCase().trim();
+                        const index = gradeOrder.findIndex(g => normalized.includes(g));
+                        return index !== -1 ? index : 999;
+                      };
+                      const sortedGrades = [...storedGrades].sort((a, b) => {
+                        const nameA = typeof a === 'string' ? a : a.name || a.grade_name || '';
+                        const nameB = typeof b === 'string' ? b : b.name || b.grade_name || '';
+                        return getRank(nameA) - getRank(nameB);
+                      });
+                      return sortedGrades.map(g => (
+                        <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                          {g.name}
                         </SelectItem>
-                      ))
-                    ) : (
-                      <SelectItem disabled value="none">
-                        No streams found in Grades & Streams
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="stream">Stream</Label>
+                  <Select 
+                    id="stream"
+                    name="stream"
+                    value={formData.stream}
+                    onChange={handleChange}
+                  >
+                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableStreams.length > 0 ? (
+                        availableStreams.map((s) => (
+                          <SelectItem key={s.name} value={s.name}>
+                            {s.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem disabled value="none">
+                          No streams found in Grades & Streams
+                        </SelectItem>
                       </SelectItem>
-                    )}
-                  </SelectContent>
-                </Select>
+                    </Select>
+                  </Select>
+                </div>
               </div>
             </div>
             <div className="space-y-2">
@@ -215,8 +244,7 @@ const ReportCardGenerator = () => {
                 value={formData.guardianName}
                 onChange={handleChange}
                 placeholder="Enter guardian name"
-                className="rounded-xl h-12 bg-slate-50 border-none"
-                required
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
               />
             </div>
             <div className="space-y-2">
@@ -227,8 +255,7 @@ const ReportCardGenerator = () => {
                 value={formData.contact}
                 onChange={handleChange}
                 placeholder="Enter phone number or email"
-                className="rounded-xl h-12 bg-slate-50 border-none"
-                required
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
               />
             </div>
             <div className="space-y-2">
