@@ -93,13 +93,14 @@ const Library = () => {
     });
   }, [books, searchQuery, selectedCategory]);
 
-  // Issue Book Action Handler (Supports multi-copy quantity)
+  // Issue Book Action Handler (Supports multi-copy quantity and optional Grade)
   const handleIssueBook = async (
     bookId: string, 
     borrowerName: string, 
     borrowerType: 'Student' | 'Staff', 
     dueDate: string,
-    quantity: number = 1
+    quantity: number = 1,
+    grade?: string
   ) => {
     // Artificial delay for smooth UX transition
     await new Promise(r => setTimeout(r, 600));
@@ -121,7 +122,7 @@ const Library = () => {
       id: `log-${Date.now()}`,
       bookId,
       bookTitle: `${book.title}${quantity > 1 ? ` (${quantity} copies)` : ''}`,
-      borrowerName,
+      borrowerName: grade ? `${borrowerName} (${grade})` : borrowerName,
       borrowerType,
       issuedDate: new Date().toISOString().split('T')[0],
       dueDate,

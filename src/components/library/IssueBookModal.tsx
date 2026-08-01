@@ -8,12 +8,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from '@/components/ui/Modal';
 import { BookOpen, AlertCircle, Loader2, Calendar, Plus, Minus } from 'lucide-react';
 import { Book } from '@/types/library';
+import { GRADES_DATA } from '@/lib/mock-data';
 
 interface IssueBookModalProps {
   isOpen: boolean;
   onClose: () => void;
   book: Book | null;
-  onIssueBook: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number) => Promise<void>;
+  onIssueBook: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number, grade?: string) => Promise<void>;
 }
 
 export const IssueBookModal: React.FC<IssueBookModalProps> = ({
@@ -24,6 +25,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 }) => {
   const [borrowerName, setBorrowerName] = useState("");
   const [borrowerType, setBorrowerType] = useState<'Student' | 'Staff'>("Student");
+  const [selectedGrade, setSelectedGrade] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   
   // Default due date to 14 days from today
@@ -39,12 +41,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     if (isOpen) {
       setBorrowerName("");
       setBorrowerType("Student");
+      setSelectedGrade("");
       setQuantity(1);
       setDueDate(defaultDueDate);
       setErrorMsg("");
       setIsSubmitting(false);
     }
-  }, [isOpen]);
+  }, [isOpen, defaultDueDate]);
 
   if (!book) return null;
 
@@ -75,18 +78,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
       return;
     }
 
+    if (borrowerType === 'Student' && !selectedGrade) {
+      setErrorMsg("Please select a class / grade level.");
+      return;
+    }
+
     if (availableCopies <= 0) {
       setErrorMsg("No copies available for issue.");
-      return;
-    }
-
-    if (quantity < 1) {
-      setErrorMsg("Quantity must be at least 1.");
-      return;
-    }
-
-    if (quantity > availableCopies) {
-      setErrorMsg(`Quantity exceeds maximum available stock (${availableCopies} copies).`);
       return;
     }
 
@@ -94,7 +92,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     setErrorMsg("");
 
     try {
-      await onIssueBook(book.id, borrowerName.trim(), borrowerType, dueDate, quantity);
+      await onIssueBook(book.id, borrowerName.trim(), borrowerType, dueDate, quantity, selectedGrade);
       onClose();
     } catch (err) {
       setErrorMsg("Failed to process book checkout.");
@@ -152,10 +150,9 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
           </div>
         </div>
 
-        {/* Clean Balanced Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-5">
           
-          {/* Full-width Borrower Name */}
+          {/* 1. Borrower Name (Full Width) */}
           <div className="space-y-1.5 md:col-span-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Borrower Name</Label>
             <Input 
@@ -167,26 +164,50 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             />
           </div>
 
-          {/* Borrower Type */}
+          {/* 2. Borrower Type */}
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Borrower Type</Label>
-            <Select value={borrowerType} onValueChange={(val: 'Student' | 'Staff') => setBorrowerType(val)}>
+            <Select value={borrowerType} onValueChange={(val: 'Student' | 'Staff') => {
+              setBorrowerType(val);
+              if (val !== 'Student') setSelectedGrade("");
+              setErrorMsg("");
+            }}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                <SelectItem value="Student">Student</SelectItem>
-                <SelectItem value="Staff">Staff</SelectItem>
+                <SelectItem value="Student">Student / Learner</SelectItem>
+                <SelectItem value="Staff">Staff Member</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
-          {/* Multi-copy Quantity Stepper */}
+          {/* 3. Conditional Class / Grade */}
+          {borrowerType === 'Student' ? (
+            <div className="space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Class / Grade</Label>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue placeholder="Select Class..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  {GRADES_DATA.map(g => (
+                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : (
+            /* Spacer to keep Quantity in the second column if Class is hidden */
+            <div className="hidden md:block" />
+          )}
+
+          {/* 4. Quantity Stepper */}
           <div className="space-y-1.5">
             <div className="flex justify-between items-center">
               <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Quantity</Label>
               <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-md">
-                Max: {availableCopies} copies
+                Max: {availableCopies}
               </span>
             </div>
             
@@ -223,7 +244,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             </div>
           </div>
 
-          {/* Return Due Date */}
+          {/* 5. Return Due Date */}
           <div className="space-y-1.5 md:col-span-2">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Return Due Date</Label>
             <div className="relative">
