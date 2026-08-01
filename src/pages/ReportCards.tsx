@@ -428,24 +428,24 @@ const ReportCards = () => {
           return (
             <Card 
               key={s.id} 
-              className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-6 border border-slate-200 space-y-5 box-border"
+              className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-6 border border-slate-200 space-y-4 box-border"
             >
-              {/* 1. Header Letterhead */}
-              <div className="text-center space-y-0.5 border-b border-slate-200 pb-3 pt-1">
-                <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-tight">
+              {/* 1. Header Letterhead - Standard Block Flow & Positive Margins */}
+              <div className="w-full text-center border-b border-slate-200 pb-3 pt-1 mb-2">
+                <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-normal mb-1">
                   MUNYAKA PRIMARY AND JUNIOR SCHOOL
                 </h2>
-                <p className="font-bold text-[10px] text-slate-600 leading-none">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-[9.5px] text-slate-500 font-medium leading-none">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-0.5 px-2.5 inline-block rounded mt-1.5">
-                  <p className="font-black text-[8.5px] uppercase tracking-tighter text-indigo-900 leading-none">
+                <p className="font-bold text-[10px] text-slate-600 leading-normal mb-1">P.O.BOX 5239-30100, ELDORET</p>
+                <p className="italic text-[9.5px] text-slate-500 font-medium leading-normal mb-2">MOTTO: Knowledge is Power</p>
+                <div className="bg-slate-100 py-1.5 px-3 rounded inline-block my-1 max-w-full">
+                  <p className="font-black text-[9px] uppercase tracking-wider text-indigo-900 leading-normal">
                     Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
                   </p>
                 </div>
               </div>
 
               {/* 2. Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px]">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] mb-2">
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
                   <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
@@ -465,7 +465,7 @@ const ReportCards = () => {
               </div>
 
               {/* 3. Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded">
+              <div className="overflow-hidden border border-slate-300 rounded mb-2">
                 <table className="w-full text-left border-collapse">
                   <thead className="bg-slate-100 border-b border-slate-300">
                     <tr className="text-[8.5px] font-black uppercase">
@@ -506,8 +506,8 @@ const ReportCards = () => {
                 </table>
               </div>
 
-              {/* 4. Remarks & Signatures Section (Positioned directly below the table with mt-6) */}
-              <div className="remarks-block space-y-3 pt-4 border-t border-slate-200 mt-6">
+              {/* 4. Remarks & Signatures Section (Positioned directly below the table with mt-5) */}
+              <div className="remarks-block space-y-3 pt-3 border-t border-slate-200 mt-5">
                 <div className="grid grid-cols-2 gap-3">
                   {/* Class Teacher's Remarks */}
                   <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
