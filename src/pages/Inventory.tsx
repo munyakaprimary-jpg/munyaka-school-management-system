@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,8 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
-import { INVENTORY, ASSET_LOGS } from '@/lib/mock-data';
+import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft, LayoutGrid } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
@@ -57,14 +56,25 @@ const Inventory = () => {
   const [newAssetStatus, setNewAssetStatus] = useState('Available');
   const [assetError, setAssetError] = useState('');
 
-  // Local state for data
-  const [assets, setAssets] = useState<AssetItem[]>(() => 
-    INVENTORY.map(a => ({ ...a, id: a.id.toString() }))
-  );
+  // 1. Initial State from Local Storage (Empty by default)
+  const [assets, setAssets] = useState<AssetItem[]>(() => {
+    const saved = localStorage.getItem('munyaka_inventory');
+    return saved ? JSON.parse(saved) : [];
+  });
 
-  const [assetLogs, setAssetLogs] = useState<AssetLog[]>(() => 
-    ASSET_LOGS.map(l => ({ ...l, qty: l.qty || 1 }))
-  );
+  const [assetLogs, setAssetLogs] = useState<AssetLog[]>(() => {
+    const saved = localStorage.getItem('munyaka_asset_logs');
+    return saved ? JSON.parse(saved) : [];
+  });
+
+  // 2. Persist to Local Storage on change
+  useEffect(() => {
+    localStorage.setItem('munyaka_inventory', JSON.stringify(assets));
+  }, [assets]);
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_asset_logs', JSON.stringify(assetLogs));
+  }, [assetLogs]);
 
   // Derived Filtered Data
   const filteredAssets = useMemo(() => {
@@ -108,7 +118,7 @@ const Inventory = () => {
     setNewAssetCategory('');
     setNewAssetQty('');
     setAssetError('');
-    showSuccess(`Asset "${newAsset.item}" registered.`);
+    showSuccess(`Asset "${newAsset.item}" registered successfully.`);
   };
 
   const handleIssueAsset = (data: { assetId: string; issuedTo: string; qty: number; remarks?: string }) => {
@@ -189,7 +199,7 @@ const Inventory = () => {
     setAssets(prev => prev.filter(a => a.id !== assetToDelete));
     setIsDeleteOpen(false);
     setAssetToDelete(null);
-    showSuccess('Asset removed.');
+    showSuccess('Asset record removed.');
   };
 
   return (
@@ -207,6 +217,7 @@ const Inventory = () => {
             variant="outline"
             className="rounded-2xl gap-2 h-11 px-6 border-slate-200 bg-white font-bold text-slate-600 shadow-sm"
             onClick={() => setIsIssueOpen(true)}
+            disabled={assets.length === 0}
           >
             <ArrowUpRight size={18} /> Issue Tool
           </Button>
@@ -214,6 +225,7 @@ const Inventory = () => {
             variant="outline"
             className="rounded-2xl gap-2 h-11 px-6 border-slate-200 bg-white font-bold text-slate-600 shadow-sm"
             onClick={() => setIsReceiveOpen(true)}
+            disabled={activeLoans.length === 0}
           >
             <ArrowDownLeft size={18} /> Receive Tool
           </Button>
@@ -243,41 +255,58 @@ const Inventory = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" onClick={() => setSearchQuery('')}>
+            <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" onClick={() => showSuccess("Syncing stock records...")}>
               <RefreshCw size={18} /> Sync Stock
             </Button>
           </div>
 
-          <div className="overflow-x-auto custom-scrollbar pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px] lg:min-w-0">
-              {filteredAssets.map((item) => (
-                <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
-                  <CardContent className="p-8">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
-                      <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
-                    </div>
-                    <div className="space-y-1 mb-6">
-                      <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
-                      <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
-                    </div>
-                    <div className="flex items-end justify-between pt-6 border-t border-slate-50">
-                      <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
-                      <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
-                        item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
-                        item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
-                        {item.status}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+          {filteredAssets.length > 0 ? (
+            <div className="overflow-x-auto custom-scrollbar pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px] lg:min-w-0">
+                {filteredAssets.map((item) => (
+                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
+                    <CardContent className="p-8">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
+                        <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
+                      </div>
+                      <div className="space-y-1 mb-6">
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
+                      </div>
+                      <div className="flex items-end justify-between pt-6 border-t border-slate-50">
+                        <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
+                        <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
+                          item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
+                          item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
+                          {item.status}
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
+                <LayoutGrid size={40} />
+              </div>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No assets found</h3>
+              <p className="text-slate-400 max-w-xs mx-auto mb-6">Either your search yielded no results or you haven't registered any assets yet.</p>
+              <Button 
+                variant="ghost" 
+                onClick={() => setIsAddAssetOpen(true)}
+                className="font-black text-indigo-600 hover:bg-transparent"
+              >
+                Register your first asset →
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         <TabsContent value="logs">
-          <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm min-w-[850px]">
@@ -291,43 +320,51 @@ const Inventory = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {assetLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-8 py-6">
-                          <p className="font-bold text-slate-900">{log.item}</p>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2">
-                            <UserCheck size={14} className="text-slate-400" />
-                            <span className="font-medium text-slate-700">{log.issuedTo}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          <div className="flex items-center gap-2 text-slate-500">
-                            <Clock size={14} />
-                            <span>{log.date}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-6">
-                          {log.dateReturned ? (
-                            <div className="flex items-center gap-2 text-slate-700 font-bold">
-                              <Calendar size={14} className="text-emerald-500" />
-                              <span>{log.dateReturned}</span>
+                    {assetLogs.length > 0 ? (
+                      assetLogs.map((log) => (
+                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-8 py-6">
+                            <p className="font-bold text-slate-900">{log.item}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-2">
+                              <UserCheck size={14} className="text-slate-400" />
+                              <span className="font-medium text-slate-700">{log.issuedTo}</span>
                             </div>
-                          ) : (
-                            <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
-                              Pending Return
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="flex items-center gap-2 text-slate-500">
+                              <Clock size={14} />
+                              <span>{log.date}</span>
+                            </div>
+                          </td>
+                          <td className="px-8 py-6">
+                            {log.dateReturned ? (
+                              <div className="flex items-center gap-2 text-slate-700 font-bold">
+                                <Calendar size={14} className="text-emerald-500" />
+                                <span>{log.dateReturned}</span>
+                              </div>
+                            ) : (
+                              <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
+                                Pending Return
+                              </Badge>
+                            )}
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
+                              {log.status}
                             </Badge>
-                          )}
-                        </td>
-                        <td className="px-8 py-6 text-right">
-                          <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
-                            {log.status}
-                          </Badge>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-medium">
+                          No issuance records found in the school ledger.
                         </td>
                       </tr>
-                    ))}
+                    )}
                   </tbody>
                 </table>
               </div>
