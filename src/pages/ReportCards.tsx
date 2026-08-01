@@ -159,7 +159,7 @@ const ReportCards = () => {
     });
   }, [searchTerm, grade, stream]);
 
-  // Handler: "download current"
+  // Handler: "Download Current"
   // Generates/exports reports for the currently selected Academic Year and Grade Level filters
   const handleDownloadCurrent = async () => {
     if (filteredStudents.length === 0) {
@@ -213,7 +213,7 @@ const ReportCards = () => {
     }
   };
 
-  // Handler: "download all"
+  // Handler: "Download All"
   // Bulk exports a combined dataset report across all available records and grade levels
   const handleDownloadAll = async () => {
     setIsDownloadingAll(true);
@@ -284,24 +284,24 @@ const ReportCards = () => {
           <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
-          {/* Button 1: download current */}
+          {/* Button 1: Download Current */}
           <Button 
             onClick={handleDownloadCurrent}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
             disabled={isExportingCurrent}
           >
             {isExportingCurrent ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            download current
+            Download Current
           </Button>
 
-          {/* Button 2: download all */}
+          {/* Button 2: Download All */}
           <Button 
             onClick={handleDownloadAll}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
             disabled={isDownloadingAll}
           >
             {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
-            download all
+            Download All
           </Button>
         </div>
       </div>
@@ -534,7 +534,7 @@ const ReportCards = () => {
           <span>Ready to export {filteredStudents.length} records for Grade {grade}. Format: A4 Portrait</span>
         </div>
         <div className="flex gap-2">
-          {/* Button 1: download current */}
+          {/* Button 1: Download Current */}
           <Button 
             onClick={handleDownloadCurrent}
             variant="outline"
@@ -542,17 +542,17 @@ const ReportCards = () => {
             disabled={isExportingCurrent}
           >
             {isExportingCurrent ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            download current
+            Download Current
           </Button>
 
-          {/* Button 2: download all */}
+          {/* Button 2: Download All */}
           <Button 
             onClick={handleDownloadAll}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
             disabled={isDownloadingAll}
           >
-            {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
-            download all
+            {isDownloadingAll ? <Loader2 className="animate-spin" size={18} /> : <FileSpreadsheet size={18} />}
+            Download All
           </Button>
         </div>
       </div>
