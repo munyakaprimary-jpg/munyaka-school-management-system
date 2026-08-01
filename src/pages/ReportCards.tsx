@@ -162,27 +162,34 @@ const ReportCards = () => {
         }
       `}</style>
 
-      {/* Top Controls Layout */}
-      <div className="flex flex-col lg:flex-row gap-8 items-start no-print">
-        {/* Left Side: Buttons & Filters Stack */}
-        <div className="w-full lg:w-72 space-y-6">
-          <div className="flex gap-2">
-            <Button 
-              onClick={downloadPDF}
-              className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-              disabled={isExporting}
-            >
-              {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-              Download PDF
-            </Button>
-            <Button 
-              className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-            >
-              <FileSpreadsheet size={16} />
-              Download CSV
-            </Button>
-          </div>
+      {/* Header Section - CBC Report Generator title above buttons */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          <BackButton fallback="/" />
+          <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            onClick={downloadPDF}
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+            disabled={isExporting}
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            Download PDF
+          </Button>
+          <Button 
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+          >
+            <FileSpreadsheet size={16} />
+            Download CSV
+          </Button>
+        </div>
+      </div>
 
+      {/* Filters & Info Section */}
+      <div className="flex flex-col lg:flex-row gap-8 items-start no-print">
+        {/* Left Side: Filters Stack */}
+        <div className="w-full lg:w-72 space-y-6">
           <div className="space-y-3 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Academic Year</Label>
@@ -262,10 +269,6 @@ const ReportCards = () => {
 
         {/* Right Side: Page Info */}
         <div className="flex-1 space-y-2">
-          <div className="flex items-center gap-3">
-            <BackButton fallback="/" />
-            <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
-          </div>
           <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in A4 Portrait layout.</p>
         </div>
       </div>
