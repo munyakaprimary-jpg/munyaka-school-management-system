@@ -1,5 +1,83 @@
 "use client";
 
+import React from 'react';
+import { Card, CardContent } from "@/components/ui/card";
+
+const students = [
+  {
+    name: "BRIAN KIPTOO",
+    uli: "A827361",
+    gradeStream: "4 Blue",
+    rank: "#1 / 1",
+    grades: [ /* English, Kiswahili, Math... */ ],
+  },
+  {
+    name: "FAITH CHEPKEMOI",
+    uli: "A827362",
+    gradeStream: "4 Blue",
+    rank: "#2 / 2",
+    grades: [ /* ... */ ],
+  },
+];
+
+const ReportCards = () => {
+  return (
+    <div className="report-cards-container">
+      {students.map((student) => (
+        <div key={student.uli} className="student-page-break">
+          <Card className="report-card">
+            {/* Header */}
+            <CardHeader className="p-4 border-b">
+              <CardTitle className="text-lg font-bold text-slate-900">{student.name}</CardTitle>
+            </CardHeader>
+            
+            {/* Grading Table */}
+            <CardContent className="p-4">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-slate-50 border-b">
+                  <tr className="text-[9px] font-black text-slate-400 tracking-widest">
+                    <th className="px-6 py-5">Learner Name</th>
+                    <th className="px-6 py-5">Assessment ID</th>
+                    <th className="px-6 py-5">Grade Stream</th>
+                    <th className="px-6 py-5">Rank</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  <tr className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-5">
+                      <p className="font-bold text-slate-900">{student.name}</p>
+                    </td>
+                    <td className="px-6 py-5">
+                      <code className="text-xs font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{student.uli}</code>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="font-bold text-slate-700">{student.gradeStream}</span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-slate-500">{student.rank}</span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+      ))}
+    </div>
+  );
+};
+
+export default ReportCards;
+
+// CSS for page breaks
+<style>
+.student-page-break {
+  page-break-after: always;
+  break-after: page;
+}
+</style><dyad-write path="src/pages/ReportCards.tsx" description="Map over students array with page-break containers for clean PDF output">
+"use client";
+
 import React, { useState, useMemo, useRef } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,7 +86,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import BackButton from '@/components/ui/BackButton';
+import BackButton from "@/components/ui/BackButton";
 import { 
   Download, 
   Search, 
@@ -24,6 +102,9 @@ import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
+
+// Import FileSpreadsheet to fix missing reference
+import { Download, Search, Printer, School, Save, Loader2, Layers, ChevronDown, FileSpreadsheet } from 'lucide-react';
 
 // Rubric Logic
 const getRubric = (score: number) => {
@@ -110,6 +191,7 @@ const ReportCards = () => {
 
   return (
     <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+      {/* Page Break Styles */}
       <style>{`
         @media print {
           .no-print { display: none !important; }
@@ -155,48 +237,77 @@ const ReportCards = () => {
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Academic Year</Label>
               <Select value={year} onValueChange={setYear}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="2026">2026</SelectItem><SelectItem value="2025">2025</SelectItem></SelectContent>
+                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="2026">2026</SelectItem>
+                  <SelectItem value="2025">2025</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Grade Level</Label>
               <Select value={grade} onValueChange={setGrade}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent>
+                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
                   <SelectItem value="all">All Grades</SelectItem>
-                  <SelectItem value="PP1">PP1</SelectItem><SelectItem value="PP2">PP2</SelectItem>
-                  {[1,2,3,4,5,6,7,8,9].map(n => <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>)}
+                  <SelectItem value="PP1">PP1</SelectItem>
+                  <SelectItem value="PP2">PP2</SelectItem>
+                  {[1,2,3,4,5,6,7,8,9].map(n => (
+                    <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
               <Select value={stream} onValueChange={setStream}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="all">All Streams</SelectItem><SelectItem value="A">Stream A</SelectItem><SelectItem value="B">Stream B</SelectItem></SelectContent>
+                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="all">All Streams</SelectItem>
+                  <SelectItem value="A">Stream A</SelectItem>
+                  <SelectItem value="B">Stream B</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Active Term</Label>
               <Select value={term} onValueChange={setTerm}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
+                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="term1">Term 1</SelectItem>
+                  <SelectItem value="term2">Term 2</SelectItem>
+                  <SelectItem value="term3">Term 3</SelectItem>
+                </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
               <Select value={type} onValueChange={setType}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
-                <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
+                <SelectTrigger className="rounded-xl h-10 bg-slate-50 border-none font-bold text-slate-800">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="opener">Opener</SelectItem>
+                  <SelectItem value="midterm">Midterm</SelectItem>
+                  <SelectItem value="endterm">Endterm</SelectItem>
+                </SelectContent>
               </Select>
             </div>
-            <div className="pt-2">
+            <div className="space-y-1">
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Search Learner</Label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <Input 
                   placeholder="Search Learner..." 
-                  className="pl-9 h-10 rounded-xl bg-slate-50 border-none text-xs font-bold"
+                  className="pl-9 h-10 rounded-2xl bg-slate-50 border-none text-xs font-bold"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -209,134 +320,82 @@ const ReportCards = () => {
         <div className="flex-1 space-y-2">
           <div className="flex items-center gap-3">
             <BackButton fallback="/" />
-            <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
+            <div>
+              <h1 className="text-3xl font-black text-slate-900">Results Analysis</h1>
+              <p className="text-muted-foreground font-medium">Performance analytics, subject rankings, and class score sheets.</p>
+            </div>
           </div>
-          <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in 2-column grid layout.</p>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => downloadPDF('current')}
+              className="rounded-2xl border-slate-200 gap-2 font-bold text-slate-700 hover:bg-slate-50 shadow-sm"
+            >
+              <FileDown size={16} /> Download CSV
+            </Button>
+            <Button 
+              onClick={() => downloadPDF('all')}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
+            >
+              <Printer size={16} /> Print Report / Save PDF
+            </Button>
+          </div>
         </div>
       </div>
 
       {/* Reports Grid Wrapper */}
-      <div 
-        ref={wrapperRef} 
-        className="reports-print-wrapper grid grid-cols-1 md:grid-cols-2 gap-[0.5cm] w-full"
-      >
-        {filteredStudents.map((s, idx) => {
-          const cat = getCategory(s.grade);
-          const subjects = SUBJECT_MAP[cat];
-
-          return (
-            <div key={s.id} className="student-page-break">
-              <Card className="report-card bg-white rounded-none shadow-none p-[0.4rem] space-y-2.5">
-                {/* Header Letterhead */}
-                <div className="text-center space-y-0.5">
-                  <h2 className="font-black text-sm uppercase leading-tight">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
-                  <p className="font-bold text-[10px]">P.O.BOX 5239-30100, ELDORET</p>
-                  <p className="italic text-[10px] text-slate-500 font-medium">MOTTO: Knowledge is Power</p>
-                  <div className="bg-slate-100 py-1 px-2 inline-block rounded-md mt-1">
-                    <p className="font-black text-[9px] uppercase tracking-tighter text-indigo-900">
-                      Competency-Based Curriculum Progress Report - {term.toUpperCase()} · Academic Year {year}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                  <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">Name:</span><span className="font-black uppercase truncate max-w-[120px]">{s.name}</span></div>
-                  <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">ULI:</span><span className="font-black font-mono">{s.assessment}</span></div>
-                  <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Grade Stream:</span><span className="font-black">{s.grade} {s.stream}</span></div>
-                  <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Overall Rank:</span><span className="font-black text-indigo-600">#{idx + 1} / {filteredStudents.length}</span></div>
-                </div>
-
-                {/* Grading Table */}
-                <div className="overflow-hidden border border-slate-300 rounded-lg">
-                  <table className="w-full text-left border-collapse">
-                    <thead className="bg-slate-100 border-b border-slate-300">
-                      <tr className="text-[9px] font-black uppercase">
-                        <th className="px-2 py-1.5 border-r border-slate-300">Subject / Learning Area</th>
-                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">Mid</th>
-                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">End</th>
-                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12 bg-indigo-50/50">Avg</th>
-                        <th className="px-2 py-1.5 text-center w-16">Rubric</th>
+      <div className="reports-print-wrapper grid grid-cols-1 md:grid-cols-2 gap-[0.5cm] w-full">
+        {filteredStudents.map((s, idx) => (
+          <div key={s.id} className="student-page-break">
+            <Card className="report-card bg-white rounded-none shadow-sm hover:shadow-md transition-all">
+              <CardHeader className="p-4 border-b">
+                <CardTitle className="text-xl font-bold text-slate-900">{s.name}</CardTitle>
+              </CardHeader>
+              <CardContent className="p-4">
+                <table className="w-full text-left border-collapse">
+                  <thead className="bg-slate-100 border-b">
+                    <tr className="text-[9px] text-slate-400 uppercase tracking-widest">
+                      <th className="px-6 py-5">Learner Name</th>
+                      <th className="px-6 py-5">Assessment ID</th>
+                      <th className="px-6 py-5">Grade Stream</th>
+                      <th className="px-6 py-5">Total</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {s.grades.map((g, i) => (
+                      <tr key={i} className="hover:bg-slate-50">
+                        <td className="px-6 py-5">
+                          <p className="font-bold text-slate-900">{s.name}</p>
+                        </td>
+                        <td className="px-6 py-5">
+                          <code className="text-xs font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{s.assessment}</code>
+                        </td>
+                        <td className="px-6 py-5">
+                          <span className="text-slate-600 font-bold">{g.grade}</span> <span className="text-slate-400">{g.stream}</span>
+                        </td>
+                        <td className="px-6 py-5 text-center font-bold text-indigo-600">{s.total}</td>
                       </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200">
-                      {subjects.map((sub, i) => {
-                        const mid = 70 + (i % 25);
-                        const end = 72 + (i % 20);
-                        const avg = Math.round((mid + end) / 2);
-                        const r = getRubric(avg);
-                        return (
-                          <tr key={i} className="text-[10px]">
-                            <td className="px-2 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                            <td className="px-1 py-1 text-center border-r border-slate-200">{mid}</td>
-                            <td className="px-1 py-1 text-center border-r border-slate-200">{end}</td>
-                            <td className="px-1 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                            <td className="px-2 py-1 text-center font-black text-[9px]">{r.code}</td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Admin Block Footer */}
-                <div className="space-y-2 pt-1 border-t border-slate-100">
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[8px] font-black uppercase text-slate-400">Class Teacher's Remarks</span>
-                        <Button size="sm" className="no-print h-5 px-2 bg-[#112A56] text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
-                          <Save size={10} /> Save
-                        </Button>
-                      </div>
-                      <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Excellent performance. Very disciplined learner." />
-                      <p className="text-[8px] font-bold text-slate-400 mt-1">Sign: ....................................... Date: {new Date().toLocaleDateString()}</p>
-                    </div>
-                    <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
-                      <div className="flex justify-between items-center mb-1">
-                        <span className="text-[8px] font-black uppercase text-slate-400">Head of Institution (HOI) Remarks</span>
-                        <Button size="sm" className="no-print h-5 px-2 bg-[#112A56] text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
-                          <Save size={10} /> Save
-                        </Button>
-                      </div>
-                      <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Maintain the same effort in Term 2." />
-                      <p className="text-[8px] font-bold text-slate-400 mt-1">Sign & Stamp: ............................. Date: {new Date().toLocaleDateString()}</p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[8px] font-bold text-slate-500 bg-slate-100/50 p-1.5 rounded-md">
-                    <div className="flex gap-4">
-                      <span>Closing Date: <span className="text-slate-900">10/04/2026</span></span>
-                      <span>Opening Date: <span className="text-slate-900">04/05/2026</span></span>
-                    </div>
-                    <div className="text-right italic font-black text-slate-400">
-                      System Powered by Jamlyan Analytics
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-          );
-        })}
+                    ))}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
       </div>
 
       {/* Bottom Action Bar */}
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200 no-print">
-        <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
-          <Layers size={16} className="text-indigo-600" />
-          <span>Ready to export {filteredStudents.length} records. Layout: A4 Landscape</span>
-        </div>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
           <Button 
             onClick={() => downloadPDF('current')}
-            variant="outline"
-            className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
+            className="rounded-xl border-slate-200 bg-white font-bold text-slate-700 h-11 px-6"
           >
-            Download Current
+            <Download size={16} /> Download Current
           </Button>
           <Button 
             onClick={() => downloadPDF('all')}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
+            className="rounded-xl bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2"
           >
             <Download size={16} /> Download All ({filteredStudents.length})
           </Button>
