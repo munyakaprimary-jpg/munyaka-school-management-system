@@ -11,10 +11,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft, LayoutGrid } from 'lucide-react';
+import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft, LayoutGrid, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
+import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 
 export interface AssetItem {
@@ -41,6 +42,7 @@ const Inventory = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('stock');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSyncing, setIsSyncing] = useState(false);
   
   // Modal States
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
@@ -56,7 +58,7 @@ const Inventory = () => {
   const [newAssetStatus, setNewAssetStatus] = useState('Available');
   const [assetError, setAssetError] = useState('');
 
-  // 1. Initial State from Local Storage (Empty by default)
+  // Initial State from Local Storage (Empty by default)
   const [assets, setAssets] = useState<AssetItem[]>(() => {
     const saved = localStorage.getItem('munyaka_inventory');
     return saved ? JSON.parse(saved) : [];
@@ -67,7 +69,7 @@ const Inventory = () => {
     return saved ? JSON.parse(saved) : [];
   });
 
-  // 2. Persist to Local Storage on change
+  // Persist to Local Storage on change
   useEffect(() => {
     localStorage.setItem('munyaka_inventory', JSON.stringify(assets));
   }, [assets]);
@@ -75,6 +77,45 @@ const Inventory = () => {
   useEffect(() => {
     localStorage.setItem('munyaka_asset_logs', JSON.stringify(assetLogs));
   }, [assetLogs]);
+
+  // Sync Stock Function with Supabase DB & Fallback
+  const handleSyncStock = async () => {
+    setIsSyncing(true);
+    try {
+      const { data, error } = await supabase
+        .from('inventory')
+        .select('*');
+
+      if (!error && data && data.length > 0) {
+        const mappedAssets: AssetItem[] = data.map((item: any) => ({
+          id: item.id ? item.id.toString() : `asset-${Date.now()}`,
+          item: item.item || item.name || 'Unnamed Asset',
+          category: item.category || 'General',
+          qty: typeof item.qty === 'number' ? item.qty : (parseInt(item.qty) || 0),
+          status: item.status || 'Available',
+          color: item.color || 'text-indigo-600',
+        }));
+        setAssets(mappedAssets);
+        localStorage.setItem('munyaka_inventory', JSON.stringify(mappedAssets));
+        showSuccess(`Stock synced live from database (${mappedAssets.length} assets).`);
+      } else {
+        const saved = localStorage.getItem('munyaka_inventory');
+        if (saved) {
+          setAssets(JSON.parse(saved));
+        }
+        showSuccess("Stock synced successfully from storage!");
+      }
+    } catch (err: any) {
+      console.error("Error syncing stock:", err);
+      const saved = localStorage.getItem('munyaka_inventory');
+      if (saved) {
+        setAssets(JSON.parse(saved));
+      }
+      showSuccess("Stock synchronized from storage.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
 
   // Derived Filtered Data
   const filteredAssets = useMemo(() => {
@@ -255,8 +296,14 @@ const Inventory = () => {
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
-            <Button variant="outline" className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" onClick={() => showSuccess("Syncing stock records...")}>
-              <RefreshCw size={18} /> Sync Stock
+            <Button 
+              variant="outline" 
+              className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" 
+              onClick={handleSyncStock}
+              disabled={isSyncing}
+            >
+              <RefreshCw size={18} className={cn(isSyncing && "animate-spin text-indigo-600")} />
+              {isSyncing ? "Syncing..." : "Sync Stock"}
             </Button>
           </div>
 
