@@ -180,7 +180,7 @@ const ReportCards = () => {
 
       if (element) {
         const opt = {
-          margin: [6, 6, 6, 6],
+          margin: [10, 10, 10, 10],
           filename: `report_card_${safeLearnerName}_${year}_${term}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
@@ -275,7 +275,7 @@ const ReportCards = () => {
         @media print {
           @page {
             size: A4 portrait;
-            margin: 6mm;
+            margin: 10mm;
           }
           body {
             background: white !important;
@@ -414,7 +414,7 @@ const ReportCards = () => {
       {/* A4 Single-Page Report Cards Container */}
       <div 
         ref={wrapperRef} 
-        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[210mm] mx-auto"
+        className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[190mm] mx-auto"
       >
         {filteredStudents.map((s, idx) => {
           const cat = getCategory(s.grade);
@@ -423,12 +423,12 @@ const ReportCards = () => {
           return (
             <Card 
               key={s.id} 
-              className="report-card bg-white w-full max-w-[210mm] h-[282mm] max-h-[282mm] shadow-sm rounded-sm p-4 space-y-2.5 overflow-hidden flex flex-col justify-between border border-slate-200"
+              className="report-card bg-white w-full max-w-[190mm] min-h-[265mm] shadow-sm rounded-sm pt-4 pb-3 px-4 space-y-2 flex flex-col justify-between border border-slate-200"
             >
               {/* Top Block: Header, Metadata, Table */}
-              <div className="space-y-2.5 flex-1 overflow-hidden">
-                {/* Header Letterhead - Stacked & Centered */}
-                <div className="text-center space-y-0.5 border-b border-slate-200 pb-2">
+              <div className="space-y-2 flex-1">
+                {/* Header Letterhead - Stacked & Centered with Explicit Top Padding */}
+                <div className="text-center space-y-0.5 border-b border-slate-200 pb-2 pt-2">
                   <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-tight">
                     MUNYAKA PRIMARY AND JUNIOR SCHOOL
                   </h2>
@@ -442,7 +442,7 @@ const ReportCards = () => {
                 </div>
 
                 {/* Metadata Grid */}
-                <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px]">
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-md border border-slate-100 text-[10px]">
                   <div className="flex justify-between items-center">
                     <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
                     <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
@@ -504,11 +504,11 @@ const ReportCards = () => {
                 </div>
               </div>
 
-              {/* Bottom Remarks & Signatures Section (Anchored to Bottom of 1-Page A4) */}
-              <div className="space-y-2 pt-2 border-t border-slate-200 shrink-0">
-                <div className="grid grid-cols-2 gap-3">
+              {/* Bottom Remarks & Signatures Section */}
+              <div className="space-y-1.5 pt-1.5 border-t border-slate-200 shrink-0">
+                <div className="grid grid-cols-2 gap-2.5">
                   {/* Class Teacher's Remarks */}
-                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
+                  <div className="space-y-0.5 p-1.5 bg-slate-50/70 rounded-md border border-slate-200">
                     <div className="flex justify-between items-center">
                       <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
                       <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
@@ -520,7 +520,7 @@ const ReportCards = () => {
                   </div>
 
                   {/* HOI Remarks */}
-                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
+                  <div className="space-y-0.5 p-1.5 bg-slate-50/70 rounded-md border border-slate-200">
                     <div className="flex justify-between items-center">
                       <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
                       <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
