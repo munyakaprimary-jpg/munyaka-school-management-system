@@ -14,7 +14,8 @@ import {
   Save, 
   Loader2, 
   Layers,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Calendar
 } from 'lucide-react';
 import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
@@ -72,6 +73,17 @@ const getGradeSortIndex = (gradeName: string): number => {
   return index !== -1 ? index : 999;
 };
 
+// Format YYYY-MM-DD into DD/MM/YYYY
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '—';
+  const parts = dateStr.split('-');
+  if (parts.length === 3) {
+    const [y, m, d] = parts;
+    return `${d}/${m}/${y}`;
+  }
+  return dateStr;
+};
+
 const ReportCards = () => {
   // Filters State
   const [year, setYear] = useState("2026");
@@ -80,6 +92,10 @@ const ReportCards = () => {
   const [term, setTerm] = useState("term1");
   const [type, setType] = useState("endterm");
   const [searchTerm, setSearchTerm] = useState("");
+
+  // Dynamic Term Calendar Dates State
+  const [closingDate, setClosingDate] = useState("2026-04-10");
+  const [openingDate, setOpeningDate] = useState("2026-05-04");
   
   const [isExportingCurrent, setIsExportingCurrent] = useState(false);
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
@@ -196,6 +212,7 @@ const ReportCards = () => {
           `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
           `Grade: Grade ${targetLearner.grade} — ${targetLearner.stream} Stream`,
           `Academic Year: ${year} | Term: ${term.toUpperCase()}`,
+          `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
           `Generated: ${new Date().toLocaleString()}`,
           `--------------------------------------------------`,
           `Guardian: ${targetLearner.guardian} | Contact: ${targetLearner.phone}`
@@ -244,6 +261,7 @@ const ReportCards = () => {
         "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
         "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
         `Generated: ${new Date().toLocaleString()}`,
+        `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
         `Total Records Included: ${STUDENTS.length}`,
         "",
         headers.join(","),
@@ -376,7 +394,7 @@ const ReportCards = () => {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Active Term</Label>
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Active Term</Label>
               <Select value={term} onValueChange={setTerm}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
@@ -384,15 +402,43 @@ const ReportCards = () => {
             </div>
 
             <div className="space-y-1">
-              <Label className="text-[10px] font.black uppercase text-slate-400 ml-1">Exam Type</Label>
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
               <Select value={type} onValueChange={setType}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
               </Select>
             </div>
 
+            {/* Dynamic Term Calendar Dates Settings */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="flex items-center gap-1.5 mb-1">
+                <Calendar size={12} className="text-indigo-600" />
+                <span className="text-[10px] font-black uppercase tracking-wider text-indigo-900">Term Calendar Dates</span>
+              </div>
+              
+              <div className="space-y-1">
+                <Label className="text-[10px] font-bold text-slate-500 ml-1">Closing Date</Label>
+                <Input 
+                  type="date"
+                  value={closingDate}
+                  onChange={(e) => setClosingDate(e.target.value)}
+                  className="h-9 rounded-xl bg-slate-50 border-slate-200 text-xs font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label className="text-[10px] font-bold text-slate-500 ml-1">Next Term Opening Date</Label>
+                <Input 
+                  type="date"
+                  value={openingDate}
+                  onChange={(e) => setOpeningDate(e.target.value)}
+                  className="h-9 rounded-xl bg-slate-50 border-slate-200 text-xs font-bold"
+                />
+              </div>
+            </div>
+
             <div className="pt-2 space-y-1">
-              <Label className="text-[10px] font.black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
+              <Label className="text-[10px] font-black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <Input 
@@ -430,39 +476,39 @@ const ReportCards = () => {
               key={s.id} 
               className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-6 border border-slate-200 space-y-4 box-border"
             >
-              {/* 1. Header Letterhead - Standard Vertical Stack */}
+              {/* 1. Header Letterhead - Standard Vertical Stack with Explicit Margins */}
               <div className="w-full flex flex-col items-center text-center border-b border-slate-200 pb-3 overflow-visible">
-                <h2 className="font-bold text-sm uppercase tracking-tight text-slate-900 mb-[4px] leading-normal">
+                <h2 className="font-bold text-sm uppercase tracking-tight text-slate-900 mb-[4px]">
                   MUNYAKA PRIMARY AND JUNIOR SCHOOL
                 </h2>
-                <p className="font-bold text-[10px] text-slate-600 mb-[2px] leading-normal">
+                <p className="font-bold text-[10px] text-slate-600 mb-[2px]">
                   P.O. BOX 5239-30100, ELDORET
                 </p>
-                <p className="italic text-[9.5px] text-slate-500 font-medium mb-[12px] leading-normal">
+                <p className="italic text-[9.5px] text-slate-500 font-medium mb-[12px]">
                   MOTTO: Knowledge is Power
                 </p>
-                <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded mb-[16px] block border border-slate-200 leading-normal">
+                <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded mb-[16px] block border border-slate-200">
                   COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
                 </h3>
               </div>
 
-              {/* 2. Learner Metadata Header */}
-              <div className="grid grid-cols-2 gap-x-6 gap-y-2.5 bg-slate-50 p-4 rounded-lg border border-slate-200 text-xs mt-5 mb-4 leading-normal overflow-visible">
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font-black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Name</span>
-                  <span className="font-bold text-slate-900 text-[11px] leading-normal truncate">{s.name}</span>
+              {/* 2. Metadata Grid */}
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] mt-[16px] mb-2">
+                <div className="flex justify-between items-center">
+                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
+                  <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">ULI / Assessment No</span>
-                  <span className="font-black font-mono text-slate-900 text-[11px] leading-normal">{s.assessment}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
+                  <span className="font-black font-mono text-slate-900">{s.assessment}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Grade / Stream</span>
-                  <span className="font-bold text-slate-900 text-[11px] leading-normal">Grade {s.grade} — {s.stream}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>
+                  <span className="font-bold text-slate-900">Grade {s.grade} — {s.stream}</span>
                 </div>
-                <div className="flex items-center justify-between gap-2 overflow-visible">
-                  <span className="font.black uppercase tracking-wider text-slate-500 text-[9px] shrink-0">Overall Rank</span>
-                  <span className="font-black text-indigo-600 text-[11px] leading-normal">#{idx + 1} of {filteredStudents.length}</span>
+                <div className="flex justify-between items-center">
+                  <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Overall Rank</span>
+                  <span className="font-black text-indigo-600">#{idx + 1} of {filteredStudents.length}</span>
                 </div>
               </div>
 
@@ -509,48 +555,40 @@ const ReportCards = () => {
               </div>
 
               {/* 4. Remarks & Signatures Section */}
-              <div className="remarks-block space-y-4 pt-4 border-t border-slate-200 mt-6 overflow-visible">
-                <div className="grid grid-cols-2 gap-4">
+              <div className="remarks-block space-y-3 pt-3 border-t border-slate-200 mt-5">
+                <div className="grid grid-cols-2 gap-3">
                   {/* Class Teacher's Remarks */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
-                    <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">Class Teacher's Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded gap-1 shrink-0">
-                        <Save size={10} /> Save
+                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
+                      <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
+                        <Save size={8} /> Save
                       </Button>
                     </div>
-                    <textarea 
-                      rows={2} 
-                      className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
-                      defaultValue="Excellent performance. Very disciplined learner." 
-                    />
-                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign: .......................................</p>
+                    <textarea rows={2} className="w-full bg-transparent border-none p-0 text-[8.5px] italic text-slate-600 resize-none outline-none font-medium leading-tight" defaultValue="Excellent performance. Very disciplined learner." />
+                    <p className="text-[7.5px] font-bold text-slate-400 pt-1">Sign: .......................................</p>
                   </div>
 
                   {/* HOI Remarks */}
-                  <div className="p-3.5 bg-slate-50/80 rounded-lg border border-slate-200 space-y-2.5 min-h-[90px] flex flex-col justify-between overflow-visible">
-                    <div className="flex justify-between items-center gap-2 pb-1 border-b border-slate-200/60 overflow-visible">
-                      <span className="text-[9px] font.black uppercase tracking-wider text-slate-500 leading-normal">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font.bold text-[7.5px] rounded gap-1 shrink-0">
-                        <Save size={10} /> Save
+                  <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
+                    <div className="flex justify-between items-center">
+                      <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
+                      <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
+                        <Save size={8} /> Save
                       </Button>
                     </div>
-                    <textarea 
-                      rows={2} 
-                      className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-700 resize-none outline-none font-medium leading-relaxed overflow-visible" 
-                      defaultValue="Maintain the same effort in Term 2." 
-                    />
-                    <p className="text-[8px] font.bold text-slate-500 pt-1 leading-normal">Sign & Stamp: .............................</p>
+                    <textarea rows={2} className="w-full bg-transparent border-none p-0 text-[8.5px] italic text-slate-600 resize-none outline-none font-medium leading-tight" defaultValue="Maintain the same effort in Term 2." />
+                    <p className="text-[7.5px] font-bold text-slate-400 pt-1">Sign & Stamp: .............................</p>
                   </div>
                 </div>
 
                 {/* Footer Dates & System Info */}
-                <div className="flex items-center justify-between text-[8px] font.bold text-slate-600 bg-slate-100/80 px-3 py-2 rounded-md border border-slate-200/80 mt-3 leading-normal overflow-visible">
+                <div className="flex items-center justify-between text-[7.5px] font-bold text-slate-500 bg-slate-100/70 p-2 rounded mt-4">
                   <div className="flex gap-4">
-                    <span>Closing Date: <span className="text-slate-900 font.black">10/04/2026</span></span>
-                    <span>Opening Date: <span className="text-slate-900 font.black">04/05/2026</span></span>
+                    <span>Closing Date: <span className="text-slate-900 font-black">{formatDateDisplay(closingDate)}</span></span>
+                    <span>Opening Date: <span className="text-slate-900 font-black">{formatDateDisplay(openingDate)}</span></span>
                   </div>
-                  <div className="text-right italic font.black text-slate-400">
+                  <div className="text-right italic font-black text-slate-400">
                     System Powered by Jamlyan Analytics
                   </div>
                 </div>
