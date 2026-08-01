@@ -33,7 +33,7 @@ const ReportCards = () => {
 
       {/* Report Cards - Each student gets their own page when printed */}
       <div className="space-y-6">
-        {STUDENTS.map((student) => (
+        {(STUDENTS || []).map((student) => (
           <div key={student.id} className="print:break-after-page print:min-h-screen mb-8 print:mb-0">
             <Card className="border-none shadow-none rounded-lg bg-white overflow-hidden">
               {/* Header */}
@@ -55,7 +55,7 @@ const ReportCards = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {student.grades.map((score, index) => {
+                    {(student.grades || []).map((score, index) => {
                       const rubric = getRubric(score);
                       return (
                         <tr key={index} className="hover:bg-slate-50">
