@@ -149,7 +149,7 @@ const ReportCards = () => {
     setStream("all");
   }, [grade]);
 
-  // Derived Filtered Students based on current Academic Year & Grade/Stream filters
+  // Derived Filtered Students based on current Academic Year & Grade/Stream/Search filters
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
       const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
@@ -160,10 +160,15 @@ const ReportCards = () => {
   }, [searchTerm, grade, stream]);
 
   // Handler: "Download Current"
-  // Generates/exports reports for the currently selected Academic Year and Grade Level filters
+  // Generates/exports reports strictly for the individual learner searched in the search box
   const handleDownloadCurrent = async () => {
+    if (!searchTerm.trim()) {
+      showError("Please type a learner's name or ULI/Assessment No in the search box to download an individual report card.");
+      return;
+    }
+
     if (filteredStudents.length === 0) {
-      showError(`No student records found for Grade ${grade} (${year}).`);
+      showError(`No learner found matching "${searchTerm}".`);
       return;
     }
 
@@ -171,10 +176,13 @@ const ReportCards = () => {
 
     try {
       const element = wrapperRef.current;
+      const targetLearner = filteredStudents[0];
+      const safeLearnerName = targetLearner.name.toLowerCase().replace(/\s+/g, '_');
+
       if (element) {
         const opt = {
           margin: [10, 10, 10, 10],
-          filename: `report_cards_grade_${grade}_year_${year}_${term}.pdf`,
+          filename: `report_card_${safeLearnerName}_${year}_${term}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
           html2canvas: { scale: 2, useCORS: true, letterRendering: true },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
@@ -182,32 +190,34 @@ const ReportCards = () => {
         };
 
         await html2pdf().set(opt).from(element).save();
-        showSuccess(`Successfully generated report cards for Grade ${grade} (${year}) — ${filteredStudents.length} learners!`);
+        showSuccess(`Generated individual report card for ${targetLearner.name}!`);
       } else {
-        // Fallback text export
+        // Fallback text export for searched learner
         const content = [
-          `MUNYAKA PRIMARY AND JUNIOR SCHOOL - CURRENT FILTER REPORT`,
-          `Academic Year: ${year} | Grade: ${grade} | Stream: ${stream} | Term: ${term.toUpperCase()}`,
+          `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
+          `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
+          `Grade: Grade ${targetLearner.grade} — ${targetLearner.stream} Stream`,
+          `Academic Year: ${year} | Term: ${term.toUpperCase()}`,
           `Generated: ${new Date().toLocaleString()}`,
           `--------------------------------------------------`,
-          ...filteredStudents.map((s, i) => `${i + 1}. ${s.name} | ULI: ${s.assessment} | Stream: ${s.stream}`)
+          `Guardian: ${targetLearner.guardian} | Contact: ${targetLearner.phone}`
         ].join('\n');
 
         const blob = new Blob([content], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `report_current_grade_${grade}_${year}.txt`;
+        link.download = `report_card_${safeLearnerName}_${year}.txt`;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
 
-        showSuccess(`Exported current selection report (${filteredStudents.length} records)`);
+        showSuccess(`Exported individual report card for ${targetLearner.name}`);
       }
     } catch (err) {
       console.error("Error generating report:", err);
-      showError("Failed to generate current selection report.");
+      showError("Failed to generate individual learner report card.");
     } finally {
       setIsExportingCurrent(false);
     }
@@ -284,7 +294,7 @@ const ReportCards = () => {
           <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
-          {/* Button 1: Download Current */}
+          {/* Button 1: Download Current (Single Learner Search) */}
           <Button 
             onClick={handleDownloadCurrent}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
@@ -373,12 +383,13 @@ const ReportCards = () => {
               </Select>
             </div>
 
-            <div className="pt-2">
+            <div className="pt-2 space-y-1">
+              <Label className="text-[10px] font-black uppercase text-indigo-600 ml-1">Search Individual Learner</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
                 <Input 
-                  placeholder="Search Learner..." 
-                  className="pl-9 h-10 rounded-xl bg-slate-50 border-none text-xs font-bold"
+                  placeholder="Type Learner Name / ULI..." 
+                  className="pl-9 h-10 rounded-xl bg-slate-50 border-indigo-200 text-xs font-bold focus:bg-white"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
@@ -389,7 +400,11 @@ const ReportCards = () => {
 
         {/* Right Side: Page Info */}
         <div className="flex-1 space-y-2">
-          <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in A4 Portrait layout for Grade {grade} ({year}).</p>
+          <p className="text-slate-500 text-sm font-medium">
+            {searchTerm.trim() 
+              ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.` 
+              : `Previewing ${filteredStudents.length} report cards for Grade ${grade} (${year}). Type a learner's name in the search box to download an individual report.`}
+          </p>
         </div>
       </div>
 
@@ -531,7 +546,11 @@ const ReportCards = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200 no-print">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
           <Layers size={16} className="text-indigo-600" />
-          <span>Ready to export {filteredStudents.length} records for Grade {grade}. Format: A4 Portrait</span>
+          <span>
+            {searchTerm.trim() 
+              ? `Ready to download individual report for ${filteredStudents[0]?.name || 'searched learner'}` 
+              : `Type a learner's name in search to download their individual report card`}
+          </span>
         </div>
         <div className="flex gap-2">
           {/* Button 1: Download Current */}
