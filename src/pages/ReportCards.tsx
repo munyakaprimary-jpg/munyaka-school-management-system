@@ -77,8 +77,16 @@ const ReportCards = () => {
     const element = wrapperRef.current;
     if (!element) return;
 
+    // Temporarily hide UI elements that shouldn't appear in the PDF
+    const elementsToHide = element.querySelectorAll('.no-print');
+    const originalDisplayValues: string[] = [];
+    elementsToHide.forEach((el, index) => {
+      originalDisplayValues[index] = (el as HTMLElement).style.display;
+      (el as HTMLElement).style.display = 'none';
+    });
+
     const opt = {
-      margin: [0.3, 0.3, 0.3, 0.3],
+      margin: [0.4, 0.4, 0.4, 0.4],
       filename: `munyaka_reports_${grade}_${term}.pdf`,
       image: { type: 'jpeg', quality: 0.98 },
       html2canvas: { scale: 2, useCORS: true, letterRendering: true },
@@ -92,6 +100,10 @@ const ReportCards = () => {
     } catch (err) {
       showError("Export failed.");
     } finally {
+      // Restore original display values
+      elementsToHide.forEach((el, index) => {
+        (el as HTMLElement).style.display = originalDisplayValues[index];
+      });
       setIsExporting(false);
     }
   };
@@ -106,13 +118,16 @@ const ReportCards = () => {
         .report-card {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
-          page-break-after: always;
           font-size: 11px;
           border: 1px solid #e2e8f0;
         }
         .report-card table, .report-card tr, .report-card td, .report-card th {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
+        }
+        .student-page-break {
+          page-break-after: always !important;
+          break-after: page !important;
         }
         .exporting-pdf .no-print { display: none !important; }
       `}</style>
@@ -210,95 +225,97 @@ const ReportCards = () => {
           const subjects = SUBJECT_MAP[cat];
 
           return (
-            <Card key={s.id} className="report-card bg-white rounded-none shadow-none p-[0.4rem] space-y-2.5">
-              {/* Header Letterhead */}
-              <div className="text-center space-y-0.5">
-                <h2 className="font-black text-sm uppercase leading-tight">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
-                <p className="font-bold text-[10px]">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-[10px] text-slate-500 font-medium">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-1 px-2 inline-block rounded-md mt-1">
-                  <p className="font-black text-[9px] uppercase tracking-tighter text-indigo-900">
-                    Competency-Based Curriculum Progress Report - {term.toUpperCase()} · Academic Year {year}
-                  </p>
+            <div key={s.id} className="student-page-break">
+              <Card className="report-card bg-white rounded-none shadow-none p-[0.4rem] space-y-2.5">
+                {/* Header Letterhead */}
+                <div className="text-center space-y-0.5">
+                  <h2 className="font-black text-sm uppercase leading-tight">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
+                  <p className="font-bold text-[10px]">P.O.BOX 5239-30100, ELDORET</p>
+                  <p className="italic text-[10px] text-slate-500 font-medium">MOTTO: Knowledge is Power</p>
+                  <div className="bg-slate-100 py-1 px-2 inline-block rounded-md mt-1">
+                    <p className="font-black text-[9px] uppercase tracking-tighter text-indigo-900">
+                      Competency-Based Curriculum Progress Report - {term.toUpperCase()} · Academic Year {year}
+                    </p>
+                  </div>
                 </div>
-              </div>
 
-              {/* Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
-                <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">Name:</span><span className="font-black uppercase truncate max-w-[120px]">{s.name}</span></div>
-                <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">ULI:</span><span className="font-black font-mono">{s.assessment}</span></div>
-                <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Grade Stream:</span><span className="font-black">{s.grade} {s.stream}</span></div>
-                <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Overall Rank:</span><span className="font-black text-indigo-600">#{idx + 1} / {filteredStudents.length}</span></div>
-              </div>
+                {/* Metadata Grid */}
+                <div className="grid grid-cols-2 gap-x-4 gap-y-1 bg-slate-50 p-2 rounded-lg border border-slate-100">
+                  <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">Name:</span><span className="font-black uppercase truncate max-w-[120px]">{s.name}</span></div>
+                  <div className="flex justify-between border-b border-slate-200 pb-0.5"><span className="font-black text-slate-400 uppercase text-[8px]">ULI:</span><span className="font-black font-mono">{s.assessment}</span></div>
+                  <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Grade Stream:</span><span className="font-black">{s.grade} {s.stream}</span></div>
+                  <div className="flex justify-between"><span className="font-black text-slate-400 uppercase text-[8px]">Overall Rank:</span><span className="font-black text-indigo-600">#{idx + 1} / {filteredStudents.length}</span></div>
+                </div>
 
-              {/* Grading Table */}
-              <div className="overflow-hidden border border-slate-300 rounded-lg">
-                <table className="w-full text-left border-collapse">
-                  <thead className="bg-slate-100 border-b border-slate-300">
-                    <tr className="text-[9px] font-black uppercase">
-                      <th className="px-2 py-1.5 border-r border-slate-300">Subject / Learning Area</th>
-                      <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">Mid</th>
-                      <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">End</th>
-                      <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12 bg-indigo-50/50">Avg</th>
-                      <th className="px-2 py-1.5 text-center w-16">Rubric</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
-                    {subjects.map((sub, i) => {
-                      const mid = 70 + (i % 25);
-                      const end = 72 + (i % 20);
-                      const avg = Math.round((mid + end) / 2);
-                      const r = getRubric(avg);
-                      return (
-                        <tr key={i} className="text-[10px]">
-                          <td className="px-2 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
-                          <td className="px-1 py-1 text-center border-r border-slate-200">{mid}</td>
-                          <td className="px-1 py-1 text-center border-r border-slate-200">{end}</td>
-                          <td className="px-1 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
-                          <td className="px-2 py-1 text-center font-black text-[9px]">{r.code}</td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                {/* Grading Table */}
+                <div className="overflow-hidden border border-slate-300 rounded-lg">
+                  <table className="w-full text-left border-collapse">
+                    <thead className="bg-slate-100 border-b border-slate-300">
+                      <tr className="text-[9px] font-black uppercase">
+                        <th className="px-2 py-1.5 border-r border-slate-300">Subject / Learning Area</th>
+                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">Mid</th>
+                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12">End</th>
+                        <th className="px-1 py-1.5 text-center border-r border-slate-300 w-12 bg-indigo-50/50">Avg</th>
+                        <th className="px-2 py-1.5 text-center w-16">Rubric</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
+                      {subjects.map((sub, i) => {
+                        const mid = 70 + (i % 25);
+                        const end = 72 + (i % 20);
+                        const avg = Math.round((mid + end) / 2);
+                        const r = getRubric(avg);
+                        return (
+                          <tr key={i} className="text-[10px]">
+                            <td className="px-2 py-1 border-r border-slate-200 font-bold text-slate-700">{sub}</td>
+                            <td className="px-1 py-1 text-center border-r border-slate-200">{mid}</td>
+                            <td className="px-1 py-1 text-center border-r border-slate-200">{end}</td>
+                            <td className="px-1 py-1 text-center border-r border-slate-200 font-black text-indigo-700 bg-indigo-50/20">{avg}%</td>
+                            <td className="px-2 py-1 text-center font-black text-[9px]">{r.code}</td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-              {/* Admin Block Footer */}
-              <div className="space-y-2 pt-1 border-t border-slate-100">
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[8px] font-black uppercase text-slate-400">Class Teacher's Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
-                        <Save size={10} /> Save
-                      </Button>
+                {/* Admin Block Footer */}
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[8px] font-black uppercase text-slate-400">Class Teacher's Remarks</span>
+                        <Button size="sm" className="no-print h-5 px-2 bg-[#112A56] text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
+                          <Save size={10} /> Save
+                        </Button>
+                      </div>
+                      <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Excellent performance. Very disciplined learner." />
+                      <p className="text-[8px] font-bold text-slate-400 mt-1">Sign: ....................................... Date: {new Date().toLocaleDateString()}</p>
                     </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Excellent performance. Very disciplined learner." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign: .......................................</p>
-                  </div>
-                  <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="text-[8px] font-black uppercase text-slate-400">HOI Remarks</span>
-                      <Button size="sm" className="no-print h-5 px-2 bg-slate-900 text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
-                        <Save size={10} /> Save
-                      </Button>
+                    <div className="space-y-1 p-2 bg-slate-50/50 rounded-lg border border-slate-100 relative">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-[8px] font-black uppercase text-slate-400">Head of Institution (HOI) Remarks</span>
+                        <Button size="sm" className="no-print h-5 px-2 bg-[#112A56] text-[#CCFF00] font-bold text-[8px] rounded-md gap-1">
+                          <Save size={10} /> Save
+                        </Button>
+                      </div>
+                      <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Maintain the same effort in Term 2." />
+                      <p className="text-[8px] font-bold text-slate-400 mt-1">Sign & Stamp: ............................. Date: {new Date().toLocaleDateString()}</p>
                     </div>
-                    <textarea rows={1} className="w-full bg-transparent border-none p-0 text-[9px] italic text-slate-600 resize-none outline-none font-medium" defaultValue="Maintain the same effort in Term 2." />
-                    <p className="text-[8px] font-bold text-slate-400 mt-1">Sign & Stamp: .............................</p>
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between text-[8px] font-bold text-slate-500 bg-slate-100/50 p-1.5 rounded-md">
-                  <div className="flex gap-4">
-                    <span>Closing Date: <span className="text-slate-900">10/04/2026</span></span>
-                    <span>Opening Date: <span className="text-slate-900">04/05/2026</span></span>
-                  </div>
-                  <div className="text-right italic font-black text-slate-400">
-                    System Powered by Jamlyan Analytics
+                  <div className="flex items-center justify-between text-[8px] font-bold text-slate-500 bg-slate-100/50 p-1.5 rounded-md">
+                    <div className="flex gap-4">
+                      <span>Closing Date: <span className="text-slate-900">10/04/2026</span></span>
+                      <span>Opening Date: <span className="text-slate-900">04/05/2026</span></span>
+                    </div>
+                    <div className="text-right italic font-black text-slate-400">
+                      System Powered by Jamlyan Analytics
+                    </div>
                   </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </div>
           );
         })}
       </div>
