@@ -67,13 +67,23 @@ const ReportCards = () => {
                             </span>
                           </td>
                         </tr>
-                      )}
-                    </tbody>
-                  </table>
-                </CardContent>
-              </Card>
-            </div>
-          ))}
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </CardContent>
+            </Card>
+          </div>
+        ))}
+      </div>
+
+      {/* Bottom Controls */}
+      <div className="flex flex-col md:flex-row gap-4 mt-8">
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => window.print()} className="rounded-xl h-11 px-5">
+            <Printer size={18} />
+          </Button>
+        </div>
       </div>
     </div>
   );
