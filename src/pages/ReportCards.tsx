@@ -430,22 +430,24 @@ const ReportCards = () => {
               key={s.id} 
               className="report-card bg-white w-full max-w-[190mm] shadow-sm rounded-sm p-6 border border-slate-200 space-y-4 box-border"
             >
-              {/* 1. Header Letterhead - Standard Block Flow & Positive Margins */}
-              <div className="w-full text-center border-b border-slate-200 pb-3 pt-1 mb-2">
-                <h2 className="font-black text-sm uppercase tracking-tight text-slate-900 leading-normal mb-1">
+              {/* 1. Header Letterhead - Standard Vertical Stack with Explicit Margins */}
+              <div className="w-full flex flex-col items-center text-center border-b border-slate-200 pb-3 overflow-visible">
+                <h2 className="font-bold text-sm uppercase tracking-tight text-slate-900 mb-[4px]">
                   MUNYAKA PRIMARY AND JUNIOR SCHOOL
                 </h2>
-                <p className="font-bold text-[10px] text-slate-600 leading-normal mb-1">P.O.BOX 5239-30100, ELDORET</p>
-                <p className="italic text-[9.5px] text-slate-500 font-medium leading-normal mb-2">MOTTO: Knowledge is Power</p>
-                <div className="bg-slate-100 py-1.5 px-3 rounded inline-block my-1 max-w-full">
-                  <p className="font-black text-[9px] uppercase tracking-wider text-indigo-900 leading-normal">
-                    Competency-Based Curriculum Progress Report — {term.toUpperCase()} · Academic Year {year}
-                  </p>
-                </div>
+                <p className="font-bold text-[10px] text-slate-600 mb-[2px]">
+                  P.O. BOX 5239-30100, ELDORET
+                </p>
+                <p className="italic text-[9.5px] text-slate-500 font-medium mb-[12px]">
+                  MOTTO: Knowledge is Power
+                </p>
+                <h3 className="font-black text-[10.5px] uppercase tracking-wider text-slate-800 bg-slate-100 px-4 py-1.5 rounded mb-[16px] block border border-slate-200">
+                  COMPETENCY BASED CURRICULUM PROGRESS REPORT — {term.toUpperCase()} · ACADEMIC YEAR {year}
+                </h3>
               </div>
 
               {/* 2. Metadata Grid */}
-              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] mb-2">
+              <div className="grid grid-cols-2 gap-x-4 gap-y-1.5 bg-slate-50 p-2.5 rounded-md border border-slate-100 text-[10px] mt-[16px] mb-2">
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Name</span>
                   <span className="font-bold text-slate-900 truncate max-w-[130px]">{s.name}</span>
@@ -506,7 +508,7 @@ const ReportCards = () => {
                 </table>
               </div>
 
-              {/* 4. Remarks & Signatures Section (Positioned directly below the table with mt-5) */}
+              {/* 4. Remarks & Signatures Section */}
               <div className="remarks-block space-y-3 pt-3 border-t border-slate-200 mt-5">
                 <div className="grid grid-cols-2 gap-3">
                   {/* Class Teacher's Remarks */}
