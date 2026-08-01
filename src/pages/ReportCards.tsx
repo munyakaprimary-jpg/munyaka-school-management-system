@@ -216,7 +216,7 @@ const ReportCards = () => {
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
           >
             <FileSpreadsheet size={16} />
-            Download CSV
+            download current
           </Button>
         </div>
       </div>
@@ -461,7 +461,7 @@ const ReportCards = () => {
           <Button 
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
           >
-            <FileSpreadsheet size={16} /> Download CSV
+            <FileSpreadsheet size={16} /> download current
           </Button>
         </div>
       </div>
