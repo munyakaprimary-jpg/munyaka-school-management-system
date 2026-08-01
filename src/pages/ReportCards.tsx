@@ -81,7 +81,8 @@ const ReportCards = () => {
   const [type, setType] = useState("endterm");
   const [searchTerm, setSearchTerm] = useState("");
   
-  const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCurrent, setIsExportingCurrent] = useState(false);
+  const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
@@ -111,7 +112,7 @@ const ReportCards = () => {
     };
   }, []);
 
-  // Sort grades logically - this is the key fix!
+  // Sort grades logically
   const sortedGrades = useMemo(() => {
     return [...storedGrades].sort((a, b) => {
       const nameA = a.name || '';
@@ -148,7 +149,7 @@ const ReportCards = () => {
     setStream("all");
   }, [grade]);
 
-  // Derived Filtered Students
+  // Derived Filtered Students based on current Academic Year & Grade/Stream filters
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
       const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
@@ -158,27 +159,106 @@ const ReportCards = () => {
     });
   }, [searchTerm, grade, stream]);
 
-  const downloadPDF = async () => {
-    setIsExporting(true);
-    const element = wrapperRef.current;
-    if (!element) return;
+  // Handler: "download current"
+  // Generates/exports reports for the currently selected Academic Year and Grade Level filters
+  const handleDownloadCurrent = async () => {
+    if (filteredStudents.length === 0) {
+      showError(`No student records found for Grade ${grade} (${year}).`);
+      return;
+    }
 
-    const opt = {
-      margin: [10, 10, 10, 10],
-      filename: `munyaka_reports_${grade}_${term}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true, letterRendering: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
+    setIsExportingCurrent(true);
 
     try {
-      await html2pdf().set(opt).from(element).save();
-      showSuccess("PDF generated successfully!");
+      const element = wrapperRef.current;
+      if (element) {
+        const opt = {
+          margin: [10, 10, 10, 10],
+          filename: `report_cards_grade_${grade}_year_${year}_${term}.pdf`,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, letterRendering: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        await html2pdf().set(opt).from(element).save();
+        showSuccess(`Successfully generated report cards for Grade ${grade} (${year}) — ${filteredStudents.length} learners!`);
+      } else {
+        // Fallback text export
+        const content = [
+          `MUNYAKA PRIMARY AND JUNIOR SCHOOL - CURRENT FILTER REPORT`,
+          `Academic Year: ${year} | Grade: ${grade} | Stream: ${stream} | Term: ${term.toUpperCase()}`,
+          `Generated: ${new Date().toLocaleString()}`,
+          `--------------------------------------------------`,
+          ...filteredStudents.map((s, i) => `${i + 1}. ${s.name} | ULI: ${s.assessment} | Stream: ${s.stream}`)
+        ].join('\n');
+
+        const blob = new Blob([content], { type: 'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `report_current_grade_${grade}_${year}.txt`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+
+        showSuccess(`Exported current selection report (${filteredStudents.length} records)`);
+      }
     } catch (err) {
-      showError("Export failed.");
+      console.error("Error generating report:", err);
+      showError("Failed to generate current selection report.");
     } finally {
-      setIsExporting(false);
+      setIsExportingCurrent(false);
+    }
+  };
+
+  // Handler: "download all"
+  // Bulk exports a combined dataset report across all available records and grade levels
+  const handleDownloadAll = async () => {
+    setIsDownloadingAll(true);
+
+    try {
+      await new Promise(r => setTimeout(r, 600));
+
+      const headers = ["Student Name", "Assessment No (ULI)", "Grade Level", "Stream", "Guardian", "Phone Contact", "Email"];
+      
+      const rows = STUDENTS.map(s => [
+        `"${s.name.replace(/"/g, '""')}"`,
+        `"${s.assessment.replace(/"/g, '""')}"`,
+        `"Grade ${s.grade}"`,
+        `"${s.stream.replace(/"/g, '""')}"`,
+        `"${s.guardian.replace(/"/g, '""')}"`,
+        `"${s.phone.replace(/"/g, '""')}"`,
+        `"${s.email.replace(/"/g, '""')}"`
+      ]);
+
+      const csvContent = [
+        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+        "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
+        `Generated: ${new Date().toLocaleString()}`,
+        `Total Records Included: ${STUDENTS.length}`,
+        "",
+        headers.join(","),
+        ...rows.map(r => r.join(","))
+      ].join("\n");
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      showSuccess(`Bulk export completed! Downloaded all ${STUDENTS.length} student records across all grades.`);
+    } catch (err) {
+      console.error("Error during bulk export:", err);
+      showError("Failed to generate bulk report.");
+    } finally {
+      setIsDownloadingAll(false);
     }
   };
 
@@ -197,26 +277,31 @@ const ReportCards = () => {
         }
       `}</style>
 
-      {/* Header Section - CBC Report Generator title above buttons */}
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
+          {/* Button 1: download current */}
           <Button 
-            onClick={downloadPDF}
+            onClick={handleDownloadCurrent}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-            disabled={isExporting}
+            disabled={isExportingCurrent}
           >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            Download PDF
+            {isExportingCurrent ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            download current
           </Button>
+
+          {/* Button 2: download all */}
           <Button 
+            onClick={handleDownloadAll}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+            disabled={isDownloadingAll}
           >
-            <FileSpreadsheet size={16} />
-            Download CSV
+            {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
+            download all
           </Button>
         </div>
       </div>
@@ -304,7 +389,7 @@ const ReportCards = () => {
 
         {/* Right Side: Page Info */}
         <div className="flex-1 space-y-2">
-          <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in A4 Portrait layout.</p>
+          <p className="text-slate-500 text-sm font-medium">Previewing {filteredStudents.length} report cards in A4 Portrait layout for Grade {grade} ({year}).</p>
         </div>
       </div>
 
@@ -446,22 +531,28 @@ const ReportCards = () => {
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-200 no-print">
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
           <Layers size={16} className="text-indigo-600" />
-          <span>Ready to export {filteredStudents.length} records. Format: A4 Portrait</span>
+          <span>Ready to export {filteredStudents.length} records for Grade {grade}. Format: A4 Portrait</span>
         </div>
         <div className="flex gap-2">
+          {/* Button 1: download current */}
           <Button 
-            onClick={downloadPDF}
+            onClick={handleDownloadCurrent}
             variant="outline"
             className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
-            disabled={isExporting}
+            disabled={isExportingCurrent}
           >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Download PDF
+            {isExportingCurrent ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+            download current
           </Button>
+
+          {/* Button 2: download all */}
           <Button 
+            onClick={handleDownloadAll}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
+            disabled={isDownloadingAll}
           >
-            <FileSpreadsheet size={16} /> Download CSV
+            {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
+            download all
           </Button>
         </div>
       </div>
