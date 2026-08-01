@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -48,12 +48,54 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showBottomNav, setShowBottomNav] = useState(true);
+  const lastScrollY = useRef(0);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Attach Hardware Back Button Handling for Capacitor/Android
   useMobileBackButton(isOpen, () => setIsOpen(false));
+
+  // Handle auto-hide bottom navigation on scroll
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!scrollContainerRef.current) return;
+      
+      const currentScrollY = scrollContainerRef.current.scrollTop;
+      
+      // Don't trigger hide logic for tiny scrolls (debounce/threshold)
+      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
+
+      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+        // Scrolling Down - Hide
+        setShowBottomNav(false);
+      } else {
+        // Scrolling Up - Show
+        setShowBottomNav(true);
+      }
+      
+      lastScrollY.current = currentScrollY;
+    };
+
+    const container = scrollContainerRef.current;
+    if (container) {
+      container.addEventListener('scroll', handleScroll, { passive: true });
+    }
+    
+    return () => {
+      if (container) {
+        container.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, []);
+
+  // Ensure nav is visible when changing routes
+  useEffect(() => {
+    setShowBottomNav(true);
+  }, [location.pathname]);
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -255,14 +297,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </header>
 
         {/* Dynamic Main Viewport */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar">
+        <div 
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
+        >
           <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>
         </div>
 
         {/* Mobile Bottom Quick Navigation Bar (One-Thumb Nav) */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pb-safe pt-2 flex items-center justify-around z-40 shadow-2xl print:hidden">
+        <div className={cn(
+          "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pb-safe pt-2 flex items-center justify-around z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
+          showBottomNav ? "translate-y-0" : "translate-y-full"
+        )}>
           {bottomQuickNav.map((item) => {
             const isActive = location.pathname === item.path;
             return (
