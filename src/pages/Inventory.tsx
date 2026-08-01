@@ -270,33 +270,36 @@ const Inventory = () => {
         <TabsContent value="logs">
           <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
             <CardContent className="p-0">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-slate-50/50 border-b">
-                    <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Asset & Qty</th>
-                    <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Recipient</th>
-                    <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date</th>
-                    <th className="px-8 py-5 text-right font-black text-slate-400 uppercase tracking-widest text-[10px]">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {assetLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-8 py-6">
-                        <p className="font-bold text-slate-900">{log.item}</p>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
-                      </td>
-                      <td className="px-8 py-6"><div className="flex items-center gap-2"><UserCheck size={14} className="text-slate-400" /><span className="font-medium text-slate-700">{log.issuedTo}</span></div></td>
-                      <td className="px-8 py-6"><div className="flex items-center gap-2 text-slate-500"><Clock size={14} /><span>{log.date}</span></div></td>
-                      <td className="px-8 py-6 text-right">
-                        <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
-                          {log.status}
-                        </Badge>
-                      </td>
+              {/* Added horizontal scroll container with custom scrollbar */}
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm min-w-[800px]">
+                  <thead>
+                    <tr className="bg-slate-50/50 border-b">
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Asset & Qty</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Recipient</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date</th>
+                      <th className="px-8 py-5 text-right font-black text-slate-400 uppercase tracking-widest text-[10px]">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody className="divide-y">
+                    {assetLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-8 py-6">
+                          <p className="font-bold text-slate-900">{log.item}</p>
+                          <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
+                        </td>
+                        <td className="px-8 py-6"><div className="flex items-center gap-2"><UserCheck size={14} className="text-slate-400" /><span className="font-medium text-slate-700">{log.issuedTo}</span></div></td>
+                        <td className="px-8 py-6"><div className="flex items-center gap-2 text-slate-500"><Clock size={14} /><span>{log.date}</span></div></td>
+                        <td className="px-8 py-6 text-right">
+                          <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
+                            {log.status}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
