@@ -3,7 +3,7 @@
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import Modal from '@/components/ui/Modal';
+import Modal from "@/components/ui/Modal";
 import { 
   Image as ImageIcon, 
   FileText, 
@@ -55,7 +55,6 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
     link.href = url;
     if (filename) link.download = filename;
     document.body.appendChild(link);
-    link.click();
     document.body.removeChild(link);
   };
 
@@ -93,13 +92,12 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
                 <Download size={16} /> Download
               </Button>
             </div>
-          ) : <div />}
+          ) : <div />
           <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">
             Close
           </Button>
         </div>
-      }
-    >
+      >
       <div className="space-y-5">
         <div className="min-h-[260px] bg-slate-900 rounded-2xl flex flex-col items-center justify-center border border-slate-800 overflow-hidden relative p-1">
           {artifact.fileUrl && artifact.type === 'Image' ? (
@@ -115,14 +113,6 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
               autoPlay 
               className="w-full h-auto max-h-[400px] rounded-lg" 
             />
-          ) : artifact.fileUrl && artifact.type === 'Audio' ? (
-            <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
-              <div className="w-16 h-16 rounded-full bg-indigo-600/30 flex items-center justify-center">
-                <Music size={36} className="text-indigo-400 animate-pulse" />
-              </div>
-              <p className="text-sm font-bold text-slate-300">{artifact.fileName || artifact.title}</p>
-              <audio controls src={artifact.fileUrl} className="w-full max-w-md h-12" />
-            </div>
           ) : artifact.fileUrl && artifact.type === 'Document' ? (
             <div className="w-full h-[420px] flex flex-col items-center bg-slate-950 rounded-xl overflow-hidden relative">
               <iframe 
@@ -139,15 +129,11 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
           )}
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-slate-50 p-4 rounded-2xl">
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Learning Area</p>
-            <p className="text-sm font-bold text-slate-900">{artifact.learningArea}</p>
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rating</p>
-            <Badge className={getGradeBadgeClass(artifact.grade)}>{artifact.grade}</Badge>
-          </div>
+        <div>
+          <p className="text-xs font-black uppercase text-slate-400 tracking-widest mb-1">Learning Area</p>
+          <p className="text-sm font-bold text-slate-900">{artifact.learningArea}</p>
+          <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Rating</p>
+          <Badge className={getGradeBadgeClass(artifact.grade)}>{artifact.grade}</Badge>
           <div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Date Added</p>
             <p className="text-xs font-bold text-slate-700">{artifact.date}</p>
@@ -159,12 +145,14 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
         </div>
 
         <div>
-          <p className="text-xs font-black uppercase text-slate-400 tracking-widest mb-1">Teacher Remarks</p>
+          <p className="text-xs font-black uppercase text-slate-400 mb-1">Teacher Remarks</p>
           <p className="text-sm text-slate-700 bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200 italic">
             "{artifact.description}"
-          </p>
+          </div>
         </div>
       </div>
     </Modal>
   );
 };
+
+export default ArtifactViewerModal;

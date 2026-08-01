@@ -3,113 +3,245 @@
 import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { 
-  Image as ImageIcon, 
-  FileText, 
-  Music, 
-  Video, 
-  Calendar, 
-  User, 
-  Eye, 
-  Trash2 
-} from 'lucide-react';
-import { Artifact, getGradeBadgeClass } from '@/types/portfolio';
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Upload } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
-interface PortfolioCardProps {
-  art: Artifact;
-  onSelect: (art: Artifact) => void;
-  onDelete: (id: string, title: string) => void;
+interface RecordCardData {
+  fullName: string;
+  studentId: string;
+  grade: string;
+  stream: string;
+  guardianName: string;
+  contact: string;
+  photoUrl?: string;
 }
 
-export const PortfolioCard: React.FC<PortfolioCardProps> = ({
-  art,
-  onSelect,
-  onDelete
-}) => {
-  const getTypeIcon = (type: Artifact['type']) => {
-    switch (type) {
-      case 'Image': return <ImageIcon size={32} className="text-indigo-500" />;
-      case 'Audio': return <Music size={32} className="text-purple-500" />;
-      case 'Video': return <Video size={32} className="text-rose-500" />;
-      default: return <FileText size={32} className="text-emerald-500" />;
+const ReportCardGenerator = () => {
+  const [formData, setFormData] = useState<RecordCardData>({
+    fullName: '',
+    studentId: '',
+    grade: '',
+    stream: '',
+    guardianName: '',
+    contact: '',
+    photoUrl: '',
+  });
+
+  const [preview, setPreview] = useState<RecordCardData | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value,
+    }));
+  };
+
+  const handleGenerate = () => {
+    if (!formData.fullName || !formData.studentId || !formData.grade || !formData.stream || !formData.guardianName || !formData.contact) {
+      alert('Please fill in all required fields');
+      return;
     }
+    setPreview(formData);
+  };
+
+  const handleReset = () => {
+    setFormData({
+      fullName: '',
+      studentId: '',
+      grade: '',
+      stream: '',
+      guardianName: '',
+      contact: '',
+      photoUrl: '',
+    });
+    setPreview(null);
   };
 
   return (
-    <Card className="group border-none shadow-sm hover:shadow-md transition-all rounded-3xl overflow-hidden bg-white flex flex-col justify-between">
-      <div>
-        <div 
-          className="aspect-video bg-slate-50 flex items-center justify-center relative overflow-hidden cursor-pointer"
-          onClick={() => onSelect(art)}
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Record Card Generator</h1>
+          <p className="text-muted-foreground">Create customizable record cards for students, staff, or any entity.</p>
+        </div>
+        <Button 
+          onClick={handleReset}
+          className="rounded-2xl gap-2 h-11 px-6 bg-slate-200 hover:bg-slate-300 text-slate-600 font-medium"
         >
-          {art.fileUrl && art.type === 'Image' ? (
-            <img src={art.fileUrl} alt={art.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-          ) : art.fileUrl && art.type === 'Video' ? (
-            <video src={art.fileUrl} className="w-full h-full object-cover" />
-          ) : art.fileUrl && art.type === 'Audio' ? (
-            <div className="p-4 w-full flex flex-col items-center gap-2">
-              <Music size={32} className="text-purple-500 animate-pulse" />
-              <audio controls src={art.fileUrl} className="w-11/12 h-8" onClick={(e) => e.stopPropagation()} />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2 p-4 text-center">
-              {getTypeIcon(art.type)}
-              {art.fileName && (
-                <span className="text-[11px] font-bold text-slate-500 max-w-[180px] truncate bg-white px-2 py-0.5 rounded-md border border-slate-200">
-                  {art.fileName}
-                </span>
-              )}
-            </div>
-          )}
-
-          <Badge variant="outline" className="absolute top-3 left-3 rounded-lg bg-white/90 backdrop-blur-sm text-[10px] uppercase font-black tracking-wider border-none shadow-sm z-10">
-            {art.type}
-          </Badge>
-        </div>
-
-        <CardContent className="p-6">
-          <div className="flex justify-between items-start mb-2">
-            <Badge variant="outline" className="rounded-lg bg-slate-50 text-slate-500 text-[10px] uppercase font-bold tracking-wider">
-              {art.learningArea}
-            </Badge>
-            <Badge className={getGradeBadgeClass(art.grade)}>{art.grade}</Badge>
-          </div>
-          <h3 
-            className="font-bold text-lg mb-1 leading-tight cursor-pointer group-hover:text-indigo-600 transition-colors"
-            onClick={() => onSelect(art)}
-          >
-            {art.title}
-          </h3>
-          <p className="text-sm text-slate-600 font-bold flex items-center gap-1.5 mt-2">
-            <User size={14} className="text-slate-400" /> {art.student}
-          </p>
-        </CardContent>
+          Reset
+        </Button>
       </div>
 
-      <div className="px-6 pb-6 pt-0 flex items-center justify-between border-t border-slate-50 mt-4">
-        <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
-          <Calendar size={12} /> {art.date}
-        </span>
-        <div className="flex gap-1">
-          <Button 
-            variant="ghost" 
-            size="sm" 
-            className="text-indigo-600 hover:bg-indigo-50 font-bold rounded-xl h-8 px-3"
-            onClick={() => onSelect(art)}
-          >
-            <Eye size={14} className="mr-1" /> View Content
-          </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl h-8 w-8"
-            onClick={() => onDelete(art.id, art.title)}
-          >
-            <Trash2 size={14} />
-          </Button>
-        </div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Form Section */}
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <CardHeader className="p-6 border-b">
+            <CardTitle>Card Information</CardTitle>
+          </CardHeader>
+          <CardContent className="p-6 space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="fullName">Full Name</Label>
+              <Input 
+                id="fullName"
+                name="fullName"
+                value={formData.fullName}
+                onChange={handleChange}
+                placeholder="Enter full name"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="studentId">Student/ID Number</Label>
+              <Input 
+                id="studentId"
+                name="studentId"
+                value={formData.studentId}
+                onChange={handleChange}
+                placeholder="e.g. A827361"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+                required
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="grade">Grade</Label>
+                <Select 
+                  id="grade"
+                  name="grade"
+                  value={formData.grade}
+                  onChange={handleChange}
+                >
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
+                    <SelectValue placeholder="Select grade" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => (
+                      <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>
+                    ))}
+                    <SelectItem value="PP1">PP1</SelectItem>
+                    <SelectItem value="PP2">PP2</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="stream">Stream</Label>
+                <Select 
+                  id="stream"
+                  name="stream"
+                  value={formData.stream}
+                  onChange={handleChange}
+                >
+                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
+                    <SelectValue placeholder="Select stream" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Blue">Blue</SelectItem>
+                    <SelectItem value="Green">Green</SelectItem>
+                    <SelectItem value="Yellow">Yellow</SelectItem>
+                    <SelectItem value="Alpha">Alpha</SelectItem>
+                    <SelectItem value="Beta">Beta</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="guardianName">Guardian Name</Label>
+              <Input 
+                id="guardianName"
+                name="guardianName"
+                value={formData.guardianName}
+                onChange={handleChange}
+                placeholder="Enter guardian name"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="contact">Contact (Phone/Email)</Label>
+              <Input 
+                id="contact"
+                name="contact"
+                value={formData.contact}
+                onChange={handleChange}
+                placeholder="Enter phone number or email"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="photoUrl">Photo URL (Optional)</Label>
+              <Input 
+                id="photoUrl"
+                name="photoUrl"
+                value={formData.photoUrl}
+                onChange={handleChange}
+                placeholder="Enter image URL"
+                className="rounded-xl h-12 bg-slate-50 border-none"
+              />
+            </div>
+            <div className="flex justify-end pt-4">
+              <Button 
+                onClick={handleGenerate}
+                className="rounded-2xl px-8 h-12 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+              >
+                Generate Preview
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
       </div>
-    </Card>
+
+      {/* Preview Section */}
+      {preview && (
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="p-6 border-b">
+              <CardTitle>Preview</CardTitle>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="flex flex-col items-center space-y-4">
+                {preview.photoUrl ? (
+                  <img 
+                    src={preview.photoUrl} 
+                    alt="Photo" 
+                    className="w-24 h-24 rounded-full border-2 border-indigo-200 object-cover"
+                  />
+                ) : (
+                  <div className="w-24 h-24 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm font-bold">
+                    {preview.fullName.charAt(0)}
+                  </div>
+                )}
+                <div className="text-center space-y-2">
+                  <h2 className="text-xl font-bold text-slate-900">{preview.fullName}</h2>
+                  <p className="text-sm text-slate-500">ID: {preview.studentId}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4 text-center space-y-2">
+                  <div>
+                    <span className="font-medium">Grade:</span> <span>{preview.grade}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Stream:</span> <span>{preview.stream}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Guardian:</span> <span>{preview.guardianName}</span>
+                  </div>
+                  <div>
+                    <span className="font-medium">Contact:</span> <span>{preview.contact}</span>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+    </div>
   );
 };
+
+export default ReportCardGenerator;
