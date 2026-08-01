@@ -17,12 +17,10 @@ import {
   Layers,
   FileSpreadsheet
 } from 'lucide-react';
-import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
+import { STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
 
 // Rubric Logic
 const getRubric = (score: number) => {
@@ -49,13 +47,6 @@ const getCategory = (grade: string) => {
   return 'Junior';
 };
 
-// Stream type for database
-interface StreamData {
-  id: string;
-  name: string;
-  grade_id: string;
-}
-
 const ReportCards = () => {
   // Filters State
   const [year, setYear] = useState("2026");
@@ -68,36 +59,6 @@ const ReportCards = () => {
   const [isExporting, setIsExporting] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Get the grade object from GRADES_DATA based on selected grade
-  const selectedGradeObj = useMemo(() => {
-    return GRADES_DATA.find(g => g.name === `Grade ${grade}` || g.name === grade);
-  }, [grade]);
-
-  const selectedGradeId = selectedGradeObj?.id || "";
-
-  // Fetch live streams from Supabase database
-  // If a specific grade is selected, filter by grade_id. If "all" grades, fetch all streams.
-  const { data: streams, isLoading: isLoadingStreams, error: streamsError } = useQuery({
-    queryKey: ['streams', selectedGradeId],
-    queryFn: async () => {
-      let query = supabase.from('streams').select('id, name, grade_id');
-      
-      // If a specific grade is selected (not "all"), filter by grade_id
-      if (selectedGradeId) {
-        query = query.eq('grade_id', selectedGradeId);
-      }
-      
-      const { data, error } = await query;
-      if (error) {
-        console.error('Error fetching streams:', error);
-        throw error;
-      }
-      return data as StreamData[];
-    },
-    enabled: true, // Always fetch streams
-    staleTime: 5 * 60 * 1000, // Cache for 5 minutes
-  });
-
   // Derived Data
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
@@ -108,45 +69,7 @@ const ReportCards = () => {
     });
   }, [searchTerm, grade, stream]);
 
-  const studentResults = useMemo(() => {
-    const learningAreas = SUBJECT_MAP[getCategory(grade)] || [];
-    return filteredStudents.map((s, idx) => {
-      const scores: Record<string, number> = {};
-      let total = 0;
-      
-      learningAreas.forEach((area, i) => {
-        const score = 55 + (i * 7) + (idx % 15);
-        scores[area] = score;
-        total += score;
-      });
-
-      const mean = learningAreas.length > 0 ? Math.round((total / learningAreas.length) * 10) / 10 : 0;
-      let level: 'EE' | 'ME' | 'AE' | 'BE' = 'BE';
-      if (mean >= 80) level = 'EE';
-      else if (mean >= 50) level = 'ME';
-      else if (mean >= 30) level = 'AE';
-
-      return {
-        rank: idx + 1,
-        studentId: s.id,
-        name: s.name,
-        assessmentNo: s.assessment,
-        stream: s.stream,
-        scores,
-        totalMarks: total,
-        meanScore: mean,
-        level
-      };
-    });
-  }, [filteredStudents, grade]);
-
-  const classMeanScore = useMemo(() => {
-    if (studentResults.length === 0) return 0;
-    const sum = studentResults.reduce((acc, s) => acc + s.meanScore, 0);
-    return Math.round((sum / studentResults.length) * 10) / 10;
-  }, [studentResults]);
-
-  const downloadPDF = async () => {
+  const downloadPDF = async (mode: 'current' | 'all') => {
     setIsExporting(true);
     const element = wrapperRef.current;
     if (!element) return;
@@ -180,8 +103,33 @@ const ReportCards = () => {
           }
           body {
             background: white !important;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
           }
           .no-print { display: none !important; }
+          .report-card {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+            page-break-after: always;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 10mm !important;
+            box-shadow: none !important;
+            border: 1px solid #e2e8f0 !important;
+          }
+          .report-card:last-child {
+            page-break-after: auto;
+          }
+          .report-card table, .report-card tr, .report-card td, .report-card th {
+            page-break-inside: avoid !important;
+            break-inside: avoid !important;
+          }
+          .reports-print-wrapper {
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 0 !important;
+            align-items: center !important;
+          }
         }
       `}</style>
 
@@ -191,18 +139,16 @@ const ReportCards = () => {
         <div className="w-full lg:w-72 space-y-6">
           <div className="flex gap-2">
             <Button 
-              onClick={downloadPDF}
+              onClick={() => downloadPDF('current')}
               className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
-              disabled={isExporting}
             >
-              {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-              Download PDF
+              <Download size={16} /> Download Current
             </Button>
             <Button 
+              onClick={() => downloadPDF('all')}
               className="flex-1 bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
             >
-              <FileSpreadsheet size={16} />
-              Download CSV
+              <FileSpreadsheet size={16} /> Download All
             </Button>
           </div>
 
@@ -220,35 +166,16 @@ const ReportCards = () => {
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>{g.name}</SelectItem>)}
+                  <SelectItem value="PP1">PP1</SelectItem><SelectItem value="PP2">PP2</SelectItem>
+                  {[1,2,3,4,5,6,7,8,9].map(n => <SelectItem key={n} value={n.toString()}>Grade {n}</SelectItem>)}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
               <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Stream</Label>
-              <Select value={stream} onValueChange={setStream} disabled={isLoadingStreams || !!streamsError}>
-                <SelectTrigger className="rounded-xl h-10 border-slate-200">
-                  <SelectValue placeholder={isLoadingStreams ? "Loading streams..." : "All Streams"} />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Streams</SelectItem>
-                  {isLoadingStreams ? (
-                    <SelectItem disabled>
-                      <Loader2 className="animate-spin mr-2" size={14} />
-                      Loading streams...
-                    </SelectItem>
-                  ) : streamsError ? (
-                    <SelectItem disabled>Error loading streams</SelectItem>
-                  ) : streams?.length === 0 ? (
-                    <SelectItem disabled>No streams configured</SelectItem>
-                  ) : (
-                    streams.map((s) => (
-                      <SelectItem key={s.id} value={s.name}>
-                        {s.name}
-                      </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
+              <Select value={stream} onValueChange={setStream}>
+                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="all">All Streams</SelectItem><SelectItem value="A">Stream A</SelectItem><SelectItem value="B">Stream B</SelectItem></SelectContent>
               </Select>
             </div>
             <div className="space-y-1">
@@ -256,6 +183,13 @@ const ReportCards = () => {
               <Select value={term} onValueChange={setTerm}>
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent><SelectItem value="term1">Term 1</SelectItem><SelectItem value="term2">Term 2</SelectItem><SelectItem value="term3">Term 3</SelectItem></SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-[10px] font-black uppercase text-slate-400 ml-1">Exam Type</Label>
+              <Select value={type} onValueChange={setType}>
+                <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
+                <SelectContent><SelectItem value="opener">Opener</SelectItem><SelectItem value="midterm">Midterm</SelectItem><SelectItem value="endterm">Endterm</SelectItem></SelectContent>
               </Select>
             </div>
             <div className="pt-2">
@@ -424,18 +358,17 @@ const ReportCards = () => {
         </div>
         <div className="flex gap-2">
           <Button 
-            onClick={downloadPDF}
+            onClick={() => downloadPDF('current')}
             variant="outline"
             className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
-            disabled={isExporting}
           >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Download PDF
+            Download Current
           </Button>
           <Button 
+            onClick={() => downloadPDF('all')}
             className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
           >
-            <FileSpreadsheet size={16} /> Download CSV
+            <Download size={16} /> Download All ({filteredStudents.length})
           </Button>
         </div>
       </div>
