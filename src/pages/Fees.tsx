@@ -9,9 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2 } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck } from 'lucide-react';
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 
 // Sub-components
@@ -62,6 +62,12 @@ const Fees = () => {
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  // Admin Auth States for Set Term Fees
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
   
   // Config States
   const [configGrade, setConfigGrade] = useState<string>("all");
@@ -101,7 +107,6 @@ const Fees = () => {
     if (tabGradeFilter === "all") return transactionsList;
     return transactionsList.filter(tx => {
       if (tx.grade) return tx.grade === tabGradeFilter;
-      // Default sample mapping for initial transactions
       return true;
     });
   }, [transactionsList, tabGradeFilter]);
@@ -124,6 +129,40 @@ const Fees = () => {
     
     const activeGradeLabel = GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "Selected Grade";
     showSuccess(`Fee statement for ${activeGradeLabel} downloaded successfully!`);
+  };
+
+  // Auth Handlers for Set Term Fees
+  const handleOpenAuthModal = () => {
+    setAuthPassword("");
+    setAuthError("");
+    setIsAuthOpen(true);
+  };
+
+  const handleVerifyAuth = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!authPassword.trim()) {
+      setAuthError("Admin password is required");
+      return;
+    }
+
+    setIsVerifying(true);
+    setAuthError("");
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+    if (authPassword === currentAdminPass) {
+      setIsAuthOpen(false);
+      setAuthPassword("");
+      handleOpenConfigModal();
+      showSuccess("Admin verified. Opening term fee configuration...");
+    } else {
+      setAuthError("Invalid admin password");
+      showError("Authorization failed");
+      setAuthPassword("");
+    }
+    setIsVerifying(false);
   };
 
   // Modal Handlers
@@ -215,9 +254,9 @@ const Fees = () => {
           <Button 
             variant="outline" 
             className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50" 
-            onClick={handleOpenConfigModal}
+            onClick={handleOpenAuthModal}
           >
-            <Settings2 size={16} /> Set Term Fees
+            <Lock size={15} className="text-slate-400" /> Set Term Fees
           </Button>
           <Button 
             className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm" 
@@ -399,6 +438,52 @@ const Fees = () => {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Admin Verification Modal for Set Term Fees */}
+      <Modal
+        isOpen={isAuthOpen}
+        onClose={() => setIsAuthOpen(false)}
+        title="Admin Authorization Required"
+        description="Enter your admin password to configure term fees."
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold h-11 px-6">
+              Cancel
+            </Button>
+            <Button 
+              type="button"
+              onClick={handleVerifyAuth}
+              disabled={isVerifying}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2"
+            >
+              {isVerifying ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+              Authorize
+            </Button>
+          </div>
+        }
+      >
+        <form onSubmit={handleVerifyAuth} className="space-y-4">
+          {authError && (
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircle size={16} /> {authError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-11 rounded-xl h-12 bg-slate-50 border-none font-bold text-lg"
+                autoFocus
+              />
+            </div>
+          </div>
+        </form>
+      </Modal>
 
       {/* Set Term Fees Modal */}
       <Modal 
