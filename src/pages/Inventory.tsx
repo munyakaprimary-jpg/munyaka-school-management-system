@@ -11,7 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Search, Package, Box, RefreshCw, UserCheck, Clock, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
 import { INVENTORY, ASSET_LOGS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
@@ -32,7 +32,8 @@ interface AssetLog {
   assetId?: string; // Links back to the master asset
   item: string;
   issuedTo: string;
-  date: string;
+  date: string; // Date issued
+  dateReturned?: string; // Date returned
   status: string;
   qty: number;
 }
@@ -134,6 +135,7 @@ const Inventory = () => {
       item: targetAsset.item,
       issuedTo: data.issuedTo,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      dateReturned: undefined,
       status: 'In Use',
       qty: data.qty
     };
@@ -142,9 +144,13 @@ const Inventory = () => {
     showSuccess(`Issued ${data.qty} ${targetAsset.item}(s) to ${data.issuedTo}`);
   };
 
-  const handleReceiveAsset = (data: { logId: string | number; qtyReturned: number; condition: string; notes?: string }) => {
-    const targetLog = assetLogs.find(l => l.id === data.logId);
+  const handleReceiveAsset = (data: { logId: string | number; qtyReturned: number; condition: string; notes?: string; returnDate?: string }) => {
+    const targetLog = assetLogs.find(l => l.id.toString() === data.logId.toString());
     if (!targetLog) return;
+
+    const formattedReturnDate = data.returnDate 
+      ? new Date(data.returnDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+      : new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
 
     // Update Master Stock (if reusable)
     const isReusable = data.condition === 'Good Condition' || data.condition === 'Needs Repair';
@@ -163,11 +169,12 @@ const Inventory = () => {
 
     // Update the Log Entry
     setAssetLogs(prev => prev.map(log => {
-      if (log.id === data.logId) {
+      if (log.id.toString() === data.logId.toString()) {
         const remaining = log.qty - data.qtyReturned;
         return {
           ...log,
           qty: remaining,
+          dateReturned: formattedReturnDate,
           status: remaining <= 0 ? 'Returned' : 'In Use'
         };
       }
@@ -273,12 +280,13 @@ const Inventory = () => {
           <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm min-w-[800px]">
+                <table className="w-full text-sm min-w-[850px]">
                   <thead>
                     <tr className="bg-slate-50/50 border-b">
                       <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Asset & Qty</th>
                       <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Recipient</th>
-                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date Issued</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date Returned</th>
                       <th className="px-8 py-5 text-right font-black text-slate-400 uppercase tracking-widest text-[10px]">Status</th>
                     </tr>
                   </thead>
@@ -289,8 +297,30 @@ const Inventory = () => {
                           <p className="font-bold text-slate-900">{log.item}</p>
                           <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
                         </td>
-                        <td className="px-8 py-6"><div className="flex items-center gap-2"><UserCheck size={14} className="text-slate-400" /><span className="font-medium text-slate-700">{log.issuedTo}</span></div></td>
-                        <td className="px-8 py-6"><div className="flex items-center gap-2 text-slate-500"><Clock size={14} /><span>{log.date}</span></div></td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2">
+                            <UserCheck size={14} className="text-slate-400" />
+                            <span className="font-medium text-slate-700">{log.issuedTo}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2 text-slate-500">
+                            <Clock size={14} />
+                            <span>{log.date}</span>
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          {log.dateReturned ? (
+                            <div className="flex items-center gap-2 text-slate-700 font-bold">
+                              <Calendar size={14} className="text-emerald-500" />
+                              <span>{log.dateReturned}</span>
+                            </div>
+                          ) : (
+                            <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
+                              Pending Return
+                            </Badge>
+                          )}
+                        </td>
                         <td className="px-8 py-6 text-right">
                           <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
                             {log.status}
@@ -324,11 +354,11 @@ const Inventory = () => {
       <Modal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} title="Register New Asset" footer={<div className="flex gap-3 justify-end w-full"><Button variant="ghost" onClick={() => setIsAddAssetOpen(false)} className="rounded-xl font-bold h-11 px-6">Cancel</Button><Button onClick={handleAddAsset} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2 text-white"><Save size={18} /> Add Asset</Button></div>}>
         <div className="space-y-4">
           {assetError && <div className="p-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs">{assetError}</div>}
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
           <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Category</Label>
             <Select onValueChange={setNewAssetCategory}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent><SelectItem value="Agriculture">Agriculture</SelectItem><SelectItem value="Science & Tech">Science & Tech</SelectItem><SelectItem value="Creative Arts">Creative Arts</SelectItem><SelectItem value="Sports">Sports</SelectItem></SelectContent></Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
         </div>
       </Modal>
 

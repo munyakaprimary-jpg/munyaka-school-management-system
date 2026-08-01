@@ -19,7 +19,7 @@ interface ActiveLoan {
 interface ReceiveAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onReceive: (data: { logId: string | number; qtyReturned: number; condition: string; notes?: string }) => void;
+  onReceive: (data: { logId: string | number; qtyReturned: number; condition: string; notes?: string; returnDate?: string }) => void;
   activeLoans: ActiveLoan[];
 }
 
@@ -28,6 +28,7 @@ const ReceiveAssetModal = ({ isOpen, onClose, onReceive, activeLoans }: ReceiveA
   const [qtyReturned, setQtyReturned] = useState("");
   const [condition, setCondition] = useState("Good Condition");
   const [notes, setNotes] = useState("");
+  const [returnDate, setReturnDate] = useState(new Date().toISOString().split('T')[0]);
   const [error, setError] = useState("");
 
   const selectedLoan = activeLoans.find(l => l.id.toString() === selectedLogId);
@@ -38,6 +39,7 @@ const ReceiveAssetModal = ({ isOpen, onClose, onReceive, activeLoans }: ReceiveA
       setQtyReturned("");
       setCondition("Good Condition");
       setNotes("");
+      setReturnDate(new Date().toISOString().split('T')[0]);
       setError("");
     }
   }, [isOpen]);
@@ -57,7 +59,8 @@ const ReceiveAssetModal = ({ isOpen, onClose, onReceive, activeLoans }: ReceiveA
       logId: selectedLogId,
       qtyReturned: numQty,
       condition,
-      notes: notes.trim() || undefined
+      notes: notes.trim() || undefined,
+      returnDate: returnDate || undefined
     });
     onClose();
   };
@@ -139,7 +142,8 @@ const ReceiveAssetModal = ({ isOpen, onClose, onReceive, activeLoans }: ReceiveA
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Return Date</Label>
           <Input 
             type="date" 
-            defaultValue={new Date().toISOString().split('T')[0]} 
+            value={returnDate} 
+            onChange={e => setReturnDate(e.target.value)}
             className="h-12 rounded-xl bg-slate-50 border-none font-bold"
           />
         </div>
