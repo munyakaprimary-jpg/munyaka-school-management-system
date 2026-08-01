@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +20,7 @@ interface RecordCardData {
   photoUrl?: string;
 }
 
-const RecordCardGenerator = () => {
+const ReportCardGenerator = () => {
   const [formData, setFormData] = useState<RecordCardData>({
     fullName: '',
     studentId: '',
@@ -32,6 +32,63 @@ const RecordCardGenerator = () => {
   });
 
   const [preview, setPreview] = useState<RecordCardData | null>(null);
+
+  // Helper to get streams from localStorage
+  const getStoredGrades = (): any[] => {
+    try {
+      const stored = localStorage.getItem('munyaka_grades');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      console.error('Failed to parse stored grades', e);
+      return [];
+    }
+  };
+
+  // Get available streams based on selected grade
+  const getAvailableStreams = (selectedGrade: string) => {
+    const storedGrades = getStoredGrades();
+    if (!storedGrades || storedGrades.length === 0) {
+      // Fallback to default GRADES_DATA if nothing in storage
+      if (selectedGrade === 'all') {
+        // Return all unique stream names from default data
+        const streamNames = new Set<string>();
+        GRADES_DATA.forEach(g => {
+          g.streams.forEach(s => streamNames.add(s.name));
+        });
+        return Array.from(streamNames).map(name => ({ name }));
+      }
+      const gradeObj = GRADES_DATA.find(g => 
+        g.name === `Grade ${selectedGrade}` || g.name === selectedGrade
+      );
+      return gradeObj ? gradeObj.streams.map(s => ({ name: s.name })) : [];
+    }
+
+    if (selectedGrade === 'all') {
+      // Collect all unique stream names from stored grades
+      const streamNames = new Set<string>();
+      storedGrades.forEach((g: any) => {
+        if (g.streams && Array.isArray(g.streams)) {
+          g.streams.forEach((s: any) => {
+            if (s && s.name) streamNames.add(s.name);
+          });
+        }
+      });
+      return Array.from(streamNames).map(name => ({ name }));
+    }
+
+    // Find the specific grade object
+    const gradeObj = storedGrades.find((g: any) => 
+      g.name === `Grade ${selectedGrade}` || g.name === selectedGrade
+    );
+    return gradeObj && Array.isArray(gradeObj.streams) 
+      ? gradeObj.streams.map((s: any) => ({ name: s.name }))
+      : [];
+  };
+
+  // Reset stream selection when grade changes
+  useEffect(() => {
+    setFormData(prev => ({ ...prev, stream: '' }));
+  }, [formData.grade]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type, checked } = e.target;
@@ -142,21 +199,12 @@ const RecordCardGenerator = () => {
                     <SelectValue placeholder="Select stream" />
                   </SelectTrigger>
                   <SelectContent>
-                    {/* Dynamically generate stream options based on selected grade */}
-                    {formData.grade ? 
-                      (() => {
-                        const gradeObj = GRADES_DATA.find(g => 
-                          g.name === `Grade ${formData.grade}` || g.name === formData.grade
-                        );
-                        return gradeObj ? gradeObj.streams.map(stream => (
-                          <SelectItem key={stream.id} value={stream.name}>
-                            {stream.name}
-                          </SelectItem>
-                        )) : [];
-                      })() 
-                    : (
-                      <SelectItem disabled>Select grade first</SelectItem>
-                    )}
+                    {/* Dynamically generate stream options based on selected grade and localStorage */}
+                    {getAvailableStreams(formData.grade).map((stream: { name: string }) => (
+                      <SelectItem key={stream.name} value={stream.name}>
+                        {stream.name}
+                      </SelectItem>
+                    ))}
                   </SelectContent>
                 </Select>
               </div>
@@ -253,4 +301,4 @@ const RecordCardGenerator = () => {
   );
 };
 
-export default RecordCardGenerator;
+export default ReportCardGenerator;
