@@ -111,7 +111,7 @@ const ReportCards = () => {
     return gradeObj?.streams?.map(s => ({ name: s.name })) || [];
   }, [grade]);
 
-  // SINGLE DECLARATION OF FILTERED STUDENTS
+  // Single Declaration of Filtered Students
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
       const matchesSearch = !searchTerm.trim() || 
@@ -131,7 +131,7 @@ const ReportCards = () => {
   // Class Mean Score
   const classMeanScore = useMemo(() => {
     if (filteredStudents.length === 0) return 0;
-    return 76.4; // Class average metric
+    return 76.4;
   }, [filteredStudents]);
 
   // Export Individual Learner Report
