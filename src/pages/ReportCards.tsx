@@ -46,6 +46,32 @@ const getCategory = (grade: string) => {
   return 'Junior';
 };
 
+// Define the order we want grades to appear
+const GRADE_ORDER = [
+  'playgroup',
+  'pp1',
+  'pp2',
+  'grade 1',
+  'grade 2',
+  'grade 3',
+  'grade 4',
+  'grade 5',
+  'grade 6',
+  'grade 7',
+  'grade 8',
+  'grade 9',
+  'grade 10',
+  'grade 11',
+  'grade 12'
+];
+
+// Helper function to get the sort index for a grade name
+const getGradeSortIndex = (gradeName: string): number => {
+  const normalized = gradeName.toLowerCase().trim();
+  const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
+  return index !== -1 ? index : 999;
+};
+
 const ReportCards = () => {
   // Filters State
   const [year, setYear] = useState("2026");
@@ -84,6 +110,15 @@ const ReportCards = () => {
       window.removeEventListener('focus', handleStorageUpdate);
     };
   }, []);
+
+  // Sort grades logically - this is the key fix!
+  const sortedGrades = useMemo(() => {
+    return [...storedGrades].sort((a, b) => {
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      return getGradeSortIndex(nameA) - getGradeSortIndex(nameB);
+    });
+  }, [storedGrades]);
 
   // Compute available streams dynamically from storedGrades according to selected grade
   const availableStreams = useMemo(() => {
@@ -205,7 +240,7 @@ const ReportCards = () => {
                 <SelectTrigger className="rounded-xl h-10 border-slate-200"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Grades</SelectItem>
-                  {storedGrades.map(g => (
+                  {sortedGrades.map(g => (
                     <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                       {g.name}
                     </SelectItem>
