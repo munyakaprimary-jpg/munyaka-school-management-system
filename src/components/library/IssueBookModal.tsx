@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from '@/components/ui/Modal';
 import { BookOpen, AlertCircle, Loader2, Calendar, Plus, Minus } from 'lucide-react';
 import { Book } from '@/types/library';
-import { GRADES_DATA } from '@/lib/mock-data';
 
 interface IssueBookModalProps {
   isOpen: boolean;
@@ -36,6 +35,12 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [errorMsg, setErrorMsg] = useState("");
 
   const availableCopies = book ? Math.max(0, book.stock - book.borrowed) : 0;
+
+  // Generate grades range from PP1 to Grade 9
+  const gradeOptions = useMemo(() => [
+    "PP1", "PP2",
+    ...Array.from({ length: 9 }, (_, i) => `Grade ${i + 1}`)
+  ], []);
 
   useEffect(() => {
     if (isOpen) {
@@ -191,14 +196,13 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
                   <SelectValue placeholder="Select Class..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
-                  {GRADES_DATA.map(g => (
-                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
+                  {gradeOptions.map(grade => (
+                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
           ) : (
-            /* Spacer to keep Quantity in the second column if Class is hidden */
             <div className="hidden md:block" />
           )}
 
