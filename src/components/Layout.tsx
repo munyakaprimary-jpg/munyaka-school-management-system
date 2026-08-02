@@ -40,9 +40,7 @@ import {
   MoreHorizontal,
   Laptop,
   Monitor,
-  UserCog,
-  Keyboard,
-  Target
+  UserCog
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -128,8 +126,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['super_admin', 'head_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
