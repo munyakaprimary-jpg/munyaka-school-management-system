@@ -40,13 +40,13 @@ const DigitalHub = () => {
     {
       title: "KICD E-Learning Portal",
       category: "CURRICULUM • Kenya National",
-      url: "https://www.keducationcloud.org/",
+      url: "https://kicd.ac.ke/",
       icon: BookOpen
     },
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://www.youtube.com/results?search_query=cbc+digital+literacy+kenya",
+      url: "https://www.youtube.com/@KICDKenya/videos",
       icon: Video
     }
   ];
@@ -81,17 +81,6 @@ const DigitalHub = () => {
     await new Promise(resolve => setTimeout(resolve, 1500));
     setIsSyncing(false);
     toast.success("Local ICT resources and asset logs synced successfully.");
-  };
-
-  const handleOpenLink = (url: string) => {
-    try {
-      const win = window.open(url, '_blank');
-      if (!win) {
-        window.location.href = url;
-      }
-    } catch (e) {
-      window.location.href = url;
-    }
   };
 
   return (
@@ -223,9 +212,11 @@ const DigitalHub = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {catalogResources.map((item, idx) => (
-              <div
+              <a
                 key={idx}
-                onClick={() => handleOpenLink(item.url)}
+                href={item.url}
+                target="_blank"
+                rel="noopener noreferrer"
                 className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
@@ -245,7 +236,7 @@ const DigitalHub = () => {
                   <span>Open</span>
                   <ExternalLink className="w-4 h-4" />
                 </div>
-              </div>
+              </a>
             ))}
           </div>
 
