@@ -436,11 +436,7 @@ const DigitalSkillsAssessment = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Grades</SelectItem>
-                    {GRADES_DATA.map(g => (
-                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
+                    {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>{g.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={compSkillFilter} onValueChange={setCompSkillFilter}>
@@ -449,11 +445,7 @@ const DigitalSkillsAssessment = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Skill Categories</SelectItem>
-                    {SKILL_CATEGORIES.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
+                    {SKILL_CATEGORIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -564,11 +556,7 @@ const DigitalSkillsAssessment = () => {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="all">All Grades</SelectItem>
-                    {GRADES_DATA.map(g => (
-                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
+                    {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>{g.name}</SelectItem>)}
                   </SelectContent>
                 </Select>
                 <Select value={typeSpeedFilter} onValueChange={setTypeSpeedFilter}>
@@ -757,11 +745,7 @@ const DigitalSkillsAssessment = () => {
             <Select value={compForm.studentId} onValueChange={(val) => setCompForm({...compForm, studentId: val})}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Choose student..." /></SelectTrigger>
               <SelectContent>
-                {STUDENTS.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} (Grade {s.grade} {s.stream}) - {s.assessment}
-                  </SelectItem>
-                ))}
+                {STUDENTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Grade {s.grade} {s.stream}) - {s.assessment}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
@@ -769,18 +753,12 @@ const DigitalSkillsAssessment = () => {
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Skill Category</Label>
             <Select value={compForm.skillCategory} onValueChange={(val) => setCompForm({...compForm, skillCategory: val})}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SKILL_CATEGORIES.map(s => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectContent>{SKILL_CATEGORIES.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Competency Level</Label>
-            <Select value={compForm.level} onValueChange={(val) => setCompForm({...compForm, level: val})}>
+            <Select value={compForm.level} onValueChange={(val: 'EE' | 'ME' | 'AE' | 'BE') => setCompForm({...compForm, level: val})}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="EE">EE - Exceeding Expectations</SelectItem>
@@ -810,13 +788,7 @@ const DigitalSkillsAssessment = () => {
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
             <Select value={typeForm.studentId} onValueChange={(val) => setTypeForm({...typeForm, studentId: val})}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Choose student..." /></SelectTrigger>
-              <SelectContent>
-                {STUDENTS.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} (Grade {s.grade} {s.stream})
-                  </SelectItem>
-                ))}
-              </SelectContent>
+              <SelectContent>{STUDENTS.map(s => <SelectItem key={s.id} value={s.id}>{s.name} (Grade {s.grade} {s.stream})</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="grid grid-cols-2 gap-4">
@@ -858,13 +830,7 @@ const DigitalSkillsAssessment = () => {
               <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Target Grade</Label>
               <Select value={projectForm.targetGrade} onValueChange={(val) => setProjectForm({...projectForm, targetGrade: val})}>
                 <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {GRADES_DATA.map(g => (
-                    <SelectItem key={g.id} value={g.name}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                <SelectContent>{GRADES_DATA.map(g => <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div className="space-y-1.5">
