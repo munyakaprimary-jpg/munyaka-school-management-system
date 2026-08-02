@@ -261,7 +261,8 @@ const DigitalSkillsAssessment = () => {
                       </tr>
                     )}
                   </tbody>
-                </table              </div>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </div>
