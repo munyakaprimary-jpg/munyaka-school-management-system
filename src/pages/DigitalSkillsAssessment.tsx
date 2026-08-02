@@ -7,7 +7,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
@@ -430,32 +429,30 @@ const DigitalSkillsAssessment = () => {
                     onChange={(e) => setCompSearch(e.target.value)}
                   />
                 </div>
-                <Select value={compGradeFilter} onValueChange={setCompGradeFilter}>
-                  <SelectTrigger className="w-[160px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="All Grades" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Grades</SelectItem>
-                    {GRADES_DATA.map(g => (
-                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={compSkillFilter} onValueChange={setCompSkillFilter}>
-                  <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="All Skills" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Skill Categories</SelectItem>
-                    {SKILL_CATEGORIES.map(s => (
-                      <SelectItem key={s} value={s}>
-                        {s}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <select 
+                  value={compGradeFilter} 
+                  onChange={(e) => setCompGradeFilter(e.target.value)}
+                  className="w-[160px] h-12 rounded-2xl bg-slate-50 border-none font-bold px-3 text-sm"
+                >
+                  <option value="all">All Grades</option>
+                  {GRADES_DATA.map(g => (
+                    <option key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <select 
+                  value={compSkillFilter} 
+                  onChange={(e) => setCompSkillFilter(e.target.value)}
+                  className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold px-3 text-sm"
+                >
+                  <option value="all">All Skill Categories</option>
+                  {SKILL_CATEGORIES.map(s => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
               </div>
               <Button 
                 className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
@@ -558,30 +555,28 @@ const DigitalSkillsAssessment = () => {
                     onChange={(e) => setTypeSearch(e.target.value)}
                   />
                 </div>
-                <Select value={typeGradeFilter} onValueChange={setTypeGradeFilter}>
-                  <SelectTrigger className="w-[160px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="All Grades" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Grades</SelectItem>
-                    {GRADES_DATA.map(g => (
-                      <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
-                        {g.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Select value={typeSpeedFilter} onValueChange={setTypeSpeedFilter}>
-                  <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                    <SelectValue placeholder="All Levels" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">All Speed Levels</SelectItem>
-                    <SelectItem value="Beginner">Beginner (< 20 WPM)</SelectItem>
-                    <SelectItem value="Intermediate">Intermediate (20-40 WPM)</SelectItem>
-                    <SelectItem value="Advanced">Advanced (40+ WPM)</SelectItem>
-                  </SelectContent>
-                </Select>
+                <select 
+                  value={typeGradeFilter} 
+                  onChange={(e) => setTypeGradeFilter(e.target.value)}
+                  className="w-[160px] h-12 rounded-2xl bg-slate-50 border-none font-bold px-3 text-sm"
+                >
+                  <option value="all">All Grades</option>
+                  {GRADES_DATA.map(g => (
+                    <option key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+                      {g.name}
+                    </option>
+                  ))}
+                </select>
+                <select 
+                  value={typeSpeedFilter} 
+                  onChange={(e) => setTypeSpeedFilter(e.target.value)}
+                  className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold px-3 text-sm"
+                >
+                  <option value="all">All Speed Levels</option>
+                  <option value="Beginner">Beginner (< 20 WPM)</option>
+                  <option value="Intermediate">Intermediate (20-40 WPM)</option>
+                  <option value="Advanced">Advanced (40+ WPM)</option>
+                </select>
               </div>
               <Button 
                 className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
@@ -754,41 +749,45 @@ const DigitalSkillsAssessment = () => {
         <form onSubmit={handleCompSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
-            <Select value={compForm.studentId} onValueChange={(val) => setCompForm({...compForm, studentId: val})}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Choose student..." /></SelectTrigger>
-              <SelectContent>
-                {STUDENTS.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} (Grade {s.grade} {s.stream}) - {s.assessment}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select 
+              value={compForm.studentId} 
+              onChange={(e) => setCompForm({...compForm, studentId: e.target.value})}
+              className="h-12 rounded-xl bg-slate-50 border-none font-bold w-full"
+            >
+              <option value="">Choose student...</option>
+              {STUDENTS.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} (Grade {s.grade} {s.stream}) - {s.assessment}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Skill Category</Label>
-            <Select value={compForm.skillCategory} onValueChange={(val) => setCompForm({...compForm, skillCategory: val})}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                {SKILL_CATEGORIES.map(s => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select 
+              value={compForm.skillCategory} 
+              onChange={(e) => setCompForm({...compForm, skillCategory: e.target.value})}
+              className="h-12 rounded-xl bg-slate-50 border-none font-bold w-full"
+            >
+              {SKILL_CATEGORIES.map(s => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Competency Level</Label>
-            <Select value={compForm.level} onValueChange={(val) => setCompForm({...compForm, level: val})}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="EE">EE - Exceeding Expectations</SelectItem>
-                <SelectItem value="ME">ME - Meeting Expectations</SelectItem>
-                <SelectItem value="AE">AE - Approaching Expectations</SelectItem>
-                <SelectItem value="BE">BE - Below Expectations</SelectItem>
-              </SelectContent>
-            </Select>
+            <select 
+              value={compForm.level} 
+              onChange={(e) => setCompForm({...compForm, level: e.target.value as 'EE' | 'ME' | 'AE' | 'BE'})}
+              className="h-12 rounded-xl bg-slate-50 border-none font-bold w-full"
+            >
+              <option value="EE">EE - Exceeding Expectations</option>
+              <option value="ME">ME - Meeting Expectations</option>
+              <option value="AE">AE - Approaching Expectations</option>
+              <option value="BE">BE - Below Expectations</option>
+            </select>
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Remarks / Observations</Label>
@@ -808,16 +807,18 @@ const DigitalSkillsAssessment = () => {
         <form onSubmit={handleTypeSubmit} className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Select Learner</Label>
-            <Select value={typeForm.studentId} onValueChange={(val) => setTypeForm({...typeForm, studentId: val})}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Choose student..." /></SelectTrigger>
-              <SelectContent>
-                {STUDENTS.map(s => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name} (Grade {s.grade} {s.stream})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <select 
+              value={typeForm.studentId} 
+              onChange={(e) => setTypeForm({...typeForm, studentId: e.target.value})}
+              className="h-12 rounded-xl bg-slate-50 border-none font-bold w-full"
+            >
+              <option value="">Choose student...</option>
+              {STUDENTS.map(s => (
+                <option key={s.id} value={s.id}>
+                  {s.name} (Grade {s.grade} {s.stream})
+                </option>
+              ))}
+            </select>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
@@ -856,16 +857,17 @@ const DigitalSkillsAssessment = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Target Grade</Label>
-              <Select value={projectForm.targetGrade} onValueChange={(val) => setProjectForm({...projectForm, targetGrade: val})}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {GRADES_DATA.map(g => (
-                    <SelectItem key={g.id} value={g.name}>
-                      {g.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <select 
+                value={projectForm.targetGrade} 
+                onChange={(e) => setProjectForm({...projectForm, targetGrade: e.target.value})}
+                className="h-12 rounded-xl bg-slate-50 border-none font-bold w-full"
+              >
+                {GRADES_DATA.map(g => (
+                  <option key={g.id} value={g.name}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
             </div>
             <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Maximum Score</Label>
