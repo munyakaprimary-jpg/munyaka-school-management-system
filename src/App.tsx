@@ -42,6 +42,7 @@ import StaffCheckIn from "./pages/StaffCheckIn";
 import DigitalHub from "./pages/DigitalHub";
 import ICTLabManagement from "./pages/ICTLabManagement";
 import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
+import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const App = () => (
                 <Route path="/digital-hub" element={<ProtectedRoute><Layout><DigitalHub /></Layout></ProtectedRoute>} />
                 <Route path="/ict-lab" element={<ProtectedRoute><Layout><ICTLabManagement /></Layout></ProtectedRoute>} />
                 <Route path="/system-management" element={<ProtectedRoute><Layout><SystemAndAccountManagement /></Layout></ProtectedRoute>} />
+                <Route path="/digital-skills" element={<ProtectedRoute><Layout><DigitalSkillsAssessment /></Layout></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
