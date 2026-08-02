@@ -21,6 +21,7 @@ import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
+import { downloadCSV } from '@/utils/downloadHelper';
 
 // Rubric Logic
 const getRubric = (score: number) => {
@@ -268,15 +269,8 @@ const ReportCards = () => {
         ...rows.map(r => r.join(","))
       ].join("\n");
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
+      // Use global download helper
+      downloadCSV(csvContent, `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`);
 
       showSuccess(`Bulk export completed! Downloaded all ${STUDENTS.length} student records across all grades.`);
     } catch (err) {
