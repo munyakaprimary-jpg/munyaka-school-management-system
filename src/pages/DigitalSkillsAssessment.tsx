@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2 } from 'lucide-react';
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -236,7 +236,7 @@ const MOCK_TOOLS: ToolMasteryRecord[] = [
   }
 ];
 
-const MOCK_PROFICIENCY_RECORDS: ProficiencyRecord[] = [
+const initialRecords: ProficiencyRecord[] = [
   { id: "1", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
   { id: "2", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-14" },
   { id: "3", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-13" },
@@ -295,7 +295,8 @@ const DigitalSkillsAssessment = () => {
   const [softwareToolFilter, setSoftwareToolFilter] = useState("all");
   const [softwareLevelFilter, setSoftwareLevelFilter] = useState("all");
   
-  // Modal states for Software Mastery
+  // Software Mastery Modal & Data State
+  const [records, setRecords] = useState<ProficiencyRecord[]>(initialRecords);
   const [selectedRecord, setSelectedRecord] = useState<ProficiencyRecord | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
@@ -326,14 +327,14 @@ const DigitalSkillsAssessment = () => {
   }, [projectSearchTerm, projectGradeFilter]);
 
   const filteredProficiencyRecords = useMemo(() => {
-    return MOCK_PROFICIENCY_RECORDS.filter(record => {
+    return records.filter(record => {
       const matchesSearch = record.studentName.toLowerCase().includes(softwareSearchTerm.toLowerCase()) ||
                            record.toolName.toLowerCase().includes(softwareSearchTerm.toLowerCase());
       const matchesTool = softwareToolFilter === "all" || record.toolName === softwareToolFilter;
       const matchesLevel = softwareLevelFilter === "all" || record.level === softwareLevelFilter;
       return matchesSearch && matchesTool && matchesLevel;
     });
-  }, [softwareSearchTerm, softwareToolFilter, softwareLevelFilter]);
+  }, [records, softwareSearchTerm, softwareToolFilter, softwareLevelFilter]);
 
   const competencyStats = useMemo(() => {
     const total = MOCK_COMPETENCIES.length;
@@ -363,14 +364,22 @@ const DigitalSkillsAssessment = () => {
   const softwareStats = useMemo(() => {
     const appsAssessed = MOCK_TOOLS.length;
     const avgMastery = Math.round(MOCK_TOOLS.reduce((sum, t) => sum + t.avgMastery, 0) / appsAssessed);
-    const highPerformers = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Proficient').length;
-    const needsPractice = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Emerging').length;
+    const highPerformers = records.filter(r => r.level === 'Proficient').length;
+    const needsPractice = records.filter(r => r.level === 'Emerging').length;
     return { appsAssessed, avgMastery, highPerformers, needsPractice };
-  }, []);
+  }, [records]);
 
-  const handleDeleteRecord = (id: string) => {
-    // In a real app, this would call an API
-    console.log("Delete record:", id);
+  const handleDelete = (id: string | number) => {
+    setRecords(prev => prev.filter(r => r.id !== id));
+  };
+
+  const handleEditSave = (updatedLevel: 'Proficient' | 'Developing' | 'Emerging') => {
+    if (!selectedRecord) return;
+    setRecords(prev => prev.map(r => 
+      r.id === selectedRecord.id ? { ...r, level: updatedLevel } : r
+    ));
+    setIsEditOpen(false);
+    setSelectedRecord(null);
   };
 
   const getRatingBadge = (rating: string) => {
@@ -1101,7 +1110,7 @@ const DigitalSkillsAssessment = () => {
                               <button onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }} className="p-1 text-gray-600 hover:text-gray-800">
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button onClick={() => handleDeleteRecord(record.id)} className="p-1 text-red-600 hover:text-red-800">
+                              <button onClick={() => handleDelete(record.id)} className="p-1 text-red-600 hover:text-red-800">
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -1123,6 +1132,107 @@ const DigitalSkillsAssessment = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Edit Modal */}
+          {isEditOpen && selectedRecord && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-slate-900">Edit Proficiency Level</h3>
+                  <button onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-4 bg-slate-50 rounded-xl">
+                    <p className="text-sm font-bold text-slate-900">{selectedRecord.studentName}</p>
+                    <p className="text-xs text-slate-500">{selectedRecord.grade} • {selectedRecord.toolName}</p>
+                  </div>
+                  <div>
+                    <Label className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-2">Proficiency Level</Label>
+                    <Select 
+                      value={selectedRecord.level} 
+                      onValueChange={(val: 'Proficient' | 'Developing' | 'Emerging') => handleEditSave(val)}
+                    >
+                      <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        <SelectItem value="Proficient">Proficient</SelectItem>
+                        <SelectItem value="Developing">Developing</SelectItem>
+                        <SelectItem value="Emerging">Emerging</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-xl h-11 font-bold"
+                      onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
+                      onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }}
+                    >
+                      Save Changes
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* View Details Modal */}
+          {isViewOpen && selectedRecord && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
+                <div className="flex items-center justify-between mb-6">
+                  <h3 className="text-lg font-bold text-slate-900">View Details</h3>
+                  <button onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  <div className="p-4 bg-indigo-50 rounded-xl">
+                    <p className="text-sm font-bold text-indigo-900">{selectedRecord.studentName}</p>
+                    <p className="text-xs text-indigo-700 mt-1">{selectedRecord.grade} • {selectedRecord.toolName}</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Level</p>
+                      <p className="text-lg font-black text-slate-900 mt-1">{selectedRecord.level}</p>
+                    </div>
+                    <div className="p-3 bg-slate-50 rounded-xl">
+                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Last Tested</p>
+                      <p className="text-lg font-black text-slate-900 mt-1">{selectedRecord.lastTested}</p>
+                    </div>
+                  </div>
+                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <p className="text-xs font-bold text-amber-800 flex items-center gap-1">
+                      <AlertCircle size={12} /> Teacher Feedback: This student shows consistent progress in practical assessments.
+                    </p>
+                  </div>
+                  <div className="flex gap-3 pt-4">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-xl h-11 font-bold"
+                      onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }}
+                    >
+                      Close
+                    </Button>
+                    <Button 
+                      className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
+                      onClick={() => { setIsViewOpen(false); setIsEditOpen(true); }}
+                    >
+                      Edit Instead
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
