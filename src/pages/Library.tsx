@@ -12,6 +12,7 @@ import { BOOKS } from '@/lib/mock-data';
 import { Book, BorrowLog } from '@/types/library';
 import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { BookHistoryModal } from '@/components/library/BookHistoryModal';
+import { RegisterBookModal } from '@/components/library/RegisterBookModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
@@ -67,6 +68,7 @@ const Library = () => {
   const [selectedCategory, setSelectedAreaCategory] = useState("All Categories");
 
   // Modal States
+  const [isRegisterBookOpen, setIsRegisterBookOpen] = useState(false);
   const [selectedBookForIssue, setSelectedBookForIssue] = useState<Book | null>(null);
   const [selectedBookForHistory, setSelectedBookForHistory] = useState<Book | null>(null);
 
@@ -92,6 +94,18 @@ const Library = () => {
       return matchesSearch && matchesCat;
     });
   }, [books, searchQuery, selectedCategory]);
+
+  // Register New Book Handler
+  const handleRegisterBook = (bookData: Omit<Book, 'id' | 'borrowed'>) => {
+    const newBook: Book = {
+      ...bookData,
+      id: `bk-${Date.now()}`,
+      borrowed: 0
+    };
+
+    setBooks(prev => [newBook, ...prev]);
+    showSuccess(`Registered "${newBook.title}" (${newBook.stock} copies) into library catalog!`);
+  };
 
   // Issue Book Action Handler (Supports multi-copy quantity and optional Grade)
   const handleIssueBook = async (
@@ -159,7 +173,10 @@ const Library = () => {
             <p className="text-muted-foreground">Manage textbooks, supplementary materials, and circulation history.</p>
           </div>
         </div>
-        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold">
+        <Button 
+          onClick={() => setIsRegisterBookOpen(true)}
+          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold"
+        >
           <Plus size={18} /> Register New Book
         </Button>
       </div>
@@ -184,6 +201,7 @@ const Library = () => {
           <option>Core Text</option>
           <option>Reference</option>
           <option>Supplementary</option>
+          <option>General Reading</option>
         </select>
       </div>
 
@@ -269,6 +287,12 @@ const Library = () => {
       </div>
 
       {/* Modals */}
+      <RegisterBookModal
+        isOpen={isRegisterBookOpen}
+        onClose={() => setIsRegisterBookOpen(false)}
+        onRegisterBook={handleRegisterBook}
+      />
+
       <IssueBookModal 
         isOpen={!!selectedBookForIssue}
         onClose={() => setSelectedBookForIssue(null)}
