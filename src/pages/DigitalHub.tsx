@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -18,11 +18,18 @@ import {
   ExternalLink,
   Monitor,
   Activity,
-  ShieldCheck
+  ShieldCheck,
+  Loader2,
+  WifiOff,
+  CheckCircle2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 const DigitalHub = () => {
+  const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+
   const resources = [
     { 
       title: "Virtual Science Lab", 
@@ -67,6 +74,33 @@ const DigitalHub = () => {
     { name: "Junior School Tech Wing", stations: 25, status: "Maintenance", uptime: "85.5%", load: 0 },
   ];
 
+  // Network status listener
+  useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    setIsOnline(navigator.onLine);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
+
+  const handleNetworkStatusClick = () => {
+    toast.success("System connected to local network.");
+  };
+
+  const handleSyncResources = async () => {
+    setIsSyncing(true);
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    setIsSyncing(false);
+    toast.success("Local ICT resources and asset logs synced successfully.");
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
@@ -79,11 +113,37 @@ const DigitalHub = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm gap-2">
-            <Wifi size={18} className="text-emerald-500" /> Network Status
+          <Button 
+            variant="outline" 
+            className="rounded-2xl border-slate-200 bg-white font-bold text-slate-700 shadow-sm gap-2"
+            onClick={handleNetworkStatusClick}
+          >
+            {isOnline ? (
+              <>
+                <Wifi size={18} className="text-emerald-500" /> 
+                <span className="text-emerald-600 font-medium">Online</span>
+              </>
+            ) : (
+              <>
+                <WifiOff size={18} className="text-amber-500" /> 
+                <span className="text-amber-600 font-medium">Offline Mode</span>
+              </>
+            )}
           </Button>
-          <Button className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2">
-            <Download size={18} /> Sync Resources
+          <Button 
+            className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+            onClick={handleSyncResources}
+            disabled={isSyncing}
+          >
+            {isSyncing ? (
+              <>
+                <Loader2 className="animate-spin" size={18} /> Syncing...
+              </>
+            ) : (
+              <>
+                <Download size={18} /> Sync Resources
+              </>
+            )}
           </Button>
         </div>
       </div>
