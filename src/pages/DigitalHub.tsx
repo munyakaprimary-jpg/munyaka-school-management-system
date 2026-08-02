@@ -83,6 +83,17 @@ const DigitalHub = () => {
     toast.success("Local ICT resources and asset logs synced successfully.");
   };
 
+  const handleOpenLink = (url: string) => {
+    try {
+      const win = window.open(url, '_blank');
+      if (!win) {
+        window.location.href = url;
+      }
+    } catch (e) {
+      window.location.href = url;
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
@@ -212,11 +223,9 @@ const DigitalHub = () => {
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             {catalogResources.map((item, idx) => (
-              <a
+              <div
                 key={idx}
-                href={item.url}
-                target="_blank"
-                rel="noopener noreferrer"
+                onClick={() => handleOpenLink(item.url)}
                 className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer group"
               >
                 <div className="flex items-center gap-3">
@@ -236,7 +245,7 @@ const DigitalHub = () => {
                   <span>Open</span>
                   <ExternalLink className="w-4 h-4" />
                 </div>
-              </a>
+              </div>
             ))}
           </div>
 
