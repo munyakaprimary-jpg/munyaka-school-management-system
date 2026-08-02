@@ -1,5 +1,32 @@
-{
-  const navigate = useNavigate();
+"use client";
+
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import BackButton from '@/components/ui/BackButton';
+import { 
+  Laptop, 
+  Wifi, 
+  HardDrive, 
+  Cpu, 
+  Globe, 
+  BookOpen, 
+  Video, 
+  Download,
+  ExternalLink,
+  Monitor,
+  Activity,
+  ShieldCheck,
+  Loader2,
+  WifiOff,
+  CheckCircle2
+} from 'lucide-react';
+import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+
+const DigitalHub = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
@@ -19,7 +46,7 @@
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://ekitabu.com",
+      url: "https://www.youtube.com/c/KICDKenya",
       icon: Video
     }
   ];
@@ -222,12 +249,8 @@
             ))}
           </div>
 
-          {/* Teacher Training Card with Internal Navigation Fallback */}
-          <div 
-            className="cursor-pointer bg-indigo-900 text-white p-8 rounded-[2rem] shadow-lg hover:bg-indigo-800 transition-all relative overflow-hidden group"
-            onClick={() => navigate('/teacher-training')}
-          >
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 group-hover:rotate-0 transition-transform duration-500">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 relative overflow-hidden">
+            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12">
               <Laptop size={120} />
             </div>
             <div className="relative z-10">
@@ -235,14 +258,11 @@
               <p className="text-indigo-200 text-xs leading-relaxed mb-6 font-medium">
                 Access self-paced modules on Digital Literacy and ICT integration in CBC.
               </p>
-              <Button 
-                type="button"
-                className="w-full bg-white text-indigo-950 font-black h-12 rounded-2xl hover:bg-indigo-50 transition-colors pointer-events-none"
-              >
+              <Button className="w-full bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl font-black h-12">
                 Open Academy
               </Button>
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
