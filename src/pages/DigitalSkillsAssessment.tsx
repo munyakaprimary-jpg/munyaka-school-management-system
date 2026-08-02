@@ -9,7 +9,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X, Save, MessageSquare, User, BookOpen, Calendar } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -275,6 +276,8 @@ const GRADE_OPTIONS = [
   "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"
 ];
 
+const PROFICIENCY_LEVELS = ['Proficient', 'Developing', 'Emerging'] as const;
+
 const DigitalSkillsAssessment = () => {
   const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'projects' | 'software'>('competencies');
   
@@ -294,6 +297,13 @@ const DigitalSkillsAssessment = () => {
   const [softwareSearchTerm, setSoftwareSearchTerm] = useState("");
   const [softwareToolFilter, setSoftwareToolFilter] = useState("all");
   const [softwareLevelFilter, setSoftwareLevelFilter] = useState("all");
+  
+  // Modal State
+  const [selectedRecord, setSelectedRecord] = useState<ProficiencyRecord | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
+  const [editLevel, setEditLevel] = useState<'Proficient' | 'Developing' | 'Emerging'>('Proficient');
+  const [proficiencyRecords, setProficiencyRecords] = useState<ProficiencyRecord[]>(MOCK_PROFICIENCY_RECORDS);
 
   const filteredCompetencies = useMemo(() => {
     return MOCK_COMPETENCIES.filter(record => {
@@ -321,14 +331,14 @@ const DigitalSkillsAssessment = () => {
   }, [projectSearchTerm, projectGradeFilter]);
 
   const filteredProficiencyRecords = useMemo(() => {
-    return MOCK_PROFICIENCY_RECORDS.filter(record => {
+    return proficiencyRecords.filter(record => {
       const matchesSearch = record.studentName.toLowerCase().includes(softwareSearchTerm.toLowerCase()) ||
                            record.toolName.toLowerCase().includes(softwareSearchTerm.toLowerCase());
       const matchesTool = softwareToolFilter === "all" || record.toolName === softwareToolFilter;
       const matchesLevel = softwareLevelFilter === "all" || record.level === softwareLevelFilter;
       return matchesSearch && matchesTool && matchesLevel;
     });
-  }, [softwareSearchTerm, softwareToolFilter, softwareLevelFilter]);
+  }, [softwareSearchTerm, softwareToolFilter, softwareLevelFilter, proficiencyRecords]);
 
   const competencyStats = useMemo(() => {
     const total = MOCK_COMPETENCIES.length;
@@ -358,10 +368,10 @@ const DigitalSkillsAssessment = () => {
   const softwareStats = useMemo(() => {
     const appsAssessed = MOCK_TOOLS.length;
     const avgMastery = Math.round(MOCK_TOOLS.reduce((sum, t) => sum + t.avgMastery, 0) / appsAssessed);
-    const highPerformers = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Proficient').length;
-    const needsPractice = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Emerging').length;
+    const highPerformers = proficiencyRecords.filter(r => r.level === 'Proficient').length;
+    const needsPractice = proficiencyRecords.filter(r => r.level === 'Emerging').length;
     return { appsAssessed, avgMastery, highPerformers, needsPractice };
-  }, []);
+  }, [proficiencyRecords]);
 
   const getRatingBadge = (rating: string) => {
     const configs = {
@@ -418,6 +428,37 @@ const DigitalSkillsAssessment = () => {
         {level}
       </Badge>
     );
+  };
+
+  const handleEditClick = (record: ProficiencyRecord) => {
+    setSelectedRecord(record);
+    setEditLevel(record.level);
+    setIsEditOpen(true);
+  };
+
+  const handleViewClick = (record: ProficiencyRecord) => {
+    setSelectedRecord(record);
+    setIsViewOpen(true);
+  };
+
+  const handleDeleteClick = (record: ProficiencyRecord) => {
+    setProficiencyRecords(prev => prev.filter(r => r.id !== record.id));
+  };
+
+  const handleSaveEdit = () => {
+    if (selectedRecord) {
+      setProficiencyRecords(prev => 
+        prev.map(r => r.id === selectedRecord.id ? { ...r, level: editLevel } : r)
+      );
+      setIsEditOpen(false);
+      setSelectedRecord(null);
+    }
+  };
+
+  const handleCloseModals = () => {
+    setIsEditOpen(false);
+    setIsViewOpen(false);
+    setSelectedRecord(null);
   };
 
   return (
@@ -1085,13 +1126,25 @@ const DigitalSkillsAssessment = () => {
                           <td className="px-8 py-5 font-medium text-slate-600">{record.lastTested}</td>
                           <td className="px-8 py-5 text-right">
                             <div className="flex items-center justify-end gap-2">
-                              <button className="p-1 text-blue-600 hover:text-blue-800" title="Edit Assessment">
+                              <button 
+                                className="p-1 text-blue-600 hover:text-blue-800" 
+                                title="Edit Assessment"
+                                onClick={() => handleEditClick(record)}
+                              >
                                 <Edit className="w-4 h-4" />
                               </button>
-                              <button className="p-1 text-gray-600 hover:text-gray-800" title="View Details">
+                              <button 
+                                className="p-1 text-gray-600 hover:text-gray-800" 
+                                title="View Details"
+                                onClick={() => handleViewClick(record)}
+                              >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              <button className="p-1 text-red-600 hover:text-red-800" title="Delete Record">
+                              <button 
+                                className="p-1 text-red-600 hover:text-red-800" 
+                                title="Delete Record"
+                                onClick={() => handleDeleteClick(record)}
+                              >
                                 <Trash2 className="w-4 h-4" />
                               </button>
                             </div>
@@ -1113,6 +1166,117 @@ const DigitalSkillsAssessment = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Edit Modal */}
+          <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>Edit Proficiency Level</span>
+                  <button onClick={handleCloseModals} className="p-1 hover:bg-slate-100 rounded-lg">
+                    <X className="w-4 h-4" />
+                  </button>
+                </DialogTitle>
+              </DialogHeader>
+              {selectedRecord && (
+                <div className="space-y-4 py-4">
+                  <div className="bg-slate-50 p-4 rounded-xl">
+                    <p className="text-sm font-medium text-slate-500">Student</p>
+                    <p className="font-bold text-slate-900">{selectedRecord.studentName}</p>
+                    <p className="text-xs text-slate-400">{selectedRecord.grade} • {selectedRecord.toolName}</p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-sm font-medium">Proficiency Level</Label>
+                    <Select value={editLevel} onValueChange={setEditLevel}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {PROFICIENCY_LEVELS.map(level => (
+                          <SelectItem key={level} value={level}>{level}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              )}
+              <DialogFooter className="flex justify-end gap-2">
+                <Button variant="outline" onClick={handleCloseModals}>Cancel</Button>
+                <Button onClick={handleSaveEdit}>
+                  <Save className="w-4 h-4 mr-2" /> Save Changes
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* View Modal */}
+          <Dialog open={isViewOpen} onOpenChange={setIsViewOpen}>
+            <DialogContent className="max-w-lg">
+              <DialogHeader>
+                <DialogTitle className="flex items-center justify-between">
+                  <span>Learner Proficiency Details</span>
+                  <button onClick={handleCloseModals} className="p-1 hover:bg-slate-100 rounded-lg">
+                    <X className="w-4 h-4" />
+                  </button>
+                </DialogTitle>
+              </DialogHeader>
+              {selectedRecord && (
+                <div className="space-y-4 py-4">
+                  <div className="flex items-center gap-4 p-4 bg-indigo-50 rounded-xl">
+                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg">
+                      {selectedRecord.studentName.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-900">{selectedRecord.studentName}</h4>
+                      <p className="text-sm text-slate-500">{selectedRecord.grade}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Tool / Application</p>
+                      <p className="font-medium text-slate-900">{selectedRecord.toolName}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Current Level</p>
+                      {getProficiencyBadge(selectedRecord.level)}
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Last Tested</p>
+                      <p className="font-medium text-slate-900">{selectedRecord.lastTested}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Assessment ID</p>
+                      <p className="font-mono text-xs text-slate-500">{selectedRecord.id}</p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 pt-4 border-t">
+                    <p className="text-xs font-black uppercase text-slate-400 tracking-wider">Teacher Notes</p>
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 min-h-[80px]">
+                      <p className="text-sm text-slate-600 italic">
+                        {selectedRecord.level === 'Proficient' 
+                          ? "Excellent command of the tool. Demonstrates advanced features independently." 
+                          : selectedRecord.level === 'Developing' 
+                          ? "Good foundational skills. Needs practice with advanced features and shortcuts." 
+                          : "Requires guided practice. Recommended for remedial sessions."}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-2 text-xs text-slate-400">
+                    <MessageSquare className="w-3 h-3" /> Sub-skill: Navigation
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded">Proficient</span>
+                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded">Formatting</span>
+                    <span className="px-2 py-0.5 bg-amber-100 text-amber-700 rounded">Advanced</span>
+                  </div>
+                </div>
+              )}
+              <DialogFooter className="flex justify-end">
+                <Button onClick={handleCloseModals}>Close</Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       )}
     </div>
