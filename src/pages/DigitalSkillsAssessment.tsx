@@ -8,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -29,6 +30,18 @@ interface TypingRecord {
   accuracy: number;
   level: 'Beginner' | 'Intermediate' | 'Advanced';
   date: string;
+}
+
+interface ProjectRecord {
+  id: string;
+  title: string;
+  grade: string;
+  rubricCriteria: string;
+  maxPoints: number;
+  submissionsTotal: number;
+  submissionsGraded: number;
+  status: 'Active' | 'Completed' | 'Pending Grading';
+  dueDate: string;
 }
 
 const MOCK_COMPETENCIES: CompetencyRecord[] = [
@@ -57,6 +70,75 @@ const MOCK_TYPING_RECORDS: TypingRecord[] = [
   { id: "10", studentName: "Helen Moraa", grade: "Grade 8", speed: 33, accuracy: 95, level: "Intermediate", date: "2024-10-06" },
 ];
 
+const MOCK_PROJECTS: ProjectRecord[] = [
+  { 
+    id: "1", 
+    title: "CBC Scratch Animation", 
+    grade: "Grade 4", 
+    rubricCriteria: "Creativity, Logic, Presentation", 
+    maxPoints: 100, 
+    submissionsTotal: 42, 
+    submissionsGraded: 38, 
+    status: "Active", 
+    dueDate: "2024-11-15" 
+  },
+  { 
+    id: "2", 
+    title: "School Newsletter Layout", 
+    grade: "Grade 5", 
+    rubricCriteria: "Design, Content, Typography", 
+    maxPoints: 100, 
+    submissionsTotal: 38, 
+    submissionsGraded: 38, 
+    status: "Completed", 
+    dueDate: "2024-10-20" 
+  },
+  { 
+    id: "3", 
+    title: "Digital Presentation on Environment", 
+    grade: "Grade 6", 
+    rubricCriteria: "Research, Slides, Delivery", 
+    maxPoints: 100, 
+    submissionsTotal: 40, 
+    submissionsGraded: 22, 
+    status: "Pending Grading", 
+    dueDate: "2024-11-30" 
+  },
+  { 
+    id: "4", 
+    title: "Interactive Quiz Game (Python)", 
+    grade: "Grade 7", 
+    rubricCriteria: "Code Logic, UI, Functionality", 
+    maxPoints: 100, 
+    submissionsTotal: 35, 
+    submissionsGraded: 15, 
+    status: "Active", 
+    dueDate: "2024-12-05" 
+  },
+  { 
+    id: "5", 
+    title: "E-Portfolio Website Design", 
+    grade: "Grade 8", 
+    rubricCriteria: "HTML/CSS, Content, Responsiveness", 
+    maxPoints: 100, 
+    submissionsTotal: 30, 
+    submissionsGraded: 30, 
+    status: "Completed", 
+    dueDate: "2024-10-28" 
+  },
+  { 
+    id: "6", 
+    title: "Data Visualization Dashboard", 
+    grade: "Grade 7", 
+    rubricCriteria: "Data Accuracy, Charts, Insights", 
+    maxPoints: 100, 
+    submissionsTotal: 35, 
+    submissionsGraded: 8, 
+    status: "Pending Grading", 
+    dueDate: "2024-11-25" 
+  },
+];
+
 const CATEGORIES = [
   "Word Processing",
   "Spreadsheets", 
@@ -69,6 +151,10 @@ const CATEGORIES = [
 
 const SPEED_LEVELS = ["Beginner", "Intermediate", "Advanced"];
 
+const GRADE_OPTIONS = [
+  "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"
+];
+
 const DigitalSkillsAssessment = () => {
   const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'projects'>('competencies');
   
@@ -79,6 +165,10 @@ const DigitalSkillsAssessment = () => {
   // Typing Tab State
   const [typingSearchTerm, setTypingSearchTerm] = useState("");
   const [speedLevelFilter, setSpeedLevelFilter] = useState("all");
+
+  // Projects Tab State
+  const [projectSearchTerm, setProjectSearchTerm] = useState("");
+  const [projectGradeFilter, setProjectGradeFilter] = useState("all");
 
   const filteredCompetencies = useMemo(() => {
     return MOCK_COMPETENCIES.filter(record => {
@@ -97,6 +187,14 @@ const DigitalSkillsAssessment = () => {
     });
   }, [typingSearchTerm, speedLevelFilter]);
 
+  const filteredProjects = useMemo(() => {
+    return MOCK_PROJECTS.filter(project => {
+      const matchesSearch = project.title.toLowerCase().includes(projectSearchTerm.toLowerCase());
+      const matchesGrade = projectGradeFilter === "all" || project.grade === projectGradeFilter;
+      return matchesSearch && matchesGrade;
+    });
+  }, [projectSearchTerm, projectGradeFilter]);
+
   const competencyStats = useMemo(() => {
     const total = MOCK_COMPETENCIES.length;
     const ee = MOCK_COMPETENCIES.filter(r => r.rating === 'EE').length;
@@ -110,6 +208,16 @@ const DigitalSkillsAssessment = () => {
     const avgSpeed = Math.round(MOCK_TYPING_RECORDS.reduce((sum, r) => sum + r.speed, 0) / totalSessions);
     const topSpeed = Math.max(...MOCK_TYPING_RECORDS.map(r => r.speed));
     return { totalSessions, avgSpeed, topSpeed };
+  }, []);
+
+  const projectStats = useMemo(() => {
+    const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
+    const totalSubmissions = MOCK_PROJECTS.reduce((sum, p) => sum + p.submissionsTotal, 0);
+    const totalGraded = MOCK_PROJECTS.reduce((sum, p) => sum + p.submissionsGraded, 0);
+    const gradedPct = totalSubmissions > 0 ? Math.round((totalGraded / totalSubmissions) * 100) : 0;
+    const highestScore = Math.max(...MOCK_PROJECTS.map(p => p.maxPoints));
+    const avgScore = 81; // Mock average class score
+    return { activeProjects, gradedPct, highestScore, avgScore };
   }, []);
 
   const getRatingBadge = (rating: string) => {
@@ -137,6 +245,20 @@ const DigitalSkillsAssessment = () => {
     return (
       <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
         {level}
+      </Badge>
+    );
+  };
+
+  const getProjectStatusBadge = (status: string) => {
+    const configs = {
+      Active: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
+      Completed: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+      "Pending Grading": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+    };
+    const config = configs[status as keyof typeof configs] || configs.Active;
+    return (
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+        {status}
       </Badge>
     );
   };
@@ -461,12 +583,153 @@ const DigitalSkillsAssessment = () => {
       )}
 
       {activeTab === 'projects' && (
-        <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
-          <h2 className="text-lg font-semibold mb-2">Project-Based Evaluations</h2>
-          <p className="text-gray-500 text-sm mb-4">Evaluate practical digital artifacts and presentations.</p>
-          <button className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2">
-            <Plus className="w-4 h-4" /> Create New Assessment
-          </button>
+        <div className="space-y-6">
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Layers size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Projects</p>
+                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{projectStats.activeProjects}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <ClipboardCheck size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Submissions Graded</p>
+                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{projectStats.gradedPct}%</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                  <Star size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Highest Rubric Score</p>
+                  <h3 className="text-2xl font-black text-amber-700 leading-none mt-1">{projectStats.highestScore}%</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Target size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Avg Class Score</p>
+                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{projectStats.avgScore}%</h3>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Filters & Search */}
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Input 
+                  placeholder="Search by Project Title or Learner Name..." 
+                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  value={projectSearchTerm}
+                  onChange={(e) => setProjectSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={projectGradeFilter} onValueChange={setProjectGradeFilter}>
+                <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Grades" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="all">All Grades</SelectItem>
+                  {GRADE_OPTIONS.map(grade => (
+                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={18} /> Export CSV
+              </Button>
+            </div>
+          </Card>
+
+          {/* Projects Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredProjects.length > 0 ? (
+              filteredProjects.map((project) => {
+                const progress = project.submissionsTotal > 0 
+                  ? Math.round((project.submissionsGraded / project.submissionsTotal) * 100) 
+                  : 0;
+                
+                return (
+                  <Card key={project.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
+                    <CardContent className="p-6 space-y-4">
+                      <div className="flex justify-between items-start">
+                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                          <FileText size={24} />
+                        </div>
+                        {getProjectStatusBadge(project.status)}
+                      </div>
+                      
+                      <div className="space-y-2">
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                          {project.title}
+                        </h3>
+                        <p className="text-sm font-bold text-indigo-500 flex items-center gap-1">
+                          <Layers size={14} /> {project.grade}
+                        </p>
+                      </div>
+
+                      <div className="space-y-3 pt-2 border-t border-slate-100">
+                        <div>
+                          <div className="flex justify-between text-xs font-black uppercase text-slate-400 tracking-wider mb-1">
+                            <span>Rubric Criteria</span>
+                            <span>{project.maxPoints} PTS</span>
+                          </div>
+                          <p className="text-sm text-slate-600 line-clamp-1">{project.rubricCriteria}</p>
+                        </div>
+                        
+                        <div>
+                          <div className="flex justify-between text-xs font-black uppercase text-slate-400 tracking-wider mb-1">
+                            <span>Grading Progress</span>
+                            <span className="text-indigo-600">{project.submissionsGraded} / {project.submissionsTotal} Graded</span>
+                          </div>
+                          <Progress value={progress} className="h-2" />
+                        </div>
+
+                        <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          <span>Due: {project.dueDate}</span>
+                          <span className="text-slate-500">{project.status}</span>
+                        </div>
+                      </div>
+
+                      <Button 
+                        className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-11 shadow-lg shadow-indigo-100 gap-2"
+                      >
+                        <ClipboardCheck size={18} /> Grade Submissions
+                      </Button>
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <div className="col-span-full text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-200 shadow-sm">
+                  <Search size={32} />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">No projects found</h3>
+                <p className="text-slate-400 text-sm max-w-xs mx-auto">No projects match the current search and grade filters.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
     </div>
