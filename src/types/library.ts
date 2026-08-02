@@ -1,6 +1,7 @@
 export type ConditionStatus = 'New' | 'Good' | 'Fair' | 'Damaged';
 export type ConditionReturnStatus = 'Good' | 'Damaged' | 'Lost' | 'Pending';
 export type BookAllocationStatus = 'Active' | 'Returned' | 'Overdue' | 'Lost';
+
 export interface BookAllocation {
   id: string;
   borrower_name: string;
@@ -16,4 +17,8 @@ export interface BookAllocation {
   condition_on_return: ConditionReturnStatus;
   status: BookAllocationStatus;
   notes?: string;
+}
+
+export function getLogBalance(qtyIssued: number, qtyReturned: number, qtyLost: number = 0): number {
+  return qtyIssued - (qtyReturned + qtyLost);
 }
