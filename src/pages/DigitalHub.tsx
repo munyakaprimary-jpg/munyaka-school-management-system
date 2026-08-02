@@ -46,7 +46,7 @@ const DigitalHub = () => {
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://ekitabu.com",
+      url: "https://www.youtube.com/c/KICDKenya",
       icon: Video
     }
   ];
@@ -187,7 +187,7 @@ const DigitalHub = () => {
                   </div>
                   <Badge className={cn(
                     "rounded-xl border-none font-bold text-[10px] uppercase",
-                    lab.status === 'Active' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                    lab.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-600"
                   )}>
                     {lab.status}
                   </Badge>
@@ -251,7 +251,7 @@ const DigitalHub = () => {
 
           <Card 
             className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 relative overflow-hidden cursor-pointer hover:bg-indigo-800 transition-all group"
-            onClick={() => handleOpenLink("https://elearning.kicd.ac.ke/")}
+            onClick={() => handleOpenLink("https://kec.ac.ke/")}
           >
             <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500">
               <Laptop size={120} />
