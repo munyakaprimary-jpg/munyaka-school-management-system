@@ -294,6 +294,11 @@ const DigitalSkillsAssessment = () => {
   const [softwareSearchTerm, setSoftwareSearchTerm] = useState("");
   const [softwareToolFilter, setSoftwareToolFilter] = useState("all");
   const [softwareLevelFilter, setSoftwareLevelFilter] = useState("all");
+  
+  // Modal states for Software Mastery
+  const [selectedRecord, setSelectedRecord] = useState<ProficiencyRecord | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isViewOpen, setIsViewOpen] = useState(false);
 
   const filteredCompetencies = useMemo(() => {
     return MOCK_COMPETENCIES.filter(record => {
@@ -362,6 +367,11 @@ const DigitalSkillsAssessment = () => {
     const needsPractice = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Emerging').length;
     return { appsAssessed, avgMastery, highPerformers, needsPractice };
   }, []);
+
+  const handleDeleteRecord = (id: string) => {
+    // In a real app, this would call an API
+    console.log("Delete record:", id);
+  };
 
   const getRatingBadge = (rating: string) => {
     const configs = {
@@ -1067,51 +1077,33 @@ const DigitalSkillsAssessment = () => {
                   <tbody className="divide-y divide-slate-100">
                     {filteredProficiencyRecords.length > 0 ? (
                       filteredProficiencyRecords.map((record, index) => (
-                        <tr 
-                          key={`${record.id}-${record.toolName.replace(/\s+/g, '-')}-${index}`}
-                          className="hover:bg-slate-50/50 transition-colors group"
-                        >
-                          <td className="px-8 py-5">
+                        <tr key={`${record.id || index}-${index}`}>
+                          <td className="p-3">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="p-3">
                             <span className="font-bold text-slate-700">{record.grade}</span>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="p-3">
                             <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold text-xs">
                               {record.toolName}
                             </Badge>
                           </td>
-                          <td className="px-8 py-5 text-center">
+                          <td className="p-3 text-center">
                             {getProficiencyBadge(record.level)}
                           </td>
-                          <td className="px-8 py-5 font-medium text-slate-600">{record.lastTested}</td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                title="View Details - Teacher Feedback & Sub-skills"
-                              >
-                                <Eye size={16} />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
-                                title="Edit Assessment"
-                              >
-                                <Edit size={16} />
-                              </Button>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                title="Delete Record"
-                              >
-                                <Trash2 size={16} />
-                              </Button>
+                          <td className="p-3 font-medium text-slate-600">{record.lastTested}</td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <button onClick={() => { setSelectedRecord(record); setIsEditOpen(true); }} className="p-1 text-blue-600 hover:text-blue-800">
+                                <Edit className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }} className="p-1 text-gray-600 hover:text-gray-800">
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button onClick={() => handleDeleteRecord(record.id)} className="p-1 text-red-600 hover:text-red-800">
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
