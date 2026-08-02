@@ -30,7 +30,7 @@ const DigitalHub = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const catalogItems = [
+  const catalogResources = [
     {
       title: "Virtual Science Lab",
       category: "INTERACTIVE • Simulations",
@@ -211,7 +211,7 @@ const DigitalHub = () => {
           <h2 className="text-xl font-black text-slate-900">Digital Catalog</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {catalogItems.map((item, idx) => (
+            {catalogResources.map((item, idx) => (
               <a
                 key={idx}
                 href={item.url}
