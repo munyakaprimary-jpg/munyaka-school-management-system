@@ -40,13 +40,13 @@ const DigitalHub = () => {
     {
       title: "KICD E-Learning Portal",
       category: "CURRICULUM • Kenya National",
-      url: "https://www.keducationcloud.org/",
+      url: "https://kicd.ac.ke/",
       icon: BookOpen
     },
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://www.youtube.com/results?search_query=cbc+digital+literacy+kenya",
+      url: "https://www.youtube.com/@KICDKenya/videos",
       icon: Video
     }
   ];
