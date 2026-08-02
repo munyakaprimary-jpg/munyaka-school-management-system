@@ -7,7 +7,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 
-const NotificationBell = () => {
+export const NotificationBell = () => {
   const { notifications, markAsRead, clearNotifications } = useNotifications();
   const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
   const open = Boolean(anchorEl);
@@ -105,5 +105,3 @@ const NotificationBell = () => {
     </div>
   );
 };
-
-export default NotificationBell;
