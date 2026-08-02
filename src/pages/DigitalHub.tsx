@@ -46,7 +46,7 @@ const DigitalHub = () => {
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ",
+      url: "https://www.youtube.com/c/KICDKenya",
       icon: Video
     }
   ];
