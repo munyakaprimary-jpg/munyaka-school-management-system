@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon } from 'lucide-react';
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -1085,11 +1085,29 @@ const DigitalSkillsAssessment = () => {
                           <td className="px-8 py-5 font-medium text-slate-600">{record.lastTested}</td>
                           <td className="px-8 py-5 text-right">
                             <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                                title="View Details"
+                              >
                                 <Eye size={16} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                                title="Edit Assessment"
+                              >
                                 <Edit size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50" 
+                                title="Delete Record"
+                              >
+                                <Trash2 size={16} />
                               </Button>
                             </div>
                           </td>
