@@ -1,132 +1,109 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
-import { Bell, Check, X, AlertCircle, CheckCircle, Info } from 'lucide-react';
-import { useNotifications, Notification } from './notification-provider';
-import { cn } from '@/lib/utils';
+import React, { useState } from 'react';
+import { Bell } from 'lucide-react';
+import { useNotifications } from '@/components/ui/notification-provider';
+import { formatDistanceToNow } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Button } from '@/components/ui/button';
 
-export const NotificationBell: React.FC = () => {
-  const { notifications, markAsRead, markAllAsRead, clearAll, unreadCount } = useNotifications();
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+const NotificationBell = () => {
+  const { notifications, markAsRead, clearNotifications } = useNotifications();
+  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
+  const open = Boolean(anchorEl);
+  const unreadCount = notifications.filter(n => !n.read).length;
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const getIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'success':
-        return <CheckCircle size={16} className="text-emerald-500" />;
-      case 'error':
-        return <X size={16} className="text-rose-500" />;
-      case 'warning':
-        return <AlertCircle size={16} className="text-amber-500" />;
-      default:
-        return <Info size={16} className="text-blue-500" />;
-    }
+  const handleClick = (event: React.MouseEvent<HTMLElement>) => {
+    setAnchorEl(event.currentTarget);
   };
 
-  const getTypeColor = (type: Notification['type']) => {
-    switch (type) {
-      case 'success':
-        return 'bg-emerald-50 border-emerald-100';
-      case 'error':
-        return 'bg-rose-50 border-rose-100';
-      case 'warning':
-        return 'bg-amber-50 border-amber-100';
-      default:
-        return 'bg-blue-50 border-blue-100';
-    }
+  const handleClose = () => {
+    setAnchorEl(null);
+  };
+
+  const handleMarkAsRead = (id: string) => {
+    markAsRead(id);
+    handleClose();
+  };
+
+  const handleNotificationClick = (id: string) => {
+    markAsRead(id);
+    // Optionally navigate to the Communication Center for message notifications
+    // For now, we just close the dropdown
+    handleClose();
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative">
       <button
-        onClick={() => setIsOpen(!isOpen)}
-        className="relative p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+        onClick={handleClick}
+        className="relative p-2 rounded-full hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+        aria-label="Notifications"
       >
-        <Bell size={18} className="text-slate-400" />
+        <Bell className="h-5 w-5 text-indigo-600" />
         {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 w-5 h-5 bg-rose-500 text-white text-[10px] font-black rounded-full flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
+          <div className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-indigo-600 text-xs font-medium text-white">
+            {unreadCount}
+          </div>
         )}
       </button>
 
-      {isOpen && (
-        <div className="absolute right-0 top-12 w-80 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-2xl z-50 max-h-96 overflow-y-auto">
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 dark:text-white">Notifications</h3>
-              {unreadCount > 0 && (
-                <button
-                  onClick={markAllAsRead}
-                  className="text-xs font-bold text-indigo-600 hover:text-indigo-700"
-                >
-                  Mark All Read
-                </button>
-              )}
-            </div>
-          </div>
-
+      <DropdownMenu
+        align="end"
+        className="w-56"
+        sideOffset={4}
+        open={open}
+        onOpenChange={setAnchorEl => {
+          if (!setAnchorEl) setAnchorEl(null);
+        }}
+      >
+        <DropdownMenuTrigger asChild>
+          <span className="sr-only">Open notifications menu</span>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="p-2 space-y-1">
           {notifications.length === 0 ? (
-            <div className="p-6 text-center text-slate-500">
-              <Bell size={32} className="mx-auto mb-2 opacity-50" />
-              <p className="text-sm">No notifications yet</p>
-            </div>
+            <DropdownMenuItem className="text-slate-500 text-xs">
+              No notifications yet
+            </DropdownMenuItem>
           ) : (
-            <div className="divide-y divide-slate-100 dark:divide-slate-800">
-              {notifications.map((notification) => (
-                <div
+            <>
+              {notifications.map(notification => (
+                <DropdownMenuItem
                   key={notification.id}
-                  onClick={() => markAsRead(notification.id)}
-                  className={cn(
-                    "p-4 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors",
-                    !notification.read && "bg-blue-50/50 dark:bg-blue-900/20"
-                  )}
+                  onClick={() => handleNotificationClick(notification.id)}
+                  className={`flex items-start space-x-3 rounded-md p-2 text-sm hover:bg-slate-100 ${
+                    !notification.read ? 'font-medium bg-indigo-50' : ''
+                  }`}
                 >
-                  <div className="flex items-start gap-3">
-                    <div className={cn("mt-0.5 p-1.5 rounded-lg", getTypeColor(notification.type))}>
-                      {getIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm text-slate-900 dark:text-white">
-                        {notification.title}
-                      </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                        {notification.message}
-                      </p>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                        {notification.timestamp.toLocaleTimeString()}
-                      </p>
-                    </div>
-                    {!notification.read && (
-                      <div className="w-2 h-2 rounded-full bg-indigo-600 flex-shrink-0" />
-                    )}
+                  <div className="flex h-3 w-3 flex-shrink-0 items-center justify-center">
+                    {/* Notification type icon - for now we use a generic bell, but could be customized */ }
+                    <Bell className="h-3 w-3 text-indigo-600" />
                   </div>
-                </div>
+                  <div className="flex-1 space-y-1">
+                    <p className="line-clamp-1 font-medium text-slate-900">{notification.title}</p>
+                    <p className="line-clamp-1 text-slate-500 text-xs">{notification.message}</p>
+                    <p className="text-xs text-slate-400">
+                      {formatDistanceToNow(new Date(notification.timestamp), { addSuffix: true })}
+                    </p>
+                  </div>
+                </DropdownMenuItem>
               ))}
-            </div>
+              <DropdownMenuItem className="border-t pt-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={clearNotifications}
+                  className="w-full text-left text-slate-500 hover:text-slate-600"
+                >
+                  Clear All
+                </Button>
+              </DropdownMenuItem>
+            </>
           )}
-
-          <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-            <button
-              onClick={clearAll}
-              className="w-full text-xs font-bold text-slate-500 hover:text-rose-600"
-            >
-              Clear All Notifications
-            </button>
-          </div>
-        </div>
-      )}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
 };
+
+export default NotificationBell;
