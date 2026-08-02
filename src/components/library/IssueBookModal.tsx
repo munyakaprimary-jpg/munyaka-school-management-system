@@ -13,7 +13,7 @@ interface IssueBookModalProps {
   isOpen: boolean;
   onClose: () => void;
   book: Book | null;
-  onIssueBook: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number, grade?: string) => Promise<void>;
+  onIssueBook: (bookId: string, borrowerName: string, borrowerType: 'Student' | 'Staff', dueDate: string, quantity: number, grade?: string, stream?: string) => Promise<void>;
 }
 
 export const IssueBookModal: React.FC<IssueBookModalProps> = ({
@@ -25,6 +25,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
   const [borrowerName, setBorrowerName] = useState("");
   const [borrowerType, setBorrowerType] = useState<'Student' | 'Staff'>("Student");
   const [selectedGrade, setSelectedGrade] = useState("");
+  const [selectedStream, setSelectedStream] = useState("");
   const [quantity, setQuantity] = useState<number>(1);
   
   // Default due date to 14 days from today
@@ -42,11 +43,14 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     ...Array.from({ length: 9 }, (_, i) => `Grade ${i + 1}`)
   ], []);
 
+  const streamOptions = useMemo(() => ["Blue", "Green", "Yellow", "Alpha", "Beta"], []);
+
   useEffect(() => {
     if (isOpen) {
       setBorrowerName("");
       setBorrowerType("Student");
       setSelectedGrade("");
+      setSelectedStream("");
       setQuantity(1);
       setDueDate(defaultDueDate);
       setErrorMsg("");
@@ -83,8 +87,8 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
       return;
     }
 
-    if (borrowerType === 'Student' && !selectedGrade) {
-      setErrorMsg("Please select a class / grade level.");
+    if (borrowerType === 'Student' && (!selectedGrade || !selectedStream)) {
+      setErrorMsg("Please select both a class grade and stream.");
       return;
     }
 
@@ -97,7 +101,7 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
     setErrorMsg("");
 
     try {
-      await onIssueBook(book.id, borrowerName.trim(), borrowerType, dueDate, quantity, selectedGrade);
+      await onIssueBook(book.id, borrowerName.trim(), borrowerType, dueDate, quantity, selectedGrade, selectedStream);
       onClose();
     } catch (err) {
       setErrorMsg("Failed to process book checkout.");
@@ -174,7 +178,10 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Borrower Type</Label>
             <Select value={borrowerType} onValueChange={(val: 'Student' | 'Staff') => {
               setBorrowerType(val);
-              if (val !== 'Student') setSelectedGrade("");
+              if (val !== 'Student') {
+                setSelectedGrade("");
+                setSelectedStream("");
+              }
               setErrorMsg("");
             }}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
@@ -189,18 +196,33 @@ export const IssueBookModal: React.FC<IssueBookModalProps> = ({
 
           {/* 3. Conditional Class / Grade */}
           {borrowerType === 'Student' ? (
-            <div className="space-y-1.5 animate-in fade-in slide-in-from-left-2 duration-300">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Class / Grade</Label>
-              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
-                  <SelectValue placeholder="Select Class..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-2xl">
-                  {gradeOptions.map(grade => (
-                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3 animate-in fade-in slide-in-from-left-2 duration-300">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade</Label>
+                <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue placeholder="Grade..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {gradeOptions.map(grade => (
+                      <SelectItem key={grade} value={grade}>{grade}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Stream</Label>
+                <Select value={selectedStream} onValueChange={setSelectedStream}>
+                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold text-slate-800">
+                    <SelectValue placeholder="Stream..." />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    {streamOptions.map(stream => (
+                      <SelectItem key={stream} value={stream}>{stream}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           ) : (
             <div className="hidden md:block" />

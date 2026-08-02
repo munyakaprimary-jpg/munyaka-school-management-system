@@ -23,6 +23,8 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
     bookTitle: "Spark: English Grade 4",
     borrowerName: "Brian Kiptoo",
     borrowerType: "Student",
+    grade: "Grade 4",
+    stream: "Blue",
     issuedDate: "2024-10-10",
     dueDate: "2024-10-24",
     status: "Issued",
@@ -36,6 +38,8 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
     bookTitle: "Spark: English Grade 4",
     borrowerName: "Mary Atieno",
     borrowerType: "Student",
+    grade: "Grade 4",
+    stream: "Blue",
     issuedDate: "2024-09-15",
     dueDate: "2024-09-29",
     returnedDate: "2024-09-28",
@@ -116,14 +120,15 @@ const Library = () => {
     showSuccess(`Registered "${newBook.title}" (${newBook.stock} copies) into library catalog!`);
   };
 
-  // Issue Book Action Handler (Supports multi-copy quantity and optional Grade)
+  // Issue Book Action Handler (Supports multi-copy quantity, Grade, and Stream)
   const handleIssueBook = async (
     bookId: string, 
     borrowerName: string, 
     borrowerType: 'Student' | 'Staff', 
     dueDate: string,
     quantity: number = 1,
-    grade?: string
+    grade?: string,
+    stream?: string
   ) => {
     // Artificial delay for smooth UX transition
     await new Promise(r => setTimeout(r, 600));
@@ -145,8 +150,10 @@ const Library = () => {
       id: `log-${Date.now()}`,
       bookId,
       bookTitle: book.title,
-      borrowerName: grade ? `${borrowerName} (${grade})` : borrowerName,
+      borrowerName,
       borrowerType,
+      grade,
+      stream,
       issuedDate: new Date().toISOString().split('T')[0],
       dueDate,
       status: "Issued",

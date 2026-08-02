@@ -14,6 +14,8 @@ export interface BorrowLog {
   bookTitle: string;
   borrowerName: string;
   borrowerType: 'Student' | 'Staff';
+  grade?: string;
+  stream?: string;
   issuedDate: string;
   dueDate: string;
   returnedDate?: string;
