@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star } from 'lucide-react';
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -42,6 +42,28 @@ interface ProjectRecord {
   submissionsGraded: number;
   status: 'Active' | 'Completed' | 'Pending Grading';
   dueDate: string;
+}
+
+interface ToolMasteryRecord {
+  id: string;
+  name: string;
+  icon: React.ElementType;
+  color: string;
+  bgColor: string;
+  totalStudents: number;
+  proficient: number;
+  developing: number;
+  emerging: number;
+  avgMastery: number;
+}
+
+interface ProficiencyRecord {
+  id: string;
+  studentName: string;
+  grade: string;
+  toolName: string;
+  level: 'Proficient' | 'Developing' | 'Emerging';
+  lastTested: string;
 }
 
 const MOCK_COMPETENCIES: CompetencyRecord[] = [
@@ -139,6 +161,104 @@ const MOCK_PROJECTS: ProjectRecord[] = [
   },
 ];
 
+const MOCK_TOOLS: ToolMasteryRecord[] = [
+  {
+    id: "1",
+    name: "MS Word / Google Docs",
+    icon: FileText,
+    color: "text-blue-600",
+    bgColor: "bg-blue-50",
+    totalStudents: 42,
+    proficient: 28,
+    developing: 10,
+    emerging: 4,
+    avgMastery: 82
+  },
+  {
+    id: "2",
+    name: "MS Excel / Google Sheets",
+    icon: Table,
+    color: "text-emerald-600",
+    bgColor: "bg-emerald-50",
+    totalStudents: 42,
+    proficient: 22,
+    developing: 14,
+    emerging: 6,
+    avgMastery: 74
+  },
+  {
+    id: "3",
+    name: "MS PowerPoint / Google Slides",
+    icon: Presentation,
+    color: "text-amber-600",
+    bgColor: "bg-amber-50",
+    totalStudents: 42,
+    proficient: 25,
+    developing: 12,
+    emerging: 5,
+    avgMastery: 78
+  },
+  {
+    id: "4",
+    name: "Web Browsing & Safety",
+    icon: Globe,
+    color: "text-indigo-600",
+    bgColor: "bg-indigo-50",
+    totalStudents: 42,
+    proficient: 30,
+    developing: 8,
+    emerging: 4,
+    avgMastery: 85
+  },
+  {
+    id: "5",
+    name: "Scratch / Block Coding",
+    icon: Monitor,
+    color: "text-purple-600",
+    bgColor: "bg-purple-50",
+    totalStudents: 42,
+    proficient: 18,
+    developing: 16,
+    emerging: 8,
+    avgMastery: 68
+  },
+  {
+    id: "6",
+    name: "Digital Citizenship",
+    icon: Shield,
+    color: "text-rose-600",
+    bgColor: "bg-rose-50",
+    totalStudents: 42,
+    proficient: 20,
+    developing: 15,
+    emerging: 7,
+    avgMastery: 71
+  }
+];
+
+const MOCK_PROFICIENCY_RECORDS: ProficiencyRecord[] = [
+  { id: "1", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "2", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-14" },
+  { id: "3", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-13" },
+  { id: "4", studentName: "Mary Atieno", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "5", studentName: "Mary Atieno", grade: "Grade 4", toolName: "MS Excel / Google Sheets", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "6", studentName: "Emmanuel Maina", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Developing", lastTested: "2024-10-13" },
+  { id: "7", studentName: "Emmanuel Maina", grade: "Grade 4", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-12" },
+  { id: "8", studentName: "Sheila Chepkoech", grade: "Grade 5", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "9", studentName: "Sheila Chepkoech", grade: "Grade 5", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "10", studentName: "David Mutua", grade: "Grade 5", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
+  { id: "11", studentName: "David Mutua", grade: "Grade 5", toolName: "Scratch / Block Coding", level: "Developing", lastTested: "2024-10-12" },
+  { id: "12", studentName: "Grace Wanjiku", grade: "Grade 6", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "13", studentName: "Grace Wanjiku", grade: "Grade 6", toolName: "MS PowerPoint / Google Slides", level: "Developing", lastTested: "2024-10-14" },
+  { id: "14", studentName: "Joseph Kariuki", grade: "Grade 6", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
+  { id: "15", studentName: "Faith Njeri", grade: "Grade 7", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "16", studentName: "Faith Njeri", grade: "Grade 7", toolName: "Scratch / Block Coding", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "17", studentName: "George Ochieng", grade: "Grade 7", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-13" },
+  { id: "18", studentName: "Helen Moraa", grade: "Grade 8", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "19", studentName: "Helen Moraa", grade: "Grade 8", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "20", studentName: "Helen Moraa", grade: "Grade 8", toolName: "Digital Citizenship", level: "Developing", lastTested: "2024-10-13" },
+];
+
 const CATEGORIES = [
   "Word Processing",
   "Spreadsheets", 
@@ -156,7 +276,7 @@ const GRADE_OPTIONS = [
 ];
 
 const DigitalSkillsAssessment = () => {
-  const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'projects'>('competencies');
+  const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'projects' | 'software'>('competencies');
   
   // Competencies Tab State
   const [searchTerm, setSearchTerm] = useState("");
@@ -169,6 +289,11 @@ const DigitalSkillsAssessment = () => {
   // Projects Tab State
   const [projectSearchTerm, setProjectSearchTerm] = useState("");
   const [projectGradeFilter, setProjectGradeFilter] = useState("all");
+
+  // Software Mastery Tab State
+  const [softwareSearchTerm, setSoftwareSearchTerm] = useState("");
+  const [softwareToolFilter, setSoftwareToolFilter] = useState("all");
+  const [softwareLevelFilter, setSoftwareLevelFilter] = useState("all");
 
   const filteredCompetencies = useMemo(() => {
     return MOCK_COMPETENCIES.filter(record => {
@@ -195,6 +320,16 @@ const DigitalSkillsAssessment = () => {
     });
   }, [projectSearchTerm, projectGradeFilter]);
 
+  const filteredProficiencyRecords = useMemo(() => {
+    return MOCK_PROFICIENCY_RECORDS.filter(record => {
+      const matchesSearch = record.studentName.toLowerCase().includes(softwareSearchTerm.toLowerCase()) ||
+                           record.toolName.toLowerCase().includes(softwareSearchTerm.toLowerCase());
+      const matchesTool = softwareToolFilter === "all" || record.toolName === softwareToolFilter;
+      const matchesLevel = softwareLevelFilter === "all" || record.level === softwareLevelFilter;
+      return matchesSearch && matchesTool && matchesLevel;
+    });
+  }, [softwareSearchTerm, softwareToolFilter, softwareLevelFilter]);
+
   const competencyStats = useMemo(() => {
     const total = MOCK_COMPETENCIES.length;
     const ee = MOCK_COMPETENCIES.filter(r => r.rating === 'EE').length;
@@ -216,8 +351,16 @@ const DigitalSkillsAssessment = () => {
     const totalGraded = MOCK_PROJECTS.reduce((sum, p) => sum + p.submissionsGraded, 0);
     const gradedPct = totalSubmissions > 0 ? Math.round((totalGraded / totalSubmissions) * 100) : 0;
     const highestScore = Math.max(...MOCK_PROJECTS.map(p => p.maxPoints));
-    const avgScore = 81; // Mock average class score
+    const avgScore = 81;
     return { activeProjects, gradedPct, highestScore, avgScore };
+  }, []);
+
+  const softwareStats = useMemo(() => {
+    const appsAssessed = MOCK_TOOLS.length;
+    const avgMastery = Math.round(MOCK_TOOLS.reduce((sum, t) => sum + t.avgMastery, 0) / appsAssessed);
+    const highPerformers = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Proficient').length;
+    const needsPractice = MOCK_PROFICIENCY_RECORDS.filter(r => r.level === 'Emerging').length;
+    return { appsAssessed, avgMastery, highPerformers, needsPractice };
   }, []);
 
   const getRatingBadge = (rating: string) => {
@@ -263,6 +406,20 @@ const DigitalSkillsAssessment = () => {
     );
   };
 
+  const getProficiencyBadge = (level: string) => {
+    const configs = {
+      Proficient: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+      Developing: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+      Emerging: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-100" },
+    };
+    const config = configs[level as keyof typeof configs] || configs.Developing;
+    return (
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+        {level}
+      </Badge>
+    );
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -297,6 +454,14 @@ const DigitalSkillsAssessment = () => {
           }`}
         >
           <FileCheck className="w-4 h-4" /> Project Evaluations
+        </button>
+        <button
+          onClick={() => setActiveTab('software')}
+          className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
+            activeTab === 'software' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
+          }`}
+        >
+          <Monitor className="w-4 h-4" /> Software Mastery
         </button>
       </div>
 
@@ -730,6 +895,221 @@ const DigitalSkillsAssessment = () => {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {activeTab === 'software' && (
+        <div className="space-y-6">
+          {/* Metric Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Monitor size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Apps Assessed</p>
+                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{softwareStats.appsAssessed}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <TrendingUpIcon size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Avg Mastery</p>
+                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{softwareStats.avgMastery}%</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Users size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">High Performers</p>
+                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{softwareStats.highPerformers}</h3>
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-4">
+                <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
+                  <TrendingDown size={24} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Needs Practice</p>
+                  <h3 className="text-2xl font-black text-rose-700 leading-none mt-1">{softwareStats.needsPractice}</h3>
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* Filters & Search */}
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="flex flex-col md:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Input 
+                  placeholder="Search by learner name or tool..." 
+                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  value={softwareSearchTerm}
+                  onChange={(e) => setSoftwareSearchTerm(e.target.value)}
+                />
+              </div>
+              <Select value={softwareToolFilter} onValueChange={setSoftwareToolFilter}>
+                <SelectTrigger className="w-[220px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Tools" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="all">All Tools</SelectItem>
+                  {MOCK_TOOLS.map(tool => (
+                    <SelectItem key={tool.id} value={tool.name}>{tool.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select value={softwareLevelFilter} onValueChange={setSoftwareLevelFilter}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Levels" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="all">All Levels</SelectItem>
+                  <SelectItem value="Proficient">Proficient</SelectItem>
+                  <SelectItem value="Developing">Developing</SelectItem>
+                  <SelectItem value="Emerging">Emerging</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={18} /> Export CSV
+              </Button>
+            </div>
+          </Card>
+
+          {/* Tool Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {MOCK_TOOLS.map((tool) => {
+              const Icon = tool.icon;
+              return (
+                <Card key={tool.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex justify-between items-start">
+                      <div className={cn("p-3 rounded-2xl", tool.bgColor)}>
+                        <Icon className={cn("text-2xl", tool.color)} size={28} />
+                      </div>
+                      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs", tool.bgColor, tool.color)}>
+                        {tool.avgMastery}% Avg
+                      </Badge>
+                    </div>
+                    
+                    <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                      {tool.name}
+                    </h3>
+
+                    <div className="space-y-3 pt-2 border-t border-slate-100">
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="p-2 bg-emerald-50 rounded-xl">
+                          <p className="text-2xl font-black text-emerald-700">{tool.proficient}</p>
+                          <p className="text-[10px] font-bold text-emerald-600 uppercase">Proficient</p>
+                        </div>
+                        <div className="p-2 bg-amber-50 rounded-xl">
+                          <p className="text-2xl font-black text-amber-700">{tool.developing}</p>
+                          <p className="text-[10px] font-bold text-amber-600 uppercase">Developing</p>
+                        </div>
+                        <div className="p-2 bg-rose-50 rounded-xl">
+                          <p className="text-2xl font-black text-rose-700">{tool.emerging}</p>
+                          <p className="text-[10px] font-bold text-rose-600 uppercase">Emerging</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex justify-between text-xs font-black uppercase text-slate-400 tracking-wider mb-1">
+                          <span>Mastery Progress</span>
+                          <span className={cn("font-bold", tool.avgMastery >= 80 ? "text-emerald-600" : tool.avgMastery >= 70 ? "text-amber-600" : "text-rose-600")}>
+                            {tool.avgMastery}%
+                          </span>
+                        </div>
+                        <Progress value={tool.avgMastery} className="h-2.5" />
+                      </div>
+
+                      <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
+                        <span>Total Students: {tool.totalStudents}</span>
+                        <span className="text-slate-500">Last Updated: Oct 15, 2024</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+
+          {/* Learner Proficiency Table */}
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="p-6 border-b bg-slate-50/50">
+              <CardTitle className="text-lg font-black text-slate-900">Learner Proficiency Records</CardTitle>
+              <p className="text-sm text-slate-500">Individual student proficiency levels across all assessed software tools.</p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50/50 border-b">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Tool / Application</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Proficiency Level</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Last Tested</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredProficiencyRecords.length > 0 ? (
+                      filteredProficiencyRecords.map((record) => (
+                        <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
+                          <td className="px-8 py-5">
+                            <p className="font-bold text-slate-900">{record.studentName}</p>
+                          </td>
+                          <td className="px-8 py-5">
+                            <span className="font-bold text-slate-700">{record.grade}</span>
+                          </td>
+                          <td className="px-8 py-5">
+                            <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold text-xs">
+                              {record.toolName}
+                            </Badge>
+                          </td>
+                          <td className="px-8 py-5 text-center">
+                            {getProficiencyBadge(record.level)}
+                          </td>
+                          <td className="px-8 py-5 font-medium text-slate-600">{record.lastTested}</td>
+                          <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
+                                <Eye size={16} />
+                              </Button>
+                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
+                                <Edit size={16} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-8 py-16 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <Search size={32} className="text-slate-200" />
+                            <p className="text-slate-500 font-bold">No proficiency records match the current filters.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       )}
     </div>
