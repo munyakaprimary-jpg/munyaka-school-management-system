@@ -9,7 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
 import { Book as BookIcon, Search, Plus, BookOpen, History, AlertCircle } from 'lucide-react';
 import { BOOKS } from '@/lib/mock-data';
-import { Book, BorrowLog } from '@/types/library';
+import { Book, BorrowLog, getLogBalance } from '@/types/library';
 import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { BookHistoryModal } from '@/components/library/BookHistoryModal';
 import { RegisterBookModal } from '@/components/library/RegisterBookModal';
@@ -25,7 +25,10 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
     borrowerType: "Student",
     issuedDate: "2024-10-10",
     dueDate: "2024-10-24",
-    status: "Issued"
+    status: "Issued",
+    qty_issued: 3,
+    qty_returned: 1,
+    qty_lost: 0
   },
   {
     id: "log-2",
@@ -36,7 +39,10 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
     issuedDate: "2024-09-15",
     dueDate: "2024-09-29",
     returnedDate: "2024-09-28",
-    status: "Returned"
+    status: "Returned",
+    qty_issued: 2,
+    qty_returned: 2,
+    qty_lost: 0
   },
   {
     id: "log-3",
@@ -46,7 +52,10 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
     borrowerType: "Staff",
     issuedDate: "2024-10-01",
     dueDate: "2024-10-15",
-    status: "Issued"
+    status: "Issued",
+    qty_issued: 1,
+    qty_returned: 0,
+    qty_lost: 0
   }
 ];
 
@@ -135,31 +144,65 @@ const Library = () => {
     const newLog: BorrowLog = {
       id: `log-${Date.now()}`,
       bookId,
-      bookTitle: `${book.title}${quantity > 1 ? ` (${quantity} copies)` : ''}`,
+      bookTitle: book.title,
       borrowerName: grade ? `${borrowerName} (${grade})` : borrowerName,
       borrowerType,
       issuedDate: new Date().toISOString().split('T')[0],
       dueDate,
-      status: "Issued"
+      status: "Issued",
+      qty_issued: quantity,
+      qty_returned: 0,
+      qty_lost: 0
     };
 
     setHistoryLogs(prev => [newLog, ...prev]);
     showSuccess(`Issued ${quantity} copy${quantity > 1 ? 'ies' : ''} of "${book.title}" to ${borrowerName}!`);
   };
 
-  // Return Book Action Handler from History Modal
-  const handleReturnBook = (logId: string) => {
+  // Process Partial Return / Loss Handler
+  const handleProcessReturn = (logId: string, qtyReturned: number, qtyLost: number) => {
     const log = historyLogs.find(l => l.id === logId);
     if (!log) return;
 
-    // 1. Decrement borrowed count for the book
-    setBooks(prev => prev.map(b => b.id === log.bookId ? { ...b, borrowed: Math.max(0, b.borrowed - 1) } : b));
+    const totalProcessed = qtyReturned + qtyLost;
+    const currentReturned = log.qty_returned || 0;
+    const currentLost = log.qty_lost || 0;
 
-    // 2. Update log status
-    const returnedDate = new Date().toISOString().split('T')[0];
-    setHistoryLogs(prev => prev.map(l => l.id === logId ? { ...l, status: 'Returned', returnedDate } : l));
+    const newReturnedTotal = currentReturned + qtyReturned;
+    const newLostTotal = currentLost + qtyLost;
+    const newBalance = log.qty_issued - (newReturnedTotal + newLostTotal);
 
-    showSuccess(`Marked "${log.bookTitle}" as returned by ${log.borrowerName}. Stock restored.`);
+    // 1. Update the log record
+    const todayStr = new Date().toISOString().split('T')[0];
+    setHistoryLogs(prev => prev.map(l => {
+      if (l.id === logId) {
+        return {
+          ...l,
+          qty_returned: newReturnedTotal,
+          qty_lost: newLostTotal,
+          returnedDate: newBalance === 0 ? todayStr : l.returnedDate,
+          status: newBalance === 0 ? (newLostTotal > 0 ? 'Closed' : 'Returned') : 'Issued'
+        };
+      }
+      return l;
+    }));
+
+    // 2. Update the Book stock & borrowed count:
+    // - Borrowed count decreases by totalProcessed (returned + lost books are no longer on loan)
+    // - Stock count decreases by qtyLost (lost books are permanently removed from inventory)
+    setBooks(prev => prev.map(b => {
+      if (b.id === log.bookId) {
+        const newBorrowed = Math.max(0, b.borrowed - totalProcessed);
+        const newStock = Math.max(0, b.stock - qtyLost);
+        return { ...b, borrowed: newBorrowed, stock: newStock };
+      }
+      return b;
+    }));
+
+    let msg = `Processed return for ${log.borrowerName}: `;
+    if (qtyReturned > 0) msg += `${qtyReturned} returned. `;
+    if (qtyLost > 0) msg += `${qtyLost} declared lost. `;
+    showSuccess(msg);
   };
 
   return (
@@ -201,7 +244,6 @@ const Library = () => {
           <option>Core Text</option>
           <option>Reference</option>
           <option>Supplementary</option>
-          <option>General Reading</option>
         </select>
       </div>
 
@@ -210,7 +252,7 @@ const Library = () => {
         {filteredBooks.map((book) => {
           const available = book.stock - book.borrowed;
           const isOutOfStock = available <= 0;
-          const usagePercent = Math.min(100, Math.round((book.borrowed / book.stock) * 100));
+          const usagePercent = Math.min(100, Math.round((book.borrowed / Math.max(1, book.stock)) * 100));
 
           return (
             <Card key={book.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
@@ -305,7 +347,7 @@ const Library = () => {
         onClose={() => setSelectedBookForHistory(null)}
         book={selectedBookForHistory}
         historyLogs={historyLogs}
-        onReturnBook={handleReturnBook}
+        onProcessReturn={handleProcessReturn}
       />
     </div>
   );
