@@ -31,7 +31,8 @@ import {
   Trash2,
   CheckCircle2,
   AlertCircle,
-  Monitor
+  Monitor,
+  Plus
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
