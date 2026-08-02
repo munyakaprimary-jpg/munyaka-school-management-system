@@ -61,6 +61,7 @@ interface ProficiencyRecord {
   id: string;
   studentName: string;
   grade: string;
+  stream: string;
   toolName: string;
   level: 'Proficient' | 'Developing' | 'Emerging';
   lastTested: string;
@@ -237,26 +238,26 @@ const MOCK_TOOLS: ToolMasteryRecord[] = [
 ];
 
 const initialRecords: ProficiencyRecord[] = [
-  { id: "1", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "2", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-14" },
-  { id: "3", studentName: "Brian Kiptoo", grade: "Grade 4", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-13" },
-  { id: "4", studentName: "Mary Atieno", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "5", studentName: "Mary Atieno", grade: "Grade 4", toolName: "MS Excel / Google Sheets", level: "Proficient", lastTested: "2024-10-14" },
-  { id: "6", studentName: "Emmanuel Maina", grade: "Grade 4", toolName: "MS Word / Google Docs", level: "Developing", lastTested: "2024-10-13" },
-  { id: "7", studentName: "Emmanuel Maina", grade: "Grade 4", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-12" },
-  { id: "8", studentName: "Sheila Chepkoech", grade: "Grade 5", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "9", studentName: "Sheila Chepkoech", grade: "Grade 5", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-14" },
-  { id: "10", studentName: "David Mutua", grade: "Grade 5", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
-  { id: "11", studentName: "David Mutua", grade: "Grade 5", toolName: "Scratch / Block Coding", level: "Developing", lastTested: "2024-10-12" },
-  { id: "12", studentName: "Grace Wanjiku", grade: "Grade 6", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "13", studentName: "Grace Wanjiku", grade: "Grade 6", toolName: "MS PowerPoint / Google Slides", level: "Developing", lastTested: "2024-10-14" },
-  { id: "14", studentName: "Joseph Kariuki", grade: "Grade 6", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
-  { id: "15", studentName: "Faith Njeri", grade: "Grade 7", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "16", studentName: "Faith Njeri", grade: "Grade 7", toolName: "Scratch / Block Coding", level: "Proficient", lastTested: "2024-10-14" },
-  { id: "17", studentName: "George Ochieng", grade: "Grade 7", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-13" },
-  { id: "18", studentName: "Helen Moraa", grade: "Grade 8", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-15" },
-  { id: "19", studentName: "Helen Moraa", grade: "Grade 8", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-14" },
-  { id: "20", studentName: "Helen Moraa", grade: "Grade 8", toolName: "Digital Citizenship", level: "Developing", lastTested: "2024-10-13" },
+  { id: "1", studentName: "Brian Kiptoo", grade: "Grade 4", stream: "East", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "2", studentName: "Brian Kiptoo", grade: "Grade 4", stream: "East", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-14" },
+  { id: "3", studentName: "Brian Kiptoo", grade: "Grade 4", stream: "East", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-13" },
+  { id: "4", studentName: "Mary Atieno", grade: "Grade 4", stream: "West", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "5", studentName: "Mary Atieno", grade: "Grade 4", stream: "West", toolName: "MS Excel / Google Sheets", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "6", studentName: "Emmanuel Maina", grade: "Grade 4", stream: "North", toolName: "MS Word / Google Docs", level: "Developing", lastTested: "2024-10-13" },
+  { id: "7", studentName: "Emmanuel Maina", grade: "Grade 4", stream: "North", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-12" },
+  { id: "8", studentName: "Sheila Chepkoech", grade: "Grade 5", stream: "East", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "9", studentName: "Sheila Chepkoech", grade: "Grade 5", stream: "East", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "10", studentName: "David Mutua", grade: "Grade 5", stream: "West", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
+  { id: "11", studentName: "David Mutua", grade: "Grade 5", stream: "West", toolName: "Scratch / Block Coding", level: "Developing", lastTested: "2024-10-12" },
+  { id: "12", studentName: "Grace Wanjiku", grade: "Grade 6", stream: "Blue", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "13", studentName: "Grace Wanjiku", grade: "Grade 6", stream: "Blue", toolName: "MS PowerPoint / Google Slides", level: "Developing", lastTested: "2024-10-14" },
+  { id: "14", studentName: "Joseph Kariuki", grade: "Grade 6", stream: "Red", toolName: "MS Excel / Google Sheets", level: "Emerging", lastTested: "2024-10-13" },
+  { id: "15", studentName: "Faith Njeri", grade: "Grade 7", stream: "East", toolName: "MS Word / Google Docs", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "16", studentName: "Faith Njeri", grade: "Grade 7", stream: "East", toolName: "Scratch / Block Coding", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "17", studentName: "George Ochieng", grade: "Grade 7", stream: "North", toolName: "MS Excel / Google Sheets", level: "Developing", lastTested: "2024-10-13" },
+  { id: "18", studentName: "Helen Moraa", grade: "Grade 8", stream: "South", toolName: "MS PowerPoint / Google Slides", level: "Proficient", lastTested: "2024-10-15" },
+  { id: "19", studentName: "Helen Moraa", grade: "Grade 8", stream: "South", toolName: "Web Browsing & Safety", level: "Proficient", lastTested: "2024-10-14" },
+  { id: "20", studentName: "Helen Moraa", grade: "Grade 8", stream: "South", toolName: "Digital Citizenship", level: "Developing", lastTested: "2024-10-13" },
 ];
 
 const CATEGORIES = [
@@ -294,6 +295,8 @@ const DigitalSkillsAssessment = () => {
   const [softwareSearchTerm, setSoftwareSearchTerm] = useState("");
   const [softwareToolFilter, setSoftwareToolFilter] = useState("all");
   const [softwareLevelFilter, setSoftwareLevelFilter] = useState("all");
+  const [selectedGrade, setSelectedGrade] = useState("All Grades");
+  const [selectedStream, setSelectedStream] = useState("All Streams");
   
   // Software Mastery Modal & Data State
   const [records, setRecords] = useState<ProficiencyRecord[]>(initialRecords);
@@ -332,9 +335,11 @@ const DigitalSkillsAssessment = () => {
                            record.toolName.toLowerCase().includes(softwareSearchTerm.toLowerCase());
       const matchesTool = softwareToolFilter === "all" || record.toolName === softwareToolFilter;
       const matchesLevel = softwareLevelFilter === "all" || record.level === softwareLevelFilter;
-      return matchesSearch && matchesTool && matchesLevel;
+      const matchesGrade = selectedGrade === "All Grades" || record.grade === selectedGrade;
+      const matchesStream = selectedStream === "All Streams" || record.stream === selectedStream;
+      return matchesSearch && matchesTool && matchesLevel && matchesGrade && matchesStream;
     });
-  }, [records, softwareSearchTerm, softwareToolFilter, softwareLevelFilter]);
+  }, [records, softwareSearchTerm, softwareToolFilter, softwareLevelFilter, selectedGrade, selectedStream]);
 
   const competencyStats = useMemo(() => {
     const total = MOCK_COMPETENCIES.length;
@@ -999,6 +1004,34 @@ const DigitalSkillsAssessment = () => {
                   <SelectItem value="Proficient">Proficient</SelectItem>
                   <SelectItem value="Developing">Developing</SelectItem>
                   <SelectItem value="Emerging">Emerging</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Grades" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="All Grades">All Grades</SelectItem>
+                  <SelectItem value="Grade 4">Grade 4</SelectItem>
+                  <SelectItem value="Grade 5">Grade 5</SelectItem>
+                  <SelectItem value="Grade 6">Grade 6</SelectItem>
+                  <SelectItem value="Grade 7">Grade 7</SelectItem>
+                  <SelectItem value="Grade 8">Grade 8</SelectItem>
+                  <SelectItem value="Grade 9">Grade 9</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={selectedStream} onValueChange={setSelectedStream}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Streams" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="All Streams">All Streams</SelectItem>
+                  <SelectItem value="East">East</SelectItem>
+                  <SelectItem value="West">West</SelectItem>
+                  <SelectItem value="North">North</SelectItem>
+                  <SelectItem value="South">South</SelectItem>
+                  <SelectItem value="Blue">Blue</SelectItem>
+                  <SelectItem value="Red">Red</SelectItem>
                 </SelectContent>
               </Select>
               <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
