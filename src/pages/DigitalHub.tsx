@@ -20,6 +20,7 @@ import {
   Activity,
   ShieldCheck
 } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 const DigitalHub = () => {
   const resources = [
