@@ -24,10 +24,42 @@ import { cn } from "@/lib/utils";
 
 const DigitalHub = () => {
   const resources = [
-    { title: "Virtual Science Lab", category: "Interactive", type: "Simulations", icon: Cpu, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "KICD E-Learning Portal", category: "Curriculum", type: "Kenya National", icon: BookOpen, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { title: "Digital Literacy Videos", category: "Media", type: "YouTube Library", icon: Video, color: "text-rose-600", bg: "bg-rose-50" },
-    { title: "CBC Resource Drive", category: "Storage", type: "Cloud Access", icon: HardDrive, color: "text-emerald-600", bg: "bg-emerald-50" },
+    { 
+      title: "Virtual Science Lab", 
+      category: "Interactive", 
+      type: "Simulations", 
+      icon: Cpu, 
+      color: "text-blue-600", 
+      bg: "bg-blue-50",
+      url: "https://phet.colorado.edu/"
+    },
+    { 
+      title: "KICD E-Learning Portal", 
+      category: "Curriculum", 
+      type: "Kenya National", 
+      icon: BookOpen, 
+      color: "text-indigo-600", 
+      bg: "bg-indigo-50",
+      url: "https://www.bec.or.ke/"
+    },
+    { 
+      title: "Digital Literacy Videos", 
+      category: "Media", 
+      type: "YouTube Library", 
+      icon: Video, 
+      color: "text-rose-600", 
+      bg: "bg-rose-50",
+      url: "https://www.youtube.com/results?search_query=cbc+digital+literacy+kenya"
+    },
+    { 
+      title: "CBC Resource Drive", 
+      category: "Storage", 
+      type: "Cloud Access", 
+      icon: HardDrive, 
+      color: "text-emerald-600", 
+      bg: "bg-emerald-50",
+      url: "#"
+    },
   ];
 
   const labs = [
@@ -137,7 +169,13 @@ const DigitalHub = () => {
           <h2 className="text-xl font-black text-slate-900">Digital Catalog</h2>
           <div className="space-y-4">
             {resources.map((res, i) => (
-              <Card key={i} className="border-none shadow-sm rounded-3xl bg-white hover:translate-x-1 transition-transform cursor-pointer group">
+              <a
+                key={i}
+                href={res.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block border-none shadow-sm rounded-3xl bg-white hover:translate-x-1 transition-transform cursor-pointer group"
+              >
                 <CardContent className="p-5 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", res.bg, res.color)}>
@@ -152,11 +190,12 @@ const DigitalHub = () => {
                       </div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="rounded-full text-slate-300 group-hover:text-indigo-600">
+                  <div className="flex items-center gap-2 text-slate-300 group-hover:text-indigo-600 transition-colors">
                     <ExternalLink size={18} />
-                  </Button>
+                    <span className="text-[10px] font-bold text-slate-400">Open</span>
+                  </div>
                 </CardContent>
-              </Card>
+              </a>
             ))}
           </div>
 
