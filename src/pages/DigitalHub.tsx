@@ -47,7 +47,7 @@ const DigitalHub = () => {
       icon: BookOpen, 
       color: "text-indigo-600", 
       bg: "bg-indigo-50",
-      url: "https://www.bec.or.ke/"
+      url: "https://www.keducationcloud.org/"
     },
     { 
       title: "Digital Literacy Videos", 
