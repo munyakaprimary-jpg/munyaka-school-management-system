@@ -1066,8 +1066,11 @@ const DigitalSkillsAssessment = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredProficiencyRecords.length > 0 ? (
-                      filteredProficiencyRecords.map((record) => (
-                        <tr key={record.id} className="hover:bg-slate-50/50 transition-colors group">
+                      filteredProficiencyRecords.map((record, index) => (
+                        <tr 
+                          key={`${record.id}-${record.toolName.replace(/\s+/g, '-')}-${index}`}
+                          className="hover:bg-slate-50/50 transition-colors group"
+                        >
                           <td className="px-8 py-5">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
