@@ -40,6 +40,7 @@ import Promote from "./pages/Promote";
 import StaffAttendancePage from "./pages/StaffAttendance";
 import StaffCheckIn from "./pages/StaffCheckIn";
 import DigitalHub from "./pages/DigitalHub";
+import TeacherTraining from "./pages/TeacherTraining";
 
 const queryClient = new QueryClient();
 
@@ -91,6 +92,7 @@ const App = () => (
                 <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
                 <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
                 <Route path="/digital-hub" element={<ProtectedRoute><Layout><DigitalHub /></Layout></ProtectedRoute>} />
+                <Route path="/teacher-training" element={<ProtectedRoute><Layout><TeacherTraining /></Layout></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
