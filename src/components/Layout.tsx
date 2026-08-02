@@ -38,7 +38,8 @@ import {
   GraduationCap,
   LogIn,
   MoreHorizontal,
-  Laptop
+  Laptop,
+  Monitor
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -120,8 +121,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     
-    // Digital Hub
+    // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['super_admin', 'head_teacher'] },
     
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
@@ -279,7 +281,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight">Munyaka Portal</span>
             </div>
 
-            <div className="relative hidden md:block flex-1 max-w-md ml-4">
+            <div className="relative hidden md:block flex-1 max-md ml-4">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
