@@ -46,7 +46,7 @@ const DigitalHub = () => {
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://www.youtube.com/c/KICDKenya",
+      url: "https://ekitabu.com",
       icon: Video
     }
   ];
@@ -221,7 +221,7 @@ const DigitalHub = () => {
         <div className="space-y-6">
           <h2 className="text-xl font-black text-slate-900">Digital Catalog</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="flex flex-col gap-4">
             {catalogResources.map((item, idx) => (
               <div
                 key={idx}
@@ -249,8 +249,11 @@ const DigitalHub = () => {
             ))}
           </div>
 
-          <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 relative overflow-hidden">
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12">
+          <Card 
+            className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 relative overflow-hidden cursor-pointer hover:bg-indigo-800 transition-all group"
+            onClick={() => handleOpenLink("https://elearning.kicd.ac.ke/")}
+          >
+            <div className="absolute right-[-20px] bottom-[-20px] opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-500">
               <Laptop size={120} />
             </div>
             <div className="relative z-10">
@@ -258,7 +261,7 @@ const DigitalHub = () => {
               <p className="text-indigo-200 text-xs leading-relaxed mb-6 font-medium">
                 Access self-paced modules on Digital Literacy and ICT integration in CBC.
               </p>
-              <Button className="w-full bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl font-black h-12">
+              <Button className="w-full bg-white text-indigo-900 hover:bg-indigo-50 rounded-2xl font-black h-12 pointer-events-none">
                 Open Academy
               </Button>
             </div>
