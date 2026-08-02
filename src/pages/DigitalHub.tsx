@@ -30,43 +30,25 @@ const DigitalHub = () => {
   const [isOnline, setIsOnline] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
 
-  const resources = [
-    { 
-      title: "Virtual Science Lab", 
-      category: "Interactive", 
-      type: "Simulations", 
-      icon: Cpu, 
-      color: "text-blue-600", 
-      bg: "bg-blue-50",
-      url: "https://phet.colorado.edu/"
+  const catalogResources = [
+    {
+      title: "Virtual Science Lab",
+      category: "INTERACTIVE • Simulations",
+      url: "https://phet.colorado.edu/",
+      icon: Cpu
     },
-    { 
-      title: "KICD E-Learning Portal", 
-      category: "Curriculum", 
-      type: "Kenya National", 
-      icon: BookOpen, 
-      color: "text-indigo-600", 
-      bg: "bg-indigo-50",
-      url: "https://www.keducationcloud.org/"
+    {
+      title: "KICD E-Learning Portal",
+      category: "CURRICULUM • Kenya National",
+      url: "https://www.keducationcloud.org/",
+      icon: BookOpen
     },
-    { 
-      title: "Digital Literacy Videos", 
-      category: "Media", 
-      type: "YouTube Library", 
-      icon: Video, 
-      color: "text-rose-600", 
-      bg: "bg-rose-50",
-      url: "https://www.youtube.com/results?search_query=cbc+digital+literacy+kenya"
-    },
-    { 
-      title: "CBC Resource Drive", 
-      category: "Storage", 
-      type: "Cloud Access", 
-      icon: HardDrive, 
-      color: "text-emerald-600", 
-      bg: "bg-emerald-50",
-      url: "#"
-    },
+    {
+      title: "Digital Literacy Videos",
+      category: "MEDIA • YouTube Library",
+      url: "https://www.youtube.com/results?search_query=cbc+digital+literacy+kenya",
+      icon: Video
+    }
   ];
 
   const labs = [
@@ -227,34 +209,33 @@ const DigitalHub = () => {
         {/* E-Learning Resources Sidebar */}
         <div className="space-y-6">
           <h2 className="text-xl font-black text-slate-900">Digital Catalog</h2>
-          <div className="space-y-4">
-            {resources.map((res, i) => (
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {catalogResources.map((item, idx) => (
               <a
-                key={i}
-                href={res.url}
+                key={idx}
+                href={item.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="block border-none shadow-sm rounded-3xl bg-white hover:translate-x-1 transition-transform cursor-pointer group"
+                className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm hover:shadow-md transition-all cursor-pointer group"
               >
-                <CardContent className="p-5 flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                    <div className={cn("w-12 h-12 rounded-2xl flex items-center justify-center shrink-0", res.bg, res.color)}>
-                      <res.icon size={22} />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{res.title}</h4>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[10px] font-black uppercase text-slate-400 tracking-tighter">{res.category}</span>
-                        <span className="w-1 h-1 rounded-full bg-slate-200" />
-                        <span className="text-[10px] font-bold text-indigo-500">{res.type}</span>
-                      </div>
-                    </div>
+                <div className="flex items-center gap-3">
+                  <div className="p-3 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                    <item.icon size={22} />
                   </div>
-                  <div className="flex items-center gap-2 text-slate-300 group-hover:text-indigo-600 transition-colors">
-                    <ExternalLink size={18} />
-                    <span className="text-[10px] font-bold text-slate-400">Open</span>
+                  <div>
+                    <h4 className="font-semibold text-slate-900 dark:text-white group-hover:text-indigo-600 transition-colors">
+                      {item.title}
+                    </h4>
+                    <p className="text-xs uppercase font-bold tracking-wider text-slate-400">
+                      {item.category}
+                    </p>
                   </div>
-                </CardContent>
+                </div>
+                <div className="flex items-center gap-1 text-slate-400 group-hover:text-indigo-600 text-sm font-medium">
+                  <span>Open</span>
+                  <ExternalLink className="w-4 h-4" />
+                </div>
               </a>
             ))}
           </div>
