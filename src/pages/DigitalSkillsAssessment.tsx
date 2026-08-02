@@ -1066,8 +1066,8 @@ const DigitalSkillsAssessment = () => {
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredProficiencyRecords.length > 0 ? (
-                      filteredProficiencyRecords.map((record, index) => (
-                        <tr key={`${record.studentName}-${record.toolName}-${index}`} className="hover:bg-slate-50/50 transition-colors">
+                      filteredProficiencyRecords.map((record) => (
+                        <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-8 py-5">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
@@ -1084,16 +1084,31 @@ const DigitalSkillsAssessment = () => {
                           </td>
                           <td className="px-8 py-5 font-medium text-slate-600">{record.lastTested}</td>
                           <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button className="p-1 text-blue-600 hover:text-blue-800" title="Edit Assessment">
-                                <Edit className="w-4 h-4" />
-                              </button>
-                              <button className="p-1 text-gray-600 hover:text-gray-800" title="View Details">
-                                <Eye className="w-4 h-4" />
-                              </button>
-                              <button className="p-1 text-red-600 hover:text-red-800" title="Delete Record">
-                                <Trash2 className="w-4 h-4" />
-                              </button>
+                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                                title="View Details"
+                              >
+                                <Eye size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                                title="Edit Assessment"
+                              >
+                                <Edit size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="rounded-xl h-9 w-9 text-slate-400 hover:text-rose-600 hover:bg-rose-50" 
+                                title="Delete Record"
+                              >
+                                <Trash2 size={16} />
+                              </Button>
                             </div>
                           </td>
                         </tr>
