@@ -1,16 +1,27 @@
-import React from 'react';
-import { Metadata } from 'next';
+// src/pages/Index.tsx
 
-export const metadata: Metadata = {
-  title: 'Welcome',
-  description: 'This is the home page',
+import React from 'react';
+import { StartIdleTimer, StopIdleTimer } from '../utils/idleTimer';
+
+const Home: React.FC = () => {
+  return (
+    <div className="h-screen flex justify-center items-center bg-gray-100">
+      <div className="bg-white p-8 shadow-lg rounded-md w-full max-w-2xl text-center">
+        <h1>Welcome to the Home Page</h1>
+        {/* Add additional content here */}
+      </div>
+    </div>
+  );
 };
 
-const Home = () => (
-  <div>
-    <h1>Welcome to My App</h1>
-    <p>This is the landing/home page.</p>
-  </div>
-);
+const IdleTimerWrapper: React.FC = () => {
+  React.useEffect(() => {
+    StartIdleTimer();
+    
+    return () => StopIdleTimer();
+  }, []);
 
-export default Home;
+  return <Home />;
+};
+
+export default IdleTimerWrapper;

@@ -1,15 +1,22 @@
-import './favicon.ico';
-import './styles/globals.css';
+// src/App.tsx
 
-import { Suspense } from 'react';
+import React from 'react';
+import { RouterProvider } from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import IdleTimerWrapper from './pages/IdleTimerWrapper';
 
-// Update this line to match your home/dashboard component file name and path
-import Home from './pages/Index';
-
-const App = () => (
-  <Suspense fallback={<div>Loading...</div>}>
-    <Home />
-  </Suspense>
-);
+const App: React.FC = () => {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/login" element={<Login />} />
+        {/* Other routes can be added here */}
+      </Routes>
+    </BrowserRouter>
+  );
+};
 
 export default App;
