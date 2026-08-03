@@ -263,8 +263,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </div>
       </aside>
 
-      {/* Main Content Area */}
-      <main className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main Content Area - Updated with responsive margins to account for fixed sidebar */}
+      <main className={cn(
+        "flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300",
+        isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
+      )}>
         {/* Mobile & Desktop Header Bar */}
         <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 print:hidden">
           <div className="flex items-center gap-3">

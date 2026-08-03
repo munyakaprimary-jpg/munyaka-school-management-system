@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import BackButton from '@/components/ui/BackButton';
-import { Play, Clock, RefreshCw, X } from 'lucide-react';
+import { Play, Clock, RefreshCw, X, AlertCircle, ExternalLink, VideoOff } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface VideoResource {
@@ -17,6 +17,7 @@ interface VideoResource {
   category: string;
   thumbnail: string;
   videoUrl: string;
+  youtubeId?: string;
 }
 
 const videoResources: VideoResource[] = [
@@ -27,7 +28,8 @@ const videoResources: VideoResource[] = [
     duration: '5:30',
     category: 'Basics',
     thumbnail: 'https://images.unsplash.com/photo-1550751827-40b859622351?auto=format&fit=crop&q=80&w=800',
-    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
+    youtubeId: 'Z_97OqS6H7U'
   },
   {
     id: '2',
@@ -36,7 +38,8 @@ const videoResources: VideoResource[] = [
     duration: '8:45',
     category: 'Safety',
     thumbnail: 'https://images.unsplash.com/photo-1563986768609-b6a39a703328?auto=format&fit=crop&q=80&w=800',
-    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+    youtubeId: 'HxySrSbSY7o'
   },
   {
     id: '3',
@@ -45,7 +48,8 @@ const videoResources: VideoResource[] = [
     duration: '6:15',
     category: 'Communication',
     thumbnail: 'https://images.unsplash.com/photo-1573164763594-331915333001?auto=format&fit=crop&q=80&w=800',
-    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+    youtubeId: 'vP6G7zZzG3U'
   },
   {
     id: '4',
@@ -54,7 +58,7 @@ const videoResources: VideoResource[] = [
     duration: '7:20',
     category: 'Safety',
     thumbnail: 'https://images.unsplash.com/photo-1516322572675-6787144333d1?auto=format&fit=crop&q=80&w=800',
-    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
+    videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
   },
   {
     id: '5',
@@ -80,8 +84,8 @@ const DigitalLiteracyVideos = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoResource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
-  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
+  const [videoError, setVideoError] = useState<string | null>(null);
+  const [useYouTubeFallback, setUseYouTubeFallback] = useState(false);
 
   const handleSync = () => {
     setIsSyncing(true);
@@ -90,27 +94,21 @@ const DigitalLiteracyVideos = () => {
 
   const handleWatchVideo = (video: VideoResource) => {
     setSelectedVideo(video);
+    setVideoError(null);
+    setUseYouTubeFallback(false);
     setIsModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedVideo(null);
+    setVideoError(null);
+    setUseYouTubeFallback(false);
   };
 
-  const handlePlayVideo = (video: VideoResource, e: React.MouseEvent) => {
-    e.stopPropagation();
-    setPlayingVideoId(video.id);
-    if (videoRefs.current[video.id]) {
-      videoRefs.current[video.id]?.play();
-    }
-  };
-
-  const handleVideoEnded = (videoId: string) => {
-    setPlayingVideoId(null);
-    if (videoRefs.current[videoId]) {
-      videoRefs.current[videoId]?.load();
-    }
+  const handleVideoError = () => {
+    console.error("Video load error for:", selectedVideo?.title);
+    setVideoError("The direct video file could not be loaded or is in an unsupported format.");
   };
 
   return (
@@ -139,28 +137,21 @@ const DigitalLiteracyVideos = () => {
       {/* Video Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {videoResources.map((video) => (
-          <Card key={video.id} className="border-none shadow-lg rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-300">
-            <div className="relative aspect-video overflow-hidden">
-              <video
-                ref={(el) => videoRefs.current[video.id] = el}
-                src={video.videoUrl}
-                poster={video.thumbnail}
-                className="w-full h-full object-cover"
-                muted
-                playsInline
-                onEnded={() => handleVideoEnded(video.id)}
-                onClick={(e) => e.stopPropagation()}
+          <Card key={video.id} className="border-none shadow-lg rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white">
+            <div 
+              className="relative aspect-video overflow-hidden cursor-pointer"
+              onClick={() => handleWatchVideo(video)}
+            >
+              <img
+                src={video.thumbnail}
+                alt={video.title}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
-              {playingVideoId !== video.id && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors duration-300">
-                  <button
-                    onClick={(e) => handlePlayVideo(video, e)}
-                    className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl hover:bg-indigo-700 transition-all transform hover:scale-105 active:scale-95"
-                  >
-                    <Play size={28} fill="currentColor" />
-                  </button>
+              <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors duration-300">
+                <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-indigo-600 shadow-xl group-hover:scale-110 transition-all active:scale-95">
+                  <Play size={28} fill="currentColor" />
                 </div>
-              )}
+              </div>
               <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
                 <Clock size={14} />
                 {video.duration}
@@ -181,7 +172,7 @@ const DigitalLiteracyVideos = () => {
                 {video.description}
               </p>
               <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 group-hover:bg-indigo-600 transition-colors"
                 onClick={() => handleWatchVideo(video)}
               >
                 Watch Video
@@ -191,44 +182,95 @@ const DigitalLiteracyVideos = () => {
         ))}
       </div>
 
-      {/* Video Player Modal */}
+      {/* Enhanced Video Player Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-full max-w-4xl p-0 bg-black border-none rounded-[2rem] shadow-2xl">
-          <DialogHeader className="flex flex-row items-center justify-between p-4 border-b border-slate-800">
-            <DialogTitle className="text-white text-xl font-bold">
-              {selectedVideo?.title || "Watch Video"}
+        <DialogContent className="w-full max-w-4xl p-0 bg-slate-950 border-none rounded-[2rem] shadow-2xl overflow-hidden">
+          <DialogHeader className="flex flex-row items-center justify-between p-5 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+            <DialogTitle className="text-white text-xl font-black truncate max-w-[80%]">
+              {selectedVideo?.title}
             </DialogTitle>
             <DialogClose asChild>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl h-9 w-9"
-                aria-label="Close video player"
+                className="text-slate-400 hover:text-white hover:bg-white/10 rounded-xl h-10 w-10 shrink-0"
               >
                 <X size={20} />
               </Button>
             </DialogClose>
           </DialogHeader>
-          <div className="relative pt-[56.25%] bg-black">
-            {selectedVideo && (
+          
+          <div className="relative aspect-video bg-black flex items-center justify-center">
+            {selectedVideo && !videoError && !useYouTubeFallback && (
               <video
                 controls
                 autoPlay
-                muted
+                className="w-full h-full"
+                onError={handleVideoError}
                 poster={selectedVideo.thumbnail}
-                src={selectedVideo.videoUrl}
-                className="absolute top-0 left-0 w-full h-full object-contain"
+              >
+                <source src={selectedVideo.videoUrl} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
+            )}
+
+            {/* Error & Fallback UI */}
+            {videoError && !useYouTubeFallback && (
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-slate-900">
+                <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-2">
+                  <VideoOff size={32} />
+                </div>
+                <div className="space-y-2 max-w-md">
+                  <h3 className="text-white font-bold text-lg">Unable to Play Video</h3>
+                  <p className="text-slate-400 text-sm">{videoError}</p>
+                </div>
+                <div className="flex flex-wrap justify-center gap-3 pt-4">
+                  {selectedVideo?.youtubeId && (
+                    <Button 
+                      onClick={() => setUseYouTubeFallback(true)}
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl h-12 px-6 gap-2"
+                    >
+                      <Play size={18} fill="currentColor" /> Watch on Web Player
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    onClick={handleCloseModal}
+                    className="border-white/20 text-white hover:bg-white/10 rounded-xl h-12 px-6"
+                  >
+                    Close
+                  </Button>
+                </div>
+              </div>
+            )}
+
+            {/* YouTube Fallback Iframe */}
+            {useYouTubeFallback && selectedVideo?.youtubeId && (
+              <iframe
+                className="w-full h-full"
+                src={`https://www.youtube.com/embed/${selectedVideo.youtubeId}?autoplay=1`}
+                title={selectedVideo.title}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
               />
             )}
           </div>
-          {selectedVideo && (
-            <div className="p-4 border-t border-slate-800">
-              <p className="text-slate-300 text-sm">
-                {selectedVideo.description}
-              </p>
+
+          <div className="p-8 bg-slate-900">
+            <div className="flex items-center gap-2 mb-4">
+              <Badge className="bg-indigo-600 text-white border-none font-black text-[10px] uppercase tracking-widest px-3 py-1">
+                {selectedVideo?.category}
+              </Badge>
+              <Badge variant="outline" className="text-slate-400 border-white/10 font-bold text-[10px]">
+                {selectedVideo?.duration} Mins
+              </Badge>
             </div>
-          )}
+            <p className="text-slate-300 text-base leading-relaxed font-medium">
+              {selectedVideo?.description}
+            </p>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
