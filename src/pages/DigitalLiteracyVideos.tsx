@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -80,6 +80,8 @@ const DigitalLiteracyVideos = () => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState<VideoResource | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [playingVideoId, setPlayingVideoId] = useState<string | null>(null);
+  const videoRefs = useRef<{ [key: string]: HTMLVideoElement | null }>({});
 
   const handleSync = () => {
     setIsSyncing(true);
@@ -94,6 +96,21 @@ const DigitalLiteracyVideos = () => {
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setSelectedVideo(null);
+  };
+
+  const handlePlayVideo = (video: VideoResource, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setPlayingVideoId(video.id);
+    if (videoRefs.current[video.id]) {
+      videoRefs.current[video.id]?.play();
+    }
+  };
+
+  const handleVideoEnded = (videoId: string) => {
+    setPlayingVideoId(null);
+    if (videoRefs.current[videoId]) {
+      videoRefs.current[videoId]?.load();
+    }
   };
 
   return (
@@ -124,20 +141,29 @@ const DigitalLiteracyVideos = () => {
         {videoResources.map((video) => (
           <Card key={video.id} className="border-none shadow-lg rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-300">
             <div className="relative aspect-video overflow-hidden">
-              <img
-                src={video.thumbnail}
-                alt={video.title}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              <video
+                ref={(el) => videoRefs.current[video.id] = el}
+                src={video.videoUrl}
+                poster={video.thumbnail}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+                onEnded={() => handleVideoEnded(video.id)}
+                onClick={(e) => e.stopPropagation()}
               />
-              <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors duration-300" />
+              {playingVideoId !== video.id && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/10 transition-colors duration-300">
+                  <button
+                    onClick={(e) => handlePlayVideo(video, e)}
+                    className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl hover:bg-indigo-700 transition-all transform hover:scale-105 active:scale-95"
+                  >
+                    <Play size={28} fill="currentColor" />
+                  </button>
+                </div>
+              )}
               <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
                 <Clock size={14} />
                 {video.duration}
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-                <div className="w-14 h-14 bg-indigo-600 rounded-full flex items-center justify-center text-white shadow-xl">
-                  <Play size={28} fill="currentColor" />
-                </div>
               </div>
             </div>
             <CardHeader className="p-6 pb-2">
