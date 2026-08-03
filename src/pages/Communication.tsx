@@ -15,6 +15,7 @@ import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
 import { MESSAGES as initialMessages } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
+import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 
 const Communication = () => {
   const { user } = useAuth();
@@ -25,6 +26,7 @@ const Communication = () => {
   const [recipient, setRecipient] = useState("All Parents");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  const { addNotification } = useNotifications(); // Get the addNotification function
 
   // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
   if (user?.role !== 'super_admin') {
@@ -44,6 +46,13 @@ const Communication = () => {
     setIsOpen(false);
     setSubject(""); setBody("");
     showSuccess(`${msgType} message broadcasted successfully!`);
+
+    // Add a notification for the sent message
+    addNotification({
+      title: `New ${msgType} Message Sent`,
+      message: `Sent to ${recipient}: ${subject}`,
+      type: 'message', // We can use this to customize the icon in the bell if needed
+    });
   };
 
   return (
@@ -107,13 +116,6 @@ const Communication = () => {
               <Button type="button" variant={msgType === 'Email' ? 'default' : 'outline'} className="rounded-xl h-11 font-bold" onClick={() => setMsgType('Email')}><Mail size={16} className="mr-2" /> Email</Button>
               <Button type="button" variant={msgType === 'SMS' ? 'default' : 'outline'} className="rounded-xl h-11 font-bold" onClick={() => setMsgType('SMS')}><MessageSquare size={16} className="mr-2" /> SMS</Button>
             </div>
-          </div>
-          <div className="space-y-2">
-            <Label>Target Audience</Label>
-            <Select value={recipient} onValueChange={setRecipient}>
-              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select target" /></SelectTrigger>
-              <SelectContent><SelectItem value="All Parents">All Parents</SelectItem><SelectItem value="Grade 4 Blue">Grade 4 - Blue</SelectItem></SelectContent>
-            </Select>
           </div>
           <div className="space-y-2">
             <Label>{msgType === 'Email' ? 'Email Subject' : 'Alert Header'}</Label>

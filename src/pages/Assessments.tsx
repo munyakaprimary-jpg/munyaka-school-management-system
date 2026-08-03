@@ -257,16 +257,14 @@ const Assessments = () => {
         ...studentRows.map(r => r.join(","))
       ].join("\n");
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
+      // Data URI fallback for Android WebView compatibility
+      const BOM = '\uFEFF';
+      const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + csvContent);
+      
       const link = document.createElement("a");
-      link.setAttribute("href", url);
-
-      const safeGrade = gradeName.toLowerCase().replace(/\s+/g, '_');
-      const safeStream = streamName.toLowerCase().replace(/\s+/g, '_');
-      const fileName = `marks_${safeGrade}_${safeStream}_${formattedTerm.toLowerCase().replace(/\s+/g, '')}.csv`;
-
-      link.setAttribute("download", fileName);
+      link.setAttribute("href", dataUri);
+      link.setAttribute("target", "_blank");
+      link.setAttribute("download", "marks_entry.csv");
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
