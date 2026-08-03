@@ -29,6 +29,7 @@ import { toast } from "sonner";
 
 const DigitalHub = () => {
   const [isOnline, setIsOnline] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
   const navigate = useNavigate();
 
   const catalogResources = [

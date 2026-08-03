@@ -4,8 +4,9 @@ import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from "@/components/ui/dialog";
 import BackButton from '@/components/ui/BackButton';
-import { Play, Clock, RefreshCw } from 'lucide-react';
+import { Play, Clock, RefreshCw, X } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface VideoResource {
@@ -15,6 +16,7 @@ interface VideoResource {
   duration: string;
   category: string;
   thumbnail: string;
+  videoUrl: string;
 }
 
 const videoResources: VideoResource[] = [
@@ -25,6 +27,7 @@ const videoResources: VideoResource[] = [
     duration: '5:30',
     category: 'Basics',
     thumbnail: 'https://images.unsplash.com/photo-1550751827-40b859622351?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
   {
     id: '2',
@@ -33,6 +36,7 @@ const videoResources: VideoResource[] = [
     duration: '8:45',
     category: 'Safety',
     thumbnail: 'https://images.unsplash.com/photo-1563986768609-b6a39a703328?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
   {
     id: '3',
@@ -41,6 +45,7 @@ const videoResources: VideoResource[] = [
     duration: '6:15',
     category: 'Communication',
     thumbnail: 'https://images.unsplash.com/photo-1573164763594-331915333001?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
   {
     id: '4',
@@ -49,6 +54,7 @@ const videoResources: VideoResource[] = [
     duration: '7:20',
     category: 'Safety',
     thumbnail: 'https://images.unsplash.com/photo-1516322572675-6787144333d1?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
   {
     id: '5',
@@ -57,6 +63,7 @@ const videoResources: VideoResource[] = [
     duration: '4:50',
     category: 'Basics',
     thumbnail: 'https://images.unsplash.com/photo-1544391492-51b39030093a?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
   {
     id: '6',
@@ -65,15 +72,28 @@ const videoResources: VideoResource[] = [
     duration: '9:10',
     category: 'Critical Thinking',
     thumbnail: 'https://images.unsplash.com/photo-1504711423350-71130003030a?auto=format&fit=crop&q=80&w=800',
+    videoUrl: 'https://www.w3schools.com/html/movie.mp4',
   },
 ];
 
 const DigitalLiteracyVideos = () => {
   const [isSyncing, setIsSyncing] = useState(false);
+  const [selectedVideo, setSelectedVideo] = useState<VideoResource | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const handleSync = () => {
     setIsSyncing(true);
     setTimeout(() => setIsSyncing(false), 1500);
+  };
+
+  const handleWatchVideo = (video: VideoResource) => {
+    setSelectedVideo(video);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setSelectedVideo(null);
   };
 
   return (
@@ -134,13 +154,57 @@ const DigitalLiteracyVideos = () => {
               <p className="text-slate-500 text-sm line-clamp-2 mb-4">
                 {video.description}
               </p>
-              <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors">
+              <Button
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors"
+                onClick={() => handleWatchVideo(video)}
+              >
                 Watch Video
               </Button>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      {/* Video Player Modal */}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="w-full max-w-4xl p-0 bg-black border-none rounded-[2rem] shadow-2xl">
+          <DialogHeader className="flex flex-row items-center justify-between p-4 border-b border-slate-800">
+            <DialogTitle className="text-white text-xl font-bold">
+              {selectedVideo?.title || "Watch Video"}
+            </DialogTitle>
+            <DialogClose asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleCloseModal}
+                className="text-slate-400 hover:text-white hover:bg-slate-800 rounded-xl h-9 w-9"
+                aria-label="Close video player"
+              >
+                <X size={20} />
+              </Button>
+            </DialogClose>
+          </DialogHeader>
+          <div className="relative pt-[56.25%] bg-black">
+            {selectedVideo && (
+              <video
+                controls
+                autoPlay
+                muted
+                poster={selectedVideo.thumbnail}
+                src={selectedVideo.videoUrl}
+                className="absolute top-0 left-0 w-full h-full object-contain"
+              />
+            )}
+          </div>
+          {selectedVideo && (
+            <div className="p-4 border-t border-slate-800">
+              <p className="text-slate-300 text-sm">
+                {selectedVideo.description}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
