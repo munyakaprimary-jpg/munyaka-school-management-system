@@ -1,11 +1,12 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import BackButton from '@/components/ui/BackButton';
-import { Play, Clock } from 'lucide-react';
+import { Play, Clock, RefreshCw } from 'lucide-react';
+import { cn } from "@/lib/utils";
 
 interface VideoResource {
   id: string;
@@ -68,6 +69,13 @@ const videoResources: VideoResource[] = [
 ];
 
 const DigitalLiteracyVideos = () => {
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  const handleSync = () => {
+    setIsSyncing(true);
+    setTimeout(() => setIsSyncing(false), 1500);
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
@@ -79,6 +87,16 @@ const DigitalLiteracyVideos = () => {
             <p className="text-muted-foreground font-medium">Enhance your digital skills with our curated video library.</p>
           </div>
         </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleSync}
+          disabled={isSyncing}
+          className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 h-10"
+        >
+          <RefreshCw size={16} className={cn("mr-2", isSyncing && "animate-spin text-indigo-600")} />
+          {isSyncing ? "Syncing..." : "Refresh Library"}
+        </Button>
       </div>
 
       {/* Video Grid */}
