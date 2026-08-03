@@ -1,32 +1,45 @@
+"use client";
 import React from 'react';
-import { BookOpen, Video } from 'lucide-react';
+import { Video } from 'lucide-react';
 
-export default function DigitalHub() {
+const DigitalHub: React.FC = () => {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-center space-x-3">
-        <BookOpen className="w-8 h-8 text-blue-600" />
-        <h1 className="text-2xl font-bold">Digital Literacy Hub</h1>
-      </div>
-      
-      <p className="text-gray-600">Explore digital literacy resources and video materials.</p>
-      
-      <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 space-y-4">
-        <div className="flex items-center space-x-2">
-          <Video className="w-5 h-5 text-blue-500" />
-          <h2 className="text-xl font-semibold">Effective Online Communication</h2>
-        </div>
-        
-        <div className="aspect-video bg-black rounded-lg overflow-hidden max-w-2xl">
-          <video 
-            controls 
-            className="w-full h-full"
+      <h1 className="text-2xl font-bold">Digital Hub</h1>
+
+      <div>
+        <h2 className="text-xl font-medium mb-3">Video Content</h2>
+        <video
+          controls
+          poster=""
+          src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
+          className="w-full max-w-lg rounded-md shadow-md"
+        >
+          <source
             src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4"
-          >
-            Your browser does not support video playback.
-          </video>
-        </div>
+            type="video/mp4"
+          />
+          Your browser does not support the video tag.
+        </video>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-medium mb-3">Document Content</h2>
+        <button className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">
+          <BookOpen className="mr-2" />
+          Document 1
+        </button>
+      </div>
+
+      <div>
+        <h2 className="text-xl font-medium mb-3">Play Content</h2>
+        <button className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">
+          <Play className="mr-2" />
+          Play 1
+        </button>
       </div>
     </div>
   );
-}
+};
+
+export default DigitalHub;
