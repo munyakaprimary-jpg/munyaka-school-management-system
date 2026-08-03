@@ -1,19 +1,20 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  Laptop, 
-  Wifi, 
-  HardDrive, 
-  Cpu, 
-  Globe, 
-  BookOpen, 
-  Video, 
+import {
+  Laptop,
+  Wifi,
+  HardDrive,
+  Cpu,
+  Globe,
+  BookOpen,
+  Video,
   Download,
   ExternalLink,
   Monitor,
@@ -28,7 +29,7 @@ import { toast } from "sonner";
 
 const DigitalHub = () => {
   const [isOnline, setIsOnline] = useState(true);
-  const [isSyncing, setIsSyncing] = useState(false);
+  const navigate = useNavigate();
 
   const catalogResources = [
     {
@@ -46,7 +47,7 @@ const DigitalHub = () => {
     {
       title: "Digital Literacy Videos",
       category: "MEDIA • YouTube Library",
-      url: "https://www.youtube.com/@KICDTV",
+      url: "/digital-literacy-videos",
       icon: Video
     }
   ];
@@ -84,15 +85,21 @@ const DigitalHub = () => {
   };
 
   const handleOpenLink = (url: string) => {
-    try {
-      const win = window.open(url, '_blank');
-      if (!win) {
+      try {
+        if (url.startsWith('/')) {
+          // Internal navigation
+          navigate(url);
+        } else {
+          // External link
+          const win = window.open(url, '_blank');
+          if (!win) {
+            window.location.href = url;
+          }
+        }
+      } catch (e) {
         window.location.href = url;
       }
-    } catch (e) {
-      window.location.href = url;
-    }
-  };
+    };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
