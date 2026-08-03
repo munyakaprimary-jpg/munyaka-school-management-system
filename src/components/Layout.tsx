@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { 
@@ -37,12 +37,7 @@ import {
   X,
   GraduationCap,
   LogIn,
-  MoreHorizontal,
-  Laptop,
-  Monitor,
-  UserCog,
-  Keyboard,
-  Target
+  MoreHorizontal
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -53,54 +48,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [showBottomNav, setShowBottomNav] = useState(true);
-  const lastScrollY = useRef(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Attach Hardware Back Button Handling for Capacitor/Android
   useMobileBackButton(isOpen, () => setIsOpen(false));
-
-  // Handle auto-hide bottom navigation on scroll
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!scrollContainerRef.current) return;
-      
-      const currentScrollY = scrollContainerRef.current.scrollTop;
-      
-      // Don't trigger hide logic for tiny scrolls (debounce/threshold)
-      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
-
-      if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
-        // Scrolling Down - Hide
-        setShowBottomNav(false);
-      } else {
-        // Scrolling Up - Show
-        setShowBottomNav(true);
-      }
-      
-      lastScrollY.current = currentScrollY;
-    };
-
-    const container = scrollContainerRef.current;
-    if (container) {
-      container.addEventListener('scroll', handleScroll, { passive: true });
-    }
-    
-    return () => {
-      if (container) {
-        container.removeEventListener('scroll', handleScroll);
-      }
-    };
-  }, []);
-
-  // Ensure nav is visible when changing routes
-  useEffect(() => {
-    setShowBottomNav(true);
-  }, [location.pathname]);
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -110,7 +63,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['super_admin'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
     { icon: Megaphone, label: 'Notice Board', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: CalendarDays, label: 'School Calendar', path: '/calendar', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -124,13 +76,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Academic Assessment & Analysis
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    
-    // Digital Hub & ICT
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['super_admin', 'head_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
@@ -287,7 +232,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight">Munyaka Portal</span>
             </div>
 
-            <div className="relative hidden md:block flex-1 max-md ml-4">
+            <div className="relative hidden md:block flex-1 max-w-md ml-4">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <input 
                 type="text" 
@@ -310,20 +255,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         </header>
 
         {/* Dynamic Main Viewport */}
-        <div 
-          ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
-        >
+        <div className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar">
           <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>
         </div>
 
         {/* Mobile Bottom Quick Navigation Bar (One-Thumb Nav) */}
-        <div className={cn(
-          "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pb-safe pt-2 flex items-center justify-around z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
-          showBottomNav ? "translate-y-0" : "translate-y-full"
-        )}>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-2 pb-safe pt-2 flex items-center justify-around z-40 shadow-2xl print:hidden">
           {bottomQuickNav.map((item) => {
             const isActive = location.pathname === item.path;
             return (

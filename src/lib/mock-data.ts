@@ -122,9 +122,9 @@ export const INVENTORY = [
 ];
 
 export const ASSET_LOGS = [
-  { id: 1, item: "Science Kit #04", issuedTo: "Unassigned", date: "Oct 18, 2024", dateReturned: undefined, status: "In Use" },
-  { id: 2, item: "Music Keyboard #01", issuedTo: "Brian Kiptoo", date: "Oct 17, 2024", dateReturned: "Oct 20, 2024", status: "Returned" },
-  { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", dateReturned: undefined, status: "In Use" },
+  { id: 1, item: "Science Kit #04", issuedTo: "Unassigned", date: "Oct 18, 2024", status: "In Use" },
+  { id: 2, item: "Music Keyboard #01", issuedTo: "Brian Kiptoo", date: "Oct 17, 2024", status: "Returned" },
+  { id: 3, item: "Jembe #22", issuedTo: "Grade 4 Blue", date: "Oct 19, 2024", status: "In Use" },
 ];
 
 export interface StaffMember {

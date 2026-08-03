@@ -8,7 +8,6 @@ import AttendanceStats from '@/components/attendance/AttendanceStats';
 import AttendanceTable from '@/components/attendance/AttendanceTable';
 import { useAttendance } from '@/hooks/useAttendance';
 import { GRADES_DATA } from '@/lib/mock-data';
-import { downloadCSV } from '@/utils/downloadHelper';
 
 const Attendance = () => {
   // Default to Grade 4 (g4)

@@ -13,7 +13,6 @@ import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, L
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import { downloadCSV } from '@/utils/downloadHelper';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';

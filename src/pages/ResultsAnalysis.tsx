@@ -28,7 +28,6 @@ import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
 import { FALLBACK_CLUSTERS, DEFAULT_EXAM_TYPES } from '@/lib/assessment-constants';
 import { showSuccess } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import { downloadCSV } from '@/utils/downloadHelper';
 
 interface StudentResult {
   rank: number;
@@ -288,8 +287,19 @@ const ResultsAnalysis = () => {
         ...rows.map(r => r.join(","))
       ].join("\n");
 
-      // Use global download helper
-      downloadCSV(csvContent, `results_analysis_${currentGrade.name.toLowerCase().replace(/\s+/g, '_')}_${selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${term}.csv`);
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+
+      const safeGrade = currentGrade.name.toLowerCase().replace(/\s+/g, '_');
+      const safeStream = selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_');
+      const fileName = `results_analysis_${safeGrade}_${safeStream}_${term}.csv`;
+
+      link.setAttribute("download", fileName);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
       setIsExporting(false);
       showSuccess(`Exported results analysis for ${studentResults.length} learners!`);
@@ -317,6 +327,7 @@ const ResultsAnalysis = () => {
         {/* Action Controls */}
         <div className="flex items-center gap-3">
           <Button 
+            variant="outline" 
             onClick={handleDownloadCSV}
             disabled={isExporting}
             className="rounded-2xl h-12 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm gap-2"
