@@ -33,12 +33,23 @@ import {
   Undo2,
   Package,
   Minus,
-  Plus as PlusIcon
+  Plus as PlusIcon,
+  Edit,
+  MoreVertical,
+  ArrowRight,
+  ShieldAlert
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import AddICTAssetModal from '@/components/ict/AddICTAssetModal';
 import { ICTAsset, ICTCategory, ICTStatus } from '@/types/ict';
+import { 
+  DropdownMenu, 
+  DropdownMenuContent, 
+  DropdownMenuItem, 
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
 // --- Types ---
 type LogStatus = 'Issued' | 'Returned' | 'Overdue' | 'Under Repair';
@@ -66,6 +77,8 @@ const INITIAL_ASSETS: ICTAsset[] = [
   { id: "2", assetTag: "ICT-TB-05", name: "Samsung Galaxy Tab A8", category: "Tablets", serialNumber: "RF8S123456", status: "Active", location: "Mobile Cart A", assignedTo: "Grade 4 Blue" },
   { id: "3", assetTag: "ICT-PJ-01", name: "Epson EB-X41", category: "Projectors", serialNumber: "V11H843040", status: "In Maintenance", location: "Staff Room", assignedTo: "John Kamau" },
   { id: "4", assetTag: "ICT-NW-02", name: "TP-Link AX1800 Router", category: "Networking", serialNumber: "220C123456", status: "Active", location: "Server Room" },
+  { id: "5", assetTag: "ICT-LP-02", name: "Dell Latitude 5420", category: "Laptops", serialNumber: "DL5420-001", status: "Active", location: "Computer Lab 1" },
+  { id: "6", assetTag: "ICT-TB-10", name: "iPad 9th Gen", category: "Tablets", serialNumber: "IPAD9-010", status: "Active", location: "Mobile Cart B" },
 ];
 
 const INITIAL_LOGS: ICTLog[] = [
@@ -290,6 +303,65 @@ const ICTLabManagement = () => {
     }
   };
 
+  const handleIssueFromTable = (asset: ICTAsset) => {
+    // Pre-fill the issue modal with this asset
+    setLogForm(prev => ({
+      ...prev,
+      category: asset.category,
+      assetId: asset.id,
+      outDate: new Date().toISOString().split('T')[0],
+      quantityIssued: 1
+    }));
+    openLogModal('issue');
+  };
+
+  const handleEditCheckout = (asset: ICTAsset) => {
+    // Find the active log for this asset
+    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
+    if (activeLog) {
+      // Pre-fill return modal with the active log
+      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
+      setLogForm(prev => ({
+        ...prev,
+        returnLogId: activeLog.id,
+        actualReturnDate: new Date().toISOString().split('T')[0],
+        conditionOnReturn: "Good",
+        quantityReturned: outstanding
+      }));
+      openLogModal('return');
+    }
+  };
+
+  const handleLogDamage = (asset: ICTAsset) => {
+    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
+    if (activeLog) {
+      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
+      setLogForm(prev => ({
+        ...prev,
+        returnLogId: activeLog.id,
+        actualReturnDate: new Date().toISOString().split('T')[0],
+        conditionOnReturn: "Damaged",
+        quantityReturned: outstanding
+      }));
+      openLogModal('return');
+    }
+  };
+
+  const handleLogLoss = (asset: ICTAsset) => {
+    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
+    if (activeLog) {
+      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
+      setLogForm(prev => ({
+        ...prev,
+        returnLogId: activeLog.id,
+        actualReturnDate: new Date().toISOString().split('T')[0],
+        conditionOnReturn: "Lost",
+        quantityReturned: outstanding
+      }));
+      openLogModal('return');
+    }
+  };
+
   const handleDelete = (id: string) => {
     setAssets(prev => prev.filter(a => a.id !== id));
     showSuccess("Asset record removed.");
@@ -302,6 +374,81 @@ const ICTLabManagement = () => {
       case 'Projectors': return <Projector size={18} />;
       case 'Networking': return <Wifi size={18} />;
       default: return <Monitor size={18} />;
+    }
+  };
+
+  const renderAssetActions = (asset: ICTAsset) => {
+    const isAssigned = !!asset.assignedTo;
+    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
+
+    if (isAssigned && activeLog) {
+      // Checked out device - show return and dropdown
+      return (
+        <div className="flex items-center justify-end gap-2">
+          <Button 
+            size="sm" 
+            onClick={() => handleEditCheckout(asset)}
+            className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all gap-1.5"
+          >
+            <Undo2 size={14} /> Process Return
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100">
+                <MoreVertical size={18} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[180px]">
+              <DropdownMenuItem 
+                onClick={() => handleEditCheckout(asset)}
+                className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
+              >
+                <Undo2 size={14} /> Process Return
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleLogDamage(asset)}
+                className="rounded-lg gap-2 font-bold cursor-pointer text-amber-600 hover:bg-amber-50"
+              >
+                <ShieldAlert size={14} /> Log Damage
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={() => handleLogLoss(asset)}
+                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
+              >
+                <AlertCircle size={14} /> Log Loss
+              </DropdownMenuItem>
+              <DropdownMenuSeparator className="my-1" />
+              <DropdownMenuItem 
+                onClick={() => handleDelete(asset.id)}
+                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
+              >
+                <Trash2 size={14} /> Remove Asset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      );
+    } else {
+      // Available device - show issue button
+      return (
+        <div className="flex items-center justify-end gap-2">
+          <Button 
+            size="sm" 
+            onClick={() => handleIssueFromTable(asset)}
+            className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
+          >
+            <ArrowUpRight size={14} /> Issue / Assign
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="rounded-xl h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50"
+            onClick={() => handleDelete(asset.id)}
+          >
+            <Trash2 size={16} />
+          </Button>
+        </div>
+      );
     }
   };
 
@@ -453,11 +600,7 @@ const ICTLabManagement = () => {
                           )}
                         </td>
                         <td className="px-8 py-5 text-right">
-                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-300 hover:text-red-500" onClick={() => handleDelete(asset.id)}>
-                              <Trash2 size={16} />
-                            </Button>
-                          </div>
+                          {renderAssetActions(asset)}
                         </td>
                       </tr>
                     ))}
