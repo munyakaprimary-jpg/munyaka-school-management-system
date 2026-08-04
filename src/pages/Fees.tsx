@@ -380,11 +380,11 @@ const Fees = () => {
                           </Badge>
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <div className="flex justify-end gap-1">
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
                               onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
                               title="View Statement"
                             >
@@ -393,7 +393,7 @@ const Fees = () => {
                             <Button 
                               variant="ghost" 
                               size="icon" 
-                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" 
+                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
                               onClick={() => showSuccess("Downloading...")}
                               title="Download PDF"
                             >
