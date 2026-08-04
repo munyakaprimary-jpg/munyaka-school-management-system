@@ -566,12 +566,29 @@ const ICTLabManagement = () => {
               <Plus size={20} /> Add New Asset
             </Button>
           ) : (
-            <Button 
-              className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
-              onClick={() => openLogModal('issue')}
-            >
-              <ArrowUpRight size={20} /> Log Device Issue
-            </Button>
+            <>
+              <Button 
+                className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
+                onClick={() => openLogModal('issue')}
+              >
+                <ArrowUpRight size={20} /> Log Device Issue
+              </Button>
+              {/* Export Buttons - Visible in Header Toolbar when on Logs tab */}
+              <Button 
+                variant="outline"
+                onClick={handleExportCSV}
+                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={handleExportJSON}
+                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <Database size={18} className="text-indigo-600" /> Export JSON
+              </Button>
+            </>
           )}
         </div>
       </div>
@@ -723,34 +740,14 @@ const ICTLabManagement = () => {
             </Card>
           </div>
 
-          {/* Export Actions Bar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input 
-                placeholder="Filter checkouts by borrower or device..." 
-                className="pl-11 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="outline"
-                onClick={handleExportCSV}
-                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-              >
-                <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV Logs
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleExportJSON}
-                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-              >
-                <Database size={18} className="text-indigo-600" /> Export JSON Backup
-              </Button>
-            </div>
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Input 
+              placeholder="Filter checkouts by borrower or device..." 
+              className="pl-11 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
           </div>
 
           {/* Logs Table */}
