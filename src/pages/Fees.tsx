@@ -93,21 +93,62 @@ const Fees = () => {
     localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
   }, [transactionsList]);
 
-  // Calculations - Use actual recorded values
-  const currentTermFee = useMemo(() => {
-    const config = feeStructures.find(f => 
-      f.year === selectedYear && f.term === selectedTerm && f.gradeId === selectedGrade
-    );
-    return config ? config.amount : 0;
-  }, [selectedYear, selectedTerm, selectedGrade, feeStructures]);
+  // ============================================
+  // DYNAMIC FEE CALCULATIONS
+  // ============================================
+  
+  // Get term fee for a specific grade
+  const getTermFeeForGrade = useMemo(() => {
+    return (gradeId: string) => {
+      const config = feeStructures.find(f => 
+        f.year === selectedYear && f.term === selectedTerm && f.gradeId === gradeId
+      );
+      return config ? config.amount : 0;
+    };
+  }, [selectedYear, selectedTerm, feeStructures]);
 
+  // Calculate total paid for each student from transactions
+  const getTotalPaidForStudent = useMemo(() => {
+    return (studentId: string) => {
+      return transactionsList
+        .filter(tx => tx.studentId === studentId)
+        .reduce((sum, tx) => sum + (tx.amount || 0), 0);
+    };
+  }, [transactionsList]);
+
+  // Build calculated fees with dynamic data
   const calculatedFees = useMemo(() => {
     return feesList.map(fee => {
-      const balance = Math.max(0, currentTermFee - fee.paid);
-      const status = fee.paid >= currentTermFee ? "Cleared" : (fee.paid > 0 ? "Partial" : "Pending");
-      return { ...fee, total: currentTermFee, balance, status };
+      // Find the student to get their grade
+      const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
+      const studentGradeId = studentObj ? 
+        GRADES_DATA.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id 
+        : selectedGrade;
+      
+      const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
+      const totalPaid = studentObj ? getTotalPaidForStudent(studentObj.id) : 0;
+      const balance = Math.max(0, termFee - totalPaid);
+      
+      // Status logic
+      let status: "Cleared" | "Partial" | "Pending" = "Pending";
+      if (balance <= 0) {
+        status = "Cleared";
+      } else if (totalPaid > 0) {
+        status = "Partial";
+      } else {
+        status = "Pending";
+      }
+      
+      return { 
+        ...fee, 
+        total: termFee, 
+        paid: totalPaid, 
+        balance, 
+        status,
+        studentGradeId 
+      };
     });
-  }, [feesList, currentTermFee]);
+  }, [feesList, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent]);
 
   // Filter calculated fees by Tab Grade Level Filter
   const filteredCalculatedFees = useMemo(() => {
@@ -128,14 +169,14 @@ const Fees = () => {
   }, [transactionsList, tabGradeFilter]);
 
   const stats = useMemo(() => {
-    const totalPossible = calculatedFees.length * currentTermFee;
-    const totalCollected = calculatedFees.reduce((acc, curr) => acc + curr.paid, 0);
+    const totalPossible = calculatedFees.reduce((sum, fee) => sum + fee.total, 0);
+    const totalCollected = calculatedFees.reduce((sum, fee) => sum + fee.paid, 0);
     return { 
       totalPossible, 
       totalCollected, 
       totalPending: Math.max(0, totalPossible - totalCollected) 
     };
-  }, [calculatedFees, currentTermFee]);
+  }, [calculatedFees]);
 
   // Download Handler respecting active Grade Level filter
   const handleDownloadFeeStatement = async () => {
@@ -257,6 +298,14 @@ const Fees = () => {
   };
 
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
+
+  // Current term fee for the selected grade (for header display)
+  const currentTermFee = useMemo(() => {
+    const config = feeStructures.find(f => 
+      f.year === selectedYear && f.term === selectedTerm && f.gradeId === selectedGrade
+    );
+    return config ? config.amount : 0;
+  }, [selectedYear, selectedTerm, selectedGrade, feeStructures]);
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
