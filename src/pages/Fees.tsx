@@ -651,7 +651,8 @@ const Fees = () => {
                     </tr>
                   )}
                 </tbody>
-              </table            </div>
+              </table>
+            </div>
           </Card>
         </TabsContent>
       </Tabs>
