@@ -42,7 +42,8 @@ import {
   Monitor,
   UserCog,
   Keyboard,
-  Target
+  Target,
+  FlaskConical
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -130,6 +131,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['super_admin', 'head_teacher'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    
+    // Science Lab
+    { icon: FlaskConical, label: 'Science Lab', path: '/science-lab', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
