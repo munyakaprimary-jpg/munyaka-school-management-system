@@ -102,7 +102,7 @@ const ReportCards = () => {
   const [isDownloadingAll, setIsDownloadingAll] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  // Dynamic Stored Grades State
+  // Dynamic Stored Grades State (matches Grades & Streams key 'munyaka_grades')
   const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
     return saved ? JSON.parse(saved) : GRADES_DATA;
@@ -200,7 +200,18 @@ const ReportCards = () => {
           margin: [8, 8, 8, 8],
           filename: `report_card_${safeLearnerName}_${year}_${term}.pdf`,
           image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, letterRendering: true, scrollY: 0 },
+          html2canvas: { 
+            scale: 2, 
+            useCORS: true, 
+            letterRendering: true, 
+            scrollY: 0,
+            ignoreElements: (element: HTMLElement) => {
+              // Ignore elements with data-html2canvas-ignore or .no-print class
+              return element.hasAttribute('data-html2canvas-ignore') || 
+                     element.classList.contains('no-print') ||
+                     element.classList.contains('html2canvas-ignore');
+            }
+          },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           pagebreak: { mode: ['avoid-all', 'css'] }
         };
@@ -293,6 +304,7 @@ const ReportCards = () => {
             background: white !important;
           }
           .no-print { display: none !important; }
+          [data-html2canvas-ignore] { display: none !important; }
         }
 
         .report-card {
@@ -311,13 +323,13 @@ const ReportCards = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
-          <h1 className="text-2xl font-black text-slate-900">CBC Report Generator</h1>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Generator</h1>
         </div>
         <div className="flex gap-2">
           {/* Button 1: Download Current */}
           <Button 
             onClick={handleDownloadCurrent}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2 no-print"
             disabled={isExportingCurrent}
           >
             {isExportingCurrent ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
@@ -327,7 +339,7 @@ const ReportCards = () => {
           {/* Button 2: Download All */}
           <Button 
             onClick={handleDownloadAll}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2"
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 text-xs gap-2 no-print"
             disabled={isDownloadingAll}
           >
             {isDownloadingAll ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} />}
@@ -460,6 +472,7 @@ const ReportCards = () => {
       <div 
         ref={wrapperRef} 
         className="reports-print-wrapper flex flex-col items-center gap-6 w-full max-w-[190mm] mx-auto"
+        data-html2canvas-ignore="false"
       >
         {filteredStudents.map((s, idx) => {
           const cat = getCategory(s.grade);
@@ -553,7 +566,7 @@ const ReportCards = () => {
                 <div className="grid grid-cols-2 gap-3">
                   {/* Class Teacher's Remarks */}
                   <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center no-print">
                       <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">Class Teacher's Remarks</span>
                       <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
                         <Save size={8} /> Save
@@ -565,7 +578,7 @@ const ReportCards = () => {
 
                   {/* HOI Remarks */}
                   <div className="space-y-1 p-2 bg-slate-50/70 rounded-md border border-slate-200">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center no-print">
                       <span className="text-[8.5px] font-black uppercase tracking-widest text-slate-400">HOI Remarks</span>
                       <Button size="sm" className="no-print h-4 px-1.5 bg-slate-900 text-[#CCFF00] font-bold text-[7.5px] rounded gap-1">
                         <Save size={8} /> Save
@@ -607,7 +620,7 @@ const ReportCards = () => {
           <Button 
             onClick={handleDownloadCurrent}
             variant="outline"
-            className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700"
+            className="rounded-xl border-slate-200 bg-white font-bold h-11 px-6 text-slate-700 no-print"
             disabled={isExportingCurrent}
           >
             {isExportingCurrent ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
@@ -617,7 +630,7 @@ const ReportCards = () => {
           {/* Button 2: Download All */}
           <Button 
             onClick={handleDownloadAll}
-            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2"
+            className="bg-[#112A56] hover:bg-[#0d1f42] text-[#CCFF00] font-bold rounded-xl h-11 px-8 gap-2 no-print"
             disabled={isDownloadingAll}
           >
             {isDownloadingAll ? <Loader2 className="animate-spin" size={18} /> : <FileSpreadsheet size={18} />}

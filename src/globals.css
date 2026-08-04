@@ -157,3 +157,135 @@ button, input, select, textarea, a {
   transform: scale(0.97);
   transition: transform 0.1s ease;
 }
+
+/* ============================================
+   PRINT & PDF EXPORT UTILITIES
+   ============================================ */
+
+/* Hide elements with .no-print class during print */
+@media print {
+  .no-print,
+  [data-no-print],
+  [data-html2canvas-ignore] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+  
+  /* Hide common interactive elements by default */
+  button.no-print,
+  .action-buttons,
+  .action-icons,
+  .dropdown-menu,
+  .modal-overlay,
+  .toast-container,
+  .notification-bell,
+  .sidebar,
+  .mobile-bottom-nav,
+  .header-bar,
+  .filter-bar,
+  .pagination,
+  .export-buttons,
+  .save-button,
+  [aria-label="Save"],
+  [aria-label="Edit"],
+  [aria-label="Delete"],
+  [aria-label="View"],
+  [aria-label="Print"],
+  [aria-label="Download"],
+  [aria-label="Export"] {
+    display: none !important;
+  }
+}
+
+/* html2canvas/html2pdf ignore support */
+[data-html2canvas-ignore] {
+  /* This attribute is respected by html2canvas automatically */
+}
+
+/* Utility class for elements that should be ignored by html2canvas */
+.html2canvas-ignore {
+  /* html2canvas will skip elements with this attribute */
+}
+
+/* Ensure proper page breaks for report cards */
+@media print {
+  .report-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  .remarks-block {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+  
+  /* Ensure tables don't break awkwardly */
+  table {
+    page-break-inside: auto;
+  }
+  
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+  
+  thead {
+    display: table-header-group;
+  }
+  
+  tfoot {
+    display: table-footer-group;
+  }
+}
+
+/* Screen-only elements (visible on screen, hidden in print) */
+.screen-only {
+  @media print {
+    display: none !important;
+  }
+}
+
+/* Print-only elements (hidden on screen, visible in print) */
+.print-only {
+  display: none !important;
+  @media print {
+    display: block !important;
+  }
+}
+
+/* A4 page sizing for report cards */
+@page {
+  size: A4;
+  margin: 8mm;
+}
+
+@media print {
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+  
+  .reports-print-wrapper {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+  
+  .report-card {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    margin-bottom: 8mm !important;
+    page-break-after: always !important;
+  }
+  
+  .report-card:last-child {
+    page-break-after: auto !important;
+  }
+}
