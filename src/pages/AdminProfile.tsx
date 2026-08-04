@@ -9,6 +9,7 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { useAuth } from '@/context/AuthContext';
 import { Shield, Key, LogOut, Camera, Save, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
 
 const AdminProfile = () => {
   const { user, updateProfile, updatePassword, logout } = useAuth();
@@ -18,6 +19,7 @@ const AdminProfile = () => {
   const [email, setEmail] = useState(user?.email || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [isSaving, setIsSaving] = useState(false);
+  const [avatar, setAvatar] = useState<string | null>(user?.avatar || null);
 
   // Password modal state
   const [isPassModalOpen, setIsPassModalOpen] = useState(false);
@@ -36,6 +38,7 @@ const AdminProfile = () => {
       setName(user.name);
       setEmail(user.email);
       setPhone(user.phone || "");
+      setAvatar(user.avatar || null);
     }
   }, [user]);
 
@@ -44,7 +47,7 @@ const AdminProfile = () => {
     setIsSaving(true);
     // Artificial delay for UX feel
     await new Promise(r => setTimeout(r, 600));
-    updateProfile({ name, email, phone });
+    updateProfile({ name, email, phone, avatar });
     setIsSaving(false);
   };
 
@@ -70,6 +73,45 @@ const AdminProfile = () => {
     }
   };
 
+  const takePicture = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Camera,
+      });
+
+      if (image.dataUrl) {
+        setAvatar(image.dataUrl);
+      }
+    } catch (error) {
+      console.error('Camera error:', error);
+      // User cancelled or error occurred
+    }
+  };
+
+  const pickFromGallery = async () => {
+    try {
+      const image = await CapacitorCamera.getPhoto({
+        quality: 90,
+        allowEditing: true,
+        resultType: CameraResultType.DataUrl,
+        source: CameraSource.Photos,
+      });
+
+      if (image.dataUrl) {
+        setAvatar(image.dataUrl);
+      }
+    } catch (error) {
+      console.error('Gallery error:', error);
+    }
+  };
+
+  const removeAvatar = () => {
+    setAvatar(null);
+  };
+
   return (
     <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center gap-3">
@@ -84,10 +126,22 @@ const AdminProfile = () => {
         {/* Sidebar Info Card */}
         <Card className="w-full md:w-80 border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden p-8 text-center shrink-0">
           <div className="relative w-32 h-32 mx-auto mb-6">
-            <div className="w-full h-full rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-4xl font-black shadow-2xl shadow-indigo-200">
-              {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || "AD"}
+            <div className="w-full h-full rounded-3xl bg-indigo-600 text-white flex items-center justify-center text-4xl font-black shadow-2xl shadow-indigo-200 overflow-hidden">
+              {avatar ? (
+                <img 
+                  src={avatar} 
+                  alt={user?.name} 
+                  className="w-full h-full object-cover" 
+                />
+              ) : (
+                user?.avatar || user?.name?.substring(0, 2).toUpperCase() || "AD"
+              )}
             </div>
-            <Button size="icon" className="absolute bottom-[-10px] right-[-10px] rounded-2xl bg-white text-slate-900 shadow-lg border hover:bg-slate-50 h-10 w-10">
+            <Button 
+              size="icon" 
+              className="absolute bottom-[-10px] right-[-10px] rounded-2xl bg-white text-slate-900 shadow-lg border hover:bg-slate-50 h-10 w-10"
+              onClick={takePicture}
+            >
               <Camera size={18} />
             </Button>
           </div>
