@@ -132,8 +132,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
-    // Science Lab
-    { icon: FlaskConical, label: 'Science Lab', path: '/science-lab', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    // Science Lab - VISIBLE TO ALL ROLES
+    { icon: FlaskConical, label: 'Science Lab', path: '/science-lab', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
