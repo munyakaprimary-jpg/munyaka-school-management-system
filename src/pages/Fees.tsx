@@ -45,9 +45,15 @@ const Fees = () => {
   // Tab Grade Level View Filter
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
 
-  // Data States
-  const [feesList, setFeesList] = useState(initialFees);
-  const [transactionsList, setTransactionsList] = useState<ExtendedTransaction[]>(initialTransactions as ExtendedTransaction[]);
+  // Data States - Load from localStorage
+  const [feesList, setFeesList] = useState(() => {
+    const saved = localStorage.getItem('munyaka_fees_records');
+    return saved ? JSON.parse(saved) : initialFees;
+  });
+  const [transactionsList, setTransactionsList] = useState<ExtendedTransaction[]>(() => {
+    const saved = localStorage.getItem('munyaka_transactions');
+    return saved ? JSON.parse(saved) : initialTransactions as ExtendedTransaction[];
+  });
   const [feeStructures, setFeeStructures] = useState<FeeStructure[]>(() => {
     const saved = localStorage.getItem('munyaka_fee_structures');
     return saved ? JSON.parse(saved) : [
@@ -74,11 +80,20 @@ const Fees = () => {
   const [configGrade, setConfigGrade] = useState<string>("all");
   const [configAmount, setConfigAmount] = useState("");
 
+  // Persist data to localStorage
   useEffect(() => {
     localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
   }, [feeStructures]);
 
-  // Calculations
+  useEffect(() => {
+    localStorage.setItem('munyaka_fees_records', JSON.stringify(feesList));
+  }, [feesList]);
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
+  }, [transactionsList]);
+
+  // Calculations - Use actual recorded values
   const currentTermFee = useMemo(() => {
     const config = feeStructures.find(f => 
       f.year === selectedYear && f.term === selectedTerm && f.gradeId === selectedGrade
@@ -169,7 +184,7 @@ const Fees = () => {
   // Modal Handlers
   const handleOpenConfigModal = () => {
     setConfigGrade("all");
-    setConfigAmount(currentTermFee.toString());
+    setConfigAmount(currentTermFee ? currentTermFee.toString() : "0");
     setIsConfigOpen(true);
   };
 
@@ -275,7 +290,7 @@ const Fees = () => {
         grade={selectedGrade} setGrade={setSelectedGrade} 
       />
 
-      {/* Summary Metrics */}
+      {/* Summary Metrics - Using actual recorded values */}
       <FeeStats 
         currentTermFee={currentTermFee} 
         totalCollected={stats.totalCollected} 
