@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
-import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X } from 'lucide-react';
+import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X, Code, Zap, Database, Cpu } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface CompetencyRecord {
@@ -32,15 +32,16 @@ interface TypingRecord {
   date: string;
 }
 
-interface ProjectRecord {
+interface DigitalQuizRecord {
   id: string;
   title: string;
   grade: string;
-  rubricCriteria: string;
-  maxPoints: number;
-  submissionsTotal: number;
-  submissionsGraded: number;
-  status: 'Active' | 'Completed' | 'Pending Grading';
+  subject: string;
+  questions: number;
+  timeLimit: number;
+  attempts: number;
+  avgScore: number;
+  status: 'Active' | 'Completed' | 'Draft';
   dueDate: string;
 }
 
@@ -93,72 +94,66 @@ const MOCK_TYPING_RECORDS: TypingRecord[] = [
   { id: "10", studentName: "Helen Moraa", grade: "Grade 8", speed: 33, accuracy: 95, level: "Intermediate", date: "2024-10-06" },
 ];
 
-const MOCK_PROJECTS: ProjectRecord[] = [
+const MOCK_DIGITAL_QUIZZES: DigitalQuizRecord[] = [
   { 
     id: "1", 
-    title: "CBC Scratch Animation", 
+    title: "Digital Citizenship Quiz", 
     grade: "Grade 4", 
-    rubricCriteria: "Creativity, Logic, Presentation", 
-    maxPoints: 100, 
-    submissionsTotal: 42, 
-    submissionsGraded: 38, 
+    subject: "ICT & Digital Literacy",
+    questions: 20, 
+    timeLimit: 30, 
+    attempts: 42, 
+    avgScore: 78, 
     status: "Active", 
     dueDate: "2024-11-15" 
   },
   { 
     id: "2", 
-    title: "School Newsletter Layout", 
+    title: "Internet Safety Assessment", 
     grade: "Grade 5", 
-    rubricCriteria: "Design, Content, Typography", 
-    maxPoints: 100, 
-    submissionsTotal: 38, 
-    submissionsGraded: 38, 
+    subject: "Digital Citizenship",
+    questions: 15, 
+    timeLimit: 20, 
+    attempts: 38, 
+    avgScore: 85, 
     status: "Completed", 
     dueDate: "2024-10-20" 
   },
   { 
     id: "3", 
-    title: "Digital Presentation on Environment", 
+    title: "Coding Fundamentals Test", 
     grade: "Grade 6", 
-    rubricCriteria: "Research, Slides, Delivery", 
-    maxPoints: 100, 
-    submissionsTotal: 40, 
-    submissionsGraded: 22, 
-    status: "Pending Grading", 
+    subject: "Computer Science",
+    questions: 25, 
+    timeLimit: 45, 
+    attempts: 40, 
+    avgScore: 72, 
+    status: "Active", 
     dueDate: "2024-11-30" 
   },
   { 
     id: "4", 
-    title: "Interactive Quiz Game (Python)", 
+    title: "Data Privacy & Security Quiz", 
     grade: "Grade 7", 
-    rubricCriteria: "Code Logic, UI, Functionality", 
-    maxPoints: 100, 
-    submissionsTotal: 35, 
-    submissionsGraded: 15, 
+    subject: "Pre-Technical Studies",
+    questions: 18, 
+    timeLimit: 25, 
+    attempts: 35, 
+    avgScore: 81, 
     status: "Active", 
     dueDate: "2024-12-05" 
   },
   { 
     id: "5", 
-    title: "E-Portfolio Website Design", 
+    title: "Advanced Spreadsheet Functions", 
     grade: "Grade 8", 
-    rubricCriteria: "HTML/CSS, Content, Responsiveness", 
-    maxPoints: 100, 
-    submissionsTotal: 30, 
-    submissionsGraded: 30, 
+    subject: "Computer Studies",
+    questions: 22, 
+    timeLimit: 35, 
+    attempts: 30, 
+    avgScore: 76, 
     status: "Completed", 
     dueDate: "2024-10-28" 
-  },
-  { 
-    id: "6", 
-    title: "Data Visualization Dashboard", 
-    grade: "Grade 7", 
-    rubricCriteria: "Data Accuracy, Charts, Insights", 
-    maxPoints: 100, 
-    submissionsTotal: 35, 
-    submissionsGraded: 8, 
-    status: "Pending Grading", 
-    dueDate: "2024-11-25" 
   },
 ];
 
@@ -214,7 +209,7 @@ const MOCK_TOOLS: ToolMasteryRecord[] = [
   {
     id: "5",
     name: "Scratch / Block Coding",
-    icon: Monitor,
+    icon: Code,
     color: "text-purple-600",
     bgColor: "bg-purple-50",
     totalStudents: 42,
@@ -234,6 +229,30 @@ const MOCK_TOOLS: ToolMasteryRecord[] = [
     developing: 15,
     emerging: 7,
     avgMastery: 71
+  },
+  {
+    id: "7",
+    name: "Python Basics",
+    icon: Cpu,
+    color: "text-green-600",
+    bgColor: "bg-green-50",
+    totalStudents: 35,
+    proficient: 12,
+    developing: 15,
+    emerging: 8,
+    avgMastery: 62
+  },
+  {
+    id: "8",
+    name: "Database Fundamentals",
+    icon: Database,
+    color: "text-orange-600",
+    bgColor: "bg-orange-50",
+    totalStudents: 30,
+    proficient: 8,
+    developing: 12,
+    emerging: 10,
+    avgMastery: 55
   }
 ];
 
@@ -277,7 +296,7 @@ const GRADE_OPTIONS = [
 ];
 
 const DigitalSkillsAssessment = () => {
-  const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'projects' | 'software'>('competencies');
+  const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'quizzes' | 'software'>('competencies');
   
   // Competencies Tab State
   const [searchTerm, setSearchTerm] = useState("");
@@ -287,9 +306,10 @@ const DigitalSkillsAssessment = () => {
   const [typingSearchTerm, setTypingSearchTerm] = useState("");
   const [speedLevelFilter, setSpeedLevelFilter] = useState("all");
 
-  // Projects Tab State
-  const [projectSearchTerm, setProjectSearchTerm] = useState("");
-  const [projectGradeFilter, setProjectGradeFilter] = useState("all");
+  // Quizzes Tab State
+  const [quizSearchTerm, setQuizSearchTerm] = useState("");
+  const [quizGradeFilter, setQuizGradeFilter] = useState("all");
+  const [quizStatusFilter, setQuizStatusFilter] = useState("all");
 
   // Software Mastery Tab State
   const [softwareSearchTerm, setSoftwareSearchTerm] = useState("");
@@ -321,13 +341,15 @@ const DigitalSkillsAssessment = () => {
     });
   }, [typingSearchTerm, speedLevelFilter]);
 
-  const filteredProjects = useMemo(() => {
-    return MOCK_PROJECTS.filter(project => {
-      const matchesSearch = project.title.toLowerCase().includes(projectSearchTerm.toLowerCase());
-      const matchesGrade = projectGradeFilter === "all" || project.grade === projectGradeFilter;
-      return matchesSearch && matchesGrade;
+  const filteredQuizzes = useMemo(() => {
+    return MOCK_DIGITAL_QUIZZES.filter(quiz => {
+      const matchesSearch = quiz.title.toLowerCase().includes(quizSearchTerm.toLowerCase()) ||
+                           quiz.subject.toLowerCase().includes(quizSearchTerm.toLowerCase());
+      const matchesGrade = quizGradeFilter === "all" || quiz.grade === quizGradeFilter;
+      const matchesStatus = quizStatusFilter === "all" || quiz.status === quizStatusFilter;
+      return matchesSearch && matchesGrade && matchesStatus;
     });
-  }, [projectSearchTerm, projectGradeFilter]);
+  }, [quizSearchTerm, quizGradeFilter, quizStatusFilter]);
 
   const filteredProficiencyRecords = useMemo(() => {
     return records.filter(record => {
@@ -356,14 +378,11 @@ const DigitalSkillsAssessment = () => {
     return { totalSessions, avgSpeed, topSpeed };
   }, []);
 
-  const projectStats = useMemo(() => {
-    const activeProjects = MOCK_PROJECTS.filter(p => p.status === 'Active').length;
-    const totalSubmissions = MOCK_PROJECTS.reduce((sum, p) => sum + p.submissionsTotal, 0);
-    const totalGraded = MOCK_PROJECTS.reduce((sum, p) => sum + p.submissionsGraded, 0);
-    const gradedPct = totalSubmissions > 0 ? Math.round((totalGraded / totalSubmissions) * 100) : 0;
-    const highestScore = Math.max(...MOCK_PROJECTS.map(p => p.maxPoints));
-    const avgScore = 81;
-    return { activeProjects, gradedPct, highestScore, avgScore };
+  const quizStats = useMemo(() => {
+    const activeQuizzes = MOCK_DIGITAL_QUIZZES.filter(q => q.status === 'Active').length;
+    const totalAttempts = MOCK_DIGITAL_QUIZZES.reduce((sum, q) => sum + q.attempts, 0);
+    const avgScore = Math.round(MOCK_DIGITAL_QUIZZES.reduce((sum, q) => sum + q.avgScore, 0) / MOCK_DIGITAL_QUIZZES.length);
+    return { activeQuizzes, totalAttempts, avgScore };
   }, []);
 
   const softwareStats = useMemo(() => {
@@ -416,11 +435,11 @@ const DigitalSkillsAssessment = () => {
     );
   };
 
-  const getProjectStatusBadge = (status: string) => {
+  const getQuizStatusBadge = (status: string) => {
     const configs = {
       Active: { bg: "bg-indigo-50", text: "text-indigo-700", border: "border-indigo-100" },
       Completed: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
-      "Pending Grading": { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+      Draft: { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200" },
     };
     const config = configs[status as keyof typeof configs] || configs.Active;
     return (
@@ -449,7 +468,7 @@ const DigitalSkillsAssessment = () => {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Digital Skills & Assessment</h1>
-          <p className="text-gray-500">Record ICT competencies, typing speeds, and practical CBC projects.</p>
+          <p className="text-gray-500">Record ICT competencies, typing speeds, digital quizzes, and software mastery.</p>
         </div>
       </div>
 
@@ -461,7 +480,7 @@ const DigitalSkillsAssessment = () => {
             activeTab === 'competencies' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Award className="w-4 h-4" /> Competencies
+          <Award className="w-4 h-4" /> ICT Competencies
         </button>
         <button
           onClick={() => setActiveTab('typing')}
@@ -472,12 +491,12 @@ const DigitalSkillsAssessment = () => {
           <Keyboard className="w-4 h-4" /> Keyboarding Log
         </button>
         <button
-          onClick={() => setActiveTab('projects')}
+          onClick={() => setActiveTab('quizzes')}
           className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
-            activeTab === 'projects' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
+            activeTab === 'quizzes' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <FileCheck className="w-4 h-4" /> Project Evaluations
+          <FileCheck className="w-4 h-4" /> Digital Quizzes
         </button>
         <button
           onClick={() => setActiveTab('software')}
@@ -771,40 +790,29 @@ const DigitalSkillsAssessment = () => {
         </div>
       )}
 
-      {activeTab === 'projects' && (
+      {activeTab === 'quizzes' && (
         <div className="space-y-6">
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Layers size={24} />
+                  <Zap size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Projects</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{projectStats.activeProjects}</h3>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Quizzes</p>
+                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{quizStats.activeQuizzes}</h3>
                 </div>
               </div>
             </Card>
             <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <ClipboardCheck size={24} />
+                  <Activity size={24} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Submissions Graded</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{projectStats.gradedPct}%</h3>
-                </div>
-              </div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                  <Star size={24} />
-                </div>
-                <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Highest Rubric Score</p>
-                  <h3 className="text-2xl font-black text-amber-700 leading-none mt-1">{projectStats.highestScore}%</h3>
+                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Attempts</p>
+                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{quizStats.totalAttempts}</h3>
                 </div>
               </div>
             </Card>
@@ -815,7 +823,7 @@ const DigitalSkillsAssessment = () => {
                 </div>
                 <div>
                   <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Avg Class Score</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{projectStats.avgScore}%</h3>
+                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{quizStats.avgScore}%</h3>
                 </div>
               </div>
             </Card>
@@ -827,13 +835,13 @@ const DigitalSkillsAssessment = () => {
               <div className="relative flex-1">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                 <Input 
-                  placeholder="Search by Project Title or Learner Name..." 
+                  placeholder="Search by Quiz Title or Subject..." 
                   className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
-                  value={projectSearchTerm}
-                  onChange={(e) => setProjectSearchTerm(e.target.value)}
+                  value={quizSearchTerm}
+                  onChange={(e) => setQuizSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={projectGradeFilter} onValueChange={setProjectGradeFilter}>
+              <Select value={quizGradeFilter} onValueChange={setQuizGradeFilter}>
                 <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
@@ -844,66 +852,77 @@ const DigitalSkillsAssessment = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <Select value={quizStatusFilter} onValueChange={setQuizStatusFilter}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent className="rounded-2xl">
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="Active">Active</SelectItem>
+                  <SelectItem value="Completed">Completed</SelectItem>
+                  <SelectItem value="Draft">Draft</SelectItem>
+                </SelectContent>
+              </Select>
               <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
                 <Download size={18} /> Export CSV
               </Button>
             </div>
           </Card>
 
-          {/* Projects Grid */}
+          {/* Quizzes Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredProjects.length > 0 ? (
-              filteredProjects.map((project) => {
-                const progress = project.submissionsTotal > 0 
-                  ? Math.round((project.submissionsGraded / project.submissionsTotal) * 100) 
-                  : 0;
-                
+            {filteredQuizzes.length > 0 ? (
+              filteredQuizzes.map((quiz) => {
                 return (
-                  <Card key={project.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
+                  <Card key={quiz.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
                     <CardContent className="p-6 space-y-4">
                       <div className="flex justify-between items-start">
                         <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
-                          <FileText size={24} />
+                          <FileCheck size={24} />
                         </div>
-                        {getProjectStatusBadge(project.status)}
+                        {getQuizStatusBadge(quiz.status)}
                       </div>
                       
                       <div className="space-y-2">
                         <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
-                          {project.title}
+                          {quiz.title}
                         </h3>
                         <p className="text-sm font-bold text-indigo-500 flex items-center gap-1">
-                          <Layers size={14} /> {project.grade}
+                          <Layers size={14} /> {quiz.grade}
                         </p>
+                        <p className="text-xs text-slate-500">{quiz.subject}</p>
                       </div>
 
                       <div className="space-y-3 pt-2 border-t border-slate-100">
-                        <div>
-                          <div className="flex justify-between text-xs font-black uppercase text-slate-400 tracking-wider mb-1">
-                            <span>Rubric Criteria</span>
-                            <span>{project.maxPoints} PTS</span>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div className="p-2 bg-slate-50 rounded-xl">
+                            <p className="text-xl font-black text-slate-900">{quiz.questions}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Questions</p>
                           </div>
-                          <p className="text-sm text-slate-600 line-clamp-1">{project.rubricCriteria}</p>
+                          <div className="p-2 bg-slate-50 rounded-xl">
+                            <p className="text-xl font-black text-slate-900">{quiz.timeLimit} min</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Time Limit</p>
+                          </div>
+                          <div className="p-2 bg-slate-50 rounded-xl">
+                            <p className="text-xl font-black text-indigo-600">{quiz.attempts}</p>
+                            <p className="text-[10px] font-bold text-indigo-500 uppercase">Attempts</p>
+                          </div>
+                        <div className="p-2 bg-slate-50 rounded-xl">
+                            <p className="text-xl font-black text-emerald-600">{quiz.avgScore}%</p>
+                            <p className="text-[10px] font-bold text-emerald-500 uppercase">Avg Score</p>
+                          </div>
                         </div>
                         
-                        <div>
-                          <div className="flex justify-between text-xs font-black uppercase text-slate-400 tracking-wider mb-1">
-                            <span>Grading Progress</span>
-                            <span className="text-indigo-600">{project.submissionsGraded} / {project.submissionsTotal} Graded</span>
-                          </div>
-                          <Progress value={progress} className="h-2" />
-                        </div>
-
                         <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
-                          <span>Due: {project.dueDate}</span>
-                          <span className="text-slate-500">{project.status}</span>
+                          <span>Due: {quiz.dueDate}</span>
+                          <span className="text-slate-500">{quiz.status}</span>
                         </div>
                       </div>
 
                       <Button 
                         className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-11 shadow-lg shadow-indigo-100 gap-2"
                       >
-                        <ClipboardCheck size={18} /> Grade Submissions
+                        <ClipboardCheck size={18} /> View Results
                       </Button>
                     </CardContent>
                   </Card>
@@ -914,8 +933,8 @@ const DigitalSkillsAssessment = () => {
                 <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-200 shadow-sm">
                   <Search size={32} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">No projects found</h3>
-                <p className="text-slate-400 text-sm max-w-xs mx-auto">No projects match the current search and grade filters.</p>
+                <h3 className="text-lg font-bold text-slate-900 mb-1">No quizzes found</h3>
+                <p className="text-slate-400 text-sm max-w-xs mx-auto">No digital quizzes match the current search and grade filters.</p>
               </div>
             )}
           </div>

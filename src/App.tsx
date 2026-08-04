@@ -44,6 +44,7 @@ import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
 import ICTLabManagement from "./pages/ICTLabManagement";
 import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
 import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
+import PracticalCompetencies from "./pages/PracticalCompetencies";
 
 const queryClient = new QueryClient();
 
@@ -95,10 +96,11 @@ const App = () => (
                 <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
                 <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
                 <Route path="/digital-hub" element={<ProtectedRoute><Layout><DigitalHub /></Layout></ProtectedRoute>} />
-                                <Route path="/digital-literacy-videos" element={<ProtectedRoute><Layout><DigitalLiteracyVideos /></Layout></ProtectedRoute>} />
-                                <Route path="/ict-lab" element={<ProtectedRoute><Layout><ICTLabManagement /></Layout></ProtectedRoute>} />
+                <Route path="/digital-literacy-videos" element={<ProtectedRoute><Layout><DigitalLiteracyVideos /></Layout></ProtectedRoute>} />
+                <Route path="/ict-lab" element={<ProtectedRoute><Layout><ICTLabManagement /></Layout></ProtectedRoute>} />
                 <Route path="/system-management" element={<ProtectedRoute><Layout><SystemAndAccountManagement /></Layout></ProtectedRoute>} />
                 <Route path="/digital-skills" element={<ProtectedRoute><Layout><DigitalSkillsAssessment /></Layout></ProtectedRoute>} />
+                <Route path="/practical-competencies" element={<ProtectedRoute><Layout><PracticalCompetencies /></Layout></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
