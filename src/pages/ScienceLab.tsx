@@ -41,7 +41,8 @@ import {
   Plus as PlusIcon,
   MoreVertical,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Layers
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
