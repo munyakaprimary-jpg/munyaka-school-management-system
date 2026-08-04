@@ -37,7 +37,11 @@ import {
   Edit,
   MoreVertical,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Download,
+  FileSpreadsheet,
+  Database,
+  HardDrive
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -50,6 +54,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { downloadCSV, downloadFile } from '@/utils/downloadHelper';
 
 // --- Types ---
 type LogStatus = 'Issued' | 'Returned' | 'Overdue' | 'Under Repair';
@@ -168,6 +173,96 @@ const ICTLabManagement = () => {
     activeCheckouts: logs.filter(l => l.status === 'Issued').length,
     overdue: logs.filter(l => l.status === 'Overdue').length,
     repair: logs.filter(l => l.status === 'Under Repair').length
+  };
+
+  // --- Export Functions ---
+  const handleExportCSV = () => {
+    // CSV for Issue/Return Logs
+    const headers = [
+      "Log ID",
+      "Asset Tag",
+      "Device Name",
+      "Category",
+      "Borrower",
+      "Description",
+      "Date Issued",
+      "Expected Return",
+      "Actual Return",
+      "Status",
+      "Condition on Return",
+      "Quantity Issued",
+      "Quantity Returned"
+    ];
+
+    const rows = logs.map(log => [
+      log.id,
+      log.assetTag,
+      log.deviceName,
+      log.category,
+      log.borrower,
+      log.description,
+      log.dateIssued,
+      log.expectedReturn,
+      log.actualReturn || "—",
+      log.status,
+      log.conditionOnReturn || "—",
+      log.quantityIssued,
+      log.quantityReturned
+    ]);
+
+    const csvContent = [
+      "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+      "ICT LAB - ISSUE & RETURN LOGS",
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Records: ${logs.length}`,
+      "",
+      headers.join(","),
+      ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    downloadCSV(csvContent, `ict_lab_issue_return_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess(`Exported ${logs.length} issue/return records to CSV.`);
+  };
+
+  const handleExportJSON = () => {
+    // Full JSON backup including assets and logs
+    const backupData = {
+      metadata: {
+        school: "Munyaka Primary and Junior School",
+        module: "ICT Lab Management",
+        generatedAt: new Date().toISOString(),
+        version: "1.0",
+        totalAssets: assets.length,
+        totalLogs: logs.length
+      },
+      assets: assets.map(asset => ({
+        ...asset,
+        // Calculate checked out quantity from logs
+        checkedOutQty: logs
+          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
+          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0),
+        availableQty: Math.max(0, 1 - logs
+          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
+          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0))
+      })),
+      logs: logs,
+      summary: {
+        totalDevices: assets.length,
+        activeDevices: assets.filter(a => a.status === 'Active').length,
+        devicesInRepair: assets.filter(a => a.status === 'In Maintenance' || a.status === 'Decommissioned').length,
+        assignedDevices: assets.filter(a => !!a.assignedTo).length,
+        activeCheckouts: logs.filter(l => l.status === 'Issued').length,
+        overdueReturns: logs.filter(l => l.status === 'Overdue').length,
+        underRepair: logs.filter(l => l.status === 'Under Repair').length,
+        totalQuantityIssued: logs.reduce((sum, l) => sum + l.quantityIssued, 0),
+        totalQuantityReturned: logs.reduce((sum, l) => sum + l.quantityReturned, 0),
+        totalOutstanding: logs.reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0)
+      }
+    };
+
+    const jsonContent = JSON.stringify(backupData, null, 2);
+    downloadFile(jsonContent, `ict_lab_full_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    showSuccess("Full ICT Lab backup exported to JSON (assets + logs + summary).");
   };
 
   // --- Handlers ---
@@ -628,14 +723,34 @@ const ICTLabManagement = () => {
             </Card>
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Filter checkouts by borrower or device..." 
-              className="pl-11 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+          {/* Export Actions Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <Input 
+                placeholder="Filter checkouts by borrower or device..." 
+                className="pl-11 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="outline"
+                onClick={handleExportCSV}
+                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV Logs
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={handleExportJSON}
+                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+              >
+                <Database size={18} className="text-indigo-600" /> Export JSON Backup
+              </Button>
+            </div>
           </div>
 
           {/* Logs Table */}
