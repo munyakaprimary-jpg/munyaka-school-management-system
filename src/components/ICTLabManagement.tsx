@@ -557,7 +557,7 @@ const ICTLabManagement = () => {
             <p className="text-muted-foreground font-medium">Unified tracking for digital literacy devices and infrastructure.</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {activeTab === 'inventory' ? (
             <Button 
               className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
@@ -566,29 +566,32 @@ const ICTLabManagement = () => {
               <Plus size={20} /> Add New Asset
             </Button>
           ) : (
-            <>
+            <div className="flex flex-wrap items-center gap-2">
               <Button 
                 className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
                 onClick={() => openLogModal('issue')}
               >
                 <ArrowUpRight size={20} /> Log Device Issue
               </Button>
-              {/* Export Buttons - Visible in Header Toolbar when on Logs tab */}
-              <Button 
-                variant="outline"
-                onClick={handleExportCSV}
-                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-              >
-                <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV
-              </Button>
-              <Button 
-                variant="outline"
-                onClick={handleExportJSON}
-                className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-              >
-                <Database size={18} className="text-indigo-600" /> Export JSON
-              </Button>
-            </>
+              {/* Export Buttons - Prominently visible in Header Toolbar when on Logs tab */}
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4 ml-2">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Export Data:</span>
+                <Button 
+                  variant="outline"
+                  onClick={handleExportCSV}
+                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleExportJSON}
+                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  <Database size={18} className="text-indigo-600" /> Export JSON
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
