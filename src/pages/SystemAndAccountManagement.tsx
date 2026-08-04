@@ -235,8 +235,8 @@ const SystemAndAccountManagement = () => {
 
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[800px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">User Identity</th>
@@ -331,8 +331,8 @@ const SystemAndAccountManagement = () => {
 
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[900px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">MAC / IP Address</th>
@@ -408,8 +408,8 @@ const SystemAndAccountManagement = () => {
 
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[800px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Day & Time Slot</th>
