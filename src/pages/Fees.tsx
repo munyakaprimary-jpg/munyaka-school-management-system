@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History } from 'lucide-react';
 import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -20,11 +20,27 @@ import FeeStats from '@/components/fees/FeeStats';
 import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
+import EditFeeModal from '@/components/fees/EditFeeModal';
 import { FeeStructure, Transaction } from '@/types/fees';
 
 interface ExtendedTransaction extends Transaction {
   studentId?: string;
   grade?: string;
+}
+
+interface AuditLogEntry {
+  id: string;
+  timestamp: string;
+  admin: string;
+  action: string;
+  studentName: string;
+  studentId: string;
+  changes: {
+    field: string;
+    oldValue: string;
+    newValue: string;
+  }[];
+  reason: string;
 }
 
 const GRADE_LEVEL_OPTIONS = [
@@ -62,11 +78,18 @@ const Fees = () => {
       { year: "2024", term: "term1", gradeId: "g7", amount: 25000 },
     ];
   });
+  
+  // Audit Log State
+  const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>(() => {
+    const saved = localStorage.getItem('munyaka_fee_audit_logs');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   // Modal & Async States
   const [isRecordOpen, setIsRecordOpen] = useState(false);
   const [isConfigOpen, setIsConfigOpen] = useState(false);
   const [isStatementOpen, setIsStatementOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
   const [isDownloading, setIsDownloading] = useState(false);
 
@@ -92,6 +115,10 @@ const Fees = () => {
   useEffect(() => {
     localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
   }, [transactionsList]);
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
 
   // ============================================
   // DYNAMIC FEE CALCULATIONS
@@ -297,6 +324,64 @@ const Fees = () => {
     showSuccess(`Recorded KES ${amountNum.toLocaleString()} payment for ${studentName}`);
   };
 
+  // Edit Fee Handler
+  const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
+    // Update the fee record
+    setFeesList(prev => prev.map(fee => {
+      if (fee.id === studentId) {
+        return { ...fee, total: termFee, paid: feePaid };
+      }
+      return fee;
+    }));
+
+    // Add a transaction record for the adjustment if feePaid changed
+    const matchedStudent = STUDENTS.find(s => s.id === studentId);
+    const studentName = matchedStudent ? matchedStudent.name : "Learner";
+    const studentGrade = matchedStudent ? matchedStudent.grade : "";
+    
+    // Calculate the difference
+    const oldFee = feesList.find(f => f.id === studentId);
+    const oldPaid = oldFee ? oldFee.paid : 0;
+    const diff = feePaid - oldPaid;
+    
+    if (diff !== 0) {
+      setTransactionsList([{ 
+        id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
+        date: new Date().toLocaleDateString(), 
+        amount: diff, 
+        method: "Admin Adjustment", 
+        ref: "ADJ-" + Date.now().toString().slice(-6), 
+        category: "Adjustment",
+        studentId,
+        grade: studentGrade,
+      }, ...transactionsList]);
+    }
+
+    // Create audit log entry
+    const auditEntry: AuditLogEntry = {
+      id: `AUD-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      admin: "System Admin",
+      action: "Fee Record Modified",
+      studentName,
+      studentId,
+      changes: [
+        { field: "Term Fee", oldValue: oldFee?.total.toString() || "0", newValue: termFee.toString() },
+        { field: "Fee Paid", oldValue: oldFee?.paid.toString() || "0", newValue: feePaid.toString() },
+      ],
+      reason: reason || "No reason provided"
+    };
+    
+    setAuditLogs(prev => [auditEntry, ...prev]);
+    
+    showSuccess(`Fee record updated for ${studentName}. Balance and status recalculated.`);
+  };
+
+  const handleOpenEditModal = (fee: any) => {
+    setActiveStudent(fee);
+    setIsEditOpen(true);
+  };
+
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
 
   // Current term fee for the selected grade (for header display)
@@ -357,6 +442,9 @@ const Fees = () => {
               </TabsTrigger>
               <TabsTrigger value="ledger" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
                 Transaction Ledger
+              </TabsTrigger>
+              <TabsTrigger value="audit" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+                Audit Trail
               </TabsTrigger>
             </TabsList>
 
@@ -429,7 +517,7 @@ const Fees = () => {
                           </Badge>
                         </td>
                         <td className="px-5 py-3.5 text-right">
-                          <div className="flex justify-end gap-1">
+                          <div className="flex justify-end gap-1 no-print">
                             <Button 
                               variant="ghost" 
                               size="icon" 
@@ -447,6 +535,15 @@ const Fees = () => {
                               title="Download PDF"
                             >
                               <FileDown size={16} />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
+                              onClick={() => handleOpenEditModal(fee)}
+                              title="Edit Fee Record"
+                            >
+                              <Edit size={16} />
                             </Button>
                           </div>
                         </td>
@@ -500,6 +597,61 @@ const Fees = () => {
                 )}
               </tbody>
             </table>
+          </Card>
+        </TabsContent>
+
+        {/* Audit Trail Tab */}
+        <TabsContent value="audit" className="m-0">
+          <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
+            <div className="p-4 border-b border-slate-200/80 flex items-center justify-between">
+              <h3 className="font-bold text-slate-900">Fee Modification Audit Trail</h3>
+              <Badge variant="outline" className="text-xs font-medium">Immutable Log</Badge>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-slate-50/80 border-b border-slate-200/80">
+                  <tr>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Timestamp</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Admin</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Changes</th>
+                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Reason</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {auditLogs.length > 0 ? (
+                    auditLogs.map((log) => (
+                      <tr key={log.id} className="hover:bg-slate-50/60 transition-colors">
+                        <td className="px-5 py-3 font-mono text-xs text-slate-600">
+                          {new Date(log.timestamp).toLocaleString()}
+                        </td>
+                        <td className="px-5 py-3 font-medium text-slate-700">{log.admin}</td>
+                        <td className="px-5 py-3">
+                          <Badge variant="outline" className="bg-amber-50 text-amber-700 border-amber-200">
+                            {log.action}
+                          </Badge>
+                        </td>
+                        <td className="px-5 py-3 font-semibold text-slate-900">{log.studentName}</td>
+                        <td className="px-5 py-3 text-slate-600 max-w-xs">
+                          {log.changes.map(c => `${c.field}: ${c.oldValue} → ${c.newValue}`).join("; ")}
+                        </td>
+                        <td className="px-5 py-3 text-slate-500 italic max-w-xs truncate">{log.reason}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={6} className="px-5 py-12 text-center text-sm text-slate-400">
+                        <div className="flex flex-col items-center gap-2">
+                          <FileText size={32} className="text-slate-200" />
+                          <p className="font-medium">No fee modifications recorded yet.</p>
+                          <p className="text-xs">Audit entries will appear here when admin edits fee records.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table            </div>
           </Card>
         </TabsContent>
       </Tabs>
@@ -609,6 +761,14 @@ const Fees = () => {
         onSubmitPayment={handleRecordPayment}
         gradesData={GRADES_DATA}
         studentsData={STUDENTS}
+      />
+
+      {/* Edit Fee Modal */}
+      <EditFeeModal
+        isOpen={isEditOpen}
+        onClose={() => { setIsEditOpen(false); setActiveStudent(null); }}
+        student={activeStudent}
+        onSave={handleEditFee}
       />
 
       {/* Statement Preview Modal */}
