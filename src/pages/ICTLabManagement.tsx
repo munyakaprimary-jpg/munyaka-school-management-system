@@ -37,7 +37,14 @@ import {
   Edit,
   MoreVertical,
   ArrowRight,
-  ShieldAlert
+  ShieldAlert,
+  Download,
+  FileSpreadsheet,
+  Database,
+  HardDrive,
+  Lock,
+  Loader2,
+  AlertCircle as AlertCircleIcon
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -50,6 +57,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { downloadCSV, downloadFile } from '@/utils/downloadHelper';
 
 // --- Types ---
 type LogStatus = 'Issued' | 'Returned' | 'Overdue' | 'Under Repair';
@@ -106,6 +114,13 @@ const ICTLabManagement = () => {
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
   const [logMode, setLogMode] = useState<'issue' | 'return'>('issue');
+
+  // --- Admin Auth for Delete ---
+  const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
+  const [deleteAuthPassword, setDeleteAuthPassword] = useState("");
+  const [deleteAuthError, setDeleteAuthError] = useState("");
+  const [isDeleteVerifying, setIsDeleteVerifying] = useState(false);
+  const [assetToDelete, setAssetToDelete] = useState<string | null>(null);
 
   // --- Unified Log Form State ---
   const [logForm, setLogForm] = useState({
@@ -170,6 +185,93 @@ const ICTLabManagement = () => {
     repair: logs.filter(l => l.status === 'Under Repair').length
   };
 
+  // --- Export Functions ---
+  const handleExportCSV = () => {
+    const headers = [
+      "Log ID",
+      "Asset Tag",
+      "Device Name",
+      "Category",
+      "Borrower",
+      "Description",
+      "Date Issued",
+      "Expected Return",
+      "Actual Return",
+      "Status",
+      "Condition on Return",
+      "Quantity Issued",
+      "Quantity Returned"
+    ];
+
+    const rows = logs.map(log => [
+      log.id,
+      log.assetTag,
+      log.deviceName,
+      log.category,
+      log.borrower,
+      log.description,
+      log.dateIssued,
+      log.expectedReturn,
+      log.actualReturn || "—",
+      log.status,
+      log.conditionOnReturn || "—",
+      log.quantityIssued,
+      log.quantityReturned
+    ]);
+
+    const csvContent = [
+      "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+      "ICT LAB - ISSUE & RETURN LOGS",
+      `Generated: ${new Date().toLocaleString()}`,
+      `Total Records: ${logs.length}`,
+      "",
+      headers.join(","),
+      ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+    ].join("\n");
+
+    downloadCSV(csvContent, `ict_lab_issue_return_logs_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess(`Exported ${logs.length} issue/return records to CSV.`);
+  };
+
+  const handleExportJSON = () => {
+    const backupData = {
+      metadata: {
+        school: "Munyaka Primary and Junior School",
+        module: "ICT Lab Management",
+        generatedAt: new Date().toISOString(),
+        version: "1.0",
+        totalAssets: assets.length,
+        totalLogs: logs.length
+      },
+      assets: assets.map(asset => ({
+        ...asset,
+        checkedOutQty: logs
+          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
+          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0),
+        availableQty: Math.max(0, 1 - logs
+          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
+          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0))
+      })),
+      logs: logs,
+      summary: {
+        totalDevices: assets.length,
+        activeDevices: assets.filter(a => a.status === 'Active').length,
+        devicesInRepair: assets.filter(a => a.status === 'In Maintenance' || a.status === 'Decommissioned').length,
+        assignedDevices: assets.filter(a => !!a.assignedTo).length,
+        activeCheckouts: logs.filter(l => l.status === 'Issued').length,
+        overdueReturns: logs.filter(l => l.status === 'Overdue').length,
+        underRepair: logs.filter(l => l.status === 'Under Repair').length,
+        totalQuantityIssued: logs.reduce((sum, l) => sum + l.quantityIssued, 0),
+        totalQuantityReturned: logs.reduce((sum, l) => sum + l.quantityReturned, 0),
+        totalOutstanding: logs.reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0)
+      }
+    };
+
+    const jsonContent = JSON.stringify(backupData, null, 2);
+    downloadFile(jsonContent, `ict_lab_full_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    showSuccess("Full ICT Lab backup exported to JSON (assets + logs + summary).");
+  };
+
   // --- Handlers ---
   const handleAddAsset = (newAsset: ICTAsset) => {
     setAssets(prev => [newAsset, ...prev]);
@@ -178,7 +280,6 @@ const ICTLabManagement = () => {
 
   const openLogModal = (mode: 'issue' | 'return') => {
     setLogMode(mode);
-    // Reset form
     setLogForm({
       category: "Laptops",
       assetId: "",
@@ -234,7 +335,6 @@ const ICTLabManagement = () => {
     };
 
     setLogs([newLog, ...logs]);
-    // Update asset status to show it's checked out
     setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: logForm.borrower } : a));
     
     setIsLogModalOpen(false);
@@ -265,7 +365,6 @@ const ICTLabManagement = () => {
     const newQuantityReturned = logToReturn.quantityReturned + logForm.quantityReturned;
     const isFullyReturned = newQuantityReturned >= logToReturn.quantityIssued;
 
-    // Update the log
     setLogs(prev => prev.map(log => 
       log.id === logForm.returnLogId 
         ? { 
@@ -278,7 +377,6 @@ const ICTLabManagement = () => {
         : log
     ));
 
-    // Update asset back to available if fully returned
     if (asset && isFullyReturned) {
       setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: undefined } : a));
     }
@@ -288,7 +386,6 @@ const ICTLabManagement = () => {
   };
 
   const handleReturn = (id: string) => {
-    // Pre-fill the return modal with this log
     const log = logs.find(l => l.id === id);
     if (log) {
       const outstanding = log.quantityIssued - log.quantityReturned;
@@ -304,7 +401,6 @@ const ICTLabManagement = () => {
   };
 
   const handleIssueFromTable = (asset: ICTAsset) => {
-    // Pre-fill the issue modal with this asset
     setLogForm(prev => ({
       ...prev,
       category: asset.category,
@@ -316,10 +412,8 @@ const ICTLabManagement = () => {
   };
 
   const handleEditCheckout = (asset: ICTAsset) => {
-    // Find the active log for this asset
     const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
     if (activeLog) {
-      // Pre-fill return modal with the active log
       const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
       setLogForm(prev => ({
         ...prev,
@@ -362,9 +456,41 @@ const ICTLabManagement = () => {
     }
   };
 
-  const handleDelete = (id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id));
-    showSuccess("Asset record removed.");
+  // --- Delete with Admin Auth ---
+  const requestDeleteAsset = (id: string) => {
+    setAssetToDelete(id);
+    setDeleteAuthPassword("");
+    setDeleteAuthError("");
+    setIsDeleteAuthOpen(true);
+  };
+
+  const handleVerifyDeleteAuth = async () => {
+    if (!deleteAuthPassword.trim()) {
+      setDeleteAuthError("Admin password is required");
+      return;
+    }
+
+    setIsDeleteVerifying(true);
+    setDeleteAuthError("");
+
+    await new Promise(resolve => setTimeout(resolve, 700));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+    if (deleteAuthPassword === currentAdminPass) {
+      if (assetToDelete) {
+        setAssets(prev => prev.filter(a => a.id !== assetToDelete));
+        showSuccess("Asset record removed successfully.");
+      }
+      setIsDeleteAuthOpen(false);
+      setAssetToDelete(null);
+      setDeleteAuthPassword("");
+    } else {
+      setDeleteAuthError("Invalid admin password");
+      showError("Authorization failed");
+      setDeleteAuthPassword("");
+    }
+    setIsDeleteVerifying(false);
   };
 
   const getCategoryIcon = (cat: ICTCategory) => {
@@ -382,7 +508,6 @@ const ICTLabManagement = () => {
     const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
 
     if (isAssigned && activeLog) {
-      // Checked out device - show return and dropdown
       return (
         <div className="flex items-center justify-end gap-2">
           <Button 
@@ -419,17 +544,16 @@ const ICTLabManagement = () => {
               </DropdownMenuItem>
               <DropdownMenuSeparator className="my-1" />
               <DropdownMenuItem 
-                onClick={() => handleDelete(asset.id)}
+                onClick={() => requestDeleteAsset(asset.id)}
                 className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
               >
-                <Trash2 size={14} /> Remove Asset
+                <Lock size={14} className="mr-1" /> Delete Asset
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       );
     } else {
-      // Available device - show issue button
       return (
         <div className="flex items-center justify-end gap-2">
           <Button 
@@ -439,14 +563,21 @@ const ICTLabManagement = () => {
           >
             <ArrowUpRight size={14} /> Issue / Assign
           </Button>
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            className="rounded-xl h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50"
-            onClick={() => handleDelete(asset.id)}
-          >
-            <Trash2 size={16} />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50">
+                <MoreVertical size={18} />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
+              <DropdownMenuItem 
+                onClick={() => requestDeleteAsset(asset.id)}
+                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
+              >
+                <Lock size={14} className="mr-1" /> Delete Asset
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       );
     }
@@ -462,7 +593,7 @@ const ICTLabManagement = () => {
             <p className="text-muted-foreground font-medium">Unified tracking for digital literacy devices and infrastructure.</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {activeTab === 'inventory' ? (
             <Button 
               className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
@@ -471,12 +602,31 @@ const ICTLabManagement = () => {
               <Plus size={20} /> Add New Asset
             </Button>
           ) : (
-            <Button 
-              className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
-              onClick={() => openLogModal('issue')}
-            >
-              <ArrowUpRight size={20} /> Log Device Issue
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button 
+                className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
+                onClick={() => openLogModal('issue')}
+              >
+                <ArrowUpRight size={20} /> Log Device Issue
+              </Button>
+              <div className="flex items-center gap-2 border-l border-slate-200 pl-4 ml-2">
+                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Export Data:</span>
+                <Button 
+                  variant="outline"
+                  onClick={handleExportCSV}
+                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV
+                </Button>
+                <Button 
+                  variant="outline"
+                  onClick={handleExportJSON}
+                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
+                >
+                  <Database size={18} className="text-indigo-600" /> Export JSON
+                </Button>
+              </div>
+            </div>
           )}
         </div>
       </div>
@@ -492,7 +642,6 @@ const ICTLabManagement = () => {
         </TabsList>
 
         <TabsContent value="inventory" className="space-y-8">
-          {/* Summary Cards */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
               { label: 'Total Devices', value: stats.total, icon: Monitor, color: 'text-blue-600', bg: 'bg-blue-50' },
@@ -514,7 +663,6 @@ const ICTLabManagement = () => {
             ))}
           </div>
 
-          {/* Filters Bar */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="md:col-span-2 relative">
@@ -552,7 +700,6 @@ const ICTLabManagement = () => {
             </div>
           </Card>
 
-          {/* Asset Table */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
@@ -612,7 +759,6 @@ const ICTLabManagement = () => {
         </TabsContent>
 
         <TabsContent value="logs" className="space-y-8">
-          {/* Summary Counters for Logs */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <Card className="border-none shadow-sm rounded-3xl bg-amber-50 p-6 flex items-center gap-4">
               <div className="p-3 bg-white rounded-2xl text-amber-600 shadow-sm"><RotateCcw size={24} /></div>
@@ -638,7 +784,6 @@ const ICTLabManagement = () => {
             />
           </div>
 
-          {/* Logs Table */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
@@ -738,7 +883,6 @@ const ICTLabManagement = () => {
           </div>
         }
       >
-        {/* Mode Toggle Tabs */}
         <Tabs value={logMode} onValueChange={setLogMode} className="w-full mb-6">
           <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
             <TabsTrigger value="issue" className="rounded-lg px-6 h-full font-bold text-xs">
@@ -960,6 +1104,49 @@ const ICTLabManagement = () => {
             </div>
           </TabsContent>
         </Tabs>
+      </Modal>
+
+      {/* Admin Auth Modal for Delete */}
+      <Modal
+        isOpen={isDeleteAuthOpen}
+        onClose={() => setIsDeleteAuthOpen(false)}
+        title="Admin Authorization Required"
+        description="Enter your admin password to delete this asset record."
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button variant="ghost" onClick={() => setIsDeleteAuthOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
+            <Button 
+              onClick={handleVerifyDeleteAuth}
+              disabled={isDeleteVerifying}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8 h-12 shadow-lg shadow-red-100 gap-2"
+            >
+              {isDeleteVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : <ShieldAlert size={16} />}
+              Authorize Delete
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          {deleteAuthError && (
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertCircleIcon size={14} /> {deleteAuthError}
+            </div>
+          )}
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <Input 
+                type="password" 
+                value={deleteAuthPassword} 
+                onChange={(e) => { setDeleteAuthPassword(e.target.value); setDeleteAuthError(""); }} 
+                placeholder="••••••••" 
+                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                autoFocus
+              />
+            </div>
+          </div>
+        </div>
       </Modal>
     </div>
   );
