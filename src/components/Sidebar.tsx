@@ -132,9 +132,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
-    // Science Lab - VISIBLE TO ALL ROLES
-    { icon: FlaskConical, label: 'Science Lab', path: '/science-lab', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
@@ -230,6 +227,24 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               </Link>
             );
           })}
+
+          {/* HARDCODED SCIENCE LAB LINK - No role check, always visible */}
+          <Link 
+            to="/science-lab"
+            onClick={() => setIsOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+              location.pathname === '/science-lab' 
+                ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" 
+                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+            )}
+          >
+            <FlaskConical size={20} className={cn(
+              "shrink-0",
+              location.pathname === '/science-lab' ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+            )} />
+            {!isCollapsed && <span className="truncate">Science Lab</span>}
+          </Link>
         </nav>
 
         {/* User Account Footer */}
