@@ -28,7 +28,10 @@ import {
   AlertCircle,
   UserCheck,
   Calendar,
-  ArrowUpRight
+  ArrowUpRight,
+  ArrowDownLeft,
+  Undo2,
+  Package
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -49,6 +52,7 @@ interface ICTLog {
   expectedReturn: string;
   actualReturn?: string;
   status: LogStatus;
+  conditionOnReturn?: string;
 }
 
 // --- Mock Data ---
@@ -60,7 +64,7 @@ const INITIAL_ASSETS: ICTAsset[] = [
 ];
 
 const INITIAL_LOGS: ICTLog[] = [
-  { id: "ISS-101", assetId: "1", assetTag: "ICT-LP-01", deviceName: "HP ProBook 450", borrower: "Jane Mwangi", description: "Classroom presentation", dateIssued: "2024-05-10", expectedReturn: "2024-05-12", status: "Returned", actualReturn: "2024-05-12" },
+  { id: "ISS-101", assetId: "1", assetTag: "ICT-LP-01", deviceName: "HP ProBook 450", borrower: "Jane Mwangi", description: "Classroom presentation", dateIssued: "2024-05-10", expectedReturn: "2024-05-12", status: "Returned", actualReturn: "2024-05-12", conditionOnReturn: "Good" },
   { id: "ISS-102", assetId: "3", assetTag: "ICT-PJ-01", deviceName: "Epson EB-X41", borrower: "John Kamau", description: "HDMI port loose", dateIssued: "2024-05-15", expectedReturn: "2024-05-20", status: "Under Repair" },
   { id: "ISS-103", assetId: "2", assetTag: "ICT-TB-05", deviceName: "Samsung Galaxy Tab A8", borrower: "Grade 4 Blue", description: "CBC Practical", dateIssued: "2024-05-22", expectedReturn: "2024-05-23", status: "Overdue" },
 ];
@@ -82,15 +86,22 @@ const ICTLabManagement = () => {
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
-  const [isIssueModalOpen, setIsIssueModalOpen] = useState(false);
+  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
+  const [logMode, setLogMode] = useState<'issue' | 'return'>('issue');
 
-  // --- New Checkout Form State ---
-  const [issueForm, setIssueForm] = useState({
+  // --- Unified Log Form State ---
+  const [logForm, setLogForm] = useState({
+    // Issue fields
     assetId: "",
     borrower: "",
     description: "",
     outDate: new Date().toISOString().split('T')[0],
-    returnDate: ""
+    returnDate: "",
+    // Return fields
+    returnLogId: "",
+    actualReturnDate: new Date().toISOString().split('T')[0],
+    conditionOnReturn: "Good",
+    returnNotes: ""
   });
 
   // --- Persistence ---
@@ -120,6 +131,11 @@ const ICTLabManagement = () => {
     );
   }, [logs, searchQuery]);
 
+  // Active checkouts (Issued but not Returned)
+  const activeCheckouts = useMemo(() => {
+    return logs.filter(l => l.status === 'Issued' || l.status === 'Overdue');
+  }, [logs]);
+
   const stats = {
     total: assets.length,
     active: assets.filter(a => a.status === 'Active').length,
@@ -139,13 +155,38 @@ const ICTLabManagement = () => {
     showSuccess(`Added ${newAsset.name} to inventory.`);
   };
 
-  const handleLogIssue = () => {
-    if (!issueForm.assetId || !issueForm.borrower || !issueForm.returnDate) {
+  const openLogModal = (mode: 'issue' | 'return') => {
+    setLogMode(mode);
+    // Reset form
+    setLogForm({
+      assetId: "",
+      borrower: "",
+      description: "",
+      outDate: new Date().toISOString().split('T')[0],
+      returnDate: "",
+      returnLogId: "",
+      actualReturnDate: new Date().toISOString().split('T')[0],
+      conditionOnReturn: "Good",
+      returnNotes: ""
+    });
+    setIsLogModalOpen(true);
+  };
+
+  const handleLogSubmit = () => {
+    if (logMode === 'issue') {
+      handleIssueSubmit();
+    } else {
+      handleReturnSubmit();
+    }
+  };
+
+  const handleIssueSubmit = () => {
+    if (!logForm.assetId || !logForm.borrower || !logForm.returnDate) {
       showError("Please fill in all required fields.");
       return;
     }
 
-    const asset = assets.find(a => a.id === issueForm.assetId);
+    const asset = assets.find(a => a.id === logForm.assetId);
     if (!asset) return;
 
     const newLog: ICTLog = {
@@ -153,26 +194,65 @@ const ICTLabManagement = () => {
       assetId: asset.id,
       assetTag: asset.assetTag,
       deviceName: asset.name,
-      borrower: issueForm.borrower,
-      description: issueForm.description,
-      dateIssued: issueForm.outDate,
-      expectedReturn: issueForm.returnDate,
+      borrower: logForm.borrower,
+      description: logForm.description,
+      dateIssued: logForm.outDate,
+      expectedReturn: logForm.returnDate,
       status: "Issued"
     };
 
     setLogs([newLog, ...logs]);
-    setIsIssueModalOpen(false);
-    setIssueForm({ assetId: "", borrower: "", description: "", outDate: new Date().toISOString().split('T')[0], returnDate: "" });
-    showSuccess(`Device ${asset.assetTag} successfully checked out to ${issueForm.borrower}.`);
+    // Update asset status to show it's checked out
+    setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: logForm.borrower } : a));
+    
+    setIsLogModalOpen(false);
+    showSuccess(`Device ${asset.assetTag} successfully checked out to ${logForm.borrower}.`);
+  };
+
+  const handleReturnSubmit = () => {
+    if (!logForm.returnLogId) {
+      showError("Please select a device to return.");
+      return;
+    }
+
+    const logToReturn = logs.find(l => l.id === logForm.returnLogId);
+    if (!logToReturn) return;
+
+    const asset = assets.find(a => a.id === logToReturn.assetId);
+
+    // Update the log
+    setLogs(prev => prev.map(log => 
+      log.id === logForm.returnLogId 
+        ? { 
+            ...log, 
+            status: 'Returned', 
+            actualReturn: logForm.actualReturnDate,
+            conditionOnReturn: logForm.conditionOnReturn
+          } 
+        : log
+    ));
+
+    // Update asset back to available
+    if (asset) {
+      setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: undefined } : a));
+    }
+
+    setIsLogModalOpen(false);
+    showSuccess(`Device ${logToReturn.assetTag} returned successfully. Condition: ${logForm.conditionOnReturn}`);
   };
 
   const handleReturn = (id: string) => {
-    setLogs(prev => prev.map(log => 
-      log.id === id 
-        ? { ...log, status: 'Returned', actualReturn: new Date().toISOString().split('T')[0] } 
-        : log
-    ));
-    showSuccess("Device marked as returned and updated in log.");
+    // Pre-fill the return modal with this log
+    const log = logs.find(l => l.id === id);
+    if (log) {
+      setLogForm(prev => ({
+        ...prev,
+        returnLogId: log.id,
+        actualReturnDate: new Date().toISOString().split('T')[0],
+        conditionOnReturn: "Good"
+      }));
+      openLogModal('return');
+    }
   };
 
   const handleDelete = (id: string) => {
@@ -211,7 +291,7 @@ const ICTLabManagement = () => {
           ) : (
             <Button 
               className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
-              onClick={() => setIsIssueModalOpen(true)}
+              onClick={() => openLogModal('issue')}
             >
               <ArrowUpRight size={20} /> Log Device Issue
             </Button>
@@ -429,8 +509,13 @@ const ICTLabManagement = () => {
                               onClick={() => handleReturn(log.id)}
                               className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all gap-1.5"
                             >
-                              <RotateCcw size={14} /> Mark Returned
+                              <Undo2 size={14} /> Process Return
                             </Button>
+                          )}
+                          {log.status === 'Returned' && (
+                            <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
+                              Completed
+                            </Badge>
                           )}
                         </td>
                       </tr>
@@ -446,79 +531,160 @@ const ICTLabManagement = () => {
       {/* --- Modals --- */}
       <AddICTAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} onAdd={handleAddAsset} />
 
+      {/* Unified Issue / Return Modal */}
       <Modal
-        isOpen={isIssueModalOpen}
-        onClose={() => setIsIssueModalOpen(false)}
-        title="Log Device Issue / Checkout"
-        description="Assign school hardware to a teacher or department for a specific period."
+        isOpen={isLogModalOpen}
+        onClose={() => setIsLogModalOpen(false)}
+        title={logMode === 'issue' ? "Log Device Issue / Checkout" : "Process Device Return"}
+        description={logMode === 'issue' 
+          ? "Assign school hardware to a teacher or department for a specific period."
+          : "Record returned assets and assess their current condition."}
         footer={
           <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsIssueModalOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
+            <Button variant="ghost" onClick={() => setIsLogModalOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
             <Button 
-              onClick={handleLogIssue}
+              onClick={handleLogSubmit}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2"
             >
-              <CheckCircle2 size={18} /> Confirm Checkout
+              {logMode === 'issue' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
+              {logMode === 'issue' ? "Confirm Checkout" : "Process Return"}
             </Button>
           </div>
         }
       >
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Select Hardware Unit</Label>
-            <Select value={issueForm.assetId} onValueChange={(val) => setIssueForm({...issueForm, assetId: val})}>
-              <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                <SelectValue placeholder="Choose device..." />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                {assets.filter(a => a.status === 'Active').map(a => (
-                  <SelectItem key={a.id} value={a.id}>{a.assetTag} — {a.name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+        {/* Mode Toggle Tabs */}
+        <Tabs value={logMode} onValueChange={setLogMode} className="w-full mb-6">
+          <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
+            <TabsTrigger value="issue" className="rounded-lg px-6 h-full font-bold text-xs">
+              <ArrowUpRight size={14} className="mr-1" /> Issue Device
+            </TabsTrigger>
+            <TabsTrigger value="return" className="rounded-lg px-6 h-full font-bold text-xs">
+              <ArrowDownLeft size={14} className="mr-1" /> Return Device
+            </TabsTrigger>
+          </TabsList>
 
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Borrower Name / Department</Label>
-            <Input 
-              value={issueForm.borrower}
-              onChange={e => setIssueForm({...issueForm, borrower: e.target.value})}
-              placeholder="e.g. Mr. Kamau / Science Dept"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Purpose / Issue Description</Label>
-            <Input 
-              value={issueForm.description}
-              onChange={e => setIssueForm({...issueForm, description: e.target.value})}
-              placeholder="e.g. For Grade 4 Practical"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
+          <TabsContent value="issue" className="space-y-4 pt-4 animate-in fade-in">
             <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Checkout Date</Label>
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Select Hardware Unit</Label>
+              <Select value={logForm.assetId} onValueChange={(val) => setLogForm({...logForm, assetId: val})}>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                  <SelectValue placeholder="Choose device..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {assets.filter(a => a.status === 'Active').map(a => (
+                    <SelectItem key={a.id} value={a.id}>{a.assetTag} — {a.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Borrower Name / Department</Label>
               <Input 
-                type="date"
-                value={issueForm.outDate}
-                onChange={e => setIssueForm({...issueForm, outDate: e.target.value})}
+                value={logForm.borrower}
+                onChange={e => setLogForm({...logForm, borrower: e.target.value})}
+                placeholder="e.g. Mr. Kamau / Science Dept"
                 className="rounded-xl h-12 bg-slate-50 border-none font-bold"
               />
             </div>
+
             <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Expected Return</Label>
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Purpose / Issue Description</Label>
               <Input 
-                type="date"
-                value={issueForm.returnDate}
-                onChange={e => setIssueForm({...issueForm, returnDate: e.target.value})}
+                value={logForm.description}
+                onChange={e => setLogForm({...logForm, description: e.target.value})}
+                placeholder="e.g. For Grade 4 Practical"
                 className="rounded-xl h-12 bg-slate-50 border-none font-bold"
               />
             </div>
-          </div>
-        </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Checkout Date</Label>
+                <Input 
+                  type="date"
+                  value={logForm.outDate}
+                  onChange={e => setLogForm({...logForm, outDate: e.target.value})}
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Expected Return</Label>
+                <Input 
+                  type="date"
+                  value={logForm.returnDate}
+                  onChange={e => setLogForm({...logForm, returnDate: e.target.value})}
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                />
+              </div>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="return" className="space-y-4 pt-4 animate-in fade-in">
+            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100 flex items-start gap-4">
+              <Package className="text-amber-600 shrink-0 mt-1" size={20} />
+              <p className="text-xs text-amber-800/80 leading-relaxed font-medium">
+                Select an active checkout below to process its return. The device will be marked available in the lab inventory.
+              </p>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Active Checkout to Return</Label>
+              <Select value={logForm.returnLogId} onValueChange={(val) => setLogForm({...logForm, returnLogId: val})}>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                  <SelectValue placeholder="Choose issued record..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {activeCheckouts.length > 0 ? (
+                    activeCheckouts.map(log => (
+                      <SelectItem key={log.id} value={log.id}>
+                        {log.borrower}: {log.deviceName} ({log.assetTag}) — Due: {log.expectedReturn}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value="none" disabled>No active checkouts to return</SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Actual Return Date</Label>
+                <Input 
+                  type="date"
+                  value={logForm.actualReturnDate}
+                  onChange={e => setLogForm({...logForm, actualReturnDate: e.target.value})}
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Condition on Return</Label>
+                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm}>
+                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="rounded-2xl">
+                    <SelectItem value="Good">Good</SelectItem>
+                    <SelectItem value="Needs Repair">Needs Repair</SelectItem>
+                    <SelectItem value="Damaged">Damaged</SelectItem>
+                    <SelectItem value="Lost">Lost / Unaccounted</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Return Notes / Remarks</Label>
+              <Input 
+                value={logForm.returnNotes}
+                onChange={e => setLogForm({...logForm, returnNotes: e.target.value})}
+                placeholder="e.g. Screen scratch, missing charger, etc."
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+              />
+            </div>
+          </TabsContent>
+        </Tabs>
       </Modal>
     </div>
   );
