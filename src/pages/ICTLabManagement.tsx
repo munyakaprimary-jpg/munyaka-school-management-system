@@ -31,7 +31,9 @@ import {
   ArrowUpRight,
   ArrowDownLeft,
   Undo2,
-  Package
+  Package,
+  Minus,
+  Plus as PlusIcon
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -46,6 +48,7 @@ interface ICTLog {
   assetId: string;
   assetTag: string;
   deviceName: string;
+  category: ICTCategory;
   borrower: string;
   description: string;
   dateIssued: string;
@@ -53,6 +56,8 @@ interface ICTLog {
   actualReturn?: string;
   status: LogStatus;
   conditionOnReturn?: string;
+  quantityIssued: number;
+  quantityReturned: number;
 }
 
 // --- Mock Data ---
@@ -64,9 +69,9 @@ const INITIAL_ASSETS: ICTAsset[] = [
 ];
 
 const INITIAL_LOGS: ICTLog[] = [
-  { id: "ISS-101", assetId: "1", assetTag: "ICT-LP-01", deviceName: "HP ProBook 450", borrower: "Jane Mwangi", description: "Classroom presentation", dateIssued: "2024-05-10", expectedReturn: "2024-05-12", status: "Returned", actualReturn: "2024-05-12", conditionOnReturn: "Good" },
-  { id: "ISS-102", assetId: "3", assetTag: "ICT-PJ-01", deviceName: "Epson EB-X41", borrower: "John Kamau", description: "HDMI port loose", dateIssued: "2024-05-15", expectedReturn: "2024-05-20", status: "Under Repair" },
-  { id: "ISS-103", assetId: "2", assetTag: "ICT-TB-05", deviceName: "Samsung Galaxy Tab A8", borrower: "Grade 4 Blue", description: "CBC Practical", dateIssued: "2024-05-22", expectedReturn: "2024-05-23", status: "Overdue" },
+  { id: "ISS-101", assetId: "1", assetTag: "ICT-LP-01", deviceName: "HP ProBook 450", category: "Laptops", borrower: "Jane Mwangi", description: "Classroom presentation", dateIssued: "2024-05-10", expectedReturn: "2024-05-12", status: "Returned", actualReturn: "2024-05-12", conditionOnReturn: "Good", quantityIssued: 1, quantityReturned: 1 },
+  { id: "ISS-102", assetId: "3", assetTag: "ICT-PJ-01", deviceName: "Epson EB-X41", category: "Projectors", borrower: "John Kamau", description: "HDMI port loose", dateIssued: "2024-05-15", expectedReturn: "2024-05-20", status: "Under Repair", quantityIssued: 1, quantityReturned: 0 },
+  { id: "ISS-103", assetId: "2", assetTag: "ICT-TB-05", deviceName: "Samsung Galaxy Tab A8", category: "Tablets", borrower: "Grade 4 Blue", description: "CBC Practical", dateIssued: "2024-05-22", expectedReturn: "2024-05-23", status: "Overdue", quantityIssued: 30, quantityReturned: 0 },
 ];
 
 const ICTLabManagement = () => {
@@ -92,16 +97,19 @@ const ICTLabManagement = () => {
   // --- Unified Log Form State ---
   const [logForm, setLogForm] = useState({
     // Issue fields
+    category: "Laptops" as ICTCategory,
     assetId: "",
     borrower: "",
     description: "",
     outDate: new Date().toISOString().split('T')[0],
     returnDate: "",
+    quantityIssued: 1,
     // Return fields
     returnLogId: "",
     actualReturnDate: new Date().toISOString().split('T')[0],
     conditionOnReturn: "Good",
-    returnNotes: ""
+    returnNotes: "",
+    quantityReturned: 1
   });
 
   // --- Persistence ---
@@ -159,15 +167,18 @@ const ICTLabManagement = () => {
     setLogMode(mode);
     // Reset form
     setLogForm({
+      category: "Laptops",
       assetId: "",
       borrower: "",
       description: "",
       outDate: new Date().toISOString().split('T')[0],
       returnDate: "",
+      quantityIssued: 1,
       returnLogId: "",
       actualReturnDate: new Date().toISOString().split('T')[0],
       conditionOnReturn: "Good",
-      returnNotes: ""
+      returnNotes: "",
+      quantityReturned: 1
     });
     setIsLogModalOpen(true);
   };
@@ -181,8 +192,13 @@ const ICTLabManagement = () => {
   };
 
   const handleIssueSubmit = () => {
-    if (!logForm.assetId || !logForm.borrower || !logForm.returnDate) {
+    if (!logForm.category || !logForm.assetId || !logForm.borrower || !logForm.returnDate) {
       showError("Please fill in all required fields.");
+      return;
+    }
+
+    if (!logForm.quantityIssued || logForm.quantityIssued < 1) {
+      showError("Quantity issued must be at least 1.");
       return;
     }
 
@@ -194,11 +210,14 @@ const ICTLabManagement = () => {
       assetId: asset.id,
       assetTag: asset.assetTag,
       deviceName: asset.name,
+      category: logForm.category,
       borrower: logForm.borrower,
       description: logForm.description,
       dateIssued: logForm.outDate,
       expectedReturn: logForm.returnDate,
-      status: "Issued"
+      status: "Issued",
+      quantityIssued: logForm.quantityIssued,
+      quantityReturned: 0
     };
 
     setLogs([newLog, ...logs]);
@@ -206,7 +225,7 @@ const ICTLabManagement = () => {
     setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: logForm.borrower } : a));
     
     setIsLogModalOpen(false);
-    showSuccess(`Device ${asset.assetTag} successfully checked out to ${logForm.borrower}.`);
+    showSuccess(`${logForm.quantityIssued} ${asset.name}(s) successfully checked out to ${logForm.borrower}.`);
   };
 
   const handleReturnSubmit = () => {
@@ -215,41 +234,57 @@ const ICTLabManagement = () => {
       return;
     }
 
+    if (!logForm.quantityReturned || logForm.quantityReturned < 1) {
+      showError("Quantity returned must be at least 1.");
+      return;
+    }
+
     const logToReturn = logs.find(l => l.id === logForm.returnLogId);
     if (!logToReturn) return;
 
+    if (logForm.quantityReturned > (logToReturn.quantityIssued - logToReturn.quantityReturned)) {
+      showError(`Cannot return more than ${logToReturn.quantityIssued - logToReturn.quantityReturned} outstanding units.`);
+      return;
+    }
+
     const asset = assets.find(a => a.id === logToReturn.assetId);
+
+    const newQuantityReturned = logToReturn.quantityReturned + logForm.quantityReturned;
+    const isFullyReturned = newQuantityReturned >= logToReturn.quantityIssued;
 
     // Update the log
     setLogs(prev => prev.map(log => 
       log.id === logForm.returnLogId 
         ? { 
             ...log, 
-            status: 'Returned', 
-            actualReturn: logForm.actualReturnDate,
-            conditionOnReturn: logForm.conditionOnReturn
+            status: isFullyReturned ? 'Returned' : 'Issued', 
+            actualReturn: isFullyReturned ? logForm.actualReturnDate : log.actualReturn,
+            conditionOnReturn: isFullyReturned ? logForm.conditionOnReturn : log.conditionOnReturn,
+            quantityReturned: newQuantityReturned
           } 
         : log
     ));
 
-    // Update asset back to available
-    if (asset) {
+    // Update asset back to available if fully returned
+    if (asset && isFullyReturned) {
       setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: undefined } : a));
     }
 
     setIsLogModalOpen(false);
-    showSuccess(`Device ${logToReturn.assetTag} returned successfully. Condition: ${logForm.conditionOnReturn}`);
+    showSuccess(`${logForm.quantityReturned} ${logToReturn.deviceName}(s) returned successfully. Condition: ${logForm.conditionOnReturn}`);
   };
 
   const handleReturn = (id: string) => {
     // Pre-fill the return modal with this log
     const log = logs.find(l => l.id === id);
     if (log) {
+      const outstanding = log.quantityIssued - log.quantityReturned;
       setLogForm(prev => ({
         ...prev,
         returnLogId: log.id,
         actualReturnDate: new Date().toISOString().split('T')[0],
-        conditionOnReturn: "Good"
+        conditionOnReturn: "Good",
+        quantityReturned: outstanding
       }));
       openLogModal('return');
     }
@@ -472,6 +507,7 @@ const ICTLabManagement = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Borrower / Purpose</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Dates (Out / Due)</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Qty Out / In</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -501,6 +537,13 @@ const ICTLabManagement = () => {
                             log.status === 'Issued' ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700")}>
                             {log.status}
                           </Badge>
+                        </td>
+                        <td className="px-8 py-5 text-center font-bold text-slate-700">
+                          <div className="flex items-center justify-center gap-2">
+                            <span className="text-amber-600">{log.quantityIssued}</span>
+                            <span className="text-slate-300">/</span>
+                            <span className="text-emerald-600">{log.quantityReturned}</span>
+                          </div>
                         </td>
                         <td className="px-8 py-5 text-right">
                           {log.status !== 'Returned' && (
@@ -565,13 +608,28 @@ const ICTLabManagement = () => {
 
           <TabsContent value="issue" className="space-y-4 pt-4 animate-in fade-in">
             <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Device Category</Label>
+              <Select value={logForm.category} onValueChange={(val) => setLogForm({...logForm, category: val as ICTCategory, assetId: ""})}>
+                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                  <SelectValue placeholder="Select category..." />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  <SelectItem value="Laptops">Laptops</SelectItem>
+                  <SelectItem value="Tablets">Tablets</SelectItem>
+                  <SelectItem value="Projectors">Projectors</SelectItem>
+                  <SelectItem value="Networking">Networking</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Select Hardware Unit</Label>
               <Select value={logForm.assetId} onValueChange={(val) => setLogForm({...logForm, assetId: val})}>
                 <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                   <SelectValue placeholder="Choose device..." />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {assets.filter(a => a.status === 'Active').map(a => (
+                  {assets.filter(a => a.status === 'Active' && a.category === logForm.category).map(a => (
                     <SelectItem key={a.id} value={a.id}>{a.assetTag} — {a.name}</SelectItem>
                   ))}
                 </SelectContent>
@@ -598,7 +656,7 @@ const ICTLabManagement = () => {
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-3 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Checkout Date</Label>
                 <Input 
@@ -616,6 +674,36 @@ const ICTLabManagement = () => {
                   onChange={e => setLogForm({...logForm, returnDate: e.target.value})}
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Quantity Issued</Label>
+                <div className="flex items-center gap-2">
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setLogForm(prev => ({...prev, quantityIssued: Math.max(1, prev.quantityIssued - 1)}))}
+                    className="h-12 w-12 rounded-xl border-slate-200"
+                  >
+                    <Minus size={16} />
+                  </Button>
+                  <Input 
+                    type="number"
+                    min="1"
+                    value={logForm.quantityIssued}
+                    onChange={e => setLogForm({...logForm, quantityIssued: Math.max(1, parseInt(e.target.value) || 1)})}
+                    className="h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
+                  />
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    size="icon"
+                    onClick={() => setLogForm(prev => ({...prev, quantityIssued: prev.quantityIssued + 1}))}
+                    className="h-12 w-12 rounded-xl border-slate-200"
+                  >
+                    <PlusIcon size={16} />
+                  </Button>
+                </div>
               </div>
             </div>
           </TabsContent>
@@ -638,7 +726,7 @@ const ICTLabManagement = () => {
                   {activeCheckouts.length > 0 ? (
                     activeCheckouts.map(log => (
                       <SelectItem key={log.id} value={log.id}>
-                        {log.borrower}: {log.deviceName} ({log.assetTag}) — Due: {log.expectedReturn}
+                        {log.borrower}: {log.deviceName} ({log.assetTag}) — Qty Out: {log.quantityIssued} / In: {log.quantityReturned} — Due: {log.expectedReturn}
                       </SelectItem>
                     ))
                   ) : (
@@ -671,6 +759,50 @@ const ICTLabManagement = () => {
                     <SelectItem value="Lost">Lost / Unaccounted</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Quantity Returned</Label>
+              <div className="flex items-center gap-2">
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => {
+                    const log = logs.find(l => l.id === logForm.returnLogId);
+                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
+                    setLogForm(prev => ({...prev, quantityReturned: Math.max(1, Math.min(maxReturn, prev.quantityReturned - 1))}));
+                  }}
+                  className="h-12 w-12 rounded-xl border-slate-200"
+                >
+                  <Minus size={16} />
+                </Button>
+                <Input 
+                  type="number"
+                  min="1"
+                  value={logForm.quantityReturned}
+                  onChange={e => {
+                    const log = logs.find(l => l.id === logForm.returnLogId);
+                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
+                    const val = Math.max(1, Math.min(maxReturn, parseInt(e.target.value) || 1));
+                    setLogForm({...logForm, quantityReturned: val});
+                  }}
+                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
+                />
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => {
+                    const log = logs.find(l => l.id === logForm.returnLogId);
+                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
+                    setLogForm(prev => ({...prev, quantityReturned: Math.min(maxReturn, prev.quantityReturned + 1)}));
+                  }}
+                  className="h-12 w-12 rounded-xl border-slate-200"
+                >
+                  <PlusIcon size={16} />
+                </Button>
               </div>
             </div>
 
