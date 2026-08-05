@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Modal from '@/components/ui/Modal';
 import { Save, Loader2, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { cn } from "@/lib/utils";
 
 interface EditFeeModalProps {
   isOpen: boolean;
