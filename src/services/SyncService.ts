@@ -6,7 +6,7 @@ import { EventEmitter } from 'events';
 class SyncService extends EventEmitter {
   private syncInterval: any = null;
   private isSyncing = false;
-  private adminHost: string = 'http://192.168.1.100:3000'; // Default, should be configurable
+  private adminHost: string = 'http://172.27.204.196:3000'; // Admin server IP
 
   constructor() {
     super();
