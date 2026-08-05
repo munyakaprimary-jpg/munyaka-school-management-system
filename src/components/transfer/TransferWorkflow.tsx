@@ -31,7 +31,8 @@ import {
   EyeOff,
   Lock,
   Download,
-  FileCheck
+  FileCheck,
+  Award
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -42,7 +43,7 @@ interface TransferWorkflowProps {
   student: StudentTransferInfo;
   isOpen: boolean;
   onClose: () => void;
-  onTransferComplete: (studentId: string) => void;
+  onTransferComplete: (studentId: string, certificateNumber: string) => void;
 }
 
 const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
@@ -166,19 +167,20 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
     
-    // Execute transfer
-    onTransferComplete(student.id);
+    // Execute transfer with certificate number
+    onTransferComplete(student.id, certNum);
     
     // Try to auto-generate PDF
     const pdfSuccess = await generateCertificatePdf();
     
-    setStep('success');
+    // Switch to success/certificate view - DO NOT CLOSE MODAL
+    setStep('certificate');
     setIsExecuting(false);
     
     if (pdfSuccess) {
       showSuccess(`Transfer executed successfully! Certificate ${certNum} downloaded.`);
     } else {
-      showSuccess(`Transfer executed successfully! Certificate ${certNum} generated. Please use manual download below.`);
+      showSuccess(`Transfer executed successfully! Certificate ${certNum} generated. Use buttons below to download or print.`);
     }
   };
 
@@ -311,12 +313,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'setup' ? "Student Transfer Workflow" : step === 'certificate' ? "Clearance Certificate Generated" : "Transfer Complete"}
+      title={step === 'setup' ? "Student Transfer Workflow" : "Clearance Certificate Generated"}
       description={step === 'setup' 
         ? `Initiate transfer for ${student.name} (${student.assessment})`
-        : step === 'certificate'
-        ? `Official Clearance Certificate for ${student.name}`
-        : `Transfer completed for ${student.name}`}
+        : `Official Clearance Certificate for ${student.name}`}
       maxWidth="max-w-3xl"
       footer={
         step === 'setup' ? (
@@ -333,31 +333,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               Execute Transfer & Generate Clearance Certificate
             </Button>
           </>
-        ) : step === 'certificate' ? (
-          <>
-            <Button variant="ghost" onClick={() => setStep('success')} className="rounded-xl font-bold">
-              Continue
-            </Button>
-            <Button 
-              onClick={handlePrintCertificate}
-              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
-            >
-              <Printer size={16} /> Print Certificate
-            </Button>
-            <Button 
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
-            >
-              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
-              Download PDF
-            </Button>
-          </>
         ) : (
           <>
-            <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">
-              Close
-            </Button>
             <Button 
               onClick={handlePrintCertificate}
               className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
@@ -370,7 +347,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
             >
               {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
-              Download PDF
+              Download Certificate (PDF)
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={onClose}
+              className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
+            >
+              <FileCheck size={16} className="mr-2" /> Done
             </Button>
           </>
         )
@@ -688,62 +672,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               <div>
                 <p className="font-bold text-rose-800">PDF Generation Issue</p>
                 <p className="text-sm text-rose-700 mt-1">{pdfError}</p>
-                <p className="text-xs text-rose-600 mt-2">Please use the manual Download PDF or Print Certificate buttons above.</p>
+                <p className="text-xs text-rose-600 mt-2">Please use the manual Download Certificate (PDF) or Print Certificate buttons above.</p>
               </div>
             </div>
           )}
-        </div>
-      )}
-
-      {step === 'success' && (
-        <div className="animate-in fade-in zoom-in-95 text-center space-y-6">
-          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
-            <CheckCircle className="text-emerald-600" size={40} />
-          </div>
-          
-          <div>
-            <h3 className="text-2xl font-black text-slate-900">Transfer Completed Successfully</h3>
-            <p className="text-slate-500 mt-2">
-              <strong>{student.name}</strong> has been transferred and clearance certificate generated.
-            </p>
-            <p className="text-sm text-slate-400 mt-1">Certificate No: <strong className="text-slate-900">{certificateNumber}</strong></p>
-          </div>
-
-          {/* PDF Error Alert in Success Step */}
-          {pdfError && (
-            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
-              <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={20} />
-              <div>
-                <p className="font-bold text-amber-800">Auto-download was blocked</p>
-                <p className="text-sm text-amber-700 mt-1">{pdfError}</p>
-                <p className="text-xs text-amber-600 mt-2">Please use the manual buttons below to get your certificate.</p>
-              </div>
-            </div>
-          )}
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
-            <Button 
-              onClick={handlePrintCertificate}
-              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white w-full sm:w-auto"
-            >
-              <Printer size={16} /> Print Certificate
-            </Button>
-            <Button 
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white w-full sm:w-auto"
-            >
-              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
-              Download PDF
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={onClose}
-              className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm w-full sm:w-auto"
-            >
-              <FileCheck size={16} className="mr-2" /> Done
-            </Button>
-          </div>
         </div>
       )}
     </Modal>
