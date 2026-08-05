@@ -83,3 +83,16 @@ export const downloadFromUrl = (url: string, fileName: string, mimeType: string 
   link.click();
   document.body.removeChild(link);
 };
+
+// Download JSON/Blob file (missing export that was causing the error)
+export const downloadFile = (content: string, fileName: string, mimeType: string = 'application/json'): void => {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = fileName;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
