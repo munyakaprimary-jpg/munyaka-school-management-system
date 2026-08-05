@@ -13,7 +13,9 @@ import {
   ClipboardCheck, 
   Award,
   Calendar,
-  BookOpen
+  BookOpen,
+  Filter,
+  ChevronDown as ChevronDownIcon
 } from 'lucide-react';
 import { 
   HistoricalAssessment, 
@@ -32,6 +34,17 @@ interface AcademicHistoryModalProps {
   studentName: string;
 }
 
+const EXAM_TYPES = [
+  { value: 'all', label: 'All Exam Types' },
+  { value: 'Opener Exam', label: 'Opener Exam' },
+  { value: 'Mid-Term Exam', label: 'Mid-Term Exam' },
+  { value: 'End of Term Exam', label: 'End of Term Exam' },
+  { value: 'Continuous Assessment (CAT)', label: 'Continuous Assessment (CAT)' },
+  { value: 'Mock / National Assessment', label: 'Mock / National Assessment' },
+] as const;
+
+type ExamTypeValue = typeof EXAM_TYPES[number]['value'];
+
 const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
   isOpen,
   onClose,
@@ -40,11 +53,19 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
 }) => {
   const [expandedYears, setExpandedYears] = useState<Set<string>>(new Set());
   const [activeTab, setActiveTab] = useState<AssessmentType | 'all'>('all');
+  const [selectedYear, setSelectedYear] = useState<string>('all');
+  const [selectedExamType, setSelectedExamType] = useState<ExamTypeValue>('all');
 
   // Filter assessments for this student
   const studentAssessments = useMemo(() => {
     return MOCK_HISTORICAL_ASSESSMENTS.filter(a => a.studentId === studentId);
   }, [studentId]);
+
+  // Get unique academic years for year filter
+  const availableYears = useMemo(() => {
+    const years = new Set(studentAssessments.map(a => a.academicYear));
+    return Array.from(years).sort((a, b) => parseInt(b) - parseInt(a));
+  }, [studentAssessments]);
 
   // Group by academic year and grade level
   const historyGroups = useMemo(() => {
@@ -84,9 +105,22 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
     setExpandedYears(newExpanded);
   };
 
-  const filterAssessmentsByType = (assessments: HistoricalAssessment[]) => {
-    if (activeTab === 'all') return assessments;
-    return assessments.filter(a => a.assessmentType === activeTab);
+  const filterAssessments = (assessments: HistoricalAssessment[]) => {
+    return assessments.filter(a => {
+      const matchesTab = activeTab === 'all' || a.assessmentType === activeTab;
+      const matchesYear = selectedYear === 'all' || a.academicYear === selectedYear;
+      const matchesExamType = selectedExamType === 'all' || a.examType === selectedExamType;
+      return matchesTab && matchesYear && matchesExamType;
+    });
+  };
+
+  const getFilteredCount = () => {
+    return studentAssessments.filter(a => {
+      const matchesTab = activeTab === 'all' || a.assessmentType === activeTab;
+      const matchesYear = selectedYear === 'all' || a.academicYear === selectedYear;
+      const matchesExamType = selectedExamType === 'all' || a.examType === selectedExamType;
+      return matchesTab && matchesYear && matchesExamType;
+    }).length;
   };
 
   const getAssessmentTypeIcon = (type: AssessmentType) => {
@@ -128,6 +162,9 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
               <div className="flex items-center gap-2 mt-1">
                 <Badge className={cn("text-xs font-bold rounded-lg border-none", getAssessmentTypeColor(assessment.assessmentType))}>
                   {assessment.assessmentType}
+                </Badge>
+                <Badge variant="outline" className="border-slate-200 text-slate-600 font-bold text-xs">
+                  {assessment.examType}
                 </Badge>
                 <span className="text-xs text-slate-400 font-medium">{assessment.term}</span>
               </div>
@@ -176,48 +213,92 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
     >
       <div className="space-y-6">
         {/* Summary Stats */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
           <div className="bg-slate-50 rounded-xl p-4 text-center">
-            <p className="text-2xl font-black text-indigo-600">{historyGroups.length}</p>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Years</p>
+            <p className="text-2xl font-black text-indigo-600">{getFilteredCount()}</p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Records</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-4 text-center">
             <p className="text-2xl font-black text-purple-600">
-              {studentAssessments.filter(a => a.assessmentType === 'Formative').length}
+              {studentAssessments.filter(a => a.assessmentType === 'Formative' && (selectedExamType === 'all' || a.examType === selectedExamType) && (selectedYear === 'all' || a.academicYear === selectedYear)).length}
             </p>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Formative</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-4 text-center">
             <p className="text-2xl font-black text-emerald-600">
-              {studentAssessments.filter(a => a.assessmentType === 'Summative').length}
+              {studentAssessments.filter(a => a.assessmentType === 'Summative' && (selectedExamType === 'all' || a.examType === selectedExamType) && (selectedYear === 'all' || a.academicYear === selectedYear)).length}
             </p>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Summative</p>
           </div>
           <div className="bg-slate-50 rounded-xl p-4 text-center">
             <p className="text-2xl font-black text-amber-600">
-              {studentAssessments.filter(a => a.assessmentType === 'ReportCard').length}
+              {studentAssessments.filter(a => a.assessmentType === 'ReportCard' && (selectedExamType === 'all' || a.examType === selectedExamType) && (selectedYear === 'all' || a.academicYear === selectedYear)).length}
             </p>
             <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Reports</p>
           </div>
+          <div className="bg-slate-50 rounded-xl p-4 text-center">
+            <p className="text-2xl font-black text-rose-600">
+              {studentAssessments.filter(a => a.performanceLevel === 'EE' && (selectedExamType === 'all' || a.examType === selectedExamType) && (selectedYear === 'all' || a.academicYear === selectedYear)).length}
+            </p>
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">EE Count</p>
+          </div>
         </div>
 
-        {/* Type Filter Tabs */}
-        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AssessmentType | 'all')} className="w-full">
-          <TabsList className="bg-white border border-slate-200 p-1 rounded-xl h-12 mb-6">
-            <TabsTrigger value="all" className="rounded-lg px-6 h-full font-bold text-xs">
-              All Records
-            </TabsTrigger>
-            <TabsTrigger value="Formative" className="rounded-lg px-6 h-full font-bold text-xs">
-              Formative Tasks
-            </TabsTrigger>
-            <TabsTrigger value="Summative" className="rounded-lg px-6 h-full font-bold text-xs">
-              Summative Exams
-            </TabsTrigger>
-            <TabsTrigger value="ReportCard" className="rounded-lg px-6 h-full font-bold text-xs">
-              Report Cards
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* Filter Controls Row */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 p-4 bg-white border border-slate-200 rounded-2xl">
+          {/* Category Filter Tabs */}
+          <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as AssessmentType | 'all')} className="w-full sm:w-auto">
+            <TabsList className="bg-slate-50 border border-slate-200 p-1 rounded-xl h-12">
+              <TabsTrigger value="all" className="rounded-lg px-6 h-full font-bold text-xs">
+                All Records
+              </TabsTrigger>
+              <TabsTrigger value="Formative" className="rounded-lg px-6 h-full font-bold text-xs">
+                Formative Tasks
+              </TabsTrigger>
+              <TabsTrigger value="Summative" className="rounded-lg px-6 h-full font-bold text-xs">
+                Summative Exams
+              </TabsTrigger>
+              <TabsTrigger value="ReportCard" className="rounded-lg px-6 h-full font-bold text-xs">
+                Report Cards
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+
+          {/* Year Filter Dropdown */}
+          <div className="w-full sm:w-auto">
+            <Select value={selectedYear} onValueChange={setSelectedYear}>
+              <SelectTrigger className="w-full sm:w-[180px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 flex items-center gap-2">
+                <Filter size={14} className="text-slate-400" />
+                <SelectValue placeholder="All Years" />
+                <ChevronDownIcon size={14} className="text-slate-400 ml-auto" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                <SelectItem value="all">All Academic Years</SelectItem>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Exam Type Filter Dropdown */}
+          <div className="w-full sm:w-auto">
+            <Select value={selectedExamType} onValueChange={setSelectedExamType}>
+              <SelectTrigger className="w-full sm:w-[220px] rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm focus:ring-2 focus:ring-indigo-500 flex items-center gap-2">
+                <Filter size={14} className="text-slate-400" />
+                <SelectValue placeholder="All Exam Types" />
+                <ChevronDownIcon size={14} className="text-slate-400 ml-auto" />
+              </SelectTrigger>
+              <SelectContent className="rounded-xl">
+                {EXAM_TYPES.map(exam => (
+                  <SelectItem key={exam.value} value={exam.value}>
+                    {exam.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
 
         {/* Academic History Timeline */}
         <div className="space-y-4">
@@ -231,7 +312,7 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
             </div>
           ) : (
             historyGroups.map((group, index) => {
-              const filteredAssessments = filterAssessmentsByType(group.assessments);
+              const filteredAssessments = filterAssessments(group.assessments);
               const hasFiltered = filteredAssessments.length > 0;
               const isExpanded = expandedYears.has(group.academicYear);
               
@@ -259,7 +340,7 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className="bg-slate-100 text-slate-600 border-none">
-                        {group.assessments.length} records
+                        {filteredAssessments.length} / {group.assessments.length} records
                       </Badge>
                       {isExpanded ? (
                         <ChevronDown size={20} className="text-slate-400" />
@@ -279,7 +360,7 @@ const AcademicHistoryModal: React.FC<AcademicHistoryModalProps> = ({
                         </div>
                       ) : (
                         <div className="text-center py-8 text-slate-400">
-                          <p className="text-sm">No {activeTab} records in this period</p>
+                          <p className="text-sm">No records match the current filters in this period</p>
                         </div>
                       )}
                     </div>
