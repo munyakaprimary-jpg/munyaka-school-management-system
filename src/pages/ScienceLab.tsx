@@ -42,7 +42,8 @@ import {
   MoreVertical,
   ChevronDown,
   ChevronUp,
-  Layers
+  Layers,
+  X
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
