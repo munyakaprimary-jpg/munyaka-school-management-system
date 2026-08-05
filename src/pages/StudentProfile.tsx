@@ -19,12 +19,14 @@ import {
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
   const student = STUDENTS[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
   // Enhanced student data for transfer
   const transferStudentData = {
@@ -33,6 +35,12 @@ const StudentProfile = () => {
     status: 'Active' as const,
     dateOfAdmission: '2022-01-10',
     coCurricularActivities: 'Football team captain (2023), Science fair 1st place (2022), School choir member',
+  };
+
+  const handleRecordPayment = (amount: number) => {
+    console.log('Record Payment clicked, amount:', amount);
+    // In a real app, this would update the fee balance
+    showSuccess(`Recorded payment of KES ${amount.toLocaleString()} for ${student.name}`);
   };
 
   return (
@@ -158,7 +166,15 @@ const StudentProfile = () => {
               </div>
               <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
-              <Button className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800">Record Payment</Button>
+              <Button 
+                className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
+                onClick={() => {
+                  console.log('Record Payment clicked');
+                  setIsPaymentModalOpen(true);
+                }}
+              >
+                Record Payment
+              </Button>
             </Card>
 
             <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
@@ -200,6 +216,21 @@ const StudentProfile = () => {
           setIsTransferOpen(false);
           showSuccess(`${student.name} has been transferred successfully.`);
         }}
+      />
+
+      {/* Record Payment Modal */}
+      <RecordPaymentModal
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        onSubmitPayment={handleRecordPayment}
+        gradesData={[]}
+        studentsData={[{ 
+          id: student.id, 
+          name: student.name, 
+          assessment: student.assessment, 
+          grade: student.grade, 
+          stream: student.stream 
+        }]}
       />
     </div>
   );
