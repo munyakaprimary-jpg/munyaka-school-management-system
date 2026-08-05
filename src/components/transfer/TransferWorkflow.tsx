@@ -310,6 +310,54 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const feeStatus = student.feeBalance <= 0 ? 'CLEARED' : 'PENDING';
   const feeStatusClass = student.feeBalance <= 0 ? 'fee-status-cleared' : 'fee-status-pending';
 
+  // Dynamic footer based on current step
+  const renderFooter = () => {
+    if (currentStep === 'FORM') {
+      return (
+        <>
+          <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
+            Cancel
+          </Button>
+          <Button 
+            onClick={handleExecuteTransfer} 
+            disabled={isExecuting || !adminPassword.trim()}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+          >
+            {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
+            Execute Transfer & Generate Clearance Certificate
+          </Button>
+        </>
+      );
+    } else {
+      // Post-execution state: Download PDF, Print, Close
+      return (
+        <>
+          <Button 
+            onClick={handlePrintCertificate}
+            className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
+          >
+            <Printer size={16} /> Print Certificate
+          </Button>
+          <Button 
+            onClick={handleDownloadPdf}
+            disabled={isGeneratingPdf}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+          >
+            {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
+            Download Certificate (PDF)
+          </Button>
+          <Button 
+            variant="outline"
+            onClick={onClose}
+            className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
+          >
+            <FileCheck size={16} className="mr-2" /> Close
+          </Button>
+        </>
+      );
+    }
+  };
+
   return (
     <Modal
       isOpen={isOpen}
@@ -319,48 +367,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         ? `Initiate transfer for ${student.name} (${student.assessment})`
         : `Official Clearance Certificate for ${student.name}`}
       maxWidth="max-w-3xl"
-      footer={
-        currentStep === 'FORM' ? (
-          <>
-            <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
-              Cancel
-            </Button>
-            <Button 
-              onClick={handleExecuteTransfer} 
-              disabled={isExecuting || !adminPassword.trim()}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
-            >
-              {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
-              Execute Transfer & Generate Clearance Certificate
-            </Button>
-          </>
-        ) : (
-          // Stage 2: Sticky footer with action buttons
-          <div className="flex flex-col sm:flex-row gap-3 w-full p-4 border-t border-slate-200 bg-white/50 backdrop-blur-sm sticky bottom-0">
-            <Button 
-              onClick={handlePrintCertificate}
-              className="flex-1 sm:w-auto rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
-            >
-              <Printer size={16} /> Print Certificate
-            </Button>
-            <Button 
-              onClick={handleDownloadPdf}
-              disabled={isGeneratingPdf}
-              className="flex-1 sm:w-auto rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
-            >
-              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
-              Download Certificate (PDF)
-            </Button>
-            <Button 
-              variant="outline"
-              onClick={onClose}
-              className="flex-1 sm:w-auto rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
-            >
-              <FileCheck size={16} className="mr-2" /> Close
-            </Button>
-          </div>
-        )
-      }
+      footer={renderFooter()}
     >
       {/* Stage 1: Transfer Setup Form */}
       {currentStep === 'FORM' && (
