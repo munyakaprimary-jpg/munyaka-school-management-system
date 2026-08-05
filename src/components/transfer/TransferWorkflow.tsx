@@ -26,7 +26,10 @@ import {
   PenTool,
   Stamp,
   Building2,
-  UserCheck
+  UserCheck,
+  Eye,
+  EyeOff,
+  Lock
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -57,6 +60,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [certificateNumber, setCertificateNumber] = useState('');
   const certificateRef = useRef<HTMLDivElement>(null);
 
+  // Admin password verification state
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [authError, setAuthError] = useState('');
+
   // Reset when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -69,6 +77,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         headteacherRemarks: '',
       });
       setCertificateNumber('');
+      setAdminPassword('');
+      setAuthError('');
+      setShowPassword(false);
     }
   }, [isOpen, student]);
 
@@ -78,11 +89,26 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       return;
     }
 
+    if (!adminPassword.trim()) {
+      setAuthError("Admin password is required to authorize this transfer.");
+      return;
+    }
+
     setIsExecuting(true);
+    setAuthError("");
+
+    // Validate admin password against stored credentials
+    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
     
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (adminPassword !== storedAdminPass) {
+      setAuthError("Invalid admin password. Authorization required to transfer learner.");
+      setIsExecuting(false);
+      return;
+    }
+
     // Generate certificate number
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
@@ -230,11 +256,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </Button>
             <Button 
               onClick={handleExecuteTransfer} 
-              disabled={isExecuting || !transferData.destinationSchool?.trim()}
+              disabled={isExecuting || !transferData.destinationSchool?.trim() || !adminPassword.trim()}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
             >
               {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
-              Execute Transfer & Generate Certificate
+              Execute Transfer & Generate Clearance Certificate
             </Button>
           </>
         ) : (
@@ -393,6 +419,46 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   rows={3}
                 />
               </div>
+            </div>
+          </div>
+
+          {/* Admin Password Verification */}
+          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/50 rounded-2xl p-5 border border-amber-100">
+            <div className="flex items-center gap-3 mb-2">
+              <Lock className="text-amber-600" size={20} />
+              <div>
+                <h4 className="font-bold text-amber-800">Admin Authorization Required</h4>
+                <p className="text-sm text-amber-700">Enter admin password to authorize this student transfer.</p>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">ADMIN PASSWORD</Label>
+              <div className="relative">
+                <Input 
+                  type={showPassword ? "text" : "password"}
+                  value={adminPassword}
+                  onChange={(e) => { 
+                    setAdminPassword(e.target.value); 
+                    if (authError) setAuthError("");
+                  }}
+                  placeholder="Enter admin password to confirm..."
+                  className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                >
+                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                </button>
+              </div>
+              {authError && (
+                <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                  <AlertCircle size={14} /> {authError}
+                </div>
+              )}
             </div>
           </div>
         </div>
