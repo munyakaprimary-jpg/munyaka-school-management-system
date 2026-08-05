@@ -256,7 +256,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </Button>
             <Button 
               onClick={handleExecuteTransfer} 
-              disabled={isExecuting || !transferData.destinationSchool?.trim() || !adminPassword.trim()}
+              disabled={isExecuting || !adminPassword.trim()}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
             >
               {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
@@ -439,7 +439,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   type={showPassword ? "text" : "password"}
                   value={adminPassword}
                   onChange={(e) => { 
-                    setAdminPassword(e.target.value); 
+                    const trimmed = e.target.value.trim();
+                    setAdminPassword(trimmed);
                     if (authError) setAuthError("");
                   }}
                   placeholder="Enter admin password to confirm..."
