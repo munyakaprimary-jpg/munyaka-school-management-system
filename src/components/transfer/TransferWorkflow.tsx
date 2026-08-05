@@ -112,6 +112,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
   // Generate PDF certificate - robust version with multiple fallback strategies
   const generateCertificatePdf = async (): Promise<boolean> => {
+    // Fallback check for html2pdf library
+    if (typeof html2pdf === 'undefined') {
+      console.error('html2pdf library is missing or not loaded.');
+      alert('PDF generator library is not loaded. Please try printing directly using the Print button.');
+      return false;
+    }
+
     setIsGeneratingPdf(true);
     setPdfError(null);
 
