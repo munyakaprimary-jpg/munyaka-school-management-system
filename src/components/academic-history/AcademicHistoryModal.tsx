@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Modal from '@/components/ui/Modal';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -26,6 +26,7 @@ import {
 } from '@/types/academic-history';
 import { MOCK_HISTORICAL_ASSESSMENTS } from '@/lib/academic-history-data';
 import { cn } from '@/lib/utils';
+import { Select, SelectTrigger, SelectContent, SelectItem } from '@/components/ui/Select';
 
 interface AcademicHistoryModalProps {
   isOpen: boolean;
