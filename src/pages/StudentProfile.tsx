@@ -14,7 +14,8 @@ import {
   CreditCard,
   ArrowLeft,
   History,
-  UserX
+  UserX,
+  Download
 } from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
@@ -68,6 +69,20 @@ const StudentProfile = () => {
           >
             <UserX size={18} /> Transfer Student
           </Button>
+          {/* Permanent Download Transfer Certificate button - visible when student is transferred */}
+          {transferStudentData.status === 'Transferred' && (
+            <Button 
+              variant="outline" 
+              className="rounded-xl gap-2 border-indigo-200 text-indigo-600 hover:bg-indigo-50"
+              onClick={() => {
+                // This would trigger the transfer workflow to show the certificate
+                // In a real app, this would fetch the existing certificate
+                setIsTransferOpen(true);
+              }}
+            >
+              <Download size={18} /> Download Transfer Certificate
+            </Button>
+          )}
         </div>
       </div>
 
@@ -212,9 +227,9 @@ const StudentProfile = () => {
         student={transferStudentData}
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
-        onTransferComplete={(studentId) => {
+        onTransferComplete={(studentId, certificateNumber) => {
           setIsTransferOpen(false);
-          showSuccess(`${student.name} has been transferred successfully.`);
+          showSuccess(`${student.name} has been transferred successfully. Certificate: ${certificateNumber}`);
         }}
       />
 

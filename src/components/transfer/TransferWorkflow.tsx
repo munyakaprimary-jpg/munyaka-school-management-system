@@ -52,7 +52,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
-  const [step, setStep] = useState<'setup' | 'certificate' | 'success'>('setup');
+  const [step, setStep] = useState<'setup' | 'certificate'>('setup');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
     dateOfExit: new Date().toISOString().split('T')[0],
@@ -173,7 +173,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // Try to auto-generate PDF
     const pdfSuccess = await generateCertificatePdf();
     
-    // Switch to success/certificate view - DO NOT CLOSE MODAL
+    // Switch to certificate view - DO NOT CLOSE MODAL
     setStep('certificate');
     setIsExecuting(false);
     
@@ -313,7 +313,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'setup' ? "Student Transfer Workflow" : "Clearance Certificate Generated"}
+      title={step === 'setup' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
       description={step === 'setup' 
         ? `Initiate transfer for ${student.name} (${student.assessment})`
         : `Official Clearance Certificate for ${student.name}`}
