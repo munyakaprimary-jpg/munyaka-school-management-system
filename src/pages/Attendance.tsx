@@ -9,15 +9,16 @@ import AttendanceTable from '@/components/attendance/AttendanceTable';
 import { useAttendance } from '@/hooks/useAttendance';
 import { GRADES_DATA } from '@/lib/mock-data';
 import { downloadCSV } from '@/utils/downloadHelper';
+import { TeacherActionWrapper, useTeacherActions } from '@/components/TeacherActionWrapper';
+import { SyncStatusHeader } from '@/components/SyncStatusHeader';
 
-const Attendance = () => {
-  // Default to Grade 4 (g4)
+const AttendanceContent = () => {
   const [selectedGradeId, setSelectedGradeId] = useState(GRADES_DATA[1]?.id || GRADES_DATA[0]?.id);
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // The hook now handles dynamic filtering based on the selectedGradeId
   const { students, markedStudents, markAttendance, exportToCSV } = useAttendance(selectedGradeId);
+  const { submitAttendance, isOnline } = useTeacherActions();
 
   const handleExport = () => {
     setIsExporting(true);
@@ -28,13 +29,30 @@ const Attendance = () => {
     }, 500);
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsEditing(false);
     showSuccess("Attendance register saved successfully!");
   };
 
+  const handleMarkAttendance = async (id: number, session: 'morning' | 'afternoon', status: string) => {
+    // Mark locally immediately for UI responsiveness
+    markAttendance(id, session, status);
+    
+    // Submit through offline-first wrapper
+    await submitAttendance({
+      student_id: id.toString(),
+      date: new Date().toISOString().split('T')[0],
+      session,
+      status,
+      timestamp: new Date().toISOString()
+    });
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Sync Status Header */}
+      <SyncStatusHeader />
+      
       <AttendanceHeader 
         selectedGradeId={selectedGradeId}
         setSelectedGradeId={setSelectedGradeId}
@@ -54,7 +72,7 @@ const Attendance = () => {
           <AttendanceTable 
             students={students}
             markedStudents={markedStudents}
-            onMarkAttendance={markAttendance}
+            onMarkAttendance={handleMarkAttendance}
             isEditing={isEditing}
           />
           
@@ -76,6 +94,19 @@ const Attendance = () => {
         </div>
       )}
     </div>
+  );
+};
+
+const Attendance = () => {
+  return (
+    <TeacherActionWrapper
+      onAttendanceSubmit={async (data) => {
+        // Direct API call would go here if needed
+        console.log('Attendance submitted:', data);
+      }}
+    >
+      <AttendanceContent />
+    </TeacherActionWrapper>
   );
 };
 

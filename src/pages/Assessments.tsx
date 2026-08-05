@@ -5,6 +5,8 @@ import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 import { ExamTypeOption } from '@/types/assessments';
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
+import { TeacherActionWrapper, useTeacherActions } from '@/components/TeacherActionWrapper';
+import { SyncStatusHeader } from '@/components/SyncStatusHeader';
 
 // Sub-components
 import AssessmentHeader from '@/components/assessments/AssessmentHeader';
@@ -14,7 +16,7 @@ import AssessmentInstructions from '@/components/assessments/AssessmentInstructi
 
 const STORAGE_KEY = 'munyaka_marks_records';
 
-const Assessments = () => {
+const AssessmentsContent = () => {
   // Dynamically load grades and streams
   const gradesList = useMemo(() => {
     const saved = localStorage.getItem('munyaka_grades');
@@ -74,6 +76,8 @@ const Assessments = () => {
   const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+
+  const { submitMarks, isOnline } = useTeacherActions();
 
   // Load saved marks from localStorage on mount
   useEffect(() => {
@@ -167,10 +171,11 @@ const Assessments = () => {
     });
   }, [currentGrade, selectedStreamId, availableStreams, searchTerm]);
 
-  const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
+  const handleMarkChange = async (studentId: string, subjectId: string, value: string) => {
     let clean = value.replace(/[^0-9]/g, '');
     if (clean !== '' && parseInt(clean, 10) > 100) clean = "100";
     
+    // Update local state immediately
     setMarksMatrix(prev => ({
       ...prev,
       [studentId]: {
@@ -178,6 +183,17 @@ const Assessments = () => {
         [subjectId]: clean
       }
     }));
+
+    // Submit through offline-first wrapper
+    await submitMarks({
+      student_id: studentId,
+      subject_id: subjectId,
+      exam_type: examType,
+      term,
+      academic_year: academicYear,
+      score: clean ? parseInt(clean, 10) : 0,
+      timestamp: new Date().toISOString()
+    });
   };
 
   const handleSave = async () => {
@@ -188,7 +204,7 @@ const Assessments = () => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(marksMatrix));
     
     setIsSaving(false);
-    showSuccess("Marks saved permanently! Records will persist across sessions.");
+    showSuccess("Marks saved locally! Records will sync to admin when online.");
   };
 
   const handleExport = () => {
@@ -257,7 +273,6 @@ const Assessments = () => {
         ...studentRows.map(r => r.join(","))
       ].join("\n");
 
-      // Data URI fallback for Android WebView compatibility
       const BOM = '\uFEFF';
       const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + csvContent);
       
@@ -276,6 +291,8 @@ const Assessments = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      <SyncStatusHeader />
+      
       <AssessmentHeader 
         onExport={handleExport}
         onSave={handleSave}
@@ -310,6 +327,18 @@ const Assessments = () => {
       
       <AssessmentInstructions />
     </div>
+  );
+};
+
+const Assessments = () => {
+  return (
+    <TeacherActionWrapper
+      onMarksSubmit={async (data) => {
+        console.log('Marks submitted:', data);
+      }}
+    >
+      <AssessmentsContent />
+    </TeacherActionWrapper>
   );
 };
 
