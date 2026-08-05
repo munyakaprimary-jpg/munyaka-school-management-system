@@ -37,6 +37,7 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
+import html2pdf from 'html2pdf.js';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -109,278 +110,243 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     }
   }, []);
 
-  // Generate certificate HTML content with pure CSS for native browser print/PDF
-  const getCertificateHtml = (): string => {
-    const feeStatus = student.feeBalance <= 0 ? 'CLEARED' : 'PENDING';
-    const feeStatusClass = student.feeBalance <= 0 ? 'fee-status-cleared' : 'fee-status-pending';
+  // Generate PDF certificate - robust version with multiple fallback strategies
+  const generateCertificatePdf = async (): Promise<boolean> => {
+    // Fallback check for html2pdf library
+    if (typeof html2pdf === 'undefined') {
+      console.error('html2pdf library is missing or not loaded.');
+      alert('PDF generator library is not loaded. Please try printing directly using the Print button.');
+      return false;
+    }
 
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="UTF-8">
-        <title>Transfer Clearance Certificate - ${certificateNumber}</title>
-        <style>
-          @page { size: A4; margin: 15mm; }
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body { 
-            font-family: 'Times New Roman', serif; 
-            background: #ffffff !important; 
-            color: #000000 !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            padding: 20px;
-          }
-          .no-print { display: none !important; }
-          .certificate-container { 
-            box-shadow: none !important; 
-            border: 2px solid #000000 !important;
-            max-width: 100% !important;
-            background: #ffffff !important;
-          }
-          .institutional-header {
-            text-align: center;
-            border-bottom: 3px double #000000;
-            padding-bottom: 20px;
-            margin-bottom: 25px;
-          }
-          .school-logo { width: 80px; height: 80px; object-fit: contain; }
-          .school-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 5px; color: #000000 !important; }
-          .school-motto { font-size: 14px; font-style: italic; color: #333333 !important; margin: 0 0 10px; }
-          .school-address { font-size: 11px; color: #555555 !important; margin: 0; }
-          .certificate-title { 
-            font-size: 18px; 
-            font-weight: 700; 
-            text-transform: uppercase; 
-            letter-spacing: 2px; 
-            text-align: center; 
-            margin: 20px 0;
-            border-bottom: 1px solid #000000;
-            padding-bottom: 10px;
-            color: #000000 !important;
-          }
-          .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
-          .detail-row { display: flex; gap: 10px; }
-          .detail-label { font-weight: 700; width: 200px; flex-shrink: 0; color: #000000 !important; }
-          .detail-value { font-weight: 400; color: #000000 !important; flex: 1; }
-          .full-width { grid-column: span 2; }
-          .remarks-box { 
-            border: 1px solid #000000; 
-            border-radius: 4px; 
-            padding: 15px; 
-            min-height: 80px; 
-            background: #ffffff !important;
-          }
-          .signatures { 
-            display: grid; 
-            grid-template-columns: 1fr 1fr; 
-            gap: 40px; 
-            margin-top: 40px; 
-            padding-top: 20px;
-            border-top: 1px solid #000000;
-          }
-          .signature-block { text-align: center; }
-          .signature-line { 
-            border-bottom: 1px solid #000000; 
-            height: 50px; 
-            margin-bottom: 8px; 
-          }
-          .signature-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: #000000 !important; }
-          .certificate-number { text-align: right; font-size: 11px; color: #555555 !important; margin-top: 20px; }
-          .fee-status-cleared { color: #006400 !important; font-weight: 700; }
-          .fee-status-pending { color: #cc0000 !important; font-weight: 700; }
-          .print-btn { display: none !important; }
-          @media print {
-            body { background: white !important; }
-            .certificate-container { border: 2px solid #000000 !important; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="certificate-container" style="background:#ffffff; color:#000000; padding:30px; border:2px solid #000000; border-radius:8px;">
-          <!-- Institutional Header -->
-          <div class="institutional-header">
-            <div style="display:flex; justify-content:center; margin-bottom:16px;">
-              <div style="width:80px; height:80px; background:#f1f5f9; border-radius:50%; display:flex; align-items:center; justify-content:center; border:2px solid #cbd5e1;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/></svg>
-              </div>
-            </div>
-            <h1 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-            <p class="school-motto">"Knowledge is Power"</p>
-            <p class="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
-          </div>
-
-          <!-- Certificate Title -->
-          <h2 class="certificate-title">Student Transfer & Clearance Certificate</h2>
-
-          <!-- Certificate Number -->
-          <div class="certificate-number">
-            Certificate No: <strong>${certificateNumber}</strong> | Date Issued: <strong>${new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</strong>
-          </div>
-
-          <!-- Student Details Grid -->
-          <div class="detail-grid">
-            <div class="detail-row">
-              <span class="detail-label">Student Full Name:</span>
-              <span class="detail-value" style="font-weight:900; font-size:1.1em;">${student.name}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Assessment UPI Code:</span>
-              <span class="detail-value" style="font-family:monospace; font-weight:700;">${student.assessment}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Gender:</span>
-              <span class="detail-value">${student.gender === 'M' ? 'Male' : 'Female'}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date of Birth:</span>
-              <span class="detail-value">${new Date(student.dob).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date of Admission:</span>
-              <span class="detail-value">${new Date(student.dateOfAdmission).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Date of Exit:</span>
-              <span class="detail-value" style="font-weight:700;">${new Date(transferData.dateOfExit || '').toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Last Grade Attained:</span>
-              <span class="detail-value">Grade ${student.grade}</span>
-            </div>
-            <div class="detail-row">
-              <span class="detail-label">Stream:</span>
-              <span class="detail-value">${student.stream}</span>
-            </div>
-            <div class="detail-row full-width">
-              <span class="detail-label">Destination School / Reason:</span>
-              <span class="detail-value">${transferData.destinationSchool || '—'}</span>
-            </div>
-            <div class="detail-row full-width">
-              <span class="detail-label">Final Fee Clearance Status:</span>
-              <span class="detail-value">
-                <span class="${feeStatusClass}" style="font-weight:700; padding:2px 8px; border-radius:4px;">
-                  ${feeStatus} ${student.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
-                </span>
-              </span>
-            </div>
-          </div>
-
-          <!-- Co-curricular Activities -->
-          <div style="margin-top:32px;">
-            <h4 style="font-weight:700; color:#000000; margin-bottom:8px; border-bottom:1px solid #000000; padding-bottom:4px;">Co-curricular Activities & Achievements</h4>
-            <div class="remarks-box">
-              <p style="color:#000000; white-space:pre-wrap;">${transferData.coCurricularActivities || 'No co-curricular activities recorded.'}</p>
-            </div>
-          </div>
-
-          <!-- Headteacher Remarks -->
-          <div style="margin-top:24px;">
-            <h4 style="font-weight:700; color:#000000; margin-bottom:8px; border-bottom:1px solid #000000; padding-bottom:4px;">Headteacher Remarks</h4>
-            <div class="remarks-box">
-              <p style="color:#000000; white-space:pre-wrap;">${transferData.headteacherRemarks || 'No additional remarks.'}</p>
-            </div>
-          </div>
-
-          <!-- Sign-off Block -->
-          <div class="signatures">
-            <div class="signature-block">
-              <div class="signature-line"></div>
-              <p class="signature-label">Bursar / Finance Clearance</p>
-              <p style="font-size:11px; color:#555555; margin-top:4px;">Signature & Date</p>
-              <p style="font-size:11px; color:#555555;">Official Stamp</p>
-            </div>
-            <div class="signature-block">
-              <div class="signature-line"></div>
-              <p class="signature-label">Headteacher Signature & Stamp</p>
-              <p style="font-size:11px; color:#555555; margin-top:4px;">Signature & Date</p>
-              <p style="font-size:11px; color:#555555;">Official School Stamp</p>
-            </div>
-          </div>
-
-          <!-- Footer -->
-          <div style="margin-top:32px; padding-top:16px; border-top:1px solid #000000; text-align:center; font-size:11px; color:#555555;">
-            <p>This certificate is issued without erasure or alteration.</p>
-            <p style="margin-top:4px;">Munyaka Primary and Junior School • P.O. Box 5239-30100, Eldoret</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
-  };
-
-  // Open native browser print window with certificate HTML for reliable PDF/print output
-  const handlePrintCertificate = () => {
+    setIsGeneratingPdf(true);
     setPdfError(null);
 
-    // Verify certificate data is available
-    if (!certificateNumber) {
-      setPdfError('Certificate number not yet generated. Please execute the transfer first.');
-      showError('Certificate not ready. Please execute the transfer first.');
+    try {
+      // Strategy 1: Try ref first
+      let element = certificateRef.current;
+      
+      // Strategy 2: Fallback to DOM ID lookup
+      if (!element) {
+        element = document.getElementById('clearance-certificate-node');
+      }
+      
+      // Strategy 3: Fallback to class selector
+      if (!element) {
+        element = document.querySelector('.certificate-container') as HTMLDivElement;
+      }
+
+      if (!element) {
+        throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
+      }
+
+      const safeStudentName = student.name.replace(/\s+/g, '_');
+      const fileName = `Munyaka_Clearance_Certificate_${safeStudentName}.pdf`;
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true, 
+          scrollY: 0,
+          ignoreElements: (el: HTMLElement) => {
+            return el.hasAttribute('data-no-print') || 
+                   el.classList.contains('no-print') ||
+                   el.classList.contains('html2canvas-ignore');
+          }
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css'] }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      return true;
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate PDF';
+      setPdfError(errorMessage);
+      return false;
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
+  // Auto-generate PDF after certificate mounts - with proper lifecycle handling
+  useEffect(() => {
+    if (currentStep === 'CERTIFICATE' && certificateNumber && isCertificateMounted) {
+      // Use setTimeout to ensure React has flushed the DOM and browser has painted
+      const timer = setTimeout(() => {
+        generateCertificatePdf();
+      }, 300); // 300ms delay for render + paint
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, certificateNumber, isCertificateMounted]);
+
+  const handleExecuteTransfer = async () => {
+    if (!transferData.destinationSchool?.trim()) {
+      showError("Please enter the destination school or reason for transfer.");
       return;
     }
 
-    // Verify the certificate container exists in the DOM
+    if (!adminPassword.trim()) {
+      setAuthError("Admin password is required to authorize this transfer.");
+      return;
+    }
+
+    setIsExecuting(true);
+    setAuthError("");
+
+    // Validate admin password against stored credentials
+    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+    
+    // Simulate API call delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (adminPassword !== storedAdminPass) {
+      setAuthError("Invalid admin password. Authorization required to transfer learner.");
+      setIsExecuting(false);
+      return;
+    }
+
+    // Generate certificate number
+    const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+    setCertificateNumber(certNum);
+    
+    // Notify parent of completion (but DON'T close modal)
+    onTransferComplete(student.id, certNum);
+    
+    // Advance to Stage 2 - Certificate View
+    // PDF auto-generation will trigger via useEffect once certificate mounts
+    setCurrentStep('CERTIFICATE');
+    setIsExecuting(false);
+    
+    showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
+  };
+
+  const handlePrintCertificate = () => {
+    // Use same robust element detection
     let element = certificateRef.current;
     if (!element) {
       element = document.getElementById('clearance-certificate-node');
     }
     if (!element) {
-      setPdfError('Certificate element not found in DOM.');
+      element = document.querySelector('.certificate-container') as HTMLDivElement;
+    }
+    
+    if (!element) {
       showError('Certificate not ready for printing. Please try again.');
       return;
     }
+    
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
 
-    setIsGeneratingPdf(true);
-
-    try {
-      // Generate the certificate HTML with pure CSS
-      const certificateHtml = getCertificateHtml();
-
-      // Open a new browser window
-      const printWindow = window.open('', '_blank', 'width=900,height=700');
-      if (!printWindow) {
-        setPdfError('Popup blocked. Please allow popups for this site and try again.');
-        showError('Popup blocked. Please allow popups and try again.');
-        setIsGeneratingPdf(false);
-        return;
-      }
-
-      // Write the certificate HTML to the new window
-      printWindow.document.write(certificateHtml);
-      printWindow.document.close();
-
-      // Wait for content to load, then trigger print
-      printWindow.onload = () => {
-        printWindow.focus();
-        // Small delay to ensure rendering is complete before printing
-        setTimeout(() => {
-          printWindow.print();
-          setIsGeneratingPdf(false);
-          showSuccess('Print dialog opened. Use "Save as PDF" in the print dialog to download.');
-        }, 300);
-      };
-
-      // Fallback: if onload doesn't fire (cached page), print after a delay
-      setTimeout(() => {
-        if (!printWindow.closed) {
-          printWindow.focus();
-          printWindow.print();
-          setIsGeneratingPdf(false);
+    const certificateHtml = element.outerHTML;
+    const printStyles = `
+      <style>
+        @page { size: A4; margin: 15mm; }
+        @media print {
+          body { 
+            font-family: 'Times New Roman', serif; 
+            background: white !important; 
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+          }
+          .no-print { display: none !important; }
+          .certificate-container { 
+            box-shadow: none !important; 
+            border: 2px solid #1e293b !important;
+            max-width: 100% !important;
+          }
+          .print-btn { display: none !important; }
         }
-      }, 1000);
+        .certificate-container {
+          font-family: 'Times New Roman', serif;
+          background: white;
+          color: #1e293b;
+        }
+        .institutional-header {
+          text-align: center;
+          border-bottom: 3px double #1e293b;
+          padding-bottom: 20px;
+          margin-bottom: 25px;
+        }
+        .school-logo { width: 80px; height: 80px; object-fit: contain; }
+        .school-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 5px; }
+        .school-motto { font-size: 14px; font-style: italic; color: #334155; margin: 0 0 10px; }
+        .school-address { font-size: 11px; color: #64748b; margin: 0; }
+        .certificate-title { 
+          font-size: 18px; 
+          font-weight: 700; 
+          text-transform: uppercase; 
+          letter-spacing: 2px; 
+          text-align: center; 
+          margin: 20px 0;
+          border-bottom: 1px solid #1e293b;
+          padding-bottom: 10px;
+        }
+        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
+        .detail-row { display: flex; gap: 10px; }
+        .detail-label { font-weight: 700; width: 200px; flex-shrink: 0; color: #334155; }
+        .detail-value { font-weight: 400; color: #1e293b; flex: 1; }
+        .full-width { grid-column: span 2; }
+        .remarks-box { 
+          border: 1px solid #cbd5e1; 
+          border-radius: 4px; 
+          padding: 15px; 
+          min-height: 80px; 
+          background: #f8fafc;
+        }
+        .signatures { 
+          display: grid; 
+          grid-template-columns: 1fr 1fr; 
+          gap: 40px; 
+          margin-top: 40px; 
+          padding-top: 20px;
+          border-top: 1px solid #cbd5e1;
+        }
+        .signature-block { text-align: center; }
+        .signature-line { 
+          border-bottom: 1px solid #1e293b; 
+          height: 50px; 
+          margin-bottom: 8px; 
+        }
+        .signature-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .certificate-number { text-align: right; font-size: 11px; color: #64748b; margin-top: 20px; }
+        .fee-status-cleared { color: #059669; font-weight: 700; }
+        .fee-status-pending { color: #dc2626; font-weight: 700; }
+      </style>
+    `;
 
-    } catch (err) {
-      console.error('Print window error:', err);
-      setPdfError('Failed to open print window. Please try again.');
-      setIsGeneratingPdf(false);
-      showError('Failed to generate certificate for printing.');
-    }
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Transfer Clearance Certificate - ${certificateNumber}</title>
+        ${printStyles}
+      </head>
+      <body>
+        ${certificateHtml}
+      </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    
+    setTimeout(() => {
+      printWindow.print();
+    }, 500);
   };
 
-  // Download PDF via native browser print dialog (Save as PDF)
-  const handleDownloadPdf = () => {
-    handlePrintCertificate();
+  const handleDownloadPdf = async () => {
+    const success = await generateCertificatePdf();
+    if (success) {
+      showSuccess('Certificate downloaded successfully!');
+    }
   };
 
   const formatDate = (dateStr: string) => {
@@ -649,17 +615,20 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95">
           {/* 
-            Certificate container with explicit ID and ref for DOM lookup.
-            Uses pure CSS with #ffffff background and #000000 text for reliable print output.
+            CRITICAL FIXES:
+            1. Explicit ID "clearance-certificate-node" for DOM lookup fallback
+            2. Callback ref (certificateRefCallback) detects mount timing precisely
+            3. Certificate content rendered in a container with proper positioning
+            4. No display:none - uses off-screen positioning if needed for hidden state
           */}
           <div 
             id="clearance-certificate-node"
             ref={certificateRefCallback}
             className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print"
             style={{ 
+              // Ensure element is measurable even if parent is hidden
               position: 'relative',
-              minHeight: '100px',
-              backgroundColor: '#ffffff'
+              minHeight: '100px'
             }}
           >
             {/* Institutional Header */}
@@ -776,7 +745,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               <div>
                 <p className="font-bold text-rose-800">PDF Generation Issue</p>
                 <p className="text-sm text-rose-700 mt-1">{pdfError}</p>
-                <p className="text-xs text-rose-600 mt-2">Please use the manual Print Certificate or Download Certificate (PDF) buttons above.</p>
+                <p className="text-xs text-rose-600 mt-2">Please use the manual Download Certificate (PDF) or Print Certificate buttons above.</p>
               </div>
             </div>
           )}
