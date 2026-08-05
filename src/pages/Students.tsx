@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History } from 'lucide-react';
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -336,6 +336,19 @@ const Students = () => {
                           title="View History"
                         >
                           <History size={18} />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={() => {
+                            // Navigate to profile and open transfer modal
+                            navigate(`/students/${student.id}`);
+                            // The transfer modal will be opened from the profile page
+                          }}
+                          title="Transfer Student"
+                        >
+                          <UserX size={18} className="text-rose-600" />
                         </Button>
                         <Button 
                           variant="ghost" 

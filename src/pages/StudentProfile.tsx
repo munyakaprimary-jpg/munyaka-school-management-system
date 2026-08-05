@@ -13,14 +13,26 @@ import {
   FileText,
   CreditCard,
   ArrowLeft,
-  History
+  History,
+  UserX
 } from 'lucide-react';
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
+import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 
 const StudentProfile = () => {
   const student = STUDENTS[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+
+  // Enhanced student data for transfer
+  const transferStudentData = {
+    ...student,
+    feeBalance: 3000, // Mock outstanding balance
+    status: 'Active' as const,
+    dateOfAdmission: '2022-01-10',
+    coCurricularActivities: 'Football team captain (2023), Science fair 1st place (2022), School choir member',
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -32,13 +44,22 @@ const StudentProfile = () => {
             <p className="text-muted-foreground">Detailed learner profile and history.</p>
           </div>
         </div>
-        <Button 
-          variant="outline" 
-          className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
-          onClick={() => setIsHistoryModalOpen(true)}
-        >
-          <History size={18} /> View History
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
+            onClick={() => setIsHistoryModalOpen(true)}
+          >
+            <History size={18} /> View History
+          </Button>
+          <Button 
+            variant="outline" 
+            className="rounded-xl gap-2 border-rose-200 text-rose-600 hover:bg-rose-50"
+            onClick={() => setIsTransferOpen(true)}
+          >
+            <UserX size={18} /> Transfer Student
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -167,6 +188,17 @@ const StudentProfile = () => {
         onClose={() => setIsHistoryModalOpen(false)}
         studentId={student.id}
         studentName={student.name}
+      />
+
+      {/* Transfer Workflow Modal */}
+      <TransferWorkflow
+        student={transferStudentData}
+        isOpen={isTransferOpen}
+        onClose={() => setIsTransferOpen(false)}
+        onTransferComplete={(studentId) => {
+          setIsTransferOpen(false);
+          showSuccess(`${student.name} has been transferred successfully.`);
+        }}
       />
     </div>
   );
