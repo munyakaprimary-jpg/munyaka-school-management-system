@@ -19,6 +19,7 @@ import {
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
   const student = STUDENTS[0]; 
