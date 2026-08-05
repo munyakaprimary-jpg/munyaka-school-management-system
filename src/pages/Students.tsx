@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle } from 'lucide-react';
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -327,6 +327,15 @@ const Students = () => {
                           title="View Profile"
                         >
                           <Eye size={18} />
+                        </Button>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                          onClick={() => navigate(`/students/${student.id}`)}
+                          title="View History"
+                        >
+                          <History size={18} />
                         </Button>
                         <Button 
                           variant="ghost" 
