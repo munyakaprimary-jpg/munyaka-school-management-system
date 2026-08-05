@@ -21,7 +21,7 @@ import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import html2pdf from 'html2pdf.js';
-import { downloadCSV } from '@/utils/downloadHelper';
+import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
 
 // Rubric Logic
 const getRubric = (score: number) => {
@@ -206,7 +206,6 @@ const ReportCards = () => {
             letterRendering: true, 
             scrollY: 0,
             ignoreElements: (element: HTMLElement) => {
-              // Ignore elements with data-html2canvas-ignore or .no-print class
               return element.hasAttribute('data-html2canvas-ignore') || 
                      element.classList.contains('no-print') ||
                      element.classList.contains('html2canvas-ignore');
@@ -220,6 +219,12 @@ const ReportCards = () => {
         showSuccess(`Generated individual 1-page portrait report card for ${targetLearner.name}!`);
       } else {
         const content = [
+          SCHOOL_HEADERS.name,
+          SCHOOL_HEADERS.motto,
+          SCHOOL_HEADERS.address,
+          SCHOOL_HEADERS.phone,
+          SCHOOL_HEADERS.email,
+          "",
           `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
           `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
           `Grade: Grade ${targetLearner.grade} — ${targetLearner.stream} Stream`,
@@ -250,7 +255,7 @@ const ReportCards = () => {
     }
   };
 
-  // Handler: "Download All"
+  // Handler: "Download All" - CSV Export with standardized headers
   const handleDownloadAll = async () => {
     setIsDownloadingAll(true);
 
@@ -269,16 +274,20 @@ const ReportCards = () => {
         `"${s.email.replace(/"/g, '""')}"`
       ]);
 
-      const csvContent = [
-        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
-        `Generated: ${new Date().toLocaleString()}`,
-        `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
-        `Total Records Included: ${STUDENTS.length}`,
-        "",
+      const csvLines = [
+        ...generateCSVHeader(
+          "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
+          [
+            `Generated: ${new Date().toLocaleString()}`,
+            `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
+            `Total Records Included: ${STUDENTS.length}`
+          ]
+        ),
         headers.join(","),
         ...rows.map(r => r.join(","))
-      ].join("\n");
+      ];
+
+      const csvContent = csvLines.join("\n");
 
       // Use global download helper
       downloadCSV(csvContent, `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`);
@@ -316,6 +325,59 @@ const ReportCards = () => {
         .remarks-block {
           page-break-inside: avoid !important;
           break-inside: avoid !important;
+        }
+
+        /* PDF Header Styles */
+        .pdf-header {
+          text-align: center;
+          margin-bottom: 20px;
+          padding-bottom: 15px;
+          border-bottom: 2px solid #4f46e5;
+        }
+        .pdf-school-name {
+          font-size: 18px;
+          font-weight: 900;
+          color: #1e293b;
+          margin: 0 0 4px 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .pdf-motto {
+          font-size: 11px;
+          font-weight: 700;
+          font-style: italic;
+          color: #4f46e5;
+          margin: 0 0 4px 0;
+        }
+        .pdf-address {
+          font-size: 10px;
+          color: #64748b;
+          margin: 0 0 2px 0;
+        }
+        .pdf-contact {
+          font-size: 9px;
+          color: #94a3b8;
+          margin: 0 0 8px 0;
+        }
+        .pdf-divider {
+          height: 2px;
+          background: linear-gradient(90deg, #4f46e5, #06b6d4);
+          margin: 8px auto;
+          width: 60%;
+          border-radius: 1px;
+        }
+        .pdf-report-title {
+          font-size: 13px;
+          font-weight: 800;
+          color: #1e293b;
+          margin: 0;
+          text-transform: uppercase;
+          letter-spacing: 0.5px;
+        }
+        .pdf-header-info {
+          font-size: 9px;
+          color: #64748b;
+          margin: 2px 0;
         }
       `}</style>
 
