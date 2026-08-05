@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -101,6 +99,24 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Ensure nav is visible when changing routes
   useEffect(() => {
     setShowBottomNav(true);
+  }, [location.pathname]);
+
+  // NEW: Remove any stray hash-like tokens that might be leaking into the DOM
+  useEffect(() => {
+    const hideTokenElements = () => {
+      const regex = /^[a-fA-F0-9]{40,}$/;
+      document.querySelectorAll('div, span, p, code').forEach((el) => {
+        const text = el.textContent?.trim() || '';
+        if (regex.test(text) && text.length > 40) {
+          el.style.display = 'none';
+        }
+      });
+    };
+    // Run after mount and whenever route changes
+    hideTokenElements();
+    // Also run after a short delay to catch late-rendering content
+    const timer = setTimeout(hideTokenElements, 100);
+    return () => clearTimeout(timer);
   }, [location.pathname]);
 
   const menuItems = [
