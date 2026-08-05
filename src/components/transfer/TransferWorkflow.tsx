@@ -578,7 +578,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               </div>
               <h1 className="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
               <p className="school-motto">"Knowledge is Power"</p>
-              <p className="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 712 345 678 | Email: info@munyaka.sc.ke</p>
+              <p className="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
             </div>
 
             {/* Certificate Title */}
