@@ -70,12 +70,17 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   }
 };
 
+/** Normalize email/username for consistent storage & lookup */
+const normalizeEmail = (email: string): string => {
+  return email.trim().toLowerCase();
+};
+
 const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
   // Ensure default admin with updated credentials is generated & active
-  const adminEmailKey = DEFAULT_ADMIN.email.toLowerCase();
+  const adminEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
   users[adminEmailKey] = {
     ...DEFAULT_ADMIN.user,
     password: DEFAULT_ADMIN.password,
@@ -91,19 +96,19 @@ const initializeUsersStorage = () => {
     : INITIAL_PRE_REGISTERED_STAFF;
 
   staffLedger.forEach((staff) => {
-    const emailKey = staff.email.toLowerCase();
+    const emailKey = normalizeEmail(staff.email);
     
     users[emailKey] = {
       id: staff.id,
       name: staff.fullName,
-      email: staff.email.toLowerCase(),
+      email: emailKey, // Store normalized
       phone: staff.phone,
       role: mapSystemRoleToUserRole(staff.systemRole),
       avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-      password: staff.tempAccessCode, 
+      password: staff.tempAccessCode, // Plain text - this IS the password for this frontend-only system
       alternativePasswords: [staff.nationalId, 'munyaka5239'],
-      isActive: staff.status !== 'Suspended',
-      emailConfirmed: true
+      isActive: staff.status !== 'Suspended', // Explicit activation flag
+      emailConfirmed: true // Explicit verification flag
     };
   });
 
@@ -127,7 +132,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, pass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(email);
     
     initializeUsersStorage();
 
@@ -172,7 +177,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const register = async (userData: RegisterData): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
-    const normalizedEmail = userData.email.trim().toLowerCase();
+    const normalizedEmail = normalizeEmail(userData.email);
     
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
     const users = usersJson ? JSON.parse(usersJson) : {};
@@ -191,8 +196,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       role: userData.role,
       avatar: userData.fullName.substring(0, 2).toUpperCase(),
       password: userData.password,
-      isActive: true,
-      emailConfirmed: true,
+      isActive: true, // Explicit activation
+      emailConfirmed: true, // Explicit verification
       department: userData.department,
       createdAt: new Date().toISOString()
     };
@@ -211,7 +216,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
     
     if (data.email) {
-      const normalizedEmail = data.email.trim().toLowerCase();
+      const normalizedEmail = normalizeEmail(data.email);
       localStorage.setItem('munyaka_admin_email', normalizedEmail);
     }
     showSuccess("Profile updated successfully");
