@@ -63,12 +63,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   });
   const [certificateNumber, setCertificateNumber] = useState('');
   
-  // Ref for the certificate container - explicitly targeting the certificate node
-  const certificateRef = useRef<HTMLDivElement>(null);
-  
-  // Track if certificate is mounted and ready for PDF generation
-  const [isCertificateMounted, setIsCertificateMounted] = useState(false);
-
   // Admin password verification state
   const [adminPassword, setAdminPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -77,6 +71,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // PDF generation state
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Ref for the off-screen printable certificate container
+  const printableCertRef = useRef<HTMLDivElement>(null);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -94,43 +91,19 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       setAuthError('');
       setShowPassword(false);
       setPdfError(null);
-      setIsCertificateMounted(false);
-    } else {
-      setIsCertificateMounted(false);
     }
   }, [isOpen, student]);
 
-  // Callback ref to detect when certificate DOM node is mounted
-  const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
-    certificateRef.current = node;
-    if (node) {
-      setIsCertificateMounted(true);
-    } else {
-      setIsCertificateMounted(false);
-    }
-  }, []);
-
-  // Generate PDF certificate - robust version with multiple fallback strategies
+  // Generate PDF certificate using off-screen container
   const generateCertificatePdf = async (): Promise<boolean> => {
     setIsGeneratingPdf(true);
     setPdfError(null);
 
     try {
-      // Strategy 1: Try ref first
-      let element = certificateRef.current;
+      const element = printableCertRef.current;
       
-      // Strategy 2: Fallback to DOM ID lookup
       if (!element) {
-        element = document.getElementById('clearance-certificate-node');
-      }
-      
-      // Strategy 3: Fallback to class selector
-      if (!element) {
-        element = document.querySelector('.certificate-container') as HTMLDivElement;
-      }
-
-      if (!element) {
-        throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
+        throw new Error('Off-screen certificate container not found in DOM');
       }
 
       const safeStudentName = student.name.replace(/\s+/g, '_');
@@ -143,16 +116,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         html2canvas: { 
           scale: 2, 
           useCORS: true, 
-          letterRendering: true, 
-          scrollY: 0,
-          ignoreElements: (el: HTMLElement) => {
-            return el.hasAttribute('data-no-print') || 
-                   el.classList.contains('no-print') ||
-                   el.classList.contains('html2canvas-ignore');
-          }
+          backgroundColor: '#ffffff',
+          logging: false,
+          scrollX: 0,
+          scrollY: 0
         },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css'] }
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       };
 
       await html2pdf().set(opt).from(element).save();
@@ -166,18 +135,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       setIsGeneratingPdf(false);
     }
   };
-
-  // Auto-generate PDF after certificate mounts - with proper lifecycle handling
-  useEffect(() => {
-    if (currentStep === 'CERTIFICATE' && certificateNumber && isCertificateMounted) {
-      // Use setTimeout to ensure React has flushed the DOM and browser has painted
-      const timer = setTimeout(() => {
-        generateCertificatePdf();
-      }, 300); // 300ms delay for render + paint
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep, certificateNumber, isCertificateMounted]);
 
   const handleExecuteTransfer = async () => {
     if (!transferData.destinationSchool?.trim()) {
@@ -193,10 +150,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setIsExecuting(true);
     setAuthError("");
 
-    // Validate admin password against stored credentials
     const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
     
-    // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
 
     if (adminPassword !== storedAdminPass) {
@@ -205,15 +160,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       return;
     }
 
-    // Generate certificate number
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
     
-    // Notify parent of completion (but DON'T close modal)
     onTransferComplete(student.id, certNum);
-    
-    // Advance to Stage 2 - Certificate View
-    // PDF auto-generation will trigger via useEffect once certificate mounts
     setCurrentStep('CERTIFICATE');
     setIsExecuting(false);
     
@@ -221,15 +171,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   };
 
   const handlePrintCertificate = () => {
-    // Use same robust element detection
-    let element = certificateRef.current;
-    if (!element) {
-      element = document.getElementById('clearance-certificate-node');
-    }
-    if (!element) {
-      element = document.querySelector('.certificate-container') as HTMLDivElement;
-    }
-    
+    // Use the off-screen container for printing as well
+    const element = printableCertRef.current;
     if (!element) {
       showError('Certificate not ready for printing. Please try again.');
       return;
@@ -376,7 +319,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         </>
       );
     } else {
-      // Post-execution state: Download PDF, Print, Close
       return (
         <>
           <Button 
@@ -404,6 +346,132 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       );
     }
   };
+
+  // Certificate Content Component - Used for both visible preview and off-screen container
+  const CertificateContent = () => (
+    <div 
+      id="printable-clearance-certificate"
+      ref={printableCertRef}
+      className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto"
+      style={{ 
+        position: 'fixed', 
+        left: '-9999px', 
+        top: '0px', 
+        width: '800px', 
+        backgroundColor: '#ffffff', 
+        color: '#000000', 
+        padding: '40px', 
+        fontFamily: 'Arial, sans-serif',
+        zIndex: -1
+      }}
+    >
+      {/* Institutional Header */}
+      <div className="institutional-header">
+        <div className="flex justify-center mb-4">
+          <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-300">
+            <School className="text-slate-600" size={32} />
+          </div>
+        </div>
+        <h1 className="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
+        <p className="school-motto">"Knowledge is Power"</p>
+        <p className="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
+      </div>
+
+      {/* Certificate Title */}
+      <h2 className="certificate-title">Student Transfer & Clearance Certificate</h2>
+
+      {/* Certificate Number */}
+      <div className="certificate-number">
+        Certificate No: <strong>{certificateNumber}</strong> | Date Issued: <strong>{formatDate(new Date().toISOString())}</strong>
+      </div>
+
+      {/* Student Details Grid */}
+      <div className="detail-grid">
+        <div className="detail-row">
+          <span className="detail-label">Student Full Name:</span>
+          <span className="detail-value font-black text-lg">{student.name}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Assessment UPI Code:</span>
+          <span className="detail-value font-mono font-bold">{student.assessment}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Gender:</span>
+          <span className="detail-value">{student.gender === 'M' ? 'Male' : 'Female'}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Date of Birth:</span>
+          <span className="detail-value">{formatDate(student.dob)}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Date of Admission:</span>
+          <span className="detail-value">{formatDate(student.dateOfAdmission)}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Date of Exit:</span>
+          <span className="detail-value font-bold">{formatDate(transferData.dateOfExit)}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Last Grade Attained:</span>
+          <span className="detail-value">Grade {student.grade}</span>
+        </div>
+        <div className="detail-row">
+          <span className="detail-label">Stream:</span>
+          <span className="detail-value">{student.stream}</span>
+        </div>
+        <div className="detail-row full-width">
+          <span className="detail-label">Destination School / Reason:</span>
+          <span className="detail-value">{transferData.destinationSchool}</span>
+        </div>
+        <div className="detail-row full-width">
+          <span className="detail-label">Final Fee Clearance Status:</span>
+          <span className="detail-value">
+            <span className={cn("font-bold px-3 py-1 rounded", feeStatusClass)}>
+              {feeStatus} {student.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
+            </span>
+          </span>
+        </div>
+      </div>
+
+      {/* Co-curricular Activities */}
+      <div className="mt-8">
+        <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Co-curricular Activities & Achievements</h4>
+        <div className="remarks-box">
+          <p className="text-slate-700 whitespace-pre-wrap">{transferData.coCurricularActivities || 'No co-curricular activities recorded.'}</p>
+        </div>
+      </div>
+
+      {/* Headteacher Remarks */}
+      <div className="mt-6">
+        <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Headteacher Remarks</h4>
+        <div className="remarks-box">
+          <p className="text-slate-700 whitespace-pre-wrap">{transferData.headteacherRemarks || 'No additional remarks.'}</p>
+        </div>
+      </div>
+
+      {/* Sign-off Block */}
+      <div className="signatures">
+        <div className="signature-block">
+          <div className="signature-line"></div>
+          <p className="signature-label">Bursar / Finance Clearance</p>
+          <p className="text-xs text-slate-500 mt-1">Signature & Date</p>
+          <p className="text-xs text-slate-400">Official Stamp</p>
+        </div>
+        <div className="signature-block">
+          <div className="signature-line"></div>
+          <p className="signature-label">Headteacher Signature & Stamp</p>
+          <p className="text-xs text-slate-500 mt-1">Signature & Date</p>
+          <p className="text-xs text-slate-400">Official School Stamp</p>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="mt-8 pt-6 border-t border-slate-300 text-center text-xs text-slate-500">
+        <p>This certificate is issued without erasure or alteration.</p>
+        <p className="mt-1">Munyaka Primary and Junior School • P.O. Box 5239-30100, Eldoret</p>
+      </div>
+    </div>
+  );
 
   return (
     <Modal
@@ -607,129 +675,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       {/* Stage 2: Official Clearance Certificate Preview */}
       {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95">
-          {/* 
-            CRITICAL FIXES:
-            1. Explicit ID "clearance-certificate-node" for DOM lookup fallback
-            2. Callback ref (certificateRefCallback) detects mount timing precisely
-            3. Certificate content rendered in a container with proper positioning
-            4. No display:none - uses off-screen positioning if needed for hidden state
-          */}
-          <div 
-            id="clearance-certificate-node"
-            ref={certificateRefCallback}
-            className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print"
-            style={{ 
-              // Ensure element is measurable even if parent is hidden
-              position: 'relative',
-              minHeight: '100px'
-            }}
-          >
-            {/* Institutional Header */}
-            <div className="institutional-header">
-              <div className="flex justify-center mb-4">
-                <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center overflow-hidden border-2 border-slate-300">
-                  <School className="text-slate-600" size={32} />
-                </div>
-              </div>
-              <h1 className="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-              <p className="school-motto">"Knowledge is Power"</p>
-              <p className="school-address">P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359 | Email: munyakaprimary@gmail.com</p>
-            </div>
-
-            {/* Certificate Title */}
-            <h2 className="certificate-title">Student Transfer & Clearance Certificate</h2>
-
-            {/* Certificate Number */}
-            <div className="certificate-number">
-              Certificate No: <strong>{certificateNumber}</strong> | Date Issued: <strong>{formatDate(new Date().toISOString())}</strong>
-            </div>
-
-            {/* Student Details Grid */}
-            <div className="detail-grid">
-              <div className="detail-row">
-                <span className="detail-label">Student Full Name:</span>
-                <span className="detail-value font-black text-lg">{student.name}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Assessment UPI Code:</span>
-                <span className="detail-value font-mono font-bold">{student.assessment}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Gender:</span>
-                <span className="detail-value">{student.gender === 'M' ? 'Male' : 'Female'}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Date of Birth:</span>
-                <span className="detail-value">{formatDate(student.dob)}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Date of Admission:</span>
-                <span className="detail-value">{formatDate(student.dateOfAdmission)}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Date of Exit:</span>
-                <span className="detail-value font-bold">{formatDate(transferData.dateOfExit)}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Last Grade Attained:</span>
-                <span className="detail-value">Grade {student.grade}</span>
-              </div>
-              <div className="detail-row">
-                <span className="detail-label">Stream:</span>
-                <span className="detail-value">{student.stream}</span>
-              </div>
-              <div className="detail-row full-width">
-                <span className="detail-label">Destination School / Reason:</span>
-                <span className="detail-value">{transferData.destinationSchool}</span>
-              </div>
-              <div className="detail-row full-width">
-                <span className="detail-label">Final Fee Clearance Status:</span>
-                <span className="detail-value">
-                  <span className={cn("font-bold px-3 py-1 rounded", feeStatusClass)}>
-                    {feeStatus} {student.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
-                  </span>
-                </span>
-              </div>
-            </div>
-
-            {/* Co-curricular Activities */}
-            <div className="mt-8">
-              <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Co-curricular Activities & Achievements</h4>
-              <div className="remarks-box">
-                <p className="text-slate-700 whitespace-pre-wrap">{transferData.coCurricularActivities || 'No co-curricular activities recorded.'}</p>
-              </div>
-            </div>
-
-            {/* Headteacher Remarks */}
-            <div className="mt-6">
-              <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Headteacher Remarks</h4>
-              <div className="remarks-box">
-                <p className="text-slate-700 whitespace-pre-wrap">{transferData.headteacherRemarks || 'No additional remarks.'}</p>
-              </div>
-            </div>
-
-            {/* Sign-off Block */}
-            <div className="signatures">
-              <div className="signature-block">
-                <div className="signature-line"></div>
-                <p className="signature-label">Bursar / Finance Clearance</p>
-                <p className="text-xs text-slate-500 mt-1">Signature & Date</p>
-                <p className="text-xs text-slate-400">Official Stamp</p>
-              </div>
-              <div className="signature-block">
-                <div className="signature-line"></div>
-                <p className="signature-label">Headteacher Signature & Stamp</p>
-                <p className="text-xs text-slate-500 mt-1">Signature & Date</p>
-                <p className="text-xs text-slate-400">Official School Stamp</p>
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="mt-8 pt-6 border-t border-slate-300 text-center text-xs text-slate-500">
-              <p>This certificate is issued without erasure or alteration.</p>
-              <p className="mt-1">Munyaka Primary and Junior School • P.O. Box 5239-30100, Eldoret</p>
-            </div>
+          {/* Visible Preview Container */}
+          <div className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print">
+            <CertificateContent />
           </div>
+
+          {/* Off-Screen Printable Container for PDF Generation */}
+          <CertificateContent />
 
           {/* PDF Error Alert */}
           {pdfError && (
