@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Card, CardContent, CardHeader, CardTitle 
 } from "@/components/ui/card";
@@ -52,7 +52,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
-  // Explicit multi-step state machine
   const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
@@ -63,7 +62,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     headteacherRemarks: '',
   });
   const [certificateNumber, setCertificateNumber] = useState('');
+  
+  // Ref for the certificate container - explicitly targeting the certificate node
   const certificateRef = useRef<HTMLDivElement>(null);
+  
+  // Track if certificate is mounted and ready for PDF generation
+  const [isCertificateMounted, setIsCertificateMounted] = useState(false);
 
   // Admin password verification state
   const [adminPassword, setAdminPassword] = useState('');
@@ -90,21 +94,45 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       setAuthError('');
       setShowPassword(false);
       setPdfError(null);
+      setIsCertificateMounted(false);
+    } else {
+      setIsCertificateMounted(false);
     }
   }, [isOpen, student]);
 
-  // Generate PDF certificate
-  const generateCertificatePdf = async (): Promise<boolean> => {
-    if (!certificateRef.current) {
-      setPdfError('Certificate element not found');
-      return false;
+  // Callback ref to detect when certificate DOM node is mounted
+  const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
+    certificateRef.current = node;
+    if (node) {
+      setIsCertificateMounted(true);
+    } else {
+      setIsCertificateMounted(false);
     }
+  }, []);
 
+  // Generate PDF certificate - robust version with multiple fallback strategies
+  const generateCertificatePdf = async (): Promise<boolean> => {
     setIsGeneratingPdf(true);
     setPdfError(null);
 
     try {
-      const element = certificateRef.current;
+      // Strategy 1: Try ref first
+      let element = certificateRef.current;
+      
+      // Strategy 2: Fallback to DOM ID lookup
+      if (!element) {
+        element = document.getElementById('clearance-certificate-node');
+      }
+      
+      // Strategy 3: Fallback to class selector
+      if (!element) {
+        element = document.querySelector('.certificate-container') as HTMLDivElement;
+      }
+
+      if (!element) {
+        throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
+      }
+
       const safeStudentName = student.name.replace(/\s+/g, '_');
       const fileName = `Munyaka_Clearance_Certificate_${safeStudentName}.pdf`;
 
@@ -131,12 +159,25 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       return true;
     } catch (err) {
       console.error('PDF generation error:', err);
-      setPdfError('Failed to generate PDF. Browser pop-up blocker may be preventing download.');
+      const errorMessage = err instanceof Error ? err.message : 'Failed to generate PDF';
+      setPdfError(errorMessage);
       return false;
     } finally {
       setIsGeneratingPdf(false);
     }
   };
+
+  // Auto-generate PDF after certificate mounts - with proper lifecycle handling
+  useEffect(() => {
+    if (currentStep === 'CERTIFICATE' && certificateNumber && isCertificateMounted) {
+      // Use setTimeout to ensure React has flushed the DOM and browser has painted
+      const timer = setTimeout(() => {
+        generateCertificatePdf();
+      }, 300); // 300ms delay for render + paint
+      
+      return () => clearTimeout(timer);
+    }
+  }, [currentStep, certificateNumber, isCertificateMounted]);
 
   const handleExecuteTransfer = async () => {
     if (!transferData.destinationSchool?.trim()) {
@@ -171,27 +212,33 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // Notify parent of completion (but DON'T close modal)
     onTransferComplete(student.id, certNum);
     
-    // Try to auto-generate PDF
-    const pdfSuccess = await generateCertificatePdf();
-    
     // Advance to Stage 2 - Certificate View
+    // PDF auto-generation will trigger via useEffect once certificate mounts
     setCurrentStep('CERTIFICATE');
     setIsExecuting(false);
     
-    if (pdfSuccess) {
-      showSuccess(`Transfer executed successfully! Certificate ${certNum} downloaded.`);
-    } else {
-      showSuccess(`Transfer executed successfully! Certificate ${certNum} generated. Use buttons below to download or print.`);
-    }
+    showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
   };
 
   const handlePrintCertificate = () => {
-    if (!certificateRef.current) return;
+    // Use same robust element detection
+    let element = certificateRef.current;
+    if (!element) {
+      element = document.getElementById('clearance-certificate-node');
+    }
+    if (!element) {
+      element = document.querySelector('.certificate-container') as HTMLDivElement;
+    }
+    
+    if (!element) {
+      showError('Certificate not ready for printing. Please try again.');
+      return;
+    }
     
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const certificateHtml = certificateRef.current.outerHTML;
+    const certificateHtml = element.outerHTML;
     const printStyles = `
       <style>
         @page { size: A4; margin: 15mm; }
@@ -559,16 +606,24 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       {/* Stage 2: Official Clearance Certificate Preview */}
       {currentStep === 'CERTIFICATE' && (
-        <div className="animate-in fade-in zoom-in-95" ref={certificateRef}>
-          {/* Print-only styles */}
-          <style jsx>{`
-            @media print {
-              .no-print { display: none !important; }
-              .certificate-container { box-shadow: none !important; border: 2px solid #1e293b !important; }
-            }
-          `}</style>
-          
-          <div className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print">
+        <div className="animate-in fade-in zoom-in-95">
+          {/* 
+            CRITICAL FIXES:
+            1. Explicit ID "clearance-certificate-node" for DOM lookup fallback
+            2. Callback ref (certificateRefCallback) detects mount timing precisely
+            3. Certificate content rendered in a container with proper positioning
+            4. No display:none - uses off-screen positioning if needed for hidden state
+          */}
+          <div 
+            id="clearance-certificate-node"
+            ref={certificateRefCallback}
+            className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print"
+            style={{ 
+              // Ensure element is measurable even if parent is hidden
+              position: 'relative',
+              minHeight: '100px'
+            }}
+          >
             {/* Institutional Header */}
             <div className="institutional-header">
               <div className="flex justify-center mb-4">
