@@ -383,6 +383,41 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     handlePrintCertificate();
   };
 
+  // Execute transfer and generate certificate
+  const handleExecuteTransfer = async () => {
+    if (!adminPassword.trim()) {
+      setAuthError('Admin password is required');
+      return;
+    }
+
+    setIsExecuting(true);
+    setAuthError('');
+
+    // Simulate admin password verification
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+    if (adminPassword !== currentAdminPass) {
+      setAuthError('Incorrect Admin Password');
+      showError('Incorrect Admin Password');
+      setIsExecuting(false);
+      return;
+    }
+
+    // Generate certificate number
+    const certNum = `MUNYAKA-TR-${Date.now().toString().slice(-6)}`;
+    setCertificateNumber(certNum);
+
+    // Move to certificate view
+    setCurrentStep('CERTIFICATE');
+    setIsExecuting(false);
+
+    // Notify parent
+    onTransferComplete(student.id, certNum);
+    showSuccess(`Transfer executed successfully. Certificate: ${certNum}`);
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
