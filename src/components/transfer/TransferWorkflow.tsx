@@ -52,7 +52,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
-  const [step, setStep] = useState<'setup' | 'certificate'>('setup');
+  // Explicit multi-step state machine
+  const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
     dateOfExit: new Date().toISOString().split('T')[0],
@@ -76,7 +77,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   // Reset when modal opens/closes
   useEffect(() => {
     if (isOpen) {
-      setStep('setup');
+      setCurrentStep('FORM');
       setTransferData({
         dateOfExit: new Date().toISOString().split('T')[0],
         destinationSchool: '',
@@ -167,14 +168,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
     
-    // Execute transfer with certificate number
+    // Notify parent of completion (but DON'T close modal)
     onTransferComplete(student.id, certNum);
     
     // Try to auto-generate PDF
     const pdfSuccess = await generateCertificatePdf();
     
-    // Switch to certificate view - DO NOT CLOSE MODAL
-    setStep('certificate');
+    // Advance to Stage 2 - Certificate View
+    setCurrentStep('CERTIFICATE');
     setIsExecuting(false);
     
     if (pdfSuccess) {
@@ -313,13 +314,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'setup' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
-      description={step === 'setup' 
+      title={currentStep === 'FORM' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
+      description={currentStep === 'FORM' 
         ? `Initiate transfer for ${student.name} (${student.assessment})`
         : `Official Clearance Certificate for ${student.name}`}
       maxWidth="max-w-3xl"
       footer={
-        step === 'setup' ? (
+        currentStep === 'FORM' ? (
           <>
             <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
               Cancel
@@ -334,17 +335,18 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </Button>
           </>
         ) : (
-          <>
+          // Stage 2: Sticky footer with action buttons
+          <div className="flex flex-col sm:flex-row gap-3 w-full p-4 border-t border-slate-200 bg-white/50 backdrop-blur-sm sticky bottom-0">
             <Button 
               onClick={handlePrintCertificate}
-              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
+              className="flex-1 sm:w-auto rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
             >
               <Printer size={16} /> Print Certificate
             </Button>
             <Button 
               onClick={handleDownloadPdf}
               disabled={isGeneratingPdf}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+              className="flex-1 sm:w-auto rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
             >
               {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
               Download Certificate (PDF)
@@ -352,15 +354,16 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             <Button 
               variant="outline"
               onClick={onClose}
-              className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
+              className="flex-1 sm:w-auto rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
             >
-              <FileCheck size={16} className="mr-2" /> Done
+              <FileCheck size={16} className="mr-2" /> Close
             </Button>
-          </>
+          </div>
         )
       }
     >
-      {step === 'setup' && (
+      {/* Stage 1: Transfer Setup Form */}
+      {currentStep === 'FORM' && (
         <div className="space-y-6 animate-in fade-in">
           {/* Student Info Header */}
           <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
@@ -547,7 +550,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         </div>
       )}
 
-      {step === 'certificate' && (
+      {/* Stage 2: Official Clearance Certificate Preview */}
+      {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95" ref={certificateRef}>
           {/* Print-only styles */}
           <style jsx>{`
