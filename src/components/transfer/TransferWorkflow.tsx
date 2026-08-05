@@ -29,11 +29,14 @@ import {
   UserCheck,
   Eye,
   EyeOff,
-  Lock
+  Lock,
+  Download,
+  FileCheck
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
+import html2pdf from 'html2pdf.js';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -48,7 +51,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
-  const [step, setStep] = useState<'setup' | 'certificate'>('setup');
+  const [step, setStep] = useState<'setup' | 'certificate' | 'success'>('setup');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
     dateOfExit: new Date().toISOString().split('T')[0],
@@ -65,6 +68,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
 
+  // PDF generation state
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [pdfError, setPdfError] = useState<string | null>(null);
+
   // Reset when modal opens/closes
   useEffect(() => {
     if (isOpen) {
@@ -80,8 +87,54 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       setAdminPassword('');
       setAuthError('');
       setShowPassword(false);
+      setPdfError(null);
     }
   }, [isOpen, student]);
+
+  // Generate PDF certificate
+  const generateCertificatePdf = async (): Promise<boolean> => {
+    if (!certificateRef.current) {
+      setPdfError('Certificate element not found');
+      return false;
+    }
+
+    setIsGeneratingPdf(true);
+    setPdfError(null);
+
+    try {
+      const element = certificateRef.current;
+      const safeStudentName = student.name.replace(/\s+/g, '_');
+      const fileName = `Munyaka_Clearance_Certificate_${safeStudentName}.pdf`;
+
+      const opt = {
+        margin: [10, 10, 10, 10],
+        filename: fileName,
+        image: { type: 'jpeg', quality: 0.98 },
+        html2canvas: { 
+          scale: 2, 
+          useCORS: true, 
+          letterRendering: true, 
+          scrollY: 0,
+          ignoreElements: (el: HTMLElement) => {
+            return el.hasAttribute('data-no-print') || 
+                   el.classList.contains('no-print') ||
+                   el.classList.contains('html2canvas-ignore');
+          }
+        },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css'] }
+      };
+
+      await html2pdf().set(opt).from(element).save();
+      return true;
+    } catch (err) {
+      console.error('PDF generation error:', err);
+      setPdfError('Failed to generate PDF. Browser pop-up blocker may be preventing download.');
+      return false;
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
 
   const handleExecuteTransfer = async () => {
     if (!transferData.destinationSchool?.trim()) {
@@ -116,9 +169,17 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // Execute transfer
     onTransferComplete(student.id);
     
-    setStep('certificate');
+    // Try to auto-generate PDF
+    const pdfSuccess = await generateCertificatePdf();
+    
+    setStep('success');
     setIsExecuting(false);
-    showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
+    
+    if (pdfSuccess) {
+      showSuccess(`Transfer executed successfully! Certificate ${certNum} downloaded.`);
+    } else {
+      showSuccess(`Transfer executed successfully! Certificate ${certNum} generated. Please use manual download below.`);
+    }
   };
 
   const handlePrintCertificate = () => {
@@ -224,6 +285,13 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     }, 500);
   };
 
+  const handleDownloadPdf = async () => {
+    const success = await generateCertificatePdf();
+    if (success) {
+      showSuccess('Certificate downloaded successfully!');
+    }
+  };
+
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
     const date = new Date(dateStr);
@@ -243,10 +311,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={step === 'setup' ? "Student Transfer Workflow" : "Clearance Certificate Generated"}
+      title={step === 'setup' ? "Student Transfer Workflow" : step === 'certificate' ? "Clearance Certificate Generated" : "Transfer Complete"}
       description={step === 'setup' 
         ? `Initiate transfer for ${student.name} (${student.assessment})`
-        : `Official Clearance Certificate for ${student.name}`}
+        : step === 'certificate'
+        ? `Official Clearance Certificate for ${student.name}`
+        : `Transfer completed for ${student.name}`}
       maxWidth="max-w-3xl"
       footer={
         step === 'setup' ? (
@@ -263,6 +333,26 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               Execute Transfer & Generate Clearance Certificate
             </Button>
           </>
+        ) : step === 'certificate' ? (
+          <>
+            <Button variant="ghost" onClick={() => setStep('success')} className="rounded-xl font-bold">
+              Continue
+            </Button>
+            <Button 
+              onClick={handlePrintCertificate}
+              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
+            >
+              <Printer size={16} /> Print Certificate
+            </Button>
+            <Button 
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+            >
+              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
+              Download PDF
+            </Button>
+          </>
         ) : (
           <>
             <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">
@@ -270,9 +360,17 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </Button>
             <Button 
               onClick={handlePrintCertificate}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
             >
               <Printer size={16} /> Print Certificate
+            </Button>
+            <Button 
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+            >
+              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
+              Download PDF
             </Button>
           </>
         )
@@ -583,13 +681,67 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
           </div>
 
-          {/* Print Button - only visible on screen */}
-          <div className="no-print text-center mt-6">
+          {/* PDF Error Alert */}
+          {pdfError && (
+            <div className="no-print mt-6 p-4 bg-rose-50 border border-rose-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="text-rose-600 shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="font-bold text-rose-800">PDF Generation Issue</p>
+                <p className="text-sm text-rose-700 mt-1">{pdfError}</p>
+                <p className="text-xs text-rose-600 mt-2">Please use the manual Download PDF or Print Certificate buttons above.</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {step === 'success' && (
+        <div className="animate-in fade-in zoom-in-95 text-center space-y-6">
+          <div className="w-20 h-20 bg-emerald-100 rounded-full flex items-center justify-center mx-auto">
+            <CheckCircle className="text-emerald-600" size={40} />
+          </div>
+          
+          <div>
+            <h3 className="text-2xl font-black text-slate-900">Transfer Completed Successfully</h3>
+            <p className="text-slate-500 mt-2">
+              <strong>{student.name}</strong> has been transferred and clearance certificate generated.
+            </p>
+            <p className="text-sm text-slate-400 mt-1">Certificate No: <strong className="text-slate-900">{certificateNumber}</strong></p>
+          </div>
+
+          {/* PDF Error Alert in Success Step */}
+          {pdfError && (
+            <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+              <AlertCircle className="text-amber-600 shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="font-bold text-amber-800">Auto-download was blocked</p>
+                <p className="text-sm text-amber-700 mt-1">{pdfError}</p>
+                <p className="text-xs text-amber-600 mt-2">Please use the manual buttons below to get your certificate.</p>
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <Button 
               onClick={handlePrintCertificate}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+              className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white w-full sm:w-auto"
             >
               <Printer size={16} /> Print Certificate
+            </Button>
+            <Button 
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white w-full sm:w-auto"
+            >
+              {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
+              Download PDF
+            </Button>
+            <Button 
+              variant="outline"
+              onClick={onClose}
+              className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm w-full sm:w-auto"
+            >
+              <FileCheck size={16} className="mr-2" /> Done
             </Button>
           </div>
         </div>
