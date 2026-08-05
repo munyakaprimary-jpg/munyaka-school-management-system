@@ -228,7 +228,8 @@ const StudentProfile = () => {
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
         onTransferComplete={(studentId, certificateNumber) => {
-          setIsTransferOpen(false);
+          // DO NOT close modal here - let user download/print first
+          // The modal handles its own close via the Close button in Stage 2
           showSuccess(`${student.name} has been transferred successfully. Certificate: ${certificateNumber}`);
         }}
       />
