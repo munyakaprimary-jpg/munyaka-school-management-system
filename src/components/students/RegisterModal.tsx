@@ -100,7 +100,10 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade Level</Label>
-            <Select value={regGrade} onValueChange={(val) => { setRegGrade(val); setRegStream(''); }}>
+            <Select value={regGrade} onValueChange={(val) => {
+              setRegGrade(val);
+              setRegStream('');
+            }}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
@@ -142,8 +145,8 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
           <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 
-export default RegisterModal;
+export default RegisterModal;"}}]
