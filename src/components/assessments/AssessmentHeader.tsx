@@ -13,7 +13,7 @@ interface AssessmentHeaderProps {
 
 const AssessmentHeader = ({ onExport, onSave, isSaving, isExporting }: AssessmentHeaderProps) => {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 w-full max-w-full overflow-x-auto whitespace-nowrap break-words">
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900">Marks Entry</h1>
         <p className="text-sm text-slate-500">Record results for all learners in the selected class.</p>
