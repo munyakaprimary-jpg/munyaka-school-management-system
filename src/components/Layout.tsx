@@ -332,7 +332,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
         >
-          <div className="max-w-7xl mx-auto w-full">
+          <div className="max-w-7xl mx-auto w-full table-scroll-viewport">
             {children}
           </div>
         </div>
