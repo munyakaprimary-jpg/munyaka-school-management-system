@@ -137,7 +137,7 @@ export const useStudentAttendance = (studentId: string | null) => {
     showSuccess(`Attendance marked as ${status}`);
     setLoading(false);
     return true;
-  };
+  });
 
   const getAttendanceForDate = (date: string): StudentAttendance => {
     return attendanceRecords[date] || {};

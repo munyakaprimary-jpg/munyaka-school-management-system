@@ -21,7 +21,7 @@ const MarksTable = ({
 }: MarksTableProps) => {
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-      <div className="overflow-x-auto w-full max-w-full whitespace-nowrap break-words">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse">
           <thead className="bg-slate-50 border-b">
             <tr>

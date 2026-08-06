@@ -2,36 +2,6 @@ export type ConditionStatus = 'New' | 'Good' | 'Fair' | 'Damaged';
 export type ConditionReturnStatus = 'Good' | 'Damaged' | 'Lost' | 'Pending';
 export type BookAllocationStatus = 'Active' | 'Returned' | 'Overdue' | 'Lost';
 
-export interface Book {
-  id: string;
-  title: string;
-  subject: string;
-  grade: string;
-  isbn: string;
-  publisher: string;
-  totalCopies: number;
-  availableCopies: number;
-  category: string;
-}
-
-export interface BorrowLog {
-  id: string;
-  bookId: string;
-  bookTitle: string;
-  borrowerName: string;
-  borrowerType: 'Student' | 'Teacher' | 'Staff';
-  grade?: string;
-  stream?: string;
-  issuedDate: string;
-  dueDate: string;
-  status: string;
-  qty_issued: number;
-  qty_returned?: number;
-  qty_lost?: number;
-  returnDate?: string;
-  condition?: string;
-}
-
 export interface BookAllocation {
   id: string;
   borrower_name: string;
@@ -47,19 +17,10 @@ export interface BookAllocation {
   condition_on_return: ConditionReturnStatus;
   status: BookAllocationStatus;
   notes?: string;
-  qty_returned?: number;
-  qty_lost?: number;
 }
 
-export function getLogBalance(
-  logOrQty: number | { qty_issued: number; qty_returned?: number; qty_lost?: number },
-  qtyReturned: number = 0,
-  qtyLost: number = 0
-): number {
-  if (typeof logOrQty === 'object' && logOrQty !== null) {
-    return logOrQty.qty_issued - ((logOrQty.qty_returned || 0) + (logOrQty.qty_lost || 0));
-  }
-  return logOrQty - (qtyReturned + qtyLost);
+export function getLogBalance(qtyIssued: number, qtyReturned: number, qtyLost: number = 0): number {
+  return qtyIssued - (qtyReturned + qtyLost);
 }
 
 export function getLogStatusInfo(log: BookAllocation): { label: string; color: string } {
