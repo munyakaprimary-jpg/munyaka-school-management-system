@@ -81,48 +81,48 @@ const BookAllocationTable: React.FC<BookAllocationFiltersProps> = ({
       <CardContent className="p-6">
         {/* Filter Bar */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Search</Label>
-            <Input 
-              placeholder="Search by name, accession number, or title..." 
-              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-bold" 
-              value={searchTerm}
-              onChange={handleSearchChange}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
-            <Select value={gradeFilter} onValueChange={onGradeChange}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Grades" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {grades.map(g => (
-                  <SelectItem key={g} value={g}>
-                    {g}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-            <Select value={streamFilter} onValueChange={onStreamChange}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Streams" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All Streams</SelectItem>
-                {streams.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      </div>
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Search</Label>
+                    <Input
+                      placeholder="Search by name, accession number, or title..."
+                      className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-bold"
+                      value={searchTerm}
+                      onChange={handleSearchChange}
+                    />
+                  </div>
+        
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
+                    <Select value={gradeFilter} onValueChange={onGradeChange}>
+                      <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
+                        <SelectValue placeholder="All Grades" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        {grades.map(g => (
+                          <SelectItem key={g} value={g}>
+                            {g}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+        
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
+                    <Select value={streamFilter} onValueChange={onStreamChange}>
+                      <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold text-slate-700">
+                        <SelectValue placeholder="All Streams" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-2xl">
+                        <SelectItem value="all">All Streams</SelectItem>
+                        {streams.map(s => (
+                          <SelectItem key={s} value={s}>{s}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </CardContent>
 
       {/* Table */}
       <div className="overflow-x-auto">
@@ -183,35 +183,27 @@ const BookAllocationTable: React.FC<BookAllocationFiltersProps> = ({
                     </Badge>
                   </td>
                   <td className="px-6 py-5 text-right">
-                    <div className="flex items-center gap-2">
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => onProcessReturn(log.id)}
-                        className="rounded-lg h-8 w-8 p-0 text-slate-400 hover:bg-indigo-50"
-                        title="View Details"
-                      >
-                        <Eye size={14} />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => onProcessReturn(log.id)}
-                        className="rounded-xl h-8 w-8 p-0 text-rose-500 hover:bg-rose-50"
-                        title="Mark as Returned"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </Card>
-      </div>
-    </div>
-  );
-};
-
-export default BookAllocationTable;
+                                      <div className="flex items-center gap-2">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => onProcessReturn(log.id)}
+                                          className="rounded-lg h-8 w-8 p-0 text-slate-400 hover:bg-indigo-50"
+                                          title="View Details"
+                                        >
+                                          <Eye size={14} />
+                                        </Button>
+                                                                              </div>
+                                                                            </td>
+                                                          </tr>
+                                                        ))}
+                                                      </tbody>
+                                                    </table>
+                                                  </div>
+                                                </Card>
+                                              </div>
+                                            </div>
+                                          );
+                                        };
+                                        
+                                        export default BookAllocationTable;
