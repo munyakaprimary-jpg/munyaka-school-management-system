@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Modal } from "@/components/ui/modal";
+import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -69,13 +69,6 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
       setRegGrade("4");
     }
   }, [isOpen]);
-
-  // Reset stream when grade changes and no longer matches available streams
-  useEffect(() => {
-    if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
-      setRegStream(availableStreams[0]);
-    }
-  }, [regGrade, availableStreams, regStream, setRegStream]);
 
   // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
@@ -149,4 +142,4 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
   );
 };
 
-export default RegisterModal;"}}]
+export default RegisterModal;
