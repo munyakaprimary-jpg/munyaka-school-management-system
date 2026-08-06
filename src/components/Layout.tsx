@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -65,6 +63,22 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Attach Hardware Back Button Handling for Capacitor/Android
   useMobileBackButton(isOpen, () => setIsOpen(false));
 
+  // Remove any stray hash-like tokens that might be leaking into the DOM
+  useEffect(() => {
+    const hideTokenElements = () => {
+      const regex = /^[a-fA-F0-9]{40,}$/;
+      document.querySelectorAll('div, span, p, code').forEach((el) => {
+        const text = el.textContent?.trim() || '';
+        if (regex.test(text) && text.length > 40) {
+          (el as HTMLElement).style.display = 'none';
+        }
+      });
+    };
+    hideTokenElements();
+    const timer = setTimeout(hideTokenElements, 100);
+    return () => clearTimeout(timer);
+  }, [location.pathname]);
+
   // Handle auto-hide bottom navigation on scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -72,14 +86,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       
       const currentScrollY = scrollContainerRef.current.scrollTop;
       
-      // Don't trigger hide logic for tiny scrolls (debounce/threshold)
       if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
 
       if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
-        // Scrolling Down - Hide
         setShowBottomNav(false);
       } else {
-        // Scrolling Up - Show
         setShowBottomNav(true);
       }
       
@@ -273,7 +284,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
         {/* Mobile & Desktop Header Bar */}
-        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 print:hidden">
+        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
           <div className="flex items-center gap-3">
             {/* Hamburger Button for Mobile */}
             <Button 
