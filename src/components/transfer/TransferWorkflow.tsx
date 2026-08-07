@@ -37,7 +37,8 @@ import {
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
-import html2pdf from 'html2pdf.js';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -76,6 +77,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
   // PDF generation state
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [isPrinting, setIsPrinting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
   // Reset when modal opens/closes
@@ -128,65 +130,63 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     });
   }, []);
 
-  // Generate PDF certificate - robust version with multiple fallback strategies
-  const generateCertificatePdf = async (): Promise<boolean> => {
-    // Fallback check for html2pdf library
-    if (typeof html2pdf === 'undefined') {
-      console.error('html2pdf library is missing or not loaded.');
-      alert('PDF generator library is not loaded. Please try printing directly using the Print button.');
-      return false;
+  // Resolve the certificate DOM node via ref, then its id, then class fallback.
+  const getCertificateElement = useCallback((): HTMLElement | null => {
+    if (certificateRef.current) return certificateRef.current;
+    const byId = document.getElementById('certificate-node');
+    if (byId) return byId;
+    return document.querySelector('.certificate-container') as HTMLElement | null;
+  }, []);
+
+  // Render the certificate node into a reliable high-res canvas. Both the PDF
+  // download and the print flow use this same image payload so the output is
+  // never blank and shows exactly what the user sees on screen.
+  const captureCertificateCanvas = useCallback(async (): Promise<HTMLCanvasElement> => {
+    const element = getCertificateElement();
+    if (!element) {
+      throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
     }
 
+    // Ensure fonts/assets are fully ready so the captured canvas is not blank.
+    await waitForRenderReady();
+
+    return html2canvas(element, {
+      useCORS: true,
+      scale: 2,
+      logging: false,
+      backgroundColor: '#ffffff',
+      scrollY: 0,
+    });
+  }, [getCertificateElement, waitForRenderReady]);
+
+  // Generate PDF certificate by rendering the node to a canvas, then placing
+  // that image into a standard A4 jsPDF document.
+  const generateCertificatePdf = async (): Promise<boolean> => {
     setIsGeneratingPdf(true);
     setPdfError(null);
 
     try {
-      // Strategy 1: Try ref first
-      let element = certificateRef.current;
-      
-      // Strategy 2: Fallback to DOM ID lookup
-      if (!element) {
-        element = document.getElementById('certificate-node');
-      }
-      
-      // Strategy 3: Fallback to class selector
-      if (!element) {
-        element = document.querySelector('.certificate-container') as HTMLDivElement;
-      }
+      const canvas = await captureCertificateCanvas();
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
 
-      if (!element) {
-        throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
-      }
+      const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 10;
+      const maxWidth = pageWidth - margin * 2;
+      const maxHeight = pageHeight - margin * 2;
 
-      // Ensure fonts/images/assets are fully ready before capturing so the
-      // generated canvas is not blank.
-      await waitForRenderReady();
+      // Fit the certificate onto the A4 page while preserving its aspect ratio.
+      const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+      const drawWidth = canvas.width * ratio;
+      const drawHeight = canvas.height * ratio;
+      const x = (pageWidth - drawWidth) / 2;
+      const y = (pageHeight - drawHeight) / 2;
+
+      pdf.addImage(imgData, 'JPEG', x, y, drawWidth, drawHeight);
 
       const safeStudentName = student.name.replace(/\s+/g, '_');
-      const fileName = `Munyaka_Clearance_Certificate_${safeStudentName}.pdf`;
-
-      const opt = {
-        margin: [10, 10, 10, 10],
-        filename: fileName,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          scrollY: 0,
-          backgroundColor: '#ffffff',
-          ignoreElements: (el: HTMLElement) => {
-            return el.hasAttribute('data-no-print') ||
-                   el.hasAttribute('data-html2canvas-ignore') ||
-                   el.classList.contains('no-print') ||
-                   el.classList.contains('html2canvas-ignore');
-          }
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css'] }
-      };
-
-      await html2pdf().set(opt).from(element).save();
+      pdf.save(`Munyaka_Clearance_Certificate_${safeStudentName}.pdf`);
       return true;
     } catch (err) {
       console.error('PDF generation error:', err);
@@ -252,153 +252,73 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   };
 
   const handlePrintCertificate = async () => {
-    // Use same robust element detection
-    let element = certificateRef.current;
-    if (!element) {
-      element = document.getElementById('certificate-node');
+    if (isPrinting) return;
+    setIsPrinting(true);
+    try {
+      // Render the certificate node to a canvas and use that image as the
+      // print payload — this reliably avoids blank output and never depends on
+      // copying live DOM markup into another document.
+      const canvas = await captureCertificateCanvas();
+      const dataUrl = canvas.toDataURL('image/png');
+
+      // Create a temporary hidden iframe to print from — this avoids opening
+      // new browser tabs and never trips pop-up blockers. The iframe is
+      // removed from the DOM once printing is done.
+      const iframe = document.createElement('iframe');
+      iframe.setAttribute('aria-hidden', 'true');
+      iframe.setAttribute('title', 'Certificate print frame');
+      iframe.style.position = 'absolute';
+      iframe.style.left = '-9999px';
+      iframe.style.top = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      iframe.style.visibility = 'hidden';
+      document.body.appendChild(iframe);
+
+      const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+      if (!iframeDoc) {
+        showError('Unable to prepare the certificate for printing. Please try again.');
+        iframe.remove();
+        return;
+      }
+
+      iframeDoc.open();
+      iframeDoc.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <title>Transfer Clearance Certificate - ${certificateNumber}</title>
+          <style>
+            @page { size: A4; margin: 0; }
+            * { margin: 0; padding: 0; box-sizing: border-box; }
+            body { background: #ffffff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            img { width: 100%; height: auto; display: block; }
+          </style>
+        </head>
+        <body>
+          <img src="${dataUrl}" alt="Transfer Clearance Certificate" />
+        </body>
+        </html>
+      `);
+      iframeDoc.close();
+
+      // Remove the iframe from the DOM once the print dialog is dismissed
+      iframe.contentWindow?.addEventListener('afterprint', () => {
+        setTimeout(() => iframe.remove(), 100);
+      });
+
+      // Wait for the image inside the iframe to load before triggering the dialog
+      setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+      }, 300);
+    } catch (err) {
+      console.error('Print error:', err);
+      showError(err instanceof Error ? err.message : 'Failed to prepare the certificate for printing.');
+    } finally {
+      setIsPrinting(false);
     }
-    if (!element) {
-      element = document.querySelector('.certificate-container') as HTMLDivElement;
-    }
-    
-    if (!element) {
-      showError('Certificate not ready for printing. Please try again.');
-      return;
-    }
-
-    // Clone the certificate so we never mutate the live DOM, and strip the
-    // "no-print" class from the copy — otherwise the print stylesheet hides
-    // the certificate itself.
-    const clone = element.cloneNode(true) as HTMLElement;
-    clone.classList.remove('no-print');
-    clone.classList.remove('html2canvas-ignore');
-    clone.removeAttribute('data-no-print');
-
-    // Create a temporary hidden iframe to print from — this avoids opening new
-    // browser tabs and never trips pop-up blockers. The iframe is removed from
-    // the DOM once printing is done.
-    const iframe = document.createElement('iframe');
-    iframe.setAttribute('aria-hidden', 'true');
-    iframe.setAttribute('title', 'Certificate print frame');
-    iframe.style.position = 'absolute';
-    iframe.style.left = '-9999px';
-    iframe.style.top = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
-    document.body.appendChild(iframe);
-
-    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
-    if (!iframeDoc) {
-      showError('Unable to prepare the certificate for printing. Please try again.');
-      iframe.remove();
-      return;
-    }
-
-    const certificateHtml = clone.outerHTML;
-    const printStyles = `
-      <style>
-        @page { size: A4; margin: 15mm; }
-        @media print {
-          body { 
-            font-family: 'Times New Roman', serif; 
-            background: white !important; 
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-          }
-          .no-print { display: none !important; }
-          .certificate-container { 
-            box-shadow: none !important; 
-            border: 2px solid #1e293b !important;
-            max-width: 100% !important;
-          }
-          .print-btn { display: none !important; }
-        }
-        .certificate-container {
-          font-family: 'Times New Roman', serif;
-          background: white;
-          color: #1e293b;
-        }
-        .institutional-header {
-          text-align: center;
-          border-bottom: 3px double #1e293b;
-          padding-bottom: 20px;
-          margin-bottom: 25px;
-        }
-        .school-logo { width: 80px; height: 80px; object-fit: contain; }
-        .school-name { font-size: 22px; font-weight: 700; letter-spacing: 1px; margin: 10px 0 5px; }
-        .school-motto { font-size: 14px; font-style: italic; color: #334155; margin: 0 0 10px; }
-        .school-address { font-size: 11px; color: #64748b; margin: 0; }
-        .certificate-title { 
-          font-size: 18px; 
-          font-weight: 700; 
-          text-transform: uppercase; 
-          letter-spacing: 2px; 
-          text-align: center; 
-          margin: 20px 0;
-          border-bottom: 1px solid #1e293b;
-          padding-bottom: 10px;
-        }
-        .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 20px 0; }
-        .detail-row { display: flex; gap: 10px; }
-        .detail-label { font-weight: 700; width: 200px; flex-shrink: 0; color: #334155; }
-        .detail-value { font-weight: 400; color: #1e293b; flex: 1; }
-        .full-width { grid-column: span 2; }
-        .remarks-box { 
-          border: 1px solid #cbd5e1; 
-          border-radius: 4px; 
-          padding: 15px; 
-          min-height: 80px; 
-          background: #f8fafc;
-        }
-        .signatures { 
-          display: grid; 
-          grid-template-columns: 1fr 1fr; 
-          gap: 40px; 
-          margin-top: 40px; 
-          padding-top: 20px;
-          border-top: 1px solid #cbd5e1;
-        }
-        .signature-block { text-align: center; }
-        .signature-line { 
-          border-bottom: 1px solid #1e293b; 
-          height: 50px; 
-          margin-bottom: 8px; 
-        }
-        .signature-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
-        .certificate-number { text-align: right; font-size: 11px; color: #64748b; margin-top: 20px; }
-        .fee-status-cleared { color: #059669; font-weight: 700; }
-        .fee-status-pending { color: #dc2626; font-weight: 700; }
-      </style>
-    `;
-
-    iframeDoc.open();
-    iframeDoc.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Transfer Clearance Certificate - ${certificateNumber}</title>
-        ${printStyles}
-      </head>
-      <body>
-        ${certificateHtml}
-      </body>
-      </html>
-    `);
-    iframeDoc.close();
-
-    // Remove the iframe from the DOM once the print dialog is dismissed
-    iframe.contentWindow?.addEventListener('afterprint', () => {
-      setTimeout(() => iframe.remove(), 100);
-    });
-
-    // Wait for fonts and content to fully render before triggering the dialog
-    await waitForRenderReady();
-    setTimeout(() => {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    }, 300);
   };
 
   const handleDownloadPdf = async () => {
@@ -447,10 +367,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         <>
           <Button
             onClick={handlePrintCertificate}
+            disabled={isPrinting || isGeneratingPdf}
             data-html2canvas-ignore="true"
             className="no-print rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
           >
-            <Printer size={16} /> Print Certificate
+            {isPrinting ? <Loader2 className="animate-spin mr-2" size={16} /> : <Printer size={16} />}
+            Print Certificate
           </Button>
           <Button
             onClick={handleDownloadPdf}
