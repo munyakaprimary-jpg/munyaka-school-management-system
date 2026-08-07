@@ -1,15 +1,24 @@
-import React from 'react';
-import { BrowserRouter as Router} from "react-router-dom";
-import GradesAndStreamsProvider from "./Providers/GradesAndStreamsProvider";
+"use client";
 
-const App = () => {
+import React from "react";
+import { RouterProvider, createBrowserRouter } from "react-router-dom";
+import Home from "@/pages/Index"; // Assuming Index is located in src/pages Index.tsx
+import { GradesAndStreamsProvider } from "@/Providers/GradesAndStreamsProvider";
+
+const router = createBrowserRouter([
+  {
+    path: "*",
+    element: <Home />,
+  }
+]);
+
+export default function App() {
+
   return (
-    <Router>
+    <>
       <GradesAndStreamsProvider>
-        {/* Your application routes here */}
+        <RouterProvider router={router} />
       </GradesAndStreamsProvider>
-    </Router>
+    </>
   );
-};
-
-export default App;
+}

@@ -1,45 +1,44 @@
 "use client";
 
-import React from 'react';
-import { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from "react";
+import { useToast } from "@/components/ui/use-toast";
+import type {
+  Stream,
+  Grade,
+} from "@/lib/supabase/types";
 
-// Define the context
-export const GradesAndStreamsContext = createContext<any>(null);
+const GradesContext = createContext<Grade[]>([]);
+export const GradesAndStreamsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Safe state initialization
+  const [grades, setGrades] = useState<Grade[]>([]);
 
-// Create a custom hook for accessing the GradesAndStreamsContext
-export const useGradesAndStreams = () => {
-  return useContext(GradesAndStreamsContext);
-};
+  useEffect(() => {
+    const fetchGrades = async () => {
+      try {
+        let { data } = await supabaseClient.from("grades").select();
+        if (data) {
+          setGrades(data as Grade[]);
+        } else {
+          useToast({ variant: "destructive", title: "Failed to load grades." });
+        }
+      } catch (error) {
+        useToast({ variant: "destructive", title: "An error occurred." });
+      }
+    };
 
-const GradesAndStreamsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Initialize state for grades and streams (you can replace with actual data fetching logic)
-  const [grades, setGrades] = useState<any[]>([]);
-  const [streams, setStreams] = useState<any[]>([]);
+    fetchGrades();
+  }, []);
 
-  // Helper functions
-  const fetchGrades = async () => {
-    // Fetch grades implementation here
+  // Safe default values for context functions
+  const getStreamsForGrade = (gradeId?: string): Stream[] => {
+    return [];
   };
-
-  const fetchStreams = async () => {
-    // Fetch streams implementation here
-  };
-
-  // Create value object containing state and helper functions
-  const value = {
-    grades,
-    setGrades,
-    streams,
-    setStreams,
-    fetchGrades,
-    fetchStreams,
-  };
-
+  
   return (
-    <GradesAndStreamsContext.Provider value={value}>
+    <GradesContext.Provider value={{ grades, getStreamsForGrade }}>
       {children}
-    </GradesAndStreamsContext.Provider>
+    </GradesContext.Provider>
   );
 };
 
-export default GradesAndStreamsProvider;
+export const useGrades = () => useContext(GradesContext);
