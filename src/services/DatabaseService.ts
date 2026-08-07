@@ -26,11 +26,6 @@ class DatabaseService {
     if (!window.schoolDB) {
       window.schoolDB = {
         syncQueue: JSON.parse(localStorage.getItem('sync_queue') || '[]'),
-        teachers: JSON.parse(localStorage.getItem('teachers') || '[]'),
-        students: JSON.parse(localStorage.getItem('students') || '[]'),
-        attendance: JSON.parse(localStorage.getItem('attendance') || '[]'),
-        marks: JSON.parse(localStorage.getItem('marks') || '[]'),
-        checkins: JSON.parse(localStorage.getItem('checkins') || '[]'),
       };
     }
   }
@@ -42,7 +37,6 @@ class DatabaseService {
         payload_type TEXT NOT NULL,
         payload TEXT NOT NULL,
         status TEXT DEFAULT 'PENDING',
-        retry_count INTEGER DEFAULT 0,
         created_at DATETIME DEFAULT CURRENT_TIMESTAMP
       );
     `;
@@ -61,8 +55,8 @@ class DatabaseService {
 
     if (this.db) {
       const result = await this.db.run(
-        'INSERT INTO sync_queue (payload_type, payload, status, retry_count, created_at) VALUES (?, ?, ?, ?, ?)',
-        [payloadType, payloadStr, 'PENDING', 0, now]
+        'INSERT INTO sync_queue (payload_type, payload, status, created_at) VALUES (?, ?, ?, ?)',
+        [payloadType, payloadStr, 'PENDING', now]
       );
       return result.insertId;
     } else {
@@ -73,7 +67,6 @@ class DatabaseService {
         payload_type: payloadType,
         payload: payloadStr,
         status: 'PENDING',
-        retry_count: 0,
         created_at: now,
       });
       localStorage.setItem('sync_queue', JSON.stringify(queue));
@@ -96,12 +89,40 @@ class DatabaseService {
     }
   }
 
+  async getSyncedQueue(limit: number = 50): Promise<any[]> {
+    if (this.db) {
+      const result = await this.db.query(
+        'SELECT * FROM sync_queue WHERE status = ? ORDER BY created_at ASC LIMIT ?',
+        ['SYNCED', limit]
+      );
+      return result.values;
+    } else {
+      return window.schoolDB.syncQueue
+        .filter((q: any) => q.status === 'SYNCED')
+        .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+        .slice(0, limit);
+    }
+  }
+
   async getPendingCount(): Promise<number> {
     if (this.db) {
       const result = await this.db.query('SELECT COUNT(*) as count FROM sync_queue WHERE status = ?', ['PENDING']);
       return result.values[0].count;
     } else {
       return window.schoolDB.syncQueue.filter((q: any) => q.status === 'PENDING').length;
+    }
+  }
+
+  async markAsSynced(id: number): Promise<void> {
+    if (this.db) {
+      await this.db.run('UPDATE sync_queue SET status = ? WHERE id = ?', ['SYNCED', id]);
+    } else {
+      const queue = window.schoolDB.syncQueue;
+      const item = queue.find((q: any) => q.id === id);
+      if (item) {
+        item.status = 'SYNCED';
+        localStorage.setItem('sync_queue', JSON.stringify(queue));
+      }
     }
   }
 
@@ -116,19 +137,6 @@ class DatabaseService {
         (q: any) => !ids.includes(q.id)
       );
       localStorage.setItem('sync_queue', JSON.stringify(window.schoolDB.syncQueue));
-    }
-  }
-
-  async updateRetryCount(id: number, count: number): Promise<void> {
-    if (this.db) {
-      await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
-    } else {
-      const queue = window.schoolDB.syncQueue;
-      const item = queue.find((q: any) => q.id === id);
-      if (item) {
-        item.retry_count = count;
-        localStorage.setItem('sync_queue', JSON.stringify(queue));
-      }
     }
   }
 
