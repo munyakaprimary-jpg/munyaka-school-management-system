@@ -1,18 +1,18 @@
-"use client";
-
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { GradesAndStreamsProvider } from './context/GradesAndStreamsContext';
 import Home from './pages/Home';
 
-function App() {
+const App: React.FC = () => {
   return (
     <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        {/* Add other routes here */}
-      </Routes>
+      <GradesAndStreamsProvider>
+        <Routes>
+          <Route path="/" element={<Home />} />
+        </Routes>
+      </GradesAndStreamsProvider>
     </Router>
   );
-}
+};
 
 export default App;
