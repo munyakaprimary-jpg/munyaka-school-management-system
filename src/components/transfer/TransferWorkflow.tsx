@@ -110,6 +110,24 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     }
   }, []);
 
+  // Wait until web fonts and any image assets inside the certificate are fully
+  // loaded, then let the browser pump a couple of frames so the html2canvas
+  // snapshot captures real painted content instead of a blank canvas.
+  const waitForRenderReady = useCallback(async () => {
+    try {
+      if (document.fonts && document.fonts.ready) {
+        await document.fonts.ready;
+      }
+    } catch {
+      /* ignore font API failures */
+    }
+
+    // Give layout/paint a moment to complete (covers entrance animations too)
+    await new Promise<void>((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(() => resolve()));
+    });
+  }, []);
+
   // Generate PDF certificate - robust version with multiple fallback strategies
   const generateCertificatePdf = async (): Promise<boolean> => {
     // Fallback check for html2pdf library
@@ -128,7 +146,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       
       // Strategy 2: Fallback to DOM ID lookup
       if (!element) {
-        element = document.getElementById('clearance-certificate-node');
+        element = document.getElementById('certificate-node');
       }
       
       // Strategy 3: Fallback to class selector
@@ -140,6 +158,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         throw new Error('Certificate element not found in DOM. Tried ref, ID, and class selectors.');
       }
 
+      // Ensure fonts/images/assets are fully ready before capturing so the
+      // generated canvas is not blank.
+      await waitForRenderReady();
+
       const safeStudentName = student.name.replace(/\s+/g, '_');
       const fileName = `Munyaka_Clearance_Certificate_${safeStudentName}.pdf`;
 
@@ -147,13 +169,15 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         margin: [10, 10, 10, 10],
         filename: fileName,
         image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { 
-          scale: 2, 
-          useCORS: true, 
-          letterRendering: true, 
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          letterRendering: true,
           scrollY: 0,
+          backgroundColor: '#ffffff',
           ignoreElements: (el: HTMLElement) => {
-            return el.hasAttribute('data-no-print') || 
+            return el.hasAttribute('data-no-print') ||
+                   el.hasAttribute('data-html2canvas-ignore') ||
                    el.classList.contains('no-print') ||
                    el.classList.contains('html2canvas-ignore');
           }
@@ -227,11 +251,11 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
   };
 
-  const handlePrintCertificate = () => {
+  const handlePrintCertificate = async () => {
     // Use same robust element detection
     let element = certificateRef.current;
     if (!element) {
-      element = document.getElementById('clearance-certificate-node');
+      element = document.getElementById('certificate-node');
     }
     if (!element) {
       element = document.querySelector('.certificate-container') as HTMLDivElement;
@@ -241,11 +265,22 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       showError('Certificate not ready for printing. Please try again.');
       return;
     }
-    
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
 
-    const certificateHtml = element.outerHTML;
+    // Clone the certificate so we never mutate the live DOM, and strip the
+    // "no-print" class from the copy — otherwise the print stylesheet hides
+    // the certificate itself.
+    const clone = element.cloneNode(true) as HTMLElement;
+    clone.classList.remove('no-print');
+    clone.classList.remove('html2canvas-ignore');
+    clone.removeAttribute('data-no-print');
+
+    const printWindow = window.open('', '_blank', 'width=900,height=1200');
+    if (!printWindow) {
+      showError('Please allow pop-ups to print the certificate.');
+      return;
+    }
+
+    const certificateHtml = clone.outerHTML;
     const printStyles = `
       <style>
         @page { size: A4; margin: 15mm; }
@@ -336,10 +371,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     `);
     printWindow.document.close();
     printWindow.focus();
-    
+
+    // Wait for fonts and content to fully render before triggering the dialog
+    await waitForRenderReady();
     setTimeout(() => {
       printWindow.print();
-    }, 500);
+    }, 300);
   };
 
   const handleDownloadPdf = async () => {
@@ -386,24 +423,27 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       // Post-execution state: Download PDF, Print, Close
       return (
         <>
-          <Button 
+          <Button
             onClick={handlePrintCertificate}
-            className="rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
+            data-html2canvas-ignore="true"
+            className="no-print rounded-xl bg-slate-600 hover:bg-slate-700 font-bold px-8 shadow-lg shadow-slate-100 gap-2 text-white"
           >
             <Printer size={16} /> Print Certificate
           </Button>
-          <Button 
+          <Button
             onClick={handleDownloadPdf}
             disabled={isGeneratingPdf}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
+            data-html2canvas-ignore="true"
+            className="no-print rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
             {isGeneratingPdf ? <Loader2 className="animate-spin mr-2" size={16} /> : <Download size={16} />}
             Download Certificate (PDF)
           </Button>
-          <Button 
+          <Button
             variant="outline"
             onClick={onClose}
-            className="rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
+            data-html2canvas-ignore="true"
+            className="no-print rounded-xl border-slate-200 bg-white font-bold px-8 shadow-sm"
           >
             <FileCheck size={16} className="mr-2" /> Close
           </Button>
@@ -614,15 +654,16 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       {/* Stage 2: Official Clearance Certificate Preview */}
       {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95">
-          {/* 
+          {/*
             CRITICAL FIXES:
-            1. Explicit ID "clearance-certificate-node" for DOM lookup fallback
+            1. Explicit ID "certificate-node" for DOM lookup fallback
             2. Callback ref (certificateRefCallback) detects mount timing precisely
             3. Certificate content rendered in a container with proper positioning
-            4. No display:none - uses off-screen positioning if needed for hidden state
+            4. The "no-print" class is only a hint for the main app's stylesheet;
+               the print/PDF handlers clone this node and strip it before export.
           */}
-          <div 
-            id="clearance-certificate-node"
+          <div
+            id="certificate-node"
             ref={certificateRefCallback}
             className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print"
             style={{ 
