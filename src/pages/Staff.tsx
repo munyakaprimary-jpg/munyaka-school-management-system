@@ -206,50 +206,50 @@ const Staff = () => {
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
+            <table className="w-full text-sm text-left min-w-[900px]">
               <thead className="text-slate-500 bg-slate-50/50 border-b">
                 <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff ID & Name</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Role / Designation</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Contact Info</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Account Status</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
+                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredStaff.map((member) => (
                   <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 min-w-[200px]">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                           {member.name.split(' ').map(n => n[0]).join('')}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{member.name}</p>
-                          <p className="text-xs text-slate-400 font-medium">Ref: {member.id} • ID: {member.id_no}</p>
+                        <div className="flex flex-col min-w-0">
+                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.name}</p>
+                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-8 py-5">
-                      <p className="font-bold text-slate-800">{member.role}</p>
-                      <p className="text-xs text-slate-400 font-medium">{member.department}</p>
+                    <td className="px-8 py-5 min-w-[180px]">
+                      <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
+                      <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
                     </td>
 
-                    <td className="px-8 py-5">
+                    <td className="px-8 py-5 min-w-[220px]">
                       <div className="space-y-0.5">
-                        <div className="flex items-center gap-2 text-xs font-medium text-slate-700">
+                        <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
                           <Phone size={13} className="text-slate-400 shrink-0" />
-                          <span>{member.phone}</span>
+                          <span className="whitespace-nowrap">{member.phone}</span>
                         </div>
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
                           <Mail size={13} className="text-slate-400 shrink-0" />
                           <span className="truncate max-w-[180px]">{member.email}</span>
                         </div>
                       </div>
                     </td>
 
-                    <td className="px-8 py-5 text-center">
+                    <td className="px-8 py-5 text-center min-w-[140px]">
                       <Badge className={
                         member.status === 'Active'
                           ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
@@ -259,7 +259,7 @@ const Staff = () => {
                       </Badge>
                     </td>
 
-                    <td className="px-8 py-5 text-right">
+                    <td className="px-8 py-5 text-right min-w-[120px]">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600">
