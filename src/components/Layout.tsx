@@ -157,13 +157,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
-  // Bottom Navigation Bar Quick Links
+  // Bottom Navigation Bar Quick Links - Filtered by user role
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/' },
-    { icon: Users, label: 'Learners', path: '/students' },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance' },
-    { icon: Wallet, label: 'Fees', path: '/fees' },
-  ];
+    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+  ].filter(item => user && item.roles.includes(user.role));
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
