@@ -1,6 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { SQLiteConnection, SQLiteValues, SQLiteResult } from '@capacitor-community/sqlite';
-import { Network } from '@capacitor/network';
+import { SQLiteConnection } from '@capacitor-community/sqlite';
 
 const DB_NAME = 'school_management';
 const DB_VERSION = 1;
@@ -10,9 +9,9 @@ class DatabaseService {
   private connection: SQLiteConnection | null = null;
 
   async initialize(): Promise<void> {
-    if (Capacitor.isNative()) {
+    if (Capacitor.isNativePlatform()) {
       this.connection = new SQLiteConnection('school_management');
-      this.db = await this.connection.createConnection(DB_NAME, DB_VERSION, 'no-encryption', 0);
+      this.db = await this.connection.createConnection(DB_NAME, false, 'no-encryption', DB_VERSION, false);
       await this.db.open();
     } else {
       // Web fallback using IndexedDB/localStorage
@@ -120,35 +119,42 @@ class DatabaseService {
   }
 
   async updateRetryCount(id: number, count: number): Promise<void> {
-      if (this.db) {
-        await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
-      } else {
-        const queue = window.schoolDB.syncQueue;
-        const item = queue.find((q: any) => q.id === id);
-        if (item) {
-          item.retry_count = count;
-          localStorage.setItem('sync_queue', JSON.stringify(queue));
-        }
+    if (this.db) {
+      await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
+    } else {
+      const queue = window.schoolDB.syncQueue;
+      const item = queue.find((q: any) => q.id === id);
+      if (item) {
+        item.retry_count = count;
+        localStorage.setItem('sync_queue', JSON.stringify(queue));
       }
     }
-  
-    async updateStatus(id: number, status: string): Promise<void> {
-      if (this.db) {
-        await this.db.run('UPDATE sync_queue SET status = ? WHERE id = ?', [status, id]);
-      } else {
-        const queue = window.schoolDB.syncQueue;
-        const item = queue.find((q: any) => q.id === id);
-        if (item) {
-          item.status = status;
-          localStorage.setItem('sync_queue', JSON.stringify(queue));
-        }
+  }
+
+  async updateStatus(id: number, status: string): Promise<void> {
+    if (this.db) {
+      await this.db.run('UPDATE sync_queue SET status = ? WHERE id = ?', [status, id]);
+    } else {
+      const queue = window.schoolDB.syncQueue;
+      const item = queue.find((q: any) => q.id === id);
+      if (item) {
+        item.status = status;
+        localStorage.setItem('sync_queue', JSON.stringify(queue));
       }
     }
+  }
 
   async isOnline(): Promise<boolean> {
-    if (Capacitor.isNative()) {
-      const status = await Network.getStatus();
-      return status.connected;
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const networkPlugin = (window as any).Capacitor?.Plugins?.Network;
+        if (networkPlugin) {
+          const status = await networkPlugin.getStatus();
+          return status.connected;
+        }
+      } catch {
+        return navigator.onLine;
+      }
     }
     return navigator.onLine;
   }
