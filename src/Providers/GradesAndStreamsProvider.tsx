@@ -1,19 +1,39 @@
 "use client";
 
-import React, { createContext, useContext } from 'react';
+import React from 'react';
+import { createContext, useContext, useState } from 'react';
 
-const GradesAndStreamsContext = createContext<{ /* Context value here */ } | undefined>(undefined);
+// Define the context
+export const GradesAndStreamsContext = createContext<any>(null);
 
+// Create a custom hook for accessing the GradesAndStreamsContext
 export const useGradesAndStreams = () => {
-  const context = useContext(GradesAndStreamsContext);
-  if (context === undefined) {
-    throw new Error('useGradesAndStreams must be used within a GradesAndStreamsProvider');
-  }
-  return context;
+  return useContext(GradesAndStreamsContext);
 };
 
-const GradesAndStreamsProvider: React.FC<{ children?: React.ReactNode }> = ({ children }) => {
-  const value {/* Provide the initial value here, or dynamically load it */ };
+const GradesAndStreamsProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  // Initialize state for grades and streams (you can replace with actual data fetching logic)
+  const [grades, setGrades] = useState<any[]>([]);
+  const [streams, setStreams] = useState<any[]>([]);
+
+  // Helper functions
+  const fetchGrades = async () => {
+    // Fetch grades implementation here
+  };
+
+  const fetchStreams = async () => {
+    // Fetch streams implementation here
+  };
+
+  // Create value object containing state and helper functions
+  const value = {
+    grades,
+    setGrades,
+    streams,
+    setStreams,
+    fetchGrades,
+    fetchStreams,
+  };
 
   return (
     <GradesAndStreamsContext.Provider value={value}>
