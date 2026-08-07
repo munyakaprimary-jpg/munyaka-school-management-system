@@ -1,18 +1,17 @@
 "use client";
 
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from './pages/Home';
+import { useRouter } from 'react-router-dom';
+import GradesAndStreamsProvider from './Providers/GradesAndStreamsProvider';
 
-function App() {
+const App = () => {
+  const router = useRouter();
+
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        {/* Add other routes here */}
-      </Routes>
-    </Router>
+    <GradesAndStreamsProvider>
+      {router.pathname === '/' ? <div>Welcome to My Dashboard</div> : <Outlet />}
+    </GradesAndStreamsProvider>
   );
-}
+};
 
 export default App;
