@@ -274,9 +274,25 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     clone.classList.remove('html2canvas-ignore');
     clone.removeAttribute('data-no-print');
 
-    const printWindow = window.open('', '_blank', 'width=900,height=1200');
-    if (!printWindow) {
-      showError('Please allow pop-ups to print the certificate.');
+    // Create a temporary hidden iframe to print from — this avoids opening new
+    // browser tabs and never trips pop-up blockers. The iframe is removed from
+    // the DOM once printing is done.
+    const iframe = document.createElement('iframe');
+    iframe.setAttribute('aria-hidden', 'true');
+    iframe.setAttribute('title', 'Certificate print frame');
+    iframe.style.position = 'absolute';
+    iframe.style.left = '-9999px';
+    iframe.style.top = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+    if (!iframeDoc) {
+      showError('Unable to prepare the certificate for printing. Please try again.');
+      iframe.remove();
       return;
     }
 
@@ -357,7 +373,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       </style>
     `;
 
-    printWindow.document.write(`
+    iframeDoc.open();
+    iframeDoc.write(`
       <!DOCTYPE html>
       <html>
       <head>
@@ -369,13 +386,18 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       </body>
       </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
+    iframeDoc.close();
+
+    // Remove the iframe from the DOM once the print dialog is dismissed
+    iframe.contentWindow?.addEventListener('afterprint', () => {
+      setTimeout(() => iframe.remove(), 100);
+    });
 
     // Wait for fonts and content to fully render before triggering the dialog
     await waitForRenderReady();
     setTimeout(() => {
-      printWindow.print();
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
     }, 300);
   };
 
