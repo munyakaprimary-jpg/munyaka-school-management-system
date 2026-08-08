@@ -47,13 +47,13 @@ const StudentProfile = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BackButton to="/students" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
-            <p className="text-muted-foreground">Detailed learner profile and history.</p>
-          </div>
-        </div>
+              <div className="flex items-center gap-3">
+                <BackButton to="/students" />
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
+                  <p className="text-sm font-medium text-slate-600 whitespace-normal break-words">Detailed learner profile and history</p>
+                </div>
+              </div>
         <div className="flex gap-2">
           <Button 
             variant="outline" 
