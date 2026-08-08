@@ -89,29 +89,29 @@ const StudentProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10">
-            <div className="w-24 h-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-6">
+        <div className="w-full flex flex-col items-center min-w-0 space-y-6">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10 w-full">
+            <div className="w-24 h-24 rounded-3xl bg-indigo-50 flex items-center justify-center mx-auto mb-6">
               <UserCircle size={60} strokeWidth={1} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
-            <p className="text-sm font-medium text-slate-400 mb-6">ID: {student.assessment}</p>
+            <h2 className="text-xl font-bold text-slate-900 whitespace-nowrap">{student.name}</h2>
+            <p className="text-sm font-medium text-slate-400 mb-6 whitespace-nowrap">ID: {student.assessment}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
-              <Badge variant="outline">{student.stream}</Badge>
+              <Badge className="bg-indigo-600 whitespace-nowrap">Grade {student.grade}</Badge>
+              <Badge variant="outline whitespace-nowrap">{student.stream}</Badge>
             </div>
-            <div className="space-y-4 text-left border-t pt-8">
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+            <div className="space-y-4 text-left border-t pt-8 w-full">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Calendar size={16} className="text-slate-400" />
-                <span>Born: {student.dob}</span>
+                <span className="whitespace-nowrap">Born: {student.dob}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Phone size={16} className="text-slate-400" />
-                <span>{student.phone}</span>
+                <span className="whitespace-nowrap">{student.phone}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Mail size={16} className="text-slate-400" />
-                <span>{student.email}</span>
+                <span className="whitespace-nowrap">{student.email}</span>
               </div>
             </div>
           </Card>
