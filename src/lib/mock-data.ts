@@ -1,11 +1,24 @@
-// Central configuration store integration
-// All data arrays are populated dynamically from the central store
+// Placeholder for data that will be fetched from API/database
+// All data arrays are empty to prevent hardcoded values
+
+export const STUDENTS = [];
+export const ATTENDANCE_TREND = [];
+export const TRANSACTIONS = [];
+export const GRADES_DATA = [];
+export const STAFF = [];
+export const BOOKS = [];
+export const MESSAGES = [];
+export const NOTICES = [];
+export const INVENTORY = [];
+export const ASSET_LOGS = [];
+export const EVENTS = [];
+export const TIMETABLE = [];
+export const FEES_DATA = [];
 
 // Interfaces remain for type safety
 export interface Stream {
   id: string;
   name: string;
-  gradeIds: string[];
   teacher: string;
   studentsCount: number;
 }
@@ -44,6 +57,13 @@ export interface StaffMember {
   status: 'Active' | 'Pre-Registered' | 'Suspended';
   joined: string;
   department: string;
+}
+
+export interface Grade {
+  id: string;
+  name: string;
+  category: 'Pre-Primary' | 'Primary' | 'Junior School';
+  streams: Stream[];
 }
 
 export interface Book {
@@ -125,20 +145,3 @@ export interface Transaction {
   ref: string;
   category: string;
 }
-
-// Placeholder arrays for backward compatibility
-// These will be populated dynamically from the central store
-export const GRADES_DATA: Grade[] = [];
-export const STREAMS_DATA: Stream[] = [];
-export const STUDENTS: Student[] = [];
-export const STAFF: StaffMember[] = [];
-export const BOOKS: Book[] = [];
-export const MESSAGES: Message[] = [];
-export const NOTICES: Notice[] = [];
-export const INVENTORY: InventoryItem[] = [];
-export const ASSET_LOGS: AssetLog[] = [];
-export const EVENTS: Event[] = [];
-export const TIMETABLE: TimetableEntry[] = [];
-export const FEES_DATA: FeeData[] = [];
-export const ATTENDANCE_TREND: any[] = [];
-export const TRANSACTIONS: Transaction[] = [];

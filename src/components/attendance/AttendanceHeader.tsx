@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Loader2, Edit3, Check } from "lucide-react";
-import useGradesStreams from '@/hooks/useGradesStreams';
+import { GRADES_DATA } from '@/lib/mock-data';
 
 interface AttendanceHeaderProps {
   selectedGradeId: string;
@@ -16,16 +16,14 @@ interface AttendanceHeaderProps {
   setIsEditing: (val: boolean) => void;
 }
 
-const AttendanceHeader = ({
-  selectedGradeId,
-  setSelectedGradeId,
-  isExporting,
+const AttendanceHeader = ({ 
+  selectedGradeId, 
+  setSelectedGradeId, 
+  isExporting, 
   onExport,
   isEditing,
   setIsEditing
 }: AttendanceHeaderProps) => {
-  const { grades, isLoading } = useGradesStreams();
-  
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
       <div>
@@ -33,22 +31,16 @@ const AttendanceHeader = ({
         <p className="text-muted-foreground">Mark morning and afternoon roll calls with real-time timestamps.</p>
       </div>
       <div className="flex flex-wrap gap-2">
-        <Select value={selectedGradeId} onValueChange={setSelectedGradeId} disabled={isLoading}>
+        <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
           <SelectTrigger className="w-[220px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
-            <SelectValue placeholder={isLoading ? "Loading grades..." : "Select Grade"} />
+            <SelectValue placeholder="Select Grade" />
           </SelectTrigger>
           <SelectContent className="rounded-2xl">
-            {isLoading ? (
-              <SelectItem disabled value="">Loading grades...</SelectItem>
-            ) : grades.length === 0 ? (
-              <SelectItem disabled value="">No grades configured</SelectItem>
-            ) : (
-              grades.map((grade) => (
-                <SelectItem key={grade.id} value={grade.id} className="rounded-xl">
-                  {grade.name} - {grade.category}
-                </SelectItem>
-              ))
-            )}
+            {GRADES_DATA.map((grade) => (
+              <SelectItem key={grade.id} value={grade.id} className="rounded-xl">
+                {grade.name} - {grade.category}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
         

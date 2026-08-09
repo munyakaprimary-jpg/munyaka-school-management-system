@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, AlertCircle } from 'lucide-react';
-import useGradesStreams from '@/hooks/useGradesStreams';
+import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
 
 interface StudentItem {
   id: string;
@@ -21,7 +21,7 @@ interface RecordPaymentModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmitPayment: (studentId: string, amount: number) => void;
-  gradesData?: any[];
+  gradesData?: Grade[];
   studentsData?: StudentItem[];
 }
 
@@ -29,12 +29,9 @@ const RecordPaymentModal = ({
   isOpen,
   onClose,
   onSubmitPayment,
-  gradesData,
-  studentsData = [],
+  gradesData = GRADES_DATA,
+  studentsData = STUDENTS,
 }: RecordPaymentModalProps) => {
-  const { grades, isLoading } = useGradesStreams();
-  const gradesToUse = gradesData || grades;
-
   // Cascading Selection States
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
   const [selectedStreamId, setSelectedStreamId] = useState<string>("");
@@ -55,8 +52,8 @@ const RecordPaymentModal = ({
 
   // Derived Selected Objects
   const selectedGradeObj = useMemo(() => {
-    return gradesToUse.find(g => g.id === selectedGradeId);
-  }, [selectedGradeId, gradesToUse]);
+    return gradesData.find(g => g.id === selectedGradeId);
+  }, [selectedGradeId, gradesData]);
 
   const availableStreams = useMemo(() => {
     return selectedGradeObj ? selectedGradeObj.streams : [];
@@ -149,22 +146,16 @@ const RecordPaymentModal = ({
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
             1. Select Grade Level
           </Label>
-          <Select value={selectedGradeId} onValueChange={handleGradeChange} disabled={isLoading || gradesToUse.length === 0}>
-            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-100 font-bold text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
-              <SelectValue placeholder={isLoading ? "Loading grades..." : gradesToUse.length === 0 ? "No grades configured" : "Choose Grade Level..."} />
+          <Select value={selectedGradeId} onValueChange={handleGradeChange}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-100 font-bold text-slate-800">
+              <SelectValue placeholder="Choose Grade Level..." />
             </SelectTrigger>
             <SelectContent>
-              {isLoading ? (
-                <SelectItem disabled value="">Loading grades...</SelectItem>
-              ) : gradesToUse.length === 0 ? (
-                <SelectItem disabled value="">No grades configured</SelectItem>
-              ) : (
-                gradesToUse.map(g => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name} ({g.category})
-                  </SelectItem>
-                ))
-              )}
+              {gradesData.map(g => (
+                <SelectItem key={g.id} value={g.id}>
+                  {g.name} ({g.category})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
