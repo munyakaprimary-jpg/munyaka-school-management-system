@@ -14,26 +14,9 @@ import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 
 const GradesStreams = () => {
-  const [grades, setGrades] = useState(() => {
-    // Read from localStorage or use default
+  const [grades, setGrades] = useState<Grade[]>(() => {
     const saved = localStorage.getItem('munyaka_grades');
-    let gradesArray = saved ? JSON.parse(saved) : [];
-    
-    // Add missing grades if not present
-    const missingGrades = [
-      { id: 'g2', name: 'Grade 2 (Primary)', category: 'Primary', streams: [] },
-      { id: 'g3', name: 'Grade 3 (Primary)', category: 'Primary', streams: [] },
-      { id: 'g6', name: 'Grade 6 (Primary)', category: 'Primary', streams: [] }
-    ];
-    
-    const existingGradeNames = gradesArray.map(g => g.name);
-    missingGrades.forEach(grade => {
-      if (!existingGradeNames.includes(grade.name)) {
-        gradesArray.push(grade);
-      }
-    });
-    
-    return gradesArray;
+    return saved ? JSON.parse(saved) : GRADES_DATA;
   });
   
   const [isGradeOpen, setIsGradeOpen] = useState(false);
@@ -77,7 +60,7 @@ const GradesStreams = () => {
   }, [grades]);
 
   const normalizeGradeKey = (name: string) => {
-    return name.trim().toLowerCase().replace(/^grade\s/i, '');
+    return name.trim().toLowerCase().replace(/^grade\s*/i, '');
   };
 
   const handleAddGrade = () => {
@@ -390,7 +373,7 @@ const GradesStreams = () => {
             </div>
           )}
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widtest">Admin Password</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
               <Input 
