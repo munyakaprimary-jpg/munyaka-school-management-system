@@ -1,3 +1,18 @@
+60 |  "use client";
+61 |  
+   |   ^
+62 |  import React, { useState, useMemo } from 'react';
+```
+
+It seems like there's a `<dyad-write>` tag in the middle of the file (line 59) which is corrupting the file. This is likely from a previous edit attempt that left artifacts.
+
+I need to provide the complete corrected file again, making sure:
+1. All imports are at the very top (after "use client")
+2. No stray tags or artifacts in the file
+3. The file is complete and properly structured
+
+Let me write the complete file again.</think>The file still has artifacts from a previous edit (the `<dyad-write>` tag on line 59). Let me provide the complete clean file.
+<dyad-write path="src/pages/Staff.tsx">
 "use client";
 
 import React, { useState, useMemo } from 'react';
