@@ -1,13 +1,13 @@
-import MarksService from '../services/MarksService';
+import marksServiceInstance from '../services/MarksService';
 
 class MarksController {
   private marksService: MarksService;
 
-  constructor(marksService: MarksService) {
-    this.marksService = marksService;
+  constructor() {
+    this.marksService = marksServiceInstance;
   }
 
-  // Controller implementation
+  // Controller methods
 }
 
-export default MarksController;
+export default new MarksController(); // Singleton pattern for easy access

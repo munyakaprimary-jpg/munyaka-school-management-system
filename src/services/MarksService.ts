@@ -1,5 +1,9 @@
 class MarksService {
-  // Service implementation
+  constructor() {
+    // Constructor implementation
+  }
+
+  // Service methods
 }
 
-export default MarksService;
+export default new MarksService(); // Singleton pattern for easy access
