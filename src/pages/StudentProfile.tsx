@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackButton from '@/components/ui/BackButton';
-import {
-  UserCircle,
-  Mail,
-  Phone,
+import { 
+  UserCircle, 
+  Mail, 
+  Phone, 
   Calendar,
   FileText,
   CreditCard,
@@ -17,28 +17,14 @@ import {
   UserX,
   Download
 } from 'lucide-react';
+import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
-  // TODO: Replace with real student data from API/database
-  const student = {
-    id: "1",
-    name: "Brian Kiptoo",
-    assessment: "A827361",
-    grade: "4",
-    stream: "Blue",
-    gender: "M",
-    dob: "2014-05-12",
-    guardian: "Samuel Kiptoo",
-    phone: "+254 712 000 111",
-    email: "sam.kiptoo@email.com",
-    health: "None",
-    needs: "None"
-  };
-  
+  const student = STUDENTS[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -103,29 +89,29 @@ const StudentProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="w-full flex flex-col items-center min-w-0 space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10 w-full">
-            <div className="w-24 h-24 rounded-3xl bg-indigo-50 flex items-center justify-center mx-auto mb-6">
+        <div className="space-y-6">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10">
+            <div className="w-24 h-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-6">
               <UserCircle size={60} strokeWidth={1} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900 whitespace-nowrap">{student.name}</h2>
-            <p className="text-sm font-medium text-slate-400 mb-6 whitespace-nowrap">ID: {student.assessment}</p>
+            <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
+            <p className="text-sm font-medium text-slate-400 mb-6">ID: {student.assessment}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600 whitespace-nowrap">Grade {student.grade}</Badge>
-              <Badge variant="outline whitespace-nowrap">{student.stream}</Badge>
+              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
+              <Badge variant="outline">{student.stream}</Badge>
             </div>
-            <div className="space-y-4 text-left border-t pt-8 w-full">
-              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
+            <div className="space-y-4 text-left border-t pt-8">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar size={16} className="text-slate-400" />
-                <span className="whitespace-nowrap">Born: {student.dob}</span>
+                <span>Born: {student.dob}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Phone size={16} className="text-slate-400" />
-                <span className="whitespace-nowrap">{student.phone}</span>
+                <span>{student.phone}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
+              <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Mail size={16} className="text-slate-400" />
-                <span className="whitespace-nowrap">{student.email}</span>
+                <span>{student.email}</span>
               </div>
             </div>
           </Card>
