@@ -1,5 +1,13 @@
+import MarksService from '../services/MarksService';
+
 class MarksController {
-  // Class implementation
+  private marksService: MarksService;
+
+  constructor(marksService: MarksService) {
+    this.marksService = marksService;
+  }
+
+  // Controller implementation
 }
 
 export default MarksController;

@@ -1,3 +1,5 @@
-export default class MarksService {
-  // Class implementation
+class MarksService {
+  // Service implementation
 }
+
+export default MarksService;
