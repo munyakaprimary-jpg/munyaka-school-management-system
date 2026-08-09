@@ -56,65 +56,6 @@ const Staff = () => {
     return STAFF;
   }, []);
 
-  // Load pre-registered<dyad-write path="src/pages/Staff.tsx" start_line="1" end_line="50">
-"use client";
-
-import React, { useState, useMemo } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import BackButton from '@/components/ui/BackButton';
-import { 
-  UserPlus, 
-  Phone, 
-  Mail, 
-  Briefcase, 
-  MoreHorizontal, 
-  Search, 
-  Eye, 
-  Edit, 
-  Key, 
-  ShieldCheck, 
-  UserCheck, 
-  Clock, 
-  Plus,
-  X
-} from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
-  DropdownMenuTrigger,
-  DropdownMenuSeparator
-} from "@/components/ui/dropdown-menu";
-import { STAFF, StaffMember } from '@/lib/mock-data';
-import { PreRegisteredStaff } from '@/types/staff-access';
-import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
-import { showSuccess } from '@/utils/toast';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
-
-const Staff = () => {
-  const navigate = useNavigate();
-  const { grades, streams, isLoading } = useGradesStreams();
-  const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
-  
-  // Edit Modal State
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
-
-  // Load staff directory
-  const staffDirectory = useMemo<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_directory');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
-    }
-    return STAFF;
-  }, []);
-
   // Load pre-registered ledger to unify accounts
   const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
