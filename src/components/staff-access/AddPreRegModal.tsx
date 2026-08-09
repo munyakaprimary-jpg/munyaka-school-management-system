@@ -12,7 +12,13 @@ import { STAFF, StaffMember } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
-import { useGradesStreams } from '@/hooks/useGradesStreams';
+
+interface AddPreRegModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSubmit: (data: Partial<PreRegisteredStaff>) => void;
+  existingPreRegistered?: PreRegisteredStaff[];
+}
 
 const mapRoleToSystemRole = (role: string): SystemRole => {
   const normalized = role.toLowerCase();
@@ -24,15 +30,7 @@ const mapRoleToSystemRole = (role: string): SystemRole => {
   return 'subject_teacher';
 };
 
-interface AddPreRegModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (data: Partial<PreRegisteredStaff>) => void;
-  existingPreRegistered?: PreRegisteredStaff[];
-}
-
 const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] }: AddPreRegModalProps) => {
-  const { grades, streams, isLoading } = useGradesStreams();
   const [comboboxOpen, setComboboxOpen] = useState(false);
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,8 +43,6 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     phone: "",
     systemRole: "subject_teacher" as SystemRole,
     department: "Languages & Humanities",
-    assignedGrade: "",
-    assignedStream: "",
     assignedSubjects: "Mathematics, Science & Tech",
     tempAccessCode: ""
   });
@@ -119,22 +115,6 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     onSubmit(formData);
   };
 
-  // Derived streams for selected grade
-  const availableStreamsForGrade = useMemo(() => {
-    if (!formData.assignedGrade) return [];
-    return streams.filter(s => s.gradeId === formData.assignedGrade);
-  }, [streams, formData.assignedGrade]);
-
-  // Reset stream when grade changes
-  useEffect(() => {
-    if (formData.assignedGrade && formData.assignedStream) {
-      const streamExists = availableStreamsForGrade.some(s => s.name === formData.assignedStream);
-      if (!streamExists) {
-        setFormData(prev => ({ ...prev, assignedStream: availableStreamsForGrade[0]?.name || '' }));
-      }
-    }
-  }, [formData.assignedGrade, availableStreamsForGrade]);
-
   return (
     <Modal
       isOpen={isOpen}
@@ -172,8 +152,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
                 variant="outline"
                 role="combobox"
                 aria-expanded={comboboxOpen}
-                className="w-full justify-between h-12 rounded-xl bg-white border-slate-200 text-left font-bold text-slate-800 disabled:opacity-50"
-                disabled={isLoading}
+                className="w-full justify-between h-12 rounded-xl bg-white border-slate-200 text-left font-bold text-slate-800"
               >
                 {selectedStaffId ? (
                   <div className="flex items-center gap-2 truncate">
@@ -262,8 +241,8 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
-            <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900 disabled:opacity-50"><SelectValue /></SelectTrigger>
+            <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
                 <SelectItem value="class_teacher">Class Teacher</SelectItem>
@@ -303,8 +282,8 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
-            <Select value={formData.department} onValueChange={val => setFormData({...formData, department: val})} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900 disabled:opacity-50"><SelectValue /></SelectTrigger>
+            <Select value={formData.department} onValueChange={val => setFormData({...formData, department: val})}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="Mathematics & Science">Mathematics & Science</SelectItem>
                 <SelectItem value="Languages & Humanities">Languages & Humanities</SelectItem>
@@ -314,46 +293,6 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
               </SelectContent>
             </Select>
           </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assigned Grade</Label>
-            <Select value={formData.assignedGrade} onValueChange={val => setFormData({...formData, assignedGrade: val, assignedStream: ''})} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900 disabled:opacity-50"><SelectValue placeholder="Select Grade" /></SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="">None</SelectItem>
-                {isLoading ? (
-                  <SelectItem disabled value="">Loading grades...</SelectItem>
-                ) : grades.length === 0 ? (
-                  <SelectItem disabled value="">No grades configured</SelectItem>
-                ) : (
-                  grades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)
-                )}
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assigned Stream</Label>
-            <Select value={formData.assignedStream} onValueChange={val => setFormData({...formData, assignedStream: val})} disabled={!formData.assignedGrade || availableStreamsForGrade.length === 0 || isLoading}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900 disabled:opacity-50 disabled:cursor-not-allowed"><SelectValue placeholder={!formData.assignedGrade ? "Select grade first..." : availableStreamsForGrade.length === 0 ? "No streams available" : "Choose stream..."} /></SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {availableStreamsForGrade.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Assigned Subjects</Label>
-            <Input 
-              value={formData.assignedSubjects} 
-              onChange={e => setFormData({...formData, assignedSubjects: e.target.value})} 
-              placeholder="e.g. Mathematics, Science & Tech" 
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
             <div className="flex gap-2">

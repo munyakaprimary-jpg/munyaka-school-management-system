@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X } from 'lucide-react';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
+import useGradesStreams from '@/hooks/useGradesStreams';
 
 interface PortfolioFiltersProps {
   searchTerm: string;
@@ -40,7 +40,7 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* 1. Grade Level Dropdown */}
         <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isLoading}>
-          <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-700 text-sm disabled:opacity-50">
+          <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-700 text-sm">
             <SelectValue placeholder={isLoading ? "Loading grades..." : "All Grades"} />
           </SelectTrigger>
           <SelectContent className="rounded-2xl">
@@ -51,7 +51,7 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
               <SelectItem disabled value="">No grades configured</SelectItem>
             ) : (
               grades.map(g => (
-                <SelectItem key={g.id} value={g.id}>
+                <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                   {g.name}
                 </SelectItem>
               ))

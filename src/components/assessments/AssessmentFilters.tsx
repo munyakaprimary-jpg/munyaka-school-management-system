@@ -7,7 +7,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Search } from "lucide-react";
 import { Grade, Stream } from '@/lib/mock-data';
 import { ExamTypeOption } from '@/types/assessments';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface AssessmentFiltersProps {
   gradesList: Grade[];
@@ -28,6 +27,7 @@ interface AssessmentFiltersProps {
 }
 
 const AssessmentFilters = ({
+  gradesList,
   selectedGradeId,
   setSelectedGradeId,
   availableStreams,
@@ -43,8 +43,6 @@ const AssessmentFilters = ({
   academicYear,
   setAcademicYear
 }: AssessmentFiltersProps) => {
-  const { grades, isLoading } = useGradesStreams();
-
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2019 }, (_, i) => (2020 + i).toString());
 
@@ -68,28 +66,22 @@ const AssessmentFilters = ({
 
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
-            <Select value={selectedGradeId} onValueChange={setSelectedGradeId} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+            <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
-                {isLoading ? (
-                  <SelectItem disabled value="">Loading grades...</SelectItem>
-                ) : grades.length === 0 ? (
-                  <SelectItem disabled value="">No grades configured</SelectItem>
-                ) : (
-                  grades.map((g) => (
-                    <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                  ))
-                )}
+                {gradesList.map((g) => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
-            <Select value={selectedStreamId} onValueChange={setSelectedStreamId} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+            <Select value={selectedStreamId} onValueChange={setSelectedStreamId}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="All Streams" />
               </SelectTrigger>
               <SelectContent>

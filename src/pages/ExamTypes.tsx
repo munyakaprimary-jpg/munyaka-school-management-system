@@ -11,7 +11,6 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface ExamType {
   id: string;
@@ -30,7 +29,6 @@ const DEFAULT_EXAM_TYPES: ExamType[] = [
 ];
 
 const ExamTypes = () => {
-  const { isLoading } = useGradesStreams();
   const [examTypes, setExamTypes] = useState<ExamType[]>(() => {
     const saved = localStorage.getItem('munyaka_exam_types');
     return saved ? JSON.parse(saved) : DEFAULT_EXAM_TYPES;

@@ -32,12 +32,10 @@ import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geof
 import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { format } from "date-fns";
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 const StaffAttendancePage = () => {
   const navigate = useNavigate();
   const { location } = useGeolocation();
-  const { grades, isLoading } = useGradesStreams();
   const { 
     masterRegister, 
     adminMarkStaff,

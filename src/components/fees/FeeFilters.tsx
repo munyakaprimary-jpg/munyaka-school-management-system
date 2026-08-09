@@ -4,7 +4,7 @@ import React from 'react';
 import { Card } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useGradesStreams } from '@/hooks/useGradesStreams';
+import useGradesStreams from '@/hooks/useGradesStreams';
 
 interface FeeFiltersProps {
   year: string;
@@ -49,7 +49,7 @@ const FeeFilters = ({ year, setYear, term, setTerm, grade, setGrade }: FeeFilter
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade Level</Label>
             <Select value={grade} onValueChange={setGrade} disabled={isLoading}>
-              <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium text-slate-800 disabled:opacity-50">
+              <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium text-slate-800">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

@@ -15,7 +15,6 @@ import { BookHistoryModal } from '@/components/library/BookHistoryModal';
 import { RegisterBookModal } from '@/components/library/RegisterBookModal';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 const DEFAULT_BORROW_LOGS: BorrowLog[] = [
   {
@@ -65,7 +64,6 @@ const DEFAULT_BORROW_LOGS: BorrowLog[] = [
 ];
 
 const Library = () => {
-  const { grades, isLoading } = useGradesStreams();
   // Books State with Local Storage Persistence
   const [books, setBooks] = useState<Book[]>(() => {
     const saved = localStorage.getItem('munyaka_library_books');
@@ -118,7 +116,7 @@ const Library = () => {
       borrowed: 0
     };
 
-    setBooks([newBook, ...books]);
+    setBooks(prev => [newBook, ...prev]);
     showSuccess(`Registered "${newBook.title}" (${newBook.stock} copies) into library catalog!`);
   };
 

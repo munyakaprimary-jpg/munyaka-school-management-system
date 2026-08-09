@@ -14,7 +14,6 @@ import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_D
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV } from '@/utils/downloadHelper';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';
@@ -53,12 +52,13 @@ const GRADE_LEVEL_OPTIONS = [
 ];
 
 const Fees = () => {
-  const { grades, isLoading } = useGradesStreams();
   // Global Academic Context Filter States
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedTerm, setSelectedTerm] = useState("term1");
-  const [selectedGrade, setSelectedGrade] = useState(grades[0]?.id || "");
+  const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0].id);
+
+  // Tab Grade Level View Filter
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
 
   // Data States - Load from localStorage
@@ -149,7 +149,7 @@ const Fees = () => {
       // Find the student to get their grade
       const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
       const studentGradeId = studentObj ? 
-        grades.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id 
+        GRADES_DATA.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id 
         : selectedGrade;
       
       const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
@@ -175,7 +175,7 @@ const Fees = () => {
         studentGradeId 
       };
     });
-  }, [feesList, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent, grades]);
+  }, [feesList, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent]);
 
   // Filter calculated fees by Tab Grade Level Filter
   const filteredCalculatedFees = useMemo(() => {
@@ -275,7 +275,7 @@ const Fees = () => {
     if (configGrade === "all") {
       setFeeStructures(prev => {
         let updated = [...prev];
-        grades.forEach(g => {
+        GRADES_DATA.forEach(g => {
           const idx = updated.findIndex(f => f.year === selectedYear && f.term === selectedTerm && f.gradeId === g.id);
           if (idx > -1) {
             updated[idx] = { ...updated[idx], amount: amountNum };
@@ -299,7 +299,7 @@ const Fees = () => {
     }
 
     setIsConfigOpen(false);
-    const targetLabel = configGrade === "all" ? "all grades" : grades.find(g => g.id === configGrade)?.name || "selected grade";
+    const targetLabel = configGrade === "all" ? "all grades" : GRADES_DATA.find(g => g.id === configGrade)?.name || "selected grade";
     showSuccess(`Fee structure updated for ${targetLabel}`);
   };
 
@@ -382,7 +382,7 @@ const Fees = () => {
     setIsEditOpen(true);
   };
 
-  const selectedGradeObj = grades.find(g => g.id === configGrade);
+  const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
 
   // Current term fee for the selected grade (for header display)
   const currentTermFee = useMemo(() => {
@@ -720,19 +720,15 @@ const Fees = () => {
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Grade Level</Label>
-            <Select value={configGrade} onValueChange={handleModalGradeChange} disabled={isLoading}>
-              <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium disabled:opacity-50">
-                <SelectValue placeholder={isLoading ? "Loading grades..." : "Select Grade"} />
+            <Select value={configGrade} onValueChange={handleModalGradeChange}>
+              <SelectTrigger className="rounded-lg h-10 px-3 bg-slate-50 border-slate-200 text-sm font-medium">
+                <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Grades (Bulk Set)</SelectItem>
-                {isLoading ? (
-                  <SelectItem disabled value="">Loading grades...</SelectItem>
-                ) : grades.length === 0 ? (
-                  <SelectItem disabled value="">No grades configured</SelectItem>
-                ) : (
-                  grades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)
-                )}
+                {GRADES_DATA.map(g => (
+                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -764,7 +760,7 @@ const Fees = () => {
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
         onSubmitPayment={handleRecordPayment}
-        gradesData={grades}
+        gradesData={GRADES_DATA}
         studentsData={STUDENTS}
       />
 
@@ -797,7 +793,7 @@ const Fees = () => {
             transactions={transactionsList} 
             year={selectedYear} 
             term={selectedTerm} 
-            gradeName={grades.find(g => g.id === selectedGrade)?.name || ""} 
+            gradeName={GRADES_DATA.find(g => g.id === selectedGrade)?.name || ""} 
           />
         )}
       </Modal>

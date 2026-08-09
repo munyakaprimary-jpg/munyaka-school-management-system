@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Search, X } from 'lucide-react';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
+import { GRADES_DATA } from '@/lib/mock-data';
 
 interface StudentFiltersProps {
   searchTerm: string;
@@ -28,13 +28,11 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   setFilterStream,
   onClearFilters
 }) => {
-  const { grades, streams, isLoading } = useGradesStreams();
-
   const uniqueStreams = React.useMemo(() => {
-    const streamNames = new Set<string>();
-    streams.forEach(s => streamNames.add(s.name));
-    return Array.from(streamNames).sort();
-  }, [streams]);
+    const streams = new Set<string>();
+    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    return Array.from(streams).sort();
+  }, []);
 
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
@@ -51,31 +49,25 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
         
         <div className="space-y-1">
           <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
-          <Select value={filterGrade} onValueChange={setFilterGrade} disabled={isLoading}>
-            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+          <Select value={filterGrade} onValueChange={setFilterGrade}>
+            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
               <SelectValue placeholder="All Grades" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Grade Levels</SelectItem>
-              {isLoading ? (
-                <SelectItem disabled value="">Loading grades...</SelectItem>
-              ) : grades.length === 0 ? (
-                <SelectItem disabled value="">No grades configured</SelectItem>
-              ) : (
-                grades.map(g => (
-                  <SelectItem key={g.id} value={g.id}>
-                    {g.name}
-                  </SelectItem>
-                ))
-              )}
+              {GRADES_DATA.map(g => (
+                <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+                  {g.name}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-1">
           <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-          <Select value={filterStream} onValueChange={setFilterStream} disabled={isLoading}>
-            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+          <Select value={filterStream} onValueChange={setFilterStream}>
+            <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
               <SelectValue placeholder="All Streams" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">

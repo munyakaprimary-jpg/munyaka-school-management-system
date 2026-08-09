@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
 import { showSuccess } from '@/utils/toast';
-import { Grade, Stream } from '@/lib/mock-data';
+import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 import { ExamTypeOption } from '@/types/assessments';
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 // Sub-components
 import AssessmentHeader from '@/components/assessments/AssessmentHeader';
@@ -16,7 +15,36 @@ import AssessmentInstructions from '@/components/assessments/AssessmentInstructi
 const STORAGE_KEY = 'munyaka_marks_records';
 
 const Assessments = () => {
-  const { grades, streams, isLoading } = useGradesStreams();
+  // Dynamically load grades and streams
+  const gradesList = useMemo(() => {
+    const saved = localStorage.getItem('munyaka_grades');
+    const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
+
+    return [...rawList].sort((a, b) => {
+      const categoryRank: Record<string, number> = {
+        'Pre-Primary': 1,
+        'Primary': 2,
+        'Junior School': 3
+      };
+      
+      const rankA = categoryRank[a.category] || 99;
+      const rankB = categoryRank[b.category] || 99;
+
+      if (rankA !== rankB) {
+        return rankA - rankB;
+      }
+
+      const extractNumber = (name: string) => {
+        const match = name.match(/\d+/);
+        if (match) return parseInt(match[0], 10);
+        if (name.toUpperCase().includes('PP1')) return 1;
+        if (name.toUpperCase().includes('PP2')) return 2;
+        return 0;
+      };
+
+      return extractNumber(a.name) - extractNumber(b.name);
+    });
+  }, []);
 
   // Dynamically load exam types
   const examTypesList = useMemo<ExamTypeOption[]>(() => {
@@ -71,10 +99,10 @@ const Assessments = () => {
 
   // Set default selected grade
   useEffect(() => {
-    if (!selectedGradeId && grades.length > 0) {
-      setSelectedGradeId(grades[0].id);
+    if (!selectedGradeId && gradesList.length > 0) {
+      setSelectedGradeId(gradesList[0].id);
     }
-  }, [grades, selectedGradeId]);
+  }, [gradesList, selectedGradeId]);
 
   // Set default selected exam type
   useEffect(() => {
@@ -91,8 +119,8 @@ const Assessments = () => {
   }, [selectedGradeId]);
 
   const currentGrade = useMemo(() => 
-    grades.find((g: Grade) => g.id === selectedGradeId), 
-    [selectedGradeId, grades]
+    gradesList.find((g: Grade) => g.id === selectedGradeId), 
+    [selectedGradeId, gradesList]
   );
 
   const availableStreams = useMemo(() => 
@@ -133,7 +161,7 @@ const Assessments = () => {
       const matchesSearch = 
         !searchTerm.trim() ||
         s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        s.assessment.toLowerCase().includes(searchTerm.toLowerCase().toLowerCase());
+        s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
 
       return matchesGrade && matchesStream && matchesSearch;
     });
@@ -256,6 +284,7 @@ const Assessments = () => {
       />
 
       <AssessmentFilters 
+        gradesList={gradesList}
         selectedGradeId={selectedGradeId}
         setSelectedGradeId={setSelectedGradeId}
         availableStreams={availableStreams}

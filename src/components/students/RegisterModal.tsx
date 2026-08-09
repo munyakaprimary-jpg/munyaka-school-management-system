@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus } from 'lucide-react';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
+import { GRADES_DATA } from '@/lib/mock-data';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -48,34 +48,34 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
   setAddress,
   onRegister
 }) => {
-  const { grades, streams, isLoading } = useGradesStreams();
-
-  // Dynamically get streams for the selected grade from central store
+  // Dynamically get streams for the selected grade from GRADES_DATA
   const availableStreams = useMemo(() => {
     if (!regGrade) return [];
-    return streams.filter(s => s.gradeId === regGrade);
-  }, [streams, regGrade]);
+    const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
+    return grade ? grade.streams.map(s => s.name) : [];
+  }, [regGrade]);
 
   // Reset stream when grade changes and no longer matches available streams
   useEffect(() => {
-    if (regStream && availableStreams.length > 0 && !availableStreams.some(s => s.name === regStream)) {
-      setRegStream(availableStreams[0]?.name || '');
+    if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
+      setRegStream(availableStreams[0]);
     }
   }, [regGrade, availableStreams, regStream, setRegStream]);
 
   // Set default grade when modal opens
   useEffect(() => {
-    if (isOpen && !regGrade && grades.length > 0) {
-      setRegGrade(grades[0].id);
+    if (isOpen) {
+      // Default to Grade 4 (PP1/PP2/Grade 1-12) if no grade is selected
+      setRegGrade("4");
     }
-  }, [isOpen, grades, regGrade, setRegGrade]);
+  }, [isOpen]);
 
   // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
-    const streamNames = new Set<string>();
-    streams.forEach(s => streamNames.add(s.name));
-    return Array.from(streamNames).sort();
-  }, [streams]);
+    const streams = new Set<string>();
+    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    return Array.from(streams).sort();
+  }, []);
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Register New Student" description="Enroll learner into the academic system." footer={<><Button variant="ghost" className="rounded-xl h-12 px-6 font-bold" onClick={onClose}>Cancel</Button><Button className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100" onClick={onRegister}><UserPlus size={18} /> Register Student</Button></>} maxWidth="max-w-xl">
@@ -96,34 +96,28 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
             <Select value={regGrade} onValueChange={(val) => {
               setRegGrade(val);
               setRegStream('');
-            }} disabled={isLoading}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold disabled:opacity-50">
-                <SelectValue placeholder={isLoading ? "Loading grades..." : "Select grade"} />
+            }}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {isLoading ? (
-                  <SelectItem disabled value="">Loading grades...</SelectItem>
-                ) : grades.length === 0 ? (
-                  <SelectItem disabled value="">No grades configured</SelectItem>
-                ) : (
-                  grades.map(g => (
-                    <SelectItem key={g.id} value={g.id}>
-                      {g.name} ({g.category})
-                    </SelectItem>
-                  ))
-                )}
+                {GRADES_DATA.map(g => (
+                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                    {g.name} ({g.category})
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Stream</Label>
-            <Select value={regStream} onValueChange={setRegStream} disabled={!regGrade || availableStreams.length === 0 || isLoading}>
+            <Select value={regStream} onValueChange={setRegStream} disabled={!regGrade || availableStreams.length === 0}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold disabled:opacity-50 disabled:cursor-not-allowed">
                 <SelectValue placeholder={!regGrade ? "Select grade first..." : availableStreams.length === 0 ? "No streams available" : "Choose stream..."} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {availableStreams.map(s => (
-                  <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -14,10 +14,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 const StaffPreRegistration = () => {
-  const { grades, isLoading } = useGradesStreams();
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
     return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
@@ -202,9 +200,9 @@ const StaffPreRegistration = () => {
           
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Role</Label>
-            <Select value={roleFilter} onValueChange={setRoleFilter} disabled={isLoading}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
-                <SelectValue placeholder={isLoading ? "Loading roles..." : "All Roles"} />
+            <Select value={roleFilter} onValueChange={setRoleFilter}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Roles" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="all">All System Roles</SelectItem>
@@ -219,9 +217,9 @@ const StaffPreRegistration = () => {
 
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter} disabled={isLoading}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
-                <SelectValue placeholder={isLoading ? "Loading statuses..." : "All Status"} />
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Status" />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="all">All Statuses</SelectItem>

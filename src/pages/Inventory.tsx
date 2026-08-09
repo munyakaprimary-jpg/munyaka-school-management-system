@@ -17,7 +17,6 @@ import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 export interface AssetItem {
   id: string;
@@ -41,7 +40,6 @@ interface AssetLog {
 
 const Inventory = () => {
   const navigate = useNavigate();
-  const { grades, isLoading } = useGradesStreams();
   const [activeTab, setActiveTab] = useState('stock');
   const [searchQuery, setSearchQuery] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
