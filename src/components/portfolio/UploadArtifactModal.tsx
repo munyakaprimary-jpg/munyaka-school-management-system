@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Upload, Paperclip, CheckCircle2 } from 'lucide-react';
-import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
+import useGradesStreams from '@/hooks/useGradesStreams';
 import { Artifact } from '@/types/portfolio';
 import { showError } from '@/utils/toast';
 
@@ -38,12 +38,13 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const { grades, isLoading } = useGradesStreams();
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    grades.forEach(g => g.streams.forEach(s => streams.add(s.name)));
     STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
     return Array.from(streams).sort();
-  }, []);
+  }, [grades]);
 
   const filteredStudents = useMemo(() => {
     return STUDENTS.filter(s => {
@@ -146,16 +147,16 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
         {/* File Picker Input Area */}
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Browse Computer Storage / Downloads</Label>
-          <input 
-            type="file" 
-            ref={fileInputRef} 
-            onChange={handleFileChange} 
-            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" 
-            className="hidden" 
+          <input
+            type="file"
+            ref={fileInputRef}
+            onChange={handleFileChange}
+            accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx"
+            className="hidden"
             id="computer-file-input"
           />
-          <label 
-            htmlFor="computer-file-input" 
+          <label
+            htmlFor="computer-file-input"
             className="border-2 border-dashed border-indigo-200 hover:border-indigo-400 bg-indigo-50/30 hover:bg-indigo-50/60 rounded-2xl p-5 flex flex-col items-center justify-center cursor-pointer transition-colors group"
           >
             <div className="w-12 h-12 bg-white rounded-2xl shadow-sm flex items-center justify-center mb-2 group-hover:scale-110 transition-transform">
@@ -189,7 +190,7 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Grades</SelectItem>
-                {GRADES_DATA.map(g => (
+                {grades.map(g => (
                   <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                     {g.name}
                   </SelectItem>
@@ -236,11 +237,11 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Artifact Title</Label>
-          <Input 
-            value={title} 
-            onChange={(e) => setTitle(e.target.value)} 
-            placeholder="e.g. Clay Modeling: Farm Animals" 
-            className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+          <Input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="e.g. Clay Modeling: Farm Animals"
+            className="rounded-xl h-12 bg-slate-50 border-none font-bold"
           />
         </div>
 
@@ -295,10 +296,10 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Observations / Remarks</Label>
-          <Textarea 
-            value={description} 
-            onChange={(e) => setDescription(e.target.value)} 
-            placeholder="Describe the learner's evidence or teacher remarks..." 
+          <Textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="Describe the learner's evidence or teacher remarks..."
             className="rounded-xl bg-slate-50 border-none min-h-[80px]"
           />
         </div>
