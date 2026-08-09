@@ -13,6 +13,7 @@ import PromotionFilters from '@/components/promote/PromotionFilters';
 import PromotionPreviewTable, { StudentPreview } from '@/components/promote/PromotionPreviewTable';
 import PromotionHistoryTable, { PromotionRecord } from '@/components/promote/PromotionHistoryTable';
 import SuccessMessage from '@/components/promote/SuccessMessage';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 // Types
 interface Student {
@@ -66,6 +67,7 @@ const MOCK_STATS = {
 };
 
 const Promote = () => {
+  const { grades, streams, isLoading } = useGradesStreams();
   const [isPromoteModalOpen, setIsPromoteModalOpen] = useState(false);
   const [students, setStudents] = useState<Student[]>(MOCK_STUDENTS);
   const [searchTerm, setSearchTerm] = useState('');

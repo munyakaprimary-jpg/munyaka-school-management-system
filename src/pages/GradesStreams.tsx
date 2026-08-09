@@ -11,13 +11,10 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 const GradesStreams = () => {
-  const [grades, setGrades] = useState<Grade[]>(() => {
-    const saved = localStorage.getItem('munyaka_grades');
-    return saved ? JSON.parse(saved) : GRADES_DATA;
-  });
+  const { grades, streams, isLoading, addGrade, updateGrade, deleteGrade, addStream, updateStream, deleteStream, refresh } = useGradesStreams();
   
   const [isGradeOpen, setIsGradeOpen] = useState(false);
   const [isStreamOpen, setIsStreamOpen] = useState(false);
@@ -35,10 +32,6 @@ const GradesStreams = () => {
   const [newStreamName, setNewStreamName] = useState("");
   const [newStreamTeacher, setNewStreamTeacher] = useState("");
   const [newStreamStudents, setNewStreamStudents] = useState("");
-
-  useEffect(() => {
-    localStorage.setItem('munyaka_grades', JSON.stringify(grades));
-  }, [grades]);
 
   const sortedGrades = useMemo(() => {
     return [...grades].sort((a, b) => {
@@ -82,14 +75,11 @@ const GradesStreams = () => {
       ? trimmedName 
       : `Grade ${trimmedName}`;
 
-    const newGrade: Grade = { 
-      id: `g-${Date.now()}`, 
+    addGrade({ 
       name: formattedName, 
-      category: newGradeCategory, 
-      streams: [] 
-    };
+      category: newGradeCategory
+    });
     
-    setGrades([...grades, newGrade]);
     setIsGradeOpen(false);
     setNewGradeName("");
     showSuccess(`Successfully created ${formattedName}!`);
@@ -119,20 +109,12 @@ const GradesStreams = () => {
     }
 
     const studentsCount = parseInt(newStreamStudents) || 0;
-    const updatedGrades = grades.map(grade => {
-      if (grade.id === selectedGradeId) {
-        const newStream: Stream = { 
-          id: `s-${Date.now()}`, 
-          name: trimmedStreamName, 
-          teacher: newStreamTeacher.trim() || "Unassigned", 
-          studentsCount 
-        };
-        return { ...grade, streams: [...grade.streams, newStream] };
-      }
-      return grade;
+    addStream(selectedGradeId, { 
+      name: trimmedStreamName, 
+      teacher: newStreamTeacher.trim() || "Unassigned", 
+      studentsCount 
     });
     
-    setGrades(updatedGrades);
     setIsStreamOpen(false);
     setSelectedGradeId("");
     setNewStreamName("");
@@ -160,7 +142,11 @@ const GradesStreams = () => {
     const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (authPassword === currentAdminPass) {
-      executeDelete();
+      if (pendingDelete?.type === 'grade') {
+        deleteGrade(pendingDelete.gradeId);
+      } else if (pendingDelete?.type === 'stream' && pendingDelete.streamId) {
+        deleteStream(pendingDelete.gradeId, pendingDelete.streamId);
+      }
       setIsAuthOpen(false);
       showSuccess(`${pendingDelete?.type === 'grade' ? 'Grade' : 'Stream'} deleted successfully.`);
     } else {
@@ -168,21 +154,6 @@ const GradesStreams = () => {
       showError("Authorization failed");
     }
     setIsVerifying(false);
-  };
-
-  const executeDelete = () => {
-    if (!pendingDelete) return;
-
-    if (pendingDelete.type === 'grade') {
-      setGrades(grades.filter(g => g.id !== pendingDelete.gradeId));
-    } else if (pendingDelete.type === 'stream' && pendingDelete.streamId) {
-      setGrades(grades.map(g => 
-        g.id === pendingDelete.gradeId 
-          ? { ...g, streams: g.streams.filter(s => s.id !== pendingDelete.streamId) } 
-          : g
-      ));
-    }
-    setPendingDelete(null);
   };
 
   return (
@@ -322,12 +293,18 @@ const GradesStreams = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Select Grade Level</Label>
-            <Select value={selectedGradeId} onValueChange={setSelectedGradeId}>
+            <Select value={selectedGradeId} onValueChange={setSelectedGradeId} disabled={isLoading}>
               <SelectTrigger className="rounded-xl h-12">
-                <SelectValue placeholder="Choose grade" />
+                <SelectValue placeholder={isLoading ? "Loading grades..." : "Choose grade"} />
               </SelectTrigger>
               <SelectContent>
-                {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)}
+                {isLoading ? (
+                  <SelectItem disabled value="">Loading grades...</SelectItem>
+                ) : grades.length === 0 ? (
+                  <SelectItem disabled value="">No grades configured</SelectItem>
+                ) : (
+                  sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>)
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -354,7 +331,7 @@ const GradesStreams = () => {
         description={`Please enter the admin password to delete this ${pendingDelete?.type}.`}
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold">Cancel</Button>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsAuthOpen(false)}>Cancel</Button>
             <Button 
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
               onClick={handleVerifyAuth}

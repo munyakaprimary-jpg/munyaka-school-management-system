@@ -5,7 +5,7 @@ import { format } from "date-fns";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Loader2, Edit3, Check } from "lucide-react";
-import useGradesStreams from '@/hooks/useGradesStreams';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface AttendanceHeaderProps {
   selectedGradeId: string;
@@ -34,7 +34,7 @@ const AttendanceHeader = ({
       </div>
       <div className="flex flex-wrap gap-2">
         <Select value={selectedGradeId} onValueChange={setSelectedGradeId} disabled={isLoading}>
-          <SelectTrigger className="w-[220px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
+          <SelectTrigger className="w-[220px] rounded-xl bg-white border-slate-200 font-bold text-slate-700 disabled:opacity-50">
             <SelectValue placeholder={isLoading ? "Loading grades..." : "Select Grade"} />
           </SelectTrigger>
           <SelectContent className="rounded-2xl">

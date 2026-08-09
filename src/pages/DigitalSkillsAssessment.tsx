@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Award, Keyboard, FileCheck, Plus, Search, Download, Eye, Edit, CheckCircle2, AlertCircle, TrendingUp, Target, Activity, FileText, Layers, ClipboardCheck, Star, Monitor, Globe, Table, Presentation, Shield, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, X, Code, Zap, Database, Cpu } from 'lucide-react';
 import { cn } from "@/lib/utils";
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface CompetencyRecord {
   id: string;
@@ -296,6 +297,7 @@ const GRADE_OPTIONS = [
 ];
 
 const DigitalSkillsAssessment = () => {
+  const { grades, streams, isLoading } = useGradesStreams();
   const [activeTab, setActiveTab] = useState<'competencies' | 'typing' | 'quizzes' | 'software'>('competencies');
   
   // Competencies Tab State
@@ -323,6 +325,13 @@ const DigitalSkillsAssessment = () => {
   const [selectedRecord, setSelectedRecord] = useState<ProficiencyRecord | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isViewOpen, setIsViewOpen] = useState(false);
+
+  // Derived unique streams from central store
+  const uniqueStreams = useMemo(() => {
+    const streamNames = new Set<string>();
+    streams.forEach(s => streamNames.add(s.name));
+    return Array.from(streamNames).sort();
+  }, [streams]);
 
   const filteredCompetencies = useMemo(() => {
     return MOCK_COMPETENCIES.filter(record => {
@@ -841,15 +850,23 @@ const DigitalSkillsAssessment = () => {
                   onChange={(e) => setQuizSearchTerm(e.target.value)}
                 />
               </div>
-              <Select value={quizGradeFilter} onValueChange={setQuizGradeFilter}>
-                <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                  <SelectValue placeholder="All Grades" />
+              <Select value={quizGradeFilter} onValueChange={setQuizGradeFilter} disabled={isLoading}>
+                <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+                  <SelectValue placeholder={isLoading ? "Loading grades..." : "All Grades"} />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
                   <SelectItem value="all">All Grades</SelectItem>
-                  {GRADE_OPTIONS.map(grade => (
-                    <SelectItem key={grade} value={grade}>{grade}</SelectItem>
-                  ))}
+                  {isLoading ? (
+                    <SelectItem disabled value="">Loading grades...</SelectItem>
+                  ) : grades.length === 0 ? (
+                    <SelectItem disabled value="">No grades configured</SelectItem>
+                  ) : (
+                    grades.map(grade => (
+                      <SelectItem key={grade.id} value={grade.name}>
+                        {grade.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <Select value={quizStatusFilter} onValueChange={setQuizStatusFilter}>
@@ -1025,18 +1042,23 @@ const DigitalSkillsAssessment = () => {
                   <SelectItem value="Emerging">Emerging</SelectItem>
                 </SelectContent>
               </Select>
-              <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                  <SelectValue placeholder="All Grades" />
+              <Select value={selectedGrade} onValueChange={setSelectedGrade} disabled={isLoading}>
+                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700 disabled:opacity-50">
+                  <SelectValue placeholder={isLoading ? "Loading grades..." : "All Grades"} />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
                   <SelectItem value="All Grades">All Grades</SelectItem>
-                  <SelectItem value="Grade 4">Grade 4</SelectItem>
-                  <SelectItem value="Grade 5">Grade 5</SelectItem>
-                  <SelectItem value="Grade 6">Grade 6</SelectItem>
-                  <SelectItem value="Grade 7">Grade 7</SelectItem>
-                  <SelectItem value="Grade 8">Grade 8</SelectItem>
-                  <SelectItem value="Grade 9">Grade 9</SelectItem>
+                  {isLoading ? (
+                    <SelectItem disabled value="">Loading grades...</SelectItem>
+                  ) : grades.length === 0 ? (
+                    <SelectItem disabled value="">No grades configured</SelectItem>
+                  ) : (
+                    grades.map(grade => (
+                      <SelectItem key={grade.id} value={grade.name}>
+                        {grade.name}
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
               <Select value={selectedStream} onValueChange={setSelectedStream}>
@@ -1045,12 +1067,9 @@ const DigitalSkillsAssessment = () => {
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
                   <SelectItem value="All Streams">All Streams</SelectItem>
-                  <SelectItem value="East">East</SelectItem>
-                  <SelectItem value="West">West</SelectItem>
-                  <SelectItem value="North">North</SelectItem>
-                  <SelectItem value="South">South</SelectItem>
-                  <SelectItem value="Blue">Blue</SelectItem>
-                  <SelectItem value="Red">Red</SelectItem>
+                  {uniqueStreams.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">

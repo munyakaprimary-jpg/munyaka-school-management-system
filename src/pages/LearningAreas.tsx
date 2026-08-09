@@ -12,6 +12,7 @@ import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
 import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface LearningArea {
   id: string;
@@ -36,6 +37,7 @@ const DEFAULT_CLUSTERS: ClusterData[] = [
 ];
 
 const LearningAreas = () => {
+  const { grades, isLoading } = useGradesStreams();
   const [clusters, setClusters] = useState<ClusterData[]>(() => {
     const saved = localStorage.getItem('munyaka_learning_areas');
     return saved ? JSON.parse(saved) : DEFAULT_CLUSTERS;
@@ -205,9 +207,9 @@ const LearningAreas = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex overflow-x-auto">
-          {clusters.map(c => <TabsTrigger key={c.id} value={c.id} className="rounded-xl px-6 h-full font-bold shrink-0 text-xs">{c.name}</TabsTrigger>)}
+          {DEFAULT_CLUSTERS.map(c => <TabsTrigger key={c.id} value={c.id} className="rounded-xl px-6 h-full font-bold shrink-0 text-xs">{c.name}</TabsTrigger>)}
         </TabsList>
-        {clusters.map(cluster => (
+        {DEFAULT_CLUSTERS.map(cluster => (
           <TabsContent key={cluster.id} value={cluster.id} className="space-y-6">
             <div className="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-6 flex items-center gap-4">
               <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl"><GraduationCap size={24} /></div>
@@ -272,9 +274,11 @@ const LearningAreas = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>CBC Cluster</Label>
-            <Select value={selectedClusterId} onValueChange={setSelectedClusterId}>
-              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Cluster" /></SelectTrigger>
-              <SelectContent>{clusters.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <Select value={selectedClusterId} onValueChange={setSelectedClusterId} disabled={isLoading}>
+              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder={isLoading ? "Loading clusters..." : "Select Cluster"} /></SelectTrigger>
+              <SelectContent>
+                {DEFAULT_CLUSTERS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+              </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
@@ -333,9 +337,9 @@ const LearningAreas = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>CBC Cluster</Label>
-            <Select value={targetClusterId} onValueChange={setTargetClusterId}>
-              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Cluster" /></SelectTrigger>
-              <SelectContent>{clusters.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <Select value={targetClusterId} onValueChange={setTargetClusterId} disabled={isLoading}>
+              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder={isLoading ? "Loading clusters..." : "Select Cluster"} /></SelectTrigger>
+              <SelectContent>{DEFAULT_CLUSTERS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
           <div className="space-y-2">

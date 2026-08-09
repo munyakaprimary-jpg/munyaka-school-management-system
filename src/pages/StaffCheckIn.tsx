@@ -6,10 +6,12 @@ import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { PersonalCheckInCard } from '@/components/attendance/PersonalCheckInCard';
 import BackButton from '@/components/ui/BackButton';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 const StaffCheckIn = () => {
   const { user } = useAuth();
   const { location } = useGeolocation();
+  const { grades, isLoading } = useGradesStreams();
   const { 
     personalRecords, 
     selfMarkAttendance

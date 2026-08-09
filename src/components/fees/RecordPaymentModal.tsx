@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, AlertCircle } from 'lucide-react';
-import useGradesStreams from '@/hooks/useGradesStreams';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 
 interface StudentItem {
   id: string;
@@ -32,7 +32,7 @@ const RecordPaymentModal = ({
   gradesData,
   studentsData = [],
 }: RecordPaymentModalProps) => {
-  const { grades, isLoading } = useGradesStreams();
+  const { grades, streams, isLoading } = useGradesStreams();
   const gradesToUse = gradesData || grades;
 
   // Cascading Selection States
@@ -59,8 +59,8 @@ const RecordPaymentModal = ({
   }, [selectedGradeId, gradesToUse]);
 
   const availableStreams = useMemo(() => {
-    return selectedGradeObj ? selectedGradeObj.streams : [];
-  }, [selectedGradeObj]);
+    return selectedGradeObj ? streams.filter(s => s.gradeId === selectedGradeObj.id) : [];
+  }, [selectedGradeObj, streams]);
 
   const selectedStreamObj = useMemo(() => {
     return availableStreams.find(s => s.id === selectedStreamId);
@@ -177,7 +177,7 @@ const RecordPaymentModal = ({
           <Select
             value={selectedStreamId}
             onValueChange={handleStreamChange}
-            disabled={!selectedGradeId || availableStreams.length === 0}
+            disabled={!selectedGradeId || availableStreams.length === 0 || isLoading}
           >
             <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-slate-100 font-bold text-slate-800 disabled:opacity-50 disabled:cursor-not-allowed">
               <SelectValue

@@ -7,12 +7,13 @@ import AttendanceHeader from '@/components/attendance/AttendanceHeader';
 import AttendanceStats from '@/components/attendance/AttendanceStats';
 import AttendanceTable from '@/components/attendance/AttendanceTable';
 import { useAttendance } from '@/hooks/useAttendance';
-import { GRADES_DATA } from '@/lib/mock-data';
+import { useGradesStreams } from '@/hooks/useGradesStreams';
 import { downloadCSV } from '@/utils/downloadHelper';
 
 const Attendance = () => {
-  // Default to Grade 4 (g4)
-  const [selectedGradeId, setSelectedGradeId] = useState(GRADES_DATA[1]?.id || GRADES_DATA[0]?.id);
+  const { grades, isLoading } = useGradesStreams();
+  // Default to first grade
+  const [selectedGradeId, setSelectedGradeId] = useState(grades[0]?.id || "");
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
