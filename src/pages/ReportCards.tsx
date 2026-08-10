@@ -382,7 +382,7 @@ const ReportCards = () => {
       `}</style>
 
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print action-bar">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 no-print">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">CBC Report Generator</h1>

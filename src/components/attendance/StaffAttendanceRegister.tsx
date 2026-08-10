@@ -81,7 +81,7 @@ export const StaffAttendanceRegister: React.FC<StaffAttendanceRegisterProps> = (
   return (
     <div className="space-y-6">
       {/* Search & Action Controls */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="relative flex-1 max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <Input

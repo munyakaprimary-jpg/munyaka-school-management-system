@@ -157,13 +157,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
-  // Bottom Navigation Bar Quick Links - Filtered by user role
+  // Bottom Navigation Bar Quick Links
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
-  ].filter(item => user && item.roles.includes(user.role));
+    { icon: LayoutDashboard, label: 'Home', path: '/' },
+    { icon: Users, label: 'Learners', path: '/students' },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance' },
+    { icon: Wallet, label: 'Fees', path: '/fees' },
+  ];
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
@@ -332,7 +332,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
         >
-          <div className="max-w-7xl mx-auto w-full table-scroll-viewport">
+          <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>
         </div>

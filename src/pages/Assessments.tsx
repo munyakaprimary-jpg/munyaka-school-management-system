@@ -275,7 +275,7 @@ const Assessments = () => {
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full table-scroll-viewport">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full overflow-x-auto -webkit-overflow-scrolling: touch">
       <AssessmentHeader 
         onExport={handleExport}
         onSave={handleSave}

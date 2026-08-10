@@ -128,18 +128,12 @@ importers:
       embla-carousel-react:
         specifier: 8.0.0
         version: 8.0.0(react@18.2.0)
-      html2canvas:
-        specifier: ^1.4.1
-        version: 1.4.1
       html2pdf.js:
         specifier: ^0.14.0
         version: 0.14.0
       input-otp:
         specifier: 1.0.0
         version: 1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
-      jspdf:
-        specifier: ^4.2.1
-        version: 4.2.1
       lucide-react:
         specifier: 0.294.0
         version: 0.294.0(react@18.2.0)
@@ -3637,7 +3631,7 @@ snapshots:
 
   '@radix-ui/primitive@1.0.0':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
 
   '@radix-ui/primitive@1.0.1':
     dependencies:
@@ -3680,7 +3674,7 @@ snapshots:
 
   '@radix-ui/react-arrow@1.0.3(@types/react-dom@18.2.15)(@types/react@18.2.37)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-primitive': 1.0.3(@types/react-dom@18.2.15)(@types/react@18.2.37)(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
@@ -3760,7 +3754,7 @@ snapshots:
 
   '@radix-ui/react-compose-refs@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       react: 18.2.0
 
   '@radix-ui/react-compose-refs@1.0.1(@types/react@18.2.37)(react@18.2.0)':
@@ -3793,7 +3787,7 @@ snapshots:
 
   '@radix-ui/react-context@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       react: 18.2.0
 
   '@radix-ui/react-context@1.0.1(@types/react@18.2.37)(react@18.2.0)':
@@ -3885,7 +3879,7 @@ snapshots:
 
   '@radix-ui/react-dismissable-layer@1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/primitive': 1.0.0
       '@radix-ui/react-compose-refs': 1.0.0(react@18.2.0)
       '@radix-ui/react-primitive': 1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
@@ -3939,7 +3933,7 @@ snapshots:
 
   '@radix-ui/react-focus-guards@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       react: 18.2.0
 
   '@radix-ui/react-focus-guards@1.0.1(@types/react@18.2.37)(react@18.2.0)':
@@ -3957,7 +3951,7 @@ snapshots:
 
   '@radix-ui/react-focus-scope@1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.0(react@18.2.0)
       '@radix-ui/react-primitive': 1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       '@radix-ui/react-use-callback-ref': 1.0.0(react@18.2.0)
@@ -4007,7 +4001,7 @@ snapshots:
 
   '@radix-ui/react-id@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-layout-effect': 1.0.0(react@18.2.0)
       react: 18.2.0
 
@@ -4150,7 +4144,7 @@ snapshots:
 
   '@radix-ui/react-portal@1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-primitive': 1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
@@ -4177,7 +4171,7 @@ snapshots:
 
   '@radix-ui/react-presence@1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.0(react@18.2.0)
       '@radix-ui/react-use-layout-effect': 1.0.0(react@18.2.0)
       react: 18.2.0
@@ -4206,7 +4200,7 @@ snapshots:
 
   '@radix-ui/react-primitive@1.0.0(react-dom@18.2.0(react@18.2.0))(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-slot': 1.0.0(react@18.2.0)
       react: 18.2.0
       react-dom: 18.2.0(react@18.2.0)
@@ -4358,7 +4352,7 @@ snapshots:
 
   '@radix-ui/react-slot@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-compose-refs': 1.0.0(react@18.2.0)
       react: 18.2.0
 
@@ -4482,7 +4476,7 @@ snapshots:
 
   '@radix-ui/react-use-callback-ref@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       react: 18.2.0
 
   '@radix-ui/react-use-callback-ref@1.0.1(@types/react@18.2.37)(react@18.2.0)':
@@ -4500,7 +4494,7 @@ snapshots:
 
   '@radix-ui/react-use-controllable-state@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-callback-ref': 1.0.0(react@18.2.0)
       react: 18.2.0
 
@@ -4521,13 +4515,13 @@ snapshots:
 
   '@radix-ui/react-use-escape-keydown@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-callback-ref': 1.0.0(react@18.2.0)
       react: 18.2.0
 
   '@radix-ui/react-use-escape-keydown@1.0.3(@types/react@18.2.37)(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/react-use-callback-ref': 1.0.1(@types/react@18.2.37)(react@18.2.0)
       react: 18.2.0
     optionalDependencies:
@@ -4542,7 +4536,7 @@ snapshots:
 
   '@radix-ui/react-use-layout-effect@1.0.0(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       react: 18.2.0
 
   '@radix-ui/react-use-layout-effect@1.0.1(@types/react@18.2.37)(react@18.2.0)':
@@ -4567,7 +4561,7 @@ snapshots:
 
   '@radix-ui/react-use-rect@1.0.1(@types/react@18.2.37)(react@18.2.0)':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@radix-ui/rect': 1.0.1
       react: 18.2.0
     optionalDependencies:
@@ -4593,7 +4587,7 @@ snapshots:
 
   '@radix-ui/rect@1.0.1':
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
 
   '@remix-run/router@1.13.0': {}
 
@@ -4827,7 +4821,7 @@ snapshots:
 
   canvg@3.0.11:
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
       '@types/raf': 3.4.3
       core-js: 3.49.0
       raf: 3.4.1
@@ -4983,7 +4977,7 @@ snapshots:
 
   dom-helpers@3.4.0:
     dependencies:
-      '@babel/runtime': 7.29.7
+      '@babel/runtime': 7.27.0
 
   dompurify@3.4.12:
     optionalDependencies:

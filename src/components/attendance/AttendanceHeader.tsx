@@ -25,7 +25,7 @@ const AttendanceHeader = ({
   setIsEditing
 }: AttendanceHeaderProps) => {
   return (
-    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+    <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Class Attendance</h1>
         <p className="text-muted-foreground">Mark morning and afternoon roll calls with real-time timestamps.</p>

@@ -120,30 +120,17 @@ class DatabaseService {
   }
 
   async updateRetryCount(id: number, count: number): Promise<void> {
-      if (this.db) {
-        await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
-      } else {
-        const queue = window.schoolDB.syncQueue;
-        const item = queue.find((q: any) => q.id === id);
-        if (item) {
-          item.retry_count = count;
-          localStorage.setItem('sync_queue', JSON.stringify(queue));
-        }
+    if (this.db) {
+      await this.db.run('UPDATE sync_queue SET retry_count = ? WHERE id = ?', [count, id]);
+    } else {
+      const queue = window.schoolDB.syncQueue;
+      const item = queue.find((q: any) => q.id === id);
+      if (item) {
+        item.retry_count = count;
+        localStorage.setItem('sync_queue', JSON.stringify(queue));
       }
     }
-  
-    async updateStatus(id: number, status: string): Promise<void> {
-      if (this.db) {
-        await this.db.run('UPDATE sync_queue SET status = ? WHERE id = ?', [status, id]);
-      } else {
-        const queue = window.schoolDB.syncQueue;
-        const item = queue.find((q: any) => q.id === id);
-        if (item) {
-          item.status = status;
-          localStorage.setItem('sync_queue', JSON.stringify(queue));
-        }
-      }
-    }
+  }
 
   async isOnline(): Promise<boolean> {
     if (Capacitor.isNative()) {
