@@ -46,15 +46,17 @@ const StudentProfile = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4">
+        {/* Title section with back arrow, name, and subtitle */}
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
           <BackButton to="/students" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
-            <p className="text-muted-foreground">Detailed learner profile and history.</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student.name}</h1>
+            <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">Detailed learner profile and history</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* Action buttons - horizontally scrollable on mobile, horizontal on desktop */}
+        <div className="flex gap-2 overflow-x-auto shrink-0">
           <Button 
             variant="outline" 
             className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -87,29 +89,29 @@ const StudentProfile = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10">
-            <div className="w-24 h-24 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-6">
+        <div className="w-full flex flex-col items-center min-w-0 space-y-6">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10 w-full">
+            <div className="w-24 h-24 rounded-3xl bg-indigo-50 flex items-center justify-center mx-auto mb-6">
               <UserCircle size={60} strokeWidth={1} />
             </div>
-            <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
-            <p className="text-sm font-medium text-slate-400 mb-6">ID: {student.assessment}</p>
+            <h2 className="text-xl font-bold text-slate-900 whitespace-nowrap">{student.name}</h2>
+            <p className="text-sm font-medium text-slate-400 mb-6 whitespace-nowrap">ID: {student.assessment}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
-              <Badge variant="outline">{student.stream}</Badge>
+              <Badge className="bg-indigo-600 whitespace-nowrap">Grade {student.grade}</Badge>
+              <Badge variant="outline whitespace-nowrap">{student.stream}</Badge>
             </div>
-            <div className="space-y-4 text-left border-t pt-8">
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+            <div className="space-y-4 text-left border-t pt-8 w-full">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Calendar size={16} className="text-slate-400" />
-                <span>Born: {student.dob}</span>
+                <span className="whitespace-nowrap">Born: {student.dob}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Phone size={16} className="text-slate-400" />
-                <span>{student.phone}</span>
+                <span className="whitespace-nowrap">{student.phone}</span>
               </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
+              <div className="flex items-center gap-3 text-sm text-slate-600 w-full">
                 <Mail size={16} className="text-slate-400" />
-                <span>{student.email}</span>
+                <span className="whitespace-nowrap">{student.email}</span>
               </div>
             </div>
           </Card>
