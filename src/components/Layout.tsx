@@ -302,17 +302,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
                 M
               </div>
-              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
+              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight">Munyaka Portal</span>
             </div>
 
-            <div className="relative hidden md:block flex-1 min-w-0 max-md ml-4">
-                                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                      <input
-                                        type="text"
-                                        placeholder="Search learners, staff, grades..."
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
-                                      />
-                                    </div>
+            <div className="relative hidden md:block flex-1 max-md ml-4">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search learners, staff, grades..." 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white"
+              />
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
