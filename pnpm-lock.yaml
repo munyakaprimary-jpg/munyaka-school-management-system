@@ -186,6 +186,9 @@ importers:
         specifier: 3.22.4
         version: 3.22.4
     devDependencies:
+      '@dyad-sh/react-vite-component-tagger':
+        specifier: ^0.9.0
+        version: 0.9.0(vite@4.5.5(@types/node@20.10.0)(lightningcss@1.32.0))
       '@types/node':
         specifier: 20.10.0
         version: 20.10.0
@@ -339,6 +342,11 @@ packages:
 
   '@capacitor/core@8.4.2':
     resolution: {integrity: sha512-fQPRb3JXRaU2pnufDUvqOjhsrYxDQeFRZyaj/sHydIUxD2NxOGHKMpmKUdI+U4OOmKuGZyvRpi7TSJU+7Bjbmg==}
+
+  '@dyad-sh/react-vite-component-tagger@0.9.0':
+    resolution: {integrity: sha512-x5HbnFS3P+igQrCD8r3ZzyLwSZcgORN/ni9QRqlDeGGJK2egTCWsGtdUyYNUZW3oRPHkAifhXTJKWLs1tk8+8A==}
+    peerDependencies:
+      vite: ^3.0.0 || ^4.0.0 || ^5.0.0 || ^6.0.0 || ^7.0.0 || ^8.0.0
 
   '@emnapi/runtime@1.11.3':
     resolution: {integrity: sha512-Xz4Tpyki7XyrpbUK1jR1AhdAdaXyhhY4lZ3neLodmhpuWfy2PAQN5B46sAiU4liOXGLkHypn/qU+jvfWSCYYLA==}
@@ -700,6 +708,9 @@ packages:
 
   '@jridgewell/sourcemap-codec@1.5.0':
     resolution: {integrity: sha512-gv3ZRaISU3fjPAgNsriBRqGWQL6quFx04YMPW/zD8XMLsU32mhCCbfbO6KZFLjvYpCZ8zyDEgqsgf+PwPaM7GQ==}
+
+  '@jridgewell/sourcemap-codec@1.5.5':
+    resolution: {integrity: sha512-cYQ9310grqxueWbl+WuIUIaiUaDcj7WOq5fVhEljNVgRfOUhY9fy2zTvfoqWsnebh8Sl70VScFbICvJnLKB0Og==}
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
@@ -2086,6 +2097,9 @@ packages:
     resolution: {integrity: sha512-WUj2qlxaQtO4g6Pq5c29GTcWGDyd8itL8zTlipgECz3JesAiiOKotd8JU6otB3PACgG6xkJUyVhboMS+bje/jA==}
     engines: {node: '>=6'}
 
+  estree-walker@2.0.2:
+    resolution: {integrity: sha512-Rfkk/Mp/DL7JVje3u18FxFujQlTNR2q6QfMSMB7AvCBx91NGj/ba3kCfza0f6dVDbw7YlRf/nDrn7pQrCCyQ/w==}
+
   eventemitter3@4.0.7:
     resolution: {integrity: sha512-8guHBZCwKnFhYdHr2ysuRWErTwhoN2X8XELRlrRwpmfeY2jjuUN4taQMsULKUVo1K4DvZl+0pgfyoysHxvmvEw==}
 
@@ -2405,6 +2419,9 @@ packages:
     resolution: {integrity: sha512-V7o0/VECSGbLHn3/1O67FUgBwWB+hmzshrgDVRJQhMh8uj5D3HBuIvhuAmQTtlupILSplwIZg5FTc4tTKMA2SA==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0
+
+  magic-string@0.30.21:
+    resolution: {integrity: sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==}
 
   merge2@1.4.1:
     resolution: {integrity: sha512-8q7VEgMJW4J8tcfVPy8g09NcQwZdbwFEqhe/WZkoIzjn/3TGDwtOCYtXGxA3O8tPzpczCCDgv+P2P5y00ZJOOg==}
@@ -3293,6 +3310,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
+  '@dyad-sh/react-vite-component-tagger@0.9.0(vite@4.5.5(@types/node@20.10.0)(lightningcss@1.32.0))':
+    dependencies:
+      '@babel/parser': 7.29.7
+      estree-walker: 2.0.2
+      magic-string: 0.30.21
+      vite: 4.5.5(@types/node@20.10.0)(lightningcss@1.32.0)
+
   '@emnapi/runtime@1.11.3':
     dependencies:
       tslib: 2.8.1
@@ -3584,6 +3608,8 @@ snapshots:
   '@jridgewell/resolve-uri@3.1.2': {}
 
   '@jridgewell/sourcemap-codec@1.5.0': {}
+
+  '@jridgewell/sourcemap-codec@1.5.5': {}
 
   '@jridgewell/trace-mapping@0.3.31':
     dependencies:
@@ -5044,6 +5070,8 @@ snapshots:
 
   escalade@3.2.0: {}
 
+  estree-walker@2.0.2: {}
+
   eventemitter3@4.0.7: {}
 
   fast-equals@5.2.2: {}
@@ -5316,6 +5344,10 @@ snapshots:
   lucide-react@0.294.0(react@18.2.0):
     dependencies:
       react: 18.2.0
+
+  magic-string@0.30.21:
+    dependencies:
+      '@jridgewell/sourcemap-codec': 1.5.5
 
   merge2@1.4.1: {}
 
