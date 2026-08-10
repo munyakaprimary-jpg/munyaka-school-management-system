@@ -1,6 +1,28 @@
-export const STUDENTS: any[] = [
-  { id: "1", name: "Sample Student", assessment: "A000001", grade: "1", stream: "Alpha", gender: "M", dob: "2015-01-01", guardian: "Guardian Name", phone: "+254 700 000 000", email: "sample@email.com", health: "None", needs: "None" }
-];
+export const LOCAL_STORAGE_STUDENTS_KEY = 'munyaka_students_list';
+
+export const getStoredStudents = (): any[] => {
+  if (typeof window === 'undefined') return [];
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_STUDENTS_KEY);
+    if (data) {
+      return JSON.parse(data);
+    }
+  } catch (e) {
+    console.error("Failed to parse stored students", e);
+  }
+  return [];
+};
+
+export const saveStoredStudents = (students: any[]) => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(LOCAL_STORAGE_STUDENTS_KEY, JSON.stringify(students));
+  } catch (e) {
+    console.error("Failed to save students", e);
+  }
+};
+
+export const STUDENTS: any[] = [];
 
 export interface Stream {
   id: string;
