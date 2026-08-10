@@ -128,65 +128,6 @@
   scrollbar-color: #94a3b8 #f8fafc;
 }
 
-/* ============================================
-   GLOBAL MOBILE OVERFLOW / HORIZONTAL-SCROLL FIX
-   Applies across every table-matrix screen (mobile APK / narrow viewports).
-   The top action/header bar and the data table below it share a scrollable
-   parent so wide content scrolls horizontally instead of being clipped by
-   the outer layout's overflow-x-hidden.
-   ============================================ */
-
-/* Shared parent for a page's header bar + table matrix.
-   Uses width:100% (capped by any max-w-* utility like max-w-7xl) so it
-   composes with desktop centering while still scrolling on mobile. */
-.table-scroll-viewport {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  overflow-scrolling: touch;
-}
-
-/* Upper table header / action bar container: keeps its controls on one row
-   but scrolls horizontally in place on narrow screens instead of clipping. */
-.action-bar {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-  overflow-scrolling: touch;
-  white-space: nowrap;
-}
-
-/* Let titles, descriptions and labels inside the action bar wrap or shrink
-   so they never force the row wider than the viewport. */
-.action-bar h1,
-.action-bar h2,
-.action-bar h3,
-.action-bar p {
-  white-space: normal;
-}
-.action-bar h1,
-.action-bar h2,
-.action-bar h3,
-.action-bar p {
-  overflow-wrap: break-word;
-  word-break: break-word;
-  min-width: 0;
-}
-.action-bar > * {
-  min-width: 0;
-}
-
-/* Belt-and-suspenders: headings/paragraphs anywhere in the app body wrap
-   long words instead of blowing out the viewport width. */
-main h1,
-main h2,
-main h3,
-main p {
-  overflow-wrap: break-word;
-  word-break: break-word;
-}
-
 /* Mobile Safe Areas (Notches, Home Indicator) */
 .pt-safe {
   padding-top: env(safe-area-inset-top, 0px);

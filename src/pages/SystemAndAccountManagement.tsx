@@ -154,7 +154,7 @@ const SystemAndAccountManagement = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
@@ -390,7 +390,7 @@ const SystemAndAccountManagement = () => {
 
         {/* --- TAB 3: LAB SCHEDULES --- */}
         <TabsContent value="lab" className="space-y-8">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Calendar size={24} /></div>
               <div>

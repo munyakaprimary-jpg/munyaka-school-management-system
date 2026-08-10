@@ -98,7 +98,7 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Dashboard Overview</h1>
           <p className="text-muted-foreground">System vitals for Munyaka Primary and Junior School.</p>

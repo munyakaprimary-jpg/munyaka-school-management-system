@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
@@ -63,22 +65,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Attach Hardware Back Button Handling for Capacitor/Android
   useMobileBackButton(isOpen, () => setIsOpen(false));
 
-  // Remove any stray hash-like tokens that might be leaking into the DOM
-  useEffect(() => {
-    const hideTokenElements = () => {
-      const regex = /^[a-fA-F0-9]{40,}$/;
-      document.querySelectorAll('div, span, p, code').forEach((el) => {
-        const text = el.textContent?.trim() || '';
-        if (regex.test(text) && text.length > 40) {
-          (el as HTMLElement).style.display = 'none';
-        }
-      });
-    };
-    hideTokenElements();
-    const timer = setTimeout(hideTokenElements, 100);
-    return () => clearTimeout(timer);
-  }, [location.pathname]);
-
   // Handle auto-hide bottom navigation on scroll
   useEffect(() => {
     const handleScroll = () => {
@@ -86,11 +72,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       
       const currentScrollY = scrollContainerRef.current.scrollTop;
       
+      // Don't trigger hide logic for tiny scrolls (debounce/threshold)
       if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
 
       if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
+        // Scrolling Down - Hide
         setShowBottomNav(false);
       } else {
+        // Scrolling Up - Show
         setShowBottomNav(true);
       }
       
@@ -157,13 +146,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
-  // Bottom Navigation Bar Quick Links - Filtered by user role
+  // Bottom Navigation Bar Quick Links
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
-  ].filter(item => user && item.roles.includes(user.role));
+    { icon: LayoutDashboard, label: 'Home', path: '/' },
+    { icon: Users, label: 'Learners', path: '/students' },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance' },
+    { icon: Wallet, label: 'Fees', path: '/fees' },
+  ];
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
@@ -284,7 +273,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
         {/* Mobile & Desktop Header Bar */}
-        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
+        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-30 print:hidden">
           <div className="flex items-center gap-3">
             {/* Hamburger Button for Mobile */}
             <Button 
@@ -302,17 +291,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
                 M
               </div>
-              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
+              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight">Munyaka Portal</span>
             </div>
 
-            <div className="relative hidden md:block flex-1 min-w-0 max-md ml-4">
-                                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                      <input
-                                        type="text"
-                                        placeholder="Search learners, staff, grades..."
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
-                                      />
-                                    </div>
+            <div className="relative hidden md:block flex-1 max-md ml-4">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+              <input 
+                type="text" 
+                placeholder="Search learners, staff, grades..." 
+                className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white"
+              />
+            </div>
           </div>
           
           <div className="flex items-center gap-2">
@@ -332,7 +321,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           ref={scrollContainerRef}
           className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
         >
-          <div className="max-w-7xl mx-auto w-full table-scroll-viewport">
+          <div className="max-w-7xl mx-auto w-full">
             {children}
           </div>
         </div>

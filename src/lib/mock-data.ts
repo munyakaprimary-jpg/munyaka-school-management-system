@@ -1,28 +1,10 @@
-export const LOCAL_STORAGE_STUDENTS_KEY = 'munyaka_students_list';
-
-export const getStoredStudents = (): any[] => {
-  if (typeof window === 'undefined') return [];
-  try {
-    const data = localStorage.getItem(LOCAL_STORAGE_STUDENTS_KEY);
-    if (data) {
-      return JSON.parse(data);
-    }
-  } catch (e) {
-    console.error("Failed to parse stored students", e);
-  }
-  return [];
-};
-
-export const saveStoredStudents = (students: any[]) => {
-  if (typeof window === 'undefined') return;
-  try {
-    localStorage.setItem(LOCAL_STORAGE_STUDENTS_KEY, JSON.stringify(students));
-  } catch (e) {
-    console.error("Failed to save students", e);
-  }
-};
-
-export const STUDENTS: any[] = [];
+export const STUDENTS = [
+  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com", health: "None", needs: "None" },
+  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com", health: "Asthma", needs: "None" },
+  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com", health: "None", needs: "Vision Support" },
+  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com", health: "None", needs: "None" },
+  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com", health: "Allergy: Peanuts", needs: "None" },
+];
 
 export interface Stream {
   id: string;

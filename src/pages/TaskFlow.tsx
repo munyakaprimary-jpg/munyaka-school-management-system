@@ -44,7 +44,7 @@ const TaskFlow = () => {
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header & Hero Stats */}
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 action-bar">
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
         <div>
           <h1 className="text-4xl font-black tracking-tight text-slate-900 mb-2">TaskFlow Pro</h1>
           <p className="text-slate-500 font-medium">Your centralized workspace for high-impact productivity.</p>

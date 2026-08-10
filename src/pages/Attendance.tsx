@@ -34,7 +34,7 @@ const Attendance = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 table-scroll-viewport">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <AttendanceHeader 
         selectedGradeId={selectedGradeId}
         setSelectedGradeId={setSelectedGradeId}
