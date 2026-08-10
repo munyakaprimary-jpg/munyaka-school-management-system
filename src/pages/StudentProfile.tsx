@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -24,7 +25,32 @@ import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
-  const student = STUDENTS[0]; 
+  const { id } = useParams();
+  const student = STUDENTS.find(s => s.id === id);
+  
+  if (!student) {
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4">
+          <BackButton to="/students" />
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">Student Not Found</h1>
+            <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">No student found with the provided ID.</p>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="lg:col-span-2 space-y-8">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+              <CardContent className="p-8 text-center">
+                <p className="text-slate-500 text-sm">The student you are looking for does not exist or has been deleted.</p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -152,12 +178,10 @@ const StudentProfile = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y">
-                  {[
-                    { subject: "Mathematics", score: "88%", lvl: "EE" },
+                  {[{ subject: "Mathematics", score: "88%", lvl: "EE" },
                     { subject: "English", score: "75%", lvl: "ME" },
                     { subject: "Science & Tech", score: "92%", lvl: "EE" },
-                    { subject: "Agriculture", score: "84%", lvl: "EE" },
-                  ].map((row, i) => (
+                    { subject: "Agriculture", score: "84%", lvl: "EE" }].map((row, i) => (
                     <tr key={i}>
                       <td className="px-8 py-5 font-bold text-slate-900">{row.subject}</td>
                       <td className="px-8 py-5 text-center font-medium text-slate-600">{row.score}</td>

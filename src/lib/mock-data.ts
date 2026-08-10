@@ -1,4 +1,6 @@
-export const STUDENTS: any[] = [];
+export const STUDENTS: any[] = [
+  { id: "1", name: "Sample Student", assessment: "A000001", grade: "1", stream: "Alpha", gender: "M", dob: "2015-01-01", guardian: "Guardian Name", phone: "+254 700 000 000", email: "sample@email.com", health: "None", needs: "None" }
+];
 
 export interface Stream {
   id: string;
