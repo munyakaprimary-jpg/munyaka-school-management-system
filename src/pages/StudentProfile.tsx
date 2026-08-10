@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  UserCircle, 
-  Mail, 
-  Phone, 
+import {
+  UserCircle,
+  Mail,
+  Phone,
   Calendar,
   FileText,
   CreditCard,
@@ -17,6 +17,7 @@ import {
   UserX,
   Download
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
@@ -24,7 +25,8 @@ import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
-  const student = STUDENTS[0]; 
+  const { studentId } = useParams<{ studentId: string }>();
+  const student = STUDENTS.find(s => s.id === studentId) || STUDENTS[0];
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
