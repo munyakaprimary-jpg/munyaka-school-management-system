@@ -31,12 +31,6 @@ const Students = () => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
 
-  // Action Modal States
-  const [selectedStudent, setSelectedStudent] = useState<any>(null);
-  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
-
   // Registration Form State
   const [fullName, setFullName] = useState("");
   const [assessmentNo, setAssessmentNo] = useState("");
@@ -195,22 +189,6 @@ const Students = () => {
     setFilterStream("all");
   };
 
-  // Action Handlers - each sets the active student before opening its modal
-  const handleView = (student: any) => {
-    setSelectedStudent(student);
-    setIsViewModalOpen(true);
-  };
-
-  const handleEdit = (student: any) => {
-    setSelectedStudent(student);
-    setIsEditModalOpen(true);
-  };
-
-  const handleTransfer = (student: any) => {
-    setSelectedStudent(student);
-    setIsTransferModalOpen(true);
-  };
-
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
@@ -341,36 +319,40 @@ const Students = () => {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={() => handleView(student)}
+                          onClick={() => navigate(`/students/${student.id}`)}
                           title="View Profile"
                         >
                           <Eye size={18} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={() => handleEdit(student)}
-                          title="Edit Student"
+                          onClick={() => navigate(`/students/${student.id}`)}
+                          title="View History"
                         >
                           <History size={18} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() => handleTransfer(student)}
+                          onClick={() => {
+                            // Navigate to profile and open transfer modal
+                            navigate(`/students/${student.id}`);
+                            // The transfer modal will be opened from the profile page
+                          }}
                           title="Transfer Student"
                         >
                           <UserX size={18} className="text-rose-600" />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
                           className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                           onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
                           title="Delete Record"
@@ -457,129 +439,6 @@ const Students = () => {
         </div>
       </Modal>
 
-      {/* View Student Modal */}
-      <Modal isOpen={isViewModalOpen} onClose={() => setIsViewModalOpen(false)} title="View Student" description="Student profile details">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
-              <p className="text-sm font-bold text-slate-900">{selectedStudent?.name}</p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Assessment No.</Label>
-              <p className="text-sm font-bold text-slate-900">{selectedStudent?.assessment}</p>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade</Label>
-              <p className="text-sm font-bold text-slate-900">{selectedStudent?.grade}</p>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Stream</Label>
-              <p className="text-sm font-bold text-slate-900">{selectedStudent?.stream}</p>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Contact</Label>
-            <p className="text-sm font-bold text-slate-900">{selectedStudent?.phone}</p>
-            <p className="text-sm font-bold text-slate-900">{selectedStudent?.guardian}</p>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Edit Student Modal */}
-      <Modal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} title="Edit Student" description="Update student details">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
-              <Input value={selectedStudent?.name} onChange={(e) => setSelectedStudent(prev => ({ ...prev, name: e.target.value }))} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Assessment No.</Label>
-              <Input value={selectedStudent?.assessment} onChange={(e) => setSelectedStudent(prev => ({ ...prev, assessment: e.target.value }))} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade</Label>
-              <Select value={selectedStudent?.grade} onValueChange={(val) => setSelectedStudent(prev => ({ ...prev, grade: val }))}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {GRADES_DATA.map(g => (
-                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Stream</Label>
-              <Select value={selectedStudent?.stream} onValueChange={(val) => setSelectedStudent(prev => ({ ...prev, stream: val }))}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Select stream" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {uniqueStreams.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Guardian Name</Label>
-              <Input value={selectedStudent?.guardian} onChange={(e) => setSelectedStudent(prev => ({ ...prev, guardian: e.target.value }))} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Phone</Label>
-              <Input value={selectedStudent?.phone} onChange={(e) => setSelectedStudent(prev => ({ ...prev, phone: e.target.value }))} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
-            </div>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Transfer Student Modal */}
-      <Modal isOpen={isTransferModalOpen} onClose={() => setIsTransferModalOpen(false)} title="Transfer Student" description="Move student to a new class or stream">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Stream</Label>
-              <Select value={selectedStudent?.stream} onValueChange={(val) => setSelectedStudent(prev => ({ ...prev, stream: val }))}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Select stream" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {uniqueStreams.map(s => (
-                    <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Grade</Label>
-              <Select value={selectedStudent?.grade} onValueChange={(val) => setSelectedStudent(prev => ({ ...prev, grade: val }))}>
-                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Select grade" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {GRADES_DATA.map(g => (
-                    <SelectItem key={g.id} value={g.name}>{g.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Transfer Reason</Label>
-            <textarea className="rounded-xl h-20 bg-slate-50 border-none font-bold p-3" placeholder="Enter transfer reason..." />
-          </div>
-        </div>
-      </Modal>
-
       {/* Admin Verification Modal for Deletion */}
       <Modal
         isOpen={isAuthOpen}
@@ -589,8 +448,8 @@ const Students = () => {
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold">Cancel</Button>
-            <Button
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8"
+            <Button 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
               onClick={handleVerifyAuth}
               disabled={isVerifying}
             >
@@ -610,11 +469,11 @@ const Students = () => {
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input
-                type="password"
-                value={authPassword}
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
-                placeholder="••••••••"
+              <Input 
+                type="password" 
+                value={authPassword} 
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
+                placeholder="••••••••" 
                 className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
                 autoFocus
               />
