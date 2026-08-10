@@ -33,7 +33,7 @@ const SchoolCalendar = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div><h1 className="text-3xl font-bold text-slate-900">School Calendar</h1><p className="text-muted-foreground">Manage events and academic milestones.</p></div>
         <div className="flex gap-2">
           <Button variant="outline" className="rounded-2xl border-slate-200">Export Ical</Button>
