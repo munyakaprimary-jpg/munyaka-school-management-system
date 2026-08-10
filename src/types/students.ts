@@ -27,4 +27,4 @@ export interface RegistrationForm {
   guardianName: string;
   phone: string;
   address: string;
-  }
+}</arg_value></tool_call>
