@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { Modal } from "@/components/ui/modal";
+import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,13 +70,6 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
     }
   }, [isOpen]);
 
-  // Reset stream when grade changes and no longer matches available streams
-  useEffect(() => {
-    if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
-      setRegStream(availableStreams[0]);
-    }
-  }, [regGrade, availableStreams, regStream, setRegStream]);
-
   // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
@@ -100,7 +93,10 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade Level</Label>
-            <Select value={regGrade} onValueChange={(val) => { setRegGrade(val); setRegStream(''); }}>
+            <Select value={regGrade} onValueChange={(val) => {
+              setRegGrade(val);
+              setRegStream('');
+            }}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                 <SelectValue placeholder="Select grade" />
               </SelectTrigger>
@@ -142,7 +138,7 @@ const RegisterModal: React.FC<RegisterModalProps> = ({
           <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
         </div>
       </div>
-    </div>
+    </Modal>
   );
 };
 

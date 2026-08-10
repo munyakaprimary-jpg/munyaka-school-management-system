@@ -305,7 +305,7 @@ const ResultsAnalysis = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       
       {/* Header & Export Action Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
@@ -650,7 +650,7 @@ const ResultsAnalysis = () => {
       {/* Complete Class Breakdown Table */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden print:shadow-none print:rounded-none">
         <CardHeader className="p-8 border-b bg-slate-50/40 print:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
             <div>
               <CardTitle className="text-2xl font-black text-slate-900">Class Results Breakdown</CardTitle>
               <CardDescription>Official score sheet showing individual subject scores, total marks, mean score, and overall rank.</CardDescription>

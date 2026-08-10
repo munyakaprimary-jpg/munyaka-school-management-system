@@ -5,10 +5,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  UserCircle, 
-  Mail, 
-  Phone, 
+import {
+  UserCircle,
+  Mail,
+  Phone,
   Calendar,
   FileText,
   CreditCard,
@@ -17,6 +17,7 @@ import {
   UserX,
   Download
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { STUDENTS } from '@/lib/mock-data';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
@@ -24,7 +25,8 @@ import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
-  const student = STUDENTS[0]; 
+  const { studentId } = useParams<{ studentId: string }>();
+  const student = STUDENTS.find(s => s.id === studentId) || STUDENTS[0];
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -46,15 +48,17 @@ const StudentProfile = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4">
+        {/* Title section with back arrow, name, and subtitle */}
+        <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
           <BackButton to="/students" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">{student.name}</h1>
-            <p className="text-muted-foreground">Detailed learner profile and history.</p>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student.name}</h1>
+            <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">Detailed learner profile and history</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        {/* Action buttons - horizontally scrollable on mobile, horizontal on desktop */}
+        <div className="flex gap-2 overflow-x-auto shrink-0">
           <Button 
             variant="outline" 
             className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"

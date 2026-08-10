@@ -57,7 +57,7 @@ const Communication = () => {
 
   return (
     <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
           <p className="text-muted-foreground">Broadcast messages and track parent outreach.</p>
