@@ -1,35 +1,40 @@
-"use client";
-
 import React, { useState } from 'react';
 
-const ExamMarksEntry = ({ onSubmit }) => {
-  const [score, setScore] = useState('');
+const ExamMarksEntry = ({ learners, selectedExamPeriod, onSubmit }) => {
+  const [marks, setMarks] = useState({});
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (Number(score) <= 100 && Number(score) >= 0) {
-      onSubmit(Number(score));
-    } else {
-      alert('Please enter a score between 0 and 100.');
-    }
+  const handleMarkChange = (learnerId, value) => {
+    setMarks(prev => ({...prev, [learnerId]: value}));
+  };
+
+  const handleSubmit = () => {
+    const validMarks = Object.entries(marks).filter(([_, value]) => {
+      const num = Number(value);
+      return !isNaN(num) && num >= 0 && num <= 100;
+    }).reduce((acc, [id, val]) => ({...acc, [id]: val}), {});
+
+    onSubmit(selectedExamPeriod, validMarks);
   };
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="flex items-center space-x-2">
-        <input
-          type="number"
-          value={score}
-          onChange={(e) => setScore(e.target.value)}
-          min="0"
-          max="100"
-          required
-          className="border rounded px-3 py-2"
-        />
-        <button type="submit" className="bg-blue-500 text-white rounded px-4 py-2">
-          Submit Score
-        </button>
-      </div>
+      {learners.map(learner => (
+        <div key={learner.id} className="mb-4">
+          <h4>{learner.name}</h4>
+          <input
+            type="number"
+            value={marks[learner.id] || ''}
+            onChange={(e) => handleMarkChange(learner.id, e.target.value)}
+            min="0"
+            max="100"
+            required
+            className="border rounded px-3 py-2"
+          />
+        </div>
+      ))}
+      <button type="submit" className="bg-blue-500 text-white rounded px-4 py-2">
+        Submit Marks
+      </button>
     </form>
   );
 };
