@@ -5,6 +5,7 @@ import { showSuccess } from '@/utils/toast';
 import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 import { ExamTypeOption } from '@/types/assessments';
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
+import { MarksService, buildExamId } from '@/services/MarksService';
 
 // Sub-components
 import AssessmentHeader from '@/components/assessments/AssessmentHeader';
@@ -70,32 +71,30 @@ const Assessments = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
   
-  // Data States
-  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-
-  // Load saved marks from localStorage on mount
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        if (parsed && typeof parsed === 'object') {
-          setMarksMatrix(parsed);
-        }
-      } catch (e) {
-        console.error("Error loading saved marks:", e);
-      }
-    }
-  }, []);
-
-  // Persist marks to localStorage whenever they change
-  useEffect(() => {
-    if (Object.keys(marksMatrix).length > 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(marksMatrix));
-    }
-  }, [marksMatrix]);
+  // Derived exam identity for the currently selected exam/session
+    const currentExamId = useMemo(() => {
+      if (!examType) return "";
+      return buildExamId({
+        academic_year: academicYear,
+        term,
+        exam_type: examType,
+        gradeId: selectedGradeId,
+        streamId: selectedStreamId,
+      });
+    }, [academicYear, term, examType, selectedGradeId, selectedStreamId]);
+  
+    // Data States
+    const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
+    const [activeExamId, setActiveExamId] = useState<string>("");
+    const [isSaving, setIsSaving] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
+  
+    // Load saved marks for the selected exam only (blank grid for a new exam).
+    useEffect(() => {
+      if (!currentExamId) return;
+      setMarksMatrix(MarksService.getMarks(currentExamId));
+      setActiveExamId(currentExamId);
+    }, [currentExamId]);
 
   // Set default selected grade
   useEffect(() => {
