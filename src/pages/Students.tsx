@@ -336,54 +336,42 @@ const Students = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            navigate(`/students/${student.id}`);
-                          }}
-                          title="View Profile"
-                        >
-                          <Eye size={18} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewHistory(student);
-                          }}
-                          title="View History"
-                        >
-                          <History size={18} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTransferStudent(student);
-                          }}
-                          title="Transfer Student"
-                        >
-                          <UserX size={18} className="text-rose-600" />
-                        </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
-                          title="Delete Record"
-                        >
-                          <Trash2 size={18} />
-                        </Button>
-                      </div>
-                    </td>
+                                          <div className="flex items-center justify-end gap-2">
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleViewHistory(student);
+                                              }}
+                                              title="View History"
+                                            >
+                                              <History size={18} />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleTransferStudent(student);
+                                              }}
+                                              title="Transfer Student"
+                                            >
+                                              <UserX size={18} className="text-rose-600" />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
+                                              className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                              onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
+                                              title="Delete Record"
+                                            >
+                                              <Trash2 size={18} />
+                                            </Button>
+                                          </div>
+                                        </td>
                   </tr>
                 ))}
                 {filteredStudents.length === 0 && (
