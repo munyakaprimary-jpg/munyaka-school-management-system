@@ -81,19 +81,19 @@ const Students = () => {
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
-    const newStudent = { 
-      id: (studentsList.length + 1).toString(), 
-      name: fullName.trim(), 
-      assessment: assessmentNo.trim().toUpperCase(), 
-      grade: regGrade, 
-      stream: regStream, 
-      gender: "M", 
-      dob: "2014-01-01", 
-      guardian: guardianName.trim(), 
-      phone: phone.trim(), 
-      email: "g@email.com", 
-      health: "None", 
-      needs: "None" 
+    const newStudent = {
+      id: (studentsList.length + 1).toString(),
+      name: fullName.trim(),
+      assessment: assessmentNo.trim().toUpperCase(),
+      grade: regGrade,
+      stream: regStream,
+      gender: "",
+      dob: "",
+      guardian: guardianName.trim(),
+      phone: phone.trim(),
+      email: "",
+      health: "",
+      needs: ""
     };
     setStudentsList([newStudent, ...studentsList]);
     setIsRegisterOpen(false);
