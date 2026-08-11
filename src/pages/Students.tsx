@@ -13,13 +13,16 @@ import BackButton from '@/components/ui/BackButton';
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
+import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
+import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import { StudentTransferInfo } from '@/types/transfer';
 
 const Students = () => {
   const [studentsList, setStudentsList] = useState(initialStudents);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterStream, setFilterStream] = useState("all");
-  
+
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
@@ -30,6 +33,11 @@ const Students = () => {
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // History and Transfer Modals State
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<typeof STUDENTS[0] | null>(null);
 
   // Registration Form State
   const [fullName, setFullName] = useState("");
@@ -123,6 +131,16 @@ const Students = () => {
       showError("Authorization failed");
     }
     setIsVerifying(false);
+  };
+
+  const handleViewHistory = (student: typeof STUDENTS[0]) => {
+    setSelectedStudent(student);
+    setIsHistoryModalOpen(true);
+  };
+
+  const handleTransferStudent = (student: typeof STUDENTS[0]) => {
+    setSelectedStudent(student);
+    setIsTransferOpen(true);
   };
 
   const handleExportCSV = () => {
@@ -319,32 +337,37 @@ const Students = () => {
                     </td>
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={() => navigate(`/students/${student.id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate(`/students/${student.id}`);
+                          }}
                           title="View Profile"
                         >
                           <Eye size={18} />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={() => navigate(`/students/${student.id}`)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewHistory(student);
+                          }}
                           title="View History"
                         >
                           <History size={18} />
                         </Button>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() => {
-                            // Navigate to profile and open transfer modal
-                            navigate(`/students/${student.id}`);
-                            // The transfer modal will be opened from the profile page
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTransferStudent(student);
                           }}
                           title="Transfer Student"
                         >
