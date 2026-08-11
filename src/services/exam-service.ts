@@ -1,4 +1,4 @@
-import { STUDENTS } from './mock-data';
+import { STUDENTS } from '@/lib/mock-data';
 
 export interface MarkRecord {
   learnerId: string;
@@ -16,7 +16,7 @@ const STORAGE_KEY = 'exam_marks_data';
 export const ExamService = {
   getMarks: (): MarksData => {
     const data = localStorage.getItem(STORAGE_KEY);
-    return data? JSON.parse(data) : [];
+    return data ? JSON.parse(data) : [];
   },
 
   saveMarks: (newMarks: MarksData): void => {
@@ -37,8 +37,8 @@ export const ExamService = {
       if (existingIndex > -1) {
         // If marks for this period already exist, merge them (allowing updates to the same period)
         updatedMarks[existingIndex].marks = {
-          ..updatedMarks[existingIndex].marks,
-          ..newMark.marks
+          ...updatedMarks[existingIndex].marks,
+          ...newMark.marks
         };
       } else {
         // If it's a new period, add it
@@ -62,7 +62,7 @@ export const ExamService = {
 
     // Check if any of these learners already have marks for this period
     const filteredNewMarks = newPeriodMarks.filter(newMark => {
-      return!currentMarks.some(m => 
+      return !currentMarks.some(m => 
         m.learnerId === newMark.learnerId &&
         m.grade === newMark.grade &&
         m.year === newMark.year &&
