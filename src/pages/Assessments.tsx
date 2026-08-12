@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 import { ExamTypeOption } from '@/types/assessments';
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
@@ -12,8 +12,6 @@ import AssessmentHeader from '@/components/assessments/AssessmentHeader';
 import AssessmentFilters from '@/components/assessments/AssessmentFilters';
 import MarksTable from '@/components/assessments/MarksTable';
 import AssessmentInstructions from '@/components/assessments/AssessmentInstructions';
-
-const STORAGE_KEY = 'munyaka_marks_records';
 
 const Assessments = () => {
   // Dynamically load grades and streams
@@ -180,14 +178,22 @@ const Assessments = () => {
   };
 
   const handleSave = async () => {
+    if (!currentExamId) {
+      showError("Please select a valid exam period.");
+      return;
+    }
+
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 800));
     
-    // Persist to localStorage as permanent record
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(marksMatrix));
-    
-    setIsSaving(false);
-    showSuccess("Marks saved permanently! Records will persist across sessions.");
+    try {
+      MarksService.saveMarks(currentExamId, marksMatrix);
+      setIsSaving(false);
+      showSuccess("Marks saved successfully for this exam period.");
+    } catch (e) {
+      setIsSaving(false);
+      showError("Failed to save marks. Please try again.");
+    }
   };
 
   const handleExport = () => {
