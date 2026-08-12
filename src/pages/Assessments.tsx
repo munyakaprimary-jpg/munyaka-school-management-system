@@ -7,6 +7,12 @@ import { ExamTypeOption } from '@/types/assessments';
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
 import { MarksService, buildExamId } from '@/services/MarksService';
 
+// Sub-components
+import AssessmentHeader from '@/components/assessments/AssessmentHeader';
+import AssessmentFilters from '@/components/assessments/AssessmentFilters';
+import MarksTable from '@/components/assessments/MarksTable';
+import AssessmentInstructions from '@/components/assessments/AssessmentInstructions';
+
 const STORAGE_KEY = 'munyaka_marks_records';
 
 const Assessments = () => {
