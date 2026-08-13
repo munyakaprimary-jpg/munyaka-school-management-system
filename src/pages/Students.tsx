@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -72,7 +70,7 @@ const Students = () => {
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+                         s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = filterGrade === "all" || s.grade === filterGrade;
       const matchesStream = filterStream === "all" || s.stream === filterStream;
       return matchesSearch && matchesGrade && matchesStream;
@@ -93,11 +91,21 @@ const Students = () => {
       phone: phone.trim(), 
       email: "g@email.com", 
       health: "None", 
-      needs: "None" 
+      needs: "None",
+      feeBalance: 0,
+      status: "Active" as const,
+      dateOfAdmission: "2020-01-15",
+      coCurricularActivities: ""
     };
     setStudentsList([newStudent, ...studentsList]);
     setIsRegisterOpen(false);
-    setFullName(""); setAssessmentNo(""); setRegGrade(""); setRegStream(""); setGuardianName(""); setPhone(""); setAddress("");
+    setFullName("");
+    setAssessmentNo("");
+    setRegGrade("");
+    setRegStream("");
+    setGuardianName("");
+    setPhone("");
+    setAddress("");
     showSuccess(`Student ${newStudent.name} registered!`);
   };
 
@@ -153,7 +161,7 @@ const Students = () => {
     
     setTimeout(() => {
       const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const row2 = "P.O. BOX 5239-30100,ELDORET";
+      const row2 = "P.O. Box 5239-30100,ELDORET";
       const row3 = "MOTTO: KNOWLEDGE POWER";
       
       const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
@@ -161,27 +169,19 @@ const Students = () => {
       const activeTerm = "Term 1";
 
       const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
-
-      const headers = ["Name", "Assessment No", "Grade", "Stream", "Guardian", "Phone"];
+      
+      const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
-        `"${s.name.replace(/"/g, '""')}"`,
-        `"${s.assessment.replace(/"/g, '""')}"`,
-        `"Grade ${s.grade}"`,
-        `"${s.stream.replace(/"/g, '""')}"`,
-        `"${s.guardian.replace(/"/g, '""')}"`,
-        `"${s.phone.replace(/"/g, '""')}"`
+        `"${s.name.replace(/"/g, '""')}\"`,
+        `"${s.assessment.replace(/"/g, '""')}\"`,
+        `\"Grade ${s.grade}\"`,
+        `"${s.stream.replace(/"/g, '""')}\"`,
+        `"${s.guardian.replace(/"/g, '""')}\"`,
+        `"${s.phone.replace(/"/g, '""')}\"`
       ]);
-
-      const csvContent = [
-        row1,
-        row2,
-        row3,
-        row4,
-        "",
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ].join("\n");
-
+      
+      const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+      
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -190,7 +190,7 @@ const Students = () => {
       const fileName = filterGrade !== "all" || filterStream !== "all" 
         ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
         : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
-
+      
       link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
@@ -249,10 +249,10 @@ const Students = () => {
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
             <Select value={filterGrade} onValueChange={setFilterGrade}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Grade Levels</SelectItem>
                 {GRADES_DATA.map(g => (
                   <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
@@ -262,14 +262,14 @@ const Students = () => {
               </SelectContent>
             </Select>
           </div>
-
+          
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
             <Select value={filterStream} onValueChange={setFilterStream}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="All Streams" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Streams</SelectItem>
                 {uniqueStreams.map(s => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
@@ -277,7 +277,7 @@ const Students = () => {
               </SelectContent>
             </Select>
           </div>
-
+          
           <Button 
             variant="ghost" 
             className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
@@ -492,6 +492,16 @@ const Students = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Academic History Modal */}
+      <AcademicHistoryModal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} studentId={selectedStudent?.id || ''} studentName={selectedStudent?.name || ''} />
+
+      {/* Transfer Workflow Modal */}
+      <TransferWorkflow isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} student={selectedStudent as StudentTransferInfo} onTransferComplete={(studentId, certificateNumber) => {
+        setIsTransferOpen(false);
+        setSelectedStudent(null);
+        showSuccess(`Transfer completed! Certificate ${certificateNumber} generated.`);
+      }} />
     </div>
   );
 };
