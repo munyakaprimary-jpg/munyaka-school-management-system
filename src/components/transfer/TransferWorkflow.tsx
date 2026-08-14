@@ -340,8 +340,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const feeStatus = student.feeBalance <= 0 ? 'CLEARED' : 'PENDING';
-  const feeStatusClass = student.feeBalance <= 0 ? 'fee-status-cleared' : 'fee-status-pending';
+  const feeStatus = student?.feeBalance <= 0 ? 'CLEARED' : 'PENDING';
+  const feeStatusClass = student?.feeBalance <= 0 ? 'fee-status-cleared' : 'fee-status-pending';
 
   // Dynamic footer based on current step
   const renderFooter = () => {
@@ -484,7 +484,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             
             <Card className={cn(
               "border-none shadow-sm rounded-2xl p-6",
-              student.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
+              student?.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
             )}>
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex items-center gap-4">
@@ -492,16 +492,16 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                     "p-4 rounded-2xl",
                     student.feeBalance > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
                   )}>
-                    {student.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
+                    {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
                   </div>
                   <div>
                     <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
                     <p className="text-2xl font-black text-slate-900">
-                      KES {student.feeBalance.toLocaleString()}
+                      KES {student?.feeBalance.toLocaleString()}
                     </p>
                     <Badge className={cn(
                       "mt-2 text-xs font-bold",
-                      student.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                      student?.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
                     )}>
                       {feeStatus}
                     </Badge>
@@ -678,7 +678,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                 <span className="detail-label">Final Fee Clearance Status:</span>
                 <span className="detail-value">
                   <span className={cn("font-bold px-3 py-1 rounded", feeStatusClass)}>
-                    {feeStatus} {student.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
+                    {student?.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
                   </span>
                 </span>
               </div>

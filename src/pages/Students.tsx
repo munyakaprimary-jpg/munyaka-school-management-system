@@ -147,9 +147,28 @@ const Students = () => {
   };
 
   const handleTransferStudent = (student: typeof STUDENTS[0]) => {
-    setSelectedStudent(student);
-    setIsTransferOpen(true);
-  };
+      // Ensure student has all required properties for StudentTransferInfo
+      const studentWithTransferInfo: StudentTransferInfo = {
+        id: student.id,
+        name: student.name,
+        assessment: student.assessment,
+        grade: student.grade,
+        stream: student.stream,
+        gender: student.gender,
+        dob: student.dob,
+        guardian: student.guardian,
+        phone: student.phone,
+        email: student.email,
+        health: student.health,
+        needs: student.needs,
+        feeBalance: student.feeBalance || 0,
+        status: student.status || 'Active',
+        dateOfAdmission: student.dateOfAdmission || '2020-01-15',
+        coCurricularActivities: student.coCurricularActivities || ''
+      };
+      setSelectedStudent(studentWithTransferInfo as typeof STUDENTS[0]);
+      setIsTransferOpen(true);
+    };
 
   const handleExportCSV = () => {
     if (filteredStudents.length === 0) {
