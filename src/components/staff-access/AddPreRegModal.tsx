@@ -97,16 +97,16 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     setComboboxOpen(false);
 
     setFormData(prev => ({
-      ...prev,
-      fullName: staff.name,
-      nationalId: staff.id_no,
-      tscNumber: staff.tsc_no || "",
-      email: staff.email,
-      phone: staff.phone,
-      systemRole: mapRoleToSystemRole(staff.role),
-      department: staff.department || "Languages & Humanities",
-      assignedSubjects: staff.subjects ? staff.subjects.join(", ") : "Mathematics, Science & Tech"
-    }));
+          ...prev,
+          fullName: staff?.name ?? "",
+          nationalId: staff?.id_no ?? "",
+          tscNumber: staff?.tsc_no || "",
+          email: staff?.email ?? "",
+          phone: staff?.phone ?? "",
+          systemRole: mapRoleToSystemRole(staff?.role ?? ""),
+          department: staff?.department || "Languages & Humanities",
+          assignedSubjects: staff?.subjects ? staff.subjects.join(", ") : "Mathematics, Science & Tech"
+        }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -174,24 +174,24 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
                   </CommandEmpty>
                   <CommandGroup heading="Available Staff Members">
                     {availableStaff.map((staff) => (
-                      <CommandItem
-                        key={staff.id}
-                        value={`${staff.name} ${staff.id_no} ${staff.email}`}
-                        onSelect={() => handleSelectStaff(staff)}
-                        className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">{staff.name}</p>
-                          <p className="text-xs text-slate-500 font-medium">ID: {staff.id_no} • {staff.role} • {staff.email}</p>
-                        </div>
-                        <Check
-                          className={cn(
-                            "h-4 w-4 text-indigo-600",
-                            selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                      </CommandItem>
-                    ))}
+                                          <CommandItem
+                                            key={staff.id}
+                                            value={`${staff?.name ?? ''} ${staff?.id_no ?? ''} ${staff?.email ?? ''}`}
+                                            onSelect={() => handleSelectStaff(staff)}
+                                            className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                                          >
+                                            <div>
+                                              <p className="font-bold text-slate-900 text-sm">{staff?.name ?? ''}</p>
+                                              <p className="text-xs text-slate-500 font-medium">ID: {staff?.id_no ?? ''} • {staff?.role ?? ''} • {staff?.email ?? ''}</p>
+                                            </div>
+                                            <Check
+                                              className={cn(
+                                                "h-4 w-4 text-indigo-600",
+                                                selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                          </CommandItem>
+                                        ))}
                   </CommandGroup>
                 </CommandList>
               </Command>

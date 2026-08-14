@@ -37,7 +37,7 @@ const AuthModal: React.FC<AuthModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title="Admin Authorization Required"
-      description={`Enter your admin password to delete learner record for "${studentToDelete?.name}".`}
+      description={`Enter your admin password to delete learner record for "${studentToDelete?.name ?? 'Unknown'}".`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} className="rounded-xl font-bold">Cancel</Button>

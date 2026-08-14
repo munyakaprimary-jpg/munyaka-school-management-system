@@ -45,10 +45,10 @@ export const PortfolioFilters: React.FC<PortfolioFiltersProps> = ({
           <SelectContent className="rounded-2xl">
             <SelectItem value="all">All Grade Levels</SelectItem>
             {GRADES_DATA.map(g => (
-              <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
-                {g.name}
-              </SelectItem>
-            ))}
+                          <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                            {g?.name ?? ''}
+                          </SelectItem>
+                        ))}
           </SelectContent>
         </Select>
 

@@ -67,11 +67,11 @@ const RecordPaymentModal = ({
   const filteredStudents = useMemo(() => {
     if (!selectedGradeObj || !selectedStreamObj) return [];
 
-    const gradeNum = selectedGradeObj.name.replace(/[^0-9]/g, '');
+    const gradeNum = selectedGradeObj?.name?.replace(/[^0-9]/g, '') ?? '';
 
     return studentsData.filter(s => {
-      const matchesGrade = s.grade === gradeNum || s.grade === selectedGradeObj.name;
-      const matchesStream = s.stream.toLowerCase() === selectedStreamObj.name.toLowerCase();
+      const matchesGrade = s.grade === gradeNum || s.grade === selectedGradeObj?.name;
+            const matchesStream = s.stream.toLowerCase() === selectedStreamObj?.name?.toLowerCase();
       return matchesGrade && matchesStream;
     });
   }, [selectedGradeObj, selectedStreamObj, studentsData]);
@@ -152,10 +152,10 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {gradesData.map(g => (
-                <SelectItem key={g.id} value={g.id}>
-                  {g.name} ({g.category})
-                </SelectItem>
-              ))}
+                              <SelectItem key={g.id} value={g.id}>
+                                {g?.name ?? ''} ({g?.category ?? ''})
+                              </SelectItem>
+                            ))}
             </SelectContent>
           </Select>
         </div>
@@ -183,10 +183,10 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {availableStreams.map(s => (
-                <SelectItem key={s.id} value={s.id}>
-                  Stream {s.name} ({s.studentsCount} Learners)
-                </SelectItem>
-              ))}
+                              <SelectItem key={s.id} value={s.id}>
+                                Stream {s?.name ?? ''} ({s?.studentsCount ?? 0} Learners)
+                              </SelectItem>
+                            ))}
             </SelectContent>
           </Select>
         </div>
@@ -217,18 +217,18 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {filteredStudents.length > 0 ? (
-                filteredStudents.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.name} — Assessment #{student.assessment}
-                  </SelectItem>
-                ))
-              ) : (
-                studentsData.map(student => (
-                  <SelectItem key={student.id} value={student.id}>
-                    {student.name} (Grade {student.grade} - {student.stream})
-                  </SelectItem>
-                ))
-              )}
+                              filteredStudents.map(student => (
+                                <SelectItem key={student.id} value={student.id}>
+                                  {student?.name ?? ''} — Assessment #{student?.assessment ?? ''}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              studentsData.map(student => (
+                                <SelectItem key={student.id} value={student.id}>
+                                  {student?.name ?? ''} (Grade {student?.grade ?? ''} - {student?.stream ?? ''})
+                                </SelectItem>
+                              ))
+                            )}
             </SelectContent>
           </Select>
         </div>

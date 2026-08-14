@@ -56,7 +56,7 @@ const MarksTable = ({
                 return (
                   <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                     <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
-                      <p className="font-bold text-slate-900 truncate">{student.name}</p>
+                      <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                         ID: {student.assessment} • Stream: {student.stream}
                       </p>

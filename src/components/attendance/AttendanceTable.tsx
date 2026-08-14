@@ -135,7 +135,7 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing
                 return (
                   <tr key={student.id} className="group hover:bg-slate-50/50 transition-colors">
                     <td className="px-8 py-6">
-                      <p className="font-bold text-slate-900 text-base">{student.name}</p>
+                      <p className="font-bold text-slate-900 text-base">{student?.name ?? 'Unknown'}</p>
                       <p className="text-xs text-slate-400 font-medium mt-0.5">Assessment ID: {student.assessment}</p>
                     </td>
                     {renderSessionColumn(record, 'morning', student.id)}

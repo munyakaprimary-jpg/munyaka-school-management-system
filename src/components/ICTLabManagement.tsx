@@ -139,12 +139,12 @@ const ICTLabManagement = () => {
   // --- Derived Data ---
   const filteredAssets = useMemo(() => {
     return assets.filter(a => {
-      const matchesSearch = 
-        a.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        a.assetTag.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        a.serialNumber.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || a.status === statusFilter;
-      const matchesCategory = categoryFilter === "all" || a.category === categoryFilter;
+      const matchesSearch =
+        a?.name?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+        a?.assetTag?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
+        a?.serialNumber?.toLowerCase().includes(searchQuery?.toLowerCase());
+      const matchesStatus = statusFilter === "all" || a?.status === statusFilter;
+      const matchesCategory = categoryFilter === "all" || a?.category === categoryFilter;
       return matchesSearch && matchesStatus && matchesCategory;
     });
   }, [assets, searchQuery, statusFilter, categoryFilter]);
@@ -268,7 +268,7 @@ const ICTLabManagement = () => {
   // --- Handlers ---
   const handleAddAsset = (newAsset: ICTAsset) => {
     setAssets(prev => [newAsset, ...prev]);
-    showSuccess(`Added ${newAsset.name} to inventory.`);
+    showSuccess(`Added ${newAsset?.name ?? 'Unknown'} to inventory.`);
   };
 
   const openLogModal = (mode: 'issue' | 'return') => {

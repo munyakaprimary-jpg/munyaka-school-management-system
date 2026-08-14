@@ -72,8 +72,8 @@ const AssessmentFilters = ({
               </SelectTrigger>
               <SelectContent>
                 {gradesList.map((g) => (
-                  <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
-                ))}
+                                  <SelectItem key={g.id} value={g.id}>{g?.name ?? ''}</SelectItem>
+                                ))}
               </SelectContent>
             </Select>
           </div>
@@ -87,10 +87,10 @@ const AssessmentFilters = ({
               <SelectContent>
                 <SelectItem value="all">All Streams</SelectItem>
                 {availableStreams.map((s) => (
-                  <SelectItem key={s.id} value={s.id}>
-                    {s.name}
-                  </SelectItem>
-                ))}
+                                  <SelectItem key={s.id} value={s.id}>
+                                    {s?.name ?? ''}
+                                  </SelectItem>
+                                ))}
               </SelectContent>
             </Select>
           </div>
@@ -103,10 +103,10 @@ const AssessmentFilters = ({
               </SelectTrigger>
               <SelectContent>
                 {examTypesList.map((et) => (
-                  <SelectItem key={et.id} value={et.code}>
-                    {et.name}
-                  </SelectItem>
-                ))}
+                                  <SelectItem key={et.id} value={et.code}>
+                                    {et?.name ?? ''}
+                                  </SelectItem>
+                                ))}
               </SelectContent>
             </Select>
           </div>
