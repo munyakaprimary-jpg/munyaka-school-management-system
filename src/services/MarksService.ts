@@ -16,7 +16,8 @@ export const MarksService = {
  const raw = localStorage.getItem(MARKS_STORAGE_KEY);
  if (!raw) return {};
  try {
- const records: MarkRecord[] = JSON.parse(raw);
+ const parsed = JSON.parse(raw);
+ const records: MarkRecord[] = Array.isArray(parsed) ? parsed : [];
  return records
 .filter(r => r.exam_id === examId)
 .reduce<MarksMatrix>((matrix, r) => {
@@ -43,11 +44,19 @@ export const MarksService = {
   }, {});
  },
 
- saveMarks: async (examId: string, matrix: MarksMatrix) => {
+ saveMarks: async (examId: string, matrix: MarksMatrix): Promise<MarkRecord[]> => {
   if (!examId) throw new Error("exam_id is required");
 
   const raw = localStorage.getItem(MARKS_STORAGE_KEY);
-  const records: MarkRecord[] = raw? JSON.parse(raw) : [];
+  let records: MarkRecord[] = [];
+  
+  try {
+    const parsed = raw ? JSON.parse(raw) : [];
+    records = Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    console.error("Error parsing marks from localStorage", e);
+    records = [];
+  }
 
   // Parse examId to extract context fields
   const [academic_year, term, exam_type, gradeId, streamId] = examId.split("|");
@@ -91,5 +100,6 @@ export const MarksService = {
   });
 
   localStorage.setItem(MARKS_STORAGE_KEY, JSON.stringify(updatedRecords));
+  return updatedRecords;
   }
 };
