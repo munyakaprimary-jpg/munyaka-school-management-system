@@ -86,7 +86,7 @@ export const MarksService = {
       );
       
       if (existingIndex > -1) {
-        updatedRecords[existingIndex] = { ...updatedRecords[existingIndex}, ...newRecord };
+        updatedRecords[existingIndex] = { ...updatedRecords[existingIndex], ...newRecord };
       } else {
         updatedRecords.push(newRecord);
       }
