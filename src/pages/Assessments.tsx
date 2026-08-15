@@ -1,31 +1,31 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { showSuccess, showError } from '@/utils/toast';
-import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
-import { ExamTypeOption } from '@/types/assessments';
-import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from '@/lib/assessment-constants';
-import { MarksService, buildExamId } from '@/services/MarksService';
+import React, { useState, useEffect, useMemo } from "react";
+import { showSuccess, showError } from "@/utils/toast";
+import { GRADES_DATA, STUDENTS, Grade, Stream } from "@/lib/mock-data";
+import { ExamTypeOption } from "@/types/assessments";
+import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from "@/lib/assessment-constants";
+import { MarksService, buildExamId } from "@/services/MarksService";
 
 // Sub-components
-import AssessmentHeader from '@/components/assessments/AssessmentHeader';
-import AssessmentFilters from '@/components/assessments/AssessmentFilters';
-import MarksTable from '@/components/assessments/MarksTable';
-import AssessmentInstructions from '@/components/assessments/AssessmentInstructions';
+import AssessmentHeader from "@/components/assessments/AssessmentHeader";
+import AssessmentFilters from "@/components/assessments/AssessmentFilters";
+import MarksTable from "@/components/assessments/MarksTable";
+import AssessmentInstructions from "@/components/assessments/AssessmentInstructions";
 
 const Assessments = () => {
   // Dynamically load grades and streams
   const gradesList = useMemo(() => {
-    const saved = localStorage.getItem('munyaka_grades');
+    const saved = localStorage.getItem("munyaka_grades");
     const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
 
     return [...rawList].sort((a, b) => {
       const categoryRank: Record<string, number> = {
-        'Pre-Primary': 1,
-        'Primary': 2,
-        'Junior School': 3
+        "Pre-Primary": 1,
+        "Primary": 2,
+        "Junior School": 3
       };
-      
+
       const rankA = categoryRank[a.category] || 99;
       const rankB = categoryRank[b.category] || 99;
 
@@ -36,8 +36,8 @@ const Assessments = () => {
       const extractNumber = (name: string) => {
         const match = name.match(/\d+/);
         if (match) return parseInt(match[0], 10);
-        if (name.toUpperCase().includes('PP1')) return 1;
-        if (name.toUpperCase().includes('PP2')) return 2;
+        if (name.toUpperCase().includes("PP1")) return 1;
+        if (name.toUpperCase().includes("PP2")) return 2;
         return 0;
       };
 
@@ -47,7 +47,7 @@ const Assessments = () => {
 
   // Dynamically load exam types
   const examTypesList = useMemo<ExamTypeOption[]>(() => {
-    const saved = localStorage.getItem('munyaka_exam_types');
+    const saved = localStorage.getItem("munyaka_exam_types");
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
@@ -68,31 +68,36 @@ const Assessments = () => {
   const [term, setTerm] = useState("term1");
   const [searchTerm, setSearchTerm] = useState("");
   const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
-  
+
   // Derived exam identity for the currently selected exam/session
-    const currentExamId = useMemo(() => {
-      if (!examType) return "";
-      return buildExamId({
-        academic_year: academicYear,
-        term,
-        exam_type: examType,
-        gradeId: selectedGradeId,
-        streamId: selectedStreamId,
-      });
-    }, [academicYear, term, examType, selectedGradeId, selectedStreamId]);
-  
-    // Data States
-    const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
-    const [activeExamId, setActiveExamId] = useState<string>("");
-    const [isSaving, setIsSaving] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
-  
-    // Load saved marks for the selected exam only (blank grid for a new exam).
-    useEffect(() => {
-      if (!currentExamId) return;
-      setMarksMatrix(MarksService.getMarks(currentExamId));
-      setActiveExamId(currentExamId);
-    }, [currentExamId]);
+  const currentExamId = useMemo(() => {
+    if (!examType) return "";
+    return buildExamId({
+      academic_year: academicYear,
+      term,
+      exam_type: examType,
+      gradeId: selectedGradeId,
+      streamId: selectedStreamId,
+    });
+  }, [academicYear, term, examType, selectedGradeId, selectedStreamId]);
+
+  // Data States
+  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
+  const [activeExamId, setActiveExamId] = useState<string>("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // Load saved marks for the selected exam only (blank grid for a new exam).
+  useEffect(() => {
+    if (!currentExamId) {
+      // When switching to a new exam type with no records, initialize blank fields
+      setMarksMatrix({});
+      setActiveExamId("");
+      return;
+    }
+    setMarksMatrix(MarksService.getMarks(currentExamId));
+    setActiveExamId(currentExamId);
+  }, [currentExamId]);
 
   // Set default selected grade
   useEffect(() => {
@@ -115,35 +120,35 @@ const Assessments = () => {
     }
   }, [selectedGradeId]);
 
-  const currentGrade = useMemo(() => 
-    gradesList.find((g: Grade) => g.id === selectedGradeId), 
+  const currentGrade = useMemo(() =>
+    gradesList.find((g: Grade) => g.id === selectedGradeId),
     [selectedGradeId, gradesList]
   );
 
-  const availableStreams = useMemo(() => 
-    currentGrade ? currentGrade.streams : [], 
+  const availableStreams = useMemo(() =>
+    currentGrade ? currentGrade.streams : [],
     [currentGrade]
   );
 
   const filteredLearningAreas = useMemo(() => {
     if (!currentGrade) return [];
     const gradeName = currentGrade.name.toLowerCase();
-    let clusterId = 'lower-primary';
-    if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) clusterId = 'upper-primary';
-    else if (gradeName.includes("pp")) clusterId = 'pre-primary';
-    else if (currentGrade.category === 'Junior School') clusterId = 'junior-school';
-    
+    let clusterId = "lower-primary";
+    if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) clusterId = "upper-primary";
+    else if (gradeName.includes("pp")) clusterId = "pre-primary";
+    else if (currentGrade.category === "Junior School") clusterId = "junior-school";
+
     return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
   }, [currentGrade]);
 
   const filteredStudents = useMemo(() => {
     if (!currentGrade) return [];
-    
-    const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
+
+    const gradeNum = currentGrade.name.replace(/[^0-9]/g, "");
 
     return STUDENTS.filter(s => {
-      const matchesGrade = 
-        s.grade === gradeNum || 
+      const matchesGrade =
+        s.grade === gradeNum ||
         s.grade === currentGrade.name ||
         `Grade ${s.grade}` === currentGrade.name;
 
@@ -155,9 +160,9 @@ const Assessments = () => {
         }
       }
 
-      const matchesSearch = 
+      const matchesSearch =
         !searchTerm.trim() ||
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
 
       return matchesGrade && matchesStream && matchesSearch;
@@ -165,9 +170,9 @@ const Assessments = () => {
   }, [currentGrade, selectedStreamId, availableStreams, searchTerm]);
 
   const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
-    let clean = value.replace(/[^0-9]/g, '');
-    if (clean !== '' && parseInt(clean, 10) > 100) clean = "100";
-    
+    let clean = value.replace(/[^0-9]/g, "");
+    if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
+
     setMarksMatrix(prev => ({
       ...prev,
       [studentId]: {
@@ -183,9 +188,17 @@ const Assessments = () => {
       return;
     }
 
+    // Validate that exam_type_id is present
+    const examIdParts = currentExamId.split("|");
+    const examTypeId = examIdParts[2];
+    if (!examTypeId) {
+      showError("Exam type ID is missing. Please select a valid exam period.");
+      return;
+    }
+
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 800));
-    
+
     try {
       MarksService.saveMarks(currentExamId, marksMatrix);
       setIsSaving(false);
@@ -244,10 +257,10 @@ const Assessments = () => {
         }, 0);
 
         return [
-          `"${student.name.replace(/"/g, '""')}"`,
-          `"${student.assessment.replace(/"/g, '""')}"`,
-          ...scores.map(s => `"${s}"`),
-          `"${hasMarks ? totalMarks : '—'}"`
+          `${student.name.replace(/\"/g, '\"\"')}`,
+          `${student.assessment.replace(/\"/g, '\"\"')}`,
+          ...scores.map(s => `${s}`),
+          `${hasMarks ? totalMarks : '—'}`
         ];
       });
 
@@ -263,9 +276,9 @@ const Assessments = () => {
       ].join("\n");
 
       // Data URI fallback for Android WebView compatibility
-      const BOM = '\uFEFF';
-      const dataUri = 'data:text/csv;charset=utf-8,' + encodeURIComponent(BOM + csvContent);
-      
+      const BOM = "\uFEFF";
+      const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(BOM + csvContent);
+
       const link = document.createElement("a");
       link.setAttribute("href", dataUri);
       link.setAttribute("target", "_blank");
@@ -281,14 +294,14 @@ const Assessments = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full table-scroll-viewport">
-      <AssessmentHeader 
+      <AssessmentHeader
         onExport={handleExport}
         onSave={handleSave}
         isSaving={isSaving}
         isExporting={isExporting}
       />
 
-      <AssessmentFilters 
+      <AssessmentFilters
         gradesList={gradesList}
         selectedGradeId={selectedGradeId}
         setSelectedGradeId={setSelectedGradeId}
@@ -306,13 +319,13 @@ const Assessments = () => {
         setAcademicYear={setAcademicYear}
       />
 
-      <MarksTable 
+      <MarksTable
         filteredLearningAreas={filteredLearningAreas}
         filteredStudents={filteredStudents}
         marksMatrix={marksMatrix}
         onMarkChange={handleMarkChange}
       />
-      
+
       <AssessmentInstructions />
     </div>
   );

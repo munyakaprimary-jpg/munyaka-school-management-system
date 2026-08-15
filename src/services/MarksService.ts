@@ -8,9 +8,8 @@ import { MarkRecord, MarksMatrix, ExamKey, MARKS_STORAGE_KEY } from './schema';
 export const buildExamId = (key: ExamKey): string =>
   `${key.academic_year}|${key.term}|${key.exam_type}|${key.gradeId}|${key.streamId}`;
 
-/***
- * Store marks as individual records with unique constraints
- * (student_id, subject_id, exam_type_id, term_id, academic_year)
+/**
+ * Store marks with proper UPSERT logic and unique constraints
  */
 export const MarksService = {
   getMarks: (examId: string): MarksMatrix => {
@@ -45,41 +44,54 @@ export const MarksService = {
   },
 
   saveMarks: (examId: string, matrix: MarksMatrix): void => {
+    if (!examId) {
+      throw new Error("exam_id is required");
+    }
+    
     const raw = localStorage.getItem(MARKS_STORAGE_KEY);
     const records: MarkRecord[] = raw ? JSON.parse(raw) : [];
-
-    // UPSERT logic: Update existing records or create new ones
-    const updatedRecords = records.map(record => {
-      const key = `${record.student_id}|${record.subject_id}|${record.exam_type_id}|${record.term_id}|${record.academic_year}`;
-      const existing = matrix[record.student_id]?.[record.subject_id];
-      
-      if (existing !== undefined) {
-        // Update existing record
-        return {
-          ...record,
-          score: existing
-        };
-      } else {
-        // Create new record
-        return {
+    
+    // Parse examId to extract context fields
+    const [academic_year, term, exam_type, gradeId, streamId] = examId.split("|");
+    
+    // Build new records from the matrix
+    const newRecords: MarkRecord[] = [];
+    Object.entries(matrix).forEach(([studentId, subjects]) => {
+      Object.entries(subjects).forEach(([subjectId, score]) => {
+        if (score === undefined || score === "") return;
+        newRecords.push({
           exam_id: examId,
-          ...record,
-          score: matrix[record.student_id]?.[record.subject_id] || ""
-        };
+          student_id: studentId,
+          subject_id: subjectId,
+          exam_type_id: exam_type,
+          term_id: term,
+          academic_year,
+          grade: gradeId,
+          stream: streamId,
+          score
+        });
+      });
+    });
+    
+    // UPSERT: Update existing records or add new ones based on unique constraint
+    // Unique constraint: (student_id, subject_id, exam_type_id, term_id, academic_year)
+    const updatedRecords = [...records];
+    newRecords.forEach(newRecord => {
+      const existingIndex = updatedRecords.findIndex(r =>
+        r.student_id === newRecord.student_id &&
+        r.subject_id === newRecord.subject_id &&
+        r.exam_type_id === newRecord.exam_type_id &&
+        r.term_id === newRecord.term_id &&
+        r.academic_year === newRecord.academic_year
+      );
+      
+      if (existingIndex > -1) {
+        updatedRecords[existingIndex] = { ...updatedRecords[existingIndex}, ...newRecord };
+      } else {
+        updatedRecords.push(newRecord);
       }
     });
-
+    
     localStorage.setItem(MARKS_STORAGE_KEY, JSON.stringify(updatedRecords));
   }
-};
-
-const extraKeyFields = (examId: string) => {
-  const [academic_year, term, exam_type, gradeId, streamId] = examId.split("|");
-  return {
-    grade: "",
-    stream: "",
-    academic_year,
-    term,
-    exam_type_id: exam_type, // Explicitly use exam_type_id
-  };
 };
