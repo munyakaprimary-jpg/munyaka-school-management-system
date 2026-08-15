@@ -59,7 +59,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     dateOfExit: new Date().toISOString().split('T')[0],
     destinationSchool: '',
     reason: '',
-    coCurricularActivities: '',
+    coCurricularActivities: student?.coCurricularActivities || '',
     headteacherRemarks: '',
   });
   const [certificateNumber, setCertificateNumber] = useState('');
@@ -88,7 +88,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
         dateOfExit: new Date().toISOString().split('T')[0],
         destinationSchool: '',
         reason: '',
-        coCurricularActivities: student.coCurricularActivities || '',
+        coCurricularActivities: student?.coCurricularActivities || '',
         headteacherRemarks: '',
       });
       setCertificateNumber('');
@@ -185,7 +185,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       pdf.addImage(imgData, 'JPEG', x, y, drawWidth, drawHeight);
 
-      const safeStudentName = student.name.replace(/\s+/g, '_');
+      const safeStudentName = (student?.name || '').replace(/\s+/g, '_');
       pdf.save(`Munyaka_Clearance_Certificate_${safeStudentName}.pdf`);
       return true;
     } catch (err) {
@@ -402,8 +402,8 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       onClose={onClose}
       title={currentStep === 'FORM' ? "Student Transfer Workflow" : "Official Clearance Certificate"}
       description={currentStep === 'FORM' 
-        ? `Initiate transfer for ${student.name} (${student.assessment})`
-        : `Official Clearance Certificate for ${student.name}`}
+        ? `Initiate transfer for ${student?.name || 'Unknown'} (${student?.assessment || 'N/A'})`
+        : `Official Clearance Certificate for ${student?.name || 'Unknown'}`}
       maxWidth="max-w-3xl"
       footer={renderFooter()}
     >
@@ -413,22 +413,22 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           {/* Student Info Header */}
           <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg">
-              {student.name.split(' ').map(n => n[0]).join('')}
+              {(student?.name || '').split(' ').map(n => n?.[0] || '').join('')}
             </div>
             <div className="flex-1">
-              <h3 className="text-xl font-black text-slate-900">{student.name}</h3>
+              <h3 className="text-xl font-black text-slate-900">{student?.name || 'Unknown'}</h3>
               <div className="flex flex-wrap gap-3 mt-2 text-sm">
                 <Badge className="bg-indigo-100 text-indigo-700 font-medium px-3 py-1">
-                  <UserCheck size={12} className="mr-1" /> Grade {student.grade}
+                  <UserCheck size={12} className="mr-1" /> Grade {student?.grade}
                 </Badge>
                 <Badge className="bg-slate-100 text-slate-700 font-medium px-3 py-1">
-                  {student.stream} Stream
+                  {student?.stream} Stream
                 </Badge>
                 <Badge className="bg-emerald-100 text-emerald-700 font-medium px-3 py-1">
-                  {student.gender === 'M' ? 'Male' : 'Female'}
+                  {student?.gender === 'M' ? 'Male' : 'Female'}
                 </Badge>
                 <Badge variant="outline" className="border-slate-200 text-slate-600 font-medium">
-                  UPI: {student.assessment}
+                  UPI: {student?.assessment}
                 </Badge>
               </div>
             </div>
@@ -487,37 +487,35 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               student?.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
             )}>
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className={cn(
-                    "p-4 rounded-2xl",
-                    student.feeBalance > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
-                  )}>
-                    {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
-                    <p className="text-2xl font-black text-slate-900">
-                      KES {student?.feeBalance.toLocaleString()}
-                    </p>
-                    <Badge className={cn(
-                      "mt-2 text-xs font-bold",
-                      student?.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                    )}>
-                      {feeStatus}
-                    </Badge>
-                  </div>
+                <div className={cn(
+                  "p-4 rounded-2xl",
+                  student?.feeBalance > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
+                )}>
+                  {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
                 </div>
-                
-                {student.feeBalance > 0 && (
-                  <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
-                    <AlertCircle size={20} className="shrink-0" />
-                    <p className="text-sm font-bold text-center max-w-xs">
-                      Attention: This student has an outstanding fee balance of <strong>KES {student.feeBalance.toLocaleString()}</strong>. 
-                      Ensure clearance or settlement before issuing final documents.
-                    </p>
-                  </div>
-                )}
+                <div>
+                  <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
+                  <p className="text-2xl font-black text-slate-900">
+                    KES {student?.feeBalance?.toLocaleString() ?? '0'}
+                  </p>
+                  <Badge className={cn(
+                    "mt-2 text-xs font-bold",
+                    student?.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                  )}>
+                    {feeStatus}
+                  </Badge>
+                </div>
               </div>
+              
+              {student?.feeBalance > 0 && (
+                <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
+                  <AlertCircle size={20} className="shrink-0" />
+                  <p className="text-sm font-bold text-center max-w-xs">
+                    Attention: This student has an outstanding fee balance of <strong>KES {student?.feeBalance?.toLocaleString() ?? '0'}</strong>. 
+                    Ensure clearance or settlement before issuing final documents.
+                  </p>
+                </div>
+              )}
             </Card>
           </div>
 
@@ -598,7 +596,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       {/* Stage 2: Official Clearance Certificate Preview */}
       {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95">
-          {/*
+          {/* 
             CRITICAL FIXES:
             1. Explicit ID "certificate-node" for DOM lookup fallback
             2. Callback ref (certificateRefCallback) detects mount timing precisely
@@ -640,45 +638,45 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             <div className="detail-grid">
               <div className="detail-row">
                 <span className="detail-label">Student Full Name:</span>
-                <span className="detail-value font-black text-lg">{student.name}</span>
+                <span className="detail-value font-black text-lg">{student?.name || 'Unknown'}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Assessment UPI Code:</span>
-                <span className="detail-value font-mono font-bold">{student.assessment}</span>
+                <span className="detail-value font-mono font-bold">{student?.assessment || 'N/A'}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Gender:</span>
-                <span className="detail-value">{student.gender === 'M' ? 'Male' : 'Female'}</span>
+                <span className="detail-value">{student?.gender === 'M' ? 'Male' : 'Female'}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Date of Birth:</span>
-                <span className="detail-value">{formatDate(student.dob)}</span>
+                <span className="detail-value">{formatDate(student?.dob || '')}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Date of Admission:</span>
-                <span className="detail-value">{formatDate(student.dateOfAdmission)}</span>
+                <span className="detail-value">{formatDate(student?.dateOfAdmission || '')}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Date of Exit:</span>
-                <span className="detail-value font-bold">{formatDate(transferData.dateOfExit)}</span>
+                <span className="detail-value font-bold">{formatDate(transferData.dateOfExit || '')}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Last Grade Attained:</span>
-                <span className="detail-value">Grade {student.grade}</span>
+                <span className="detail-value">Grade {student?.grade}</span>
               </div>
               <div className="detail-row">
                 <span className="detail-label">Stream:</span>
-                <span className="detail-value">{student.stream}</span>
+                <span className="detail-value">{student?.stream}</span>
               </div>
               <div className="detail-row full-width">
                 <span className="detail-label">Destination School / Reason:</span>
-                <span className="detail-value">{transferData.destinationSchool}</span>
+                <span className="detail-value">{transferData.destinationSchool || 'Not specified'}</span>
               </div>
               <div className="detail-row full-width">
                 <span className="detail-label">Final Fee Clearance Status:</span>
                 <span className="detail-value">
                   <span className={cn("font-bold px-3 py-1 rounded", feeStatusClass)}>
-                    {student?.feeBalance > 0 ? `• Balance: KES ${student.feeBalance.toLocaleString()}` : '• Balance: 0 KES'}
+                    {student?.feeBalance > 0 ? `• Balance: KES ${student?.feeBalance?.toLocaleString() ?? '0'}` : '• Balance: 0 KES'}
                   </span>
                 </span>
               </div>
