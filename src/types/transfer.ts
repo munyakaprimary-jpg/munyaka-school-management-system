@@ -29,4 +29,5 @@ export interface StudentTransferInfo {
   status: 'Active' | 'Transferred' | 'Graduated' | 'Suspended';
   dateOfAdmission: string;
   coCurricularActivities: string;
+  examType: string; // Add examType to match MarksService requirements
 }
