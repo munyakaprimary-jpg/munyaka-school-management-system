@@ -3,9 +3,10 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { showSuccess, showError } from "@/utils/toast";
 import { GRADES_DATA, STUDENTS, Grade, Stream } from "@/lib/mock-data";
-import { ExamTypeOption } from "@/types/assessments";
+import { ExamTypeOption, LearningArea } from "@/types/assessments";
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from "@/lib/assessment-constants";
 import { MarksService, buildExamId } from "@/services/MarksService";
+import { LearningAreasService } from "@/services/learning-areas-service";
 
 // Sub-components
 import AssessmentHeader from "@/components/assessments/AssessmentHeader";
@@ -14,35 +15,30 @@ import MarksTable from "@/components/assessments/MarksTable";
 import AssessmentInstructions from "@/components/assessments/AssessmentInstructions";
 
 const Assessments = () => {
- // Dynamically load grades and streams
- const gradesList = useMemo(() => {
- const saved = localStorage.getItem("munyaka_grades");
- const rawList: Grade[] = await LearningAreasService.fetchLearningAreas();
+ // State to hold dynamically fetched grades
+ const [gradesList, setGradesList] = useState<Grade[]>([]);
+ const [isLoadingGrades, setIsLoadingGrades] = useState(true);
 
- return [...rawList].sort((a, b) => {
- const categoryRank: Record<string, number> = {
- "Pre-Primary": 1,
- "Primary": 2,
- "Junior School": 3
- };
-
- const rankA = categoryRank[a.category] || 99;
- const rankB = categoryRank[b.category] || 99;
-
- if (rankA !== rankB) {
- return rankA - rankB;
- }
-
- const extractNumber = (name: string) => {
- const match = name.match(/\d+/);
- if (match) return parseInt(match[0], 10);
- if (name.toUpperCase().includes("PP1")) return 1;
- if (name.toUpperCase().includes("PP2")) return 2;
- return 0;
- };
-
- return extractNumber(a.name) - extractNumber(b.name);
- });
+ // Fetch grades from learning areas service on mount
+ useEffect(() => {
+   LearningAreasService.fetchLearningAreas()
+     .then((data) => {
+       // Transform learning areas to grades format
+       const transformedGrades = data.map((area, index) => ({
+         id: `grade-${index + 1}`,
+         name: area.name,
+         category: area.type === 'Core' ? 'Primary' : 'Junior School',
+         streams: ['Class A', 'Class B']
+       })) as Grade[];
+       setGradesList(transformedGrades.length > 0 ? transformedGrades : GRADES_DATA);
+       setIsLoadingGrades(false);
+     })
+     .catch((error) => {
+       console.error("Error fetching learning areas:", error);
+       // Fall back to mock data on error
+       setGradesList(GRADES_DATA);
+       setIsLoadingGrades(false);
+     });
  }, []);
 
  // Dynamically load exam types
@@ -130,6 +126,24 @@ const Assessments = () => {
  [currentGrade]
  );
 
+ // Fetch learning areas dynamically from database
+ const [dbLearningAreas, setDbLearningAreas] = useState<LearningArea[]>([]);
+ const [isLoadingLearningAreas, setIsLoadingLearningAreas] = useState(true);
+
+ useEffect(() => {
+   const fetchLearningAreas = async () => {
+     try {
+       const areas = await LearningAreasService.getLearningAreasForCluster('lower-primary');
+       setDbLearningAreas(areas);
+     } catch (error) {
+       console.error("Error fetching learning areas:", error);
+     } finally {
+       setIsLoadingLearningAreas(false);
+     }
+   };
+   fetchLearningAreas();
+ }, []);
+
  const filteredLearningAreas = useMemo(() => {
  if (!currentGrade) return [];
  const gradeName = currentGrade.name.toLowerCase();
@@ -138,8 +152,13 @@ const Assessments = () => {
  else if (gradeName.includes("pp")) clusterId = "pre-primary";
  else if (currentGrade.category === "Junior School") clusterId = "junior-school";
 
+ // Use database learning areas if available, otherwise fall back to hardcoded
+ if (!isLoadingLearningAreas && dbLearningAreas.length > 0) {
+   return dbLearningAreas;
+ }
+
  return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
- }, [currentGrade]);
+ }, [currentGrade, isLoadingLearningAreas, dbLearningAreas]);
 
  const filteredStudents = useMemo(() => {
  if (!currentGrade) return [];
