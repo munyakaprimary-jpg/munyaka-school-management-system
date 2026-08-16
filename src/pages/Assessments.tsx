@@ -17,7 +17,7 @@ const Assessments = () => {
  // Dynamically load grades and streams
  const gradesList = useMemo(() => {
  const saved = localStorage.getItem("munyaka_grades");
- const rawList: Grade[] = saved ? JSON.parse(saved) : GRADES_DATA;
+ const rawList: Grade[] = await LearningAreasService.fetchLearningAreas();
 
  return [...rawList].sort((a, b) => {
  const categoryRank: Record<string, number> = {
