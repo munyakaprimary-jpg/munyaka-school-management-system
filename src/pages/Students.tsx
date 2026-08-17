@@ -17,7 +17,21 @@ import { StudentTransferInfo } from '@/types/transfer';
 import { Student } from '@/types/student';
 
 const Students = () => {
-  const [studentsList, setStudentsList] = useState(initialStudents);
+  const [studentsList, setStudentsList] = useState(() => {
+    const saved = localStorage.getItem('munyaka_students_master');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return initialStudents;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('munyaka_students_master', JSON.stringify(studentsList));
+  }, [studentsList]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterStream, setFilterStream] = useState("all");
