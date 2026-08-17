@@ -1,15 +1,18 @@
 "use client";
 
 import React from 'react';
-import { Provider } from 'react-redux';
-import store from './store';
-import Routing from './Routing';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import routes from './routes';
 
 const App = () => {
   return (
-    <Provider store={store}>
-      <Routing />
-    </Provider>
+    <Router>
+      <Routes>
+        {routes.map((route, index) => (
+          <Route key={index} path={route.path} component={route.component} />
+        ))}
+      </Routes>
+    </Router>
   );
 };
 
