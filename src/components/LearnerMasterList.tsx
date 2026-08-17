@@ -1,26 +1,12 @@
-import React, { useEffect } from 'react';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
-import { setStudentCount } from '../app/actions';
+import React from "react";
 
-const LearnerMasterList: React.FC = () => {
- const { count } = useSelector((state: RootState) => state.studentCount);
-
- useEffect(() => {
- // Simulate fetching data from the database
- const fetchStudentCount = async () => {
- const fetchedCount = 6; // Replace with your actual data fetching logic
- setStudentCount(fetchedCount)();
- };
- fetchStudentCount();
- }, [setStudentCount]);
-
- return (
- <div>
- <h3>Learner Master List</h3>
- <p>Active Records: {count}</p>
- </div>
- );
+const LearnerMasterList = () => {
+  return (
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Learner Master List</h1>
+    </div>
+  );
 };
 
+export { LearnerMasterList };
 export default LearnerMasterList;

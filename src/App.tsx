@@ -1,16 +1,19 @@
-import React from 'react';
-import { Provider } from 'react-redux';
-import store from './store';
-import LearnerMasterList from './components/LearnerMasterList';
-import Dashboard from './components/Dashboard';
+"use client";
 
-const App: React.FC = () => (
- <Provider store={store}>
- <div>
- <LearnerMasterList />
- <Dashboard />
- </div>
- </Provider>
-);
+import React from 'react';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import routes from './routes';
+
+const App = () => {
+  return (
+    <Router>
+      <Routes>
+        {routes.map((route, index) => (
+          <Route key={index} path={route.path} component={route.component} />
+        ))}
+      </Routes>
+    </Router>
+  );
+};
 
 export default App;
