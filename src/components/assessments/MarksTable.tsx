@@ -29,7 +29,7 @@ const MarksTable = ({
         const studentMarks = marksMatrix[student.id] || {};
         const val = studentMarks[area.id];
         if (val !== undefined && val !== "") {
-          const num = parseInt(val, 10);
+          const num = parseInt(String(val), 10);
           if (!isNaN(num)) {
             sum += num;
             count++;
@@ -50,7 +50,7 @@ const MarksTable = ({
         const studentMarks = marksMatrix[student.id] || {};
         const val = studentMarks[area.id];
         if (val !== undefined && val !== "") {
-          const num = parseInt(val, 10);
+          const num = parseInt(String(val), 10);
           if (!isNaN(num)) {
             sum += num;
             count++;
@@ -83,7 +83,7 @@ const MarksTable = ({
       filteredLearningAreas.forEach(area => {
         const val = studentMarks[area.id];
         if (val !== undefined && val !== "") {
-          const num = parseInt(val, 10);
+          const num = parseInt(String(val), 10);
           if (!isNaN(num)) {
             sum += num;
             hasMarks = true;
