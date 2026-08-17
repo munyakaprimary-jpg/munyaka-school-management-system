@@ -14,6 +14,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { StudentTransferInfo } from '@/types/transfer';
+import { Student } from '@/types/student';
 
 const Students = () => {
   const [studentsList, setStudentsList] = useState(initialStudents);
@@ -35,7 +36,7 @@ const Students = () => {
   // History and Transfer Modals State
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<typeof STUDENTS[0] | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   // Registration Form State
   const [fullName, setFullName] = useState("");
@@ -141,12 +142,12 @@ const Students = () => {
     setIsVerifying(false);
   };
 
-  const handleViewHistory = (student: typeof STUDENTS[0]) => {
+  const handleViewHistory = (student: Student) => {
     setSelectedStudent(student);
     setIsHistoryModalOpen(true);
   };
 
-  const handleTransferStudent = (student: typeof STUDENTS[0]) => {
+  const handleTransferStudent = (student: Student) => {
       // Ensure student has all required properties for StudentTransferInfo
       const studentWithTransferInfo: StudentTransferInfo = {
         id: student.id,
@@ -164,9 +165,10 @@ const Students = () => {
         feeBalance: student.feeBalance || 0,
         status: student.status || 'Active',
         dateOfAdmission: student.dateOfAdmission || '2020-01-15',
-        coCurricularActivities: student.coCurricularActivities || ''
+        coCurricularActivities: student.coCurricularActivities || '',
+        examType: student.examType || 'Regular'
       };
-      setSelectedStudent(studentWithTransferInfo as typeof STUDENTS[0]);
+      setSelectedStudent(studentWithTransferInfo as unknown as Student);
       setIsTransferOpen(true);
     };
 
