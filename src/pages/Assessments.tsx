@@ -259,8 +259,8 @@ const Assessments = () => {
      const headers = ["Learner Name", "Assessment ID", ...filteredLearningAreas.map(a => a.name), "Total"];
  
      // Calculate subject totals and MSS for summary rows
-     const subjectTotals = {};
-     const subjectMSS = {};
+     const subjectTotals: Record<string, number> = {};
+     const subjectMSS: Record<string, string> = {};
      
      filteredLearningAreas.forEach(area => {
        let sum = 0;
@@ -269,7 +269,7 @@ const Assessments = () => {
          const studentMarks = marksMatrix[student.id] || {};
          const val = studentMarks[area.id];
          if (val !== undefined && val !== "") {
-           const num = parseInt(val, 10);
+           const num = parseInt(String(val), 10);
            if (!isNaN(num)) {
              sum += num;
              count++;
@@ -298,7 +298,7 @@ const Assessments = () => {
        const totalMarks = filteredLearningAreas.reduce((sum, area) => {
          const val = studentMarks[area.id];
          if (val !== undefined && val !== "") {
-           const num = parseInt(val, 10);
+           const num = parseInt(String(val), 10);
            return sum + (isNaN(num) ? 0 : num);
          }
          return sum;

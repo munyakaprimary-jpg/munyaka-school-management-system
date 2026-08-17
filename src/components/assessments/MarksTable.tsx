@@ -9,7 +9,7 @@ import { LearningArea } from '@/types/assessments';
 interface MarksTableProps {
   filteredLearningAreas: LearningArea[];
   filteredStudents: any[];
-  marksMatrix: Record<string, Record<string, string>>;
+  marksMatrix: Record<string, Record<string, string | number>>;
   onMarkChange: (studentId: string, subjectId: string, value: string) => void;
 }
 
