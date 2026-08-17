@@ -1,17 +1,12 @@
 "use client";
 
-import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Home from '../pages/Index';
-import About from '../pages/About';
+import Home from "./pages/Home";
+import About from "./pages/About";
+import { Route, Routes } from "react-router-dom";
 
-const AppRouter = () => (
-  <Router>
-    <Routes>
-      <Route path="/" element={<Home />} />
-      <Route path="/about" element={<About />} />
-    </Routes>
-  </Router>
-);
+const routes: React.ReactNode[] = [
+  <Route path="/" element={<Home />} />,
+  <Route path="/about" element={<About />} />,
+];
 
-export default AppRouter;
+export default routes;

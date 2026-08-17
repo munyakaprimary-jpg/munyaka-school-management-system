@@ -1,16 +1,10 @@
 "use client";
 
-import React from 'react';
-import { Provider } from 'react-redux';
-import store from './store';
-import AppRouter from './routes'; // Corrected import path
+import { RouterProvider } from "react-router-dom";
+import routes from "./routes";
 
 const App = () => {
-  return (
-    <Provider store={store}>
-      <AppRouter />
-    </Provider>
-  );
+  return <RouterProvider router={routes} />;
 };
 
 export default App;
