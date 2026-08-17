@@ -103,20 +103,20 @@ const MarksTable = ({
       <div className="overflow-x-auto w-full max-w-full whitespace-nowrap break-words">
         <table className="w-full text-sm text-left border-collapse min-w-max">
           <thead className="bg-slate-50 border-b">
-            <tr>
-              <th className="sticky left-0 bg-slate-50 z-20 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64 min-w-[200px]">
-                Learner Details
-              </th>
-              {filteredLearningAreas.map(area => (
-                <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px] max-w-[120px]">
-                  {area.name}
-                </th>
-              ))}
-              <th className="sticky right-0 bg-indigo-50/50 z-20 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
-                Total
-              </th>
-            </tr>
-          </thead>
+                      <tr>
+                        <th className="sticky left-0 bg-white z-30 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64 min-w-[200px]">
+                          Learner Details
+                        </th>
+                        {filteredLearningAreas.map(area => (
+                          <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px] max-w-[120px]">
+                            {area.name}
+                          </th>
+                        ))}
+                        <th className="sticky right-0 bg-indigo-50 z-30 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
+                          Total
+                        </th>
+                      </tr>
+                    </thead>
           <tbody className="divide-y">
             {filteredStudents.length > 0 ? (
               <>
@@ -127,7 +127,7 @@ const MarksTable = ({
 
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r min-w-[200px]">
+                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-20 px-6 py-4 border-r min-w-[200px]">
                         <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
                           ID: {student.assessment} • Stream: {student.stream}
@@ -143,7 +143,7 @@ const MarksTable = ({
                           />
                         </td>
                       ))}
-                      <td className="sticky right-0 bg-indigo-50/30 z-10 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
+                      <td className="sticky right-0 bg-indigo-50 z-20 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
                         {hasMarks ? totalMarks : "—"}
                       </td>
                     </tr>
