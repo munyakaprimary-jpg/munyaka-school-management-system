@@ -1,15 +1,14 @@
 "use client";
 
-import Home from "@/pages/Home";
-import About from "@/pages/About";
+import { Home } from "@/components/Home";
+import { SchoolManagementSystem } from "@/components/SchoolManagementSystem";
+import { LearnerMasterList } from "@/components/LearnerMasterList";
 
-export default [
-  {
-    path: "/",
-    element: <Home />,
-  },
-  {
-    path: "/about",
-    element: <About />,
-  },
+const routes = [
+  { path: "/", component: SchoolManagementSystem },
+  { path: "/dashboard", component: SchoolManagementSystem },
+  { path: "/learnerMasterList", component: LearnerMasterList },
+  // Add other routes here
 ];
+
+export default routes;

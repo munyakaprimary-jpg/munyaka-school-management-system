@@ -1,26 +1,20 @@
+"use client";
+
 import React from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
-interface Learner {
-  id: string;
-  name: string;
-  email: string;
-}
-
-interface LearnerMasterListProps {
-  learners: Learner[];
-}
-
-const LearnerMasterList: React.FC<LearnerMasterListProps> = ({ learners }) => {
+const LearnerMasterList = () => {
   return (
-    <div>
-      <h2>Learner Master List</h2>
-      <ul>
-        {learners.map(learner => (
-          <li key={learner.id}>
-            {learner.name} - {learner.email}
-          </li>
-        ))}
-      </ul>
+    <div className="p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Learner Master List</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p>This is the Learner Master List view.</p>
+        </CardContent>
+      </Card>
     </div>
   );
 };

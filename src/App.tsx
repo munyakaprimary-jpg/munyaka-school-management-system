@@ -1,23 +1,18 @@
 "use client";
 
 import React from 'react';
-import { useEffect } from 'react';
-import { RouterProvider, createBrowserRouter } from 'react-router-dom';
-import { Provider } from 'react-redux';
-import store from './store';
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import routes from './routes';
 
-const router = createBrowserRouter(routes);
-
 const App = () => {
-  useEffect(() => {
-    // Your useEffect logic here
-  }, []);
-
   return (
-    <Provider store={store}>
-      <RouterProvider router={router} />
-    </Provider>
+    <Router>
+      <Routes>
+        {routes.map((route, index) => (
+          <Route key={index} path={route.path} component={route.component} />
+        ))}
+      </Routes>
+    </Router>
   );
 };
 
