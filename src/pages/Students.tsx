@@ -350,7 +350,7 @@ const Students = () => {
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Grade Levels</SelectItem>
-                {GRADES_DATA.map(g => (
+                {gradesList.map((g: any) => (
                   <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
                     {g.name}
                   </SelectItem>
