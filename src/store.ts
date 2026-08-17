@@ -1,27 +1,11 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { createReducer, PayloadAction } from '@reduxjs/toolkit';
-
-interface StudentCountState {
- count: number;
-}
-
-const initialState: StudentCountState = {
- count: 0
-};
-
-const studentCountReducer = createReducer(initialState, {
- setStudentCount: (state, action: PayloadAction<number>) => {
- state.count = action.payload;
- }
-});
+import { configureStore, createSlice } from "@reduxjs/toolkit";
+import learnersReducer from "./features/learners/learnersSlice";
 
 const store = configureStore({
- reducer: {
- studentCount: studentCountReducer
- }
+  reducer: {
+    learners: learnersReducer,
+    // Add other reducers here
+  },
 });
 
 export default store;
-
-export type RootState = ReturnType<typeof store.getState>;
-export type AppDispatch = typeof store.dispatch;

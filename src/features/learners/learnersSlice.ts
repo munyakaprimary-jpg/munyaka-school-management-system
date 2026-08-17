@@ -1,23 +1,36 @@
-import { createSlice, PayloadAction } from '@reduxjs/toolkit';
+import { createSlice } from "@reduxjs/toolkit";
 
-interface Learner {
-  id: string;
-  name: string;
-  email: string;
-}
+const initialState = {
+  learners: [],
+  loading: false,
+  error: null,
+};
 
-const initialState: Learner[] = [];
-
-export const learnersSlice = createSlice({
-  name: 'learners',
+const learnersSlice = createSlice({
+  name: "learners",
   initialState,
   reducers: {
-    addLearner: (state, action: PayloadAction<Learner>) => {
-      state.push(action.payload);
+    fetchLearnersRequest: (state) => {
+      state.loading = true;
+      state.error = null;
     },
+    fetchLearnersSuccess: (state, action) => {
+      state.loading = false;
+      state.learners = action.payload;
+    },
+    fetchLearnersFailure: (state, action) => {
+      state.loading = false;
+      state.error = action.payload;
+    },
+  },
+  extraReducers: (builder) => {
+    builder.addCase("anotherAction", (state, action) => {
+      // Handle another action
+    });
   },
 });
 
-export const { addLearner } = learnersSlice.actions;
+export const { fetchLearnersRequest, fetchLearnersSuccess, fetchLearnersFailure } =
+  learnersSlice.actions;
 
 export default learnersSlice.reducer;
