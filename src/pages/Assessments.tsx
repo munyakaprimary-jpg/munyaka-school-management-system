@@ -6,6 +6,7 @@ import { GRADES_DATA, STUDENTS, Grade, Stream } from "@/lib/mock-data";
 import { ExamTypeOption, LearningArea } from "@/types/assessments";
 import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from "@/lib/assessment-constants";
 import { MarksService, buildExamId } from "@/services/MarksService";
+import { MarksMatrix } from "@/services/schema";
 import { LearningAreasService } from "@/services/learning-areas-service";
 
 // Sub-components

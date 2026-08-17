@@ -100,24 +100,24 @@ const MarksTable = ({
 
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-      <div className="overflow-x-auto w-full max-w-full whitespace-nowrap break-words">
+      <div className="overflow-x-auto">
         <table className="w-full text-sm text-left border-collapse min-w-max">
-          <thead className="bg-slate-50 border-b">
-                      <tr>
-                        <th className="sticky left-0 bg-white z-30 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64 min-w-[200px]">
-                          Learner Details
-                        </th>
-                        {filteredLearningAreas.map(area => (
-                          <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px] max-w-[120px]">
-                            {area.name}
-                          </th>
-                        ))}
-                        <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
-                          Total
-                        </th>
-                      </tr>
-                    </thead>
-          <tbody className="divide-y">
+          <thead className="bg-slate-50 border-b border-slate-200">
+            <tr>
+              <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-64 min-w-[200px]">
+                Learner Details
+              </th>
+              {filteredLearningAreas.map(area => (
+                <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[100px] max-w-[120px]">
+                  {area.name}
+                </th>
+              ))}
+              <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
+                Total
+              </th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100">
             {filteredStudents.length > 0 ? (
               <>
                 {filteredStudents.map((student) => {
@@ -126,33 +126,33 @@ const MarksTable = ({
                   const hasMarks = totalMarks > 0;
 
                   return (
-                    <tr key={student.id} className="hover:bg-slate-50 transition-colors">
-                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-20 px-6 py-4 border-r min-w-[200px]">
-                                              <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
-                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                                                ID: {student.assessment} • Stream: {student.stream}
-                                              </p>
-                                            </td>
-                                            {filteredLearningAreas.map(area => (
-                                              <td key={area.id} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[120px]">
-                                                <Input
-                                                  value={marksMatrix[student.id]?.[area.id] || ""}
-                                                  onChange={(e) => onMarkChange(student.id, area.id, e.target.value)}
-                                                  placeholder="—"
-                                                  className="w-16 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
-                                                />
-                                              </td>
-                                            ))}
-                                            <td className="bg-indigo-50 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
-                                              {hasMarks ? totalMarks : "—"}
-                                            </td>
+                    <tr key={student.id} className="hover:bg-slate-50/80 transition-colors">
+                      <td className="px-6 py-4 border-r min-w-[200px]">
+                        <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                          ID: {student.assessment} • Stream: {student.stream}
+                        </p>
+                      </td>
+                      {filteredLearningAreas.map(area => (
+                        <td key={area.id} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[120px]">
+                          <Input
+                            value={marksMatrix[student.id]?.[area.id] || ""}
+                            onChange={(e) => onMarkChange(student.id, area.id, e.target.value)}
+                            placeholder="—"
+                            className="w-16 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                          />
+                        </td>
+                      ))}
+                      <td className="bg-indigo-50/60 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
+                        {hasMarks ? totalMarks : "—"}
+                      </td>
                     </tr>
                   );
                 })}
                 
                 {/* Summary Row 1: Subject Totals */}
                 <tr className="bg-slate-50 border-t-2 border-slate-200">
-                  <td className="sticky left-0 bg-slate-50 z-10 px-6 py-4 border-r font-black text-slate-900 min-w-[200px]">
+                  <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[200px]">
                     Subject Totals
                   </td>
                   {filteredLearningAreas.map(area => (
@@ -160,14 +160,14 @@ const MarksTable = ({
                       {subjectTotals[area.id] || 0}
                     </td>
                   ))}
-                  <td className="sticky right-0 bg-indigo-100/50 z-10 px-4 py-3 text-center font-black text-indigo-700 min-w-[90px] border-l">
+                  <td className="bg-indigo-100/50 px-4 py-3 text-center font-black text-indigo-700 min-w-[90px] border-l">
                     {grandTotalSum}
                   </td>
                 </tr>
 
                 {/* Summary Row 2: Subject MSS */}
                 <tr className="bg-slate-50 border-t border-slate-200">
-                  <td className="sticky left-0 bg-slate-50 z-10 px-6 py-4 border-r font-black text-slate-900 min-w-[200px]">
+                  <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[200px]">
                     Subject MSS
                   </td>
                   {filteredLearningAreas.map(area => (
@@ -175,7 +175,7 @@ const MarksTable = ({
                       {subjectMSS[area.id]?.toFixed(2) || "0.00"}
                     </td>
                   ))}
-                  <td className="sticky right-0 bg-indigo-100/50 z-10 px-4 py-3 text-center font-black text-indigo-700 min-w-[90px] border-l">
+                  <td className="bg-indigo-100/50 px-4 py-3 text-center font-black text-indigo-700 min-w-[90px] border-l">
                     {grandTotalMSS.toFixed(2)}
                   </td>
                 </tr>
