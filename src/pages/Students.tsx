@@ -15,29 +15,8 @@ import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryM
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { StudentTransferInfo } from '@/types/transfer';
 
-const STUDENTS_STORAGE_KEY = 'munyaka_students_list';
-
 const Students = () => {
-  const [studentsList, setStudentsList] = useState(() => {
-    try {
-      const saved = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      if (saved) {
-        return JSON.parse(saved);
-      }
-    } catch (e) {
-      console.error(e);
-    }
-    return initialStudents;
-  });
-
-  // Save to localStorage whenever studentsList changes
-  React.useEffect(() => {
-    try {
-      localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(studentsList));
-    } catch (e) {
-      console.error(e);
-    }
-  }, [studentsList]);
+  const [studentsList, setStudentsList] = useState(initialStudents);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterStream, setFilterStream] = useState("all");
