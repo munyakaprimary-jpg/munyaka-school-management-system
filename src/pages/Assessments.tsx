@@ -236,27 +236,52 @@ const Assessments = () => {
      showSuccess("No learners found to export.");
      return;
    }
-
+ 
    setIsExporting(true);
-
+ 
    setTimeout(() => {
      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
      const row2 = "P.O. BOX 5239-30100,ELDORET";
      const row3 = "MOTTO: KNOWLEDGE POWER";
-
+ 
      const currentYear = new Date().getFullYear().toString();
      const gradeName = currentGrade ? currentGrade.name : "All Grades";
-
+ 
      const streamObj = availableStreams.find(s => s.id === selectedStreamId);
      const streamName = selectedStreamId === "all" ? "All Streams" : (streamObj ? streamObj.name : "All Streams");
-
+ 
      const formattedTerm = term === "term1" ? "Term 1" : term === "term2" ? "Term 2" : "Term 3";
-
+ 
      const row4 = `GRADE: ${gradeName}, STREAM: ${streamName}`;
      const row5 = `YEAR: ${currentYear}, TERM: ${formattedTerm}`;
-
+ 
      const headers = ["Learner Name", "Assessment ID", ...filteredLearningAreas.map(a => a.name), "Total"];
-
+ 
+     // Calculate subject totals and MSS for summary rows
+     const subjectTotals = {};
+     const subjectMSS = {};
+     
+     filteredLearningAreas.forEach(area => {
+       let sum = 0;
+       let count = 0;
+       filteredStudents.forEach(student => {
+         const studentMarks = marksMatrix[student.id] || {};
+         const val = studentMarks[area.id];
+         if (val !== undefined && val !== "") {
+           const num = parseInt(val, 10);
+           if (!isNaN(num)) {
+             sum += num;
+             count++;
+           }
+         }
+       });
+       subjectTotals[area.id] = sum;
+       subjectMSS[area.id] = count > 0 ? (sum / count).toFixed(2) : "0.00";
+     });
+     
+     const grandTotalSum = Object.values(subjectTotals).reduce((a, b) => a + b, 0);
+     const grandTotalMSS = Object.values(subjectMSS).reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / Object.values(subjectMSS).length;
+ 
      const studentRows = filteredStudents.map(student => {
        const studentMarks = marksMatrix[student.id] || {};
        let hasMarks = false;
@@ -268,7 +293,7 @@ const Assessments = () => {
          }
          return "—";
        });
-
+ 
        const totalMarks = filteredLearningAreas.reduce((sum, area) => {
          const val = studentMarks[area.id];
          if (val !== undefined && val !== "") {
@@ -277,7 +302,7 @@ const Assessments = () => {
          }
          return sum;
        }, 0);
-
+ 
        return [
          `${student.name.replace(/"/g, '""')}`,
          `${student.assessment.replace(/"/g, '""')}`,
@@ -285,22 +310,26 @@ const Assessments = () => {
          `${hasMarks ? totalMarks : '—'}`
        ];
      });
-
+ 
      const csvContent = [
-       row1,
-       row2,
-       row3,
-       row4,
-       row5,
-       "",
-       headers.map(h => `"${h}"`).join(","),
-       ...studentRows.map(r => r.join(","))
-     ].join("\n");
-
+           row1,
+           row2,
+           row3,
+           row4,
+           row5,
+           "",
+           headers.map(h => `"${h}"`).join(","),
+           ...studentRows.map(r => r.join(",")),
+           // Subject Totals row
+           ["Subject Totals", "", ...Object.values(subjectTotals).map(v => v.toString()), grandTotalSum.toString()].join(","),
+           // Subject MSS row
+           ["Subject MSS", "", ...Object.values(subjectMSS).map(v => v), grandTotalMSS.toFixed(2)].join(",")
+         ].join("\n");
+ 
      // Data URI fallback for Android WebView compatibility
      const BOM = "\uFEFF";
      const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(BOM + csvContent);
-
+ 
      const link = document.createElement("a");
      link.setAttribute("href", dataUri);
      link.setAttribute("target", "_blank");
@@ -308,9 +337,9 @@ const Assessments = () => {
      document.body.appendChild(link);
      link.click();
      document.body.removeChild(link);
-
+ 
      setIsExporting(false);
-     showSuccess(`Exported marks sheet for ${filteredStudents.length} learners.`);
+     showSuccess(`Exported marks sheet for ${filteredStudents.length} learners with summary rows.`);
    }, 800);
  };
 
