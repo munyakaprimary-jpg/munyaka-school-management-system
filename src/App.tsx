@@ -1,19 +1,19 @@
 "use client";
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import routes from './routes';
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { Provider } from "react-redux";
+import { store } from "./store";
+import SchoolManagementSystem from "./components/SchoolManagementSystem";
 
-const App = () => {
+export default function App() {
   return (
-    <Router>
-      <Routes>
-        {routes.map((route, index) => (
-          <Route key={index} path={route.path} component={route.component} />
-        ))}
-      </Routes>
-    </Router>
+    <Provider store={store}>
+      <BrowserRouter>
+        <Routes>
+          <Route path="*" element={<SchoolManagementSystem />} />
+        </Routes>
+      </BrowserRouter>
+    </Provider>
   );
-};
-
-export default App;
+}
