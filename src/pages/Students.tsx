@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX } from 'lucide-react';
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
@@ -50,6 +50,7 @@ const Students = () => {
   // History and Transfer Modals State
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
 
   // Registration Form State
@@ -61,12 +62,27 @@ const Students = () => {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
 
+  // Edit Form State
+  const [editId, setEditId] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editAssessmentNo, setEditAssessmentNo] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editStream, setEditStream] = useState("");
+  const [editGuardianName, setEditGuardianName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+
   // Dynamically get streams for the selected grade from GRADES_DATA
   const availableStreams = useMemo(() => {
     if (!regGrade) return [];
     const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
     return grade ? grade.streams.map(s => s.name) : [];
   }, [regGrade]);
+
+  const editAvailableStreams = useMemo(() => {
+    if (!editGrade) return [];
+    const grade = GRADES_DATA.find(g => g.name === `Grade ${editGrade}` || g.name === editGrade);
+    return grade ? grade.streams.map(s => s.name) : [];
+  }, [editGrade]);
 
   // Reset stream when grade changes and no longer matches available streams
   React.useEffect(() => {
@@ -94,18 +110,18 @@ const Students = () => {
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
-    const newStudent = { 
-      id: (studentsList.length + 1).toString(), 
-      name: fullName.trim(), 
-      assessment: assessmentNo.trim().toUpperCase(), 
-      grade: regGrade, 
-      stream: regStream, 
-      gender: "M", 
-      dob: "2014-01-01", 
-      guardian: guardianName.trim(), 
-      phone: phone.trim(), 
-      email: "g@email.com", 
-      health: "None", 
+    const newStudent = {
+      id: (studentsList.length + 1).toString(),
+      name: fullName.trim(),
+      assessment: assessmentNo.trim().toUpperCase(),
+      grade: regGrade,
+      stream: regStream,
+      gender: "M",
+      dob: "2014-01-01",
+      guardian: guardianName.trim(),
+      phone: phone.trim(),
+      email: "g@email.com",
+      health: "None",
       needs: "None",
       feeBalance: 0,
       status: "Active" as const,
@@ -122,6 +138,38 @@ const Students = () => {
     setPhone("");
     setAddress("");
     showSuccess(`Student ${newStudent.name} registered!`);
+  };
+
+  const handleEditStudent = (student: Student) => {
+    setEditId(student.id);
+    setEditFullName(student.name);
+    setEditAssessmentNo(student.assessment);
+    setEditGrade(student.grade);
+    setEditStream(student.stream);
+    setEditGuardianName(student.guardian || "");
+    setEditPhone(student.phone || "");
+    setIsEditOpen(true);
+  };
+
+  const handleUpdateStudent = () => {
+    if (!editFullName.trim() || !editAssessmentNo.trim() || !editGrade || !editStream) return;
+    const updatedList = studentsList.map(s => {
+      if (s.id === editId) {
+        return {
+          ...s,
+          name: editFullName.trim(),
+          assessment: editAssessmentNo.trim().toUpperCase(),
+          grade: editGrade,
+          stream: editStream,
+          guardian: editGuardianName.trim(),
+          phone: editPhone.trim()
+        };
+      }
+      return s;
+    });
+    setStudentsList(updatedList);
+    setIsEditOpen(false);
+    showSuccess(`Student "${editFullName}" updated successfully!`);
   };
 
   const requestDeleteStudent = (student: { id: string; name: string }) => {
@@ -387,6 +435,18 @@ const Students = () => {
                                             <Button
                                               variant="ghost"
                                               size="icon"
+                                              className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                handleEditStudent(student);
+                                              }}
+                                              title="Edit Student"
+                                            >
+                                              <Edit3 size={18} />
+                                            </Button>
+                                            <Button
+                                              variant="ghost"
+                                              size="icon"
                                               className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
                                               onClick={(e) => {
                                                 e.stopPropagation();
@@ -481,6 +541,62 @@ const Students = () => {
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Physical Location</Label>
             <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Edit Student Modal */}
+      <Modal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} title="Edit Student Record" description="Modify learner details in the academic system." footer={<><Button variant="ghost" className="rounded-xl h-12 px-6 font-bold" onClick={() => setIsEditOpen(false)}>Cancel</Button><Button className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100" onClick={handleUpdateStudent}><Edit3 size={18} /> Save Changes</Button></>} maxWidth="max-w-xl">
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
+              <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Assessment No.</Label>
+              <Input value={editAssessmentNo} onChange={(e) => setEditAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade Level</Label>
+              <Select value={editGrade} onValueChange={(val) => { setEditGrade(val); setEditStream(''); }}>
+                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                  <SelectValue placeholder="Select grade" />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {GRADES_DATA.map(g => (
+                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                      {g.name} ({g.category})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Stream</Label>
+              <Select value={editStream} onValueChange={setEditStream} disabled={!editGrade || editAvailableStreams.length === 0}>
+                <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                  <SelectValue placeholder={!editGrade ? "Select grade first..." : editAvailableStreams.length === 0 ? "No streams available" : "Choose stream..."} />
+                </SelectTrigger>
+                <SelectContent className="rounded-xl">
+                  {editAvailableStreams.map(s => (
+                    <SelectItem key={s} value={s}>{s}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Guardian Name</Label>
+              <Input value={editGuardianName} onChange={(e) => setEditGuardianName(e.target.value)} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Phone</Label>
+              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            </div>
           </div>
         </div>
       </Modal>
