@@ -1,16 +1,16 @@
-"use client";
-
 import React from 'react';
 import { Provider } from 'react-redux';
 import store from './store';
-import { Router } from '../routes'; // Correct import path
+import LearnerMasterList from './components/LearnerMasterList';
+import Dashboard from './components/Dashboard';
 
-const App = () => {
-  return (
-    <Provider store={store}>
-      <Router />
-    </Provider>
-  );
-};
+const App: React.FC = () => (
+ <Provider store={store}>
+ <div>
+ <LearnerMasterList />
+ <Dashboard />
+ </div>
+ </Provider>
+);
 
 export default App;

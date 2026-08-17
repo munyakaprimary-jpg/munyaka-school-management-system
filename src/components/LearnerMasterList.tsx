@@ -1,28 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { setStudentCount } from '../app/actions';
 
-interface Learner {
-  id: string;
-  name: string;
-  email: string;
-}
+const LearnerMasterList: React.FC = () => {
+ const { count } = useSelector((state: RootState) => state.studentCount);
 
-interface LearnerMasterListProps {
-  learners: Learner[];
-}
+ useEffect(() => {
+ // Simulate fetching data from the database
+ const fetchStudentCount = async () => {
+ const fetchedCount = 6; // Replace with your actual data fetching logic
+ setStudentCount(fetchedCount)();
+ };
+ fetchStudentCount();
+ }, [setStudentCount]);
 
-const LearnerMasterList: React.FC<LearnerMasterListProps> = ({ learners }) => {
-  return (
-    <div>
-      <h2>Learner Master List</h2>
-      <ul>
-        {learners.map(learner => (
-          <li key={learner.id}>
-            {learner.name} - {learner.email}
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
+ return (
+ <div>
+ <h3>Learner Master List</h3>
+ <p>Active Records: {count}</p>
+ </div>
+ );
 };
 
 export default LearnerMasterList;
