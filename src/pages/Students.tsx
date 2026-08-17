@@ -71,18 +71,31 @@ const Students = () => {
   const [editGuardianName, setEditGuardianName] = useState("");
   const [editPhone, setEditPhone] = useState("");
 
-  // Dynamically get streams for the selected grade from GRADES_DATA
+  // Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
+  const gradesList = useMemo(() => {
+    const savedGrades = localStorage.getItem('munyaka_grades');
+    if (savedGrades) {
+      try {
+        return JSON.parse(savedGrades);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return GRADES_DATA;
+  }, []);
+
+  // Dynamically get streams for the selected grade
   const availableStreams = useMemo(() => {
     if (!regGrade) return [];
-    const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
-    return grade ? grade.streams.map(s => s.name) : [];
-  }, [regGrade]);
+    const grade = gradesList.find((g: any) => g.name === `Grade ${regGrade}` || g.name === regGrade || g.id === regGrade);
+    return grade ? grade.streams.map((s: any) => s.name) : [];
+  }, [regGrade, gradesList]);
 
   const editAvailableStreams = useMemo(() => {
     if (!editGrade) return [];
-    const grade = GRADES_DATA.find(g => g.name === `Grade ${editGrade}` || g.name === editGrade);
-    return grade ? grade.streams.map(s => s.name) : [];
-  }, [editGrade]);
+    const grade = gradesList.find((g: any) => g.name === `Grade ${editGrade}` || g.name === editGrade || g.id === editGrade);
+    return grade ? grade.streams.map((s: any) => s.name) : [];
+  }, [editGrade, gradesList]);
 
   // Reset stream when grade changes and no longer matches available streams
   React.useEffect(() => {
@@ -94,9 +107,9 @@ const Students = () => {
   // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+    gradesList.forEach((g: any) => g.streams.forEach((s: any) => streams.add(s.name)));
     return Array.from(streams).sort();
-  }, []);
+  }, [gradesList]);
 
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
