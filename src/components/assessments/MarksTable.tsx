@@ -112,7 +112,7 @@ const MarksTable = ({
                             {area.name}
                           </th>
                         ))}
-                        <th className="sticky right-0 bg-indigo-50 z-30 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
+                        <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[90px] border-l">
                           Total
                         </th>
                       </tr>
@@ -128,24 +128,24 @@ const MarksTable = ({
                   return (
                     <tr key={student.id} className="hover:bg-slate-50 transition-colors">
                       <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-20 px-6 py-4 border-r min-w-[200px]">
-                        <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
-                          ID: {student.assessment} • Stream: {student.stream}
-                        </p>
-                      </td>
-                      {filteredLearningAreas.map(area => (
-                        <td key={area.id} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[120px]">
-                          <Input
-                            value={marksMatrix[student.id]?.[area.id] || ""}
-                            onChange={(e) => onMarkChange(student.id, area.id, e.target.value)}
-                            placeholder="—"
-                            className="w-16 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
-                          />
-                        </td>
-                      ))}
-                      <td className="sticky right-0 bg-indigo-50 z-20 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
-                        {hasMarks ? totalMarks : "—"}
-                      </td>
+                                              <p className="font-bold text-slate-900 truncate">{student?.name ?? 'Unknown'}</p>
+                                              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                                                ID: {student.assessment} • Stream: {student.stream}
+                                              </p>
+                                            </td>
+                                            {filteredLearningAreas.map(area => (
+                                              <td key={area.id} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[120px]">
+                                                <Input
+                                                  value={marksMatrix[student.id]?.[area.id] || ""}
+                                                  onChange={(e) => onMarkChange(student.id, area.id, e.target.value)}
+                                                  placeholder="—"
+                                                  className="w-16 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                                                />
+                                              </td>
+                                            ))}
+                                            <td className="bg-indigo-50 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[90px] border-l">
+                                              {hasMarks ? totalMarks : "—"}
+                                            </td>
                     </tr>
                   );
                 })}
