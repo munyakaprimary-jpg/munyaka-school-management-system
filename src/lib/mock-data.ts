@@ -122,7 +122,13 @@ export const GRADES_DATA: Grade[] = sortGrades([
       { id: "s12", name: "Beta", teacher: "Unassigned", studentsCount: 28 }
     ]
   }
-].map(g => ({ ...g, name: formatGradeName(g.name) })));
+].map(g => ({
+  ...g,
+  name: formatGradeName(g.name),
+  streams: Array.from(
+    new Map(g.streams.map(s => [s.name.trim().toLowerCase(), s])).values()
+  )
+})));
 
 export const BOOKS = [
   { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },

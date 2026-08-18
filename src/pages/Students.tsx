@@ -109,8 +109,10 @@ const Students = () => {
   // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
-    gradesList.forEach((g: any) => g.streams.forEach((s: any) => streams.add(s.name)));
-    return Array.from(streams).sort();
+    gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
+      if (s.name) streams.add(s.name.trim());
+    }));
+    return Array.from(streams).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
   }, [gradesList]);
 
   const filteredStudents = useMemo(() => {
