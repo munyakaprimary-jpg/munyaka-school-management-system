@@ -34,10 +34,11 @@ export const formatGradeName = (name: string): string => {
   const upper = trimmed.toUpperCase();
   if (upper === 'PP1' || upper === 'PP2') return upper;
   
-  // Ensure "grade 5" -> "Grade 5"
+  // Ensure capitalized formatting e.g. "grade 5" -> "Grade 5"
   if (/^grade\s*\d+/i.test(trimmed)) {
     const numMatch = trimmed.match(/\d+/);
     return numMatch ? `Grade ${numMatch[0]}` : trimmed;
   }
-  return trimmed;
+  // Capitalize general words if needed
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
 };
