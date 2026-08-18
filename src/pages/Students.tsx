@@ -10,6 +10,7 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { sortGrades } from '@/utils/gradeSort';
 import { showSuccess, showError } from '@/utils/toast';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
