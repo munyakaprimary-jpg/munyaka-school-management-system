@@ -519,7 +519,7 @@ const Students = () => {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {GRADES_DATA.map(g => (
+                  {gradesList.map(g => (
                     <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
@@ -579,7 +579,7 @@ const Students = () => {
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {GRADES_DATA.map(g => (
+                  {gradesList.map(g => (
                     <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
