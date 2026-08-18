@@ -74,14 +74,15 @@ const Students = () => {
   // Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
   const gradesList = useMemo(() => {
     const savedGrades = localStorage.getItem('munyaka_grades');
+    let list = GRADES_DATA;
     if (savedGrades) {
       try {
-        return JSON.parse(savedGrades);
+        list = JSON.parse(savedGrades);
       } catch (e) {
         console.error(e);
       }
     }
-    return GRADES_DATA;
+    return sortGrades(list);
   }, []);
 
   // Dynamically get streams for the selected grade
