@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { Search, X } from 'lucide-react';
 import { GRADES_DATA } from '@/lib/mock-data';
+import { sortGrades } from '@/utils/gradeSort';
 
 interface StudentFiltersProps {
   searchTerm: string;
@@ -59,7 +60,7 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Grade Levels</SelectItem>
-              {GRADES_DATA.map(g => (
+              {sortGrades(GRADES_DATA).map(g => (
                 <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
                   {g.name}
                 </SelectItem>

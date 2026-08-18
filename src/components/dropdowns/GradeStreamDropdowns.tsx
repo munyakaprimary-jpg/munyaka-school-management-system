@@ -1,20 +1,15 @@
 import React, { useState, useMemo } from 'react';
 import { useSelector } from 'react-redux';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
+import { sortGrades } from '@/utils/gradeSort';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 // Get grades from central store
 const grades = useSelector(state => state.school.grades);
 
-// Sort grades in educational order
+// Sort grades in educational order using sortGrades helper
 const sortedGrades = useMemo(() => {
-  return [...grades].sort((a, b) => {
-    const categories = { 'Pre-Primary': 1, 'Primary': 2, 'Junior School': 3 };
-    if (categories[a.category] !== categories[b.category]) {
-      return categories[a.category] - categories[b.category];
-    }
-    return a.name.localeCompare(b.name);
-  });
+  return sortGrades(grades);
 }, [grades]);
 
 // Get streams for selected grade

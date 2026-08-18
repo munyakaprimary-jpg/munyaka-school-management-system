@@ -20,7 +20,9 @@ export interface Grade {
   streams: Stream[];
 }
 
-export const GRADES_DATA: Grade[] = [
+import { sortGrades, formatGradeName } from '@/utils/gradeSort';
+
+export const GRADES_DATA: Grade[] = sortGrades([
   {
     id: "gpp1",
     name: "PP1",
@@ -49,6 +51,24 @@ export const GRADES_DATA: Grade[] = [
     ]
   },
   {
+    id: "g2",
+    name: "Grade 2",
+    category: "Primary",
+    streams: [
+      { id: "s2a", name: "Blue", teacher: "Unassigned", studentsCount: 40 },
+      { id: "s2b", name: "Green", teacher: "Unassigned", studentsCount: 35 }
+    ]
+  },
+  {
+    id: "g3",
+    name: "Grade 3",
+    category: "Primary",
+    streams: [
+      { id: "s3a", name: "Blue", teacher: "Unassigned", studentsCount: 38 },
+      { id: "s3b", name: "Green", teacher: "Unassigned", studentsCount: 36 }
+    ]
+  },
+  {
     id: "g4",
     name: "Grade 4",
     category: "Primary",
@@ -64,6 +84,15 @@ export const GRADES_DATA: Grade[] = [
     streams: [
       { id: "s5", name: "Alpha", teacher: "John Kamau", studentsCount: 40 },
       { id: "s6", name: "Beta", teacher: "Unassigned", studentsCount: 36 }
+    ]
+  },
+  {
+    id: "g6",
+    name: "Grade 6",
+    category: "Primary",
+    streams: [
+      { id: "s6a", name: "Alpha", teacher: "Unassigned", studentsCount: 38 },
+      { id: "s6b", name: "Beta", teacher: "Unassigned", studentsCount: 35 }
     ]
   },
   {
@@ -93,7 +122,7 @@ export const GRADES_DATA: Grade[] = [
       { id: "s12", name: "Beta", teacher: "Unassigned", studentsCount: 28 }
     ]
   }
-];
+].map(g => ({ ...g, name: formatGradeName(g.name) })));
 
 export const BOOKS = [
   { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
