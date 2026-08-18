@@ -28,11 +28,15 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   setFilterStream,
   onClearFilters
 }) => {
-  const uniqueStreams = React.useMemo(() => {
-    const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    return Array.from(streams).sort();
-  }, []);
+  const availableStreams = React.useMemo(() => {
+    if (!filterGrade || filterGrade === "all") {
+      const streams = new Set<string>();
+      GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+      return Array.from(streams).sort();
+    }
+    const gradeObj = GRADES_DATA.find(g => g.id === filterGrade || g.name.toLowerCase().includes(filterGrade.toLowerCase()) || g.name.replace(/[^0-9]/g, '') === filterGrade);
+    return gradeObj ? gradeObj.streams.map(s => s.name) : [];
+  }, [filterGrade]);
 
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
@@ -66,13 +70,17 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
 
         <div className="space-y-1">
           <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-          <Select value={filterStream} onValueChange={setFilterStream}>
+          <Select
+            value={filterStream}
+            onValueChange={setFilterStream}
+            disabled={!filterGrade || filterGrade === "all"}
+          >
             <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-              <SelectValue placeholder="All Streams" />
+              <SelectValue placeholder={!filterGrade || filterGrade === "all" ? "Select grade first..." : "All Streams"} />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Streams</SelectItem>
-              {uniqueStreams.map(s => (
+              {availableStreams.map(s => (
                 <SelectItem key={s} value={s}>{s}</SelectItem>
               ))}
             </SelectContent>
