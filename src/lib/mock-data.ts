@@ -1,4 +1,4 @@
-import { sortGrades } from '@/utils/gradeSort';
+import { sortGrades, formatGradeName } from '@/utils/gradeSort';
 
 export const STUDENTS = [
   { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Football team captain, Science fair winner" },
@@ -21,8 +21,6 @@ export interface Grade {
   category: 'Pre-Primary' | 'Primary' | 'Junior School';
   streams: Stream[];
 }
-
-import { sortGrades } from '@/utils/gradeSort';
 
 export const GRADES_DATA: Grade[] = sortGrades([
   {
