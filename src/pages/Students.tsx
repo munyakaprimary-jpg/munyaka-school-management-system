@@ -264,13 +264,13 @@ const Students = () => {
 
       const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
-        `"${s.name.replace(/\"/g, '\"\"')}"`,
-        `"${s.assessment.replace(/\"/g, '\"\"')}"`,
-        `\"Grade ${s.grade}\"`,
-        `"${s.stream.replace(/\"/g, '\"\"')}"`,
-        `"${s.guardian.replace(/\"/g, '\"\"')}"`,
-        `"${s.phone.replace(/\"/g, '\"\"')}"`
-      ]);
+              `"${s.name.replace(/"/g, '""')}"`,
+              `"${s.assessment.replace(/"/g, '""')}"`,
+              `"Grade ${s.grade}"`,
+              `"${s.stream.replace(/"/g, '""')}"`,
+              `"${s.guardian.replace(/"/g, '""')}"`,
+              `"${s.phone.replace(/"/g, '""')}"`
+            ]);
 
       const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
