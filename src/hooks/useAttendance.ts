@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
 import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { downloadCSV } from '@/utils/downloadHelper';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 
 interface SessionAttendance {
   status: string;
@@ -20,10 +21,10 @@ export const useAttendance = (selectedGradeId: string) => {
   const learnersInGrade = useMemo(() => {
     const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
     if (!gradeObj) return [];
-    
+
     const gradeNum = gradeObj.name.replace(/[^0-9]/g, '');
-    
-    return STUDENTS.filter(s => 
+
+    return STUDENTS.filter(s =>
       s.grade === gradeNum || s.grade === gradeObj.name
     ).map(s => ({
       id: parseInt(s.id),
@@ -32,49 +33,33 @@ export const useAttendance = (selectedGradeId: string) => {
     }));
   }, [selectedGradeId]);
 
-  const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
-  const [isInitialized, setIsInitialized] = useState(false);
-
   // Storage key is specific to the grade to keep records separate
   const currentStorageKey = `${STORAGE_KEY_PREFIX}${selectedGradeId}`;
 
-  // Load/Initialize attendance for the current grade
+  // Use useLocalStorage for attendance persistence
+  const [markedStudents, setMarkedStudents] = useLocalStorage<Record<number, StudentAttendance>>(
+    currentStorageKey,
+    {}
+  );
+
+  const [isInitialized, setIsInitialized] = useState(false);
+
+  // Initialize attendance for the current grade if empty
   useEffect(() => {
-    setIsInitialized(false);
-    const saved = localStorage.getItem(currentStorageKey);
-    
-    if (saved) {
-      try {
-        setMarkedStudents(JSON.parse(saved));
-      } catch (e) {
-        console.error("Error loading attendance:", e);
-        initializeDefaults();
-      }
-    } else {
-      initializeDefaults();
+    if (Object.keys(markedStudents).length === 0 && learnersInGrade.length > 0) {
+      const defaultRecord: Record<number, StudentAttendance> = {};
+      const timestamp = format(new Date(), "HH:mm");
+
+      learnersInGrade.forEach(learner => {
+        defaultRecord[learner.id] = {
+          morning: { status: 'P', time: timestamp },
+          afternoon: { status: 'P', time: timestamp }
+        };
+      });
+      setMarkedStudents(defaultRecord);
     }
     setIsInitialized(true);
-  }, [selectedGradeId, learnersInGrade]);
-
-  const initializeDefaults = () => {
-    const defaultRecord: Record<number, StudentAttendance> = {};
-    const timestamp = format(new Date(), "HH:mm");
-    
-    learnersInGrade.forEach(learner => {
-      defaultRecord[learner.id] = {
-        morning: { status: 'P', time: timestamp },
-        afternoon: { status: 'P', time: timestamp }
-      };
-    });
-    setMarkedStudents(defaultRecord);
-  };
-
-  // Persist changes
-  useEffect(() => {
-    if (isInitialized && Object.keys(markedStudents).length > 0) {
-      localStorage.setItem(currentStorageKey, JSON.stringify(markedStudents));
-    }
-  }, [markedStudents, isInitialized, currentStorageKey]);
+  }, [selectedGradeId, learnersInGrade, markedStudents, setMarkedStudents]);
 
   const markAttendance = (id: number, session: 'morning' | 'afternoon', status: string) => {
     const timestamp = format(new Date(), "HH:mm");
@@ -91,7 +76,7 @@ export const useAttendance = (selectedGradeId: string) => {
     const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
     const gradeLabel = gradeObj ? gradeObj.name : "Selected Grade";
     const currentDateStr = format(new Date(), "PP");
-    
+
     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
     const row2 = "P.O. BOX 5239-30100, ELDORET";
     const row3 = "MOTTO: KNOWLEDGE POWER";
@@ -109,8 +94,8 @@ export const useAttendance = (selectedGradeId: string) => {
     const rows = learnersInGrade.map(learner => {
       const record = markedStudents[learner.id] || {};
       return [
-        `"${learner.name.replace(/"/g, '""')}"`,
-        `"${learner.assessment.replace(/"/g, '""')}"`,
+        `"${learner.name.replace(/\"/g, '""')}"`,
+        `"${learner.assessment.replace(/\"/g, '""')}"`,
         `"${getStatusLabel(record.morning?.status)}"`,
         `"${record.morning?.time || '—'}"`,
         `"${getStatusLabel(record.afternoon?.status)}"`,

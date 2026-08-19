@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { sortGrades } from '@/utils/gradeSort';
 import { showSuccess, showError } from '@/utils/toast';
@@ -18,21 +19,12 @@ import { StudentTransferInfo } from '@/types/transfer';
 import { Student } from '@/types/student';
 
 const Students = () => {
-  const [studentsList, setStudentsList] = useState(() => {
-    const saved = localStorage.getItem('munyaka_students_master');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return initialStudents;
-  });
+  // Use useLocalStorage for students list persistence
+  const [studentsList, setStudentsList] = useLocalStorage<Student[]>(
+    'munyaka_students_master',
+    initialStudents
+  );
 
-  React.useEffect(() => {
-    localStorage.setItem('munyaka_students_master', JSON.stringify(studentsList));
-  }, [studentsList]);
   const [searchTerm, setSearchTerm] = useState("");
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterStream, setFilterStream] = useState("all");
@@ -587,7 +579,7 @@ const Students = () => {
                     <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
-                  ))}
+                  ))
                 </SelectContent>
               </Select>
             </div>
@@ -600,7 +592,7 @@ const Students = () => {
                 <SelectContent className="rounded-xl">
                   {editAvailableStreams.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
-                  ))}
+                  ))
                 </SelectContent>
               </Select>
             </div>
