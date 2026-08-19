@@ -1,14 +1,14 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Search, X } from 'lucide-react';
-import { GRADES_DATA } from '@/lib/mock-data';
-import { sortGrades } from '@/utils/gradeSort';
+import { Search, X } from "lucide-react";
+import { GRADES_DATA } from "@/lib/mock-data";
+import { sortGrades } from "@/utils/gradeSort";
 
 interface StudentFiltersProps {
   searchTerm: string;
@@ -29,14 +29,22 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
   setFilterStream,
   onClearFilters
 }) => {
+  // Precompute the numeric string from the filterGrade for efficient comparison
+  const filterGradeNumber = React.useMemo(() => {
+    if (filterGrade === "all" || !filterGrade) return null;
+    const match = filterGrade.match(/\d+/);
+    return match ? match[0] : null;
+  }, [filterGrade]);
+
   const availableStreams = React.useMemo(() => {
-    if (!filterGrade || filterGrade === "all") {
+    if (filterGrade === "all" || !filterGrade) {
       const streams = new Set<string>();
-      GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
+      GRADES_DATA.forEach((g) => g.streams.forEach((s) => streams.add(s.name)));
       return Array.from(streams).sort();
     }
-    const gradeObj = GRADES_DATA.find(g => g.id === filterGrade || g.name.toLowerCase().includes(filterGrade.toLowerCase()) || g.name.replace(/[^0-9]/g, '') === filterGrade);
-    return gradeObj ? gradeObj.streams.map(s => s.name) : [];
+    // Find the grade object by its full name
+    const gradeObj = GRADES_DATA.find((g) => g.name === filterGrade);
+    return gradeObj ? gradeObj.streams.map((s) => s.name) : [];
   }, [filterGrade]);
 
   return (
@@ -44,24 +52,26 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <div className="relative sm:col-span-2">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input 
-            placeholder="Search by name/ID..." 
-            className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium text-sm" 
-            value={searchTerm} 
-            onChange={(e) => setSearchTerm(e.target.value)} 
+          <Input
+            placeholder="Search by name/ID..."
+            className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium text-sm"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
-        
+
         <div className="space-y-1">
-          <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
+          <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+            Grade
+          </Label>
           <Select value={filterGrade} onValueChange={setFilterGrade}>
             <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
               <SelectValue placeholder="All Grades" />
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Grade Levels</SelectItem>
-              {sortGrades(GRADES_DATA).map(g => (
-                <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+              {sortGrades(GRADES_DATA).map((g) => (
+                <SelectItem key={g.id} value={g.name}>
                   {g.name}
                 </SelectItem>
               ))}
@@ -70,7 +80,9 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
         </div>
 
         <div className="space-y-1">
-          <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
+          <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest px-1">
+            Stream
+          </Label>
           <Select
             value={filterStream}
             onValueChange={setFilterStream}
@@ -81,15 +93,17 @@ const StudentFilters: React.FC<StudentFiltersProps> = ({
             </SelectTrigger>
             <SelectContent className="rounded-2xl">
               <SelectItem value="all">All Streams</SelectItem>
-              {availableStreams.map(s => (
-                <SelectItem key={s} value={s}>{s}</SelectItem>
+              {availableStreams.map((s) => (
+                <SelectItem key={s} value={s}>
+                  {s}
+                </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
 
-        <Button 
-          variant="ghost" 
+        <Button
+          variant="ghost"
           className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors w-full sm:col-span-2 lg:col-span-1"
           onClick={onClearFilters}
         >

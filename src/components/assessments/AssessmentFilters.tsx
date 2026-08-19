@@ -1,12 +1,12 @@
 "use client";
 
-import React from 'react';
+import React from "react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from "lucide-react";
-import { Grade, Stream } from '@/lib/mock-data';
-import { ExamTypeOption } from '@/types/assessments';
+import { Grade, Stream } from "@/lib/mock-data";
+import { ExamTypeOption } from "@/types/assessments";
 
 interface AssessmentFiltersProps {
   gradesList: Grade[];
@@ -26,7 +26,7 @@ interface AssessmentFiltersProps {
   setAcademicYear: (val: string) => void;
 }
 
-const AssessmentFilters = ({
+const AssessmentFilters: React.FC<AssessmentFiltersProps> = ({
   gradesList,
   selectedGradeId,
   setSelectedGradeId,
@@ -42,9 +42,16 @@ const AssessmentFilters = ({
   setSearchTerm,
   academicYear,
   setAcademicYear
-}: AssessmentFiltersProps) => {
+}) => {
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: currentYear - 2019 }, (_, i) => (2020 + i).toString());
+
+  // Precompute the numeric string from the selectedGradeId for efficient comparison
+  const selectedGradeNumber = React.useMemo(() => {
+    if (selectedGradeId === "all" || !selectedGradeId) return null;
+    const match = selectedGradeId.match(/\d+/);
+    return match ? match[0] : null;
+  }, [selectedGradeId]);
 
   return (
     <div className="action-bar">
@@ -71,9 +78,12 @@ const AssessmentFilters = ({
                 <SelectValue placeholder="Select Grade" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Grades</SelectItem>
                 {gradesList.map((g) => (
-                                  <SelectItem key={g.id} value={g.id}>{g?.name ?? ''}</SelectItem>
-                                ))}
+                  <SelectItem key={g.id} value={g.name}>
+                    {g.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -87,10 +97,10 @@ const AssessmentFilters = ({
               <SelectContent>
                 <SelectItem value="all">All Streams</SelectItem>
                 {availableStreams.map((s) => (
-                                  <SelectItem key={s.id} value={s.id}>
-                                    {s?.name ?? ''}
-                                  </SelectItem>
-                                ))}
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -103,10 +113,10 @@ const AssessmentFilters = ({
               </SelectTrigger>
               <SelectContent>
                 {examTypesList.map((et) => (
-                                  <SelectItem key={et.id} value={et.code}>
-                                    {et?.name ?? ''}
-                                  </SelectItem>
-                                ))}
+                  <SelectItem key={et.id} value={et.code}>
+                    {et.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -129,10 +139,10 @@ const AssessmentFilters = ({
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <Input 
-                value={searchTerm} 
-                onChange={(e) => setSearchTerm(e.target.value)} 
-                placeholder="Name/ID..." 
+              <Input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Name/ID..."
                 className="pl-9 h-11 rounded-xl bg-slate-50 border-none font-bold text-sm"
               />
             </div>

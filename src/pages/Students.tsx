@@ -86,6 +86,13 @@ const Students = () => {
     return sortGrades(list);
   }, []);
 
+  // Precompute the numeric string from the filterGrade for efficient comparison
+  const filterGradeNumber = useMemo(() => {
+    if (filterGrade === "all" || !filterGrade) return null;
+    const match = filterGrade.match(/\d+/);
+    return match ? match[0] : null;
+  }, [filterGrade]);
+
   // Dynamically get streams for the selected grade
   const availableStreams = useMemo(() => {
     if (!regGrade) return [];
@@ -106,11 +113,11 @@ const Students = () => {
     }
   }, [regGrade, availableStreams, regStream]);
 
-  // Get unique streams for the filter dropdown - lowercase to remove duplicates
+  // Get unique streams for the filter dropdown
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
     gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
-      if (s.name) streams.add(s.name.trim().toLowerCase());
+      if (s.name) streams.add(s.name.trim());
     }));
     return Array.from(streams).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
   }, [gradesList]);
@@ -119,11 +126,12 @@ const Students = () => {
     return studentsList.filter(s => {
       const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = filterGrade === "all" || s.grade === filterGrade;
+      const matchesGrade = filterGrade === "all" ||
+                           (filterGradeNumber !== null && s.grade === filterGradeNumber);
       const matchesStream = filterStream === "all" || s.stream === filterStream;
       return matchesSearch && matchesGrade && matchesStream;
     });
-  }, [studentsList, searchTerm, filterGrade, filterStream]);
+  }, [studentsList, searchTerm, filterGradeNumber, filterStream]);
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
@@ -264,7 +272,7 @@ const Students = () => {
       const row2 = "P.O. Box 5239-30100,ELDORET";
       const row3 = "MOTTO: KNOWLEDGE POWER";
 
-      const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
+      const activeGrade = filterGrade !== "all" ? filterGrade : "All Grades";
       const activeStream = filterStream !== "all" ? filterStream : "All Streams";
       const activeTerm = "Term 1";
 
@@ -288,7 +296,7 @@ const Students = () => {
       link.setAttribute("href", url);
 
       const fileName = filterGrade !== "all" || filterStream !== "all"
-        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
+        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
         : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
 
       link.setAttribute("download", fileName);
@@ -355,7 +363,7 @@ const Students = () => {
               <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Grade Levels</SelectItem>
                 {gradesList.map((g: any) => (
-                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '')}>
+                  <SelectItem key={g.id} value={g.name}>
                     {g.name}
                   </SelectItem>
                 ))}
@@ -524,7 +532,7 @@ const Students = () => {
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {gradesList.map(g => (
-                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                    <SelectItem key={g.id} value={g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
                   ))}
@@ -584,7 +592,7 @@ const Students = () => {
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
                   {gradesList.map(g => (
-                    <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
+                    <SelectItem key={g.id} value={g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
                   ))}
