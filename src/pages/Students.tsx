@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
-import BackButton from '@/components/ui/BackButton';
+import Modal from "@/components/ui/Modal";
+import BackButton from "@/components/ui/BackButton";
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
 import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
 import { sortGrades } from '@/utils/gradeSort';
@@ -106,19 +106,19 @@ const Students = () => {
     }
   }, [regGrade, availableStreams, regStream]);
 
-  // Get unique streams for the filter dropdown
+  // Get unique streams for the filter dropdown - lowercase to remove duplicates
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
     gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
-      if (s.name) streams.add(s.name.trim());
+      if (s.name) streams.add(s.name.trim().toLowerCase());
     }));
     return Array.from(streams).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
   }, [gradesList]);
 
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
-      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                         s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = filterGrade === "all" || s.grade === filterGrade;
       const matchesStream = filterStream === "all" || s.stream === filterStream;
       return matchesSearch && matchesGrade && matchesStream;
@@ -227,29 +227,29 @@ const Students = () => {
   };
 
   const handleTransferStudent = (student: Student) => {
-      // Ensure student has all required properties for StudentTransferInfo
-      const studentWithTransferInfo: StudentTransferInfo = {
-        id: student.id,
-        name: student.name,
-        assessment: student.assessment,
-        grade: student.grade,
-        stream: student.stream,
-        gender: student.gender,
-        dob: student.dob,
-        guardian: student.guardian,
-        phone: student.phone,
-        email: student.email,
-        health: student.health,
-        needs: student.needs,
-        feeBalance: student.feeBalance || 0,
-        status: student.status || 'Active',
-        dateOfAdmission: student.dateOfAdmission || '2020-01-15',
-        coCurricularActivities: student.coCurricularActivities || '',
-        examType: student.examType || 'Regular'
-      };
-      setSelectedStudent(studentWithTransferInfo as unknown as Student);
-      setIsTransferOpen(true);
+    // Ensure student has all required properties for StudentTransferInfo
+    const studentWithTransferInfo: StudentTransferInfo = {
+      id: student.id,
+      name: student.name,
+      assessment: student.assessment,
+      grade: student.grade,
+      stream: student.stream,
+      gender: student.gender,
+      dob: student.dob,
+      guardian: student.guardian,
+      phone: student.phone,
+      email: student.email,
+      health: student.health,
+      needs: student.needs,
+      feeBalance: student.feeBalance || 0,
+      status: student.status || 'Active',
+      dateOfAdmission: student.dateOfAdmission || '2020-01-15',
+      coCurricularActivities: student.coCurricularActivities || '',
+      examType: student.examType || 'Regular'
     };
+    setSelectedStudent(studentWithTransferInfo as unknown as Student);
+    setIsTransferOpen(true);
+  };
 
   const handleExportCSV = () => {
     if (filteredStudents.length === 0) {
@@ -258,44 +258,44 @@ const Students = () => {
     }
 
     setIsExporting(true);
-    
+
     setTimeout(() => {
       const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
       const row2 = "P.O. Box 5239-30100,ELDORET";
       const row3 = "MOTTO: KNOWLEDGE POWER";
-      
+
       const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
       const activeStream = filterStream !== "all" ? filterStream : "All Streams";
       const activeTerm = "Term 1";
 
       const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
-      
+
       const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
       const rows = filteredStudents.map(s => [
-        `"${s.name.replace(/"/g, '""')}\"`,
-        `"${s.assessment.replace(/"/g, '""')}\"`,
+        `"${s.name.replace(/\"/g, '\"\"')}"`,
+        `"${s.assessment.replace(/\"/g, '\"\"')}"`,
         `\"Grade ${s.grade}\"`,
-        `"${s.stream.replace(/"/g, '""')}\"`,
-        `"${s.guardian.replace(/"/g, '""')}\"`,
-        `"${s.phone.replace(/"/g, '""')}\"`
+        `"${s.stream.replace(/\"/g, '\"\"')}"`,
+        `"${s.guardian.replace(/\"/g, '\"\"')}"`,
+        `"${s.phone.replace(/\"/g, '\"\"')}"`
       ]);
-      
+
       const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-      
+
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      
-      const fileName = filterGrade !== "all" || filterStream !== "all" 
+
+      const fileName = filterGrade !== "all" || filterStream !== "all"
         ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
         : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
-      
+
       link.setAttribute("download", fileName);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
-      
+
       setIsExporting(false);
       showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
     }, 800);
@@ -318,8 +318,8 @@ const Students = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-11 px-6 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
             onClick={handleExportCSV}
             disabled={isExporting}
@@ -338,14 +338,14 @@ const Students = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Search by name/ID..." 
-              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
+            <Input
+              placeholder="Search by name/ID..."
+              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          
+
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
             <Select value={filterGrade} onValueChange={setFilterGrade}>
@@ -362,7 +362,7 @@ const Students = () => {
               </SelectContent>
             </Select>
           </div>
-          
+
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
             <Select value={filterStream} onValueChange={setFilterStream}>
@@ -377,9 +377,9 @@ const Students = () => {
               </SelectContent>
             </Select>
           </div>
-          
-          <Button 
-            variant="ghost" 
+
+          <Button
+            variant="ghost"
             className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
             onClick={clearFilters}
           >
@@ -436,54 +436,54 @@ const Students = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">
-                                          <div className="flex items-center justify-end gap-2">
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleViewHistory(student);
-                                              }}
-                                              title="View History"
-                                            >
-                                              <History size={18} />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleEditStudent(student);
-                                              }}
-                                              title="Edit Student"
-                                            >
-                                              <Edit3 size={18} />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleTransferStudent(student);
-                                              }}
-                                              title="Transfer Student"
-                                            >
-                                              <UserX size={18} className="text-rose-600" />
-                                            </Button>
-                                            <Button
-                                              variant="ghost"
-                                              size="icon"
-                                              className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                                              onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
-                                              title="Delete Record"
-                                            >
-                                              <Trash2 size={18} />
-                                            </Button>
-                                          </div>
-                                        </td>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleViewHistory(student);
+                          }}
+                          title="View History"
+                        >
+                          <History size={18} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEditStudent(student);
+                          }}
+                          title="Edit Student"
+                        >
+                          <Edit3 size={18} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleTransferStudent(student);
+                          }}
+                          title="Transfer Student"
+                        >
+                          <UserX size={18} className="text-rose-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
+                          title="Delete Record"
+                        >
+                          <Trash2 size={18} />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
                 {filteredStudents.length === 0 && (
@@ -627,8 +627,8 @@ const Students = () => {
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold">Cancel</Button>
-            <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+            <Button
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8"
               onClick={handleVerifyAuth}
               disabled={isVerifying}
             >
@@ -648,11 +648,11 @@ const Students = () => {
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
+              <Input
+                type="password"
+                value={authPassword}
+                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
+                placeholder="••••••••"
                 className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
                 autoFocus
               />
