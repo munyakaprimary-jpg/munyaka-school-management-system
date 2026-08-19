@@ -243,55 +243,60 @@ const Students = () => {
     setIsTransferOpen(true);
   };
 
-  const handleExportCSV = () => {
-    if (filteredStudents.length === 0) {
-      showSuccess("No learners found for the current filters.");
-      return;
-    }
-
-    setIsExporting(true);
-
-    setTimeout(() => {
-      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const row2 = "P.O. Box 5239-30100,ELDORET";
-      const row3 = "MOTTO: KNOWLEDGE POWER";
-
-      const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
-      const activeStream = filterStream !== "all" ? filterStream : "All Streams";
-      const activeTerm = "Term 1";
-
-      const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
-
-      const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
-      const rows = filteredStudents.map(s => [
-              `"${s.name.replace(/"/g, '""')}"`,
-              `"${s.assessment.replace(/"/g, '""')}"`,
-              `"Grade ${s.grade}"`,
-              `"${s.stream.replace(/"/g, '""')}"`,
-              `"${s.guardian.replace(/"/g, '""')}"`,
-              `"${s.phone.replace(/"/g, '""')}"`
-            ]);
-
-      const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-
-      const fileName = filterGrade !== "all" || filterStream !== "all"
-        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
-        : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
-
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      setIsExporting(false);
-      showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
-    }, 800);
-  };
+  const escapeCSV = (str: string) => {
+      const escaped = String(str).replace(/"/g, '""');
+      return `"${escaped}"`;
+    };
+  
+    const handleExportCSV = () => {
+      if (filteredStudents.length === 0) {
+        showSuccess("No learners found for the current filters.");
+        return;
+      }
+  
+      setIsExporting(true);
+  
+      setTimeout(() => {
+        const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+        const row2 = "P.O. Box 5239-30100,ELDORET";
+        const row3 = "MOTTO: KNOWLEDGE POWER";
+  
+        const activeGrade = filterGrade !== "all" ? `Grade ${filterGrade}` : "All Grades";
+        const activeStream = filterStream !== "all" ? filterStream : "All Streams";
+        const activeTerm = "Term 1";
+  
+        const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
+  
+        const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
+        const rows = filteredStudents.map(s => [
+          escapeCSV(s.name),
+          escapeCSV(s.assessment),
+          `"Grade ${s.grade}"`,
+          escapeCSV(s.stream),
+          escapeCSV(s.guardian),
+          escapeCSV(s.phone)
+        ]);
+  
+        const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+  
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+  
+        const fileName = filterGrade !== "all" || filterStream !== "all"
+          ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
+          : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
+  
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+  
+        setIsExporting(false);
+        showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
+      }, 800);
+    };
 
   const clearFilters = () => {
     setSearchTerm("");
