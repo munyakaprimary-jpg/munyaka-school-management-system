@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from '@/components/ui/Modal';
+import Modal from "@/components/ui/Modal";
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
 import { NOTICES as initialNotices } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
@@ -38,9 +38,9 @@ const Notices = () => {
 
       <div className="grid grid-cols-1 gap-6">{noticesList.map((notice) => (
         <Card key={notice.id} className="rounded-[2rem] bg-white overflow-hidden group">
-          <CardContent className="p-8 flex flex-col md:flex-row gap-6">
-            <div className={`w-16 h-16 rounded-3xl ${notice.color} flex items-center justify-center shrink-0`}><Megaphone size={28} /></div>
-            <div className="flex-1 space-y-3">
+          <CardContent className="p-5 flex flex-col md:flex-row gap-6">
+            <div className={`w-14 h-14 rounded-3xl ${notice.color} flex items-center justify-center shrink-0`}><Megaphone size={24} /></div>
+            <div className="flex-1 space-y-2">
               <div className="flex items-center justify-between"><div className="flex items-center gap-2"><Badge>{notice.category}</Badge><span className="text-xs font-bold text-slate-400 flex items-center gap-1.5"><Calendar size={14} /> {notice.date}</span></div><Button variant="ghost" size="icon" className="text-slate-300"><Pin size={18} /></Button></div>
               <h3 className="text-xl font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{notice.title}</h3>
               <p className="text-slate-600 text-sm leading-relaxed">{notice.content || notice.description}</p>

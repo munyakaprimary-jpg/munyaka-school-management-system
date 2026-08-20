@@ -415,7 +415,7 @@ const DigitalSkillsAssessment = () => {
     };
     const config = configs[rating as keyof typeof configs] || configs.ME;
     return (
-      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2 py-0.5", config.bg, config.text, config.border)}>
         {config.label} ({rating})
       </Badge>
     );
@@ -429,7 +429,7 @@ const DigitalSkillsAssessment = () => {
     };
     const config = configs[level as keyof typeof configs] || configs.Beginner;
     return (
-      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2 py-0.5", config.bg, config.text, config.border)}>
         {level}
       </Badge>
     );
@@ -443,7 +443,7 @@ const DigitalSkillsAssessment = () => {
     };
     const config = configs[status as keyof typeof configs] || configs.Active;
     return (
-      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2 py-0.5", config.bg, config.text, config.border)}>
         {status}
       </Badge>
     );
@@ -457,122 +457,122 @@ const DigitalSkillsAssessment = () => {
     };
     const config = configs[level as keyof typeof configs] || configs.Developing;
     return (
-      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2.5 py-0.5", config.bg, config.text, config.border)}>
+      <Badge variant="outline" className={cn("rounded-lg font-bold text-xs px-2 py-0.5", config.bg, config.text, config.border)}>
         {level}
       </Badge>
     );
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Digital Skills & Assessment</h1>
+          <h1 className="text-xl font-bold text-gray-900">Digital Skills & Assessment</h1>
           <p className="text-gray-500">Record ICT competencies, typing speeds, digital quizzes, and software mastery.</p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-gray-200 space-x-4">
+      <div className="flex border-b border-gray-200 space-x-2">
         <button
           onClick={() => setActiveTab('competencies')}
-          className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
+          className={`pb-2 px-3 font-medium text-xs flex items-center gap-1 ${
             activeTab === 'competencies' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Award className="w-4 h-4" /> ICT Competencies
+          <Award className="w-3 h-3" /> ICT Competencies
         </button>
         <button
           onClick={() => setActiveTab('typing')}
-          className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
+          className={`pb-2 px-3 font-medium text-xs flex items-center gap-1 ${
             activeTab === 'typing' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Keyboard className="w-4 h-4" /> Keyboarding Log
+          <Keyboard className="w-3 h-3" /> Keyboarding Log
         </button>
         <button
           onClick={() => setActiveTab('quizzes')}
-          className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
+          className={`pb-2 px-3 font-medium text-xs flex items-center gap-1 ${
             activeTab === 'quizzes' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <FileCheck className="w-4 h-4" /> Digital Quizzes
+          <FileCheck className="w-3 h-3" /> Digital Quizzes
         </button>
         <button
           onClick={() => setActiveTab('software')}
-          className={`pb-3 px-4 font-medium text-sm flex items-center gap-2 ${
+          className={`pb-2 px-3 font-medium text-xs flex items-center gap-1 ${
             activeTab === 'software' ? 'border-b-2 border-indigo-600 text-indigo-600' : 'text-gray-500 hover:text-gray-700'
           }`}
         >
-          <Monitor className="w-4 h-4" /> Software Mastery
+          <Monitor className="w-3 h-3" /> Software Mastery
         </button>
       </div>
 
       {/* Tab Content */}
       {activeTab === 'competencies' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Metric Cards */}
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Award size={24} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Award size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Evaluated</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{competencyStats.total}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Total Evaluated</p>
+                  <h3 className="text-lg font-black text-slate-900 leading-none mt-0.5">{competencyStats.total}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <CheckCircle2 size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">EE (Exceeding)</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{competencyStats.ee}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">EE (Exceeding)</p>
+                  <h3 className="text-lg font-black text-emerald-700 leading-none mt-0.5">{competencyStats.ee}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <CheckCircle2 size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
+                  <CheckCircle2 size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">ME (Meeting)</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{competencyStats.me}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">ME (Meeting)</p>
+                  <h3 className="text-lg font-black text-blue-700 leading-none mt-0.5">{competencyStats.me}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
-                  <AlertCircle size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-50 text-amber-600 rounded-2xl">
+                  <AlertCircle size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">AE / BE (Support Needed)</p>
-                  <h3 className="text-2xl font-black text-amber-700 leading-none mt-1">{competencyStats.aeBe}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">AE / BE (Support Needed)</p>
+                  <h3 className="text-lg font-black text-amber-700 leading-none mt-0.5">{competencyStats.aeBe}</h3>
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Filters & Search */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-            <div className="flex flex-col md:flex-row gap-4">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <Input 
                   placeholder="Search by learner name or Adm No..." 
-                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  className="pl-9 h-10 rounded-2xl border-none bg-slate-50 font-medium"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                 />
               </div>
               <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[220px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[180px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Skill Categories" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -582,57 +582,57 @@ const DigitalSkillsAssessment = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
-                <Download size={18} /> Export CSV
+              <Button variant="outline" className="h-10 px-4 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={16} /> Export CSV
               </Button>
             </div>
           </Card>
 
           {/* Competencies Table */}
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Adm No</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Skill Category</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Rating</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Date</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Student Name</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Adm No</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Grade</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Skill Category</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-center">Rating</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Date</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredCompetencies.length > 0 ? (
                       filteredCompetencies.map((record) => (
                         <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <code className="text-xs font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{record.admNo}</code>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <span className="font-bold text-slate-700">{record.grade}</span>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold text-xs">
                               {record.category}
                             </Badge>
                           </td>
-                          <td className="px-8 py-5 text-center">
+                          <td className="px-6 py-3 text-center">
                             {getRatingBadge(record.rating)}
                           </td>
-                          <td className="px-8 py-5 font-medium text-slate-600">{record.date}</td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
-                                <Eye size={16} />
+                          <td className="px-6 py-3 font-medium text-slate-600">{record.date}</td>
+                          <td className="px-6 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
+                                <Eye size={14} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
-                                <Edit size={16} />
+                              <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
+                                <Edit size={14} />
                               </Button>
                             </div>
                           </td>
@@ -640,9 +640,9 @@ const DigitalSkillsAssessment = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-8 py-16 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <Search size={32} className="text-slate-200" />
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search size={24} className="text-slate-200" />
                             <p className="text-slate-500 font-bold">No competency records match the current filters.</p>
                           </div>
                         </td>
@@ -657,58 +657,58 @@ const DigitalSkillsAssessment = () => {
       )}
 
       {activeTab === 'typing' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <TrendingUp size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <TrendingUp size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Class Avg Speed</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{typingStats.avgSpeed} WPM</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Class Avg Speed</p>
+                  <h3 className="text-lg font-black text-slate-900 leading-none mt-0.5">{typingStats.avgSpeed} WPM</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <Target size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <Target size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Top Speed</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{typingStats.topSpeed} WPM</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Top Speed</p>
+                  <h3 className="text-lg font-black text-emerald-700 leading-none mt-0.5">{typingStats.topSpeed} WPM</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <Activity size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Activity size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Sessions</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{typingStats.totalSessions}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Total Sessions</p>
+                  <h3 className="text-lg font-black text-blue-700 leading-none mt-0.5">{typingStats.totalSessions}</h3>
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Filters & Search */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-            <div className="flex flex-col md:flex-row gap-4">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <Input 
                   placeholder="Search by learner name..." 
-                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  className="pl-9 h-10 rounded-2xl border-none bg-slate-50 font-medium"
                   value={typingSearchTerm}
                   onChange={(e) => setTypingSearchTerm(e.target.value)}
                 />
               </div>
               <Select value={speedLevelFilter} onValueChange={setSpeedLevelFilter}>
-                <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[160px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Speed Levels" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -718,55 +718,55 @@ const DigitalSkillsAssessment = () => {
                   ))}
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
-                <Download size={18} /> Export CSV
+              <Button variant="outline" className="h-10 px-4 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={16} /> Export CSV
               </Button>
             </div>
           </Card>
 
           {/* Typing Records Table */}
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm text-left">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Speed (WPM)</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Accuracy (%)</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Speed Level</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Assessment Date</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Student Name</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Grade</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-center">Speed (WPM)</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-center">Accuracy (%)</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-center">Speed Level</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Assessment Date</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredTypingRecords.length > 0 ? (
                       filteredTypingRecords.map((record) => (
                         <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
-                          <td className="px-8 py-5">
+                          <td className="px-6 py-3">
                             <span className="font-bold text-slate-700">{record.grade}</span>
                           </td>
-                          <td className="px-8 py-5 text-center">
-                            <span className="font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl">{record.speed} WPM</span>
+                          <td className="px-6 py-3 text-center">
+                            <span className="font-black text-indigo-600 bg-indigo-50 px-2 py-1 rounded-xl">{record.speed} WPM</span>
                           </td>
-                          <td className="px-8 py-5 text-center">
+                          <td className="px-6 py-3 text-center">
                             <span className="font-bold text-emerald-600">{record.accuracy}%</span>
                           </td>
-                          <td className="px-8 py-5 text-center">
+                          <td className="px-6 py-3 text-center">
                             {getSpeedLevelBadge(record.level)}
                           </td>
-                          <td className="px-8 py-5 font-medium text-slate-600">{record.date}</td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
-                                <Eye size={16} />
+                          <td className="px-6 py-3 font-medium text-slate-600">{record.date}</td>
+                          <td className="px-6 py-3 text-right">
+                            <div className="flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="View Details">
+                                <Eye size={14} />
                               </Button>
-                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
-                                <Edit size={16} />
+                              <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50" title="Edit Record">
+                                <Edit size={14} />
                               </Button>
                             </div>
                           </td>
@@ -774,9 +774,9 @@ const DigitalSkillsAssessment = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={7} className="px-8 py-16 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <Search size={32} className="text-slate-200" />
+                        <td colSpan={7} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search size={24} className="text-slate-200" />
                             <p className="text-slate-500 font-bold">No typing records match the current filters.</p>
                           </div>
                         </td>
@@ -791,58 +791,58 @@ const DigitalSkillsAssessment = () => {
       )}
 
       {activeTab === 'quizzes' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Zap size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Zap size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Quizzes</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{quizStats.activeQuizzes}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Active Quizzes</p>
+                  <h3 className="text-lg font-black text-slate-900 leading-none mt-0.5">{quizStats.activeQuizzes}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <Activity size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <Activity size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Attempts</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{quizStats.totalAttempts}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Total Attempts</p>
+                  <h3 className="text-lg font-black text-emerald-700 leading-none mt-0.5">{quizStats.totalAttempts}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <Target size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Target size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Avg Class Score</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{quizStats.avgScore}%</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Avg Class Score</p>
+                  <h3 className="text-lg font-black text-blue-700 leading-none mt-0.5">{quizStats.avgScore}%</h3>
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Filters & Search */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-            <div className="flex flex-col md:flex-row gap-4">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <Input 
                   placeholder="Search by Quiz Title or Subject..." 
-                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  className="pl-9 h-10 rounded-2xl border-none bg-slate-50 font-medium"
                   value={quizSearchTerm}
                   onChange={(e) => setQuizSearchTerm(e.target.value)}
                 />
               </div>
               <Select value={quizGradeFilter} onValueChange={setQuizGradeFilter}>
-                <SelectTrigger className="w-[200px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[160px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -853,7 +853,7 @@ const DigitalSkillsAssessment = () => {
                 </SelectContent>
               </Select>
               <Select value={quizStatusFilter} onValueChange={setQuizStatusFilter}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[140px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Status" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -863,53 +863,53 @@ const DigitalSkillsAssessment = () => {
                   <SelectItem value="Draft">Draft</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
-                <Download size={18} /> Export CSV
+              <Button variant="outline" className="h-10 px-4 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={16} /> Export CSV
               </Button>
             </div>
           </Card>
 
           {/* Quizzes Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {filteredQuizzes.length > 0 ? (
               filteredQuizzes.map((quiz) => {
                 return (
                   <Card key={quiz.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
-                    <CardContent className="p-6 space-y-4">
+                    <CardContent className="p-4 space-y-3">
                       <div className="flex justify-between items-start">
-                        <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
-                          <FileCheck size={24} />
+                        <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl shrink-0">
+                          <FileCheck size={20} />
                         </div>
                         {getQuizStatusBadge(quiz.status)}
                       </div>
                       
-                      <div className="space-y-2">
-                        <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                      <div className="space-y-1">
+                        <h3 className="text-base font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
                           {quiz.title}
                         </h3>
                         <p className="text-sm font-bold text-indigo-500 flex items-center gap-1">
-                          <Layers size={14} /> {quiz.grade}
+                          <Layers size={12} /> {quiz.grade}
                         </p>
                         <p className="text-xs text-slate-500">{quiz.subject}</p>
                       </div>
 
-                      <div className="space-y-3 pt-2 border-t border-slate-100">
-                        <div className="grid grid-cols-3 gap-2 text-center">
-                          <div className="p-2 bg-slate-50 rounded-xl">
-                            <p className="text-xl font-black text-slate-900">{quiz.questions}</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Questions</p>
+                      <div className="space-y-2 pt-1 border-t border-slate-100">
+                        <div className="grid grid-cols-3 gap-1 text-center">
+                          <div className="p-1.5 bg-slate-50 rounded-xl">
+                            <p className="text-lg font-black text-slate-900">{quiz.questions}</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase">Questions</p>
                           </div>
-                          <div className="p-2 bg-slate-50 rounded-xl">
-                            <p className="text-xl font-black text-slate-900">{quiz.timeLimit} min</p>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Time Limit</p>
+                          <div className="p-1.5 bg-slate-50 rounded-xl">
+                            <p className="text-lg font-black text-slate-900">{quiz.timeLimit} min</p>
+                            <p className="text-[8px] font-bold text-slate-400 uppercase">Time Limit</p>
                           </div>
-                          <div className="p-2 bg-slate-50 rounded-xl">
-                            <p className="text-xl font-black text-indigo-600">{quiz.attempts}</p>
-                            <p className="text-[10px] font-bold text-indigo-500 uppercase">Attempts</p>
+                          <div className="p-1.5 bg-slate-50 rounded-xl">
+                            <p className="text-lg font-black text-indigo-600">{quiz.attempts}</p>
+                            <p className="text-[8px] font-bold text-indigo-500 uppercase">Attempts</p>
                           </div>
-                        <div className="p-2 bg-slate-50 rounded-xl">
-                            <p className="text-xl font-black text-emerald-600">{quiz.avgScore}%</p>
-                            <p className="text-[10px] font-bold text-emerald-500 uppercase">Avg Score</p>
+                        <div className="p-1.5 bg-slate-50 rounded-xl">
+                            <p className="text-lg font-black text-emerald-600">{quiz.avgScore}%</p>
+                            <p className="text-[8px] font-bold text-emerald-500 uppercase">Avg Score</p>
                           </div>
                         </div>
                         
@@ -920,20 +920,20 @@ const DigitalSkillsAssessment = () => {
                       </div>
 
                       <Button 
-                        className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-11 shadow-lg shadow-indigo-100 gap-2"
+                        className="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-700 font-black h-10 shadow-lg shadow-indigo-100 gap-2"
                       >
-                        <ClipboardCheck size={18} /> View Results
+                        <ClipboardCheck size={16} /> View Results
                       </Button>
                     </CardContent>
                   </Card>
                 );
               })
             ) : (
-              <div className="col-span-full text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                <div className="w-16 h-16 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-200 shadow-sm">
-                  <Search size={32} />
+              <div className="col-span-full text-center py-12 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
+                <div className="w-12 h-12 bg-white rounded-3xl flex items-center justify-center mx-auto mb-3 text-slate-200 shadow-sm">
+                  <Search size={24} />
                 </div>
-                <h3 className="text-lg font-bold text-slate-900 mb-1">No quizzes found</h3>
+                <h3 className="text-base font-bold text-slate-900 mb-1">No quizzes found</h3>
                 <p className="text-slate-400 text-sm max-w-xs mx-auto">No digital quizzes match the current search and grade filters.</p>
               </div>
             )}
@@ -942,69 +942,69 @@ const DigitalSkillsAssessment = () => {
       )}
 
       {activeTab === 'software' && (
-        <div className="space-y-6">
+        <div className="space-y-4">
           {/* Metric Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <Monitor size={24} />
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-2xl">
+                  <Monitor size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Apps Assessed</p>
-                  <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{softwareStats.appsAssessed}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Apps Assessed</p>
+                  <h3 className="text-lg font-black text-slate-900 leading-none mt-0.5">{softwareStats.appsAssessed}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-                  <TrendingUpIcon size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-2xl">
+                  <TrendingUpIcon size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Avg Mastery</p>
-                  <h3 className="text-2xl font-black text-emerald-700 leading-none mt-1">{softwareStats.avgMastery}%</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Avg Mastery</p>
+                  <h3 className="text-lg font-black text-emerald-700 leading-none mt-0.5">{softwareStats.avgMastery}%</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-                  <Users size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-blue-50 text-blue-600 rounded-2xl">
+                  <Users size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">High Performers</p>
-                  <h3 className="text-2xl font-black text-blue-700 leading-none mt-1">{softwareStats.highPerformers}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">High Performers</p>
+                  <h3 className="text-lg font-black text-blue-700 leading-none mt-0.5">{softwareStats.highPerformers}</h3>
                 </div>
               </div>
             </Card>
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
-                  <TrendingDown size={24} />
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-rose-50 text-rose-600 rounded-2xl">
+                  <TrendingDown size={20} />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Needs Practice</p>
-                  <h3 className="text-2xl font-black text-rose-700 leading-none mt-1">{softwareStats.needsPractice}</h3>
+                  <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Needs Practice</p>
+                  <h3 className="text-lg font-black text-rose-700 leading-none mt-0.5">{softwareStats.needsPractice}</h3>
                 </div>
               </div>
             </Card>
           </div>
 
           {/* Filters & Search */}
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-            <div className="flex flex-col md:flex-row gap-4">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-3">
+            <div className="flex flex-col md:flex-row gap-3">
               <div className="relative flex-1">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                 <Input 
                   placeholder="Search by learner name or tool..." 
-                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                  className="pl-9 h-10 rounded-2xl border-none bg-slate-50 font-medium"
                   value={softwareSearchTerm}
                   onChange={(e) => setSoftwareSearchTerm(e.target.value)}
                 />
               </div>
               <Select value={softwareToolFilter} onValueChange={setSoftwareToolFilter}>
-                <SelectTrigger className="w-[220px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[180px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Tools" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -1015,7 +1015,7 @@ const DigitalSkillsAssessment = () => {
                 </SelectContent>
               </Select>
               <Select value={softwareLevelFilter} onValueChange={setSoftwareLevelFilter}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[140px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Levels" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -1026,7 +1026,7 @@ const DigitalSkillsAssessment = () => {
                 </SelectContent>
               </Select>
               <Select value={selectedGrade} onValueChange={setSelectedGrade}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[140px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Grades" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -1040,7 +1040,7 @@ const DigitalSkillsAssessment = () => {
                 </SelectContent>
               </Select>
               <Select value={selectedStream} onValueChange={setSelectedStream}>
-                <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
+                <SelectTrigger className="w-[140px] h-10 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
                   <SelectValue placeholder="All Streams" />
                 </SelectTrigger>
                 <SelectContent className="rounded-2xl">
@@ -1053,45 +1053,45 @@ const DigitalSkillsAssessment = () => {
                   <SelectItem value="Red">Red</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="h-12 px-6 rounded-2xl border-slate-200 bg-white font-bold gap-2">
-                <Download size={18} /> Export CSV
+              <Button variant="outline" className="h-10 px-4 rounded-2xl border-slate-200 bg-white font-bold gap-2">
+                <Download size={16} /> Export CSV
               </Button>
             </div>
           </Card>
 
           {/* Tool Cards Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {MOCK_TOOLS.map((tool) => {
               const Icon = tool.icon;
               return (
                 <Card key={tool.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white overflow-hidden group">
-                  <CardContent className="p-6 space-y-4">
+                  <CardContent className="p-4 space-y-3">
                     <div className="flex justify-between items-start">
-                      <div className={cn("p-3 rounded-2xl", tool.bgColor)}>
-                        <Icon className={cn("text-2xl", tool.color)} size={28} />
+                      <div className={cn("p-2 rounded-2xl", tool.bgColor)}>
+                        <Icon className={cn("text-xl", tool.color)} size={24} />
                       </div>
                       <Badge variant="outline" className={cn("rounded-lg font-bold text-xs", tool.bgColor, tool.color)}>
                         {tool.avgMastery}% Avg
                       </Badge>
                     </div>
                     
-                    <h3 className="text-lg font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                    <h3 className="text-base font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
                       {tool.name}
                     </h3>
 
-                    <div className="space-y-3 pt-2 border-t border-slate-100">
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="p-2 bg-emerald-50 rounded-xl">
-                          <p className="text-2xl font-black text-emerald-700">{tool.proficient}</p>
-                          <p className="text-[10px] font-bold text-emerald-600 uppercase">Proficient</p>
+                    <div className="space-y-2 pt-1 border-t border-slate-100">
+                      <div className="grid grid-cols-3 gap-1 text-center">
+                        <div className="p-1.5 bg-emerald-50 rounded-xl">
+                          <p className="text-lg font-black text-emerald-700">{tool.proficient}</p>
+                          <p className="text-[8px] font-bold text-emerald-600 uppercase">Proficient</p>
                         </div>
-                        <div className="p-2 bg-amber-50 rounded-xl">
-                          <p className="text-2xl font-black text-amber-700">{tool.developing}</p>
-                          <p className="text-[10px] font-bold text-amber-600 uppercase">Developing</p>
+                        <div className="p-1.5 bg-amber-50 rounded-xl">
+                          <p className="text-lg font-black text-amber-700">{tool.developing}</p>
+                          <p className="text-[8px] font-bold text-amber-600 uppercase">Developing</p>
                         </div>
-                        <div className="p-2 bg-rose-50 rounded-xl">
-                          <p className="text-2xl font-black text-rose-700">{tool.emerging}</p>
-                          <p className="text-[10px] font-bold text-rose-600 uppercase">Emerging</p>
+                        <div className="p-1.5 bg-rose-50 rounded-xl">
+                          <p className="text-lg font-black text-rose-700">{tool.emerging}</p>
+                          <p className="text-[8px] font-bold text-rose-600 uppercase">Emerging</p>
                         </div>
                       </div>
 
@@ -1102,7 +1102,7 @@ const DigitalSkillsAssessment = () => {
                             {tool.avgMastery}%
                           </span>
                         </div>
-                        <Progress value={tool.avgMastery} className="h-2.5" />
+                        <Progress value={tool.avgMastery} className="h-1.5" />
                       </div>
 
                       <div className="flex justify-between items-center text-xs font-bold text-slate-400 uppercase tracking-wider">
@@ -1117,9 +1117,9 @@ const DigitalSkillsAssessment = () => {
           </div>
 
           {/* Learner Proficiency Table */}
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-            <CardHeader className="p-6 border-b bg-slate-50/50">
-              <CardTitle className="text-lg font-black text-slate-900">Learner Proficiency Records</CardTitle>
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="p-4 border-b bg-slate-50/50">
+              <CardTitle className="text-base font-black text-slate-900">Learner Proficiency Records</CardTitle>
               <p className="text-sm text-slate-500">Individual student proficiency levels across all assessed software tools.</p>
             </CardHeader>
             <CardContent className="p-0">
@@ -1127,43 +1127,43 @@ const DigitalSkillsAssessment = () => {
                 <table className="w-full text-sm text-left">
                   <thead className="bg-slate-50/50 border-b">
                     <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Tool / Application</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Proficiency Level</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Last Tested</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Student Name</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Grade</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Tool / Application</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-center">Proficiency Level</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">Last Tested</th>
+                      <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {filteredProficiencyRecords.length > 0 ? (
                       filteredProficiencyRecords.map((record, index) => (
                         <tr key={`${record.id || index}-${index}`}>
-                          <td className="p-3">
+                          <td className="p-2">
                             <p className="font-bold text-slate-900">{record.studentName}</p>
                           </td>
-                          <td className="p-3">
+                          <td className="p-2">
                             <span className="font-bold text-slate-700">{record.grade}</span>
                           </td>
-                          <td className="p-3">
+                          <td className="p-2">
                             <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold text-xs">
                               {record.toolName}
                             </Badge>
                           </td>
-                          <td className="p-3 text-center">
+                          <td className="p-2 text-center">
                             {getProficiencyBadge(record.level)}
                           </td>
-                          <td className="p-3 font-medium text-slate-600">{record.lastTested}</td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-2">
+                          <td className="p-2 font-medium text-slate-600">{record.lastTested}</td>
+                          <td className="p-2">
+                            <div className="flex items-center gap-1">
                               <button onClick={() => { setSelectedRecord(record); setIsEditOpen(true); }} className="p-1 text-blue-600 hover:text-blue-800">
-                                <Edit className="w-4 h-4" />
+                                <Edit className="w-3 h-3" />
                               </button>
                               <button onClick={() => { setSelectedRecord(record); setIsViewOpen(true); }} className="p-1 text-gray-600 hover:text-gray-800">
-                                <Eye className="w-4 h-4" />
+                                <Eye className="w-3 h-3" />
                               </button>
                               <button onClick={() => handleDelete(record.id)} className="p-1 text-red-600 hover:text-red-800">
-                                <Trash2 className="w-4 h-4" />
+                                <Trash2 className="w-3 h-3" />
                               </button>
                             </div>
                           </td>
@@ -1171,9 +1171,9 @@ const DigitalSkillsAssessment = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={6} className="px-8 py-16 text-center">
-                          <div className="flex flex-col items-center gap-3">
-                            <Search size={32} className="text-slate-200" />
+                        <td colSpan={6} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center gap-2">
+                            <Search size={24} className="text-slate-200" />
                             <p className="text-slate-500 font-bold">No proficiency records match the current filters.</p>
                           </div>
                         </td>
@@ -1188,25 +1188,25 @@ const DigitalSkillsAssessment = () => {
           {/* Edit Modal */}
           {isEditOpen && selectedRecord && (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-slate-900">Edit Proficiency Level</h3>
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 animate-in zoom-in-95">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-base font-bold text-slate-900">Edit Proficiency Level</h3>
                   <button onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
-                    <X size={20} />
+                    <X size={18} />
                   </button>
                 </div>
-                <div className="space-y-4">
-                  <div className="p-4 bg-slate-50 rounded-xl">
+                <div className="space-y-3">
+                  <div className="p-3 bg-slate-50 rounded-xl">
                     <p className="text-sm font-bold text-slate-900">{selectedRecord.studentName}</p>
                     <p className="text-xs text-slate-500">{selectedRecord.grade} • {selectedRecord.toolName}</p>
                   </div>
                   <div>
-                    <Label className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-2">Proficiency Level</Label>
+                    <Label className="text-xs font-black uppercase text-slate-400 tracking-widest block mb-1">Proficiency Level</Label>
                     <Select 
                       value={selectedRecord.level} 
                       onValueChange={(val: 'Proficient' | 'Developing' | 'Emerging') => handleEditSave(val)}
                     >
-                      <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
+                      <SelectTrigger className="h-10 rounded-xl bg-slate-50 border-none font-bold">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent className="rounded-2xl">
@@ -1216,16 +1216,16 @@ const DigitalSkillsAssessment = () => {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="flex gap-3 pt-4">
+                  <div className="flex gap-2 pt-3">
                     <Button 
                       variant="ghost" 
-                      className="flex-1 rounded-xl h-11 font-bold"
+                      className="flex-1 rounded-xl h-9 font-bold"
                       onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }}
                     >
                       Cancel
                     </Button>
                     <Button 
-                      className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
+                      className="flex-1 rounded-xl h-9 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
                       onClick={() => { setIsEditOpen(false); setSelectedRecord(null); }}
                     >
                       Save Changes
@@ -1238,53 +1238,51 @@ const DigitalSkillsAssessment = () => {
 
           {/* View Details Modal */}
           {isViewOpen && selectedRecord && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
-              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
-                <div className="flex items-center justify-between mb-6">
-                  <h3 className="text-lg font-bold text-slate-900">View Details</h3>
-                  <button onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
-                    <X size={20} />
-                  </button>
+            <div className="fixed inset-0 z-50 flex items-center            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 animate-in zoom-in-95">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-base font-bold text-slate-900">View Details</h3>
+                <button onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
+                  <X size={18} />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div className="p-3 bg-indigo-50 rounded-xl">
+                  <p className="text-sm font-bold text-indigo-900">{selectedRecord.studentName}</p>
+                  <p className="text-xs text-indigo-700 mt-1">{selectedRecord.grade} • {selectedRecord.toolName}</p>
                 </div>
-                <div className="space-y-4">
-                  <div className="p-4 bg-indigo-50 rounded-xl">
-                    <p className="text-sm font-bold text-indigo-900">{selectedRecord.studentName}</p>
-                    <p className="text-xs text-indigo-700 mt-1">{selectedRecord.grade} • {selectedRecord.toolName}</p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Current Level</p>
+                    <p className="text-base font-black text-slate-900 mt-0.5">{selectedRecord.level}</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="p-3 bg-slate-50 rounded-xl">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Current Level</p>
-                      <p className="text-lg font-black text-slate-900 mt-1">{selectedRecord.level}</p>
-                    </div>
-                    <div className="p-3 bg-slate-50 rounded-xl">
-                      <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Last Tested</p>
-                      <p className="text-lg font-black text-slate-900 mt-1">{selectedRecord.lastTested}</p>
-                    </div>
+                  <div className="p-2 bg-slate-50 rounded-xl">
+                    <p className="text-[8px] font-black uppercase text-slate-400 tracking-widest">Last Tested</p>
+                    <p className="text-base font-black text-slate-900 mt-0.5">{selectedRecord.lastTested}</p>
                   </div>
-                  <div className="p-3 bg-amber-50 rounded-xl border border-amber-200">
-                    <p className="text-xs font-bold text-amber-800 flex items-center gap-1">
-                      <AlertCircle size={12} /> Teacher Feedback: This student shows consistent progress in practical assessments.
-                    </p>
-                  </div>
-                  <div className="flex gap-3 pt-4">
-                    <Button 
-                      variant="ghost" 
-                      className="flex-1 rounded-xl h-11 font-bold"
-                      onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }}
-                    >
-                      Close
-                    </Button>
-                    <Button 
-                      className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
-                      onClick={() => { setIsViewOpen(false); setIsEditOpen(true); }}
-                    >
-                      Edit Instead
-                    </Button>
-                  </div>
+                </div>
+                <div className="p-2 bg-amber-50 rounded-xl border border-amber-200">
+                  <p className="text-xs font-bold text-amber-800 flex items-center gap-1">
+                    <AlertCircle size={10} /> Teacher Feedback: This student shows consistent progress in practical assessments.
+                  </p>
+                </div>
+                <div className="flex gap-2 pt-3">
+                  <Button 
+                    variant="ghost" 
+                    className="flex-1 rounded-xl h-9 font-bold"
+                    onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }}
+                  >
+                    Close
+                  </Button>
+                  <Button 
+                    className="flex-1 rounded-xl h-9 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
+                    onClick={() => { setIsViewOpen(false); setIsEditOpen(true); }}
+                  >
+                    Edit Instead
+                  </Button>
                 </div>
               </div>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

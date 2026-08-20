@@ -21,9 +21,9 @@ const Timetable = () => {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <Select defaultValue="grade4">
-          <SelectTrigger className="rounded-2xl h-12 bg-white border-none shadow-sm">
+          <SelectTrigger className="rounded-2xl h-10 bg-white border-none shadow-sm">
             <SelectValue placeholder="Select Grade" />
           </SelectTrigger>
           <SelectContent>
@@ -40,25 +40,25 @@ const Timetable = () => {
             <table className="w-full text-sm text-center border-collapse">
               <thead>
                 <tr className="bg-slate-50/50 border-b">
-                  <th className="px-6 py-5 font-black text-slate-400 uppercase tracking-widest text-[10px] w-40">Time</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Monday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Tuesday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Wednesday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Thursday</th>
-                  <th className="px-6 py-5 font-black text-slate-900 uppercase tracking-widest text-[10px]">Friday</th>
+                  <th className="px-4 py-3 font-black text-slate-400 uppercase tracking-widest text-[8px] w-32">Time</th>
+                  <th className="px-4 py-3 font-black text-slate-900 uppercase tracking-widest text-[8px]">Monday</th>
+                  <th className="px-4 py-3 font-black text-slate-900 uppercase tracking-widest text-[8px]">Tuesday</th>
+                  <th className="px-4 py-3 font-black text-slate-900 uppercase tracking-widest text-[8px]">Wednesday</th>
+                  <th className="px-4 py-3 font-black text-slate-900 uppercase tracking-widest text-[8px]">Thursday</th>
+                  <th className="px-4 py-3 font-black text-slate-900 uppercase tracking-widest text-[8px]">Friday</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {TIMETABLE.map((row, i) => (
                   <tr key={i} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-6 font-bold text-slate-500 bg-slate-50/30">
-                      <div className="flex items-center justify-center gap-2">
-                        <Clock size={12} /> {row.time}
+                    <td className="px-4 py-3 font-bold text-slate-500 bg-slate-50/30">
+                      <div className="flex items-center justify-center gap-1">
+                        <Clock size={10} /> {row.time}
                       </div>
                     </td>
                     {[row.mon, row.tue, row.wed, row.thu, row.fri].map((lesson, idx) => (
-                      <td key={idx} className="px-6 py-6">
-                        <div className={`p-3 rounded-2xl text-xs font-bold ${
+                      <td key={idx} className="px-4 py-3">
+                        <div className={`p-2 rounded-2xl text-xs font-bold ${
                           lesson === 'BREAK' ? 'bg-amber-50 text-amber-700 border border-amber-100' :
                           ['Assembly', 'Pastoral'].includes(lesson) ? 'bg-purple-50 text-purple-700' :
                           'bg-indigo-50 text-indigo-700'

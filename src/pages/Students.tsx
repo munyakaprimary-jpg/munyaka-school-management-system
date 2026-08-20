@@ -1,5 +1,4 @@
 import React, { useState, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -99,12 +98,6 @@ const Students = () => {
     const grade = gradesList.find((g: any) => g.name === `Grade ${regGrade}` || g.name === regGrade || g.id === regGrade);
     return grade ? grade.streams.map((s: any) => s.name) : [];
   }, [regGrade, gradesList]);
-
-  const editAvailableStreams = useMemo(() => {
-    if (!editGrade) return [];
-    const grade = gradesList.find((g: any) => g.name === `Grade ${editGrade}` || g.name === editGrade || g.id === editGrade);
-    return grade ? grade.streams.map((s: any) => s.name) : [];
-  }, [editGrade, gradesList]);
 
   // Reset stream when grade changes and no longer matches available streams
   React.useEffect(() => {
@@ -342,8 +335,8 @@ const Students = () => {
       </div>
 
       {/* Filters Card */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
           <div className="relative md:col-span-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input
@@ -380,7 +373,9 @@ const Students = () => {
               <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Streams</SelectItem>
                 {uniqueStreams.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

@@ -135,7 +135,7 @@ const DigitalLiteracyVideos = () => {
       </div>
 
       {/* Video Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {videoResources.map((video) => (
           <Card key={video.id} className="border-none shadow-lg rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white">
             <div 
@@ -148,31 +148,31 @@ const DigitalLiteracyVideos = () => {
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-0 flex items-center justify-center bg-black/20 group-hover:bg-black/30 transition-colors duration-300">
-                <div className="w-14 h-14 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-indigo-600 shadow-xl group-hover:scale-110 transition-all active:scale-95">
-                  <Play size={28} fill="currentColor" />
+                <div className="w-12 h-12 bg-white/90 backdrop-blur-sm rounded-full flex items-center justify-center text-indigo-600 shadow-xl group-hover:scale-110 transition-all active:scale-95">
+                  <Play size={24} fill="currentColor" />
                 </div>
               </div>
-              <div className="absolute bottom-3 right-3 bg-black/70 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
-                <Clock size={14} />
+              <div className="absolute bottom-2 right-2 bg-black/70 text-white px-2 py-1 rounded-lg text-xs font-bold flex items-center gap-1">
+                <Clock size={12} />
                 {video.duration}
               </div>
             </div>
-            <CardHeader className="p-6 pb-2">
-              <div className="flex items-center gap-2 mb-2">
-                <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none font-bold text-[10px] uppercase tracking-wider">
+            <CardHeader className="p-4 pb-1">
+              <div className="flex items-center gap-2 mb-1">
+                <Badge variant="secondary" className="rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-none font-bold text-[8px] uppercase tracking-wider">
                   {video.category}
                 </Badge>
               </div>
-              <CardTitle className="text-xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+              <CardTitle className="text-base font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
                 {video.title}
               </CardTitle>
             </CardHeader>
-            <CardContent className="p-6 pt-2">
-              <p className="text-slate-500 text-sm line-clamp-2 mb-4">
+            <CardContent className="p-4 pt-1">
+              <p className="text-slate-500 text-sm line-clamp-2 mb-3">
                 {video.description}
               </p>
               <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-11 group-hover:bg-indigo-600 transition-colors"
+                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors"
                 onClick={() => handleWatchVideo(video)}
               >
                 Watch Video
@@ -184,9 +184,9 @@ const DigitalLiteracyVideos = () => {
 
       {/* Enhanced Video Player Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="w-full max-w-4xl p-0 bg-slate-950 border-none rounded-[2rem] shadow-2xl overflow-hidden">
-          <DialogHeader className="flex flex-row items-center justify-between p-5 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
-            <DialogTitle className="text-white text-xl font-black truncate max-w-[80%]">
+        <DialogContent className="w-full max-w-3xl p-0 bg-slate-950 border-none rounded-[2rem] shadow-2xl overflow-hidden">
+          <DialogHeader className="flex flex-row items-center justify-between p-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
+            <DialogTitle className="text-white text-lg font-black truncate max-w-[80%]">
               {selectedVideo?.title}
             </DialogTitle>
             <DialogClose asChild>
@@ -194,9 +194,9 @@ const DigitalLiteracyVideos = () => {
                 variant="ghost"
                 size="icon"
                 onClick={handleCloseModal}
-                className="text-slate-400 hover:text-white hover:bg-white/10 rounded-xl h-10 w-10 shrink-0"
+                className="text-slate-400 hover:text-white hover:bg-white/10 rounded-xl h-9 w-9 shrink-0"
               >
-                <X size={20} />
+                <X size={18} />
               </Button>
             </DialogClose>
           </DialogHeader>
@@ -217,27 +217,27 @@ const DigitalLiteracyVideos = () => {
 
             {/* Error & Fallback UI */}
             {videoError && !useYouTubeFallback && (
-              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-4 bg-slate-900">
-                <div className="w-16 h-16 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-2">
-                  <VideoOff size={32} />
+              <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-3 bg-slate-900">
+                <div className="w-12 h-12 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-1">
+                  <VideoOff size={24} />
                 </div>
-                <div className="space-y-2 max-w-md">
-                  <h3 className="text-white font-bold text-lg">Unable to Play Video</h3>
+                <div className="space-y-1 max-w-md">
+                  <h3 className="text-white font-bold text-base">Unable to Play Video</h3>
                   <p className="text-slate-400 text-sm">{videoError}</p>
                 </div>
-                <div className="flex flex-wrap justify-center gap-3 pt-4">
+                <div className="flex flex-wrap justify-center gap-2 pt-2">
                   {selectedVideo?.youtubeId && (
                     <Button 
                       onClick={() => setUseYouTubeFallback(true)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl h-12 px-6 gap-2"
+                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl h-10 px-4 gap-2"
                     >
-                      <Play size={18} fill="currentColor" /> Watch on Web Player
+                      <Play size={16} fill="currentColor" /> Watch on Web Player
                     </Button>
                   )}
                   <Button 
                     variant="outline" 
                     onClick={handleCloseModal}
-                    className="border-white/20 text-white hover:bg-white/10 rounded-xl h-12 px-6"
+                    className="border-white/20 text-white hover:bg-white/10 rounded-xl h-10 px-4"
                   >
                     Close
                   </Button>
@@ -258,16 +258,16 @@ const DigitalLiteracyVideos = () => {
             )}
           </div>
 
-          <div className="p-8 bg-slate-900">
-            <div className="flex items-center gap-2 mb-4">
-              <Badge className="bg-indigo-600 text-white border-none font-black text-[10px] uppercase tracking-widest px-3 py-1">
+          <div className="p-6 bg-slate-900">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge className="bg-indigo-600 text-white border-none font-black text-[8px] uppercase tracking-widest px-2 py-1">
                 {selectedVideo?.category}
               </Badge>
-              <Badge variant="outline" className="text-slate-400 border-white/10 font-bold text-[10px]">
+              <Badge variant="outline" className="text-slate-400 border-white/10 font-bold text-[8px]">
                 {selectedVideo?.duration} Mins
               </Badge>
             </div>
-            <p className="text-slate-300 text-base leading-relaxed font-medium">
+            <p className="text-slate-300 text-sm leading-relaxed font-medium">
               {selectedVideo?.description}
             </p>
           </div>
