@@ -7,7 +7,7 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { GRADES_DATA, Grade } from '@/lib/mock-data';
-import { cn } from '@/lib/utils';
+
 import { 
   Laptop, 
   Search, 
