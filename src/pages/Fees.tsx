@@ -458,7 +458,7 @@ const Fees = () => {
                   <SelectItem key={opt.value} value={opt.value}>
                     {opt.label}
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -682,7 +682,7 @@ const Fees = () => {
       >
         <form onSubmit={handleVerifyAuth} className="space-y-4">
           {authError && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
               <AlertCircle size={16} /> {authError}
             </div>
           )}
