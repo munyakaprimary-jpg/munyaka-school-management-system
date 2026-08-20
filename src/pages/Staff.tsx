@@ -41,11 +41,9 @@ const Staff = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
   
-  // Edit Modal State
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // Load staff directory
   const staffDirectory = useMemo<StaffMember[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_directory');
     if (saved) {
@@ -54,20 +52,17 @@ const Staff = () => {
     return STAFF;
   }, []);
 
-  // Load pre-registered ledger to unify accounts
   const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
     return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
   }, []);
 
-  // Unified Staff Master List (Combines Directory & Pre-Registered)
   const masterStaffList = useMemo(() => {
     const directoryMap = new Map<string, StaffMember>();
     staffDirectory.forEach(s => directoryMap.set(s.id_no, s));
 
     const combined: StaffMember[] = [...staffDirectory];
 
-    // Include pre-registered staff who are not yet in the main directory
     preRegLedger.forEach(p => {
       if (!directoryMap.has(p.nationalId)) {
         combined.push({
@@ -89,7 +84,6 @@ const Staff = () => {
     return combined;
   }, [staffDirectory, preRegLedger]);
 
-  // Filter staff by Search Term & Status Tabs
   const filteredStaff = useMemo(() => {
     return masterStaffList.filter(s => {
       const matchesSearch = 
@@ -116,7 +110,6 @@ const Staff = () => {
   };
 
   const handleSaveStaff = (updatedStaff: StaffMember) => {
-    // Update in localStorage
     const saved = localStorage.getItem('munyaka_staff_directory');
     const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
     const updatedList = staffList.map(s => s.id === updatedStaff.id ? updatedStaff : s);
@@ -129,8 +122,7 @@ const Staff = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
@@ -153,8 +145,7 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Metrics Summary Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
           <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl">
             <Briefcase size={22} />
@@ -186,7 +177,6 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Search & Status Filter Bar */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -216,7 +206,6 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Master Staff Data Table */}
       <div className="table-scroll-viewport">
         <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
           <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
@@ -233,11 +222,11 @@ const Staff = () => {
               <table className="w-full text-sm text-left min-w-[900px]">
                 <thead className="text-slate-500 bg-slate-50/50 border-b">
                   <tr>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff ID & Name</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Role / Designation</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Contact Info</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Account Status</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -336,7 +325,6 @@ const Staff = () => {
         </Card>
       </div>
 
-      {/* Edit Staff Modal */}
       {isEditModalOpen && editingStaff && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
@@ -393,7 +381,7 @@ const Staff = () => {
                 <Input 
                   defaultValue={editingStaff.id}
                   readOnly
-                  className="rounded-xl h-12 bg-slate-100 border-none font-bold text-slate-500"
+                  className="rounded-xl h-12 bg-slate-100 border-none cursor-not-allowed opacity-60"
                 />
               </div>
               <div className="space-y-2">

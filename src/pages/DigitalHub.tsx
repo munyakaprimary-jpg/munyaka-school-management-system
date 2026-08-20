@@ -58,7 +58,6 @@ const DigitalHub = () => {
     { name: "Junior School Tech Wing", stations: 25, status: "Maintenance", uptime: "85.5%", load: 0 },
   ];
 
-  // Network status listener
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -86,30 +85,27 @@ const DigitalHub = () => {
   };
 
   const handleOpenLink = (url: string) => {
-      try {
-        if (url.startsWith('/')) {
-          // Internal navigation
-          navigate(url);
-        } else {
-          // External link
-          const win = window.open(url, '_blank');
-          if (!win) {
-            window.location.href = url;
-          }
+    try {
+      if (url.startsWith('/')) {
+        navigate(url);
+      } else {
+        const win = window.open(url, '_blank');
+        if (!win) {
+          window.location.href = url;
         }
-      } catch (e) {
-        window.location.href = url;
       }
-    };
+    } catch (e) {
+      window.location.href = url;
+    }
+  };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header */}
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Digital Hub</h1>
+            <h1 className="text-2xl font-black tracking-tight text-slate-900">Digital Hub</h1>
             <p className="text-muted-foreground font-medium">ICT infrastructure and e-learning resource management.</p>
           </div>
         </div>
@@ -149,7 +145,6 @@ const DigitalHub = () => {
         </div>
       </div>
 
-      {/* Connectivity & Usage Stats */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'Network Speed', value: '45 Mbps', icon: Globe, color: 'text-blue-600', bg: 'bg-blue-50', sub: 'Safaricom Fiber' },
@@ -173,7 +168,6 @@ const DigitalHub = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Lab Status Section */}
         <div className="lg:col-span-2 space-y-6">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-black text-slate-900">Lab Infrastructure</h2>
@@ -209,11 +203,11 @@ const DigitalHub = () => {
                   
                   <div className="grid grid-cols-2 gap-3 pt-1">
                     <div className="p-3 bg-slate-50 rounded-2xl">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Stability</p>
+                      <p className="text-[8px] font-black uppercase text-slate-400">Stability</p>
                       <p className="text-sm font-black text-slate-900">{lab.uptime}</p>
                     </div>
                     <div className="p-3 bg-slate-50 rounded-2xl">
-                      <p className="text-[8px] font-black text-slate-400 uppercase">Power</p>
+                      <p className="text-[8px] font-black uppercase text-slate-400">Power</p>
                       <p className="text-sm font-black text-emerald-600 flex items-center gap-1">
                         <ShieldCheck size={10} /> Backup OK
                       </p>
@@ -225,7 +219,6 @@ const DigitalHub = () => {
           </div>
         </div>
 
-        {/* E-Learning Resources Sidebar */}
         <div className="space-y-4">
           <h2 className="text-xl font-black text-slate-900">Digital Catalog</h2>
           

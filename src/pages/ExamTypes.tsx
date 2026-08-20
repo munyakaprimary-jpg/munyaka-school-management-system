@@ -97,10 +97,10 @@ const ExamTypes = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
         {examTypes.map((exam) => (
           <Card key={exam.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group relative">
-            <CardContent className="p-4 flex flex-col h-full justify-between">
+            <CardContent className="p-3 flex flex-col h-full justify-between">
               <div>
                 <div className="flex justify-between items-start mb-3">
                   <Badge className={
@@ -151,7 +151,12 @@ const ExamTypes = () => {
         <div className="space-y-3">
           <div className="space-y-1.5">
             <Label>Exam Type Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. End Term Exam" className="rounded-xl h-10" />
+            <Input 
+              value={name} 
+              onChange={(e) => setName(e.target.value)} 
+              placeholder="e.g. End Term Exam" 
+              className="rounded-xl h-10" 
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
@@ -198,7 +203,7 @@ const ExamTypes = () => {
           <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
             <AlertTriangle size={24} />
           </div>
-          <p className="text-slate-500">
+          <p className="text-slate-500 text-sm">
             Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.name}"</strong>? This action cannot be undone.
           </p>
         </div>

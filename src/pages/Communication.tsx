@@ -28,7 +28,6 @@ const Communication = () => {
   const [body, setBody] = useState("");
   const { addNotification } = useNotifications();
 
-  // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
   if (user?.role !== 'super_admin') {
     return <Navigate to="/" replace />;
   }
@@ -47,7 +46,6 @@ const Communication = () => {
     setSubject(""); setBody("");
     showSuccess(`${msgType} message broadcasted successfully!`);
 
-    // Add a notification for the sent message
     addNotification({
       title: `New ${msgType} Message Sent`,
       message: `Sent to ${recipient}: ${subject}`,
@@ -56,12 +54,9 @@ const Communication = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div>
-          <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
-          <p className="text-muted-foreground">Broadcast messages and track parent outreach.</p>
-        </div>
+        <div><h1 className="text-3xl font-bold text-slate-900">Communication Center</h1><p className="text-muted-foreground">Broadcast messages and track parent outreach.</p></div>
         <div className="flex gap-2">
           <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => setActiveTab("logs")}><History size={18} /> Logs</Button>
           <Button className="rounded-2xl shadow-lg bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => handleOpenCompose('Email')}><Send size={18} /> Compose</Button>
@@ -69,7 +64,7 @@ const Communication = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex w-fit overflow-x-auto">
           <TabsTrigger value="outreach" className="rounded-xl px-8 h-full font-bold text-xs">Outreach</TabsTrigger>
           <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs">Logs</TabsTrigger>
         </TabsList>
@@ -97,18 +92,12 @@ const Communication = () => {
         </TabsContent>
       </Tabs>
 
-      <Modal
-        isOpen={isOpen}
-        onClose={() => setIsOpen(false)}
-        title={`Compose ${msgType === 'Email' ? 'Email' : 'SMS'}`}
-        description="Send an official communication."
-        footer={
-          <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8" onClick={handleSend}><Send size={16} className="mr-2" /> Dispatch Message</Button>
-          </>
-        }
-      >
+      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`Compose ${msgType === 'Email' ? 'Email' : 'SMS'}`} description="Send an official communication." footer={
+        <>
+          <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsOpen(false)}>Cancel</Button>
+          <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8" onClick={handleSend}><Send size={16} className="mr-2" /> Dispatch Message</Button>
+        </>
+      }>
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Communication Mode</Label>

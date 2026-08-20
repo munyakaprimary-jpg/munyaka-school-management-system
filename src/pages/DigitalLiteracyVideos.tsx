@@ -113,7 +113,6 @@ const DigitalLiteracyVideos = () => {
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/digital-hub" />
@@ -134,7 +133,6 @@ const DigitalLiteracyVideos = () => {
         </Button>
       </div>
 
-      {/* Video Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {videoResources.map((video) => (
           <Card key={video.id} className="border-none shadow-lg rounded-[2rem] overflow-hidden group hover:shadow-xl transition-all duration-300 bg-white">
@@ -172,7 +170,7 @@ const DigitalLiteracyVideos = () => {
                 {video.description}
               </p>
               <Button
-                className="w-full bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors"
+                className="w-full rounded-2xl bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold h-10 group-hover:bg-indigo-600 transition-colors"
                 onClick={() => handleWatchVideo(video)}
               >
                 Watch Video
@@ -182,7 +180,6 @@ const DigitalLiteracyVideos = () => {
         ))}
       </div>
 
-      {/* Enhanced Video Player Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="w-full max-w-3xl p-0 bg-slate-950 border-none rounded-[2rem] shadow-2xl overflow-hidden">
           <DialogHeader className="flex flex-row items-center justify-between p-4 border-b border-white/5 bg-slate-900/50 backdrop-blur-md">
@@ -215,7 +212,6 @@ const DigitalLiteracyVideos = () => {
               </video>
             )}
 
-            {/* Error & Fallback UI */}
             {videoError && !useYouTubeFallback && (
               <div className="absolute inset-0 flex flex-col items-center justify-center p-8 text-center space-y-3 bg-slate-900">
                 <div className="w-12 h-12 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mb-1">
@@ -245,7 +241,6 @@ const DigitalLiteracyVideos = () => {
               </div>
             )}
 
-            {/* YouTube Fallback Iframe */}
             {useYouTubeFallback && selectedVideo?.youtubeId && (
               <iframe
                 className="w-full h-full"
