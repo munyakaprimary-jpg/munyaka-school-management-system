@@ -87,7 +87,7 @@ const INITIAL_RESERVATIONS: LabReservation[] = [
   { id: "RES-01", day: "Monday", time: "08:00 AM - 09:30 AM", grade: "Grade 7 Alpha", subject: "Digital Literacy", teacher: "Mr. Omondi", room: "Main Lab", status: "Completed" },
   { id: "RES-02", day: "Wednesday", time: "11:00 AM - 12:30 PM", grade: "Grade 4 Blue", subject: "Creative Arts", teacher: "Ms. Mwangi", room: "Main Lab", status: "In Session" },
   { id: "RES-03", day: "Friday", time: "02:00 PM - 03:30 PM", grade: "Grade 8 Beta", subject: "Pre-Tech", teacher: "Mr. Kamau", room: "Mini Lab", status: "Upcoming" },
-};
+];
 
 const SystemAndAccountManagement = () => {
   const [activeTab, setActiveTab] = useState("logins");
