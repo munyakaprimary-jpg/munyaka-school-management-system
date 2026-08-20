@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Progress } from '@/components/ui/progress';
 import { Award, CheckCircle2, XCircle, Loader2, AlertCircle, TrendingUp, Target, Activity, FileSpreadsheet, BarChart3, Users, TrendingDown, TrendingUp as TrendingUpIcon, Trash2, Eye, Edit, MoreVertical } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { cn } from '@/lib/utils';
 
 // --- Types ---
 interface StudentResult {
