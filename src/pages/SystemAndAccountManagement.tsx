@@ -237,9 +237,6 @@ const SystemAndAccountManagement = () => {
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm text-left min-w-[700px]">
-                  <thead className="text-slate-500 border-b bg-slate-50/5          <CardContent className="p-0">
-              <div className="overflow-x-auto custom-scrollbar">
-                <table className="w-full text-sm text-left min-w-[700px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
                       <th className="px-6 py-3 font-black text-[8px] uppercase tracking-widest text-slate-400">User Identity</th>
