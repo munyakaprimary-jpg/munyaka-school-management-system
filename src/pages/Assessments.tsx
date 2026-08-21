@@ -165,28 +165,49 @@ const Assessments = () => {
  }, [currentGrade, isLoadingLearningAreas, dbLearningAreas]);
 
  const filteredStudents = useMemo(() => {
+   // Load students from student directory master localStorage or mock data
+   let masterStudents = STUDENTS;
+   const savedStudents = localStorage.getItem('munyaka_students_master');
+   if (savedStudents) {
+     try {
+       const parsed = JSON.parse(savedStudents);
+       if (Array.isArray(parsed) && parsed.length > 0) {
+         masterStudents = parsed;
+       }
+     } catch (e) {
+       console.error("Error parsing munyaka_students_master:", e);
+     }
+   }
+
    if (!currentGrade) return [];
 
-   const gradeNum = currentGrade.name.replace(/[^0-9]/g, "");
+   const gradeNameLower = currentGrade.name.toLowerCase();
+   // e.g. "grade 4" or "4" or "pp1"
+   const gradeQuery = gradeNameLower.replace("grade ", "").trim();
 
-   return STUDENTS.filter(s => {
+   return masterStudents.filter(s => {
+     const sGrade = (s.grade || "").toLowerCase().trim();
+     const sGradeFormatted = `grade ${sGrade}`.trim();
+     
      const matchesGrade =
-       s.grade === gradeNum ||
-       s.grade === currentGrade.name ||
-       `Grade ${s.grade}` === currentGrade.name;
+       sGrade === gradeQuery ||
+       sGradeFormatted === gradeNameLower ||
+       currentGrade.name.toLowerCase() === sGradeFormatted ||
+       currentGrade.name.toLowerCase() === sGrade;
 
      let matchesStream = true;
      if (selectedStreamId !== "all") {
        const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId);
        if (streamObj) {
-         matchesStream = s.stream.toLowerCase() === streamObj.name.toLowerCase();
+         matchesStream = s.stream.toLowerCase().trim() === streamObj.name.toLowerCase().trim();
        }
      }
 
      const matchesSearch =
        !searchTerm.trim() ||
-       s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-       s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+       s.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+       s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
+       (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
      return matchesGrade && matchesStream && matchesSearch;
    });

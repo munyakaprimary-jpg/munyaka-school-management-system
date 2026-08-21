@@ -184,8 +184,13 @@ const MarksTable = ({
               <tr>
                 <td colSpan={totalCols} className="px-8 py-20 text-center">
                   <div className="flex flex-col items-center gap-3">
-                    <div className="p-4 bg-slate-50 rounded-full text-slate-300"><Search size={32} /></div>
-                    <p className="text-slate-500 font-bold">No learners found for the selected Grade and Stream.</p>
+                    <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                      <Search size={32} />
+                    </div>
+                    <p className="text-slate-800 font-bold text-base">No learners found for the selected Grade and Stream.</p>
+                    <p className="text-xs text-slate-400 font-medium max-w-sm">
+                      Try selecting a different grade or stream from the filter bar above, or clear your search term.
+                    </p>
                   </div>
                 </td>
               </tr>
