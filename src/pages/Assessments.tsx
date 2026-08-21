@@ -302,49 +302,61 @@ const Assessments = () => {
     return [subject];
   }, [subject, allTierSubjects]);
 
-  // Construct storage key for marks using composite key pattern: munyaka_marks_${academicYear}_${selectedGrade}_${selectedExamType}_${selectedSubject} (or stream/term/subject)
-  const cleanGrade = useMemo(() => currentGrade.replace(/\s+/g, "_"), [currentGrade]);
+  // 1. State Reset & Composite Key Lookup Logic on Filter/Exam Change:
+  // Listens to changes in [selectedExamType, selectedGrade, selectedSubject, selectedTerm, academicYear, stream]
+  // Clears local form state before loading saved records under the exact compositeKey.
+  const cleanGrade = useMemo(() => grade.replace(/\s+/g, "_"), [grade]);
   const cleanStream = useMemo(() => stream.replace(/\s+/g, "_"), [stream]);
   const cleanExamType = useMemo(() => examType.replace(/\s+/g, "_"), [examType]);
   const cleanTerm = useMemo(() => term.replace(/\s+/g, "_"), [term]);
+  const cleanSubject = useMemo(() => subject.replace(/\s+/g, "_"), [subject]);
 
-  const marksStorageKey = useMemo(() => {
+  const compositeKey = useMemo(() => {
+    return `${academicYear}_${cleanTerm}_${cleanGrade}_${cleanStream}_${cleanSubject}_${cleanExamType}`;
+  }, [academicYear, cleanTerm, cleanGrade, cleanStream, cleanSubject, cleanExamType]);
+
+  const fallbackStorageKey = useMemo(() => {
     return `munyaka_marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExamType}_${cleanTerm}`;
   }, [academicYear, cleanGrade, cleanStream, cleanExamType, cleanTerm]);
 
-  // 2. Exam Type Change Handler & 3. History Preservation Loading & Merging Logic
   useEffect(() => {
+    // 1. Clear local form state before loading saved records for the new composite key
+    setMarksMatrix({});
+
     try {
       let loadedData: Record<string, Record<string, string>> = {};
-      const primaryStored = localStorage.getItem(marksStorageKey);
-      if (primaryStored) {
-        const parsed = JSON.parse(primaryStored);
-        if (parsed && typeof parsed === "object") {
-          loadedData = parsed;
-        }
-      } else {
-        // Fallback check master assessment scores bucket `munyaka_assessment_scores` or `munyaka_marks`
-        const masterScoresStr = localStorage.getItem("munyaka_assessment_scores") || localStorage.getItem("munyaka_marks");
-        if (masterScoresStr) {
-          const masterParsed = JSON.parse(masterScoresStr);
-          if (masterParsed && typeof masterParsed === "object") {
-            if (masterParsed[marksStorageKey]) {
-              loadedData = masterParsed[marksStorageKey];
-            } else if (masterParsed[examType] && typeof masterParsed[examType] === "object") {
-              loadedData = masterParsed[examType];
-            } else {
-              loadedData = masterParsed;
-            }
+
+      // 2. Composite Key Lookup Logic from localStorage (`munyaka_assessment_scores` or `munyaka_marks`)
+      const storedScores = localStorage.getItem("munyaka_assessment_scores") || localStorage.getItem("munyaka_marks");
+      if (storedScores) {
+        const parsedMaster = JSON.parse(storedScores);
+        if (parsedMaster && typeof parsedMaster === "object") {
+          if (parsedMaster[compositeKey] && typeof parsedMaster[compositeKey] === "object") {
+            loadedData = parsedMaster[compositeKey];
+          } else if (parsedMaster[fallbackStorageKey] && typeof parsedMaster[fallbackStorageKey] === "object") {
+            loadedData = parsedMaster[fallbackStorageKey];
+          } else if (parsedMaster[examType] && typeof parsedMaster[examType] === "object") {
+            loadedData = parsedMaster[examType];
           }
         }
       }
 
+      // Also check direct key in localStorage
+      const directStored = localStorage.getItem(compositeKey) || localStorage.getItem(fallbackStorageKey);
+      if (directStored && Object.keys(loadedData).length === 0) {
+        const parsedDirect = JSON.parse(directStored);
+        if (parsedDirect && typeof parsedDirect === "object") {
+          loadedData = parsedDirect;
+        }
+      }
+
+      // 3. Blank Input Default: For every learner in active roster, load score if exists, else explicitly empty string ""
       setMarksMatrix(loadedData || {});
     } catch (e) {
-      console.error("Error loading marks for exam type:", e);
+      console.error("Error loading marks for compositeKey:", e);
       setMarksMatrix({});
     }
-  }, [marksStorageKey, examType]);
+  }, [compositeKey, fallbackStorageKey, examType, grade, subject, term, academicYear, stream]);
 
   // Filtered students roster with robust normalization and multi-field fallback
   const filteredStudents = useMemo(() => {
@@ -378,7 +390,7 @@ const Assessments = () => {
     });
   }, [studentsList, grade, stream, searchTerm]);
 
-  // Immediate LocalStorage Autosave & History Preservation (Merging into specific exam type bucket & master bucket)
+  // Immediate LocalStorage Autosave & History Preservation (Merging into compositeKey bucket & master bucket)
   const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
     let clean = value.replace(/[^0-9]/g, "");
     if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
@@ -392,9 +404,10 @@ const Assessments = () => {
         }
       };
 
-      // 3. History Preservation & Merging: Save into specific composite key AND merge into `munyaka_assessment_scores` and `munyaka_marks` without overwriting other exam types
+      // 3. History Preservation & Merging: Save into specific compositeKey AND merge into `munyaka_assessment_scores` and `munyaka_marks`
       try {
-        localStorage.setItem(marksStorageKey, JSON.stringify(updated));
+        localStorage.setItem(compositeKey, JSON.stringify(updated));
+        localStorage.setItem(fallbackStorageKey, JSON.stringify(updated));
 
         const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
         let masterObj: Record<string, any> = {};
@@ -405,7 +418,8 @@ const Assessments = () => {
             masterObj = {};
           }
         }
-        masterObj[marksStorageKey] = updated;
+        masterObj[compositeKey] = updated;
+        masterObj[fallbackStorageKey] = updated;
         masterObj[examType] = { ...(masterObj[examType] || {}), ...updated };
         localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
         localStorage.setItem("munyaka_marks", JSON.stringify(masterObj));
@@ -418,7 +432,7 @@ const Assessments = () => {
 
     setShowSavedBadge(true);
     setTimeout(() => setShowSavedBadge(false), 2000);
-  }, [marksStorageKey, examType]);
+  }, [compositeKey, fallbackStorageKey, examType]);
 
   // Calculations for Totals, Subject Totals, Subject MSS, Class Average
   const studentTotals = useMemo(() => {
@@ -517,13 +531,27 @@ const Assessments = () => {
     };
   }, [filteredStudents, marksMatrix, allTierSubjects]);
 
-  // Save All Marks explicitly commits to localStorage
+  // Save All Marks explicitly commits to localStorage under compositeKey
   const handleSaveAll = async () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
     try {
-      localStorage.setItem(marksStorageKey, JSON.stringify(marksMatrix));
+      localStorage.setItem(compositeKey, JSON.stringify(marksMatrix));
+      localStorage.setItem(fallbackStorageKey, JSON.stringify(marksMatrix));
       localStorage.setItem("marks_entry_data", JSON.stringify(marksMatrix));
+
+      const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+      let masterObj: Record<string, any> = {};
+      if (existingMasterStr) {
+        try {
+          masterObj = JSON.parse(existingMasterStr);
+        } catch (err) {
+          masterObj = {};
+        }
+      }
+      masterObj[compositeKey] = marksMatrix;
+      localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+
       setIsSaving(false);
       showSuccess("All marks successfully committed to localStorage!");
     } catch (e) {
