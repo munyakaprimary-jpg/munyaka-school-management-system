@@ -1,412 +1,677 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { showSuccess, showError } from "@/utils/toast";
-import { GRADES_DATA, STUDENTS, Grade, Stream } from "@/lib/mock-data";
-import { ExamTypeOption, LearningArea } from "@/types/assessments";
-import { DEFAULT_EXAM_TYPES, FALLBACK_CLUSTERS } from "@/lib/assessment-constants";
-import { MarksService, buildExamId } from "@/services/MarksService";
-import { MarksMatrix } from "@/services/schema";
-import { LearningAreasService } from "@/services/learning-areas-service";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
+import { STUDENTS } from "@/lib/mock-data";
+import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 
-// Sub-components
-import AssessmentHeader from "@/components/assessments/AssessmentHeader";
-import AssessmentFilters from "@/components/assessments/AssessmentFilters";
-import MarksTable from "@/components/assessments/MarksTable";
-import AssessmentInstructions from "@/components/assessments/AssessmentInstructions";
+// Educational Tier Subject Mappings
+const TIER_SUBJECTS: Record<string, string[]> = {
+  "pre-primary": [
+    "Language Activities",
+    "Mathematical Activities",
+    "Environmental Activities",
+    "Psychomotor & Creative Activities",
+    "Religious Education"
+  ],
+  "lower-primary": [
+    "Literacy",
+    "Kiswahili/Indigenous Language",
+    "English Language",
+    "Mathematical Activities",
+    "Environmental Activities",
+    "Hygiene & Nutrition Activities",
+    "Religious Education",
+    "Movement & Creative Activities"
+  ],
+  "upper-primary": [
+    "English",
+    "Kiswahili",
+    "Mathematics",
+    "Science & Technology",
+    "Agriculture & Nutrition",
+    "Social Studies",
+    "Religious Education (CRE/IRE/HRE)",
+    "Creative Arts"
+  ],
+  "junior-secondary": [
+    "English",
+    "Kiswahili",
+    "Mathematics",
+    "Integrated Science",
+    "Health Education",
+    "Agriculture & Nutrition",
+    "Social Studies",
+    "Religious Education",
+    "Pre-Technical Studies",
+    "Computer Science",
+    "Creative Arts & Sports"
+  ]
+};
+
+const getTierKey = (gradeName: string): string => {
+  const g = gradeName.toLowerCase();
+  if (g.includes("pp1") || g.includes("pp2") || g.includes("pre-primary")) return "pre-primary";
+  if (g.includes("grade 1") || g.includes("grade 2") || g.includes("grade 3")) return "lower-primary";
+  if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "upper-primary";
+  if (g.includes("grade 7") || g.includes("grade 8") || g.includes("grade 9") || g.includes("junior")) return "junior-secondary";
+  return "lower-primary";
+};
 
 const Assessments = () => {
- // State to hold dynamically fetched grades
- const [gradesList, setGradesList] = useState<Grade[]>([]);
- const [isLoadingGrades, setIsLoadingGrades] = useState(true);
+  // 1. Retrieve Students Directory from localStorage ('students_directory' or 'learners' or fallback to STUDENTS)
+  const studentsList = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading students directory:", e);
+    }
+    return STUDENTS;
+  }, []);
 
- // Fetch grades from learning areas service on mount
- useEffect(() => {
-   LearningAreasService.fetchLearningAreas()
-     .then((data) => {
-            // Transform learning areas to grades format
-            const transformedGrades = data.map((area, index) => ({
-              id: `grade-${index + 1}`,
-              name: area.name,
-              category: area.type === 'Core' ? 'Primary' as const : 'Junior School' as const,
-              streams: [
-                { id: `s${index}a`, name: 'Class A', teacher: 'Unassigned', studentsCount: 30 },
-                { id: `s${index}b`, name: 'Class B', teacher: 'Unassigned', studentsCount: 28 }
-              ]
-            }));
-            setGradesList(transformedGrades.length > 0 ? transformedGrades : GRADES_DATA);
-            setIsLoadingGrades(false);
-          })
-     .catch((error) => {
-       console.error("Error fetching learning areas:", error);
-       // Fall back to mock data on error
-       setGradesList(GRADES_DATA);
-       setIsLoadingGrades(false);
-     });
- }, []);
+  // Extract dynamic grades and streams from student directory
+  const availableGrades = useMemo(() => {
+    const gradesSet = new Set<string>();
+    studentsList.forEach(s => {
+      if (s.grade) gradesSet.add(s.grade);
+    });
+    const list = Array.from(gradesSet);
+    return list.length > 0 ? list : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"];
+  }, [studentsList]);
 
- // Dynamically load exam types
- const examTypesList = useMemo<ExamTypeOption[]>(() => {
-   const saved = localStorage.getItem("munyaka_exam_types");
-   if (saved) {
-     try {
-       const parsed = JSON.parse(saved);
-       if (Array.isArray(parsed) && parsed.length > 0) {
-         return parsed;
-       }
-     } catch (e) {
-       console.error("Error parsing saved exam types:", e);
-     }
-   }
-   return DEFAULT_EXAM_TYPES;
- }, []);
+  // Extract streams per grade
+  const streamsByGrade = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    studentsList.forEach(s => {
+      if (s.grade && s.stream) {
+        if (!map[s.grade]) map[s.grade] = [];
+        if (!map[s.grade].includes(s.stream)) map[s.grade].push(s.stream);
+      }
+    });
+    return map;
+  }, [studentsList]);
 
- // Filter States
- const [selectedGradeId, setSelectedGradeId] = useState<string>("");
- const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
- const [examType, setExamType] = useState<string>("");
- const [term, setTerm] = useState("term1");
- const [searchTerm, setSearchTerm] = useState("");
- const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
+  // Retrieve Exam Types from localStorage ('exam_types' or 'school_settings' or DEFAULT_EXAM_TYPES)
+  const examTypesList = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("exam_types") || localStorage.getItem("munyaka_exam_types");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading exam types:", e);
+    }
+    return DEFAULT_EXAM_TYPES;
+  }, []);
 
- // Derived exam identity for the currently selected exam/session
- const currentExamId = useMemo(() => {
-   if (!examType) return "";
-   return buildExamId({
-     academic_year: academicYear,
-     term,
-     exam_type: examType,
-     gradeId: selectedGradeId,
-     streamId: selectedStreamId,
-   });
- }, [academicYear, term, examType, selectedGradeId, selectedStreamId]);
+  // Control States bound to localStorage / defaults
+  const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
+  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
+  
+  const [grade, setGrade] = useState<string>(() => availableGrades[0] || "Grade 4");
+  const [stream, setStream] = useState<string>("All Streams");
+  const [examType, setExamType] = useState<string>(() => examTypesList[0]?.code || examTypesList[0]?.id || "Formative Assessment");
+  const [term, setTerm] = useState<string>("Term 1");
+  const [subject, setSubject] = useState<string>("All Subjects");
+  const [searchTerm, setSearchTerm] = useState<string>("");
 
- // Data States
-  const [marksMatrix, setMarksMatrix] = useState<MarksMatrix>({});
-  const [activeExamId, setActiveExamId] = useState<string>("");
+  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
- 
-  // Load saved marks for the selected exam only (blank grid for a new exam).
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  // Compute academic year options from students directory or current year + past 3 years
   useEffect(() => {
-    if (!currentExamId) {
-      // When switching to a new exam type with no records, initialize blank fields
-      setMarksMatrix({});
-      setActiveExamId("");
+    const yearsSet = new Set<string>([new Date().getFullYear().toString()]);
+    studentsList.forEach(s => {
+      if (s.academicYear) yearsSet.add(s.academicYear);
+    });
+    setAcademicYearOptions(Array.from(yearsSet).sort().reverse());
+  }, [studentsList]);
+
+  // Available streams for selected grade
+  const currentGradeStreams = useMemo(() => {
+    const streams = streamsByGrade[grade] || ["Class A", "Class B"];
+    return streams;
+  }, [streamsByGrade, grade]);
+
+  // Reset stream if not in current grade
+  useEffect(() => {
+    if (stream !== "All Streams" && !currentGradeStreams.includes(stream)) {
+      setStream("All Streams");
+    }
+  }, [grade, currentGradeStreams, stream]);
+
+  // Educational tier subjects for selected grade
+  const tierKey = useMemo(() => getTierKey(grade), [grade]);
+  const allTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
+
+  // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
+  const activeSubjects = useMemo(() => {
+    if (subject === "All Subjects") {
+      return allTierSubjects;
+    }
+    return [subject];
+  }, [subject, allTierSubjects]);
+
+  // Construct storage key for marks: marks_entry_data or marks_[academicYear]_[grade]_[stream]_[examType]_[term]
+  const marksStorageKey = useMemo(() => {
+    const cleanGrade = grade.replace(/\s+/g, "_");
+    const cleanStream = stream.replace(/\s+/g, "_");
+    const cleanExam = examType.replace(/\s+/g, "_");
+    const cleanTerm = term.replace(/\s+/g, "_");
+    return `marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExam}_${cleanTerm}`;
+  }, [academicYear, grade, stream, examType, term]);
+
+  // Load marks from localStorage on filter change
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(marksStorageKey) || localStorage.getItem("marks_entry_data");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === "object") {
+          setMarksMatrix(parsed);
+          return;
+        }
+      }
+    } catch (e) {
+      console.error("Error loading marks from localStorage:", e);
+    }
+    setMarksMatrix({});
+  }, [marksStorageKey]);
+
+  // Filtered students roster
+  const filteredStudents = useMemo(() => {
+    return studentsList.filter(s => {
+      const matchesGrade = !s.grade || s.grade.toLowerCase() === grade.toLowerCase();
+      const matchesStream = stream === "All Streams" || !s.stream || s.stream.toLowerCase() === stream.toLowerCase();
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+      return matchesGrade && matchesStream && matchesSearch;
+    });
+  }, [studentsList, grade, stream, searchTerm]);
+
+  // Immediate LocalStorage Autosave & State Update
+  const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
+    let clean = value.replace(/[^0-9]/g, "");
+    if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
+
+    setMarksMatrix(prev => {
+      const updated = {
+        ...prev,
+        [studentId]: {
+          ...(prev[studentId] || {}),
+          [subj]: clean
+        }
+      };
+
+      // Immediate localStorage autosave
+      try {
+        localStorage.setItem(marksStorageKey, JSON.stringify(updated));
+        localStorage.setItem("marks_entry_data", JSON.stringify(updated));
+      } catch (e) {
+        console.error("Autosave error:", e);
+      }
+
+      return updated;
+    });
+
+    setShowSavedBadge(true);
+    setTimeout(() => setShowSavedBadge(false), 2000);
+  }, [marksStorageKey]);
+
+  // Calculations for Totals, Subject Totals, Subject MSS, Class Average
+  const studentTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    filteredStudents.forEach(student => {
+      const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+      let sum = 0;
+      let hasMarks = false;
+      allTierSubjects.forEach(subj => {
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            sum += num;
+            hasMarks = true;
+          }
+        }
+      });
+      totals[student.id || student.admissionNumber] = hasMarks ? sum : 0;
+    });
+    return totals;
+  }, [filteredStudents, marksMatrix, allTierSubjects]);
+
+  const subjectTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    allTierSubjects.forEach(subj => {
+      let sum = 0;
+      filteredStudents.forEach(student => {
+        const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) sum += num;
+        }
+      });
+      totals[subj] = sum;
+    });
+    return totals;
+  }, [allTierSubjects, filteredStudents, marksMatrix]);
+
+  const subjectMSS = useMemo(() => {
+    const mss: Record<string, number> = {};
+    allTierSubjects.forEach(subj => {
+      let sum = 0;
+      let count = 0;
+      filteredStudents.forEach(student => {
+        const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            sum += num;
+            count++;
+          }
+        }
+      });
+      mss[subj] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+    });
+    return mss;
+  }, [allTierSubjects, filteredStudents, marksMatrix]);
+
+  const grandTotalSum = useMemo(() => {
+    return Object.values(subjectTotals).reduce((a, b) => a + b, 0);
+  }, [subjectTotals]);
+
+  const grandTotalMSS = useMemo(() => {
+    const vals = Object.values(subjectMSS).filter(v => v > 0);
+    if (vals.length === 0) return 0;
+    return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
+  }, [subjectMSS]);
+
+  // Class Average & Completion Progress Calculation
+  const classStats = useMemo(() => {
+    let totalScoreSum = 0;
+    let entriesCount = 0;
+    const maxPossibleEntries = filteredStudents.length * allTierSubjects.length;
+
+    filteredStudents.forEach(student => {
+      const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+      allTierSubjects.forEach(subj => {
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            totalScoreSum += num;
+            entriesCount++;
+          }
+        }
+      });
+    });
+
+    const meanPercentage = entriesCount > 0 ? (totalScoreSum / (entriesCount * 100)) * 100 : 0;
+    return {
+      meanFormatted: `${meanPercentage.toFixed(1)}%`,
+      completionText: `${entriesCount}/${maxPossibleEntries} entered`
+    };
+  }, [filteredStudents, marksMatrix, allTierSubjects]);
+
+  // Save All Marks explicitly commits to localStorage
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 600));
+    try {
+      localStorage.setItem(marksStorageKey, JSON.stringify(marksMatrix));
+      localStorage.setItem("marks_entry_data", JSON.stringify(marksMatrix));
+      setIsSaving(false);
+      showSuccess("All marks successfully committed to localStorage!");
+    } catch (e) {
+      setIsSaving(false);
+      showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
+
+  // Download CSV export
+  const handleDownloadCSV = () => {
+    if (filteredStudents.length === 0) {
+      showError("No students found to export.");
       return;
     }
-    setMarksMatrix(MarksService.getMarks(currentExamId));
-    setActiveExamId(currentExamId);
-  }, [currentExamId]);
+    setIsExporting(true);
+    setTimeout(() => {
+      const headers = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
+      const rows = filteredStudents.map(student => {
+        const id = student.id || student.admissionNumber;
+        const studentMarks = marksMatrix[id] || {};
+        const scores = allTierSubjects.map(subj => studentMarks[subj] !== undefined ? studentMarks[subj] : "");
+        const total = studentTotals[id] || 0;
+        return [
+          `"${(student.name || "").replace(/"/g, '""')}"`,
+          `"${(student.admissionNumber || student.id || "").replace(/"/g, '""')}"`,
+          `"${(student.stream || "").replace(/"/g, '""')}"`,
+          ...scores,
+          total
+        ].join(",");
+      });
 
- // Set default selected grade
- useEffect(() => {
-   if (!selectedGradeId && gradesList.length > 0) {
-     setSelectedGradeId(gradesList[0].name);
-   }
- }, [gradesList, selectedGradeId]);
+      const csvContent = [
+        `"Marks Entry & CBC Assessment - ${grade} (${stream})"`,
+        `"Academic Year: ${academicYear} | Term: ${term} | Exam: ${examType}"`,
+        "",
+        headers.join(","),
+        ...rows,
+        ["SUBJECT TOTALS", "", "", ...allTierSubjects.map(subj => subjectTotals[subj] || 0), grandTotalSum].join(","),
+        ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(",")
+      ].join("\n");
 
- // Set default selected exam type
- useEffect(() => {
-   if (!examType && examTypesList.length > 0) {
-     setExamType(examTypesList[0].code || examTypesList[0].id);
-   }
- }, [examTypesList, examType]);
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Marks_Entry_${grade.replace(/\s+/g, "_")}_${stream.replace(/\s+/g, "_")}_${academicYear}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setIsExporting(false);
+      showSuccess("CSV report downloaded successfully.");
+    }, 600);
+  };
 
- // Reset stream to 'all' whenever Grade Level changes
- useEffect(() => {
-   if (selectedGradeId) {
-     setSelectedStreamId("all");
-   }
- }, [selectedGradeId]);
+  // Download PDF simulation / print
+  const handleDownloadPDF = () => {
+    window.print();
+  };
 
- const currentGrade = useMemo(() =>
-   gradesList.find((g: Grade) => g.id === selectedGradeId),
-   [selectedGradeId, gradesList]
- );
+  return (
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
+      {/* 1. Header & Quick Actions Layout */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Marks Entry & CBC Assessment</h1>
+            {showSavedBadge && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
+                <CheckCircle2 size={12} /> Saved to LocalStorage
+              </span>
+            )}
+          </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            onClick={handleDownloadCSV}
+            disabled={isExporting}
+          >
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
+          </Button>
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            onClick={handleDownloadPDF}
+          >
+            <FileText size={16} /> Download PDF
+          </Button>
+          <Button
+            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"
+            onClick={handleSaveAll}
+            disabled={isSaving}
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
+          </Button>
+        </div>
+      </div>
 
- const availableStreams = useMemo(() =>
-   currentGrade ? currentGrade.streams : [],
-   [currentGrade]
- );
+      {/* 3. Dynamic Filter Bar & Controls (Grid Card Container) */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          
+          {/* 1. Academic Year */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
+            <Select value={academicYear} onValueChange={setAcademicYear}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Year" />
+              </SelectTrigger>
+              <SelectContent>
+                {academicYearOptions.map(yr => (
+                  <SelectItem key={yr} value={yr}>{yr}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
- // Fetch learning areas dynamically from database
- const [dbLearningAreas, setDbLearningAreas] = useState<LearningArea[]>([]);
- const [isLoadingLearningAreas, setIsLoadingLearningAreas] = useState(true);
+          {/* 2. Grade */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableGrades.map(g => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
- useEffect(() => {
-   const fetchLearningAreas = async () => {
-     try {
-       const areas = await LearningAreasService.getLearningAreasForCluster('lower-primary');
-       setDbLearningAreas(areas);
-     } catch (error) {
-       console.error("Error fetching learning areas:", error);
-     } finally {
-       setIsLoadingLearningAreas(false);
-     }
-   };
-   fetchLearningAreas();
- }, []);
+          {/* 3. Stream */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
+            <Select value={stream} onValueChange={setStream}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Streams">All Streams</SelectItem>
+                {currentGradeStreams.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
- const filteredLearningAreas = useMemo(() => {
-   if (!currentGrade) return [];
-   const gradeName = currentGrade.name.toLowerCase();
-   let clusterId = "lower-primary";
-   if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) clusterId = "upper-primary";
-   else if (gradeName.includes("pp")) clusterId = "pre-primary";
-   else if (currentGrade.category === "Junior School") clusterId = "junior-school";
+          {/* 4. Exam Type */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
+            <Select value={examType} onValueChange={setExamType}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Exam Type" />
+              </SelectTrigger>
+              <SelectContent>
+                {examTypesList.map((et: any) => (
+                  <SelectItem key={et.id || et.code} value={et.name || et.code}>
+                    {et.name || et.code}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-   // Use database learning areas if available, otherwise fall back to hardcoded
-   if (!isLoadingLearningAreas && dbLearningAreas.length > 0) {
-     return dbLearningAreas;
-   }
+          {/* 5. Term */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
+            <Select value={term} onValueChange={setTerm}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Term" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Term 1">Term 1</SelectItem>
+                <SelectItem value="Term 2">Term 2</SelectItem>
+                <SelectItem value="Term 3">Term 3</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
 
-   return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
- }, [currentGrade, isLoadingLearningAreas, dbLearningAreas]);
+          {/* 6. Subject */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Subjects">All Subjects</SelectItem>
+                {allTierSubjects.map(subj => (
+                  <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
- const filteredStudents = useMemo(() => {
-   // Load students from student directory master localStorage or mock data
-   let masterStudents = STUDENTS;
-   const savedStudents = localStorage.getItem('munyaka_students_master');
-   if (savedStudents) {
-     try {
-       const parsed = JSON.parse(savedStudents);
-       if (Array.isArray(parsed) && parsed.length > 0) {
-         masterStudents = parsed;
-       }
-     } catch (e) {
-       console.error("Error parsing munyaka_students_master:", e);
-     }
-   }
+          {/* 7. Find Learner */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Name/ID..."
+                className="pl-9 h-11 rounded-xl bg-slate-50 border-none font-bold text-sm"
+              />
+            </div>
+          </div>
 
-   if (!selectedGradeId || selectedGradeId === "all") return [];
+          {/* 8. Class Average Card */}
+          <div className="space-y-1.5 flex flex-col justify-end">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Class Average</label>
+            <div className="h-11 rounded-xl bg-indigo-50 px-3 flex items-center justify-between">
+              <span className="font-black text-indigo-700 text-sm">{classStats.meanFormatted}</span>
+              <span className="text-[10px] font-bold text-indigo-500">{classStats.completionText}</span>
+            </div>
+          </div>
 
-   const currentGrade = gradesList.find((g: Grade) => g.name.toLowerCase() === selectedGradeId.toLowerCase() || g.id === selectedGradeId);
-   if (!currentGrade) return [];
+        </div>
+      </Card>
 
-   const gradeNameLower = currentGrade.name.toLowerCase();
-   // e.g. "grade 4" or "4" or "pp1"
-   const gradeQuery = gradeNameLower.replace("grade ", "").trim();
+      {/* 4. Educational Tier-Based Mark Sheet Table Matrix */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse min-w-max">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-72 min-w-[240px]">
+                  Learner Details ({filteredStudents.length})
+                </th>
+                {activeSubjects.map(subj => (
+                  <th key={subj} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[120px] max-w-[160px]">
+                    {subj}
+                  </th>
+                ))}
+                <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[100px] border-l">
+                  TOTAL
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredStudents.length > 0 ? (
+                <>
+                  {filteredStudents.map(student => {
+                    const studentId = student.id || student.admissionNumber;
+                    const studentMarks = marksMatrix[studentId] || {};
+                    const totalMarks = studentTotals[studentId] || 0;
+                    const hasMarks = totalMarks > 0;
 
-   return masterStudents.filter(s => {
-     const sGrade = (s.grade || "").toLowerCase().trim();
-     const sGradeFormatted = `grade ${sGrade}`.trim();
-     
-     const matchesGrade =
-       sGrade === gradeQuery ||
-       sGradeFormatted === gradeNameLower ||
-       currentGrade.name.toLowerCase() === sGradeFormatted ||
-       currentGrade.name.toLowerCase() === sGrade;
+                    return (
+                      <tr key={studentId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-4 border-r min-w-[240px]">
+                          <p className="font-bold text-slate-900 truncate">{student.name || "Unknown Student"}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                            ID: {student.admissionNumber || student.assessment || studentId} • Stream: {student.stream || "Main"}
+                          </p>
+                        </td>
 
-     let matchesStream = true;
-     if (selectedStreamId !== "all") {
-       const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId || sItem.name.toLowerCase() === selectedStreamId.toLowerCase());
-       if (streamObj) {
-         matchesStream = s.stream.toLowerCase().trim() === streamObj.name.toLowerCase().trim();
-       } else {
-         matchesStream = s.stream.toLowerCase().trim() === selectedStreamId.toLowerCase().trim();
-       }
-     }
+                        {activeSubjects.map(subj => (
+                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[120px] max-w-[160px]">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={studentMarks[subj] !== undefined ? studentMarks[subj] : ""}
+                              onChange={e => handleMarkChange(studentId, subj, e.target.value)}
+                              placeholder="—"
+                              className="w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                            />
+                          </td>
+                        ))}
 
-     const matchesSearch =
-       !searchTerm.trim() ||
-       s.name.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-       s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim()) ||
-       (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+                        <td className="bg-indigo-50/60 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[100px] border-l">
+                          {hasMarks ? totalMarks : "—"}
+                        </td>
+                      </tr>
+                    );
+                  })}
 
-     return matchesGrade && matchesStream && matchesSearch;
-   });
- }, [selectedGradeId, selectedStreamId, availableStreams, searchTerm, gradesList]);
+                  {/* Summary Row 1: SUBJECT TOTALS */}
+                  <tr className="bg-slate-50 border-t-2 border-slate-200">
+                    <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[240px]">
+                      SUBJECT TOTALS
+                    </td>
+                    {activeSubjects.map(subj => (
+                      <td key={`tot-${subj}`} className="px-2 py-3 border-r text-center font-bold text-slate-800 min-w-[120px] max-w-[160px] bg-slate-50">
+                        {subjectTotals[subj] || 0}
+                      </td>
+                    ))}
+                    <td className="bg-indigo-100/60 px-4 py-3 text-center font-black text-indigo-700 min-w-[100px] border-l">
+                      {grandTotalSum}
+                    </td>
+                  </tr>
 
- const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
-   let clean = value.replace(/[^0-9]/g, "");
-   if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
-
-   setMarksMatrix(prev => ({
-     ...prev,
-     [studentId]: {
-       ...(prev[studentId] || {}),
-       [subjectId]: clean
-     }
-   }));
- };
-
- const handleSave = async () => {
-   if (!currentExamId) {
-     showError("Please select a valid exam period.");
-     return;
-   }
-
-   // Validate that exam_type_id is present
-   const examIdParts = currentExamId.split("|");
-   const examTypeId = examIdParts[2];
-   if (!examTypeId) {
-     showError("Exam type ID is missing. Please select a valid exam period.");
-     return;
-   }
-
-   setIsSaving(true);
-   await new Promise(r => setTimeout(r, 800));
-
-   try {
-     MarksService.saveMarks(currentExamId, marksMatrix);
-     setIsSaving(false);
-     showSuccess("Marks saved successfully for this exam period.");
-   } catch (e) {
-     setIsSaving(false);
-     showError("Error saving marks: " + (e.message || JSON.stringify(e)));
-   }
- };
-
- const handleExport = () => {
-   if (filteredStudents.length === 0) {
-     showSuccess("No learners found to export.");
-     return;
-   }
- 
-   setIsExporting(true);
- 
-   setTimeout(() => {
-     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-     const row2 = "P.O. BOX 5239-30100,ELDORET";
-     const row3 = "MOTTO: KNOWLEDGE POWER";
- 
-     const currentYear = new Date().getFullYear().toString();
-     const gradeName = currentGrade ? currentGrade.name : "All Grades";
- 
-     const streamObj = availableStreams.find(s => s.id === selectedStreamId);
-     const streamName = selectedStreamId === "all" ? "All Streams" : (streamObj ? streamObj.name : "All Streams");
- 
-     const formattedTerm = term === "term1" ? "Term 1" : term === "term2" ? "Term 2" : "Term 3";
- 
-     const row4 = `GRADE: ${gradeName}, STREAM: ${streamName}`;
-     const row5 = `YEAR: ${currentYear}, TERM: ${formattedTerm}`;
- 
-     const headers = ["Learner Name", "Assessment ID", ...filteredLearningAreas.map(a => a.name), "Total"];
- 
-     // Calculate subject totals and MSS for summary rows
-     const subjectTotals: Record<string, number> = {};
-     const subjectMSS: Record<string, string> = {};
-     
-     filteredLearningAreas.forEach(area => {
-       let sum = 0;
-       let count = 0;
-       filteredStudents.forEach(student => {
-         const studentMarks = marksMatrix[student.id] || {};
-         const val = studentMarks[area.id];
-         if (val !== undefined && val !== "") {
-           const num = parseInt(String(val), 10);
-           if (!isNaN(num)) {
-             sum += num;
-             count++;
-           }
-         }
-       });
-       subjectTotals[area.id] = sum;
-       subjectMSS[area.id] = count > 0 ? (sum / count).toFixed(2) : "0.00";
-     });
-     
-     const grandTotalSum = Object.values(subjectTotals).reduce((a, b) => a + b, 0);
-     const grandTotalMSS = Object.values(subjectMSS).reduce((a, b) => parseFloat(a) + parseFloat(b), 0) / Object.values(subjectMSS).length;
- 
-     const studentRows = filteredStudents.map(student => {
-       const studentMarks = marksMatrix[student.id] || {};
-       let hasMarks = false;
-       const scores = filteredLearningAreas.map(area => {
-         const val = studentMarks[area.id];
-         if (val !== undefined && val !== "") {
-           hasMarks = true;
-           return val;
-         }
-         return "—";
-       });
- 
-       const totalMarks = filteredLearningAreas.reduce((sum, area) => {
-         const val = studentMarks[area.id];
-         if (val !== undefined && val !== "") {
-           const num = parseInt(String(val), 10);
-           return sum + (isNaN(num) ? 0 : num);
-         }
-         return sum;
-       }, 0);
- 
-       return [
-         `${student.name.replace(/"/g, '""')}`,
-         `${student.assessment.replace(/"/g, '""')}`,
-         ...scores.map(s => `${s}`),
-         `${hasMarks ? totalMarks : '—'}`
-       ];
-     });
- 
-     const csvContent = [
-           row1,
-           row2,
-           row3,
-           row4,
-           row5,
-           "",
-           headers.map(h => `"${h}"`).join(","),
-           ...studentRows.map(r => r.join(",")),
-           // Subject Totals row
-           ["Subject Totals", "", ...Object.values(subjectTotals).map(v => v.toString()), grandTotalSum.toString()].join(","),
-           // Subject MSS row
-           ["Subject MSS", "", ...Object.values(subjectMSS).map(v => v), grandTotalMSS.toFixed(2)].join(",")
-         ].join("\n");
- 
-     // Data URI fallback for Android WebView compatibility
-     const BOM = "\uFEFF";
-     const dataUri = "data:text/csv;charset=utf-8," + encodeURIComponent(BOM + csvContent);
- 
-     const link = document.createElement("a");
-     link.setAttribute("href", dataUri);
-     link.setAttribute("target", "_blank");
-     link.setAttribute("download", "marks_entry.csv");
-     document.body.appendChild(link);
-     link.click();
-     document.body.removeChild(link);
- 
-     setIsExporting(false);
-     showSuccess(`Exported marks sheet for ${filteredStudents.length} learners with summary rows.`);
-   }, 800);
- };
-
- return (
-   <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full table-scroll-viewport">
-     <AssessmentHeader
-       onExport={handleExport}
-       onSave={handleSave}
-       isSaving={isSaving}
-       isExporting={isExporting}
-     />
-
-     <AssessmentFilters
-       gradesList={gradesList}
-       selectedGradeId={selectedGradeId}
-       setSelectedGradeId={setSelectedGradeId}
-       availableStreams={availableStreams}
-       selectedStreamId={selectedStreamId}
-       setSelectedStreamId={setSelectedStreamId}
-       examTypesList={examTypesList}
-       examType={examType}
-       setExamType={setExamType}
-       term={term}
-       setTerm={setTerm}
-       searchTerm={searchTerm}
-       setSearchTerm={setSearchTerm}
-       academicYear={academicYear}
-       setAcademicYear={setAcademicYear}
-     />
-
-     <MarksTable
-       filteredLearningAreas={filteredLearningAreas}
-       filteredStudents={filteredStudents}
-       marksMatrix={marksMatrix}
-       onMarkChange={handleMarkChange}
-     />
-
-     <AssessmentInstructions />
-   </div>
- );
+                  {/* Summary Row 2: SUBJECT MSS */}
+                  <tr className="bg-slate-50 border-t border-slate-200">
+                    <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[240px]">
+                      SUBJECT MSS
+                    </td>
+                    {activeSubjects.map(subj => (
+                      <td key={`mss-${subj}`} className="px-2 py-3 border-r text-center font-bold text-slate-800 min-w-[120px] max-w-[160px] bg-slate-50">
+                        {subjectMSS[subj] !== undefined ? subjectMSS[subj].toFixed(2) : "0.00"}
+                      </td>
+                    ))}
+                    <td className="bg-indigo-100/60 px-4 py-3 text-center font-black text-indigo-700 min-w-[100px] border-l">
+                      {grandTotalMSS.toFixed(2)}
+                    </td>
+                  </tr>
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={activeSubjects.length + 2} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <Search size={32} />
+                      </div>
+                      <p className="text-slate-800 font-bold text-base">No learners found for {grade} / {stream}.</p>
+                      <p className="text-xs text-slate-400 font-medium max-w-sm">
+                        Please check your student directory or select another grade and stream from the controls above.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+    </div>
+  );
 };
 
 export default Assessments;
