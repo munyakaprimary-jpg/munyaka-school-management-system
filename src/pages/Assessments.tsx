@@ -102,7 +102,7 @@ const Assessments = () => {
  // Set default selected grade
  useEffect(() => {
    if (!selectedGradeId && gradesList.length > 0) {
-     setSelectedGradeId(gradesList[0].id);
+     setSelectedGradeId(gradesList[0].name);
    }
  }, [gradesList, selectedGradeId]);
 
@@ -179,6 +179,9 @@ const Assessments = () => {
      }
    }
 
+   if (!selectedGradeId || selectedGradeId === "all") return [];
+
+   const currentGrade = gradesList.find((g: Grade) => g.name.toLowerCase() === selectedGradeId.toLowerCase() || g.id === selectedGradeId);
    if (!currentGrade) return [];
 
    const gradeNameLower = currentGrade.name.toLowerCase();
@@ -197,9 +200,11 @@ const Assessments = () => {
 
      let matchesStream = true;
      if (selectedStreamId !== "all") {
-       const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId);
+       const streamObj = availableStreams.find((sItem: Stream) => sItem.id === selectedStreamId || sItem.name.toLowerCase() === selectedStreamId.toLowerCase());
        if (streamObj) {
          matchesStream = s.stream.toLowerCase().trim() === streamObj.name.toLowerCase().trim();
+       } else {
+         matchesStream = s.stream.toLowerCase().trim() === selectedStreamId.toLowerCase().trim();
        }
      }
 
@@ -211,7 +216,7 @@ const Assessments = () => {
 
      return matchesGrade && matchesStream && matchesSearch;
    });
- }, [currentGrade, selectedStreamId, availableStreams, searchTerm]);
+ }, [selectedGradeId, selectedStreamId, availableStreams, searchTerm, gradesList]);
 
  const handleMarkChange = (studentId: string, subjectId: string, value: string) => {
    let clean = value.replace(/[^0-9]/g, "");
