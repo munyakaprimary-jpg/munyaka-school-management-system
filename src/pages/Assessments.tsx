@@ -78,42 +78,23 @@ const Assessments = () => {
     return STUDENTS;
   }, []);
 
-  // 2. Extract dynamic grades and streams from student directory (Robust full dynamic extraction)
+  // Extract dynamic grades and streams from student directory
   const availableGrades = useMemo(() => {
     const gradesSet = new Set<string>();
     studentsList.forEach(s => {
-      if (s.grade) {
-        const cleaned = String(s.grade).trim();
-        if (cleaned) gradesSet.add(cleaned);
-      }
+      if (s.grade) gradesSet.add(s.grade);
     });
-    const list = Array.from(gradesSet).sort((a, b) => {
-      // Sort grades logically: PP1, PP2, Grade 1, Grade 2...
-      const getOrder = (g: string) => {
-        const lower = g.toLowerCase();
-        if (lower.includes("pp1")) return 1;
-        if (lower.includes("pp2")) return 2;
-        const match = lower.match(/\d+/);
-        return match ? parseInt(match[0], 10) + 10 : 99;
-      };
-      return getOrder(a) - getOrder(b);
-    });
-    return list.length > 0 ? list : ["PP1", "PP2", "Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"];
+    const list = Array.from(gradesSet);
+    return list.length > 0 ? list : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"];
   }, [studentsList]);
 
-  // Extract streams per grade with full dynamic extraction
+  // Extract streams per grade
   const streamsByGrade = useMemo(() => {
     const map: Record<string, string[]> = {};
     studentsList.forEach(s => {
       if (s.grade && s.stream) {
-        const gClean = String(s.grade).trim();
-        const sClean = String(s.stream).trim();
-        if (gClean && sClean) {
-          if (!map[gClean]) map[gClean] = [];
-          if (!map[gClean].includes(sClean)) {
-            map[gClean].push(sClean);
-          }
-        }
+        if (!map[s.grade]) map[s.grade] = [];
+        if (!map[s.grade].includes(s.stream)) map[s.grade].push(s.stream);
       }
     });
     return map;
@@ -158,15 +139,13 @@ const Assessments = () => {
     setAcademicYearOptions(Array.from(yearsSet).sort().reverse());
   }, [studentsList]);
 
-  // Available streams for selected grade with "All Streams" prepended and auto-reset logic
+  // Available streams for selected grade
   const currentGradeStreams = useMemo(() => {
-    const rawStreams = streamsByGrade[grade] || [];
-    // Ensure uniqueness and sorting
-    const uniqueStreams = Array.from(new Set(rawStreams)).sort();
-    return uniqueStreams.length > 0 ? uniqueStreams : ["Red", "Blue", "Green", "East", "West"];
+    const streams = streamsByGrade[grade] || ["Class A", "Class B"];
+    return streams;
   }, [streamsByGrade, grade]);
 
-  // Reset stream if the active stream does not exist for a newly selected grade
+  // Reset stream if not in current grade
   useEffect(() => {
     if (stream !== "All Streams" && !currentGradeStreams.includes(stream)) {
       setStream("All Streams");
