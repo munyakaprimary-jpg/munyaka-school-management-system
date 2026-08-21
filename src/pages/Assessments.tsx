@@ -10,7 +10,7 @@ import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-
 import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 
-// Educational Tier Subject Mappings
+// Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
   "pre-primary": [
     "Language Activities",
@@ -61,6 +61,15 @@ const getTierKey = (gradeName: string): string => {
   if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "upper-primary";
   if (g.includes("grade 7") || g.includes("grade 8") || g.includes("grade 9") || g.includes("junior")) return "junior-secondary";
   return "lower-primary";
+};
+
+const getLevelNameForGrade = (gradeName: string): string => {
+  const g = gradeName.toLowerCase();
+  if (g.includes("pp1") || g.includes("pp2") || g.includes("pre-primary")) return "Pre-Primary";
+  if (g.includes("grade 1") || g.includes("grade 2") || g.includes("grade 3")) return "Lower Primary";
+  if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "Upper Primary";
+  if (g.includes("grade 7") || g.includes("grade 8") || g.includes("grade 9") || g.includes("junior")) return "Junior Secondary";
+  return "Lower Primary";
 };
 
 const Assessments = () => {
@@ -195,7 +204,7 @@ const Assessments = () => {
     return DEFAULT_EXAM_TYPES;
   }, []);
 
-  // 4. Learning Areas / Subjects from munyaka_learning_areas with fallback protection
+  // 4. Learning Areas / Subjects from munyaka_learning_areas with robust nested parsing logic
   const learningAreasFromStorage = useMemo(() => {
     try {
       const stored = localStorage.getItem("munyaka_learning_areas");
@@ -209,58 +218,40 @@ const Assessments = () => {
     return [];
   }, []);
 
-  // Control States bound to localStorage / defaults
-  const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
-  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
-  
-  const [grade, setGrade] = useState<string>(() => availableGrades[0] || "Grade 4");
-  const [stream, setStream] = useState<string>("All Streams");
-  const [examType, setExamType] = useState<string>(() => examTypesList[0]?.code || examTypesList[0]?.id || "Formative Assessment");
-  const [term, setTerm] = useState<string>("Term 1");
-  const [subject, setSubject] = useState<string>("All Subjects");
-  const [searchTerm, setSearchTerm] = useState<string>("");
-
-  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
-  const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const [showSavedBadge, setShowSavedBadge] = useState(false);
-
-  // Compute academic year options from students directory or current year + past 3 years
-  useEffect(() => {
-    const yearsSet = new Set<string>([new Date().getFullYear().toString()]);
-    studentsList.forEach(s => {
-      if (s.academicYear) yearsSet.add(s.academicYear);
-    });
-    setAcademicYearOptions(Array.from(yearsSet).sort().reverse());
-  }, [studentsList]);
-
-  // Available streams for selected grade with fallback
-  const currentGradeStreams = useMemo(() => {
-    const streams = streamsByGrade[grade] || ["Green", "Yellow", "Blue", "Red", "Neptune", "Jupiter", "Mercury", "Venus"];
-    return streams;
-  }, [streamsByGrade, grade]);
-
-  // Reset stream if not in current grade
-  useEffect(() => {
-    if (stream !== "All Streams" && !currentGradeStreams.includes(stream)) {
-      setStream("All Streams");
-    }
-  }, [grade, currentGradeStreams, stream]);
-
   // Educational tier subjects for selected grade with munyaka_learning_areas integration
   const tierKey = useMemo(() => getTierKey(grade), [grade]);
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
   const allTierSubjects = useMemo(() => {
     if (learningAreasFromStorage.length > 0) {
-      // Filter learning areas matching active grade tier or return all if none match specifically
-      const mapped = learningAreasFromStorage
-        .map((la: any) => la.name || la.title)
+      const targetLevelName = getLevelNameForGrade(grade).toLowerCase();
+      
+      // Check if munyaka_learning_areas has tier objects (e.g. { category: "Lower Primary", subjects: [...] } or { name: "Lower Primary", learningAreas: [...] })
+      for (const item of learningAreasFromStorage) {
+        if (item && typeof item === 'object') {
+          const catName = (item.category || item.name || item.title || "").toString().toLowerCase();
+          if (catName.includes(targetLevelName) || catName === targetLevelName || (targetLevelName.includes("junior") && catName.includes("junior"))) {
+            const nestedList = item.subjects || item.learningAreas || item.items || item.subcategories;
+            if (Array.isArray(nestedList) && nestedList.length > 0) {
+              const extracted = nestedList
+                .map((sub: any) => typeof sub === 'string' ? sub : (sub.name || sub.title || sub.subjectName))
+                .filter(Boolean);
+              if (extracted.length > 0) return extracted;
+            }
+          }
+        }
+      }
+
+      // If stored data contains a flat array of subject objects directly
+      const flatExtracted = learningAreasFromStorage
+        .map((la: any) => typeof la === 'string' ? la : (la.name || la.title || la.subjectName))
         .filter(Boolean);
-      if (mapped.length > 0) return mapped;
+      if (flatExtracted.length > 0 && !learningAreasFromStorage.some((item: any) => item?.subjects || item?.learningAreas || item?.items || item?.category)) {
+        return flatExtracted;
+      }
     }
     return defaultTierSubjects;
-  }, [learningAreasFromStorage, defaultTierSubjects]);
+  }, [learningAreasFromStorage, grade, defaultTierSubjects]);
 
   // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
   const activeSubjects = useMemo(() => {
