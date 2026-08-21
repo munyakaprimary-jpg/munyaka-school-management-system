@@ -1238,7 +1238,8 @@ const DigitalSkillsAssessment = () => {
 
           {/* View Details Modal */}
           {isViewOpen && selectedRecord && (
-            <div className="fixed inset-0 z-50 flex items-center            <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 animate-in zoom-in-95">
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+              <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-4 animate-in zoom-in-95">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-base font-bold text-slate-900">View Details</h3>
                 <button onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }} className="p-1 text-slate-400 hover:text-slate-600">
@@ -1269,7 +1270,7 @@ const DigitalSkillsAssessment = () => {
                   <Button 
                     variant="ghost" 
                     className="flex-1 rounded-xl h-9 font-bold"
-                    onClick={() => { setIsViewOpen(false); setSelectedRecord(null); }}
+                    onClick={() => setIsViewOpen(false); setSelectedRecord(null)}
                   >
                     Close
                   </Button>
