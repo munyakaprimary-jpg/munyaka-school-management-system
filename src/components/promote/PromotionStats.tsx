@@ -4,6 +4,15 @@ import React from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
+import { 
+  Users, 
+  Clock, 
+  Wallet, 
+  UserCheck, 
+  GraduationCap,
+  FileText,
+  TrendingUp
+} from 'lucide-react';
 import { cn } from "@/lib/utils";
 
 interface StatsCardProps {
@@ -25,23 +34,23 @@ const StatsCard: React.FC<StatsCardProps> = ({
   subtitle,
   progress 
 }) => (
-  <Card className="border-none shadow-sm bg-white p-3 rounded-lg">
-    <div className="flex items-center gap-3">
-      <div className={`p-2 ${bg} ${color} rounded-lg`}>
-        <Icon className="text-xs" />
+  <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
+    <div className="flex items-center gap-4 mb-6">
+      <div className={`p-3 ${bg} ${color} rounded-2xl`}>
+        <Icon size={24} />
       </div>
       <div>
-        <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{title}</p>
-        <h3 className="text-sm font-bold text-slate-900">{value}</h3>
+        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{title}</p>
+        <h3 className="text-2xl font-black text-slate-900">{value}</h3>
       </div>
     </div>
     {subtitle && (
-      <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+      <div className="flex items-center justify-between text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-1.5 rounded-xl">
         <span>{subtitle}</span>
       </div>
     )}
     {progress !== undefined && (
-      <Progress value={progress} className="h-1" />
+      <Progress value={progress} className="h-1.5" />
     )}
   </Card>
 );
@@ -57,7 +66,7 @@ interface PromotionStatsProps {
 
 const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
       <StatsCard
         title="Total Students"
         value={stats.totalStudents}
@@ -65,6 +74,7 @@ const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
         color="text-indigo-600"
         bg="bg-indigo-50"
       />
+      
       <StatsCard
         title="Active Students"
         value={stats.activeStudents}
@@ -72,6 +82,7 @@ const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
         color="text-emerald-600"
         bg="bg-emerald-50"
       />
+      
       <StatsCard
         title="Graduated"
         value={stats.graduatedStudents}
@@ -79,6 +90,7 @@ const PromotionStats: React.FC<PromotionStatsProps> = ({ stats }) => {
         color="text-purple-600"
         bg="bg-purple-50"
       />
+      
       <StatsCard
         title="Highest Grade"
         value={stats.highestGrade}

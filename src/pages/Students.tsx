@@ -1,4 +1,92 @@
-// Precompute the numeric string from the filterGrade for efficient comparison
+import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import Modal from "@/components/ui/Modal";
+import BackButton from "@/components/ui/BackButton";
+import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
+import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
+import { sortGrades } from '@/utils/gradeSort';
+import { showSuccess, showError } from '@/utils/toast';
+import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
+import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import { StudentTransferInfo } from '@/types/transfer';
+import { Student } from '@/types/student';
+
+const Students = () => {
+  const [studentsList, setStudentsList] = useState(() => {
+    const saved = localStorage.getItem('munyaka_students_master');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return initialStudents;
+  });
+
+  React.useEffect(() => {
+    localStorage.setItem('munyaka_students_master', JSON.stringify(studentsList));
+  }, [studentsList]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterGrade, setFilterGrade] = useState("all");
+  const [filterStream, setFilterStream] = useState("all");
+
+  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const navigate = useNavigate();
+
+  // Admin Auth Deletion State
+  const [isAuthOpen, setIsAuthOpen] = useState(false);
+  const [authPassword, setAuthPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [isVerifying, setIsVerifying] = useState(false);
+  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+
+  // History and Transfer Modals State
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+
+  // Registration Form State
+  const [fullName, setFullName] = useState("");
+  const [assessmentNo, setAssessmentNo] = useState("");
+  const [regGrade, setRegGrade] = useState("");
+  const [regStream, setRegStream] = useState("");
+  const [guardianName, setGuardianName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [address, setAddress] = useState("");
+
+  // Edit Form State
+  const [editId, setEditId] = useState("");
+  const [editFullName, setEditFullName] = useState("");
+  const [editAssessmentNo, setEditAssessmentNo] = useState("");
+  const [editGrade, setEditGrade] = useState("");
+  const [editStream, setEditStream] = useState("");
+  const [editGuardianName, setEditGuardianName] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+
+  // Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
+  const gradesList = useMemo(() => {
+    const savedGrades = localStorage.getItem('munyaka_grades');
+    let list = GRADES_DATA;
+    if (savedGrades) {
+      try {
+        list = JSON.parse(savedGrades);
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    return sortGrades(list);
+  }, []);
+
+  // Precompute the numeric string from the filterGrade for efficient comparison
   const filterGradeNumber = useMemo(() => {
     if (filterGrade === "all" || !filterGrade) return null;
     const match = filterGrade.match(/\d+/);
@@ -11,6 +99,12 @@
     const grade = gradesList.find((g: any) => g.name === `Grade ${regGrade}` || g.name === regGrade || g.id === regGrade);
     return grade ? grade.streams.map((s: any) => s.name) : [];
   }, [regGrade, gradesList]);
+
+  const editAvailableStreams = useMemo(() => {
+    if (!editGrade) return [];
+    const grade = gradesList.find((g: any) => g.name === `Grade ${editGrade}` || g.name === editGrade || g.id === editGrade);
+    return grade ? grade.streams.map((s: any) => s.name) : [];
+  }, [editGrade, gradesList]);
 
   // Reset stream when grade changes and no longer matches available streams
   React.useEffect(() => {
@@ -248,8 +342,8 @@
       </div>
 
       {/* Filters Card */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-4 sm:p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
           <div className="relative md:col-span-2">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
             <Input
@@ -286,9 +380,7 @@
               <SelectContent className="rounded-xl">
                 <SelectItem value="all">All Streams</SelectItem>
                 {uniqueStreams.map(s => (
-                  <SelectItem key={s} value={s}>
-                    {s}
-                  </SelectItem>
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
               </SelectContent>
             </Select>

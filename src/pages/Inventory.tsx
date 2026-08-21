@@ -41,7 +41,7 @@ interface AssetLog {
 const Inventory = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('stock');
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState('');
   const [isSyncing, setIsSyncing] = useState(false);
   
   // Modal States
@@ -249,7 +249,7 @@ const Inventory = () => {
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight text-slate-900">Tools & Resources</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Tools & Resources</h1>
             <p className="text-muted-foreground">Comprehensive inventory and asset lifecycle management.</p>
           </div>
         </div>
@@ -271,7 +271,7 @@ const Inventory = () => {
             <ArrowDownLeft size={18} /> Receive Tool
           </Button>
           <Button 
-            className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
+            className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold"
             onClick={() => setIsAddAssetOpen(true)}
           >
             <Plus size={18} /> Add New Asset
@@ -281,24 +281,24 @@ const Inventory = () => {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
-          <TabsTrigger value="stock" className="rounded-xl px-6 h-full font-bold text-xs">Asset Stock</TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-6 h-full font-bold text-xs">Issuance History</TabsTrigger>
+          <TabsTrigger value="stock" className="rounded-xl px-8 h-full font-bold text-xs">Asset Stock</TabsTrigger>
+          <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs">Issuance History</TabsTrigger>
         </TabsList>
 
         <TabsContent value="stock" className="space-y-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="md:col-span-3 relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
               <Input 
                 placeholder="Search assets by name or category..." 
-                className="pl-11 h-12 rounded-3xl border-none bg-slate-50 font-medium"
+                className="pl-12 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
             <Button 
-              variant="outline"
-              className="h-11 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" 
+              variant="outline" 
+              className="h-14 px-6 rounded-3xl border-none shadow-sm bg-white gap-2 text-slate-600 font-bold" 
               onClick={handleSyncStock}
               disabled={isSyncing}
             >
@@ -309,21 +309,21 @@ const Inventory = () => {
 
           {filteredAssets.length > 0 ? (
             <div className="overflow-x-auto custom-scrollbar pb-6 -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 min-w-[1000px] lg:min-w-0">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 min-w-[1000px] lg:min-w-0">
                 {filteredAssets.map((item) => (
-                  <Card key={item.id} className="border-none shadow-sm bg-white p-3 rounded-lg group">
-                    <CardContent className="p-3">
-                      <div className="flex justify-between items-start mb-3">
-                        <div className={cn("w-10 h-10 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={24} /></div>
+                  <Card key={item.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
+                    <CardContent className="p-8">
+                      <div className="flex justify-between items-start mb-6">
+                        <div className={cn("w-14 h-14 rounded-2xl bg-slate-50 flex items-center justify-center", item.color)}><Box size={28} /></div>
                         <Button variant="ghost" size="icon" className="rounded-full text-slate-300 hover:text-red-500" onClick={() => { setAssetToDelete(item.id); setIsDeleteOpen(true); }}><Trash2 size={18} /></Button>
                       </div>
-                      <div className="space-y-1 mb-3">
-                        <h3 className="text-sm font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.item}</h3>
-                        <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">{item.category}</p>
+                      <div className="space-y-1 mb-6">
+                        <h3 className="text-lg font-bold text-slate-900 leading-tight">{item.item}</h3>
+                        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.category}</p>
                       </div>
-                      <div className="flex items-end justify-between pt-3 border-t border-slate-100">
-                        <div><p className="text-[9px] font-black uppercase text-slate-400 mb-1">Stock</p><p className="text-xl font-black text-slate-900">{item.qty}</p></div>
-                        <Badge className={cn("rounded-lg border-none px-2.5 py-1.5 font-bold text-[9px] uppercase", 
+                      <div className="flex items-end justify-between pt-6 border-t border-slate-50">
+                        <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1">Stock</p><p className="text-2xl font-black text-slate-900">{item.qty}</p></div>
+                        <Badge className={cn("rounded-lg border-none px-3 py-1 font-bold text-[10px] uppercase", 
                           item.status === 'Available' ? "bg-emerald-50 text-emerald-600" : 
                           item.status === 'Low Stock' ? "bg-amber-50 text-amber-700" : "bg-blue-50 text-blue-700")}>
                           {item.status}
@@ -335,12 +335,12 @@ const Inventory = () => {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8 bg-white rounded-2xl border-2 border-dashed border-slate-200">
-              <div className="w-10 h-10 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
-                <LayoutGrid size={28} />
+            <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-200">
+              <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
+                <LayoutGrid size={40} />
               </div>
-              <h3 className="text-sm font-bold text-slate-900 mb-2">No assets found</h3>
-              <p className="text-slate-400 text-sm max-w-xs mx-auto mb-6">Either your search yielded no results or you haven't registered any assets yet.</p>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">No assets found</h3>
+              <p className="text-slate-400 max-w-xs mx-auto mb-6">Either your search yielded no results or you haven't registered any assets yet.</p>
               <Button 
                 variant="ghost" 
                 onClick={() => setIsAddAssetOpen(true)}
@@ -353,52 +353,52 @@ const Inventory = () => {
         </TabsContent>
 
         <TabsContent value="logs">
-          <Card className="border-none shadow-sm bg-white p-3 rounded-lg">
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm min-w-[850px]">
                   <thead>
                     <tr className="bg-slate-50/50 border-b">
-                      <th className="px-6 py-4 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Asset & Qty</th>
-                      <th className="px-6 py-4 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Recipient</th>
-                      <th className="px-6 py-4 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Date Issued</th>
-                      <th className="px-6 py-4 text-left font-black text-slate-400 uppercase tracking-widest text-[9px]">Date Returned</th>
-                      <th className="px-6 py-4 text-right font-black text-slate-400 uppercase tracking-widest text-[9px]">Status</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Asset & Qty</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Recipient</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date Issued</th>
+                      <th className="px-8 py-5 text-left font-black text-slate-400 uppercase tracking-widest text-[10px]">Date Returned</th>
+                      <th className="px-8 py-5 text-right font-black text-slate-400 uppercase tracking-widest text-[10px]">Status</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
                     {assetLogs.length > 0 ? (
                       assetLogs.map((log) => (
-                        <tr key={log.id} className="hover:bg-slate-50/50 transition-colors">
-                          <td className="px-5 py-3">
+                        <tr key={log.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-8 py-6">
                             <p className="font-bold text-slate-900">{log.item}</p>
-                            <p className="text-[8px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Quantity: {log.qty}</p>
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-8 py-6">
                             <div className="flex items-center gap-2">
-                              <UserCheck size={12} className="text-slate-400" />
+                              <UserCheck size={14} className="text-slate-400" />
                               <span className="font-medium text-slate-700">{log.issuedTo}</span>
                             </div>
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-8 py-6">
                             <div className="flex items-center gap-2 text-slate-500">
-                              <Clock size={12} />
+                              <Clock size={14} />
                               <span>{log.date}</span>
                             </div>
                           </td>
-                          <td className="px-5 py-3">
+                          <td className="px-8 py-6">
                             {log.dateReturned ? (
                               <div className="flex items-center gap-2 text-slate-700 font-bold">
-                                <Calendar size={12} className="text-emerald-500" />
+                                <Calendar size={14} className="text-emerald-500" />
                                 <span>{log.dateReturned}</span>
                               </div>
                             ) : (
-                              <Badge variant="outline" className="rounded-lg border-none text-slate-400 font-bold text-[8px]">
+                              <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
                                 Pending Return
                               </Badge>
                             )}
                           </td>
-                          <td className="px-5 py-3 text-right">
+                          <td className="px-8 py-6 text-right">
                             <Badge className={cn("rounded-lg border-none font-bold", log.status === 'In Use' ? "bg-blue-50 text-blue-700" : "bg-emerald-50 text-emerald-700")}>
                               {log.status}
                             </Badge>
@@ -407,7 +407,7 @@ const Inventory = () => {
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={5} className="px-5 py-10 text-center text-slate-400 font-medium">
+                        <td colSpan={5} className="px-8 py-20 text-center text-slate-400 font-medium">
                           No issuance records found in the school ledger.
                         </td>
                       </tr>
@@ -438,11 +438,11 @@ const Inventory = () => {
       <Modal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} title="Register New Asset" footer={<div className="flex gap-3 justify-end w-full"><Button variant="ghost" onClick={() => setIsAddAssetOpen(false)} className="rounded-xl font-bold h-11 px-6">Cancel</Button><Button onClick={handleAddAsset} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-8 shadow-lg shadow-indigo-100 gap-2 text-white"><Save size={18} /> Add Asset</Button></div>}>
         <div className="space-y-4">
           {assetError && <div className="p-3 bg-rose-50 text-rose-600 rounded-xl font-bold text-xs">{assetError}</div>}
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(e.target.value)} className="h-10 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Asset Name</Label><Input value={newAssetName} onChange={e => setNewAssetName(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
           <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Category</Label>
-            <Select onValueChange={setNewAssetCategory}><SelectTrigger className="h-10 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent><SelectItem value="Agriculture">Agriculture</SelectItem><SelectItem value="Science & Tech">Science & Tech</SelectItem><SelectItem value="Creative Arts">Creative Arts</SelectItem><SelectItem value="Sports">Sports</SelectItem></SelectContent></Select>
+            <Select onValueChange={setNewAssetCategory}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue placeholder="Select category..." /></SelectTrigger><SelectContent><SelectItem value="Agriculture">Agriculture</SelectItem><SelectItem value="Science & Tech">Science & Tech</SelectItem><SelectItem value="Creative Arts">Creative Arts</SelectItem><SelectItem value="Sports">Sports</SelectItem></SelectContent></Select>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(e.target.value)} className="h-10 rounded-xl bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Initial Qty</Label><Input type="number" value={newAssetQty} onChange={e => setNewAssetQty(e.target.value)} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
         </div>
       </Modal>
 

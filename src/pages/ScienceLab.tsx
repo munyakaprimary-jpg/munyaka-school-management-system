@@ -1,558 +1,507 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { GRADES_DATA, Grade } from '@/lib/mock-data';
+"use client";
 
+import React, { useState, useMemo, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from "@/components/ui/progress";
+import BackButton from '@/components/ui/BackButton';
+import Modal from '@/components/ui/Modal';
 import { 
-  Laptop, 
+  FlaskConical, 
   Search, 
   Plus, 
   Wrench, 
   Monitor, 
-  Smartphone, 
-  Projector, 
-  Wifi, 
-  Trash2,
-  CheckCircle2,
-  Clock,
-  LayoutGrid,
-  ClipboardList,
-  RotateCcw,
-  AlertCircle,
-  UserCheck,
-  Calendar,
-  ArrowUpRight,
-  ArrowDownLeft,
-  Undo2,
+  Calendar, 
+  AlertTriangle, 
+  Trash2, 
+  Edit, 
+  Eye, 
+  Download, 
+  Upload, 
+  RotateCcw, 
+  Shield, 
+  TestTube, 
+  Microscope, 
+  Scale, 
+  ClipboardList, 
+  FileText, 
+  UserCheck, 
+  AlertCircle, 
+  CheckCircle2, 
+  XCircle, 
+  Loader2,
   Package,
   Minus,
   Plus as PlusIcon,
-  Edit,
   MoreVertical,
-  ArrowRight,
-  ShieldAlert,
-  Download,
-  FileSpreadsheet,
-  Database,
-  HardDrive,
-  Lock,
-  Loader2,
-  AlertCircle as AlertCircleIcon
+  ChevronDown,
+  ChevronUp,
+  Layers,
+  X
 } from 'lucide-react';
+import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
-import { cn } from '@/lib/utils';
-import AddICTAssetModal from '@/components/ict/AddICTAssetModal';
-import { ICTAsset, ICTCategory, ICTStatus } from '@/types/ict';
+import { downloadCSV, downloadFile } from '@/utils/downloadHelper';
+import { 
+  ChemicalItem, 
+  EquipmentItem, 
+  LabBooking, 
+  BreakageLog,
+  HazardLevel,
+  BookingStatus,
+  BreakageStatus
+} from '@/types/scienceLab';
+import { CHEMICALS, EQUIPMENT, LAB_BOOKINGS, BREAKAGE_LOGS } from '@/data/scienceLabData';
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
   DropdownMenuItem, 
   DropdownMenuTrigger,
   DropdownMenuSeparator
-} from '@/components/ui/dropdown-menu';
-import { downloadCSV, downloadFile } from '@/utils/downloadHelper';
-
-// --- Types ---
-type LogStatus = 'Issued' | 'Returned' | 'Overdue' | 'Under Repair';
-
-interface ICTLog {
-  id: string;
-  assetId: string;
-  assetTag: string;
-  deviceName: string;
-  category: ICTCategory;
-  borrower: string;
-  description: string;
-  dateIssued: string;
-  expectedReturn: string;
-  actualReturn?: string;
-  status: LogStatus;
-  conditionOnReturn?: string;
-  quantityIssued: number;
-  quantityReturned: number;
-}
-
-// --- Mock Data ---
-const INITIAL_ASSETS: ICTAsset[] = [
-  { id: "1", assetTag: "ICT-LP-01", name: "HP ProBook 450", category: "Laptops", serialNumber: "CND12345XYZ", status: "Active", location: "Computer Lab 1", assignedTo: "Jane Mwangi" },
-  { id: "2", assetTag: "ICT-TB-05", name: "Samsung Galaxy Tab A8", category: "Tablets", serialNumber: "RF8S123456", status: "Active", location: "Mobile Cart A", assignedTo: "Grade 4 Blue" },
-  { id: "3", assetTag: "ICT-PJ-01", name: "Epson EB-X41", category: "Projectors", serialNumber: "V11H843040", status: "In Maintenance", location: "Staff Room", assignedTo: "John Kamau" },
-  { id: "4", assetTag: "ICT-NW-02", name: "TP-Link AX1800 Router", category: "Networking", serialNumber: "220C123456", status: "Active", location: "Server Room" },
-  { id: "5", assetTag: "ICT-LP-02", name: "Dell Latitude 5420", category: "Laptops", serialNumber: "DL5420-001", status: "Active", location: "Computer Lab 1" },
-  { id: "6", assetTag: "ICT-TB-10", name: "iPad 9th Gen", category: "Tablets", serialNumber: "IPAD9-010", status: "Active", location: "Mobile Cart B" },
-];
-
-const INITIAL_LOGS: ICTLog[] = [
-  { id: "ISS-101", assetId: "1", assetTag: "ICT-LP-01", deviceName: "HP ProBook 450", category: "Laptops", borrower: "Jane Mwangi", description: "Classroom presentation", dateIssued: "2024-05-10", expectedReturn: "2024-05-12", status: "Returned", actualReturn: "2024-05-12", conditionOnReturn: "Good", quantityIssued: 1, quantityReturned: 1 },
-  { id: "ISS-102", assetId: "3", assetTag: "ICT-PJ-01", deviceName: "Epson EB-X41", category: "Projectors", borrower: "John Kamau", description: "HDMI port loose", dateIssued: "2024-05-15", expectedReturn: "2024-05-20", status: "Under Repair", quantityIssued: 1, quantityReturned: 0 },
-  { id: "ISS-103", assetId: "2", assetTag: "ICT-TB-05", deviceName: "Samsung Galaxy Tab A8", category: "Tablets", borrower: "Grade 4 Blue", description: "CBC Practical", dateIssued: "2024-05-22", expectedReturn: "2024-05-23", status: "Overdue", quantityIssued: 30, quantityReturned: 0 },
-];
+} from "@/components/ui/dropdown-menu";
 
 const ScienceLab = () => {
-  // --- States ---
-  const [activeTab, setActiveTab] = useState("inventory");
-  const [assets, setAssets] = useState<ICTAsset[]>(() => {
-    const saved = localStorage.getItem('munyaka_ict_assets');
-    return saved ? JSON.parse(saved) : INITIAL_ASSETS;
-  });
-  const [logs, setLogs] = useState<ICTLog[]>(() => {
-    const saved = localStorage.getItem('munyaka_ict_logs');
-    return saved ? JSON.parse(saved) : INITIAL_LOGS;
-  });
-
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<'chemicals' | 'equipment' | 'bookings' | 'breakages'>('chemicals');
   
-  const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
-  const [isLogModalOpen, setIsLogModalOpen] = useState(false);
-  const [logMode, setLogMode] = useState<'issue' | 'return'>('issue');
+  // Chemicals State
+  const [chemicals, setChemicals] = useState<ChemicalItem[]>(CHEMICALS);
+  const [chemicalSearch, setChemicalSearch] = useState("");
+  const [hazardFilter, setHazardFilter] = useState<string>("all");
+  const [isAddChemicalOpen, setIsAddChemicalOpen] = useState(false);
+  const [editingChemical, setEditingChemical] = useState<ChemicalItem | null>(null);
+  
+  // Equipment State
+  const [equipment, setEquipment] = useState<EquipmentItem[]>(EQUIPMENT);
+  const [equipmentSearch, setEquipmentSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [isAddEquipmentOpen, setIsAddEquipmentOpen] = useState(false);
+  const [editingEquipment, setEditingEquipment] = useState<EquipmentItem | null>(null);
+  
+  // Bookings State
+  const [bookings, setBookings] = useState<LabBooking[]>(LAB_BOOKINGS);
+  const [bookingSearch, setBookingSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [isAddBookingOpen, setIsAddBookingOpen] = useState(false);
+  const [editingBooking, setEditingBooking] = useState<LabBooking | null>(null);
+  
+  // Breakages State
+  const [breakages, setBreakages] = useState<BreakageLog[]>(BREAKAGE_LOGS);
+  const [breakageSearch, setBreakageSearch] = useState("");
+  const [breakageStatusFilter, setBreakageStatusFilter] = useState<string>("all");
+  const [isAddBreakageOpen, setIsAddBreakageOpen] = useState(false);
+  const [editingBreakage, setEditingBreakage] = useState<BreakageLog | null>(null);
 
-  // --- Unified Log Form State ---
-  const [logForm, setLogForm] = useState({
-    // Issue fields
-    category: "Laptops" as ICTCategory,
-    assetId: "",
-    borrower: "",
-    description: "",
-    outDate: new Date().toISOString().split('T')[0],
-    returnDate: "",
-    quantityIssued: 1,
-    // Return fields
-    returnLogId: "",
-    actualReturnDate: new Date().toISOString().split('T')[0],
-    conditionOnReturn: "Good",
-    returnNotes: "",
-    quantityReturned: 1
+  // Form States
+  const [chemicalForm, setChemicalForm] = useState({
+    name: "", formula: "", quantity: "", unit: "L", location: "", 
+    expiryDate: "", hazardLevel: "Low" as HazardLevel, minThreshold: ""
+  });
+  
+  const [equipmentForm, setEquipmentForm] = useState({
+    name: "", category: "", totalQty: "", functionalQty: "", damagedQty: "", location: ""
+  });
+  
+  const [bookingForm, setBookingForm] = useState({
+    date: new Date().toISOString().split('T')[0], timeSlot: "08:00-09:30", teacher: "",
+    gradeClass: "", topic: "", itemsRequested: "", status: "Pending" as BookingStatus
+  });
+  
+  const [breakageForm, setBreakageForm] = useState({
+    date: new Date().toISOString().split('T')[0], studentName: "", admNo: "",
+    gradeClass: "", itemBroken: "", qty: "1", cost: "", status: "Pending" as BreakageStatus
   });
 
-  // --- Persistence ---
+  // Persistence
+  useEffect(() => { localStorage.setItem('munyaka_science_chemicals', JSON.stringify(chemicals)); }, [chemicals]);
+  useEffect(() => { localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment)); }, [equipment]);
+  useEffect(() => { localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings)); }, [bookings]);
+  useEffect(() => { localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages)); }, [breakages]);
+
+  // Load from localStorage on mount
   useEffect(() => {
-    localStorage.setItem('munyaka_ict_assets', JSON.stringify(assets));
-    localStorage.setItem('munyaka_ict_logs', JSON.stringify(logs));
-  }, [assets, logs]);
+    const savedChemicals = localStorage.getItem('munyaka_science_chemicals');
+    if (savedChemicals) setChemicals(JSON.parse(savedChemicals));
+    
+    const savedEquipment = localStorage.getItem('munyaka_science_equipment');
+    if (savedEquipment) setEquipment(JSON.parse(savedEquipment));
+    
+    const savedBookings = localStorage.getItem('munyaka_science_bookings');
+    if (savedBookings) setBookings(JSON.parse(savedBookings));
+    
+    const savedBreakages = localStorage.getItem('munyaka_science_breakages');
+    if (savedBreakages) setBreakages(JSON.parse(savedBreakages));
+  }, []);
 
-  // --- Derived Data ---
-  const filteredAssets = useMemo(() => {
-    return assets.filter(a => {
-      const matchesSearch =
-        a?.name?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-        a?.assetTag?.toLowerCase().includes(searchQuery?.toLowerCase()) ||
-        a?.serialNumber?.toLowerCase().includes(searchQuery?.toLowerCase());
-      const matchesStatus = statusFilter === "all" || a?.status === statusFilter;
-      const matchesCategory = categoryFilter === "all" || a?.category === categoryFilter;
-      return matchesSearch && matchesStatus && matchesCategory;
-    });
-  }, [assets, searchQuery, statusFilter, categoryFilter]);
+  // Filtered Data
+  const filteredChemicals = useMemo(() => chemicals.filter(c => {
+    const matchesSearch = c.name.toLowerCase().includes(chemicalSearch.toLowerCase()) ||
+                         c.formula.toLowerCase().includes(chemicalSearch.toLowerCase());
+    const matchesHazard = hazardFilter === "all" || c.hazardLevel === hazardFilter;
+    return matchesSearch && matchesHazard;
+  }), [chemicals, chemicalSearch, hazardFilter]);
 
-  const filteredLogs = useMemo(() => {
-    return logs.filter(l => 
-      l.deviceName.toLowerCase().includes(searchQuery.toLowerCase()) || 
-      l.assetTag.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      l.borrower.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [logs, searchQuery]);
+  const filteredEquipment = useMemo(() => equipment.filter(e => {
+    const matchesSearch = e.name.toLowerCase().includes(equipmentSearch.toLowerCase()) ||
+                         e.category.toLowerCase().includes(equipmentSearch.toLowerCase());
+    const matchesCategory = categoryFilter === "all" || e.category === categoryFilter;
+    return matchesSearch && matchesCategory;
+  }), [equipment, equipmentSearch, categoryFilter]);
 
-  // Active checkouts (Issued but not Returned)
-  const activeCheckouts = useMemo(() => {
-    return logs.filter(l => l.status === 'Issued' || l.status === 'Overdue');
-  }, [logs]);
+  const filteredBookings = useMemo(() => bookings.filter(b => {
+    const matchesSearch = b.topic.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+                         b.teacher.toLowerCase().includes(bookingSearch.toLowerCase()) ||
+                         b.gradeClass.toLowerCase().includes(bookingSearch.toLowerCase());
+    const matchesStatus = statusFilter === "all" || b.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  }), [bookings, bookingSearch, statusFilter]);
 
-  const stats = {
-    total: assets.length,
-    active: assets.filter(a => a.status === 'Active').length,
-    repair: assets.filter(a => a.status === 'In Maintenance' || a.status === 'Decommissioned').length,
-    assigned: assets.filter(a => !!a.assignedTo).length
+  const filteredBreakages = useMemo(() => breakages.filter(b => {
+    const matchesSearch = b.studentName.toLowerCase().includes(breakageSearch.toLowerCase()) ||
+                         b.itemBroken.toLowerCase().includes(breakageSearch.toLowerCase()) ||
+                         b.admNo.toLowerCase().includes(breakageSearch.toLowerCase());
+    const matchesStatus = breakageStatusFilter === "all" || b.status === breakageStatusFilter;
+    return matchesSearch && matchesStatus;
+  }), [breakages, breakageSearch, breakageStatusFilter]);
+
+  // Stats
+  const chemicalStats = {
+    total: chemicals.length,
+    highHazard: chemicals.filter(c => c.hazardLevel === "High").length,
+    lowStock: chemicals.filter(c => c.quantity <= c.minThreshold).length,
+    expiringSoon: chemicals.filter(c => {
+      const daysUntilExpiry = (new Date(c.expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+      return daysUntilExpiry <= 90 && daysUntilExpiry > 0;
+    }).length
   };
 
-  const logStats = {
-    activeCheckouts: logs.filter(l => l.status === 'Issued').length,
-    overdue: logs.filter(l => l.status === 'Overdue').length,
-    repair: logs.filter(l => l.status === 'Under Repair').length
+  const equipmentStats = {
+    total: equipment.length,
+    functional: equipment.reduce((sum, e) => sum + e.functionalQty, 0),
+    damaged: equipment.reduce((sum, e) => sum + e.damagedQty, 0),
+    categories: new Set(equipment.map(e => e.category)).size
   };
 
-  // --- Export Functions ---
-  const handleExportCSV = () => {
-    // CSV for Issue/Return Logs
-    const headers = [
-      "Log ID",
-      "Asset Tag",
-      "Device Name",
-      "Category",
-      "Borrower",
-      "Description",
-      "Date Issued",
-      "Expected Return",
-      "Actual Return",
-      "Status",
-      "Condition on Return",
-      "Quantity Issued",
-      "Quantity Returned"
-    ];
-
-    const rows = logs.map(log => [
-      log.id,
-      log.assetTag,
-      log.deviceName,
-      log.category,
-      log.borrower,
-      log.description,
-      log.dateIssued,
-      log.expectedReturn,
-      log.actualReturn || "—",
-      log.status,
-      log.conditionOnReturn || "—",
-      log.quantityIssued,
-      log.quantityReturned
-    ]);
-
-    const csvContent = [
-      "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-      "ICT LAB - ISSUE & RETURN LOGS",
-      `Generated: ${new Date().toLocaleString()}`,
-      `Total Records: ${logs.length}`,
-      "",
-      headers.join(","),
-      ...rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
-    ].join("\n");
-
-    downloadCSV(csvContent, `ict_lab_issue_return_logs_${new Date().toISOString().split('T')[0]}.csv`);
-    showSuccess(`Exported ${logs.length} issue/return records to CSV.`);
+  const bookingStats = {
+    total: bookings.length,
+    pending: bookings.filter(b => b.status === "Pending").length,
+    approved: bookings.filter(b => b.status === "Approved").length,
+    completed: bookings.filter(b => b.status === "Completed").length
   };
 
-  const handleExportJSON = () => {
-    // Full JSON backup including assets and logs
-    const backupData = {
-      metadata: {
-        school: "Munyaka Primary and Junior School",
-        module: "ICT Lab Management",
-        generatedAt: new Date().toISOString(),
-        version: "1.0",
-        totalAssets: assets.length,
-        totalLogs: logs.length
-      },
-      assets: assets.map(asset => ({
-        ...asset,
-        // Calculate checked out quantity from logs
-        checkedOutQty: logs
-          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
-          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0),
-        availableQty: Math.max(0, 1 - logs
-          .filter(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'))
-          .reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0))
-      })),
-      logs: logs,
-      summary: {
-        totalDevices: assets.length,
-        activeDevices: assets.filter(a => a.status === 'Active').length,
-        devicesInRepair: assets.filter(a => a.status === 'In Maintenance' || a.status === 'Decommissioned').length,
-        assignedDevices: assets.filter(a => !!a.assignedTo).length,
-        activeCheckouts: logs.filter(l => l.status === 'Issued').length,
-        overdueReturns: logs.filter(l => l.status === 'Overdue').length,
-        underRepair: logs.filter(l => l.status === 'Under Repair').length,
-        totalQuantityIssued: logs.reduce((sum, l) => sum + l.quantityIssued, 0),
-        totalQuantityReturned: logs.reduce((sum, l) => sum + l.quantityReturned, 0),
-        totalOutstanding: logs.reduce((sum, l) => sum + (l.quantityIssued - l.quantityReturned), 0)
-      }
-    };
-
-    const jsonContent = JSON.stringify(backupData, null, 2);
-    downloadFile(jsonContent, `ict_lab_full_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
-    showSuccess("Full ICT Lab backup exported to JSON (assets + logs + summary).");
+  const breakageStats = {
+    total: breakages.length,
+    pending: breakages.filter(b => b.status === "Pending").length,
+    paid: breakages.filter(b => b.status === "Paid").length,
+    waived: breakages.filter(b => b.status === "Waived").length,
+    totalCost: breakages.reduce((sum, b) => sum + b.cost, 0)
   };
 
-  // --- Handlers ---
-  const handleAddAsset = (newAsset: ICTAsset) => {
-    setAssets(prev => [newAsset, ...prev]);
-    showSuccess(`Added ${newAsset.name ?? 'Unknown'} to inventory.`);
-  };
-
-  const openLogModal = (mode: 'issue' | 'return') => {
-    setLogMode(mode);
-    // Reset form
-    setLogForm({
-      category: "Laptops",
-      assetId: "",
-      borrower: "",
-      description: "",
-      outDate: new Date().toISOString().split('T')[0],
-      returnDate: "",
-      quantityIssued: 1,
-      returnLogId: "",
-      actualReturnDate: new Date().toISOString().split('T')[0],
-      conditionOnReturn: "Good",
-      returnNotes: "",
-      quantityReturned: 1
-    });
-    setIsLogModalOpen(true);
-  };
-
-  const handleLogSubmit = () => {
-    if (logMode === 'issue') {
-      handleIssueSubmit();
-    } else {
-      handleReturnSubmit();
-    }
-  };
-
-  const handleIssueSubmit = () => {
-    if (!logForm.category || !logForm.assetId || !logForm.borrower || !logForm.returnDate) {
+  // Handlers
+  const handleAddChemical = () => {
+    if (!chemicalForm.name || !chemicalForm.quantity || !chemicalForm.expiryDate) {
       showError("Please fill in all required fields.");
       return;
     }
-
-    if (!logForm.quantityIssued || logForm.quantityIssued < 1) {
-      showError("Quantity issued must be at least 1.");
-      return;
-    }
-
-    const asset = assets.find(a => a.id === logForm.assetId);
-    if (!asset) return;
-
-    const newLog: ICTLog = {
-      id: `ISS-${Date.now().toString().slice(-4)}`,
-      assetId: asset.id,
-      assetTag: asset.assetTag,
-      deviceName: asset.name,
-      category: logForm.category,
-      borrower: logForm.borrower,
-      description: logForm.description,
-      dateIssued: logForm.outDate,
-      expectedReturn: logForm.returnDate,
-      status: "Issued",
-      quantityIssued: logForm.quantityIssued,
-      quantityReturned: 0
+    const newChemical: ChemicalItem = {
+      id: `CHM-${Date.now().toString().slice(-4)}`,
+      ...chemicalForm,
+      quantity: parseFloat(chemicalForm.quantity),
+      minThreshold: parseFloat(chemicalForm.minThreshold) || 0
     };
-
-    setLogs([newLog, ...logs]);
-    // Update asset status to show it's checked out
-    setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: logForm.borrower } : a));
-    
-    setIsLogModalOpen(false);
-    showSuccess(`${logForm.quantityIssued} ${asset.name}(s) successfully checked out to ${logForm.borrower}.`);
+    setChemicals([newChemical, ...chemicals]);
+    setIsAddChemicalOpen(false);
+    resetChemicalForm();
+    showSuccess(`Chemical "${newChemical.name}" added successfully.`);
   };
 
-  const handleReturnSubmit = () => {
-    if (!logForm.returnLogId) {
-      showError("Please select a device to return.");
+  const handleEditChemical = (chemical: ChemicalItem) => {
+    setEditingChemical(chemical);
+    setChemicalForm({
+      name: chemical.name, formula: chemical.formula, quantity: chemical.quantity.toString(),
+      unit: chemical.unit, location: chemical.location, expiryDate: chemical.expiryDate,
+      hazardLevel: chemical.hazardLevel, minThreshold: chemical.minThreshold.toString()
+    });
+    setIsAddChemicalOpen(true);
+  };
+
+  const handleSaveChemicalEdit = () => {
+    if (!editingChemical) return;
+    setChemicals(prev => prev.map(c => c.id === editingChemical.id ? { ...c, ...chemicalForm, quantity: parseFloat(chemicalForm.quantity), minThreshold: parseFloat(chemicalForm.minThreshold) || 0 } : c));
+    setEditingChemical(null);
+    setIsAddChemicalOpen(false);
+    resetChemicalForm();
+    showSuccess("Chemical updated successfully.");
+  };
+
+  const handleDeleteChemical = (id: string) => {
+    setChemicals(prev => prev.filter(c => c.id !== id));
+    showSuccess("Chemical removed.");
+  };
+
+  const resetChemicalForm = () => {
+    setChemicalForm({ name: "", formula: "", quantity: "", unit: "L", location: "", expiryDate: "", hazardLevel: "Low", minThreshold: "" });
+  };
+
+  const handleAddEquipment = () => {
+    if (!equipmentForm.name || !equipmentForm.category || !equipmentForm.totalQty) {
+      showError("Please fill in all required fields.");
       return;
     }
+    const newEquipment: EquipmentItem = {
+      id: `EQP-${Date.now().toString().slice(-4)}`,
+      ...equipmentForm,
+      totalQty: parseInt(equipmentForm.totalQty),
+      functionalQty: parseInt(equipmentForm.functionalQty) || 0,
+      damagedQty: parseInt(equipmentForm.damagedQty) || 0
+    };
+    setEquipment([newEquipment, ...equipment]);
+    setIsAddEquipmentOpen(false);
+    resetEquipmentForm();
+    showSuccess(`Equipment "${newEquipment.name}" added successfully.`);
+  };
 
-    if (!logForm.quantityReturned || logForm.quantityReturned < 1) {
-      showError("Quantity returned must be at least 1.");
+  const handleEditEquipment = (item: EquipmentItem) => {
+    setEditingEquipment(item);
+    setEquipmentForm({
+      name: item.name, category: item.category, totalQty: item.totalQty.toString(),
+      functionalQty: item.functionalQty.toString(), damagedQty: item.damagedQty.toString(),
+      location: item.location
+    });
+    setIsAddEquipmentOpen(true);
+  };
+
+  const handleSaveEquipmentEdit = () => {
+    if (!editingEquipment) return;
+    setEquipment(prev => prev.map(e => e.id === editingEquipment.id ? { ...e, ...equipmentForm, totalQty: parseInt(equipmentForm.totalQty), functionalQty: parseInt(equipmentForm.functionalQty) || 0, damagedQty: parseInt(equipmentForm.damagedQty) || 0 } : e));
+    setEditingEquipment(null);
+    setIsAddEquipmentOpen(false);
+    resetEquipmentForm();
+    showSuccess("Equipment updated successfully.");
+  };
+
+  const handleDeleteEquipment = (id: string) => {
+    setEquipment(prev => prev.filter(e => e.id !== id));
+    showSuccess("Equipment removed.");
+  };
+
+  const resetEquipmentForm = () => {
+    setEquipmentForm({ name: "", category: "", totalQty: "", functionalQty: "", damagedQty: "", location: "" });
+  };
+
+  const handleAddBooking = () => {
+    if (!bookingForm.teacher || !bookingForm.gradeClass || !bookingForm.topic) {
+      showError("Please fill in all required fields.");
       return;
     }
+    const newBooking: LabBooking = {
+      id: `LBK-${Date.now().toString().slice(-4)}`,
+      ...bookingForm,
+      itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean)
+    };
+    setBookings([newBooking, ...bookings]);
+    setIsAddBookingOpen(false);
+    resetBookingForm();
+    showSuccess(`Lab booking for "${newBooking.topic}" created.`);
+  };
 
-    const logToReturn = logs.find(l => l.id === logForm.returnLogId);
-    if (!logToReturn) return;
+  const handleEditBooking = (booking: LabBooking) => {
+    setEditingBooking(booking);
+    setBookingForm({
+      date: booking.date, timeSlot: booking.timeSlot, teacher: booking.teacher,
+      gradeClass: booking.gradeClass, topic: booking.topic,
+      itemsRequested: booking.itemsRequested.join(', '), status: booking.status
+    });
+    setIsAddBookingOpen(true);
+  };
 
-    if (logForm.quantityReturned > (logToReturn.quantityIssued - logToReturn.quantityReturned)) {
-      showError(`Cannot return more than ${logToReturn.quantityIssued - logToReturn.quantityReturned} outstanding units.`);
+  const handleSaveBookingEdit = () => {
+    if (!editingBooking) return;
+    setBookings(prev => prev.map(b => b.id === editingBooking.id ? { ...b, ...bookingForm, itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean) } : b));
+    setEditingBooking(null);
+    setIsAddBookingOpen(false);
+    resetBookingForm();
+    showSuccess("Booking updated successfully.");
+  };
+
+  const handleDeleteBooking = (id: string) => {
+    setBookings(prev => prev.filter(b => b.id !== id));
+    showSuccess("Booking removed.");
+  };
+
+  const resetBookingForm = () => {
+    setBookingForm({ date: new Date().toISOString().split('T')[0], timeSlot: "08:00-09:30", teacher: "", gradeClass: "", topic: "", itemsRequested: "", status: "Pending" });
+  };
+
+  const handleAddBreakage = () => {
+    if (!breakageForm.studentName || !breakageForm.admNo || !breakageForm.itemBroken || !breakageForm.cost) {
+      showError("Please fill in all required fields.");
       return;
     }
-
-    const asset = assets.find(a => a.id === logToReturn.assetId);
-
-    const newQuantityReturned = logToReturn.quantityReturned + logForm.quantityReturned;
-    const isFullyReturned = newQuantityReturned >= logToReturn.quantityIssued;
-
-    // Update the log
-    setLogs(prev => prev.map(log => 
-      log.id === logForm.returnLogId 
-        ? { 
-            ...log, 
-            status: isFullyReturned ? 'Returned' : 'Issued', 
-            actualReturn: isFullyReturned ? logForm.actualReturnDate : log.actualReturn,
-            conditionOnReturn: isFullyReturned ? logForm.conditionOnReturn : log.conditionOnReturn,
-            quantityReturned: newQuantityReturned
-          } 
-        : log
-    ));
-
-    if (asset && isFullyReturned) {
-      setAssets(prev => prev.map(a => a.id === asset.id ? { ...a, status: 'Active', assignedTo: undefined } : a));
-    }
-
-    setIsLogModalOpen(false);
-    showSuccess(`${logForm.quantityReturned} ${logToReturn.deviceName}(s) returned successfully. Condition: ${logForm.conditionOnReturn}`);
+    const newBreakage: BreakageLog = {
+      id: `BRK-${Date.now().toString().slice(-4)}`,
+      ...breakageForm,
+      qty: parseInt(breakageForm.qty) || 1,
+      cost: parseFloat(breakageForm.cost) || 0
+    };
+    setBreakages([newBreakage, ...breakages]);
+    setIsAddBreakageOpen(false);
+    resetBreakageForm();
+    showSuccess(`Breakage logged for ${newBreakage.studentName}.`);
   };
 
-  const handleReturn = (id: string) => {
-    // Pre-fill the return modal with this log
-    const log = logs.find(l => l.id === id);
-    if (log) {
-      const outstanding = log.quantityIssued - log.quantityReturned;
-      setLogForm(prev => ({
-        ...prev,
-        returnLogId: log.id,
-        actualReturnDate: new Date().toISOString().split('T')[0],
-        conditionOnReturn: "Good",
-        quantityReturned: outstanding
-      }));
-      openLogModal('return');
-    }
+  const handleEditBreakage = (breakage: BreakageLog) => {
+    setEditingBreakage(breakage);
+    setBreakageForm({
+      date: breakage.date, studentName: breakage.studentName, admNo: breakage.admNo,
+      gradeClass: breakage.gradeClass, itemBroken: breakage.itemBroken,
+      qty: breakage.qty.toString(), cost: breakage.cost.toString(), status: breakage.status
+    });
+    setIsAddBreakageOpen(true);
   };
 
-  const handleIssueFromTable = (asset: ICTAsset) => {
-    // Pre-fill the issue modal with this asset
-    setLogForm(prev => ({
-      ...prev,
-      category: asset.category,
-      assetId: asset.id,
-      outDate: new Date().toISOString().split('T')[0],
-      quantityIssued: 1
-    }));
-    openLogModal('issue');
+  const handleSaveBreakageEdit = () => {
+    if (!editingBreakage) return;
+    setBreakages(prev => prev.map(b => b.id === editingBreakage.id ? { ...b, ...breakageForm, qty: parseInt(breakageForm.qty) || 1, cost: parseFloat(breakageForm.cost) || 0 } : b));
+    setEditingBreakage(null);
+    setIsAddBreakageOpen(false);
+    resetBreakageForm();
+    showSuccess("Breakage record updated.");
   };
 
-  const handleEditCheckout = (asset: ICTAsset) => {
-    // Find the active log for this asset
-    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
-    if (activeLog) {
-      // Pre-fill return modal with the active log
-      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
-      setLogForm(prev => ({
-        ...prev,
-        returnLogId: activeLog.id,
-        actualReturnDate: new Date().toISOString().split('T')[0],
-        conditionOnReturn: "Good",
-        quantityReturned: outstanding
-      }));
-      openLogModal('return');
-    }
+  const handleDeleteBreakage = (id: string) => {
+    setBreakages(prev => prev.filter(b => b.id !== id));
+    showSuccess("Breakage record removed.");
   };
 
-  const handleLogDamage = (asset: ICTAsset) => {
-    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
-    if (activeLog) {
-      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
-      setLogForm(prev => ({
-        ...prev,
-        returnLogId: activeLog.id,
-        actualReturnDate: new Date().toISOString().split('T')[0],
-        conditionOnReturn: "Damaged",
-        quantityReturned: outstanding
-      }));
-      openLogModal('return');
-    }
+  const resetBreakageForm = () => {
+    setBreakageForm({ date: new Date().toISOString().split('T')[0], studentName: "", admNo: "", gradeClass: "", itemBroken: "", qty: "1", cost: "", status: "Pending" });
   };
 
-  const handleLogLoss = (asset: ICTAsset) => {
-    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
-    if (activeLog) {
-      const outstanding = activeLog.quantityIssued - activeLog.quantityReturned;
-      setLogForm(prev => ({
-        ...prev,
-        returnLogId: activeLog.id,
-        actualReturnDate: new Date().toISOString().split('T')[0],
-        conditionOnReturn: "Lost",
-        quantityReturned: outstanding
-      }));
-      openLogModal('return');
-    }
+  // Export Functions
+  const handleExportChemicals = () => {
+    const headers = ["ID", "Name", "Formula", "Quantity", "Unit", "Location", "Expiry Date", "Hazard Level", "Min Threshold"];
+    const rows = chemicals.map(c => [c.id, c.name, c.formula, c.quantity, c.unit, c.location, c.expiryDate, c.hazardLevel, c.minThreshold]);
+    const csv = ["MUNYAKA SCIENCE LAB - CHEMICALS INVENTORY", `Generated: ${new Date().toLocaleString()}`, `Total: ${chemicals.length}`, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    downloadCSV(csv, `science_lab_chemicals_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess("Chemicals exported to CSV.");
   };
 
-  const handleDelete = (id: string) => {
-    setAssets(prev => prev.filter(a => a.id !== id));
-    showSuccess("Asset record removed.");
+  const handleExportEquipment = () => {
+    const headers = ["ID", "Name", "Category", "Total Qty", "Functional", "Damaged", "Location"];
+    const rows = equipment.map(e => [e.id, e.name, e.category, e.totalQty, e.functionalQty, e.damagedQty, e.location]);
+    const csv = ["MUNYAKA SCIENCE LAB - EQUIPMENT INVENTORY", `Generated: ${new Date().toLocaleString()}`, `Total: ${equipment.length}`, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    downloadCSV(csv, `science_lab_equipment_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess("Equipment exported to CSV.");
   };
 
-  const getCategoryIcon = (cat: ICTCategory) => {
-    switch(cat) {
-      case 'Laptops': return <Laptop size={18} />;
-      case 'Tablets': return <Smartphone size={18} />;
-      case 'Projectors': return <Projector size={18} />;
-      case 'Networking': return <Wifi size={18} />;
-      default: return <Monitor size={18} />;
-    }
+  const handleExportBookings = () => {
+    const headers = ["ID", "Date", "Time Slot", "Teacher", "Grade/Class", "Topic", "Items Requested", "Status"];
+    const rows = bookings.map(b => [b.id, b.date, b.timeSlot, b.teacher, b.gradeClass, b.topic, b.itemsRequested.join('; '), b.status]);
+    const csv = ["MUNYAKA SCIENCE LAB - BOOKINGS", `Generated: ${new Date().toLocaleString()}`, `Total: ${bookings.length}`, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    downloadCSV(csv, `science_lab_bookings_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess("Bookings exported to CSV.");
   };
 
-  const renderAssetActions = (asset: ICTAsset) => {
-    const isAssigned = !!asset.assignedTo;
-    const activeLog = logs.find(l => l.assetId === asset.id && (l.status === 'Issued' || l.status === 'Overdue'));
+  const handleExportBreakages = () => {
+    const headers = ["ID", "Date", "Student Name", "Adm No", "Grade/Class", "Item Broken", "Qty", "Cost", "Status"];
+    const rows = breakages.map(b => [b.id, b.date, b.studentName, b.admNo, b.gradeClass, b.itemBroken, b.qty, b.cost, b.status]);
+    const csv = ["MUNYAKA SCIENCE LAB - BREAKAGE LOGS", `Generated: ${new Date().toLocaleString()}`, `Total: ${breakages.length}`, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+    downloadCSV(csv, `science_lab_breakages_${new Date().toISOString().split('T')[0]}.csv`);
+    showSuccess("Breakages exported to CSV.");
+  };
 
-    if (isAssigned && activeLog) {
-      // Checked out device - show return and dropdown
-      return (
-        <div className="flex items-center justify-end gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => handleEditCheckout(asset)}
-            className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all gap-1.5"
-          >
-            <Undo2 size={14} /> Process Return
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100">
-                <MoreVertical size={18} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[180px]">
-              <DropdownMenuItem 
-                onClick={() => handleEditCheckout(asset)}
-                className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
-              >
-                <Undo2 size={14} /> Process Return
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleLogDamage(asset)}
-                className="rounded-lg gap-2 font-bold cursor-pointer text-amber-600 hover:bg-amber-50"
-              >
-                <ShieldAlert size={14} /> Log Damage
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                onClick={() => handleLogLoss(asset)}
-                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
-              >
-                <AlertCircle size={14} /> Log Loss
-              </DropdownMenuItem>
-              <DropdownMenuSeparator className="my-1" />
-              <DropdownMenuItem 
-                onClick={() => handleDelete(asset.id)}
-                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
-              >
-                <Trash2 size={14} className="mr-1" /> Delete Asset
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
+  const handleExportAll = () => {
+    const backup = {
+      metadata: { school: "Munyaka Primary and Junior School", module: "Science Lab", generatedAt: new Date().toISOString() },
+      chemicals, equipment, bookings, breakages
+    };
+    downloadFile(JSON.stringify(backup, null, 2), `science_lab_full_backup_${new Date().toISOString().split('T')[0]}.json`, 'application/json');
+    showSuccess("Full Science Lab backup exported to JSON.");
+  };
+
+  const getHazardBadge = (level: HazardLevel) => {
+    const configs = {
+      High: { bg: "bg-rose-50", text: "text-rose-700", border: "border-rose-100" },
+      Medium: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+      Low: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" }
+    };
+    const config = configs[level];
+    return <Badge variant="outline" className={cn("rounded-lg font-bold text-xs", config.bg, config.text, config.border)}>{level}</Badge>;
+  };
+
+  const getStatusBadge = (status: string, type: 'booking' | 'breakage') => {
+    if (type === 'booking') {
+      const configs = {
+        Pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+        Approved: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+        Completed: { bg: "bg-blue-50", text: "text-blue-700", border: "border-blue-100" }
+      };
+      const config = configs[status as BookingStatus] || configs.Pending;
+      return <Badge variant="outline" className={cn("rounded-lg font-bold text-xs", config.bg, config.text, config.border)}>{status}</Badge>;
     } else {
-      // Available device - show issue button
-      return (
-        <div className="flex items-center justify-end gap-2">
-          <Button 
-            size="sm" 
-            onClick={() => handleIssueFromTable(asset)}
-            className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
-          >
-            <ArrowUpRight size={14} /> Issue / Assign
-          </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-red-500 hover:bg-red-50">
-                <MoreVertical size={18} />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
-              <DropdownMenuItem 
-                onClick={() => handleDelete(asset.id)}
-                className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
-              >
-                <Trash2 size={14} /> Remove Asset
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      );
+      const configs = {
+        Pending: { bg: "bg-amber-50", text: "text-amber-700", border: "border-amber-100" },
+        Paid: { bg: "bg-emerald-50", text: "text-emerald-700", border: "border-emerald-100" },
+        Waived: { bg: "bg-slate-50", text: "text-slate-700", border: "border-slate-200" }
+      };
+      const config = configs[status as BreakageStatus] || configs.Pending;
+      return <Badge variant="outline" className={cn("rounded-lg font-bold text-xs", config.bg, config.text, config.border)}>{status}</Badge>;
     }
   };
+
+  const renderChemicalActions = (chemical: ChemicalItem) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100"><MoreVertical size={18} /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
+        <DropdownMenuItem onClick={() => handleEditChemical(chemical)} className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"><Edit size={14} /> Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDeleteChemical(chemical.id)} className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderEquipmentActions = (item: EquipmentItem) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100"><MoreVertical size={18} /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
+        <DropdownMenuItem onClick={() => handleEditEquipment(item)} className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"><Edit size={14} /> Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDeleteEquipment(item.id)} className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderBookingActions = (booking: LabBooking) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100"><MoreVertical size={18} /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
+        <DropdownMenuItem onClick={() => handleEditBooking(booking)} className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"><Edit size={14} /> Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDeleteBooking(booking.id)} className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  const renderBreakageActions = (breakage: BreakageLog) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600 hover:bg-slate-100"><MoreVertical size={18} /></Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="rounded-xl p-1 min-w-[160px]">
+        <DropdownMenuItem onClick={() => handleEditBreakage(breakage)} className="rounded-lg gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"><Edit size={14} /> Edit</DropdownMenuItem>
+        <DropdownMenuItem onClick={() => handleDeleteBreakage(breakage.id)} className="rounded-lg gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"><Trash2 size={14} /> Delete</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -560,170 +509,117 @@ const ScienceLab = () => {
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">ICT Lab Management</h1>
-            <p className="text-muted-foreground font-medium">Unified tracking for digital literacy devices and infrastructure.</p>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Science Lab Management</h1>
+            <p className="text-muted-foreground font-medium">Chemicals, equipment, lab bookings, and breakage tracking.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          {activeTab === 'inventory' ? (
-            <Button 
-              className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
-              onClick={() => setIsAddAssetOpen(true)}
-            >
-              <Plus size={20} /> Add New Asset
-            </Button>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              <Button 
-                className="rounded-2xl gap-2 h-12 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black"
-                onClick={() => openLogModal('issue')}
-              >
-                <ArrowUpRight size={20} /> Log Device Issue
+          <Button variant="outline" onClick={handleExportAll} className="rounded-2xl gap-2 h-11 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm">
+            <Download size={18} className="text-emerald-600" /> Export All (JSON)
+          </Button>
+          {activeTab === 'chemicals' && (
+            <>
+              <Button onClick={handleExportChemicals} className="rounded-2xl gap-2 h-11 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm">
+                <Download size={18} className="text-emerald-600" /> Export CSV
               </Button>
-              {/* Export Buttons - Prominently visible in Header Toolbar when on Logs tab */}
-              <div className="flex items-center gap-2 border-l border-slate-200 pl-4 ml-2">
-                <span className="text-xs font-bold text-slate-400 uppercase tracking-wider hidden sm:block">Export Data:</span>
-                <Button 
-                  variant="outline"
-                  onClick={handleExportCSV}
-                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-                >
-                  <FileSpreadsheet size={18} className="text-emerald-600" /> Export CSV
-                </Button>
-                <Button 
-                  variant="outline"
-                  onClick={handleExportJSON}
-                  className="rounded-xl h-11 px-5 border-slate-200 bg-white text-sm font-bold gap-2 text-slate-700 hover:bg-slate-50 shadow-sm"
-                >
-                  <Database size={18} className="text-indigo-600" /> Export JSON
-                </Button>
-              </div>
-            </div>
+              <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black" onClick={() => { setEditingChemical(null); resetChemicalForm(); setIsAddChemicalOpen(true); }}>
+                <Plus size={18} /> Add Chemical
+              </Button>
+            </>
+          )}
+          {activeTab === 'equipment' && (
+            <>
+              <Button onClick={handleExportEquipment} className="rounded-2xl gap-2 h-11 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm">
+                <Download size={18} className="text-emerald-600" /> Export CSV
+              </Button>
+              <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black" onClick={() => { setEditingEquipment(null); resetEquipmentForm(); setIsAddEquipmentOpen(true); }}>
+                <Plus size={18} /> Add Equipment
+              </Button>
+            </>
+          )}
+          {activeTab === 'bookings' && (
+            <>
+              <Button onClick={handleExportBookings} className="rounded-2xl gap-2 h-11 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm">
+                <Download size={18} className="text-emerald-600" /> Export CSV
+              </Button>
+              <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black" onClick={() => { setEditingBooking(null); resetBookingForm(); setIsAddBookingOpen(true); }}>
+                <Plus size={18} /> New Booking
+              </Button>
+            </>
+          )}
+          {activeTab === 'breakages' && (
+            <>
+              <Button onClick={handleExportBreakages} className="rounded-2xl gap-2 h-11 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm">
+                <Download size={18} className="text-emerald-600" /> Export CSV
+              </Button>
+              <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-black" onClick={() => { setEditingBreakage(null); resetBreakageForm(); setIsAddBreakageOpen(true); }}>
+                <Plus size={18} /> Log Breakage
+              </Button>
+            </>
           )}
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex w-fit">
-          <TabsTrigger value="inventory" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <LayoutGrid size={16} /> Asset Inventory
-          </TabsTrigger>
-          <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <ClipboardList size={16} /> Issues & Returns
-          </TabsTrigger>
+          <TabsTrigger value="chemicals" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><FlaskConical size={16} /> Chemicals</TabsTrigger>
+          <TabsTrigger value="equipment" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><Microscope size={16} /> Equipment</TabsTrigger>
+          <TabsTrigger value="bookings" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><Calendar size={16} /> Bookings</TabsTrigger>
+          <TabsTrigger value="breakages" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><AlertTriangle size={16} /> Breakages</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="inventory" className="space-y-8">
-          {/* Summary Cards */}
+        {/* CHEMICALS TAB */}
+        <TabsContent value="chemicals" className="space-y-8">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {[
-              { label: 'Total Devices', value: stats.total, icon: Monitor, color: 'text-blue-600', bg: 'bg-blue-50' },
-              { label: 'Operational', value: stats.active, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-              { label: 'Needs Repair', value: stats.repair, icon: Wrench, color: 'text-rose-600', bg: 'bg-rose-50' },
-              { label: 'Assigned', value: stats.assigned, icon: UserCheck, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'Total Chemicals', value: chemicalStats.total, icon: FlaskConical, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'High Hazard', value: chemicalStats.highHazard, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' },
+              { label: 'Low Stock', value: chemicalStats.lowStock, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Expiring ≤90d', value: chemicalStats.expiringSoon, icon: Calendar, color: 'text-blue-600', bg: 'bg-blue-50' },
             ].map((s, i) => (
               <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6">
                 <div className="flex items-center gap-4">
-                  <div className={cn("p-3 rounded-2xl", s.bg)}>
-                    <s.icon className={s.color} size={24} />
-                  </div>
-                  <div>
-                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p>
-                    <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3>
-                  </div>
+                  <div className={cn("p-3 rounded-2xl", s.bg)}><s.icon className={s.color} size={24} /></div>
+                  <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p><h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3></div>
                 </div>
               </Card>
             ))}
           </div>
 
-          {/* Filters Bar */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              <div className="md:col-span-2 relative">
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                <Input 
-                  placeholder="Search by tag, model, or serial..." 
-                  className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="Active">Active</SelectItem>
-                  <SelectItem value="In Maintenance">In Maintenance</SelectItem>
-                  <SelectItem value="Decommissioned">Decommissioned</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="All Categories" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="Laptops">Laptops</SelectItem>
-                  <SelectItem value="Tablets">Tablets</SelectItem>
-                  <SelectItem value="Projectors">Projectors</SelectItem>
-                  <SelectItem value="Networking">Networking</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="md:col-span-2 relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><Input placeholder="Search by name or formula..." className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" value={chemicalSearch} onChange={e => setChemicalSearch(e.target.value)} /></div>
+              <Select value={hazardFilter} onValueChange={setHazardFilter}><SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="All Hazard Levels" /></SelectTrigger><SelectContent><SelectItem value="all">All Levels</SelectItem><SelectItem value="High">High</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="Low">Low</SelectItem></SelectContent></Select>
             </div>
           </Card>
 
-          {/* Asset Table */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm text-left min-w-[1000px]">
                   <thead className="text-slate-500 border-b bg-slate-50/50">
                     <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">ID & Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Category</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Serial No.</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Assigned To</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Chemical</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Formula</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Qty / Unit</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Location</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Expiry</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Hazard</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Min Threshold</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredAssets.map((asset) => (
-                      <tr key={asset.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5">
-                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{asset.name}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">Tag: {asset.assetTag}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-2 font-bold text-slate-600">
-                            <div className="p-1.5 bg-slate-100 rounded-lg text-slate-400">{getCategoryIcon(asset.category)}</div>
-                            {asset.category}
-                          </div>
-                        </td>
-                        <td className="px-8 py-5">
-                          <code className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-1 rounded-lg">{asset.serialNumber}</code>
-                        </td>
-                        <td className="px-8 py-5">
-                          <Badge className={cn("rounded-lg border-none font-bold text-[10px] uppercase", 
-                            asset.status === 'Active' ? "bg-emerald-50 text-emerald-700" : 
-                            asset.status === 'In Maintenance' ? "bg-amber-50 text-amber-700" : "bg-slate-100 text-slate-400")}>
-                            {asset.status}
-                          </Badge>
-                        </td>
-                        <td className="px-8 py-5">
-                          {asset.assignedTo ? (
-                            <div className="flex items-center gap-2 font-bold text-indigo-600">
-                              <CheckCircle2 size={14} /> {asset.assignedTo}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic">Not Assigned</span>
-                          )}
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          {renderAssetActions(asset)}
-                        </td>
+                    {filteredChemicals.map((chemical) => (
+                      <tr key={chemical.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-5"><p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{chemical.name}</p></td>
+                        <td className="px-8 py-5 font-mono text-slate-600">{chemical.formula}</td>
+                        <td className="px-8 py-5 text-center font-bold text-slate-700">{chemical.quantity} {chemical.unit}</td>
+                        <td className="px-8 py-5 text-slate-600">{chemical.location}</td>
+                        <td className="px-8 py-5 text-center font-medium text-slate-600">{chemical.expiryDate}</td>
+                        <td className="px-8 py-5 text-center">{getHazardBadge(chemical.hazardLevel)}</td>
+                        <td className="px-8 py-5 text-center font-bold text-amber-600">{chemical.minThreshold} {chemical.unit}</td>
+                        <td className="px-8 py-5 text-right">{renderChemicalActions(chemical)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -733,100 +629,106 @@ const ScienceLab = () => {
           </Card>
         </TabsContent>
 
-        <TabsContent value="logs" className="space-y-8">
-          {/* Summary Counters for Logs */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <Card className="border-none shadow-sm rounded-3xl bg-amber-50 p-6 flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-amber-600 shadow-sm"><RotateCcw size={24} /></div>
-              <div><p className="text-[10px] font-black uppercase text-amber-700 tracking-widest">Active Checkouts</p><h3 className="text-2xl font-black text-amber-900">{logStats.activeCheckouts}</h3></div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-3xl bg-rose-50 p-6 flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-rose-600 shadow-sm"><AlertCircle size={24} /></div>
-              <div><p className="text-[10px] font-black uppercase text-rose-700 tracking-widest">Overdue Returns</p><h3 className="text-2xl font-black text-rose-900">{logStats.overdue}</h3></div>
-            </Card>
-            <Card className="border-none shadow-sm rounded-3xl bg-indigo-50 p-6 flex items-center gap-4">
-              <div className="p-3 bg-white rounded-2xl text-indigo-600 shadow-sm"><Wrench size={24} /></div>
-              <div><p className="text-[10px] font-black uppercase text-indigo-700 tracking-widest">Under Repair</p><h3 className="text-2xl font-black text-indigo-900">{logStats.repair}</h3></div>
-            </Card>
+        {/* EQUIPMENT TAB */}
+        <TabsContent value="equipment" className="space-y-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Items', value: equipmentStats.total, icon: Package, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'Functional', value: equipmentStats.functional, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Damaged', value: equipmentStats.damaged, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50' },
+              { label: 'Categories', value: equipmentStats.categories, icon: Layers, color: 'text-purple-600', bg: 'bg-purple-50' },
+            ].map((s, i) => (
+              <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6"><div className="flex items-center gap-4"><div className={cn("p-3 rounded-2xl", s.bg)}><s.icon className={s.color} size={24} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p><h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3></div></div></Card>
+            ))}
           </div>
 
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Filter checkouts by borrower or device..." 
-              className="pl-11 h-14 rounded-3xl border-none shadow-sm bg-white font-medium"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
-          </div>
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2 relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><Input placeholder="Search by name or category..." className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" value={equipmentSearch} onChange={e => setEquipmentSearch(e.target.value)} /></div>
+              <Select value={categoryFilter} onValueChange={setCategoryFilter}><SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="All Categories" /></SelectTrigger><SelectContent>{["All Categories", ...new Set(equipment.map(e => e.category))].map(c => <SelectItem key={c} value={c === "All Categories" ? "all" : c}>{c}</SelectItem>)}</SelectContent></Select>
+            </div>
+          </Card>
 
-          {/* Logs Table */}
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardContent className="p-0">
               <div className="overflow-x-auto custom-scrollbar">
                 <table className="w-full text-sm text-left min-w-[1000px]">
-                  <thead className="text-slate-500 border-b bg-slate-50/50">
-                    <tr>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Log ID</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Asset & Device</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Borrower / Purpose</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Dates (Out / Due)</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Qty Out / In</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                    </tr>
-                  </thead>
+                  <thead className="text-slate-500 border-b bg-slate-50/50"><tr><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Equipment</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Category</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Total Qty</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Functional</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Damaged</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Location</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th></tr></thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredLogs.map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5 font-black text-slate-400 text-[10px]">{log.id}</td>
-                        <td className="px-8 py-5">
-                          <p className="font-bold text-slate-900">{log.deviceName}</p>
-                          <p className="text-[10px] font-black text-slate-400 uppercase">{log.assetTag}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <p className="font-bold text-slate-700">{log.borrower}</p>
-                          <p className="text-xs text-slate-400 italic line-clamp-1">{log.description}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="space-y-1">
-                            <p className="text-xs font-bold text-slate-600 flex items-center gap-1.5"><Calendar size={12} className="text-slate-300" /> {log.dateIssued}</p>
-                            <p className={cn("text-xs font-bold flex items-center gap-1.5", log.status === 'Overdue' ? "text-rose-600" : "text-slate-400")}>
-                              <Clock size={12} className="text-slate-300" /> {log.status === 'Returned' ? `Ret: ${log.actualReturn}` : `Due: ${log.expectedReturn}`}
-                            </p>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-center">
-                          <Badge className={cn("rounded-lg border-none font-bold text-[10px] uppercase", 
-                            log.status === 'Returned' ? "bg-emerald-50 text-emerald-700" : 
-                            log.status === 'Issued' ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700")}>
-                            {log.status}
-                          </Badge>
-                        </td>
-                        <td className="px-8 py-5 text-center font-bold text-slate-700">
-                          <div className="flex items-center justify-center gap-2">
-                            <span className="text-amber-600">{log.quantityIssued}</span>
-                            <span className="text-slate-300">/</span>
-                            <span className="text-emerald-600">{log.quantityReturned}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          {log.status !== 'Returned' && (
-                            <Button 
-                              size="sm" 
-                              onClick={() => handleReturn(log.id)}
-                              className="rounded-xl h-9 px-4 text-xs font-bold bg-indigo-50 text-indigo-600 hover:bg-indigo-600 hover:text-white transition-all gap-1.5"
-                            >
-                              <Undo2 size={14} /> Process Return
-                            </Button>
-                          )}
-                          {log.status === 'Returned' && (
-                            <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-400 font-bold text-[10px]">
-                              Completed
-                            </Badge>
-                          )}
-                        </td>
-                      </tr>
+                    {filteredEquipment.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group"><td className="px-8 py-5"><p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{item.name}</p></td><td className="px-8 py-5"><Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold text-xs">{item.category}</Badge></td><td className="px-8 py-5 text-center font-bold text-slate-700">{item.totalQty}</td><td className="px-8 py-5 text-center font-bold text-emerald-600">{item.functionalQty}</td><td className="px-8 py-5 text-center font-bold text-rose-600">{item.damagedQty}</td><td className="px-8 py-5 text-slate-600">{item.location}</td><td className="px-8 py-5 text-right">{renderEquipmentActions(item)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BOOKINGS TAB */}
+        <TabsContent value="bookings" className="space-y-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Bookings', value: bookingStats.total, icon: Calendar, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'Pending', value: bookingStats.pending, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Approved', value: bookingStats.approved, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Completed', value: bookingStats.completed, icon: FileText, color: 'text-blue-600', bg: 'bg-blue-50' },
+            ].map((s, i) => (
+              <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6"><div className="flex items-center gap-4"><div className={cn("p-3 rounded-2xl", s.bg)}><s.icon className={s.color} size={24} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p><h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3></div></div></Card>
+            ))}
+          </div>
+
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2 relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><Input placeholder="Search by topic, teacher, or class..." className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" value={bookingSearch} onChange={e => setBookingSearch(e.target.value)} /></div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}><SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Approved">Approved</SelectItem><SelectItem value="Completed">Completed</SelectItem></SelectContent></Select>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[1000px]">
+                  <thead className="text-slate-500 border-b bg-slate-50/50"><tr><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Booking ID</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Date / Time</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Teacher</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade / Class</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Topic</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Items Requested</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredBookings.map((booking) => (
+                      <tr key={booking.id} className="hover:bg-slate-50/50 transition-colors group"><td className="px-8 py-5 font-black text-slate-400 text-[10px]">{booking.id}</td><td className="px-8 py-5"><p className="font-bold text-slate-600">{booking.date}</p><p className="text-xs text-slate-400">{booking.timeSlot}</p></td><td className="px-8 py-5 font-bold text-slate-700">{booking.teacher}</td><td className="px-8 py-5 font-bold text-slate-700">{booking.gradeClass}</td><td className="px-8 py-5 font-medium text-slate-800">{booking.topic}</td><td className="px-8 py-5 text-slate-500 text-sm max-w-[200px] truncate">{booking.itemsRequested.join(', ')}</td><td className="px-8 py-5 text-center">{getStatusBadge(booking.status, 'booking')}</td><td className="px-8 py-5 text-right">{renderBookingActions(booking)}</td></tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* BREAKAGES TAB */}
+        <TabsContent value="breakages" className="space-y-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Incidents', value: breakageStats.total, icon: AlertTriangle, color: 'text-rose-600', bg: 'bg-rose-50' },
+              { label: 'Pending', value: breakageStats.pending, icon: AlertCircle, color: 'text-amber-600', bg: 'bg-amber-50' },
+              { label: 'Paid', value: breakageStats.paid, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Total Cost (KES)', value: breakageStats.totalCost.toLocaleString(), icon: Scale, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+            ].map((s, i) => (
+              <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6"><div className="flex items-center gap-4"><div className={cn("p-3 rounded-2xl", s.bg)}><s.icon className={s.color} size={24} /></div><div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p><h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3></div></div></Card>
+            ))}
+          </div>
+
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2 relative"><Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} /><Input placeholder="Search by student, item, or adm no..." className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" value={breakageSearch} onChange={e => setBreakageSearch(e.target.value)} /></div>
+              <Select value={breakageStatusFilter} onValueChange={setBreakageStatusFilter}><SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold"><SelectValue placeholder="All Status" /></SelectTrigger><SelectContent><SelectItem value="all">All Status</SelectItem><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Waived">Waived</SelectItem></SelectContent></Select>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[1000px]">
+                  <thead className="text-slate-500 border-b bg-slate-50/50"><tr><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Log ID</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Date</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student / Adm No</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade / Class</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Item Broken</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Qty</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Cost (KES)</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th><th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredBreakages.map((breakage) => (
+                      <tr key={breakage.id} className="hover:bg-slate-50/50 transition-colors group"><td className="px-8 py-5 font-black text-slate-400 text-[10px]">{breakage.id}</td><td className="px-8 py-5 font-medium text-slate-600">{breakage.date}</td><td className="px-8 py-5"><p className="font-bold text-slate-900">{breakage.studentName}</p><p className="text-xs font-mono text-slate-500">{breakage.admNo}</p></td><td className="px-8 py-5 font-bold text-slate-700">{breakage.gradeClass}</td><td className="px-8 py-5 font-medium text-slate-800">{breakage.itemBroken}</td><td className="px-8 py-5 text-center font-bold text-slate-700">{breakage.qty}</td><td className="px-8 py-5 text-right font-bold text-rose-600">{breakage.cost.toLocaleString()}</td><td className="px-8 py-5 text-center">{getStatusBadge(breakage.status, 'breakage')}</td><td className="px-8 py-5 text-right">{renderBreakageActions(breakage)}</td></tr>
                     ))}
                   </tbody>
                 </table>
@@ -836,288 +738,72 @@ const ScienceLab = () => {
         </TabsContent>
       </Tabs>
 
-      {/* --- Modals --- */}
-      <AddICTAssetModal isOpen={isAddAssetOpen} onClose={() => setIsAddAssetOpen(false)} onAdd={handleAddAsset} />
-
-      {/* Unified Issue / Return Modal */}
-      <Modal
-        isOpen={isLogModalOpen}
-        onClose={() => setIsLogModalOpen(false)}
-        title={logMode === 'issue' ? "Log Device Issue / Checkout" : "Process Device Return"}
-        description={logMode === 'issue' 
-          ? "Assign school hardware to a teacher or department for a specific period."
-          : "Record returned assets and assess their current condition."}
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsLogModalOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
-            <Button 
-              onClick={handleLogSubmit}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2"
-            >
-              {logMode === 'issue' ? <ArrowUpRight size={18} /> : <ArrowDownLeft size={18} />}
-              {logMode === 'issue' ? "Confirm Checkout" : "Process Return"}
-            </Button>
-          </div>
-        }
-      >
-        {logMode === 'issue' && (
-          <TabsContent value="issue" className="space-y-4 pt-4 animate-in fade-in">
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Device Category</Label>
-              <Select value={logForm.category} onValueChange={(val) => setLogForm({...logForm, category: val as ICTCategory, assetId: ""})}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Select category..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="Laptops">Laptops</SelectItem>
-                  <SelectItem value="Tablets">Tablets</SelectItem>
-                  <SelectItem value="Projectors">Projectors</SelectItem>
-                  <SelectItem value="Networking">Networking</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Select Hardware Unit</Label>
-              <Select value={logForm.assetId} onValueChange={(val) => setLogForm({...logForm, assetId: val})}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Choose device..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {assets.filter(a => a.status === 'Active' && a.category === logForm.category).map(a => (
-                    <SelectItem key={a.id} value={a.id}>{a.assetTag} — {a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Borrower Name / Department</Label>
-              <Input 
-                value={logForm.borrower}
-                onChange={e => setLogForm({...logForm, borrower: e.target.value})}
-                placeholder="e.g. Mr. Kamau / Science Dept"
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Purpose / Issue Description</Label>
-              <Input 
-                value={logForm.description}
-                onChange={e => setLogForm({...logForm, description: e.target.value})}
-                placeholder="e.g. For Grade 4 Practical"
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-              />
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Checkout Date</Label>
-                <Input 
-                  type="date"
-                  value={logForm.outDate}
-                  onChange={e => setLogForm({...logForm, outDate: e.target.value})}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Expected Return</Label>
-                <Input 
-                  type="date"
-                  value={logForm.returnDate}
-                  onChange={e => setLogForm({...logForm, returnDate: e.target.value})}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Quantity Issued</Label>
-                <div className="flex items-center gap-2">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => setLogForm(prev => ({...prev, quantityIssued: Math.max(1, prev.quantityIssued - 1)}))}
-                    className="h-12 w-12 rounded-xl border-slate-200"
-                  >
-                    <Minus size={16} />
-                  </Button>
-                  <Input 
-                    type="number"
-                    min="1"
-                    value={logForm.quantityIssued}
-                    onChange={e => setLogForm({...logForm, quantityIssued: Math.max(1, parseInt(e.target.value) || 1)})}
-                    className="h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
-                  />
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    size="icon"
-                    onClick={() => setLogForm(prev => ({...prev, quantityIssued: prev.quantityIssued + 1}))}
-                    className="h-12 w-12 rounded-xl border-slate-200"
-                  >
-                    <PlusIcon size={16} />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </TabsContent>
-        )}
-
-        {logMode === 'return' && (
-          <TabsContent value="return" className="space-y-4 pt-4 animate-in fade-in">
-            <div className="p-4 bg-amber-50/50 rounded-2xl border border-amber-100 flex items-start gap-4">
-              <Package className="text-amber-600 shrink-0 mt-1" size={20} />
-              <p className="text-xs text-amber-800/80 leading-relaxed font-medium">
-                Select an active checkout below to process its return. The device will be marked available in the lab inventory.
-              </p>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Active Checkout to Return</Label>
-              <Select value={logForm.returnLogId} onValueChange={(val) => setLogForm({...logForm, returnLogId: val})}>
-                <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                  <SelectValue placeholder="Choose issued record..." />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  {activeCheckouts.length > 0 ? (
-                    activeCheckouts.map(log => (
-                      <SelectItem key={log.id} value={log.id}>
-                        {log.borrower}: {log.deviceName} ({log.assetTag}) — Qty Out: {log.quantityIssued} / In: {log.quantityReturned} — Due: {log.expectedReturn}
-                      </SelectItem>
-                    ))
-                  ) : (
-                    <SelectItem value="none" disabled>No active checkouts to return</SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Actual Return Date</Label>
-                <Input 
-                  type="date"
-                  value={logForm.actualReturnDate}
-                  onChange={e => setLogForm({...logForm, actualReturnDate: e.target.value})}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Condition on Return</Label>
-                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm}>
-                  <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent className="rounded-2xl">
-                    <SelectItem value="Good">Good</SelectItem>
-                    <SelectItem value="Needs Repair">Needs Repair</SelectItem>
-                    <SelectItem value="Damaged">Damaged</SelectItem>
-                    <SelectItem value="Lost">Lost / Unaccounted</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Quantity Returned</Label>
-              <div className="flex items-center gap-2">
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => {
-                    const log = logs.find(l => l.id === logForm.returnLogId);
-                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
-                    setLogForm(prev => ({...prev, quantityReturned: Math.max(1, Math.min(maxReturn, prev.quantityReturned - 1))}));
-                  }}
-                  className="h-12 w-12 rounded-xl border-slate-200"
-                >
-                  <Minus size={16} />
-                </Button>
-                <Input 
-                  type="number"
-                  min="1"
-                  value={logForm.quantityReturned}
-                  onChange={e => {
-                    const log = logs.find(l => l.id === logForm.returnLogId);
-                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
-                    const val = Math.max(1, Math.min(maxReturn, parseInt(e.target.value) || 1));
-                    setLogForm({...logForm, quantityReturned: val});
-                  }}
-                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
-                />
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  size="icon"
-                  onClick={() => {
-                    const log = logs.find(l => l.id === logForm.returnLogId);
-                    const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
-                    setLogForm(prev => ({...prev, quantityReturned: Math.min(maxReturn, prev.quantityReturned + 1)}));
-                  }}
-                  className="h-12 w-12 rounded-xl border-slate-200"
-                >
-                  <PlusIcon size={16} />
-                </Button>
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Return Notes / Remarks</Label>
-              <Input 
-                value={logForm.returnNotes}
-                onChange={e => setLogForm({...logForm, returnNotes: e.target.value})}
-                placeholder="e.g. Screen scratch, missing charger, etc."
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-              />
-            </div>
-          </TabsContent>
-        )}
-      </Modal>
-
-      {/* Admin Auth Modal for Delete */}
-      <Modal
-        isOpen={isDeleteAuthOpen}
-        onClose={() => setIsDeleteAuthOpen(false)}
-        title="Admin Authorization Required"
-        description="Enter your admin password to delete this asset record."
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsDeleteAuthOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
-            <Button 
-              onClick={handleVerifyDeleteAuth}
-              disabled={isDeleteVerifying}
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8 h-12 shadow-lg shadow-red-100 gap-2"
-            >
-              {isDeleteVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : <ShieldAlert size={16} />}
-              Authorize Delete
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {deleteAuthError && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircleIcon size={14} /> {deleteAuthError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={deleteAuthPassword} 
-                onChange={(e) => { setDeleteAuthPassword(e.target.value); setDeleteAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                autoFocus
-              />
+      {/* MODALS */}
+      {/* Add/Edit Chemical Modal */}
+      {(isAddChemicalOpen || editingChemical) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-bold text-slate-900">{editingChemical ? "Edit Chemical" : "Add New Chemical"}</h3><button onClick={() => { setIsAddChemicalOpen(false); setEditingChemical(null); resetChemicalForm(); }} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button></div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Chemical Name</Label><Input value={chemicalForm.name} onChange={e => setChemicalForm({...chemicalForm, name: e.target.value})} placeholder="e.g. Hydrochloric Acid" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Formula</Label><Input value={chemicalForm.formula} onChange={e => setChemicalForm({...chemicalForm, formula: e.target.value})} placeholder="e.g. HCl" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="grid grid-cols-3 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Quantity</Label><Input type="number" step="0.1" value={chemicalForm.quantity} onChange={e => setChemicalForm({...chemicalForm, quantity: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Unit</Label><Select value={chemicalForm.unit} onValueChange={val => setChemicalForm({...chemicalForm, unit: val})}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="L">Liters (L)</SelectItem><SelectItem value="mL">Milliliters (mL)</SelectItem><SelectItem value="kg">Kilograms (kg)</SelectItem><SelectItem value="g">Grams (g)</SelectItem></SelectContent></Select></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Min Threshold</Label><Input type="number" step="0.1" value={chemicalForm.minThreshold} onChange={e => setChemicalForm({...chemicalForm, minThreshold: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Location</Label><Input value={chemicalForm.location} onChange={e => setChemicalForm({...chemicalForm, location: e.target.value})} placeholder="e.g. Chemical Cabinet A1" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Expiry Date</Label><Input type="date" value={chemicalForm.expiryDate} onChange={e => setChemicalForm({...chemicalForm, expiryDate: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Hazard Level</Label><Select value={chemicalForm.hazardLevel} onValueChange={val => setChemicalForm({...chemicalForm, hazardLevel: val as HazardLevel})}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Low">Low</SelectItem><SelectItem value="Medium">Medium</SelectItem><SelectItem value="High">High</SelectItem></SelectContent></Select></div></div>
+              <div className="flex gap-3 pt-4 border-t"><Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={() => { setIsAddChemicalOpen(false); setEditingChemical(null); resetChemicalForm(); }}>Cancel</Button><Button className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100" onClick={editingChemical ? handleSaveChemicalEdit : handleAddChemical}>{editingChemical ? "Save Changes" : "Add Chemical"}</Button></div>
             </div>
           </div>
         </div>
-      </Modal>
+      )}
+
+      {/* Add/Edit Equipment Modal */}
+      {(isAddEquipmentOpen || editingEquipment) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-bold text-slate-900">{editingEquipment ? "Edit Equipment" : "Add New Equipment"}</h3><button onClick={() => { setIsAddEquipmentOpen(false); setEditingEquipment(null); resetEquipmentForm(); }} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button></div>
+            <div className="p-6 space-y-4">
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Equipment Name</Label><Input value={equipmentForm.name} onChange={e => setEquipmentForm({...equipmentForm, name: e.target.value})} placeholder="e.g. Bunsen Burner" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Category</Label><Input value={equipmentForm.category} onChange={e => setEquipmentForm({...equipmentForm, category: e.target.value})} placeholder="e.g. Heating, Measuring, Glassware" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="grid grid-cols-3 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Total Qty</Label><Input type="number" value={equipmentForm.totalQty} onChange={e => setEquipmentForm({...equipmentForm, totalQty: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Functional</Label><Input type="number" value={equipmentForm.functionalQty} onChange={e => setEquipmentForm({...equipmentForm, functionalQty: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Damaged</Label><Input type="number" value={equipmentForm.damagedQty} onChange={e => setEquipmentForm({...equipmentForm, damagedQty: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Location</Label><Input value={equipmentForm.location} onChange={e => setEquipmentForm({...equipmentForm, location: e.target.value})} placeholder="e.g. Lab Bench Row 1" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="flex gap-3 pt-4 border-t"><Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={() => { setIsAddEquipmentOpen(false); setEditingEquipment(null); resetEquipmentForm(); }}>Cancel</Button><Button className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100" onClick={editingEquipment ? handleSaveEquipmentEdit : handleAddEquipment}>{editingEquipment ? "Save Changes" : "Add Equipment"}</Button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Booking Modal */}
+      {(isAddBookingOpen || editingBooking) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-bold text-slate-900">{editingBooking ? "Edit Booking" : "New Lab Booking"}</h3><button onClick={() => { setIsAddBookingOpen(false); setEditingBooking(null); resetBookingForm(); }} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button></div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date</Label><Input type="date" value={bookingForm.date} onChange={e => setBookingForm({...bookingForm, date: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Time Slot</Label><Select value={bookingForm.timeSlot} onValueChange={val => setBookingForm({...bookingForm, timeSlot: val})}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="08:00-09:30">08:00-09:30</SelectItem><SelectItem value="09:30-11:00">09:30-11:00</SelectItem><SelectItem value="11:00-12:30">11:00-12:30</SelectItem><SelectItem value="12:30-14:00">12:30-14:00</SelectItem><SelectItem value="14:00-15:30">14:00-15:30</SelectItem></SelectContent></Select></div></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Teacher</Label><Input value={bookingForm.teacher} onChange={e => setBookingForm({...bookingForm, teacher: e.target.value})} placeholder="e.g. Mr. Peter Omondi" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade / Class</Label><Input value={bookingForm.gradeClass} onChange={e => setBookingForm({...bookingForm, gradeClass: e.target.value})} placeholder="e.g. Grade 7 Alpha" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label><Select value={bookingForm.status} onValueChange={val => setBookingForm({...bookingForm, status: val as BookingStatus})}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Approved">Approved</SelectItem><SelectItem value="Completed">Completed</SelectItem></SelectContent></Select></div></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Topic / Experiment</Label><Input value={bookingForm.topic} onChange={e => setBookingForm({...bookingForm, topic: e.target.value})} placeholder="e.g. Acid-Base Titration" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Items Requested (comma separated)</Label><Input value={bookingForm.itemsRequested} onChange={e => setBookingForm({...bookingForm, itemsRequested: e.target.value})} placeholder="e.g. Hydrochloric Acid, Sodium Hydroxide, Burette" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="flex gap-3 pt-4 border-t"><Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={() => { setIsAddBookingOpen(false); setEditingBooking(null); resetBookingForm(); }}>Cancel</Button><Button className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100" onClick={editingBooking ? handleSaveBookingEdit : handleAddBooking}>{editingBooking ? "Save Changes" : "Create Booking"}</Button></div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add/Edit Breakage Modal */}
+      {(isAddBreakageOpen || editingBreakage) && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+          <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+            <div className="p-6 border-b flex justify-between items-center"><h3 className="text-lg font-bold text-slate-900">{editingBreakage ? "Edit Breakage Record" : "Log New Breakage"}</h3><button onClick={() => { setIsAddBreakageOpen(false); setEditingBreakage(null); resetBreakageForm(); }} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button></div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date</Label><Input type="date" value={breakageForm.date} onChange={e => setBreakageForm({...breakageForm, date: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Student Name</Label><Input value={breakageForm.studentName} onChange={e => setBreakageForm({...breakageForm, studentName: e.target.value})} placeholder="e.g. Brian Kiptoo" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div></div>
+              <div className="grid grid-cols-2 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Adm No</Label><Input value={breakageForm.admNo} onChange={e => setBreakageForm({...breakageForm, admNo: e.target.value})} placeholder="e.g. A827361" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Grade / Class</Label><Input value={breakageForm.gradeClass} onChange={e => setBreakageForm({...breakageForm, gradeClass: e.target.value})} placeholder="e.g. Grade 7 Alpha" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div></div>
+              <div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Item Broken</Label><Input value={breakageForm.itemBroken} onChange={e => setBreakageForm({...breakageForm, itemBroken: e.target.value})} placeholder="e.g. Test Tube (15mL)" className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div>
+              <div className="grid grid-cols-3 gap-4"><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Quantity</Label><Input type="number" value={breakageForm.qty} onChange={e => setBreakageForm({...breakageForm, qty: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Cost (KES)</Label><Input type="number" value={breakageForm.cost} onChange={e => setBreakageForm({...breakageForm, cost: e.target.value})} className="h-12 rounded-xl bg-slate-50 border-none font-bold" /></div><div className="space-y-2"><Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label><Select value={breakageForm.status} onValueChange={val => setBreakageForm({...breakageForm, status: val as BreakageStatus})}><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Pending">Pending</SelectItem><SelectItem value="Paid">Paid</SelectItem><SelectItem value="Waived">Waived</SelectItem></SelectContent></Select></div></div>
+              <div className="flex gap-3 pt-4 border-t"><Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={() => { setIsAddBreakageOpen(false); setEditingBreakage(null); resetBreakageForm(); }}>Cancel</Button><Button className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100" onClick={editingBreakage ? handleSaveBreakageEdit : handleAddBreakage}>{editingBreakage ? "Save Changes" : "Log Breakage"}</Button></div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

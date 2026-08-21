@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -82,7 +82,7 @@ const GradesStreams = () => {
       ? trimmedName 
       : `Grade ${trimmedName}`;
 
-    const newGrade: Grade { 
+    const newGrade: Grade = { 
       id: `g-${Date.now()}`, 
       name: formattedName, 
       category: newGradeCategory, 
@@ -121,7 +121,7 @@ const GradesStreams = () => {
     const studentsCount = parseInt(newStreamStudents) || 0;
     const updatedGrades = grades.map(grade => {
       if (grade.id === selectedGradeId) {
-        const newStream: Stream { 
+        const newStream: Stream = { 
           id: `s-${Date.now()}`, 
           name: trimmedStreamName, 
           teacher: newStreamTeacher.trim() || "Unassigned", 
@@ -130,7 +130,7 @@ const GradesStreams = () => {
         return { ...grade, streams: [...grade.streams, newStream] };
       }
       return grade;
-    };
+    });
     
     setGrades(updatedGrades);
     setIsStreamOpen(false);
@@ -166,7 +166,6 @@ const GradesStreams = () => {
     } else {
       setAuthError("Invalid admin password");
       showError("Authorization failed");
-      setAuthPassword("");
     }
     setIsVerifying(false);
   };
@@ -196,18 +195,20 @@ const GradesStreams = () => {
             <p className="text-muted-foreground">Configure school classes, streams, and assign class teachers.</p>
           </div>
         </div>
-        <Button variant="outline" className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsStreamOpen(true)}>
-          <Plus size={18} /> Add Stream
-        </Button>
-        <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsGradeOpen(true)}>
-          <Layers size={18} /> Add Grade Level
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => setIsStreamOpen(true)}>
+            <Plus size={18} /> Add Stream
+          </Button>
+          <Button className="rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => setIsGradeOpen(true)}>
+            <Layers size={18} /> Add Grade Level
+          </Button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 gap-8">
         {sortedGrades.map((grade) => (
           <Card key={grade.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden group">
-            <CardHeader className="p-4 flex flex-row items-center justify-between flex-wrap gap-4">
+            <CardHeader className="p-8 border-b bg-slate-50/50 flex flex-row items-center justify-between flex-wrap gap-4">
               <div>
                 <div className="flex items-center gap-3">
                   <CardTitle className="text-xl font-black text-slate-900">{grade.name}</CardTitle>
@@ -231,10 +232,10 @@ const GradesStreams = () => {
                 </Button>
               </div>
             </CardHeader>
-            <CardContent className="p-3">
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+            <CardContent className="p-8">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {grade.streams.map((stream) => (
-                  <div key={stream.id} className="p-3 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group/stream">
+                  <div key={stream.id} className="p-6 rounded-3xl border border-slate-100 bg-slate-50/50 hover:bg-slate-50 transition-all relative group/stream">
                     <div className="flex justify-between items-start mb-4">
                       <div>
                         <h4 className="text-lg font-bold text-slate-900">{stream.name} Stream</h4>

@@ -97,12 +97,12 @@ const ExamTypes = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {examTypes.map((exam) => (
           <Card key={exam.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group relative">
-            <CardContent className="p-3 flex flex-col h-full justify-between">
+            <CardContent className="p-8 flex flex-col h-full justify-between">
               <div>
-                <div className="flex justify-between items-start mb-3">
+                <div className="flex justify-between items-start mb-4">
                   <Badge className={
                     exam.category === 'Formative' ? "bg-emerald-50 text-emerald-700 font-bold" : 
                     exam.category === 'Summative' ? "bg-indigo-50 text-indigo-700 font-bold" :
@@ -113,21 +113,21 @@ const ExamTypes = () => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 h-8 w-8"
+                    className="rounded-full text-slate-400 hover:text-red-600 hover:bg-red-50 h-9 w-9"
                     onClick={() => { setExamToDelete({ id: exam.id, name: exam.name }); setIsDeleteOpen(true); }}
                   >
-                    <Trash2 size={14} />
+                    <Trash2 size={16} />
                   </Button>
                 </div>
-                <h4 className="text-base font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                <h4 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
                   {exam.name}
                 </h4>
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Code: {exam.code}</p>
-                {exam.description && <p className="text-xs text-slate-500 leading-relaxed mb-3">{exam.description}</p>}
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Code: {exam.code}</p>
+                {exam.description && <p className="text-xs text-slate-500 leading-relaxed mb-4">{exam.description}</p>}
               </div>
-              <div className="pt-3 border-t border-slate-50 flex justify-between items-center mt-auto">
+              <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
                 <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Report Weight</span>
-                <Badge variant="outline" className="rounded-lg font-black text-slate-700 border-slate-200 bg-slate-50 px-2 py-0.5">
+                <Badge variant="outline" className="rounded-lg font-black text-slate-700 border-slate-200 bg-slate-50 px-2.5 py-1">
                   {exam.weight}% Weight
                 </Badge>
               </div>
@@ -148,25 +148,20 @@ const ExamTypes = () => {
           </>
         }
       >
-        <div className="space-y-3">
-          <div className="space-y-1.5">
+        <div className="space-y-4">
+          <div className="space-y-2">
             <Label>Exam Type Name</Label>
-            <Input 
-              value={name} 
-              onChange={(e) => setName(e.target.value)} 
-              placeholder="e.g. End Term Exam" 
-              className="rounded-xl h-10" 
-            />
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. End Term Exam" className="rounded-xl h-12" />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
               <Label>Unique Code</Label>
-              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. ENDTERM" className="rounded-xl h-10 uppercase" />
+              <Input value={code} onChange={(e) => setCode(e.target.value)} placeholder="e.g. ENDTERM" className="rounded-xl h-12 uppercase" />
             </div>
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label>Category</Label>
               <Select value={category} onValueChange={(val: any) => setCategory(val)}>
-                <SelectTrigger className="rounded-xl h-10">
+                <SelectTrigger className="rounded-xl h-12">
                   <SelectValue placeholder="Select Category" />
                 </SelectTrigger>
                 <SelectContent>
@@ -177,13 +172,13 @@ const ExamTypes = () => {
               </Select>
             </div>
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Report Card Weight (%)</Label>
-            <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 60" className="rounded-xl h-10" />
+            <Input type="number" value={weight} onChange={(e) => setWeight(e.target.value)} placeholder="e.g. 60" className="rounded-xl h-12" />
           </div>
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             <Label>Description (Optional)</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Final comprehensive exam" className="rounded-xl h-10" />
+            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Final comprehensive exam" className="rounded-xl h-12" />
           </div>
         </div>
       </Modal>
@@ -199,11 +194,11 @@ const ExamTypes = () => {
           </>
         }
       >
-        <div className="flex flex-col items-center text-center space-y-3">
-          <div className="w-12 h-12 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
-            <AlertTriangle size={24} />
+        <div className="flex flex-col items-center text-center space-y-4">
+          <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center">
+            <AlertTriangle size={32} />
           </div>
-          <p className="text-slate-500 text-sm">
+          <p className="text-slate-500">
             Are you sure you want to delete <strong className="text-slate-800">"{examToDelete?.name}"</strong>? This action cannot be undone.
           </p>
         </div>

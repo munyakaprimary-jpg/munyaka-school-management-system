@@ -15,7 +15,7 @@ import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
 import { MESSAGES as initialMessages } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
-import { useNotifications } from '@/components/ui/notification-provider';
+import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 
 const Communication = () => {
   const { user } = useAuth();
@@ -26,8 +26,9 @@ const Communication = () => {
   const [recipient, setRecipient] = useState("All Parents");
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const { addNotification } = useNotifications();
+  const { addNotification } = useNotifications(); // Get the addNotification function
 
+  // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
   if (user?.role !== 'super_admin') {
     return <Navigate to="/" replace />;
   }
@@ -46,17 +47,21 @@ const Communication = () => {
     setSubject(""); setBody("");
     showSuccess(`${msgType} message broadcasted successfully!`);
 
+    // Add a notification for the sent message
     addNotification({
       title: `New ${msgType} Message Sent`,
       message: `Sent to ${recipient}: ${subject}`,
-      type: 'message',
+      type: 'message', // We can use this to customize the icon in the bell if needed
     });
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div><h1 className="text-3xl font-bold text-slate-900">Communication Center</h1><p className="text-muted-foreground">Broadcast messages and track parent outreach.</p></div>
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
+          <p className="text-muted-foreground">Broadcast messages and track parent outreach.</p>
+        </div>
         <div className="flex gap-2">
           <Button variant="outline" className="rounded-2xl border-slate-200 gap-2" onClick={() => setActiveTab("logs")}><History size={18} /> Logs</Button>
           <Button className="rounded-2xl shadow-lg bg-indigo-600 hover:bg-indigo-700 gap-2" onClick={() => handleOpenCompose('Email')}><Send size={18} /> Compose</Button>
@@ -64,27 +69,27 @@ const Communication = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex w-fit overflow-x-auto">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8">
           <TabsTrigger value="outreach" className="rounded-xl px-8 h-full font-bold text-xs">Outreach</TabsTrigger>
           <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs">Logs</TabsTrigger>
         </TabsList>
         <TabsContent value="outreach" className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <Card className="rounded-[2rem] bg-white p-5 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('SMS')}>
-            <div className="w-16 h-16 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"><MessageSquare size={28} /></div>
-            <h3 className="text-lg font-bold text-slate-900">Send SMS Alert</h3>
+          <Card className="rounded-[2rem] bg-white p-10 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('SMS')}>
+            <div className="w-20 h-20 rounded-3xl bg-emerald-50 text-emerald-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><MessageSquare size={36} /></div>
+            <h3 className="text-xl font-bold text-slate-900">Send SMS Alert</h3>
           </Card>
-          <Card className="rounded-[2rem] bg-white p-5 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('Email')}>
-            <div className="w-16 h-16 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform"><Mail size={28} /></div>
-            <h3 className="text-lg font-bold text-slate-900">Email Newsletter</h3>
+          <Card className="rounded-[2rem] bg-white p-10 text-center hover:shadow-md cursor-pointer group" onClick={() => handleOpenCompose('Email')}>
+            <div className="w-20 h-20 rounded-3xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-6 group-hover:scale-110 transition-transform"><Mail size={36} /></div>
+            <h3 className="text-xl font-bold text-slate-900">Email Newsletter</h3>
           </Card>
         </TabsContent>
         <TabsContent value="logs">
           <Card className="rounded-3xl bg-white overflow-hidden">
             <CardContent className="p-0">
               <table className="w-full text-sm">
-                <thead><tr className="bg-slate-50/50 border-b"><th className="px-6 py-4 text-left font-black text-slate-400 text-[8px]">Recipient</th><th className="px-6 py-4 text-left font-black text-slate-400 text-[8px]">Subject</th><th className="px-6 py-4 text-center font-black text-slate-400 text-[8px]">Type</th><th className="px-6 py-4 text-right font-black text-slate-400 text-[8px]">Status</th></tr></thead>
+                <thead><tr className="bg-slate-50/50 border-b"><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Recipient</th><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Subject</th><th className="px-8 py-5 text-center font-black text-slate-400 text-[10px]">Type</th><th className="px-8 py-5 text-right font-black text-slate-400 text-[10px]">Status</th></tr></thead>
                 <tbody className="divide-y">{messagesList.map((msg) => (
-                  <tr key={msg.id} className="hover:bg-slate-50 transition-colors"><td className="px-6 py-3 font-bold">{msg.recipient}</td><td className="px-6 py-3 font-medium">{msg.subject}</td><td className="px-6 py-3 text-center"><Badge variant="outline">{msg.type}</Badge></td><td className="px-6 py-3 text-right"><Badge><UserCheck size={10} className="mr-1" /> {msg.status}</Badge></td></tr>
+                  <tr key={msg.id} className="hover:bg-slate-50 transition-colors"><td className="px-8 py-6 font-bold">{msg.recipient}</td><td className="px-8 py-6 font-medium">{msg.subject}</td><td className="px-8 py-6 text-center"><Badge variant="outline">{msg.type}</Badge></td><td className="px-8 py-6 text-right"><Badge><UserCheck size={12} className="mr-1.5" /> {msg.status}</Badge></td></tr>
                 ))}</tbody>
               </table>
             </CardContent>
@@ -92,27 +97,33 @@ const Communication = () => {
         </TabsContent>
       </Tabs>
 
-      <Modal isOpen={isOpen} onClose={() => setIsOpen(false)} title={`Compose ${msgType === 'Email' ? 'Email' : 'SMS'}`} description="Send an official communication." footer={
-        <>
-          <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsOpen(false)}>Cancel</Button>
-          <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8" onClick={handleSend}><Send size={16} className="mr-2" /> Dispatch Message</Button>
-        </>
-      }>
+      <Modal
+        isOpen={isOpen}
+        onClose={() => setIsOpen(false)}
+        title={`Compose ${msgType === 'Email' ? 'Email' : 'SMS'}`}
+        description="Send an official communication."
+        footer={
+          <>
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsOpen(false)}>Cancel</Button>
+            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8" onClick={handleSend}><Send size={16} className="mr-2" /> Dispatch Message</Button>
+          </>
+        }
+      >
         <div className="space-y-4">
           <div className="space-y-2">
             <Label>Communication Mode</Label>
             <div className="grid grid-cols-2 gap-2">
-              <Button type="button" variant={msgType === 'Email' ? 'default' : 'outline'} className="rounded-xl h-10 font-bold" onClick={() => setMsgType('Email')}><Mail size={14} className="mr-2" /> Email</Button>
-              <Button type="button" variant={msgType === 'SMS' ? 'default' : 'outline'} className="rounded-xl h-10 font-bold" onClick={() => setMsgType('SMS')}><MessageSquare size={14} className="mr-2" /> SMS</Button>
+              <Button type="button" variant={msgType === 'Email' ? 'default' : 'outline'} className="rounded-xl h-11 font-bold" onClick={() => setMsgType('Email')}><Mail size={16} className="mr-2" /> Email</Button>
+              <Button type="button" variant={msgType === 'SMS' ? 'default' : 'outline'} className="rounded-xl h-11 font-bold" onClick={() => setMsgType('SMS')}><MessageSquare size={16} className="mr-2" /> SMS</Button>
             </div>
           </div>
           <div className="space-y-2">
             <Label>{msgType === 'Email' ? 'Email Subject' : 'Alert Header'}</Label>
-            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. End of Term Notice" className="rounded-xl h-10" />
+            <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. End of Term Notice" className="rounded-xl h-12" />
           </div>
           <div className="space-y-2">
             <Label>Message Content</Label>
-            <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type content here..." className="rounded-xl min-h-[100px]" />
+            <Textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Type content here..." className="rounded-xl min-h-[120px]" />
           </div>
         </div>
       </Modal>
