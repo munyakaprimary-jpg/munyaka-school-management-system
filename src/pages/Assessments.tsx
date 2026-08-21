@@ -64,33 +64,61 @@ const getTierKey = (gradeName: string): string => {
 };
 
 const Assessments = () => {
-  // 1. Retrieve Students Directory from localStorage ('students_directory' or 'learners' or fallback to STUDENTS)
+  // 1. Retrieve Students Directory from localStorage with munyaka_students and fallback
   const studentsList = useMemo(() => {
     try {
-      const stored = localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
+      const stored = localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.error("Error loading students directory:", e);
+      console.error("Error loading munyaka_students:", e);
     }
     return STUDENTS;
   }, []);
 
-  // Extract dynamic grades and streams from student directory
+  // 2. Grades & Streams from munyaka_grades with fallback protection
+  const gradesListFromStorage = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_grades");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_grades:", e);
+    }
+    return [];
+  }, []);
+
   const availableGrades = useMemo(() => {
+    if (gradesListFromStorage.length > 0) {
+      return gradesListFromStorage.map((g: any) => g.name || g.grade || String(g));
+    }
     const gradesSet = new Set<string>();
     studentsList.forEach(s => {
       if (s.grade) gradesSet.add(s.grade);
     });
     const list = Array.from(gradesSet);
-    return list.length > 0 ? list : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8"];
-  }, [studentsList]);
+    return list.length > 0 ? list : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"];
+  }, [gradesListFromStorage, studentsList]);
 
-  // Extract streams per grade
+  // Extract streams per grade from munyaka_grades or studentsList with fallback
   const streamsByGrade = useMemo(() => {
     const map: Record<string, string[]> = {};
+    if (gradesListFromStorage.length > 0) {
+      gradesListFromStorage.forEach((g: any) => {
+        const gName = g.name || g.grade;
+        if (gName) {
+          if (Array.isArray(g.streams)) {
+            map[gName] = g.streams.map((st: any) => typeof st === 'string' ? st : (st.name || st.stream));
+          } else if (Array.isArray(g.classes)) {
+            map[gName] = g.classes.map((c: any) => typeof c === 'string' ? c : (c.name || c.class));
+          }
+        }
+      });
+    }
     studentsList.forEach(s => {
       if (s.grade && s.stream) {
         if (!map[s.grade]) map[s.grade] = [];
@@ -98,20 +126,40 @@ const Assessments = () => {
       }
     });
     return map;
-  }, [studentsList]);
+  }, [gradesListFromStorage, studentsList]);
 
-  // Retrieve Exam Types from localStorage ('exam_types' or 'school_settings' or DEFAULT_EXAM_TYPES)
+  // 3. Exam Types from munyaka_exam_types with fallback
   const examTypesList = useMemo(() => {
     try {
-      const stored = localStorage.getItem("exam_types") || localStorage.getItem("munyaka_exam_types");
+      const stored = localStorage.getItem("munyaka_exam_types");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((et: any) => ({
+            id: et.id || et.code || et.name,
+            code: et.code || et.id || et.name,
+            name: et.name || et.code || et.id
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_exam_types:", e);
+    }
+    return DEFAULT_EXAM_TYPES;
+  }, []);
+
+  // 4. Learning Areas / Subjects from munyaka_learning_areas with fallback protection
+  const learningAreasFromStorage = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_learning_areas");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.error("Error loading exam types:", e);
+      console.error("Error loading munyaka_learning_areas:", e);
     }
-    return DEFAULT_EXAM_TYPES;
+    return [];
   }, []);
 
   // Control States bound to localStorage / defaults
@@ -139,9 +187,9 @@ const Assessments = () => {
     setAcademicYearOptions(Array.from(yearsSet).sort().reverse());
   }, [studentsList]);
 
-  // Available streams for selected grade
+  // Available streams for selected grade with fallback
   const currentGradeStreams = useMemo(() => {
-    const streams = streamsByGrade[grade] || ["Class A", "Class B"];
+    const streams = streamsByGrade[grade] || ["Green", "Yellow", "Blue", "Red", "Neptune", "Jupiter", "Mercury", "Venus"];
     return streams;
   }, [streamsByGrade, grade]);
 
@@ -152,9 +200,20 @@ const Assessments = () => {
     }
   }, [grade, currentGradeStreams, stream]);
 
-  // Educational tier subjects for selected grade
+  // Educational tier subjects for selected grade with munyaka_learning_areas integration
   const tierKey = useMemo(() => getTierKey(grade), [grade]);
-  const allTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
+  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
+
+  const allTierSubjects = useMemo(() => {
+    if (learningAreasFromStorage.length > 0) {
+      // Filter learning areas matching active grade tier or return all if none match specifically
+      const mapped = learningAreasFromStorage
+        .map((la: any) => la.name || la.title)
+        .filter(Boolean);
+      if (mapped.length > 0) return mapped;
+    }
+    return defaultTierSubjects;
+  }, [learningAreasFromStorage, defaultTierSubjects]);
 
   // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
   const activeSubjects = useMemo(() => {
