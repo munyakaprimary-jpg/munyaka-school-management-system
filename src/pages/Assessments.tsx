@@ -279,16 +279,34 @@ const Assessments = () => {
     setMarksMatrix({});
   }, [marksStorageKey]);
 
-  // Filtered students roster
+  // Filtered students roster with robust normalization and multi-field fallback
   const filteredStudents = useMemo(() => {
+    const selectedGradeNormalized = grade.trim().toLowerCase();
+
     return studentsList.filter(s => {
-      const matchesGrade = !s.grade || s.grade.toLowerCase() === grade.toLowerCase();
-      const matchesStream = stream === "All Streams" || !s.stream || s.stream.toLowerCase() === stream.toLowerCase();
+      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
+      const rawStudentGrade = s.grade || s.gradeLevel || s.class || "";
+      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
+
+      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
+      const matchesGrade = !studentGradeNormalized ||
+        studentGradeNormalized === selectedGradeNormalized ||
+        studentGradeNormalized.replace(/[^0-9]/g, "") === selectedGradeNormalized.replace(/[^0-9]/g, "") && selectedGradeNormalized.replace(/[^0-9]/g, "") !== "";
+
+      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
+      const rawStudentStream = s.stream || s.classStream || s.section || "";
+      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
+      const selectedStreamNormalized = stream.trim().toLowerCase();
+
+      const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
+      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
+
       const matchesSearch = !searchTerm.trim() ||
         (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+
       return matchesGrade && matchesStream && matchesSearch;
     });
   }, [studentsList, grade, stream, searchTerm]);
