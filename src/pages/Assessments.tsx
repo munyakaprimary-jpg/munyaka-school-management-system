@@ -93,15 +93,45 @@ const Assessments = () => {
   }, []);
 
   const availableGrades = useMemo(() => {
+    const cbcGradeOrder = [
+      "PP1", "PP2", "Playgroup", "PP1/PP2",
+      "Grade 1", "Grade 2", "Grade 3",
+      "Grade 4", "Grade 5", "Grade 6",
+      "Grade 7", "Grade 8", "Grade 9"
+    ];
+
+    let rawGrades: string[] = [];
     if (gradesListFromStorage.length > 0) {
-      return gradesListFromStorage.map((g: any) => g.name || g.grade || String(g));
+      rawGrades = gradesListFromStorage.map((g: any) => g.name || g.grade || String(g));
+    } else {
+      const gradesSet = new Set<string>();
+      studentsList.forEach(s => {
+        if (s.grade) gradesSet.add(s.grade);
+      });
+      rawGrades = Array.from(gradesSet);
+      if (rawGrades.length === 0) {
+        rawGrades = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"];
+      }
     }
-    const gradesSet = new Set<string>();
-    studentsList.forEach(s => {
-      if (s.grade) gradesSet.add(s.grade);
+
+    // Sort according to cbcGradeOrder index. Unknown grades appended in numeric ascending order.
+    return rawGrades.sort((a, b) => {
+      const indexA = cbcGradeOrder.indexOf(a);
+      const indexB = cbcGradeOrder.indexOf(b);
+
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+
+      // Extract numeric value if any for ascending order fallback
+      const numA = parseInt(a.replace(/[^0-9]/g, ""), 10) || 999;
+      const numB = parseInt(b.replace(/[^0-9]/g, ""), 10) || 999;
+      if (numA !== numB) return numA - numB;
+
+      return a.localeCompare(b);
     });
-    const list = Array.from(gradesSet);
-    return list.length > 0 ? list : ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"];
   }, [gradesListFromStorage, studentsList]);
 
   // Extract streams per grade from munyaka_grades or studentsList with fallback
