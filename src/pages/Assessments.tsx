@@ -73,6 +73,27 @@ const getLevelNameForGrade = (gradeName: string): string => {
 };
 
 const Assessments = () => {
+  // Control States bound to localStorage / defaults
+  const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
+  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
+  
+  const [grade, setGrade] = useState<string>(() => "Grade 4");
+  const [stream, setStream] = useState<string>("All Streams");
+  const [examType, setExamType] = useState<string>("Formative Assessment");
+  const [term, setTerm] = useState<string>("Term 1");
+  const [subject, setSubject] = useState<string>("All Subjects");
+  const [searchTerm, setSearchTerm] = useState<string>("");
+
+  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  // Null-safe grade getter
+  const currentGrade = grade || "Grade 1";
+  const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
+  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
+
   // 1. Retrieve Students Directory from localStorage with munyaka_students and fallback
   const studentsList = useMemo(() => {
     try {
@@ -160,6 +181,13 @@ const Assessments = () => {
     });
   }, [gradesListFromStorage, studentsList]);
 
+  // Set initial grade if availableGrades has items
+  useEffect(() => {
+    if (availableGrades.length > 0 && (!grade || !availableGrades.includes(grade))) {
+      setGrade(availableGrades[0]);
+    }
+  }, [availableGrades, grade]);
+
   // Extract streams per grade from munyaka_grades or studentsList with fallback
   const streamsByGrade = useMemo(() => {
     const map: Record<string, string[]> = {};
@@ -184,6 +212,12 @@ const Assessments = () => {
     return map;
   }, [gradesListFromStorage, studentsList]);
 
+  // Available streams for selected grade with fallback
+  const currentGradeStreams = useMemo(() => {
+    const streams = streamsByGrade[currentGrade] || ["Green", "Yellow", "Blue", "Red", "Neptune", "Jupiter", "Mercury", "Venus"];
+    return streams;
+  }, [streamsByGrade, currentGrade]);
+
   // 3. Exam Types from munyaka_exam_types with fallback
   const examTypesList = useMemo(() => {
     try {
@@ -204,6 +238,13 @@ const Assessments = () => {
     return DEFAULT_EXAM_TYPES;
   }, []);
 
+  // Set initial exam type if available
+  useEffect(() => {
+    if (examTypesList.length > 0 && (!examType || !examTypesList.some((et: any) => (et.name || et.code) === examType))) {
+      setExamType(examTypesList[0]?.name || examTypesList[0]?.code || "Formative Assessment");
+    }
+  }, [examTypesList, examType]);
+
   // 4. Learning Areas / Subjects from munyaka_learning_areas with robust nested parsing logic
   const learningAreasFromStorage = useMemo(() => {
     try {
@@ -218,13 +259,10 @@ const Assessments = () => {
     return [];
   }, []);
 
-  // Educational tier subjects for selected grade with munyaka_learning_areas integration
-  const tierKey = useMemo(() => getTierKey(grade), [grade]);
-  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
-
   const allTierSubjects = useMemo(() => {
+    if (!currentGrade) return defaultTierSubjects;
     if (learningAreasFromStorage.length > 0) {
-      const targetLevelName = getLevelNameForGrade(grade).toLowerCase();
+      const targetLevelName = getLevelNameForGrade(currentGrade).toLowerCase();
       
       // Check if munyaka_learning_areas has tier objects (e.g. { category: "Lower Primary", subjects: [...] } or { name: "Lower Primary", learningAreas: [...] })
       for (const item of learningAreasFromStorage) {
@@ -251,7 +289,7 @@ const Assessments = () => {
       }
     }
     return defaultTierSubjects;
-  }, [learningAreasFromStorage, grade, defaultTierSubjects]);
+  }, [learningAreasFromStorage, currentGrade, defaultTierSubjects]);
 
   // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
   const activeSubjects = useMemo(() => {
@@ -263,12 +301,12 @@ const Assessments = () => {
 
   // Construct storage key for marks: marks_entry_data or marks_[academicYear]_[grade]_[stream]_[examType]_[term]
   const marksStorageKey = useMemo(() => {
-    const cleanGrade = grade.replace(/\s+/g, "_");
+    const cleanGrade = currentGrade.replace(/\s+/g, "_");
     const cleanStream = stream.replace(/\s+/g, "_");
     const cleanExam = examType.replace(/\s+/g, "_");
     const cleanTerm = term.replace(/\s+/g, "_");
     return `marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExam}_${cleanTerm}`;
-  }, [academicYear, grade, stream, examType, term]);
+  }, [academicYear, currentGrade, stream, examType, term]);
 
   // Load marks from localStorage on filter change
   useEffect(() => {
@@ -289,7 +327,7 @@ const Assessments = () => {
 
   // Filtered students roster with robust normalization and multi-field fallback
   const filteredStudents = useMemo(() => {
-    const selectedGradeNormalized = grade.trim().toLowerCase();
+    const selectedGradeNormalized = currentGrade.trim().toLowerCase();
 
     return studentsList.filter(s => {
       // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
