@@ -17,6 +17,9 @@ import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { StudentTransferInfo } from '@/types/transfer';
 import { Student } from '@/types/student';
 
+// Utility to normalize stream names to Title Case
+const toTitleCase = (str: string) => str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+
 const Students = () => {
   const [studentsList, setStudentsList] = useState(() => {
     const saved = localStorage.getItem('munyaka_students_master');
@@ -96,7 +99,7 @@ const Students = () => {
   // Dynamically get streams for the selected grade
   const availableStreams = useMemo(() => {
     if (!regGrade) return [];
-    const grade = gradesList.find((g: any) => g.name === `Grade ${regGrade}` || g.name === regGrade || g.id === regGrade);
+    const grade = gradesList.find((g: any) => g.name.toLowerCase() === `grade ${regGrade.toLowerCase()}` || g.name.toLowerCase() === regGrade.toLowerCase() || g.id === regGrade);
     return grade ? grade.streams.map((s: any) => s.name) : [];
   }, [regGrade, gradesList]);
 
@@ -113,14 +116,16 @@ const Students = () => {
     }
   }, [regGrade, availableStreams, regStream]);
 
-  // Get unique streams for the filter dropdown
-  const uniqueStreams = useMemo(() => {
-    const streams = new Set<string>();
-    gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
-      if (s.name) streams.add(s.name.trim());
-    }));
-    return Array.from(streams).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
-  }, [gradesList]);
+  // Get unique streams for the filter dropdown (case-insensitive deduplication, Title Case display)
+    const uniqueStreams = useMemo(() => {
+      const streams = new Set<string>();
+      gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
+        if (s.name) streams.add(s.name.trim().toLowerCase());
+      }));
+      return Array.from(streams)
+        .map(stream => toTitleCase(stream))
+        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
+    }, [gradesList]);
 
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
