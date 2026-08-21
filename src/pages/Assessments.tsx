@@ -75,7 +75,10 @@ const getLevelNameForGrade = (gradeName: string): string => {
 const Assessments = () => {
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
-  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>([]);
+  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>(() => {
+    const currentY = new Date().getFullYear();
+    return [String(currentY - 1), String(currentY), String(currentY + 1), String(currentY + 2)];
+  });
   
   const [grade, setGrade] = useState<string>(() => "Grade 4");
   const [stream, setStream] = useState<string>("All Streams");
@@ -299,31 +302,49 @@ const Assessments = () => {
     return [subject];
   }, [subject, allTierSubjects]);
 
-  // Construct storage key for marks: marks_entry_data or marks_[academicYear]_[grade]_[stream]_[examType]_[term]
-  const marksStorageKey = useMemo(() => {
-    const cleanGrade = currentGrade.replace(/\s+/g, "_");
-    const cleanStream = stream.replace(/\s+/g, "_");
-    const cleanExam = examType.replace(/\s+/g, "_");
-    const cleanTerm = term.replace(/\s+/g, "_");
-    return `marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExam}_${cleanTerm}`;
-  }, [academicYear, currentGrade, stream, examType, term]);
+  // Construct storage key for marks using composite key pattern: munyaka_marks_${academicYear}_${selectedGrade}_${selectedExamType}_${selectedSubject} (or stream/term/subject)
+  const cleanGrade = useMemo(() => currentGrade.replace(/\s+/g, "_"), [currentGrade]);
+  const cleanStream = useMemo(() => stream.replace(/\s+/g, "_"), [stream]);
+  const cleanExamType = useMemo(() => examType.replace(/\s+/g, "_"), [examType]);
+  const cleanTerm = useMemo(() => term.replace(/\s+/g, "_"), [term]);
 
-  // Load marks from localStorage on filter change
+  const marksStorageKey = useMemo(() => {
+    return `munyaka_marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExamType}_${cleanTerm}`;
+  }, [academicYear, cleanGrade, cleanStream, cleanExamType, cleanTerm]);
+
+  // 2. Exam Type Change Handler & 3. History Preservation Loading & Merging Logic
   useEffect(() => {
     try {
-      const stored = localStorage.getItem(marksStorageKey) || localStorage.getItem("marks_entry_data");
-      if (stored) {
-        const parsed = JSON.parse(stored);
+      let loadedData: Record<string, Record<string, string>> = {};
+      const primaryStored = localStorage.getItem(marksStorageKey);
+      if (primaryStored) {
+        const parsed = JSON.parse(primaryStored);
         if (parsed && typeof parsed === "object") {
-          setMarksMatrix(parsed);
-          return;
+          loadedData = parsed;
+        }
+      } else {
+        // Fallback check master assessment scores bucket `munyaka_assessment_scores` or `munyaka_marks`
+        const masterScoresStr = localStorage.getItem("munyaka_assessment_scores") || localStorage.getItem("munyaka_marks");
+        if (masterScoresStr) {
+          const masterParsed = JSON.parse(masterScoresStr);
+          if (masterParsed && typeof masterParsed === "object") {
+            if (masterParsed[marksStorageKey]) {
+              loadedData = masterParsed[marksStorageKey];
+            } else if (masterParsed[examType] && typeof masterParsed[examType] === "object") {
+              loadedData = masterParsed[examType];
+            } else {
+              loadedData = masterParsed;
+            }
+          }
         }
       }
+
+      setMarksMatrix(loadedData || {});
     } catch (e) {
-      console.error("Error loading marks from localStorage:", e);
+      console.error("Error loading marks for exam type:", e);
+      setMarksMatrix({});
     }
-    setMarksMatrix({});
-  }, [marksStorageKey]);
+  }, [marksStorageKey, examType]);
 
   // Filtered students roster with robust normalization and multi-field fallback
   const filteredStudents = useMemo(() => {
@@ -357,7 +378,7 @@ const Assessments = () => {
     });
   }, [studentsList, grade, stream, searchTerm]);
 
-  // Immediate LocalStorage Autosave & State Update
+  // Immediate LocalStorage Autosave & History Preservation (Merging into specific exam type bucket & master bucket)
   const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
     let clean = value.replace(/[^0-9]/g, "");
     if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
@@ -371,12 +392,25 @@ const Assessments = () => {
         }
       };
 
-      // Immediate localStorage autosave
+      // 3. History Preservation & Merging: Save into specific composite key AND merge into `munyaka_assessment_scores` and `munyaka_marks` without overwriting other exam types
       try {
         localStorage.setItem(marksStorageKey, JSON.stringify(updated));
-        localStorage.setItem("marks_entry_data", JSON.stringify(updated));
+
+        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+        let masterObj: Record<string, any> = {};
+        if (existingMasterStr) {
+          try {
+            masterObj = JSON.parse(existingMasterStr);
+          } catch (err) {
+            masterObj = {};
+          }
+        }
+        masterObj[marksStorageKey] = updated;
+        masterObj[examType] = { ...(masterObj[examType] || {}), ...updated };
+        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+        localStorage.setItem("munyaka_marks", JSON.stringify(masterObj));
       } catch (e) {
-        console.error("Autosave error:", e);
+        console.error("Autosave/History preservation error:", e);
       }
 
       return updated;
@@ -384,7 +418,7 @@ const Assessments = () => {
 
     setShowSavedBadge(true);
     setTimeout(() => setShowSavedBadge(false), 2000);
-  }, [marksStorageKey]);
+  }, [marksStorageKey, examType]);
 
   // Calculations for Totals, Subject Totals, Subject MSS, Class Average
   const studentTotals = useMemo(() => {
