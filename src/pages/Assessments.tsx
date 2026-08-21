@@ -93,20 +93,21 @@ const Assessments = () => {
   }, []);
 
   const availableGrades = useMemo(() => {
-    const cbcGradeOrder = [
-      "PP1", "PP2", "Playgroup", "PP1/PP2",
-      "Grade 1", "Grade 2", "Grade 3",
-      "Grade 4", "Grade 5", "Grade 6",
-      "Grade 7", "Grade 8", "Grade 9"
+    const cbcOrder = [
+      "pp1", "pp2", "playgroup", "pp1/pp2",
+      "grade 1", "grade 2", "grade 3",
+      "grade 4", "grade 5", "grade 6",
+      "grade 7", "grade 8", "grade 9"
     ];
 
-    let rawGrades: string[] = [];
+    let rawGrades: any[] = [];
     if (gradesListFromStorage.length > 0) {
       rawGrades = gradesListFromStorage.map((g: any) => g.name || g.grade || String(g));
     } else {
       const gradesSet = new Set<string>();
       studentsList.forEach(s => {
-        if (s.grade) gradesSet.add(s.grade);
+        const gName = s.grade || s.gradeLevel || s.class;
+        if (gName) gradesSet.add(gName);
       });
       rawGrades = Array.from(gradesSet);
       if (rawGrades.length === 0) {
@@ -114,23 +115,39 @@ const Assessments = () => {
       }
     }
 
-    // Sort according to cbcGradeOrder index. Unknown grades appended in numeric ascending order.
-    return rawGrades.sort((a, b) => {
-      const indexA = cbcGradeOrder.indexOf(a);
-      const indexB = cbcGradeOrder.indexOf(b);
+    // Sort according to cbcOrder with normalization
+    const sorted = [...rawGrades].sort((a, b) => {
+      const nameA = (a.name || a).toString().trim().toLowerCase();
+      const nameB = (b.name || b).toString().trim().toLowerCase();
+      
+      const indexA = cbcOrder.indexOf(nameA);
+      const indexB = cbcOrder.indexOf(nameB);
 
-      if (indexA !== -1 && indexB !== -1) {
-        return indexA - indexB;
-      }
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
 
       // Extract numeric value if any for ascending order fallback
-      const numA = parseInt(a.replace(/[^0-9]/g, ""), 10) || 999;
-      const numB = parseInt(b.replace(/[^0-9]/g, ""), 10) || 999;
+      const numA = parseInt(nameA.replace(/[^0-9]/g, ""), 10) || 999;
+      const numB = parseInt(nameB.replace(/[^0-9]/g, ""), 10) || 999;
       if (numA !== numB) return numA - numB;
 
-      return a.localeCompare(b);
+      return nameA.localeCompare(nameB);
+    });
+
+    // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
+    return sorted.map((g: any) => {
+      const str = (g.name || g).toString().trim();
+      // If it starts with grade in lowercase, capitalize Grade
+      if (str.toLowerCase().startsWith("grade ")) {
+        const numPart = str.substring(6);
+        return `Grade ${numPart}`;
+      }
+      if (str.toLowerCase() === "pp1") return "PP1";
+      if (str.toLowerCase() === "pp2") return "PP2";
+      if (str.toLowerCase() === "playgroup") return "Playgroup";
+      if (str.toLowerCase() === "pp1/pp2") return "PP1/PP2";
+      return str.charAt(0).toUpperCase() + str.slice(1);
     });
   }, [gradesListFromStorage, studentsList]);
 
