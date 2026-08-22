@@ -290,34 +290,6 @@ export default function Students() {
     document.body.removeChild(link);
   };
 
-  // State for CSV Dropdown
-  const [isCsvOpen, setIsCsvOpen] = useState(false);
-
-  // CSV export helper function
-  const exportToCSV = (dataArray: Learner[], filename: string) => {
-    const headers = ['ADM NO.', 'NAME', 'GRADE', 'STREAM', 'GENDER', 'PARENT/GUARDIAN', 'PHONE'];
-    const rows = dataArray.map((l) => [
-      l.admNo || '',
-      `"${(l.name || '').replace(/"/g, '""')}"`,
-      l.grade || '',
-      l.stream || '',
-      l.gender || '',
-      `"${(l.guardian || '').replace(/"/g, '""')}"`,
-      `"${(l.phone || '').replace(/"/g, '""')}"`,
-    ]);
-
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', filename);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
   // Print
   const handlePrint = () => {
     window.print();
@@ -341,124 +313,14 @@ export default function Students() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setIsCsvOpen(!isCsvOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
-            >
-              <Download className="w-4 h-4 text-slate-500" />
-              Export CSV
-            </button>
-
-            {isCsvOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-20"
-                  onClick={() => setIsCsvOpen(false)}
-                />
-                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-200/90 py-2 z-30 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="px-4 py-2 border-b border-slate-100">
-                    <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Export Options</p>
-                  </div>
-                  
-                  {/* Option 1: Current view */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      exportToCSV(filteredLearners, 'current_view.csv');
-                      setIsCsvOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex flex-col gap-0.5 border-b border-slate-100 last:border-b-0"
-                  >
-                    <span className="text-sm font-semibold text-slate-800 flex items-center justify-between">
-                      Current view
-                    </span>
-                    <span className="text-xs text-slate-500 truncate">
-                      {selectedGrade || selectedStream ? `Filtered by ${selectedGrade || 'All Grades'} ${selectedStream ? `/ ${selectedStream}` : ''}` : 'All learners in current view'}
-                    </span>
-                  </button>
-
-                  {/* Option 2: Download by grade */}
-                  <button
-                    type="button"
-                    disabled={!selectedGrade}
-                    onClick={() => {
-                      if (!selectedGrade) return;
-                      const gradeData = learners.filter(l => l.grade === selectedGrade);
-                      const safeGradeName = selectedGrade.toLowerCase().replace(/\s+/g, '_');
-                      exportToCSV(gradeData, `grade_${safeGradeName}_learners.csv`);
-                      setIsCsvOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-3 transition-colors flex flex-col gap-0.5 border-b border-slate-100 last:border-b-0 ${
-                      selectedGrade ? 'hover:bg-slate-50 cursor-pointer' : 'opacity-50 cursor-not-allowed bg-slate-50/50'
-                    }`}
-                  >
-                    <span className="text-sm font-semibold text-slate-800 flex items-center justify-between">
-                      Download by grade
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {selectedGrade ? `Grade: ${selectedGrade}` : 'No grade selected'}
-                    </span>
-                  </button>
-
-                  {/* Option 3: Download by stream */}
-                  <button
-                    type="button"
-                    disabled={!selectedStream}
-                    onClick={() => {
-                      if (!selectedStream) return;
-                      const streamData = learners.filter(l => l.stream === selectedStream);
-                      const safeStreamName = selectedStream.toLowerCase().replace(/\s+/g, '_');
-                      exportToCSV(streamData, `stream_${safeStreamName}_learners.csv`);
-                      setIsCsvOpen(false);
-                    }}
-                    className={`w-full text-left px-4 py-3 transition-colors flex flex-col gap-0.5 border-b border-slate-100 last:border-b-0 ${
-                      selectedStream ? 'hover:bg-slate-50 cursor-pointer' : 'opacity-50 cursor-not-allowed bg-slate-50/50'
-                    }`}
-                  >
-                    <span className="text-sm font-semibold text-slate-800 flex items-center justify-between">
-                      Download by stream
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      {selectedStream ? `Stream: ${selectedStream}` : 'No stream selected'}
-                    </span>
-                  </button>
-
-                  {/* Option 4: All learners */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      try {
-                        const raw = localStorage.getItem('school_learners_data');
-                        if (raw) {
-                          const parsed = JSON.parse(raw);
-                          if (Array.isArray(parsed) && parsed.length > 0) {
-                            exportToCSV(parsed, 'complete_register.csv');
-                          } else {
-                            exportToCSV(learners, 'complete_register.csv');
-                          }
-                        } else {
-                          exportToCSV(learners, 'complete_register.csv');
-                        }
-                      } catch (e) {
-                        exportToCSV(learners, 'complete_register.csv');
-                      }
-                      setIsCsvOpen(false);
-                    }}
-                    className="w-full text-left px-4 py-3 hover:bg-slate-50 transition-colors flex flex-col gap-0.5"
-                  >
-                    <span className="text-sm font-semibold text-slate-800 flex items-center justify-between">
-                      All learners
-                    </span>
-                    <span className="text-xs text-slate-500">
-                      Complete school register
-                    </span>
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
+          >
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
+          </button>
 
           <button
             type="button"
