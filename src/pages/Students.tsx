@@ -260,6 +260,22 @@ export default function Students() {
     setIsModalOpen(false);
   };
 
+  // Close & Reset Modal Handler
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFormError('');
+    setEditingLearnerId(null);
+    setFormData({
+      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      name: '',
+      grade: GRADES_LIST[0] || 'Grade 4',
+      stream: STREAMS_LIST[0] || 'North',
+      gender: 'Female',
+      guardian: '',
+      phone: '',
+    });
+  };
+
   // Handle Delete Confirmation
   const confirmDelete = (id: string) => {
     setLearners((prev) => prev.filter((item) => item.id !== id));
@@ -477,8 +493,14 @@ export default function Students() {
 
       {/* 5. Modal Dialog for Add / Edit Learner (Dynamic Grades & Streams) */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+        <div
+          onClick={handleCloseModal}
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200"
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200"
+          >
             <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
@@ -493,8 +515,9 @@ export default function Students() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsModalOpen(false)}
+                onClick={handleCloseModal}
                 className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-xl transition-all"
+                title="Close modal"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -617,7 +640,7 @@ export default function Students() {
               <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={handleCloseModal}
                   className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
                 >
                   Cancel
