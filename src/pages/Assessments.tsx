@@ -304,53 +304,54 @@ const Assessments = () => {
     return `${academicYear}_${term}_${grade}_${subject}_${examType}`;
   }, [academicYear, term, grade, subject, examType]);
 
-  const fallbackStorageKey = useMemo(() => {
-    return `munyaka_marks_${academicYear}_${term}_${grade}_${subject}_${examType}`;
-  }, [academicYear, term, grade, subject, examType]);
-
   // ============================================
   // RE-TRIGGER LOAD ON TERM SWITCH
   // Include selectedTerm (term) in dependency array
   // ============================================
   useEffect(() => {
-    // 1. Clear local form state completely before loading saved records for the new composite key
+    // 1. Immediately clear marks when term or any key filter changes
     setMarksMatrix({});
 
     try {
       let loadedData: Record<string, Record<string, string>> = {};
 
-      // 2. Composite Key Lookup Logic from localStorage (`munyaka_assessment_scores` or `munyaka_marks`)
-      const storedScores = localStorage.getItem("munyaka_assessment_scores") || localStorage.getItem("munyaka_marks");
+      // 2. Strict composite key matching - NO FALLBACKS to other terms
+      const storedScores = localStorage.getItem("munyaka_assessment_scores");
       if (storedScores) {
         const parsedMaster = JSON.parse(storedScores);
-        if (parsedMaster && typeof parsedMaster === "object") {
-          if (parsedMaster[targetKey] && typeof parsedMaster[targetKey] === "object") {
-            loadedData = parsedMaster[targetKey];
-          } else if (parsedMaster[fallbackStorageKey] && typeof parsedMaster[fallbackStorageKey] === "object") {
-            loadedData = parsedMaster[fallbackStorageKey];
-          } else if (parsedMaster[examType] && typeof parsedMaster[examType] === "object") {
-            loadedData = parsedMaster[examType];
-          }
+        if (parsedMaster && typeof parsedMaster === "object" && parsedMaster[targetKey]) {
+          loadedData = parsedMaster[targetKey];
         }
       }
 
-      // Also check direct key in localStorage
-      const directStored = localStorage.getItem(targetKey) || localStorage.getItem(fallbackStorageKey);
-      if (directStored && Object.keys(loadedData).length === 0) {
+      // Also check direct key storage
+      const directStored = localStorage.getItem(targetKey);
+      if (directStored) {
         const parsedDirect = JSON.parse(directStored);
         if (parsedDirect && typeof parsedDirect === "object") {
-          loadedData = parsedDirect;
+          loadedData = { ...loadedData, ...parsedDirect };
         }
       }
 
-      // 3. Blank Input Default: For every learner in active roster, load score if exists, else explicitly empty string ""
-      // Only populate scores for students that have exact matches for this targetKey
-      setMarksMatrix(loadedData || {});
+      // 3. Ensure ALL filtered students have entries (blank if no saved marks)
+      const completeData: Record<string, Record<string, string>> = {};
+      filteredStudents.forEach(student => {
+        const studentId = student.id || student.admissionNumber;
+        // Start with blank entries for all subjects
+        const blankEntries: Record<string, string> = {};
+        allTierSubjects.forEach(subj => {
+          blankEntries[subj] = "";
+        });
+        // Merge with any saved marks
+        completeData[studentId] = { ...blankEntries, ...(loadedData[studentId] || {}) };
+      });
+
+      setMarksMatrix(completeData);
     } catch (e) {
       console.error("Error loading marks for targetKey:", e);
       setMarksMatrix({});
     }
-  }, [targetKey, fallbackStorageKey, examType, grade, subject, term, academicYear, stream]);
+  }, [targetKey, filteredStudents, allTierSubjects]);
 
   // Filtered students roster with robust normalization and multi-field fallback
   const filteredStudents = useMemo(() => {
@@ -401,10 +402,9 @@ const Assessments = () => {
         }
       };
 
-      // 3. History Preservation & Merging: Save into specific targetKey AND merge into `munyaka_assessment_scores` and `munyaka_marks`
+      // 3. History Preservation & Merging: Save into specific targetKey
       try {
         localStorage.setItem(targetKey, JSON.stringify(updated));
-        localStorage.setItem(fallbackStorageKey, JSON.stringify(updated));
 
         const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
         let masterObj: Record<string, any> = {};
@@ -416,10 +416,7 @@ const Assessments = () => {
           }
         }
         masterObj[targetKey] = updated;
-        masterObj[fallbackStorageKey] = updated;
-        masterObj[examType] = { ...(masterObj[examType] || {}), ...updated };
         localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
-        localStorage.setItem("munyaka_marks", JSON.stringify(masterObj));
       } catch (e) {
         console.error("Autosave/History preservation error:", e);
       }
@@ -429,7 +426,7 @@ const Assessments = () => {
 
     setShowSavedBadge(true);
     setTimeout(() => setShowSavedBadge(false), 2000);
-  }, [targetKey, fallbackStorageKey, examType]);
+  }, [targetKey]);
 
   // Calculations for Totals, Subject Totals, Subject MSS, Class Average
   const studentTotals = useMemo(() => {
@@ -534,8 +531,6 @@ const Assessments = () => {
     await new Promise(r => setTimeout(r, 600));
     try {
       localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
-      localStorage.setItem(fallbackStorageKey, JSON.stringify(marksMatrix));
-      localStorage.setItem("marks_entry_data", JSON.stringify(marksMatrix));
 
       const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
       let masterObj: Record<string, any> = {};
