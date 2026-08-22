@@ -137,33 +137,42 @@ const Attendance = () => {
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">Class Attendance</h1>
           <p className="text-muted-foreground">Mark morning and afternoon roll calls with real-time timestamps.</p>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <Select value={selectedClass} onValueChange={setSelectedClass}>
-            <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
-              <SelectValue placeholder="Select Class" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              {CLASS_OPTIONS.map((cls) => (
-                <SelectItem key={cls.value} value={cls.value} className="rounded-xl">
-                  {cls.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+        <div className="flex flex-col md:flex-row md:items-end gap-3">
+          {/* Grade Dropdown with Label */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">GRADE</span>
+            <Select value={selectedClass} onValueChange={setSelectedClass}>
+              <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
+                <SelectValue placeholder="Select Class" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {CLASS_OPTIONS.map((cls) => (
+                  <SelectItem key={cls.value} value={cls.value} className="rounded-xl">
+                    {cls.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
-          <Select value={selectedStream} onValueChange={setSelectedStream}>
-            <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
-              <SelectValue placeholder="Select Stream" />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              {availableStreams.map((stream: string) => (
-                <SelectItem key={stream} value={stream} className="rounded-xl">
-                  {stream}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          {/* Stream Dropdown with Label */}
+          <div className="flex flex-col gap-1">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">STREAM</span>
+            <Select value={selectedStream} onValueChange={setSelectedStream}>
+              <SelectTrigger className="w-[180px] rounded-xl bg-white border-slate-200 font-bold text-slate-700">
+                <SelectValue placeholder="Select Stream" />
+              </SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                {availableStreams.map((stream: string) => (
+                  <SelectItem key={stream} value={stream} className="rounded-xl">
+                    {stream}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
 
+          {/* Date Picker */}
           <div className="relative">
             <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <input
