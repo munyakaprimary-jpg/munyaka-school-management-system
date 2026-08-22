@@ -86,33 +86,38 @@ export default function Students() {
     return DEFAULT_LEARNERS;
   });
 
-  // Dynamic Active Term Reader from LocalStorage
+  // Dynamic Active Term Reader from LocalStorage (System Config, Academic Setup, School Settings)
   const getActiveTermString = () => {
     try {
-      const keys = ['current_academic_term', 'school_term', 'academic_session', 'term_info'];
-      for (const key of keys) {
+      const configKeys = ['system_config', 'academic_setup', 'school_settings', 'current_academic_term', 'school_term', 'academic_session'];
+      for (const key of configKeys) {
         const val = localStorage.getItem(key);
         if (val) {
-          // If it's stored as JSON
           try {
             const parsed = JSON.parse(val);
-            if (typeof parsed === 'string') return parsed;
             if (parsed && typeof parsed === 'object') {
-              const t = parsed.term || parsed.name || parsed.activeTerm;
-              const y = parsed.year || parsed.academicYear;
-              if (t && y) return `${t.toUpperCase()}, ${y}`;
-              if (t) return t.toUpperCase();
+              const termVal = parsed.currentTerm || parsed.term || parsed.activeTerm || parsed.name;
+              const yearVal = parsed.currentYear || parsed.year || parsed.academicYear;
+              if (termVal && yearVal) {
+                return `${String(termVal).toUpperCase()}, ${yearVal}`;
+              }
+              if (termVal) {
+                return String(termVal).toUpperCase();
+              }
+            } else if (typeof parsed === 'string' && parsed.trim().length > 0) {
+              return parsed.trim().toUpperCase();
             }
           } catch {
-            // It's a raw string
-            if (val.trim().length > 0) return val.trim().toUpperCase();
+            if (val.trim().length > 0) {
+              return val.trim().toUpperCase();
+            }
           }
         }
       }
     } catch (e) {
-      console.error('Error reading academic term from localStorage', e);
+      console.error('Error reading academic config from localStorage', e);
     }
-    return 'TERM 1, 2025';
+    return 'TERM 1, 2026';
   };
 
   const [activeTermText, setActiveTermText] = useState(getActiveTermString);
