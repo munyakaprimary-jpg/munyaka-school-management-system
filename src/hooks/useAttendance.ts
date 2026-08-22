@@ -13,32 +13,79 @@ interface StudentAttendance {
   afternoon?: SessionAttendance;
 }
 
-const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
+const STORAGE_KEY = 'munyaka_attendance_records';
+const STUDENTS_KEY = 'munyaka_students';
+const SELECTED_CLASS_KEY = 'munyaka_selected_class';
+const SELECTED_STREAM_KEY = 'munyaka_selected_stream';
+const SELECTED_DATE_KEY = 'munyaka_selected_date';
 
-export const useAttendance = (selectedGradeId: string) => {
-  // Source of truth: Students filtered by grade
+export const useAttendance = (selectedGradeId?: string) => {
+  // Initialize filters from localStorage
+  const [selectedClass, setSelectedClass] = useState(() => 
+    localStorage.getItem(SELECTED_CLASS_KEY) || 'PP2'
+  );
+  const [selectedStream, setSelectedStream] = useState(() => 
+    localStorage.getItem(SELECTED_STREAM_KEY) || 'all'
+  );
+  const [selectedDate, setSelectedDate] = useState(() => 
+    localStorage.getItem(SELECTED_DATE_KEY) || format(new Date(), "yyyy-MM-dd")
+  );
+
+  // Persist filter changes
+  useEffect(() => {
+    localStorage.setItem(SELECTED_CLASS_KEY, selectedClass);
+  }, [selectedClass]);
+
+  useEffect(() => {
+    localStorage.setItem(SELECTED_STREAM_KEY, selectedStream);
+  }, [selectedStream]);
+
+  useEffect(() => {
+    localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
+  }, [selectedDate]);
+
+  // Source of truth: Students filtered by class and stream
   const learnersInGrade = useMemo(() => {
-    const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
-    if (!gradeObj) return [];
+    let students = [];
     
-    const gradeNum = gradeObj.name.replace(/[^0-9]/g, '');
+    // Try to load from munyaka_students first
+    const storedStudents = localStorage.getItem(STUDENTS_KEY);
+    if (storedStudents) {
+      try {
+        students = JSON.parse(storedStudents);
+      } catch (e) {
+        console.error("Error parsing students:", e);
+        students = STUDENTS;
+      }
+    } else {
+      students = STUDENTS;
+    }
+
+    // Filter by class (grade)
+    const classStudents = students.filter(s => {
+      const studentGrade = s.grade || s.class || '';
+      return studentGrade === selectedClass || `Grade ${studentGrade}` === selectedClass;
+    });
+
+    // Filter by stream
+    if (selectedStream !== 'all') {
+      return classStudents.filter(s => s.stream === selectedStream);
+    }
     
-    return STUDENTS.filter(s => 
-      s.grade === gradeNum || s.grade === gradeObj.name
-    ).map(s => ({
-      id: parseInt(s.id),
+    return classStudents.map(s => ({
+      id: parseInt(s.id) || Math.random(),
       name: s.name,
       assessment: s.assessment
     }));
-  }, [selectedGradeId]);
+  }, [selectedClass, selectedStream]);
 
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Storage key is specific to the grade to keep records separate
-  const currentStorageKey = `${STORAGE_KEY_PREFIX}${selectedGradeId}`;
+  // Storage key is specific to the class, stream, and date
+  const currentStorageKey = `${STORAGE_KEY}_${selectedClass}_${selectedStream}_${selectedDate}`;
 
-  // Load/Initialize attendance for the current grade
+  // Load/Initialize attendance for the current filters
   useEffect(() => {
     setIsInitialized(false);
     const saved = localStorage.getItem(currentStorageKey);
@@ -54,7 +101,7 @@ export const useAttendance = (selectedGradeId: string) => {
       initializeDefaults();
     }
     setIsInitialized(true);
-  }, [selectedGradeId, learnersInGrade]);
+  }, [currentStorageKey, learnersInGrade]);
 
   const initializeDefaults = () => {
     const defaultRecord: Record<number, StudentAttendance> = {};
@@ -88,14 +135,12 @@ export const useAttendance = (selectedGradeId: string) => {
   };
 
   const exportToCSV = () => {
-    const gradeObj = GRADES_DATA.find(g => g.id === selectedGradeId);
-    const gradeLabel = gradeObj ? gradeObj.name : "Selected Grade";
-    const currentDateStr = format(new Date(), "PP");
+    const currentDateStr = format(new Date(selectedDate), "PP");
     
     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
     const row2 = "P.O. BOX 5239-30100, ELDORET";
     const row3 = "MOTTO: KNOWLEDGE POWER";
-    const row4 = `CLASS ATTENDANCE REGISTER - ${gradeLabel.toUpperCase()} - DATE: ${currentDateStr}`;
+    const row4 = `CLASS ATTENDANCE REGISTER - ${selectedClass.toUpperCase()} - ${selectedStream !== 'all' ? selectedStream.toUpperCase() : 'ALL STREAMS'} - DATE: ${currentDateStr}`;
 
     const headers = ["Learner Name", "Assessment ID", "Morning Session", "Morning Time", "Afternoon Session", "Afternoon Time"];
 
@@ -120,8 +165,7 @@ export const useAttendance = (selectedGradeId: string) => {
 
     const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
-    // Use global download helper
-    downloadCSV(csvContent, `attendance_${gradeLabel.replace(/\s+/g, '_')}_${format(new Date(), "yyyy_MM_dd")}.csv`);
+    downloadCSV(csvContent, `attendance_${selectedClass.replace(/\s+/g, '_')}_${selectedStream}_${selectedDate}.csv`);
   };
 
   return {
@@ -129,5 +173,11 @@ export const useAttendance = (selectedGradeId: string) => {
     markedStudents,
     markAttendance,
     exportToCSV,
+    selectedClass,
+    setSelectedClass,
+    selectedStream,
+    setSelectedStream,
+    selectedDate,
+    setSelectedDate,
   };
 };

@@ -7,17 +7,24 @@ import AttendanceHeader from '@/components/attendance/AttendanceHeader';
 import AttendanceStats from '@/components/attendance/AttendanceStats';
 import AttendanceTable from '@/components/attendance/AttendanceTable';
 import { useAttendance } from '@/hooks/useAttendance';
-import { GRADES_DATA } from '@/lib/mock-data';
 import { downloadCSV } from '@/utils/downloadHelper';
 
 const Attendance = () => {
-  // Default to Grade 4 (g4)
-  const [selectedGradeId, setSelectedGradeId] = useState(GRADES_DATA[1]?.id || GRADES_DATA[0]?.id);
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   
-  // The hook now handles dynamic filtering based on the selectedGradeId
-  const { students, markedStudents, markAttendance, exportToCSV } = useAttendance(selectedGradeId);
+  const { 
+    students, 
+    markedStudents, 
+    markAttendance, 
+    exportToCSV,
+    selectedClass,
+    setSelectedClass,
+    selectedStream,
+    setSelectedStream,
+    selectedDate,
+    setSelectedDate
+  } = useAttendance();
 
   const handleExport = () => {
     setIsExporting(true);
@@ -36,8 +43,12 @@ const Attendance = () => {
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 table-scroll-viewport">
       <AttendanceHeader 
-        selectedGradeId={selectedGradeId}
-        setSelectedGradeId={setSelectedGradeId}
+        selectedClass={selectedClass}
+        setSelectedClass={setSelectedClass}
+        selectedStream={selectedStream}
+        setSelectedStream={setSelectedStream}
+        selectedDate={selectedDate}
+        setSelectedDate={setSelectedDate}
         isExporting={isExporting}
         onExport={handleExport}
         isEditing={isEditing}
@@ -72,7 +83,7 @@ const Attendance = () => {
         </>
       ) : (
         <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-          <p className="text-slate-400 font-bold">No learners registered for the selected grade level.</p>
+          <p className="text-slate-400 font-bold">No learners registered for the selected class and stream.</p>
         </div>
       )}
     </div>
