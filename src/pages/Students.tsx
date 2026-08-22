@@ -9,26 +9,53 @@ export default function Students() {
   // Form toggle states
   const [activeForm, setActiveForm] = useState<'none' | 'single' | 'bulk'>('none');
 
-  // Form Fields State
-  const [uliNo, setUliNo] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [grade, setGrade] = useState('Grade 4');
-  const [stream, setStream] = useState('Yellow');
-  const [bulkText, setBulkText] = useState('');
-
-  // 1. READ FROM LOCALSTORAGE
-  const [students, setStudents] = useState<any[]>(() => {
+  // Load Grades and Classes setting data dynamically from LocalStorage
+  const [gradesList] = useState<any[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
+      const raw = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_classes');
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
     }
   });
 
-  const [gradesList] = useState<any[]>(() => {
+  // Default initial grade selection based on stored grades
+  const initialGradeName = useMemo(() => {
+    if (gradesList.length > 0) {
+      return gradesList[0].name || gradesList[0].label || 'Grade 4';
+    }
+    return 'Grade 4';
+  }, [gradesList]);
+
+  // Form Fields State
+  const [uliNo, setUliNo] = useState('');
+  const [fullName, setFullName] = useState('');
+  const [grade, setGrade] = useState(initialGradeName);
+  const [stream, setStream] = useState('');
+  const [bulkText, setBulkText] = useState('');
+
+  // Dynamically compute available streams for the selected registration grade
+  const formAvailableStreams = useMemo(() => {
+    const selectedObj = gradesList.find((g: any) => (g.name || g.label || g.id) === grade);
+    if (selectedObj && Array.isArray(selectedObj.streams)) {
+      return selectedObj.streams.map((s: any) => (typeof s === 'string' ? s : s.name));
+    }
+    return [];
+  }, [grade, gradesList]);
+
+  // Auto-set default stream when Grade selection changes
+  useEffect(() => {
+    if (formAvailableStreams.length > 0) {
+      setStream(formAvailableStreams[0]);
+    } else {
+      setStream('Yellow');
+    }
+  }, [grade, formAvailableStreams]);
+
+  // 1. READ FROM LOCALSTORAGE
+  const [students, setStudents] = useState<any[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_grades');
+      const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
       return raw ? JSON.parse(raw) : [];
     } catch (e) {
       return [];
@@ -98,8 +125,8 @@ export default function Students() {
     saveStudentsToLocalStorage(updated);
   };
 
-  // Extract Dynamic Streams
-  const availableStreams = useMemo(() => {
+  // Extract Dynamic Streams for Filter Bar
+  const filterAvailableStreams = useMemo(() => {
     if (filterGrade === 'all') {
       const streamsSet = new Set<string>();
       gradesList.forEach((g: any) => {
@@ -109,9 +136,9 @@ export default function Students() {
       });
       return ['all', ...Array.from(streamsSet)];
     }
-    const matchObj = gradesList.find((g: any) => g.name === filterGrade || g.id === filterGrade);
+    const matchObj = gradesList.find((g: any) => (g.name || g.id) === filterGrade);
     if (matchObj && Array.isArray(matchObj.streams)) {
-      return ['all', ...matchObj.streams.map((s: any) => typeof s === 'string' ? s : s.name)];
+      return ['all', ...matchObj.streams.map((s: any) => (typeof s === 'string' ? s : s.name))];
     }
     return ['all'];
   }, [filterGrade, gradesList]);
@@ -196,24 +223,65 @@ export default function Students() {
                 className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
               />
             </div>
+
+            {/* DYNAMIC GRADE SELECT DROPDOWN */}
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">GRADE / CLASS</label>
-              <input
-                type="text"
+              <select
                 value={grade}
                 onChange={(e) => setGrade(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
+              >
+                {gradesList.length > 0 ? (
+                  gradesList.map((g: any) => {
+                    const val = g.name || g.label || g.id;
+                    return (
+                      <option key={val} value={val}>
+                        {val}
+                      </option>
+                    );
+                  })
+                ) : (
+                  <>
+                    <option value="Grade 1">Grade 1</option>
+                    <option value="Grade 2">Grade 2</option>
+                    <option value="Grade 3">Grade 3</option>
+                    <option value="Grade 4">Grade 4</option>
+                    <option value="Grade 5">Grade 5</option>
+                    <option value="Grade 6">Grade 6</option>
+                    <option value="Grade 7">Grade 7</option>
+                    <option value="Grade 8">Grade 8</option>
+                    <option value="Grade 9">Grade 9</option>
+                  </>
+                )}
+              </select>
             </div>
+
+            {/* DYNAMIC STREAM SELECT DROPDOWN */}
             <div>
               <label className="block text-xs font-semibold text-slate-500 mb-1">STREAM</label>
-              <input
-                type="text"
+              <select
                 value={stream}
                 onChange={(e) => setStream(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
+                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
+              >
+                {formAvailableStreams.length > 0 ? (
+                  formAvailableStreams.map((st: string) => (
+                    <option key={st} value={st}>
+                      {st}
+                    </option>
+                  ))
+                ) : (
+                  <>
+                    <option value="Yellow">Yellow</option>
+                    <option value="Red">Red</option>
+                    <option value="Blue">Blue</option>
+                    <option value="Green">Green</option>
+                  </>
+                )}
+              </select>
             </div>
+
             <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-slate-100">
               <button
                 type="button"
@@ -305,7 +373,7 @@ export default function Students() {
           onChange={(e) => setFilterStream(e.target.value)}
           className="bg-white border border-slate-200 rounded-full px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none cursor-pointer min-w-[140px]"
         >
-          {availableStreams.map((s) => (
+          {filterAvailableStreams.map((s) => (
             <option key={s} value={s}>
               {s === 'all' ? 'All Streams' : s}
             </option>
