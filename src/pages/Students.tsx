@@ -610,7 +610,7 @@ const Students = () => {
                   <SelectValue placeholder={!editGrade ? "Select grade first..." : editAvailableStreams.length === 0 ? "No streams available" : "Choose stream..."} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {editAvailableStreams.map(s: any => (
+                  {editAvailableStreams.map(s => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
