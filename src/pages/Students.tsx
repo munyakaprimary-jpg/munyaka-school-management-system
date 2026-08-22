@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -13,505 +13,492 @@ import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { sortGrades } from '@/utils/gradeSort';
 
-// Safe student data loading from localStorage
-const loadStudents = (): any[] => {
+// 1. Declare all state variables at the VERY TOP of the component
+const [filterGrade, setFilterGrade] = useState(() => 'all');
+const [filterStream, setFilterStream] = useState(() => 'all');
+const [searchTerm, setSearchTerm] = useState('');
+const [students, setStudents] = useState(() => {
   try {
     const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
-    if (!raw) return [];
-    const studentList = JSON.parse(raw);
-    if (!Array.isArray(studentList)) return [];
-    return studentList;
-  } catch (err) {
-    console.error("Error loading students:", err);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
     return [];
   }
-};
+});
 
-// Safe student filtering with grade & stream - NO filterFilter
-const getFilteredStudents = () => {
-  try {
-    const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
-    if (!raw) return [];
-    const studentList = JSON.parse(raw);
-    
-    if (!Array.isArray(studentList)) return [];
+// 2. Derive/Filter data AFTER all state variables are fully declared
+const filteredStudents = useMemo(() => {
+  if (!Array.isArray(students)) return [];
+  return students.filter((student: any) => {
+    const matchSearch = !searchTerm || 
+      (student.name && student.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (student.admNo && student.admNo.toString().includes(searchTerm));
+    const matchGrade = !filterGrade || filterGrade === 'all' || student.class === filterGrade || student.grade === filterGrade;
+    const matchStream = !filterStream || filterStream === 'all' || student.stream === filterStream;
+    return matchSearch && matchGrade && matchStream;
+  });
+}, [students, searchTerm, filterGrade, filterStream]);
 
-    return studentList.filter((student: any) => {
-      const matchGrade = !selectedClass || selectedClass === 'all' || student.class === selectedClass || student.grade === selectedClass;
-      const matchStream = !selectedStream || selectedStream === 'all' || student.stream === selectedStream;
-      return matchGrade && matchStream;
-    });
-  } catch (err) {
-    console.error("Error filtering students:", err);
-    return [];
+// Other state declarations
+const [isRegisterOpen, setIsRegisterOpen] = useState(false);
+const [isExporting, setIsExporting] = useState(false);
+const navigate = useNavigate();
+
+// Admin Auth Deletion State
+const [isAuthOpen, setIsAuthOpen] = useState(false);
+const [authPassword, setAuthPassword] = useState("");
+const [authError, setAuthError] = useState("");
+const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
+
+// History and Transfer Modals State
+const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+const [isTransferOpen, setIsTransferOpen] = useState(false);
+const [isEditOpen, setIsEditOpen] = useState(false);
+const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
+
+// Registration Form State
+const [fullName, setFullName] = useState("");
+const [assessmentNo, setAssessmentNo] = useState("");
+const [regGrade, setRegGrade] = useState("");
+const [regStream, setRegStream] = useState("");
+const [guardianName, setGuardianName] = useState("");
+const [phone, setPhone] = useState("");
+const [address, setAddress] = useState("");
+
+// Edit Form State
+const [editId, setEditId] = useState("");
+const [editFullName, setEditFullName] = useState("");
+const [editAssessmentNo, setEditAssessmentNo] = useState("");
+const [editGrade, setEditGrade] = useState("");
+const [editStream, setEditStream] = useState("");
+const [editGuardianName, setEditGuardianName] = useState("");
+const [editPhone, setEditPhone] = useState("");
+
+// Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
+const gradesList = useMemo(() => {
+  const savedGrades = localStorage.getItem('munyaka_grades');
+  let list = [...students].map((s: any) => ({ name: s.grade || s.gradeLevel || 'Grade 1', id: s.id || s.id_no || String(s.id) }));
+  if (savedGrades) {
+    try {
+      list = JSON.parse(savedGrades);
+    } catch (e) {
+      console.error(e);
+    }
   }
+  return sortGrades(list);
+}, [students]);
+
+// Precompute the numeric string from the filterGrade for efficient comparison
+const filterGradeNumber = useMemo(() => {
+  if (filterGrade === "all" || !filterGrade) return null;
+  const match = filterGrade.match(/\d+/);
+  return match ? match[0] : null;
+}, [filterGrade]);
+
+// Dynamically get streams for the selected grade
+const availableStreams = useMemo(() => {
+  if (!regGrade) return [];
+  const grade = gradesList.find((g: any) => g.name.toLowerCase() === `grade ${regGrade.toLowerCase()}` || g.name.toLowerCase() === regGrade.toLowerCase() || g.id === regGrade);
+  return grade ? grade.streams.map((s: any) => s.name) : [];
+}, [regGrade, gradesList]);
+
+// Reset stream when grade changes and no longer matches available streams
+useEffect(() => {
+  if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
+    setRegStream(availableStreams[0]);
+  }
+}, [regGrade, availableStreams, regGrade]);
+
+// Get unique streams for the filter dropdown (case-insensitive deduplication, Title Case display)
+const uniqueStreams = useMemo(() => {
+  const streams = new Set<string>();
+  gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
+    if (s.name) streams.add(s.name.trim().toLowerCase());
+  }));
+  return Array.from(streams)
+    .map(stream => stream.replace(/(^\w|-\w)/g, c => c.toUpperCase()))
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
+}, [gradesList]);
+
+const [filterGrade2, setFilterGrade2] = useState('all'); // duplicate maybe remove
+const [filterStream2, setFilterStream2] = useState('all'); // duplicate maybe remove
+
+// Use safe filtered students
+const finalFilteredStudents = useMemo(() => filteredStudents, [filteredStudents]);
+
+const handleRegisterStudent = () => {
+  if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
+  const newStudent = {
+    id: (students.length + 1).toString(),
+    name: fullName.trim(),
+    assessment: assessmentNo.trim().toUpperCase(),
+    grade: regGrade,
+    stream: regStream,
+    gender: "M",
+    dob: "2014-01-01",
+    guardian: guardianName.trim(),
+    phone: phone.trim(),
+    email: "g@email.com",
+    health: "None",
+    needs: "None",
+    feeBalance: 0,
+    status: "Active" as const,
+    dateOfAdmission: "2020-01-15",
+    coCurricularActivities: ""
+  };
+  setStudents([newStudent, ...students]);
+  setIsRegisterOpen(false);
+  setFullName("");
+  setAssessmentNo("");
+  setRegGrade("");
+  setRegStream("");
+  setGuardianName("");
+  setPhone("");
+  setAddress("");
+  showSuccess(`Student ${newStudent.name} registered!`);
 };
 
-const Students = () => {
-  const [studentsList, setStudentsList] = useState(() => loadStudents());
-  const [isRegisterOpen, setIsRegisterOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
-  const navigate = useNavigate();
+const handleEditStudent = (student: any) => {
+  setEditId(student.id);
+  setEditFullName(student.name);
+  setEditAssessmentNo(student.assessment);
+  setEditGrade(student.grade);
+  setEditStream(student.stream);
+  setEditGuardianName(student.guardian || "");
+  setEditPhone(student.phone || "");
+  setIsEditOpen(true);
+};
 
-  // Admin Auth Deletion State
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  const [studentToDelete, setStudentToDelete] = useState<{ id: string; name: string } | null>(null);
-
-  // History and Transfer Modals State
-  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-  const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
-
-  // Registration Form State
-  const [fullName, setFullName] = useState("");
-  const [assessmentNo, setAssessmentNo] = useState("");
-  const [regGrade, setRegGrade] = useState("");
-  const [regStream, setRegStream] = useState("");
-  const [guardianName, setGuardianName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [address, setAddress] = useState("");
-
-  // Edit Form State
-  const [editId, setEditId] = useState("");
-  const [editFullName, setEditFullName] = useState("");
-  const [editAssessmentNo, setEditAssessmentNo] = useState("");
-  const [editGrade, setEditGrade] = useState("");
-  const [editStream, setEditStream] = useState("");
-  const [editGuardianName, setEditGuardianName] = useState("");
-  const [editPhone, setEditPhone] = useState("");
-
-  // Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
-  const gradesList = useMemo(() => {
-    const savedGrades = localStorage.getItem('munyaka_grades');
-    let list = [...studentsList].map((s: any) => ({ name: s.grade || s.gradeLevel || 'Grade 1', id: s.id || s.id_no || String(s.id) }));
-    if (savedGrades) {
-      try {
-        list = JSON.parse(savedGrades);
-      } catch (e) {
-        console.error(e);
-      }
+const handleUpdateStudent = () => {
+  if (!editFullName.trim() || !editAssessmentNo.trim() || !editGrade || !editStream) return;
+  const updatedList = students.map((s: any) => {
+    if (s.id === editId) {
+      return {
+        ...s,
+        name: editFullName.trim(),
+        assessment: editAssessmentNo.trim().toUpperCase(),
+        grade: editGrade,
+        stream: editStream,
+        guardian: editGuardianName.trim(),
+        phone: editPhone.trim()
+      };
     }
-    return sortGrades(list);
-  }, []);
+    return s;
+  });
+  setStudents(updatedList);
+  setIsEditOpen(false);
+  showSuccess(`Student "${editFullName}" updated successfully!`);
+};
 
-  // Precompute the numeric string from the filterGrade for efficient comparison
-  const filterGradeNumber = useMemo(() => {
-    if (filterGrade === "all" || !filterGrade) return null;
-    const match = filterGrade.match(/\d+/);
-    return match ? match[0] : null;
-  }, [filterGrade]);
+const requestDeleteStudent = (student: { id: string; name: string }) => {
+  setStudentToDelete(student);
+  setAuthPassword("");
+  setAuthError("");
+  setIsAuthOpen(true);
+};
 
-  // Dynamically get streams for the selected grade
-  const availableStreams = useMemo(() => {
-    if (!regGrade) return [];
-    const grade = gradesList.find((g: any) => g.name.toLowerCase() === `grade ${regGrade.toLowerCase()}` || g.name.toLowerCase() === regGrade.toLowerCase() || g.id === regGrade);
-    return grade ? grade.streams.map((s: any) => s.name) : [];
-  }, [regGrade, gradesList]);
+const handleVerifyAuth = async () => {
+  if (!authPassword) {
+    setAuthError("Password is required");
+    return;
+  }
 
-  // Reset stream when grade changes and no longer matches available streams
-  React.useEffect(() => {
-    if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
-      setRegStream(availableStreams[0]);
+  setIsVerifying(true);
+  await new Promise(r => setTimeout(r, 600));
+
+  const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+
+  if (authPassword === currentAdminPass) {
+    if (studentToDelete) {
+      setStudents(prev => prev.filter((s: any) => s.id !== studentToDelete.id));
+      showSuccess(`Student "${studentToDelete.name}" deleted successfully.`);
     }
-  }, [regGrade, availableStreams, regStream]);
+    setIsAuthOpen(false);
+    setStudentToDelete(null);
+  } else {
+    setAuthError("Invalid admin password");
+    showError("Authorization failed");
+  }
+  setIsVerifying(false);
+};
 
-  // Get unique streams for the filter dropdown (case-insensitive deduplication, Title Case display)
-  const uniqueStreams = useMemo(() => {
-    const streams = new Set<string>();
-    gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
-      if (s.name) streams.add(s.name.trim().toLowerCase());
-    }));
-    return Array.from(streams)
-      .map(stream => stream.replace(/(^\w|-\w)/g, c => c.toUpperCase()))
-      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
-  }, [gradesList]);
+const handleViewHistory = (student: any) => {
+  setSelectedStudent(student);
+  setIsHistoryModalOpen(true);
+};
 
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterGrade, setFilterGrade] = useState("all");
-  const [filterStream, setFilterStream] = useState("all");
-
-  const handleRegisterStudent = () => {
-    if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
-    const newStudent = {
-      id: (studentsList.length + 1).toString(),
-      name: fullName.trim(),
-      assessment: assessmentNo.trim().toUpperCase(),
-      grade: regGrade,
-      stream: regStream,
-      gender: "M",
-      dob: "2014-01-01",
-      guardian: guardianName.trim(),
-      phone: phone.trim(),
-      email: "g@email.com",
-      health: "None",
-      needs: "None",
-      feeBalance: 0,
-      status: "Active" as const,
-      dateOfAdmission: "2020-01-15",
-      coCurricularActivities: ""
-    };
-    setStudentsList([newStudent, ...studentsList]);
-    setIsRegisterOpen(false);
-    setFullName("");
-    setAssessmentNo("");
-    setRegGrade("");
-    setRegStream("");
-    setGuardianName("");
-    setPhone("");
-    setAddress("");
-    showSuccess(`Student ${newStudent.name} registered!`);
+const handleTransferStudent = (student: any) => {
+  const studentWithTransferInfo: any = {
+    id: student.id,
+    name: student.name,
+    assessment: student.assessment,
+    grade: student.grade,
+    stream: student.stream,
+    gender: student.gender,
+    dob: student.dob,
+    guardian: student.guardian,
+    phone: student.phone,
+    email: student.email,
+    health: student.health,
+    needs: student.needs,
+    feeBalance: student.feeBalance || 0,
+    status: student.status || 'Active',
+    dateOfAdmission: student.dateOfAdmission || '2020-01-15',
+    coCurricularActivities: student.coCurricularActivities || '',
+    examType: student.examType || 'Regular'
   };
+  setSelectedStudent(studentWithTransferInfo);
+  setIsTransferOpen(true);
+};
 
-  const handleEditStudent = (student: any) => {
-    setEditId(student.id);
-    setEditFullName(student.name);
-    setEditAssessmentNo(student.assessment);
-    setEditGrade(student.grade);
-    setEditStream(student.stream);
-    setEditGuardianName(student.guardian || "");
-    setEditPhone(student.phone || "");
-    setIsEditOpen(true);
-  };
+const handleExportCSV = () => {
+  const filtered = finalFilteredStudents;
+  if (filtered.length === 0) {
+    showSuccess("No learners found for the current filters.");
+    return;
+  }
 
-  const handleUpdateStudent = () => {
-    if (!editFullName.trim() || !editAssessmentNo.trim() || !editGrade || !editStream) return;
-    const updatedList = studentsList.map((s: any) => {
-      if (s.id === editId) {
-        return {
-          ...s,
-          name: editFullName.trim(),
-          assessment: editAssessmentNo.trim().toUpperCase(),
-          grade: editGrade,
-          stream: editStream,
-          guardian: editGuardianName.trim(),
-          phone: editPhone.trim()
-        };
-      }
-      return s;
-    });
-    setStudentsList(updatedList);
-    setIsEditOpen(false);
-    showSuccess(`Student "${editFullName}" updated successfully!`);
-  };
+  setIsExporting(true);
 
-  const requestDeleteStudent = (student: { id: string; name: string }) => {
-    setStudentToDelete(student);
-    setAuthPassword("");
-    setAuthError("");
-    setIsAuthOpen(true);
-  };
+  setTimeout(() => {
+    const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+    const row2 = "P.O. Box 5239-30100,ELDORET";
+    const row3 = "MOTTO: KNOWLEDGE POWER";
 
-  const handleVerifyAuth = async () => {
-    if (!authPassword) {
-      setAuthError("Password is required");
-      return;
-    }
+    const activeGrade = filterGrade !== "all" ? filterGrade : "All Grades";
+    const activeStream = filterStream !== "all" ? filterStream : "All Streams";
+    const activeTerm = "Term 1";
 
-    setIsVerifying(true);
-    await new Promise(r => setTimeout(r, 600));
+    const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+    const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
+    const rows = filtered.map(s => [
+      `"${s.name.replace(/\"/g, '\"\"')}"`,
+      `"${s.assessment.replace(/\"/g, '\"\"')}"`,
+      `\"Grade ${s.grade}\"`,
+      `"${s.stream.replace(/\"/g, '\"\"')}"`,
+      `"${s.guardian.replace(/\"/g, '\"\"')}"`,
+      `"${s.phone.replace(/\"/g, '\"\"')}"`
+    ]);
 
-    if (authPassword === currentAdminPass) {
-      if (studentToDelete) {
-        setStudentsList(prev => prev.filter((s: any) => s.id !== studentToDelete.id));
-        showSuccess(`Student "${studentToDelete.name}" deleted successfully.`);
-      }
-      setIsAuthOpen(false);
-      setStudentToDelete(null);
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
-    }
-    setIsVerifying(false);
-  };
+    const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
-  const handleViewHistory = (student: any) => {
-    setSelectedStudent(student);
-    setIsHistoryModalOpen(true);
-  };
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    const fileName = filterGrade !== "all" || filterStream !== "all"
+      ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
+      : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
 
-  const handleTransferStudent = (student: any) => {
-    const studentWithTransferInfo: any = {
-      id: student.id,
-      name: student.name,
-      assessment: student.assessment,
-      grade: student.grade,
-      stream: student.stream,
-      gender: student.gender,
-      dob: student.dob,
-      guardian: student.guardian,
-      phone: student.phone,
-      email: student.email,
-      health: student.health,
-      needs: student.needs,
-      feeBalance: student.feeBalance || 0,
-      status: student.status || 'Active',
-      dateOfAdmission: student.dateOfAdmission || '2020-01-15',
-      coCurricularActivities: student.coCurricularActivities || '',
-      examType: student.examType || 'Regular'
-    };
-    setSelectedStudent(studentWithTransferInfo);
-    setIsTransferOpen(true);
-  };
+    link.setAttribute("download", fileName);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
 
-  const handleExportCSV = () => {
-    const filtered = getFilteredStudents();
-    if (filtered.length === 0) {
-      showSuccess("No learners found for the current filters.");
-      return;
-    }
+    setIsExporting(false);
+    showSuccess(`Exported ${filtered.length} learners to CSV`);
+  }, 800);
+};
 
-    setIsExporting(true);
+const clearFilters = () => {
+  setSearchTerm("");
+  setFilterGrade("all");
+  setFilterStream("all");
+};
 
-    setTimeout(() => {
-      const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const row2 = "P.O. Box 5239-30100,ELDORET";
-      const row3 = "MOTTO: KNOWLEDGE POWER";
-
-      const activeGrade = filterGrade !== "all" ? filterGrade : "All Grades";
-      const activeStream = filterStream !== "all" ? filterStream : "All Streams";
-      const activeTerm = "Term 1";
-
-      const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
-
-      const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
-      const rows = filtered.map(s => [
-        `"${s.name.replace(/\"/g, '\"\"')}"`,
-        `"${s.assessment.replace(/\"/g, '\"\"')}"`,
-        `\"Grade ${s.grade}\"`,
-        `"${s.stream.replace(/\"/g, '\"\"')}"`,
-        `"${s.guardian.replace(/\"/g, '\"\"')}"`,
-        `"${s.phone.replace(/\"/g, '\"\"')}"`
-      ]);
-
-      const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
-
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      const fileName = filterGrade !== "all" || filterStream !== "all"
-        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
-        : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
-
-      link.setAttribute("download", fileName);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      setIsExporting(false);
-      showSuccess(`Exported ${filtered.length} learners to CSV`);
-    }, 800);
-  };
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setFilterGrade("all");
-    setFilterStream("all");
-  };
-
-  // Use safe filtered students
-  const filteredStudents = useMemo(() => getFilteredStudents(), [selectedClass, selectedStream]);
-
-  return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Student Directory</h1>
-            <p className="text-muted-foreground">Manage learner profiles and class allocations.</p>
-          </div>
-        </div>
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            className="h-11 px-6 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
-            onClick={handleExportCSV}
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Export CSV
-          </Button>
-          <Button className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95" onClick={() => setIsRegisterOpen(true)}>
-            <Plus size={18} /> Add Student
-          </Button>
+// Render
+return (
+  <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
+      <div className="flex items-center gap-3">
+        <BackButton fallback="/" />
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Student Directory</h1>
+          <p className="text-muted-foreground">Manage learner profiles and class allocations.</p>
         </div>
       </div>
+      <div className="flex gap-2">
+        <Button
+          variant="outline"
+          className="h-11 px-6 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
+          onClick={handleExportCSV}
+          disabled={isExporting}
+        >
+          {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+          Export CSV
+        </Button>
+        <Button className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95" onClick={() => setIsRegisterOpen(true)}>
+          <Plus size={18} /> Add Student
+        </Button>
+      </div>
+    </div>
 
-      {/* Filters Card */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input
-              placeholder="Search by name/ID..."
-              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
-            <Select value={filterGrade} onValueChange={setFilterGrade}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Grades" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="all">All Grade Levels</SelectItem>
-                {gradesList.map((g: any) => (
-                  <SelectItem key={g.id} value={g.name}>
-                    {g.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-            <Select value={filterStream} onValueChange={setFilterStream}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Streams" />
-              </SelectTrigger>
-              <SelectContent className="rounded-xl">
-                <SelectItem value="all">All Streams</SelectItem>
-                {uniqueStreams.map(s => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button
-            variant="ghost"
-            className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
-            onClick={clearFilters}
-          >
-            <X size={18} /> Clear Filters
-          </Button>
+    <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="relative md:col-span-2">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+          <Input
+            placeholder="Search by name/ID..."
+            className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
         </div>
-      </Card>
 
-      {/* Learners Table Section */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Learner Master List</CardTitle>
-            <p className="text-sm text-slate-500 font-medium">Tabular view for bulk student management.</p>
-          </div>
-          <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold px-4 py-1.5 rounded-xl">
-            {filteredStudents.length} Active Records
-          </Badge>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="w-full overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-slate-500 bg-slate-50/50 border-b">
-                <tr>
-                  <th className="whitespace-nowrap text-xs p-2">Learner Name</th>
-                  <th className="whitespace-nowrap text-xs p-2">Assessment ID</th>
-                  <th className="whitespace-nowrap text-xs p-2">Class Level</th>
-                  <th className="whitespace-nowrap text-xs p-2">Stream</th>
-                  <th className="whitespace-nowrap text-xs p-2">Guardian Contact</th>
-                  <th className="whitespace-nowrap text-xs p-2 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredStudents.length > 0 ? (
-                  filteredStudents.map((student: any) => (
-                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="text-xs font-medium whitespace-nowrap p-2 min-w-[120px]">
-                        <p className="text-xs font-medium whitespace-nowrap">{student.name}</p>
-                      </td>
-                      <td className="whitespace-nowrap text-xs p-2">
-                        <code className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
-                      </td>
-                      <td className="whitespace-nowrap text-xs p-2">
-                        <span className="font-bold text-slate-700">Grade {student.grade}</span>
-                      </td>
-                      <td className="whitespace-nowrap text-xs p-2">
-                        <Badge variant="outline" className="text-[10px] whitespace-nowrap rounded-lg border-slate-200 text-slate-600 font-bold">
-                          {student.stream}
-                        </Badge>
-                      </td>
-                      <td className="whitespace-nowrap text-xs p-2">
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-900">{student.phone}</span>
-                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{student.guardian}</span>
-                        </div>
-                      </td>
-                      <td className="whitespace-nowrap text-xs p-2 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                            onClick={(e: any) => {
-                              e.stopPropagation();
-                              handleViewHistory(student);
-                            }}
-                            title="View History"
-                          >
-                            <History size={18} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                            onClick={(e: any) => {
-                              e.stopPropagation();
-                              handleEditStudent(student);
-                            }}
-                            title="Edit Student"
-                          >
-                            <Edit3 size={18} />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                            onClick={(e: any) => {
-                              e.stopPropagation();
-                              handleTransferStudent(student);
-                            }}
-                            title="Transfer Student"
-                          >
-                            <UserX size={18} className="text-rose-600" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                            onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
-                            title="Delete Record"
-                          >
-                            <Trash2 size={18} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <Search size={32} className="text-slate-200" />
-                        <p className="text-slate-500 font-bold">No records match the current criteria.</p>
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Grade</Label>
+          <Select value={filterGrade} onValueChange={setFilterGrade}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectValue placeholder="All Grades" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all">All Grade Levels</SelectItem>
+              {gradesList.map((g: any) => (
+                <SelectItem key={g.id} value={g.name}>
+                  {g.name}
+                </SelectItem>
+              ))
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-1.5">
+          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
+          <Select value={filterStream} onValueChange={setFilterStream}>
+            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
+              <SelectValue placeholder="All Streams" />
+            </SelectTrigger>
+            <SelectContent className="rounded-xl">
+              <SelectItem value="all">All Streams</SelectItem>
+              {uniqueStreams.map(s => (
+                <SelectItem key={s} value={s}>{s}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <Button
+          variant="ghost"
+          className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
+          onClick={clearFilters}
+        >
+          <X size={18} /> Clear Filters
+        </Button>
+      </div>
+    </Card>
+
+    <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+      <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
+        <div>
+          <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Learner Master List</CardTitle>
+          <p className="text-sm text-slate-500 font-medium">Tabular view for bulk student management.</p>
+        </div>
+        <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold px-4 py-1.5 rounded-xl">
+          {finalFilteredStudents.length} Active Records
+        </Badge>
+      </CardHeader>
+      <CardContent className="p-0">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-sm text-left">
+            <thead className="text-slate-500 bg-slate-50/50 border-b">
+              <tr>
+                <th className="whitespace-nowrap text-xs p-2">Learner Name</th>
+                <th className="whitespace-nowrap text-xs p-2">Assessment ID</th>
+                <th className="whitespace-nowrap text-xs p-2">Class Level</th>
+                <th className="whitespace-nowrap text-xs p-2">Stream</th>
+                <th className="whitespace-nowrap text-xs p-2">Guardian Contact</th>
+                <th className="whitespace-nowrap text-xs p-2 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-50">
+              {finalFilteredStudents.length > 0 ? (
+                finalFilteredStudents.map((student: any) => (
+                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="text-xs font-medium whitespace-nowrap p-2 min-w-[120px]">
+                      <p className="text-xs font-medium whitespace-nowrap">{student.name}</p>
+                    </td>
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <code className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
+                    </td>
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <span className="font-bold text-slate-700">Grade {student.grade}</span>
+                    </td>
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <Badge variant="outline" className="text-[10px] whitespace-nowrap rounded-lg border-slate-200 text-slate-600 font-bold">
+                        {student.stream}
+                      </Badge>
+                    </td>
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <div className="flex flex-col">
+                        <span className="font-bold text-slate-900">{student.phone}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{student.guardian}</span>
+                      </div>
+                    </td>
+                    <td className="whitespace-nowrap text-xs p-2 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            handleViewHistory(student);
+                          }}
+                          title="View History"
+                        >
+                          <History size={18} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            handleEditStudent(student);
+                          }}
+                          title="Edit Student"
+                        >
+                          <Edit3 size={18} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={(e: any) => {
+                            e.stopPropagation();
+                            handleTransferStudent(student);
+                          }}
+                          title="Transfer Student"
+                        >
+                          <UserX size={18} className="text-rose-600" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                          onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
+                          title="Delete Record"
+                        >
+                          <Trash2 size={18} />
+                        </Button>
                       </div>
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={6} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <Search size={32} className="text-slate-200" />
+                      <p className="text-slate-500 font-bold">No records match the current criteria.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </Card>
 
       {/* Register New Student Modal - Dynamically linked to Grades & Streams */}
