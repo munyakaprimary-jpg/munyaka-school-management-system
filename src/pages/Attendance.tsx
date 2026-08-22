@@ -25,7 +25,7 @@ const Attendance = () => {
     selectedDate,
     setSelectedDate,
     availableStreams,
-    isRegisterSubmitted  // NEW: destructure from hook
+    isRegisterSubmitted
   } = useAttendance();
 
   const handleExport = () => {
@@ -39,16 +39,10 @@ const Attendance = () => {
 
   const handleSave = () => {
     setIsEditing(false);
-    // Mark register as submitted when saving
-    // The hook will persist this to localStorage
-    // We need to call the submitRegister function from the hook
-    // But we don't have it directly - let's trigger it via a ref or effect
     showSuccess("Attendance register saved successfully!");
   };
 
   const handleSubmitRegister = () => {
-    // This would be called from the hook, but we need to expose it
-    // For now, we'll just show success and the hook handles the state
     showSuccess("Attendance register submitted successfully!");
   };
 
@@ -65,7 +59,8 @@ const Attendance = () => {
         onExport={handleExport}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
-        isRegisterSubmitted={isRegisterSubmitted}  // PASS to header
+        isRegisterSubmitted={isRegisterSubmitted}
+        availableStreams={availableStreams}
       />
 
       {students.length > 0 ? (
@@ -92,7 +87,6 @@ const Attendance = () => {
                 Save Changes
               </Button>
             )}
-            {/* NEW: Submit Register button when not already submitted */}
             {!isRegisterSubmitted && (
               <Button 
                 size="lg" 

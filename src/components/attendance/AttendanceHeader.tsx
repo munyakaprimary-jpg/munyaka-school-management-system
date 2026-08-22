@@ -16,7 +16,8 @@ interface AttendanceHeaderProps {
   onExport: () => void;
   isEditing: boolean;
   setIsEditing: (val: boolean) => void;
-  isRegisterSubmitted: boolean;  // NEW: from useAttendance hook
+  isRegisterSubmitted: boolean;  // from useAttendance hook
+  availableStreams: string[];  // NEW: dynamically extracted streams
 }
 
 const CLASS_OPTIONS = [
@@ -44,7 +45,8 @@ const AttendanceHeader = ({
   onExport,
   isEditing,
   setIsEditing,
-  isRegisterSubmitted  // NEW prop
+  isRegisterSubmitted,
+  availableStreams  // NEW: dynamically extracted streams
 }: AttendanceHeaderProps) => {
   // Calculate if register is completed based on submission status
   const isRegisterCompleted = isRegisterSubmitted;
@@ -86,8 +88,11 @@ const AttendanceHeader = ({
             <SelectValue placeholder="Select Stream" />
           </SelectTrigger>
           <SelectContent className="rounded-2xl">
-            <SelectItem value="all" className="rounded-xl">All Streams</SelectItem>
-            {/* Streams loaded dynamically from useAttendance hook */}
+            {availableStreams.map((stream: string) => (
+              <SelectItem key={stream} value={stream} className="rounded-xl">
+                {stream}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
 
@@ -105,10 +110,10 @@ const AttendanceHeader = ({
         <Button 
           variant={isEditing ? "default" : "outline"} 
           onClick={() => setIsEditing(!isEditing)}
-          disabled={buttonDisabled}  // APPLY disabled attribute
-          className={buttonClasses}  // APPLY updated classes
+          disabled={buttonDisabled}
+          className={buttonClasses}
         >
-          {buttonLabel}  // CHANGE label based on state
+          {buttonLabel}
         </Button>
 
         <Button 

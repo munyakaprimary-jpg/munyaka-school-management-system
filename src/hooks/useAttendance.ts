@@ -110,42 +110,45 @@ export const useAttendance = (selectedGradeId?: string) => {
     localStorage.setItem(SUBMISSION_STATUS_KEY, JSON.stringify(submissionData));
   }, [isRegisterSubmitted, selectedClass, selectedStream, selectedDate]);
 
-  // Get available streams for the selected class - MULTI-SOURCE EXTRACTION
-  const availableStreams = useMemo(() => {
-    const dynamicStreams = new Set<string>();
-
-    // Source A: Try reading from munyaka_grades
+  // --- EXACT getAvailableStreams IMPLEMENTATION ---
+  const getAvailableStreams = (): string[] => {
     try {
       const rawGrades = localStorage.getItem('munyaka_grades');
-      if (rawGrades) {
-        const grades = JSON.parse(rawGrades);
-        const activeGrade = grades.find((g: any) => g.name === selectedClass || g.id === selectedClass);
-        if (activeGrade && Array.isArray(activeGrade.streams)) {
-          activeGrade.streams.forEach((s: any) => dynamicStreams.add(typeof s === 'string' ? s : s.name));
+      if (!rawGrades) return ['All Streams'];
+
+      const grades = JSON.parse(rawGrades);
+      // Find the currently selected class object in munyaka_grades
+      const currentGradeObj = grades.find(
+        (g: any) => g.name === selectedClass || g.id === selectedClass || g.code === selectedClass
+      );
+
+      if (currentGradeObj && Array.isArray(currentGradeObj.streams) && currentGradeObj.streams.length > 0) {
+        const extractedStreams = currentGradeObj.streams.map((s: any) =>
+          typeof s === 'string' ? s : s.name || s.label || s.streamName
+        );
+        return ['All Streams', ...extractedStreams];
+      }
+
+      // Fallback: If no class-specific match, flatten streams across ALL grades in munyaka_grades
+      const allUniqueStreams = new Set<string>();
+      grades.forEach((g: any) => {
+        if (Array.isArray(g.streams)) {
+          g.streams.forEach((s: any) => {
+            const streamName = typeof s === 'string' ? s : s.name || s.label;
+            if (streamName) allUniqueStreams.add(streamName);
+          });
         }
-      }
-    } catch (e) { console.error(e); }
+      });
 
-    // Source B: Try extracting unique streams directly from enrolled students
-    try {
-      const rawStudents = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
-      if (rawStudents) {
-        const students = JSON.parse(rawStudents);
-        students.forEach((st: any) => {
-          if (st.stream && (st.class === selectedClass || st.grade === selectedClass)) {
-            dynamicStreams.add(st.stream);
-          }
-        });
-      }
-    } catch (e) { console.error(e); }
-
-    // Source C: Fallback to standard streams if no streams exist in localStorage yet
-    if (dynamicStreams.size === 0) {
-      return ['All Streams', 'Stream A', 'Stream B', 'Stream C', 'East', 'West'];
+      return allUniqueStreams.size > 0 ? ['All Streams', ...Array.from(allUniqueStreams)] : ['All Streams'];
+    } catch (err) {
+      console.error('Error loading streams from munyaka_grades:', err);
+      return ['All Streams'];
     }
+  };
 
-    return ['All Streams', ...Array.from(dynamicStreams)];
-  }, [selectedClass]);
+  // Use the exact getAvailableStreams function
+  const availableStreams = getAvailableStreams();
 
   // Reset stream to "all" if previously selected stream doesn't exist for new class
   useEffect(() => {
