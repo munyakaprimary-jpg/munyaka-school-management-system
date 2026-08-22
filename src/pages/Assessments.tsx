@@ -248,19 +248,18 @@ const Assessments = () => {
 
   // Reset scores matrix when term or examType changes (strict isolation)
   useEffect(() => {
-    // Clear marks matrix to prevent Term 1 data leaking into Term 2 view
     setMarksMatrix({});
   }, [academicYear, term, examType, grade]);
 
   // Load scores from localStorage composite key, ensure every filtered student has an entry
   useEffect(() => {
-    const storedScores = assessmentScoresRaw[compositeKey] || {};
+    const scores = assessmentScoresRaw[compositeKey] || {};
     const complete: Record<string, Record<string, string>> = {};
     filteredStudents.forEach(student => {
       const sid = student.id || student.admissionNumber || String(student);
       const entry: Record<string, string> = {};
       allTierSubjects.forEach(subj => {
-        entry[subj] = storedScores[sid] && storedScores[sid][subj] !== undefined ? String(storedScores[sid][subj]) : "";
+        entry[subj] = scores[sid] && scores[sid][subj] !== undefined ? String(scores[sid][subj]) : "";
       });
       complete[sid] = entry;
     });
