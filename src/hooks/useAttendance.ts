@@ -20,6 +20,9 @@ const SELECTED_STREAM_KEY = 'munyaka_selected_stream';
 const SELECTED_DATE_KEY = 'munyaka_selected_date';
 const GRADES_KEY = 'munyaka_grades';
 
+// New key for global submission tracking
+const SUBMISSION_STATUS_KEY = 'munyaka_attendance_submission_status';
+
 export const useAttendance = (selectedGradeId?: string) => {
   // Initialize filters from localStorage
   const [selectedClass, setSelectedClass] = useState(() => 
@@ -78,6 +81,34 @@ export const useAttendance = (selectedGradeId?: string) => {
   useEffect(() => {
     localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
   }, [selectedDate]);
+
+  // --- NEW: Check if attendance has been submitted globally ---
+  const [isRegisterSubmitted, setIsRegisterSubmitted] = useState(false);
+  
+  useEffect(() => {
+    // Check global submission status
+    const stored = localStorage.getItem(SUBMISSION_STATUS_KEY);
+    if (stored) {
+      try {
+        const submissionData = JSON.parse(stored);
+        // Check if submission exists for current class/stream/date
+        const key = `${selectedClass}_${selectedStream}_${selectedDate}`;
+        if (submissionData[key]) {
+          setIsRegisterSubmitted(true);
+        }
+      } catch (e) {
+        console.error("Error parsing submission status:", e);
+      }
+    }
+    setIsRegisterSubmitted(false); // Default if no data
+  }, [selectedClass, selectedStream, selectedDate]);
+
+  // Persist submission status when it changes
+  useEffect(() => {
+    const submissionData = {};
+    submissionData[`${selectedClass}_${selectedStream}_${selectedDate}`] = isRegisterSubmitted;
+    localStorage.setItem(SUBMISSION_STATUS_KEY, JSON.stringify(submissionData));
+  }, [isRegisterSubmitted, selectedClass, selectedStream, selectedDate]);
 
   // Get available streams for the selected class
   const availableStreams = useMemo(() => {
@@ -212,6 +243,11 @@ export const useAttendance = (selectedGradeId?: string) => {
     }));
   };
 
+  // NEW: Function to mark register as submitted
+  const submitRegister = () => {
+    setIsRegisterSubmitted(true);
+  };
+
   const exportToCSV = () => {
     const currentDateStr = format(new Date(selectedDate), "PP");
     
@@ -250,6 +286,8 @@ export const useAttendance = (selectedGradeId?: string) => {
     students: learnersInGrade,
     markedStudents,
     markAttendance,
+    submitRegister,
+    isRegisterSubmitted,
     exportToCSV,
     selectedClass,
     setSelectedClass,

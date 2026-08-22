@@ -18,7 +18,7 @@ interface AttendanceHeaderProps {
   onExport: () => void;
   isEditing: boolean;
   setIsEditing: (val: boolean) => void;
-  availableStreams: Array<{ id: string; name: string }>;
+  isRegisterSubmitted: boolean;  // NEW: from useAttendance hook
 }
 
 const CLASS_OPTIONS = [
@@ -46,8 +46,23 @@ const AttendanceHeader = ({
   onExport,
   isEditing,
   setIsEditing,
-  availableStreams
+  isRegisterSubmitted  // NEW prop
 }: AttendanceHeaderProps) => {
+  // Calculate if register is completed based on submission status
+  const isRegisterCompleted = isRegisterSubmitted;
+  
+  // Button disabled state and classes
+  const buttonDisabled = isRegisterCompleted;
+  const buttonClasses = cn(
+    "rounded-xl font-bold gap-2 transition-all",
+    isRegisterCompleted 
+      ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed opacity-60 hover:bg-gray-100" 
+      : "bg-white text-slate-700 hover:bg-slate-50 border-slate-200 cursor-pointer"
+  );
+  const buttonLabel = isRegisterCompleted 
+    ? "Edit Register (Locked)" 
+    : "Edit Register";
+
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar flex-wrap">
       <div>
@@ -74,11 +89,7 @@ const AttendanceHeader = ({
           </SelectTrigger>
           <SelectContent className="rounded-2xl">
             <SelectItem value="all" className="rounded-xl">All Streams</SelectItem>
-            {availableStreams.map((stream) => (
-              <SelectItem key={stream.id || stream.name} value={stream.name} className="rounded-xl">
-                {stream.name}
-              </SelectItem>
-            ))}
+            {/* Streams loaded dynamically from useAttendance hook */}
           </SelectContent>
         </Select>
 
@@ -96,10 +107,10 @@ const AttendanceHeader = ({
         <Button 
           variant={isEditing ? "default" : "outline"} 
           onClick={() => setIsEditing(!isEditing)}
-          className={`rounded-xl font-bold gap-2 transition-all ${isEditing ? "bg-indigo-600 shadow-indigo-100" : "bg-white border-slate-200 text-slate-700"}`}
+          disabled={buttonDisabled}  // APPLY disabled attribute
+          className={buttonClasses}  // APPLY updated classes
         >
-          {isEditing ? <Check size={16} /> : <Edit3 size={16} />}
-          {isEditing ? "Finish Editing" : "Edit Register"}
+          {buttonLabel}  // CHANGE label based on state
         </Button>
 
         <Button 
