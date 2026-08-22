@@ -9,37 +9,46 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
 import { Search, Plus, UserPlus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, History, UserX, Edit3 } from 'lucide-react';
-import { STUDENTS as initialStudents, GRADES_DATA } from '@/lib/mock-data';
-import { sortGrades } from '@/utils/gradeSort';
 import { showSuccess, showError } from '@/utils/toast';
-import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
-import TransferWorkflow from '@/components/transfer/TransferWorkflow';
-import { StudentTransferInfo } from '@/types/transfer';
-import { Student } from '@/types/student';
+import { cn } from "@/lib/utils";
+import { sortGrades } from '@/utils/gradeSort';
 
-// Utility to normalize stream names to Title Case
-const toTitleCase = (str: string) => str.toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
+// Safe student data loading from localStorage
+const loadStudents = (): any[] => {
+  try {
+    const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
+    if (!raw) return [];
+    const studentList = JSON.parse(raw);
+    if (!Array.isArray(studentList)) return [];
+    return studentList;
+  } catch (err) {
+    console.error("Error loading students:", err);
+    return [];
+  }
+};
+
+// Safe student filtering with grade & stream - NO filterFilter
+const getFilteredStudents = () => {
+  try {
+    const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
+    if (!raw) return [];
+    const studentList = JSON.parse(raw);
+    
+    if (!Array.isArray(studentList)) return [];
+
+    return studentList.filter((student: any) => {
+      const matchGrade = !selectedClass || selectedClass === 'all' || student.class === selectedClass || student.grade === selectedClass;
+      const matchStream = !selectedStream || selectedStream === 'all' || student.stream === selectedStream;
+      return matchGrade && matchStream;
+    });
+  } catch (err) {
+    console.error("Error filtering students:", err);
+    return [];
+  }
+};
 
 const Students = () => {
-  const [studentsList, setStudentsList] = useState(() => {
-    const saved = localStorage.getItem('munyaka_students_master');
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch (e) {
-        console.error(e);
-      }
-    }
-    return initialStudents;
-  });
-
-  React.useEffect(() => {
-    localStorage.setItem('munyaka_students_master', JSON.stringify(studentsList));
-  }, [studentsList]);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterGrade, setFilterGrade] = useState("all");
-  const [filterStream, setFilterStream] = useState("all");
-
+  const [studentsList, setStudentsList] = useState(() => loadStudents());
   const [isRegisterOpen, setIsRegisterOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const navigate = useNavigate();
@@ -55,7 +64,7 @@ const Students = () => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [selectedStudent, setSelectedStudent] = useState<any | null>(null);
 
   // Registration Form State
   const [fullName, setFullName] = useState("");
@@ -78,7 +87,7 @@ const Students = () => {
   // Get dynamic grades list from localStorage ('munyaka_grades') or GRADES_DATA
   const gradesList = useMemo(() => {
     const savedGrades = localStorage.getItem('munyaka_grades');
-    let list = GRADES_DATA;
+    let list = [...studentsList].map((s: any) => ({ name: s.grade || s.gradeLevel || 'Grade 1', id: s.id || s.id_no || String(s.id) }));
     if (savedGrades) {
       try {
         list = JSON.parse(savedGrades);
@@ -103,12 +112,6 @@ const Students = () => {
     return grade ? grade.streams.map((s: any) => s.name) : [];
   }, [regGrade, gradesList]);
 
-  const editAvailableStreams = useMemo(() => {
-    if (!editGrade) return [];
-    const grade = gradesList.find((g: any) => g.name === `Grade ${editGrade}` || g.name === editGrade || g.id === editGrade);
-    return grade ? grade.streams.map((s: any) => s.name) : [];
-  }, [editGrade, gradesList]);
-
   // Reset stream when grade changes and no longer matches available streams
   React.useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
@@ -123,20 +126,13 @@ const Students = () => {
       if (s.name) streams.add(s.name.trim().toLowerCase());
     }));
     return Array.from(streams)
-      .map(stream => toTitleCase(stream))
+      .map(stream => stream.replace(/(^\w|-\w)/g, c => c.toUpperCase()))
       .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
   }, [gradesList]);
 
-  const filteredStudents = useMemo(() => {
-    return studentsList.filter(s => {
-      const matchesSearch = s.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = filterGrade === "all" ||
-                           (filterGradeNumber !== null && s.grade === filterGradeNumber);
-      const matchesStream = filterFilter === "all" || s.stream === filterStream;
-      return matchesSearch && matchesGrade && matchesStream;
-    });
-  }, [studentsList, searchTerm, filterGradeNumber, filterFilter]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filterGrade, setFilterGrade] = useState("all");
+  const [filterStream, setFilterStream] = useState("all");
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
@@ -170,7 +166,7 @@ const Students = () => {
     showSuccess(`Student ${newStudent.name} registered!`);
   };
 
-  const handleEditStudent = (student: Student) => {
+  const handleEditStudent = (student: any) => {
     setEditId(student.id);
     setEditFullName(student.name);
     setEditAssessmentNo(student.assessment);
@@ -183,7 +179,7 @@ const Students = () => {
 
   const handleUpdateStudent = () => {
     if (!editFullName.trim() || !editAssessmentNo.trim() || !editGrade || !editStream) return;
-    const updatedList = studentsList.map(s => {
+    const updatedList = studentsList.map((s: any) => {
       if (s.id === editId) {
         return {
           ...s,
@@ -222,7 +218,7 @@ const Students = () => {
 
     if (authPassword === currentAdminPass) {
       if (studentToDelete) {
-        setStudentsList(prev => prev.filter(s => s.id !== studentToDelete.id));
+        setStudentsList(prev => prev.filter((s: any) => s.id !== studentToDelete.id));
         showSuccess(`Student "${studentToDelete.name}" deleted successfully.`);
       }
       setIsAuthOpen(false);
@@ -234,13 +230,13 @@ const Students = () => {
     setIsVerifying(false);
   };
 
-  const handleViewHistory = (student: Student) => {
+  const handleViewHistory = (student: any) => {
     setSelectedStudent(student);
     setIsHistoryModalOpen(true);
   };
 
-  const handleTransferStudent = (student: Student) => {
-    const studentWithTransferInfo: StudentTransferInfo = {
+  const handleTransferStudent = (student: any) => {
+    const studentWithTransferInfo: any = {
       id: student.id,
       name: student.name,
       assessment: student.assessment,
@@ -259,12 +255,13 @@ const Students = () => {
       coCurricularActivities: student.coCurricularActivities || '',
       examType: student.examType || 'Regular'
     };
-    setSelectedStudent(studentWithTransferInfo as unknown as Student);
+    setSelectedStudent(studentWithTransferInfo);
     setIsTransferOpen(true);
   };
 
   const handleExportCSV = () => {
-    if (filteredStudents.length === 0) {
+    const filtered = getFilteredStudents();
+    if (filtered.length === 0) {
       showSuccess("No learners found for the current filters.");
       return;
     }
@@ -277,13 +274,13 @@ const Students = () => {
       const row3 = "MOTTO: KNOWLEDGE POWER";
 
       const activeGrade = filterGrade !== "all" ? filterGrade : "All Grades";
-      const activeStream = filterFilter !== "all" ? filterFilter : "All Streams";
+      const activeStream = filterStream !== "all" ? filterStream : "All Streams";
       const activeTerm = "Term 1";
 
       const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
 
       const headers = ["Name", "Assessment No.", "Grade", "Stream", "Guardian", "Phone"];
-      const rows = filteredStudents.map(s => [
+      const rows = filtered.map(s => [
         `"${s.name.replace(/\"/g, '\"\"')}"`,
         `"${s.assessment.replace(/\"/g, '\"\"')}"`,
         `\"Grade ${s.grade}\"`,
@@ -298,9 +295,8 @@ const Students = () => {
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-
-      const fileName = filterGrade !== "all" || filterFilter !== "all"
-        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterFilter !== "all" ? '_stream_' + filterFilter : ''}.csv`
+      const fileName = filterGrade !== "all" || filterStream !== "all"
+        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
         : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
 
       link.setAttribute("download", fileName);
@@ -309,15 +305,18 @@ const Students = () => {
       document.body.removeChild(link);
 
       setIsExporting(false);
-      showSuccess(`Exported ${filteredStudents.length} learners to CSV`);
+      showSuccess(`Exported ${filtered.length} learners to CSV`);
     }, 800);
   };
 
   const clearFilters = () => {
     setSearchTerm("");
     setFilterGrade("all");
-    setFilterFilter("all");
+    setFilterStream("all");
   };
+
+  // Use safe filtered students
+  const filteredStudents = useMemo(() => getFilteredStudents(), [selectedClass, selectedStream]);
 
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -377,7 +376,7 @@ const Students = () => {
 
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-            <Select value={filterFilter} onValueChange={setFilterFilter}>
+            <Select value={filterStream} onValueChange={setFilterStream}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="All Streams" />
               </SelectTrigger>
@@ -425,80 +424,81 @@ const Students = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredStudents.map((student) => (
-                  <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="text-xs font-medium whitespace-nowrap p-2 min-w-[120px]">
-                      <p className="text-xs font-medium whitespace-nowrap">{student.name}</p>
-                    </td>
-                    <td className="whitespace-nowrap text-xs p-2">
-                      <code className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
-                    </td>
-                    <td className="whitespace-nowrap text-xs p-2">
-                      <span className="font-bold text-slate-700">Grade {student.grade}</span>
-                    </td>
-                    <td className="whitespace-nowrap text-xs p-2">
-                      <Badge variant="outline" className="text-[10px] whitespace-nowrap rounded-lg border-slate-200 text-slate-600 font-bold">
-                        {student.stream}
-                      </Badge>
-                    </td>
-                    <td className="whitespace-nowrap text-xs p-2">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900">{student.phone}</span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{student.guardian}</span>
-                      </div>
-                    </td>
-                    <td className="whitespace-nowrap text-xs p-2 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleViewHistory(student);
-                          }}
-                          title="View History"
-                        >
-                          <History size={18} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleEditStudent(student);
-                          }}
-                          title="Edit Student"
-                        >
-                          <Edit3 size={18} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleTransferStudent(student);
-                          }}
-                          title="Transfer Student"
-                        >
-                          <UserX size={18} className="text-rose-600" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                          onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
-                          title="Delete Record"
-                        >
-                          <Trash2 size={18} />
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredStudents.length === 0 && (
+                {filteredStudents.length > 0 ? (
+                  filteredStudents.map((student: any) => (
+                    <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="text-xs font-medium whitespace-nowrap p-2 min-w-[120px]">
+                        <p className="text-xs font-medium whitespace-nowrap">{student.name}</p>
+                      </td>
+                      <td className="whitespace-nowrap text-xs p-2">
+                        <code className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
+                      </td>
+                      <td className="whitespace-nowrap text-xs p-2">
+                        <span className="font-bold text-slate-700">Grade {student.grade}</span>
+                      </td>
+                      <td className="whitespace-nowrap text-xs p-2">
+                        <Badge variant="outline" className="text-[10px] whitespace-nowrap rounded-lg border-slate-200 text-slate-600 font-bold">
+                          {student.stream}
+                        </Badge>
+                      </td>
+                      <td className="whitespace-nowrap text-xs p-2">
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{student.phone}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{student.guardian}</span>
+                        </div>
+                      </td>
+                      <td className="whitespace-nowrap text-xs p-2 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                            onClick={(e: any) => {
+                              e.stopPropagation();
+                              handleViewHistory(student);
+                            }}
+                            title="View History"
+                          >
+                            <History size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all"
+                            onClick={(e: any) => {
+                              e.stopPropagation();
+                              handleEditStudent(student);
+                            }}
+                            title="Edit Student"
+                          >
+                            <Edit3 size={18} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            onClick={(e: any) => {
+                              e.stopPropagation();
+                              handleTransferStudent(student);
+                            }}
+                            title="Transfer Student"
+                          >
+                            <UserX size={18} className="text-rose-600" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                            onClick={() => requestDeleteStudent({ id: student.id, name: student.name })}
+                            title="Delete Record"
+                          >
+                            <Trash2 size={18} />
+                          </Button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
                   <tr>
                     <td colSpan={6} className="px-8 py-20 text-center">
                       <div className="flex flex-col items-center gap-3">
@@ -520,22 +520,22 @@ const Students = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
-              <Input value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={fullName} onChange={(e: any) => setFullName(e.target.value)} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Assessment No.</Label>
-              <Input value={assessmentNo} onChange={(e) => setAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={assessmentNo} onChange={(e: any) => setAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade Level</Label>
-              <Select value={regGrade} onValueChange={(val) => { setRegGrade(val); setRegStream(''); }}>
+              <Select value={regGrade} onValueChange={(val: any) => { setRegGrade(val); setRegStream(''); }}>
                 <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {gradesList.map(g => (
+                  {gradesList.map((g: any) => (
                     <SelectItem key={g.id} value={g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
@@ -560,16 +560,16 @@ const Students = () => {
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Guardian Name</Label>
-              <Input value={guardianName} onChange={(e) => setGuardianName(e.target.value)} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={guardianName} onChange={(e: any) => setGuardianName(e.target.value)} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Phone</Label>
-              <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={phone} onChange={(e: any) => setPhone(e.target.value)} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
           </div>
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Physical Location</Label>
-            <Input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+            <Input value={address} onChange={(e: any) => setAddress(e.target.value)} placeholder="Eldoret" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
           </div>
         </div>
       </Modal>
@@ -580,22 +580,22 @@ const Students = () => {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Full Name</Label>
-              <Input value={editFullName} onChange={(e) => setEditFullName(e.target.value)} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={editFullName} onChange={(e: any) => setEditFullName(e.target.value)} placeholder="John Doe" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Assessment No.</Label>
-              <Input value={editAssessmentNo} onChange={(e) => setEditAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={editAssessmentNo} onChange={(e: any) => setEditAssessmentNo(e.target.value)} placeholder="A100200" className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Grade Level</Label>
-              <Select value={editGrade} onValueChange={(val) => { setEditGrade(val); setEditStream(''); }}>
+              <Select value={editGrade} onValueChange={(val: any) => { setEditGrade(val); setEditStream(''); }}>
                 <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
                   <SelectValue placeholder="Select grade" />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {gradesList.map(g => (
+                  {gradesList.map((g: any) => (
                     <SelectItem key={g.id} value={g.name}>
                       {g.name} ({g.category})
                     </SelectItem>
@@ -610,7 +610,7 @@ const Students = () => {
                   <SelectValue placeholder={!editGrade ? "Select grade first..." : editAvailableStreams.length === 0 ? "No streams available" : "Choose stream..."} />
                 </SelectTrigger>
                 <SelectContent className="rounded-xl">
-                  {editAvailableStreams.map(s => (
+                  {editAvailableStreams.map(s: any => (
                     <SelectItem key={s} value={s}>{s}</SelectItem>
                   ))}
                 </SelectContent>
@@ -620,11 +620,11 @@ const Students = () => {
           <div className="grid grid-cols-2 gap-4 pt-4 border-t border-slate-50">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Guardian Name</Label>
-              <Input value={editGuardianName} onChange={(e) => setEditGuardianName(e.target.value)} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={editGuardianName} onChange={(e: any) => setEditGuardianName(e.target.value)} placeholder="Name" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Phone</Label>
-              <Input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+              <Input value={editPhone} onChange={(e: any) => setEditPhone(e.target.value)} placeholder="+254" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
             </div>
           </div>
         </div>
@@ -663,7 +663,7 @@ const Students = () => {
               <Input
                 type="password"
                 value={authPassword}
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
+                onChange={(e: any) => { setAuthPassword(e.target.value); setAuthError(""); }}
                 placeholder="••••••••"
                 className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
                 autoFocus
@@ -677,7 +677,7 @@ const Students = () => {
       <AcademicHistoryModal isOpen={isHistoryModalOpen} onClose={() => setIsHistoryModalOpen(false)} studentId={selectedStudent?.id || ''} studentName={selectedStudent?.name || ''} />
 
       {/* Transfer Workflow Modal */}
-      <TransferWorkflow isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} student={selectedStudent as StudentTransferInfo} onTransferComplete={(studentId, certificateNumber) => {
+      <TransferWorkflow isOpen={isTransferOpen} onClose={() => setIsTransferOpen(false)} student={selectedStudent as any} onTransferComplete={(studentId: any, certificateNumber: any) => {
         setIsTransferOpen(false);
         setSelectedStudent(null);
         showSuccess(`Transfer completed! Certificate ${certificateNumber} generated.`);
