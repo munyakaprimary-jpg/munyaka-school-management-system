@@ -86,8 +86,8 @@ export default function Students() {
     return DEFAULT_LEARNERS;
   });
 
-  // Dynamic Active Term Reader from LocalStorage (System Config, Academic Setup, School Settings)
-  const getActiveTermString = () => {
+  // 1. Dynamic Reader Function for Active Term & Year
+  const getActiveTermLabel = () => {
     try {
       const configKeys = ['system_config', 'academic_setup', 'school_settings', 'active_term', 'current_academic_term', 'school_term', 'academic_session'];
       for (const key of configKeys) {
@@ -120,17 +120,19 @@ export default function Students() {
     return 'TERM 2, 2026';
   };
 
-  const [activeTermText, setActiveTermText] = useState(getActiveTermString);
+  const [termBadge, setTermBadge] = useState<string>(getActiveTermLabel);
 
-  // Sync active term on window focus or storage updates
+  // 2. Real-Time LocalStorage Event Listener
   useEffect(() => {
-    const handleStorageChange = () => {
-      setActiveTermText(getActiveTermString());
+    const updateTerm = () => setTermBadge(getActiveTermLabel());
+    updateTerm();
+    window.addEventListener('storage', updateTerm);
+    // Also poll/listen to custom storage events if dispatched within the same app
+    const interval = setInterval(updateTerm, 1000);
+    return () => {
+      window.removeEventListener('storage', updateTerm);
+      clearInterval(interval);
     };
-    window.addEventListener('storage', handleStorageChange);
-    // Also check on mount
-    setActiveTermText(getActiveTermString());
-    return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
 
   // Automatically sync learners back to localStorage on change
@@ -367,7 +369,7 @@ export default function Students() {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learners Management</h1>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
-              {activeTermText}
+              {termBadge}
             </span>
           </div>
           <p className="text-sm font-medium text-slate-500">
