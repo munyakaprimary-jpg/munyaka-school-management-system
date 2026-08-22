@@ -18,6 +18,7 @@ const STUDENTS_KEY = 'munyaka_students';
 const SELECTED_CLASS_KEY = 'munyaka_selected_class';
 const SELECTED_STREAM_KEY = 'munyaka_selected_stream';
 const SELECTED_DATE_KEY = 'munyaka_selected_date';
+const GRADES_KEY = 'munyaka_grades';
 
 export const useAttendance = (selectedGradeId?: string) => {
   // Initialize filters from localStorage
@@ -31,6 +32,40 @@ export const useAttendance = (selectedGradeId?: string) => {
     localStorage.getItem(SELECTED_DATE_KEY) || format(new Date(), "yyyy-MM-dd")
   );
 
+  // Load grades/streams from localStorage
+  const [gradesData, setGradesData] = useState<any[]>(() => {
+    try {
+      const stored = localStorage.getItem(GRADES_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_grades:", e);
+    }
+    return GRADES_DATA;
+  });
+
+  // Listen for storage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const stored = localStorage.getItem(GRADES_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setGradesData(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing munyaka_grades:", e);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Persist filter changes
   useEffect(() => {
     localStorage.setItem(SELECTED_CLASS_KEY, selectedClass);
@@ -43,6 +78,49 @@ export const useAttendance = (selectedGradeId?: string) => {
   useEffect(() => {
     localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
   }, [selectedDate]);
+
+  // Get available streams for the selected class
+  const availableStreams = useMemo(() => {
+    // Find the matching grade object
+    const gradeObj = gradesData.find((g: any) => {
+      const gradeName = (g.name || g.grade || '').toString().trim();
+      const selectedName = selectedClass.trim();
+      return gradeName === selectedName || 
+             gradeName === `Grade ${selectedName}` ||
+             gradeName.replace(/[^0-9]/g, '') === selectedName.replace(/[^0-9]/g, '');
+    });
+
+    // If grade found and has streams, return them
+    if (gradeObj && Array.isArray(gradeObj.streams) && gradeObj.streams.length > 0) {
+      return gradeObj.streams.map((s: any) => ({
+        id: s.id || s.name,
+        name: s.name || s.stream || s
+      }));
+    }
+
+    // Fallback: extract all unique streams across all grades
+    const allStreams = new Set<string>();
+    gradesData.forEach((g: any) => {
+      if (Array.isArray(g.streams)) {
+        g.streams.forEach((s: any) => {
+          const streamName = (s.name || s.stream || s).toString().trim();
+          if (streamName) allStreams.add(streamName);
+        });
+      }
+    });
+
+    return Array.from(allStreams).map(name => ({ id: name, name }));
+  }, [gradesData, selectedClass]);
+
+  // Reset stream to "all" if previously selected stream doesn't exist for new class
+  useEffect(() => {
+    if (selectedStream !== 'all' && availableStreams.length > 0) {
+      const streamExists = availableStreams.some(s => s.name === selectedStream);
+      if (!streamExists) {
+        setSelectedStream('all');
+      }
+    }
+  }, [selectedClass, availableStreams, selectedStream]);
 
   // Source of truth: Students filtered by class and stream
   const learnersInGrade = useMemo(() => {
@@ -179,5 +257,6 @@ export const useAttendance = (selectedGradeId?: string) => {
     setSelectedStream,
     selectedDate,
     setSelectedDate,
+    availableStreams
   };
 };

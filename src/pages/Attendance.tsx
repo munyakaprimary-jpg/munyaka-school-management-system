@@ -23,7 +23,8 @@ const Attendance = () => {
     selectedStream,
     setSelectedStream,
     selectedDate,
-    setSelectedDate
+    setSelectedDate,
+    availableStreams
   } = useAttendance();
 
   const handleExport = () => {
@@ -53,6 +54,7 @@ const Attendance = () => {
         onExport={handleExport}
         isEditing={isEditing}
         setIsEditing={setIsEditing}
+        availableStreams={availableStreams}
       />
 
       {students.length > 0 ? (

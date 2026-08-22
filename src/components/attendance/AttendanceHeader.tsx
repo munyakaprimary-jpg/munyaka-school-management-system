@@ -18,18 +18,8 @@ interface AttendanceHeaderProps {
   onExport: () => void;
   isEditing: boolean;
   setIsEditing: (val: boolean) => void;
+  availableStreams: Array<{ id: string; name: string }>;
 }
-
-const STREAM_OPTIONS = [
-  { value: 'all', label: 'All Streams' },
-  { value: 'Stream A', label: 'Stream A' },
-  { value: 'Stream B', label: 'Stream B' },
-  { value: 'Stream C', label: 'Stream C' },
-  { value: 'East', label: 'East' },
-  { value: 'West', label: 'West' },
-  { value: 'North', label: 'North' },
-  { value: 'South', label: 'South' },
-];
 
 const CLASS_OPTIONS = [
   { value: 'PP1', label: 'PP1' },
@@ -55,7 +45,8 @@ const AttendanceHeader = ({
   isExporting, 
   onExport,
   isEditing,
-  setIsEditing
+  setIsEditing,
+  availableStreams
 }: AttendanceHeaderProps) => {
   return (
     <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar flex-wrap">
@@ -82,9 +73,10 @@ const AttendanceHeader = ({
             <SelectValue placeholder="Select Stream" />
           </SelectTrigger>
           <SelectContent className="rounded-2xl">
-            {STREAM_OPTIONS.map((stream) => (
-              <SelectItem key={stream.value} value={stream.value} className="rounded-xl">
-                {stream.label}
+            <SelectItem value="all" className="rounded-xl">All Streams</SelectItem>
+            {availableStreams.map((stream) => (
+              <SelectItem key={stream.id || stream.name} value={stream.name} className="rounded-xl">
+                {stream.name}
               </SelectItem>
             ))}
           </SelectContent>
