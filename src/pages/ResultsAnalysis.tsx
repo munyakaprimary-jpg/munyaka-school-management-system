@@ -1,12 +1,11 @@
-"use client";
-
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import BackButton from '@/components/ui/BackButton';
+import BackButton from "@/components/ui/BackButton";
 import { 
   BarChart3, 
   Printer, 
@@ -75,695 +74,812 @@ const getScoreForStudentSubject = (
 const ResultsAnalysis = () => {
   // Filter States
   const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[2]?.id || GRADES_DATA[0]?.id); // Default to Grade 4
-  const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
-  const [examType, setExamType] = useState<string>(DEFAULT_EXAM_TYPES[0].code);
-  const [term, setTerm] = useState<string>("term1");
+  const [academicYearOptions, setAcademicYearOptions] = useState<string[]>(() => {
+    const currentY = new Date().getFullYear();
+    return [String(currentY - 1), String(currentY), String(currentY + 1), String(currentY + 2)];
+  });
+  
+  const [grade, setGrade] = useState<string>(() => "Grade 4");
+  const [stream, setStream] = useState<string>("All Streams");
+  const [examType, setExamType] = useState<string>("Formative Assessment");
+  const [term, setTerm] = useState<string>("Term 1");
+  const [subject, setSubject] = useState<string>("All Subjects");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [isExporting, setIsExporting] = useState<boolean>(false);
 
-  // Selected Grade Object
-  const currentGrade = useMemo(() => {
-    return GRADES_DATA.find(g => g.id === selectedGradeId) || GRADES_DATA[0];
-  }, [selectedGradeId]);
+  const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
+  const [isSaving, setIsSaving] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
 
-  // Available Streams for the selected Grade
-  const availableStreams = useMemo(() => {
-    return currentGrade ? currentGrade.streams : [];
-  }, [currentGrade]);
+  // Null-safe grade getter
+  const currentGrade = grade || "Grade 1";
+  const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
+  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
-  // Learning Areas (Subjects) for the selected Grade
-  const learningAreas = useMemo(() => {
-    if (!currentGrade) return [];
-    const gradeName = currentGrade.name.toLowerCase();
-    let clusterId = 'lower-primary';
-    if (gradeName.includes("grade 4") || gradeName.includes("grade 5") || gradeName.includes("grade 6")) clusterId = 'upper-primary';
-    else if (gradeName.includes("pp")) clusterId = 'pre-primary';
-    else if (currentGrade.category === 'Junior School') clusterId = 'junior-school';
-    
-    return FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
-  }, [currentGrade]);
+  // 1. Retrieve Students Directory from localStorage with munyaka_students and fallback
+  const studentsList = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_students:", e);
+    }
+    return STUDENTS;
+  }, []);
 
-  // Filtered Students matching Grade, Stream, and Search
-  const filteredStudents = useMemo(() => {
-    if (!currentGrade) return [];
-    const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
+  // 2. Grades & Streams from munyaka_grades with fallback protection
+  const gradesListFromStorage = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_grades");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_grades:", e);
+    }
+    return [];
+  }, []);
 
-    return STUDENTS.filter(s => {
-      const matchesGrade = 
-        s.grade === gradeNum || 
-        s.grade === currentGrade.name ||
-        `Grade ${s.grade}` === currentGrade.name;
+  const availableGrades = useMemo(() => {
+    const cbcOrder = [
+      "pp1", "pp2", "playgroup", "pp1/pp2",
+      "grade 1", "grade 2", "grade 3",
+      "grade 4", "grade 5", "grade 6",
+      "grade 7", "grade 8", "grade 9"
+    ];
 
-      let matchesStream = true;
-      if (selectedStreamId !== "all") {
-        const streamObj = availableStreams.find(sItem => sItem.id === selectedStreamId);
-        if (streamObj) {
-          matchesStream = s.stream.toLowerCase() === streamObj.name.toLowerCase();
+    let rawGrades: any[] = [];
+    if (gradesListFromStorage.length > 0) {
+      rawGrades = gradesListFromStorage.map((g: any) => g.name || g.grade || String(g));
+    } else {
+      const gradesSet = new Set<string>();
+      studentsList.forEach(s => {
+        const gName = s.grade || s.gradeLevel || s.class;
+        if (gName) gradesSet.add(gName);
+      });
+      rawGrades = Array.from(gradesSet);
+      if (rawGrades.length === 0) {
+        rawGrades = ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6", "Grade 7", "Grade 8", "Grade 9"];
+      }
+    }
+
+    // Sort according to cbcOrder with normalization
+    const sorted = [...rawGrades].sort((a, b) => {
+      const nameA = (a.name || a).toString().trim().toLowerCase();
+      const nameB = (b.name || b).toString().trim().toLowerCase();
+      
+      const indexA = cbcOrder.indexOf(nameA);
+      const indexB = cbcOrder.indexOf(nameB);
+
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+
+      // Extract numeric value if any for ascending order fallback
+      const numA = parseInt(nameA.replace(/[^0-9]/g, ""), 10) || 999;
+      const numB = parseInt(nameB.replace(/[^0-9]/g, ""), 10) || 999;
+      if (numA !== numB) return numA - numB;
+
+      return nameA.localeCompare(nameB);
+    });
+
+    // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
+    return sorted.map((g: any) => {
+      const str = (g.name || g).toString().trim();
+      // If it starts with grade in lowercase, capitalize Grade
+      if (str.toLowerCase().startsWith("grade ")) {
+        const numPart = str.substring(6);
+        return `Grade ${numPart}`;
+      }
+      if (str.toLowerCase() === "pp1") return "PP1";
+      if (str.toLowerCase() === "pp2") return "PP2";
+      if (str.toLowerCase() === "playgroup") return "Playgroup";
+      if (str.toLowerCase() === "pp1/pp2") return "PP1/PP2";
+      return str.charAt(0).toUpperCase() + str.slice(1);
+    });
+  }, [gradesListFromStorage, studentsList]);
+
+  // Set initial grade if availableGrades has items
+  useEffect(() => {
+    if (availableGrades.length > 0 && (!grade || !availableGrades.includes(grade))) {
+      setGrade(availableGrades[0]);
+    }
+  }, [availableGrades, grade]);
+
+  // Extract streams per grade from munyaka_grades or studentsList with fallback
+  const streamsByGrade = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    if (gradesListFromStorage.length > 0) {
+      gradesListFromStorage.forEach((g: any) => {
+        const gName = g.name || g.grade;
+        if (gName) {
+          if (Array.isArray(g.streams)) {
+            map[gName] = g.streams.map((st: any) => typeof st === 'string' ? st : (st.name || st.stream));
+          } else if (Array.isArray(g.classes)) {
+            map[gName] = g.classes.map((c: any) => typeof c === 'string' ? c : (c.name || c.class));
+          }
+        }
+      });
+    }
+    studentsList.forEach(s => {
+      if (s.grade && s.stream) {
+        if (!map[s.grade]) map[s.grade] = [];
+        if (!map[s.grade].includes(s.stream)) map[s.grade].push(s.stream);
+      }
+    });
+    return map;
+  }, [gradesListFromStorage, studentsList]);
+
+  // Available streams for selected grade with fallback
+  const currentGradeStreams = useMemo(() => {
+    const streams = streamsByGrade[currentGrade] || ["Green", "Yellow", "Blue", "Red", "Neptune", "Jupiter", "Mercury", "Venus"];
+    return streams;
+  }, [streamsByGrade, currentGrade]);
+
+  // 3. Exam Types from munyaka_exam_types with fallback
+  const examTypesList = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_exam_types");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed.map((et: any) => ({
+            id: et.id || et.code || et.name,
+            code: et.code || et.id || et.name,
+            name: et.name || et.code || et.id
+          }));
+        }
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_exam_types:", e);
+    }
+    return DEFAULT_EXAM_TYPES;
+  }, []);
+
+  // Set initial exam type if available
+  useEffect(() => {
+    if (examTypesList.length > 0 && (!examType || !examTypesList.some((et: any) => (et.name || et.code) === examType))) {
+      setExamType(examTypesList[0]?.name || examTypesList[0]?.code || "Formative Assessment");
+    }
+  }, [examTypesList, examType]);
+
+  // 4. Learning Areas / Subjects from munyaka_learning_areas with robust nested parsing logic
+  const learningAreasFromStorage = useMemo(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_learning_areas");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_learning_areas:", e);
+    }
+    return [];
+  }, []);
+
+  const allTierSubjects = useMemo(() => {
+    let subjects = defaultTierSubjects;
+    if (!currentGrade) subjects = defaultTierSubjects;
+    else if (learningAreasFromStorage.length > 0) {
+      const targetLevelName = getLevelNameForGrade(currentGrade).toLowerCase();
+      
+      for (const item of learningAreasFromStorage) {
+        if (item && typeof item === 'object') {
+          const catName = (item.category || item.name || item.title || "").toString().toLowerCase();
+          if (catName.includes(targetLevelName) || catName === targetLevelName || (targetLevelName.includes("junior") && catName.includes("junior"))) {
+            const nestedList = item.subjects || item.learningAreas || item.items || item.subcategories;
+            if (Array.isArray(nestedList) && nestedList.length > 0) {
+              const extracted = nestedList
+                .map((sub: any) => typeof sub === 'string' ? sub : (sub.name || sub.title || sub.subjectName))
+                .filter(Boolean);
+              if (extracted.length > 0) subjects = extracted;
+            }
+          }
         }
       }
 
-      const matchesSearch = 
-        !searchTerm.trim() ||
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+      const flatExtracted = learningAreasFromStorage
+        .map((la: any) => typeof la === 'string' ? la : (la.name || la.title || la.subjectName))
+        .filter(Boolean);
+      if (flatExtracted.length > 0 && !learningAreasFromStorage.some((item: any) => item?.subjects || item?.learningAreas || item?.items || item?.category)) {
+        subjects = flatExtracted;
+      }
+    }
+    return subjects.filter((subj: string) => !subj.toLowerCase().includes('ppi') && !subj.toLowerCase().includes('pastoral'));
+  }, [learningAreasFromStorage, currentGrade, defaultTierSubjects]);
+
+  // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
+  const activeSubjects = useMemo(() => {
+    const base = subject === "All Subjects" ? allTierSubjects : [subject];
+    return base.filter((subj: string) => !subj.toLowerCase().includes('ppi') && !subj.toLowerCase().includes('pastoral'));
+  }, [subject, allTierSubjects]);
+
+  // 1. State Reset & Composite Key Lookup Logic on Filter/Exam Change:
+  // Listens to changes in [selectedExamType, selectedGrade, selectedSubject, selectedTerm, academicYear, stream]
+  // Clears local form state before loading saved records under the exact compositeKey.
+  const cleanGrade = useMemo(() => grade.replace(/\s+/g, "_"), [grade]);
+  const cleanStream = useMemo(() => stream.replace(/\s+/g, "_"), [stream]);
+  const cleanExamType = useMemo(() => examType.replace(/\s+/g, "_"), [examType]);
+  const cleanTerm = useMemo(() => term.replace(/\s+/g, "_"), [term]);
+  const cleanSubject = useMemo(() => subject.replace(/\s+/g, "_"), [subject]);
+
+  const compositeKey = useMemo(() => {
+    return `${academicYear}_${cleanTerm}_${cleanGrade}_${cleanStream}_${cleanSubject}_${cleanExamType}`;
+  }, [academicYear, cleanTerm, cleanGrade, cleanStream, cleanSubject, cleanExamType]);
+
+  const fallbackStorageKey = useMemo(() => {
+    return `munyaka_marks_${academicYear}_${cleanGrade}_${cleanStream}_${cleanExamType}_${cleanTerm}`;
+  }, [academicYear, cleanGrade, cleanStream, cleanExamType, cleanTerm]);
+
+  useEffect(() => {
+    // 1. Clear local form state before loading saved records for the new composite key
+    setMarksMatrix({});
+
+    try {
+      let loadedData: Record<string, Record<string, string>> = {};
+
+      // 2. Composite Key Lookup Logic from localStorage (`munyaka_assessment_scores` or `munyaka_marks`)
+      const storedScores = localStorage.getItem("munyaka_assessment_scores") || localStorage.getItem("munyaka_marks");
+      if (storedScores) {
+        const parsedMaster = JSON.parse(storedScores);
+        if (parsedMaster && typeof parsedMaster === "object") {
+          if (parsedMaster[compositeKey] && typeof parsedMaster[compositeKey] === "object") {
+            loadedData = parsedMaster[compositeKey];
+          } else if (parsedMaster[fallbackStorageKey] && typeof parsedMaster[fallbackStorageKey] === "object") {
+            loadedData = parsedMaster[fallbackStorageKey];
+          } else if (parsedMaster[examType] && typeof parsedMaster[examType] === "object") {
+            loadedData = parsedMaster[examType];
+          }
+        }
+      }
+
+      // Also check direct key in localStorage
+      const directStored = localStorage.getItem(compositeKey) || localStorage.getItem(fallbackStorageKey);
+      if (directStored && Object.keys(loadedData).length === 0) {
+        const parsedDirect = JSON.parse(directStored);
+        if (parsedDirect && typeof parsedDirect === "object") {
+          loadedData = parsedDirect;
+        }
+      }
+
+      // 3. Blank Input Default: For every learner in active roster, load score if exists, else explicitly empty string ""
+      setMarksMatrix(loadedData || {});
+    } catch (e) {
+      console.error("Error loading marks for compositeKey:", e);
+      setMarksMatrix({});
+    }
+  }, [compositeKey, fallbackStorageKey, examType, grade, subject, term, academicYear, stream]);
+
+  // Filtered students roster with robust normalization and multi-field fallback
+  const filteredStudents = useMemo(() => {
+    const selectedGradeNormalized = currentGrade.trim().toLowerCase();
+
+    return studentsList.filter(s => {
+      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
+      const rawStudentGrade = s.grade || s.gradeLevel || s.class || "";
+      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
+
+      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
+      const matchesGrade = !studentGradeNormalized ||
+        studentGradeNormalized === selectedGradeNormalized ||
+        studentGradeNormalized.replace(/[^0-9]/g, "") === selectedGradeNormalized.replace(/[^0-9]/g, "") && selectedGradeNormalized.replace(/[^0-9]/g, "") !== "";
+
+      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
+      const rawStudentStream = s.stream || s.classStream || s.section || "";
+      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
+      const selectedStreamNormalized = stream.trim().toLowerCase();
+
+      const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
+      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
+
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });
-  }, [currentGrade, selectedStreamId, availableStreams, searchTerm]);
+  }, [studentsList, grade, stream, searchTerm]);
 
-  // Calculate Student Results & Overall Rank
-  const studentResults: StudentResult[] = useMemo(() => {
-    const savedMarksRaw = localStorage.getItem(STORAGE_KEY);
-    let savedMarks: Record<string, Record<string, string>> = {};
-    if (savedMarksRaw) {
-      try { savedMarks = JSON.parse(savedMarksRaw); } catch (e) {}
-    }
+  // Immediate LocalStorage Autosave & History Preservation (Merging into compositeKey bucket & master bucket)
+  const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
+    let clean = value.replace(/[^0-9]/g, "");
+    if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
 
-    const rawResults = filteredStudents.map(student => {
-      const scores: Record<string, number> = {};
-      let total = 0;
-      
-      learningAreas.forEach(area => {
-        const score = getScoreForStudentSubject(student.id, area.id, savedMarks);
-        scores[area.id] = score;
-        total += score;
+    setMarksMatrix(prev => {
+      const updated = {
+        ...prev,
+        [studentId]: {
+          ...(prev[studentId] || {}),
+          [subj]: clean
+        }
+      };
+
+      // 3. History Preservation & Merging: Save into specific compositeKey AND merge into `munyaka_assessment_scores` and `munyaka_marks`
+      try {
+        localStorage.setItem(compositeKey, JSON.stringify(updated));
+        localStorage.setItem(fallbackStorageKey, JSON.stringify(updated));
+
+        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+        let masterObj: Record<string, any> = {};
+        if (existingMasterStr) {
+          try {
+            masterObj = JSON.parse(existingMasterStr);
+          } catch (err) {
+            masterObj = {};
+          }
+        }
+        masterObj[compositeKey] = updated;
+        masterObj[fallbackStorageKey] = updated;
+        masterObj[examType] = { ...(masterObj[examType] || {}), ...updated };
+        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+        localStorage.setItem("munyaka_marks", JSON.stringify(masterObj));
+      } catch (e) {
+        console.error("Autosave/History preservation error:", e);
+      }
+
+      return updated;
+    });
+
+    setShowSavedBadge(true);
+    setTimeout(() => setShowSavedBadge(false), 2000);
+  }, [compositeKey, fallbackStorageKey, examType]);
+
+  // Calculations for Totals, Subject Totals, Subject MSS, Class Average
+  const studentTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    filteredStudents.forEach(student => {
+      const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+      let sum = 0;
+      let hasMarks = false;
+      allTierSubjects.forEach(subj => {
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            sum += num;
+            hasMarks = true;
+          }
+        }
       });
+      totals[student.id || student.admissionNumber] = hasMarks ? sum : 0;
+    });
+    return totals;
+  }, [filteredStudents, marksMatrix, allTierSubjects]);
 
-      const mean = learningAreas.length > 0 ? Math.round((total / learningAreas.length) * 10) / 10 : 0;
-      
-      let level: 'EE' | 'ME' | 'AE' | 'BE' = 'BE';
-      if (mean >= 80) level = 'EE';
-      else if (mean >= 50) level = 'ME';
-      else if (mean >= 30) level = 'AE';
+  const subjectTotals = useMemo(() => {
+    const totals: Record<string, number> = {};
+    allTierSubjects.forEach(subj => {
+      let sum = 0;
+      filteredStudents.forEach(student => {
+        const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) sum += num;
+        }
+      });
+      totals[subj] = sum;
+    });
+    return totals;
+  }, [allTierSubjects, filteredStudents, marksMatrix]);
 
-      return {
-        studentId: student.id,
-        name: student.name,
-        assessmentNo: student.assessment,
-        stream: student.stream,
-        scores,
-        totalMarks: total,
-        meanScore: mean,
-        level,
-        rank: 0
-      };
+  const subjectMSS = useMemo(() => {
+    const mss: Record<string, number> = {};
+    allTierSubjects.forEach(subj => {
+      let sum = 0;
+      let count = 0;
+      filteredStudents.forEach(student => {
+        const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            sum += num;
+            count++;
+          }
+        }
+      });
+      mss[subj] = count > 0 ? parseFloat((sum / count).toFixed(2)) : 0;
+    });
+    return mss;
+  }, [allTierSubjects, filteredStudents, marksMatrix]);
+
+  const grandTotalSum = useMemo(() => {
+    return Object.values(subjectTotals).reduce((a, b) => a + b, 0);
+  }, [subjectTotals]);
+
+  const grandTotalMSS = useMemo(() => {
+    const vals = Object.values(subjectMSS).filter(v => v > 0);
+    if (vals.length === 0) return 0;
+    return parseFloat((vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(2));
+  }, [subjectMSS]);
+
+  // Class Average & Completion Progress Calculation
+  const classStats = useMemo(() => {
+    let totalScoreSum = 0;
+    let entriesCount = 0;
+    const maxPossibleEntries = filteredStudents.length * allTierSubjects.length;
+
+    filteredStudents.forEach(student => {
+      const studentMarks = marksMatrix[student.id || student.admissionNumber] || {};
+      allTierSubjects.forEach(subj => {
+        const val = studentMarks[subj];
+        if (val !== undefined && val !== "") {
+          const num = parseInt(String(val), 10);
+          if (!isNaN(num)) {
+            totalScoreSum += num;
+            entriesCount++;
+          }
+        }
+      });
     });
 
-    // Sort descending by Total Marks to establish Rank
-    rawResults.sort((a, b) => b.totalMarks - a.totalMarks);
-
-    return rawResults.map((item, index) => ({
-      ...item,
-      rank: index + 1
-    }));
-  }, [filteredStudents, learningAreas]);
-
-  // Overall Class Mean Score
-  const classMeanScore = useMemo(() => {
-    if (studentResults.length === 0) return 0;
-    const sum = studentResults.reduce((acc, s) => acc + s.meanScore, 0);
-    return Math.round((sum / studentResults.length) * 10) / 10;
-  }, [studentResults]);
-
-  // Top 3 Performers
-  const topPerformers = useMemo(() => {
-    return studentResults.slice(0, 3);
-  }, [studentResults]);
-
-  // Grade Distribution Matrix
-  const gradeDistribution = useMemo(() => {
-    const counts = { EE: 0, ME: 0, AE: 0, BE: 0 };
-    studentResults.forEach(s => {
-      counts[s.level]++;
-    });
-    const total = studentResults.length || 1;
+    const meanPercentage = entriesCount > 0 ? (totalScoreSum / (entriesCount * 100)) * 100 : 0;
     return {
-      EE: { count: counts.EE, pct: Math.round((counts.EE / total) * 100) },
-      ME: { count: counts.ME, pct: Math.round((counts.ME / total) * 100) },
-      AE: { count: counts.AE, pct: Math.round((counts.AE / total) * 100) },
-      BE: { count: counts.BE, pct: Math.round((counts.BE / total) * 100) },
+      meanFormatted: `${meanPercentage.toFixed(1)}%`,
+      completionText: `${entriesCount}/${maxPossibleEntries} entered`
     };
-  }, [studentResults]);
+  }, [filteredStudents, marksMatrix, allTierSubjects]);
 
-  // Subject Performance Ranking (sorted by Subject Mean descending)
-  const subjectSummaries: SubjectSummary[] = useMemo(() => {
-    if (studentResults.length === 0 || learningAreas.length === 0) return [];
+  // Save All Marks explicitly commits to localStorage under compositeKey
+  const handleSaveAll = async () => {
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 600));
+    try {
+      localStorage.setItem(compositeKey, JSON.stringify(marksMatrix));
+      localStorage.setItem(fallbackStorageKey, JSON.stringify(marksMatrix));
+      localStorage.setItem("marks_entry_data", JSON.stringify(marksMatrix));
 
-    const summaries = learningAreas.map(area => {
-      const allScores = studentResults.map(s => s.scores[area.id] || 0);
-      const sum = allScores.reduce((a, b) => a + b, 0);
-      const mean = Math.round((sum / allScores.length) * 10) / 10;
-      const highest = Math.max(...allScores);
-      const lowest = Math.min(...allScores);
-      const passing = allScores.filter(sc => sc >= 50).length;
-      const passRate = Math.round((passing / allScores.length) * 100);
+      const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+      let masterObj: Record<string, any> = {};
+      if (existingMasterStr) {
+        try {
+          masterObj = JSON.parse(existingMasterStr);
+        } catch (err) {
+          masterObj = {};
+        }
+      }
+      masterObj[compositeKey] = marksMatrix;
+      localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
 
-      return {
-        id: area.id,
-        name: area.name,
-        mean,
-        highest,
-        lowest,
-        passRate
-      };
-    });
+      setIsSaving(false);
+      showSuccess("All marks successfully committed to localStorage!");
+    } catch (e) {
+      setIsSaving(false);
+      showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
+    }
+  };
 
-    summaries.sort((a, b) => b.mean - a.mean);
-    return summaries;
-  }, [studentResults, learningAreas]);
-
-  // Selected Stream Name for Labels
-  const selectedStreamName = useMemo(() => {
-    if (selectedStreamId === "all") return "Combined (All Streams)";
-    const strObj = availableStreams.find(s => s.id === selectedStreamId);
-    return strObj ? `${strObj.name} Stream` : "Selected Stream";
-  }, [selectedStreamId, availableStreams]);
-
-  // Download CSV Handler
+  // Download CSV export
   const handleDownloadCSV = () => {
-    if (studentResults.length === 0) {
-      showSuccess("No result records available to export.");
+    if (filteredStudents.length === 0) {
+      showError("No students found to export.");
       return;
     }
-
     setIsExporting(true);
-
     setTimeout(() => {
-      const line1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const line2 = "P.O. BOX 5239-30100, ELDORET • TEL: +254 712 345 678";
-      const line3 = "ACADEMIC RESULTS ANALYSIS REPORT";
-      
-      const termLabel = term === 'term1' ? 'Term 1' : term === 'term2' ? 'Term 2' : 'Term 3';
-      const examObj = DEFAULT_EXAM_TYPES.find(e => e.code === examType);
-      const examLabel = examObj ? examObj.name : examType;
-
-      const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examLabel}`;
-      const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
-
-      const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
-
-      const rows = studentResults.map(s => {
-        const subjectScores = learningAreas.map(a => s.scores[a.id] || 0);
+      const headers = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
+      const rows = filteredStudents.map(student => {
+        const id = student.id || student.admissionNumber;
+        const studentMarks = marksMatrix[id] || {};
+        const scores = allTierSubjects.map(subj => studentMarks[subj] !== undefined ? studentMarks[subj] : "");
+        const total = studentTotals[id] || 0;
         return [
-          s.rank,
-          `"${s.assessmentNo}"`,
-          `"${s.name.replace(/"/g, '""')}"`,
-          `"${s.stream}"`,
-          ...subjectScores,
-          s.totalMarks,
-          s.meanScore,
-          `"${s.level}"`
-        ];
+          `"${(student.name || "").replace(/"/g, '""')}"`,
+          `"${(student.admissionNumber || student.id || "").replace(/"/g, '""')}"`,
+          `"${(student.stream || "").replace(/"/g, '""')}"`,
+          ...scores,
+          total
+        ].join(",");
       });
 
       const csvContent = [
-        line1,
-        line2,
-        line3,
-        line4,
-        line5,
+        `"Marks Entry & CBC Assessment - ${grade} (${stream})"`,
+        `"Academic Year: ${academicYear} | Term: ${term} | Exam: ${examType}"`,
         "",
         headers.join(","),
-        ...rows.map(r => r.join(","))
+        ...rows,
+        ["SUBJECT TOTALS", "", "", ...allTierSubjects.map(subj => subjectTotals[subj] || 0), grandTotalSum].join(","),
+        ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(",")
       ].join("\n");
 
-      // Use global download helper
-      downloadCSV(csvContent, `results_analysis_${currentGrade.name.toLowerCase().replace(/\s+/g, '_')}_${selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${term}.csv`);
-
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.setAttribute("href", url);
+      link.setAttribute("download", `Marks_Entry_${grade.replace(/\s+/g, "_")}_${stream.replace(/\s+/g, "_")}_${academicYear}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
       setIsExporting(false);
-      showSuccess(`Exported results analysis for ${studentResults.length} learners!`);
+      showSuccess("CSV report downloaded successfully.");
     }, 600);
   };
 
-  // Print Handler
-  const handlePrint = () => {
+  // Download PDF simulation / print
+  const handleDownloadPDF = () => {
     window.print();
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      
-      {/* Header & Export Action Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 print:hidden action-bar">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Results Analysis</h1>
-            <p className="text-muted-foreground font-medium">Performance analytics, subject rankings, and class score sheets.</p>
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
+      {/* 1. Header & Quick Actions Layout */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+        <div>
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Marks Entry & CBC Assessment</h1>
+            {showSavedBadge && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
+                <CheckCircle2 size={12} /> Saved to LocalStorage
+              </span>
+            )}
           </div>
+          <p className="text-sm text-slate-500 mt-1">
+            Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit.
+          </p>
         </div>
-
-        {/* Action Controls */}
-        <div className="flex items-center gap-3">
-          <Button 
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadCSV}
             disabled={isExporting}
-            className="rounded-2xl h-12 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm gap-2"
           >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <FileSpreadsheet size={18} className="text-emerald-600" />}
-            Download CSV / Excel
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
           </Button>
-
-          <Button 
-            onClick={handlePrint}
-            className="rounded-2xl h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2"
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            onClick={handleDownloadPDF}
           >
-            <Printer size={18} /> Print Report / Save PDF
+            <FileText size={16} /> Download PDF
+          </Button>
+          <Button
+            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"
+            onClick={handleSaveAll}
+            disabled={isSaving}
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />} Save All Marks
           </Button>
         </div>
       </div>
 
-      {/* Official Print Header (Visible ONLY when printing) */}
-      <div className="hidden print:block text-center space-y-2 border-b-2 border-slate-900 pb-6 mb-6">
-        <div className="flex items-center justify-center gap-3 mb-1">
-          <School size={36} className="text-slate-900" />
-          <h1 className="text-2xl font-black uppercase tracking-tight text-slate-900">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h1>
-        </div>
-        <p className="text-xs font-bold text-slate-700">P.O. Box 5239-30100 Eldoret • Tel: +254 712 345 678 • Email: info@munyaka.sc.ke</p>
-        <p className="text-sm font-black uppercase tracking-widest text-indigo-900 pt-1">OFFICIAL ACADEMIC RESULTS ANALYSIS REPORT</p>
-        <div className="flex justify-center flex-wrap gap-6 pt-2 text-xs font-bold text-slate-700 bg-slate-50 p-2 rounded-xl border border-slate-200">
-          <span>Academic Year: {academicYear}</span>
-          <span>Grade Level: {currentGrade.name}</span>
-          <span>Stream: {selectedStreamName}</span>
-          <span>Term: {term.toUpperCase()}</span>
-          <span>Exam: {DEFAULT_EXAM_TYPES.find(e => e.code === examType)?.name || examType}</span>
-        </div>
-      </div>
-
-      {/* Filter Toolbar (Hidden on Print) */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+      {/* 3. Dynamic Filter Bar & Controls (Grid Card Container) */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          
+          {/* 1. Academic Year */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Academic Year</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Academic Year</label>
             <Select value={academicYear} onValueChange={setAcademicYear}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Year" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {["2024", "2025", "2026"].map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Grade Level</label>
-            <Select value={selectedGradeId} onValueChange={(val) => { setSelectedGradeId(val); setSelectedStreamId("all"); }}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category})</SelectItem>)}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Stream Cohort</label>
-            <Select value={selectedStreamId} onValueChange={setSelectedStreamId}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">Combined (All Streams)</SelectItem>
-                {availableStreams.map(s => (
-                  <SelectItem key={s.id} value={s.id}>{s.name} Stream ({s.studentsCount} Students)</SelectItem>
+              <SelectContent>
+                {academicYearOptions.map(yr => (
+                  <SelectItem key={yr} value={yr}>{yr}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* 2. Grade */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Exam Type</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Grade</label>
+            <Select value={grade} onValueChange={setGrade}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Grade" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableGrades.map(g => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 3. Stream */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Stream</label>
+            <Select value={stream} onValueChange={setStream}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                {currentGradeStreams.map(s => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 4. Exam Type */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Exam Type" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                {DEFAULT_EXAM_TYPES.map(e => <SelectItem key={e.id} value={e.code}>{e.name}</SelectItem>)}
+              <SelectContent>
+                {examTypesList.map((et: any) => (
+                  <SelectItem key={et.id || et.code} value={et.name || et.code}>
+                    {et.name || et.code}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
 
+          {/* 5. Term */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Term</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Term</label>
             <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
-                <SelectValue />
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Term" />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="term1">Term 1</SelectItem>
-                <SelectItem value="term2">Term 2</SelectItem>
-                <SelectItem value="term3">Term 3</SelectItem>
+              <SelectContent>
+                <SelectItem value="Term 1">Term 1</SelectItem>
+                <SelectItem value="Term 2">Term 2</SelectItem>
+                <SelectItem value="Term 3">Term 3</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
+          {/* 6. Subject */}
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Search Student</label>
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Subject</label>
+            <Select value={subject} onValueChange={setSubject}>
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
+                <SelectValue placeholder="Subject" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="All Subjects">All Subjects</SelectItem>
+                {allTierSubjects.map(subj => (
+                  <SelectItem key={subj} value={subj}>{subj}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* 7. Find Learner */}
+          <div className="space-y-1.5">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Find Learner</label>
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                value={searchTerm} 
-                onChange={e => setSearchTerm(e.target.value)} 
-                placeholder="Name / ID..." 
-                className="pl-10 h-12 rounded-2xl bg-slate-50 border-none font-bold text-sm"
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Input
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Name/ID..."
+                className="pl-9 h-11 rounded-xl bg-slate-50 border-none font-bold text-sm"
               />
             </div>
           </div>
+
+          {/* 8. Class Average Card */}
+          <div className="space-y-1.5 flex flex-col justify-end">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Class Average</label>
+            <div className="h-11 rounded-xl bg-indigo-50 px-3 flex items-center justify-between">
+              <span className="font-black text-indigo-700 text-sm">{classStats.meanFormatted}</span>
+              <span className="text-[10px] font-bold text-indigo-500">{classStats.completionText}</span>
+            </div>
+          </div>
+
         </div>
       </Card>
 
-      {/* Analytics Summary Stats (Cards) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 print:grid-cols-4">
-        <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-600 text-white p-6 relative overflow-hidden flex flex-col justify-between">
-          <div className="absolute right-[-10px] top-[-10px] opacity-10 pointer-events-none">
-            <BarChart3 size={96} />
-          </div>
-          <div>
-            <p className="text-xs font-black uppercase tracking-widest text-indigo-200">Class Mean Score</p>
-            <h3 className="text-4xl font-black text-white mt-1">{classMeanScore}%</h3>
-          </div>
-          <div className="mt-4 pt-3 border-t border-indigo-500/50 flex items-center justify-between text-xs font-bold text-indigo-100">
-            <span>Overall Cohort Average</span>
-            <Badge className="bg-white/20 text-white border-none">{currentGrade.name}</Badge>
-          </div>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Analyzed</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{studentResults.length}</h3>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-2xl">
-              <Users size={22} />
-            </div>
-          </div>
-          <p className="text-xs font-bold text-slate-500 mt-4">{selectedStreamName}</p>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Highest Mean</p>
-              <h3 className="text-3xl font-black text-emerald-600 mt-1">
-                {studentResults[0] ? `${studentResults[0].meanScore}%` : '0%'}
-              </h3>
-            </div>
-            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
-              <Trophy size={22} />
-            </div>
-          </div>
-          <p className="text-xs font-bold text-slate-700 truncate mt-4">
-            Top Student: {studentResults[0]?.name || 'N/A'}
-          </p>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 flex flex-col justify-between">
-          <div className="flex justify-between items-start">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Subjects Analyzed</p>
-              <h3 className="text-3xl font-black text-slate-900 mt-1">{learningAreas.length}</h3>
-            </div>
-            <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-              <BookOpen size={22} />
-            </div>
-          </div>
-          <p className="text-xs font-bold text-slate-500 mt-4">CBC Curriculum Areas</p>
-        </Card>
-      </div>
-
-      {/* Grade Distribution & Top Performers Section */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
-        {/* Grade Distribution Matrix */}
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-          <CardHeader className="px-0 pt-0 pb-6 border-b">
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle className="text-xl font-black text-slate-900">Grade Distribution Matrix</CardTitle>
-                <CardDescription>CBC Learner Performance Level breakdown across score thresholds.</CardDescription>
-              </div>
-              <Badge variant="outline" className="rounded-lg border-slate-200 font-bold">
-                {studentResults.length} Learners
-              </Badge>
-            </div>
-          </CardHeader>
-
-          <CardContent className="px-0 pt-6 space-y-6">
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-              <div className="bg-emerald-50/70 p-4 rounded-2xl border border-emerald-100">
-                <div className="flex items-center justify-between mb-1">
-                  <Badge className="bg-emerald-600 text-white font-black text-[10px]">EE</Badge>
-                  <span className="text-xs font-bold text-emerald-700">80-100%</span>
-                </div>
-                <p className="text-2xl font-black text-emerald-900">{gradeDistribution.EE.count}</p>
-                <p className="text-[10px] font-bold text-emerald-600 uppercase mt-1">{gradeDistribution.EE.pct}% of class</p>
-              </div>
-
-              <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-100">
-                <div className="flex items-center justify-between mb-1">
-                  <Badge className="bg-blue-600 text-white font-black text-[10px]">ME</Badge>
-                  <span className="text-xs font-bold text-blue-700">50-79%</span>
-                </div>
-                <p className="text-2xl font-black text-blue-900">{gradeDistribution.ME.count}</p>
-                <p className="text-[10px] font-bold text-blue-600 uppercase mt-1">{gradeDistribution.ME.pct}% of class</p>
-              </div>
-
-              <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-100">
-                <div className="flex items-center justify-between mb-1">
-                  <Badge className="bg-amber-600 text-white font-black text-[10px]">AE</Badge>
-                  <span className="text-xs font-bold text-amber-700">30-49%</span>
-                </div>
-                <p className="text-2xl font-black text-amber-900">{gradeDistribution.AE.count}</p>
-                <p className="text-[10px] font-bold text-amber-600 uppercase mt-1">{gradeDistribution.AE.pct}% of class</p>
-              </div>
-
-              <div className="bg-rose-50/70 p-4 rounded-2xl border border-rose-100">
-                <div className="flex items-center justify-between mb-1">
-                  <Badge className="bg-rose-600 text-white font-black text-[10px]">BE</Badge>
-                  <span className="text-xs font-bold text-rose-700">0-29%</span>
-                </div>
-                <p className="text-2xl font-black text-rose-900">{gradeDistribution.BE.count}</p>
-                <p className="text-[10px] font-bold text-rose-600 uppercase mt-1">{gradeDistribution.BE.pct}% of class</p>
-              </div>
-            </div>
-
-            {/* Visual Distribution Stacked Progress */}
-            <div className="space-y-2 pt-2">
-              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Class Performance Spread</p>
-              <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
-                <div style={{ width: `${gradeDistribution.EE.pct}%` }} className="bg-emerald-500 transition-all duration-500" title={`EE: ${gradeDistribution.EE.pct}%`} />
-                <div style={{ width: `${gradeDistribution.ME.pct}%` }} className="bg-blue-500 transition-all duration-500" title={`ME: ${gradeDistribution.ME.pct}%`} />
-                <div style={{ width: `${gradeDistribution.AE.pct}%` }} className="bg-amber-500 transition-all duration-500" title={`AE: ${gradeDistribution.AE.pct}%`} />
-                <div style={{ width: `${gradeDistribution.BE.pct}%` }} className="bg-rose-500 transition-all duration-500" title={`BE: ${gradeDistribution.BE.pct}%`} />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Top 3 Performing Students Card */}
-        <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-          <CardHeader className="px-0 pt-0 pb-6 border-b">
-            <CardTitle className="text-xl font-black text-slate-900 flex items-center gap-2">
-              <Award className="text-amber-500" size={22} /> Top Performers
-            </CardTitle>
-            <CardDescription>Highest ranking learners in this assessment cohort.</CardDescription>
-          </CardHeader>
-
-          <CardContent className="px-0 pt-6 space-y-4">
-            {topPerformers.map((student, idx) => (
-              <div key={student.studentId} className="flex items-center justify-between p-4 bg-slate-50/80 rounded-2xl border border-slate-100">
-                <div className="flex items-center gap-3">
-                  <div className={cn(
-                    "w-9 h-9 rounded-xl flex items-center justify-center font-black text-sm text-white shrink-0 shadow-sm",
-                    idx === 0 ? "bg-amber-500" : idx === 1 ? "bg-slate-400" : "bg-amber-700"
-                  )}>
-                    #{student.rank}
-                  </div>
-                  <div>
-                    <p className="font-bold text-slate-900 text-sm leading-tight">{student.name}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Stream: {student.stream} • ID: {student.assessmentNo}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-black text-indigo-600 text-base">{student.meanScore}%</p>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">{student.totalMarks} pts</p>
-                </div>
-              </div>
-            ))}
-
-            {topPerformers.length === 0 && (
-              <div className="py-8 text-center text-slate-400 text-sm">
-                No student results found for selected cohort.
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Subjects Performance Ranking Table */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b bg-slate-50/40">
-          <CardTitle className="text-xl font-black text-slate-900">Subject Performance Ranking</CardTitle>
-          <CardDescription>Learning areas ranked by average class score from highest to lowest.</CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead className="bg-slate-50/80 border-b">
-                <tr>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Rank</th>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Learning Area</th>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Subject Mean</th>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Highest Score</th>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Lowest Score</th>
-                  <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Pass Rate (≥50%)</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {subjectSummaries.map((subj, idx) => (
-                  <tr key={subj.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-6 py-4 font-bold text-slate-400">#{idx + 1}</td>
-                    <td className="px-6 py-4 font-bold text-slate-900">{subj.name}</td>
-                    <td className="px-6 py-4 text-center">
-                      <span className="font-black text-indigo-600 bg-indigo-50 px-3 py-1 rounded-xl">
-                        {subj.mean}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 text-center font-bold text-emerald-600">{subj.highest}%</td>
-                    <td className="px-6 py-4 text-center font-bold text-rose-500">{subj.lowest}%</td>
-                    <td className="px-6 py-4 text-right">
-                      <Badge className={cn("font-bold", subj.passRate >= 70 ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700")}>
-                        {subj.passRate}% Meeting Threshold
-                      </Badge>
-                    </td>
-                  </tr>
+      {/* 4. Educational Tier-Based Mark Sheet Table Matrix */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse min-w-max">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-72 min-w-[240px]">
+                  Learner Details ({filteredStudents.length})
+                </th>
+                {activeSubjects.map(subj => (
+                  <th key={subj} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[120px] max-w-[160px]">
+                    {subj}
+                  </th>
                 ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+                <th className="bg-indigo-50 px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center min-w-[100px] border-l">
+                  TOTAL
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredStudents.length > 0 ? (
+                <>
+                  {filteredStudents.map(student => {
+                    const studentId = student.id || student.admissionNumber;
+                    const studentMarks = marksMatrix[studentId] || {};
+                    const totalMarks = studentTotals[studentId] || 0;
+                    const hasMarks = totalMarks > 0;
 
-      {/* Complete Class Breakdown Table */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden print:shadow-none print:rounded-none">
-        <CardHeader className="p-8 border-b bg-slate-50/40 print:p-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
-            <div>
-              <CardTitle className="text-2xl font-black text-slate-900">Class Results Breakdown</CardTitle>
-              <CardDescription>Official score sheet showing individual subject scores, total marks, mean score, and overall rank.</CardDescription>
-            </div>
-            <Badge className="bg-indigo-600 text-white font-bold px-4 py-1.5 rounded-xl print:hidden">
-              {studentResults.length} Students Ranked
-            </Badge>
-          </div>
-        </CardHeader>
+                    return (
+                      <tr key={studentId} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-4 border-r min-w-[240px]">
+                          <p className="font-bold text-slate-900 truncate">{student.name || "Unknown Student"}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">
+                            ID: {student.admissionNumber || student.assessment || studentId} • Stream: {student.stream || "Main"}
+                          </p>
+                        </td>
 
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
-              <thead className="bg-slate-50/80 border-b">
-                <tr>
-                  <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
-                    Rank
-                  </th>
-                  <th className="sticky left-16 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
-                    Student Name & Admin No
-                  </th>
-                  {selectedStreamId === "all" && (
-                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
-                      Stream
-                    </th>
-                  )}
-                  {learningAreas.map(area => (
-                    <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[90px]">
-                      {area.name}
-                    </th>
-                  ))}
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
-                    Total Marks
-                  </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
-                    Mean (%)
-                  </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
-                    Level
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {studentResults.length > 0 ? (
-                  studentResults.map((student) => (
-                    <tr key={student.studentId} className="hover:bg-slate-50 transition-colors group">
-                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 font-black text-center border-r text-slate-900">
-                        #{student.rank}
-                      </td>
-                      <td className="sticky left-16 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
-                        <p className="font-bold text-slate-900">{student.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
-                      </td>
-                      {selectedStreamId === "all" && (
-                        <td className="px-4 py-4 text-center font-bold text-slate-600 border-r">
-                          <Badge variant="outline" className="rounded-lg border-slate-200 text-xs">
-                            {student.stream}
-                          </Badge>
+                        {activeSubjects.map(subj => (
+                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[120px] max-w-[160px]">
+                            <Input
+                              type="number"
+                              min="0"
+                              max="100"
+                              value={studentMarks[subj] !== undefined ? studentMarks[subj] : ""}
+                              onChange={e => handleMarkChange(studentId, subj, e.target.value)}
+                              placeholder="—"
+                              className="w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                            />
+                          </td>
+                        ))}
+
+                        <td className="bg-indigo-50/60 px-4 py-3 text-center font-black text-sm text-indigo-600 min-w-[100px] border-l">
+                          {hasMarks ? totalMarks : "—"}
                         </td>
-                      )}
-                      {learningAreas.map(area => (
-                        <td key={area.id} className="px-3 py-4 border-r text-center font-bold text-slate-700">
-                          {student.scores[area.id] !== undefined ? student.scores[area.id] : "—"}
-                        </td>
-                      ))}
-                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-900">
-                        {student.totalMarks}
+                      </tr>
+                    );
+                  })}
+
+                  {/* Summary Row 1: SUBJECT TOTALS */}
+                  <tr className="bg-slate-50 border-t-2 border-slate-200">
+                    <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[240px]">
+                      SUBJECT TOTALS
+                    </td>
+                    {activeSubjects.map(subj => (
+                      <td key={`tot-${subj}`} className="px-2 py-3 border-r text-center font-bold text-slate-800 min-w-[120px] max-w-[160px] bg-slate-50">
+                        {subjectTotals[subj] || 0}
                       </td>
-                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-700 text-base">
-                        {student.meanScore}%
-                      </td>
-                      <td className="px-4 py-4 text-center">
-                        <Badge className={cn("font-black rounded-lg border-none text-xs px-2.5 py-0.5", 
-                          student.level === 'EE' ? "bg-emerald-50 text-emerald-700" :
-                          student.level === 'ME' ? "bg-blue-50 text-blue-700" :
-                          student.level === 'AE' ? "bg-amber-50 text-amber-700" : "bg-rose-50 text-rose-700"
-                        )}>
-                          {student.level}
-                        </Badge>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={learningAreas.length + 5} className="px-8 py-16 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <Search size={36} className="text-slate-200" />
-                        <p className="text-slate-500 font-bold">No student result records found for the selected Grade and Stream filters.</p>
-                      </div>
+                    ))}
+                    <td className="bg-indigo-100/60 px-4 py-3 text-center font-black text-indigo-700 min-w-[100px] border-l">
+                      {grandTotalSum}
                     </td>
                   </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Official Footer Notice (Visible ONLY on Print) */}
-      <div className="hidden print:block text-center pt-8 border-t border-slate-300 text-xs text-slate-500 space-y-2">
-        <div className="flex justify-between px-12 pt-6 pb-12 font-bold text-slate-800">
-          <div>
-            <p>Class Teacher Signature: .......................................</p>
-            <p className="text-[10px] text-slate-400 font-normal mt-1">Date: {new Date().toLocaleDateString()}</p>
-          </div>
-          <div>
-            <p>Headteacher Stamp & Sign: .......................................</p>
-            <p className="text-[10px] text-slate-400 font-normal mt-1">Official Seal</p>
-          </div>
+                  {/* Summary Row 2: SUBJECT MSS */}
+                  <tr className="bg-slate-50 border-t border-slate-200">
+                    <td className="px-6 py-4 border-r font-black text-slate-900 min-w-[240px]">
+                      SUBJECT MSS
+                    </td>
+                    {activeSubjects.map(subj => (
+                      <td key={`mss-${subj}`} className="px-2 py-3 border-r text-center font-bold text-slate-800 min-w-[120px] max-w-[160px] bg-slate-50">
+                        {subjectMSS[subj] !== undefined ? subjectMSS[subj].toFixed(2) : "0.00"}
+                      </td>
+                    ))}
+                    <td className="bg-indigo-100/60 px-4 py-3 text-center font-black text-indigo-700 min-w-[100px] border-l">
+                      {grandTotalMSS.toFixed(2)}
+                    </td>
+                  </tr>
+                </>
+              ) : (
+                <tr>
+                  <td colSpan={activeSubjects.length + 2} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <Search size={32} />
+                      </div>
+                      <p className="text-slate-800 font-bold text-base">No learners found for {grade} / {stream}.</p>
+                      <p className="text-xs text-slate-400 font-medium max-w-sm">
+                        Please check your student directory or select another grade and stream from the controls above.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
-        <p>This is an official computer-generated Results Analysis Report for Munyaka Primary and Junior School.</p>
-      </div>
-
+      </Card>
     </div>
   );
 };
