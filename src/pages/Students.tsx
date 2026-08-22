@@ -117,15 +117,15 @@ const Students = () => {
   }, [regGrade, availableStreams, regStream]);
 
   // Get unique streams for the filter dropdown (case-insensitive deduplication, Title Case display)
-    const uniqueStreams = useMemo(() => {
-      const streams = new Set<string>();
-      gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
-        if (s.name) streams.add(s.name.trim().toLowerCase());
-      }));
-      return Array.from(streams)
-        .map(stream => toTitleCase(stream))
-        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
-    }, [gradesList]);
+  const uniqueStreams = useMemo(() => {
+    const streams = new Set<string>();
+    gradesList.forEach((g: any) => g.streams.forEach((s: any) => {
+      if (s.name) streams.add(s.name.trim().toLowerCase());
+    }));
+    return Array.from(streams)
+      .map(stream => toTitleCase(stream))
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'accent' }));
+  }, [gradesList]);
 
   const filteredStudents = useMemo(() => {
     return studentsList.filter(s => {
@@ -133,10 +133,10 @@ const Students = () => {
                            s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = filterGrade === "all" ||
                            (filterGradeNumber !== null && s.grade === filterGradeNumber);
-      const matchesStream = filterStream === "all" || s.stream === filterStream;
+      const matchesStream = filterFilter === "all" || s.stream === filterStream;
       return matchesSearch && matchesGrade && matchesStream;
     });
-  }, [studentsList, searchTerm, filterGradeNumber, filterStream]);
+  }, [studentsList, searchTerm, filterGradeNumber, filterFilter]);
 
   const handleRegisterStudent = () => {
     if (!fullName.trim() || !assessmentNo.trim() || !regGrade || !regStream) return;
@@ -240,7 +240,6 @@ const Students = () => {
   };
 
   const handleTransferStudent = (student: Student) => {
-    // Ensure student has all required properties for StudentTransferInfo
     const studentWithTransferInfo: StudentTransferInfo = {
       id: student.id,
       name: student.name,
@@ -278,7 +277,7 @@ const Students = () => {
       const row3 = "MOTTO: KNOWLEDGE POWER";
 
       const activeGrade = filterGrade !== "all" ? filterGrade : "All Grades";
-      const activeStream = filterStream !== "all" ? filterStream : "All Streams";
+      const activeStream = filterFilter !== "all" ? filterFilter : "All Streams";
       const activeTerm = "Term 1";
 
       const row4 = `GRADE ${activeGrade}, STREAM ${activeStream}, YEAR ${new Date().getFullYear()}, TERM ${activeTerm}`;
@@ -295,13 +294,13 @@ const Students = () => {
 
       const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
 
-      const fileName = filterGrade !== "all" || filterStream !== "all"
-        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterStream !== "all" ? '_stream_' + filterStream : ''}.csv`
+      const fileName = filterGrade !== "all" || filterFilter !== "all"
+        ? `learners_${filterGrade !== "all" ? 'grade_' + filterGrade.replace(/\s+/g, '_') : ''}${filterFilter !== "all" ? '_stream_' + filterFilter : ''}.csv`
         : `all_learners_${new Date().toISOString().split('T')[0]}.csv`;
 
       link.setAttribute("download", fileName);
@@ -317,7 +316,7 @@ const Students = () => {
   const clearFilters = () => {
     setSearchTerm("");
     setFilterGrade("all");
-    setFilterStream("all");
+    setFilterFilter("all");
   };
 
   return (
@@ -378,7 +377,7 @@ const Students = () => {
 
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Stream</Label>
-            <Select value={filterStream} onValueChange={setFilterStream}>
+            <Select value={filterFilter} onValueChange={setFilterFilter}>
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue placeholder="All Streams" />
               </SelectTrigger>
@@ -413,42 +412,42 @@ const Students = () => {
           </Badge>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
+          <div className="w-full overflow-x-auto">
             <table className="w-full text-sm text-left">
               <thead className="text-slate-500 bg-slate-50/50 border-b">
                 <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Learner Name</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Assessment ID</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Class Level</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Stream</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Guardian Contact</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                  <th className="whitespace-nowrap text-xs p-2">Learner Name</th>
+                  <th className="whitespace-nowrap text-xs p-2">Assessment ID</th>
+                  <th className="whitespace-nowrap text-xs p-2">Class Level</th>
+                  <th className="whitespace-nowrap text-xs p-2">Stream</th>
+                  <th className="whitespace-nowrap text-xs p-2">Guardian Contact</th>
+                  <th className="whitespace-nowrap text-xs p-2 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {filteredStudents.map((student) => (
                   <tr key={student.id} className="hover:bg-slate-50/50 transition-colors">
-                    <td className="px-8 py-5">
-                      <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{student.name}</p>
+                    <td className="text-xs font-medium whitespace-nowrap p-2 min-w-[120px]">
+                      <p className="text-xs font-medium whitespace-nowrap">{student.name}</p>
                     </td>
-                    <td className="px-8 py-5">
-                      <code className="text-xs font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <code className="text-[10px] font-black text-slate-500 bg-slate-100 px-2 py-1 rounded-lg uppercase">{student.assessment}</code>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="whitespace-nowrap text-xs p-2">
                       <span className="font-bold text-slate-700">Grade {student.grade}</span>
                     </td>
-                    <td className="px-8 py-5">
-                      <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold">
+                    <td className="whitespace-nowrap text-xs p-2">
+                      <Badge variant="outline" className="text-[10px] whitespace-nowrap rounded-lg border-slate-200 text-slate-600 font-bold">
                         {student.stream}
                       </Badge>
                     </td>
-                    <td className="px-8 py-5">
+                    <td className="whitespace-nowrap text-xs p-2">
                       <div className="flex flex-col">
                         <span className="font-bold text-slate-900">{student.phone}</span>
                         <span className="text-[10px] font-bold text-slate-400 uppercase tracking-tight">{student.guardian}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right">
+                    <td className="whitespace-nowrap text-xs p-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <Button
                           variant="ghost"

@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { showSuccess, showError } from "@/utils/toast";
 import { Button } from "@/components/ui/button";
@@ -263,11 +261,11 @@ const Assessments = () => {
   }, []);
 
   const allTierSubjects = useMemo(() => {
-    if (!currentGrade) return defaultTierSubjects;
-    if (learningAreasFromStorage.length > 0) {
+    let subjects = defaultTierSubjects;
+    if (!currentGrade) subjects = defaultTierSubjects;
+    else if (learningAreasFromStorage.length > 0) {
       const targetLevelName = getLevelNameForGrade(currentGrade).toLowerCase();
       
-      // Check if munyaka_learning_areas has tier objects (e.g. { category: "Lower Primary", subjects: [...] } or { name: "Lower Primary", learningAreas: [...] })
       for (const item of learningAreasFromStorage) {
         if (item && typeof item === 'object') {
           const catName = (item.category || item.name || item.title || "").toString().toLowerCase();
@@ -277,29 +275,26 @@ const Assessments = () => {
               const extracted = nestedList
                 .map((sub: any) => typeof sub === 'string' ? sub : (sub.name || sub.title || sub.subjectName))
                 .filter(Boolean);
-              if (extracted.length > 0) return extracted;
+              if (extracted.length > 0) subjects = extracted;
             }
           }
         }
       }
 
-      // If stored data contains a flat array of subject objects directly
       const flatExtracted = learningAreasFromStorage
         .map((la: any) => typeof la === 'string' ? la : (la.name || la.title || la.subjectName))
         .filter(Boolean);
       if (flatExtracted.length > 0 && !learningAreasFromStorage.some((item: any) => item?.subjects || item?.learningAreas || item?.items || item?.category)) {
-        return flatExtracted;
+        subjects = flatExtracted;
       }
     }
-    return defaultTierSubjects;
+    return subjects.filter((subj: string) => !subj.toLowerCase().includes('ppi') && !subj.toLowerCase().includes('pastoral'));
   }, [learningAreasFromStorage, currentGrade, defaultTierSubjects]);
 
   // Active subjects list based on Subject filter ("All Subjects" vs specific subject)
   const activeSubjects = useMemo(() => {
-    if (subject === "All Subjects") {
-      return allTierSubjects;
-    }
-    return [subject];
+    const base = subject === "All Subjects" ? allTierSubjects : [subject];
+    return base.filter((subj: string) => !subj.toLowerCase().includes('ppi') && !subj.toLowerCase().includes('pastoral'));
   }, [subject, allTierSubjects]);
 
   // 1. State Reset & Composite Key Lookup Logic on Filter/Exam Change:
