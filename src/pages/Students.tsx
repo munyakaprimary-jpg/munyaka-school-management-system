@@ -331,10 +331,12 @@ export default function Students() {
     setDeleteId(null);
   };
 
-  // Export CSV
-  const handleExportCSV = () => {
+  // Export CSV with options ("All Learners" vs "Current View")
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+
+  const exportToCSV = (datasetToExport: Learner[]) => {
     const headers = ['Adm No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
-    const rows = filteredLearners.map((l) => [
+    const rows = datasetToExport.map((l) => [
       l.admNo,
       `"${l.name}"`,
       l.grade,
@@ -353,6 +355,22 @@ export default function Students() {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setIsExportMenuOpen(false);
+  };
+
+  const handleExportAll = () => {
+    try {
+      const fullDataset = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
+      const targetDataset = Array.isArray(fullDataset) && fullDataset.length > 0 ? fullDataset : learners;
+      exportToCSV(targetDataset);
+    } catch {
+      exportToCSV(learners);
+    }
+  };
+
+  const handleExportCurrentView = () => {
+    // Current view exports filteredLearners (which respects cleared/active filters without hardcoded stale filters like "Grade 4")
+    exportToCSV(filteredLearners);
   };
 
   // Print
@@ -378,14 +396,38 @@ export default function Students() {
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={handleExportCSV}
-            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
-          >
-            <Download className="w-4 h-4 text-slate-500" />
-            Export CSV
-          </button>
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
+            >
+              <Download className="w-4 h-4 text-slate-500" />
+              Export CSV
+              <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
+            </button>
+
+            {isExportMenuOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-lg py-1.5 z-50 animate-in fade-in zoom-in-95 duration-100">
+                <button
+                  type="button"
+                  onClick={handleExportAll}
+                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <Users className="w-3.5 h-3.5 text-indigo-500" />
+                  All Learners
+                </button>
+                <button
+                  type="button"
+                  onClick={handleExportCurrentView}
+                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2 border-t border-slate-100"
+                >
+                  <FileText className="w-3.5 h-3.5 text-slate-500" />
+                  Current View ({filteredLearners.length})
+                </button>
+              </div>
+            )}
+          </div>
 
           <button
             type="button"
