@@ -1,450 +1,616 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Search, Plus, Eye, Edit3, Trash2, SlidersHorizontal, X, UserPlus, Upload } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { 
+  Search, Plus, Edit3, Trash2, SlidersHorizontal, X, UserPlus, 
+  Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles
+} from 'lucide-react';
+
+interface Learner {
+  id: string;
+  admNo: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: 'Male' | 'Female' | 'Other';
+  guardian: string;
+  phone: string;
+}
+
+const DEFAULT_LEARNERS: Learner[] = [
+  {
+    id: '1',
+    admNo: 'MPS/2025/001',
+    name: 'Esther Njeri Mwangi',
+    grade: 'Grade 4',
+    stream: 'North',
+    gender: 'Female',
+    guardian: 'Grace Mwangi',
+    phone: '+254 712 345 678',
+  },
+  {
+    id: '2',
+    admNo: 'MPS/2025/002',
+    name: 'Felix Mutua Kioko',
+    grade: 'Grade 5',
+    stream: 'South',
+    gender: 'Male',
+    guardian: 'David Kioko',
+    phone: '+254 722 987 654',
+  },
+  {
+    id: '3',
+    admNo: 'MPS/2025/003',
+    name: 'Gloria Nekesa Wafula',
+    grade: 'Grade 3',
+    stream: 'East',
+    gender: 'Female',
+    guardian: 'Christine Wafula',
+    phone: '+254 733 456 789',
+  },
+  {
+    id: '4',
+    admNo: 'MPS/2025/004',
+    name: 'Hassan Abdi Omar',
+    grade: 'Grade 6',
+    stream: 'West',
+    gender: 'Male',
+    guardian: 'Fatuma Omar',
+    phone: '+254 701 112 233',
+  },
+  {
+    id: '5',
+    admNo: 'MPS/2025/005',
+    name: 'Irene Chebet Langat',
+    grade: 'Grade 4',
+    stream: 'North',
+    gender: 'Female',
+    guardian: 'Kiprono Langat',
+    phone: '+254 755 667 889',
+  },
+];
+
+const GRADES_LIST = [
+  'PP1', 'PP2', 
+  'Grade 1', 'Grade 2', 'Grade 3', 
+  'Grade 4', 'Grade 5', 'Grade 6', 
+  'Grade 7', 'Grade 8'
+];
+
+const STREAMS_LIST = ['North', 'South', 'East', 'West'];
 
 export default function Students() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterGrade, setFilterGrade] = useState(() => localStorage.getItem('munyaka_selected_class') || 'all');
-  const [filterStream, setFilterStream] = useState(() => localStorage.getItem('munyaka_selected_stream') || 'all');
-
-  // Form toggle states
-  const [activeForm, setActiveForm] = useState<'none' | 'single' | 'bulk'>('none');
-
-  // Load Grades and Classes setting data dynamically from LocalStorage
-  const [gradesList] = useState<any[]>(() => {
+  // 1. LocalStorage Persistence Setup
+  const [learners, setLearners] = useState<Learner[]>(() => {
     try {
-      const raw = localStorage.getItem('munyaka_grades') || localStorage.getItem('munyaka_classes');
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // Default initial grade selection based on stored grades
-  const initialGradeName = useMemo(() => {
-    if (gradesList.length > 0) {
-      return gradesList[0].name || gradesList[0].label || 'Grade 4';
-    }
-    return 'Grade 4';
-  }, [gradesList]);
-
-  // Form Fields State
-  const [uliNo, setUliNo] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [grade, setGrade] = useState(initialGradeName);
-  const [stream, setStream] = useState('');
-  const [bulkText, setBulkText] = useState('');
-
-  // Dynamically compute available streams for the selected registration grade
-  const formAvailableStreams = useMemo(() => {
-    const selectedObj = gradesList.find((g: any) => (g.name || g.label || g.id) === grade);
-    if (selectedObj && Array.isArray(selectedObj.streams)) {
-      return selectedObj.streams.map((s: any) => (typeof s === 'string' ? s : s.name));
-    }
-    return [];
-  }, [grade, gradesList]);
-
-  // Auto-set default stream when Grade selection changes
-  useEffect(() => {
-    if (formAvailableStreams.length > 0) {
-      setStream(formAvailableStreams[0]);
-    } else {
-      setStream('Yellow');
-    }
-  }, [grade, formAvailableStreams]);
-
-  // 1. READ FROM LOCALSTORAGE
-  const [students, setStudents] = useState<any[]>(() => {
-    try {
-      const raw = localStorage.getItem('munyaka_students') || localStorage.getItem('munyaka_learners');
-      return raw ? JSON.parse(raw) : [];
-    } catch (e) {
-      return [];
-    }
-  });
-
-  // 2. WRITE TO LOCALSTORAGE
-  const saveStudentsToLocalStorage = (updated: any[]) => {
-    setStudents(updated);
-    localStorage.setItem('munyaka_students', JSON.stringify(updated));
-    localStorage.setItem('munyaka_learners', JSON.stringify(updated));
-  };
-
-  // Add Single Learner
-  const handleAddSingle = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!fullName.trim()) return;
-
-    const newLearner = {
-      id: Date.now().toString(),
-      uliNo: uliNo.trim() || `ADM-${Math.floor(1000 + Math.random() * 9000)}`,
-      name: fullName.trim(),
-      fullName: fullName.trim(),
-      grade: grade,
-      class: grade,
-      stream: stream
-    };
-
-    const updated = [newLearner, ...students];
-    saveStudentsToLocalStorage(updated);
-
-    // Reset Form
-    setUliNo('');
-    setFullName('');
-    setActiveForm('none');
-  };
-
-  // Add Bulk Learners
-  const handleAddBulk = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!bulkText.trim()) return;
-
-    const lines = bulkText.split('\n').filter(l => l.trim().length > 0);
-    const createdList = lines.map((line, index) => {
-      const parts = line.split(',').map(p => p.trim());
-      return {
-        id: (Date.now() + index).toString(),
-        uliNo: parts[0] || `ADM-${Math.floor(1000 + Math.random() * 9000)}`,
-        name: parts[1] || parts[0] || 'Learner',
-        fullName: parts[1] || parts[0] || 'Learner',
-        grade: parts[2] || grade,
-        class: parts[2] || grade,
-        stream: parts[3] || stream
-      };
-    });
-
-    const updated = [...createdList, ...students];
-    saveStudentsToLocalStorage(updated);
-
-    setBulkText('');
-    setActiveForm('none');
-  };
-
-  // Delete Learner
-  const handleDelete = (id: string | number) => {
-    const updated = students.filter(s => (s.id || s.admNo || s.uliNo) !== id);
-    saveStudentsToLocalStorage(updated);
-  };
-
-  // Extract Dynamic Streams for Filter Bar
-  const filterAvailableStreams = useMemo(() => {
-    if (filterGrade === 'all') {
-      const streamsSet = new Set<string>();
-      gradesList.forEach((g: any) => {
-        if (Array.isArray(g.streams)) {
-          g.streams.forEach((s: any) => streamsSet.add(typeof s === 'string' ? s : s.name));
+      const saved = localStorage.getItem('school_learners_data');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
         }
-      });
-      return ['all', ...Array.from(streamsSet)];
+      }
+    } catch (e) {
+      console.error('Error loading learners from localStorage', e);
     }
-    const matchObj = gradesList.find((g: any) => (g.name || g.id) === filterGrade);
-    if (matchObj && Array.isArray(matchObj.streams)) {
-      return ['all', ...matchObj.streams.map((s: any) => (typeof s === 'string' ? s : s.name))];
-    }
-    return ['all'];
-  }, [filterGrade, gradesList]);
+    // Seed default learners
+    localStorage.setItem('school_learners_data', JSON.stringify(DEFAULT_LEARNERS));
+    return DEFAULT_LEARNERS;
+  });
 
-  // Filter List
-  const filteredStudents = useMemo(() => {
-    return students.filter((student: any) => {
-      const idNo = student.uliNo || student.admNo || student.id || '';
-      const name = student.name || student.fullName || '';
-      const matchesSearch = !searchTerm || name.toLowerCase().includes(searchTerm.toLowerCase()) || idNo.toString().toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesGrade = filterGrade === 'all' || student.class === filterGrade || student.grade === filterGrade;
-      const matchesStream = filterStream === 'all' || student.stream === filterStream;
+  // Automatically sync learners back to localStorage on change
+  useEffect(() => {
+    try {
+      localStorage.setItem('school_learners_data', JSON.stringify(learners));
+    } catch (e) {
+      console.error('Error saving learners to localStorage', e);
+    }
+  }, [learners]);
+
+  // Filters state
+  const [searchTerm, setSearchTerm] = useState('');
+  const [gradeFilter, setGradeFilter] = useState('All');
+  const [streamFilter, setStreamFilter] = useState('All');
+
+  // Modal State
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    admNo: 'MPS/2025/0' + Math.floor(10 + Math.random() * 90),
+    name: '',
+    grade: 'Grade 4',
+    stream: 'North',
+    gender: 'Female' as 'Male' | 'Female' | 'Other',
+    guardian: '',
+    phone: '',
+  });
+
+  const [formError, setFormError] = useState('');
+
+  // Delete Confirmation State
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Filtered learners
+  const filteredLearners = useMemo(() => {
+    return learners.filter((learner) => {
+      const matchesSearch = 
+        learner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        learner.admNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        learner.guardian.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesGrade = gradeFilter === 'All' || learner.grade === gradeFilter;
+      const matchesStream = streamFilter === 'All' || learner.stream === streamFilter;
+
       return matchesSearch && matchesGrade && matchesStream;
     });
-  }, [students, searchTerm, filterGrade, filterStream]);
+  }, [learners, searchTerm, gradeFilter, streamFilter]);
+
+  // Open Add Modal
+  const handleOpenAdd = () => {
+    setEditingLearnerId(null);
+    setFormData({
+      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      name: '',
+      grade: 'Grade 4',
+      stream: 'North',
+      gender: 'Female',
+      guardian: '',
+      phone: '',
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  // Open Edit Modal
+  const handleOpenEdit = (learner: Learner) => {
+    setEditingLearnerId(learner.id);
+    setFormData({
+      admNo: learner.admNo,
+      name: learner.name,
+      grade: learner.grade,
+      stream: learner.stream,
+      gender: learner.gender,
+      guardian: learner.guardian,
+      phone: learner.phone,
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  // Handle Form Submit
+  const handleSaveLearner = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.admNo.trim() || !formData.name.trim() || !formData.guardian.trim()) {
+      setFormError('Please fill in all required fields (Admission No, Full Name, Parent/Guardian).');
+      return;
+    }
+
+    if (editingLearnerId) {
+      // Update existing
+      setLearners((prev) =>
+        prev.map((item) =>
+          item.id === editingLearnerId
+            ? { ...item, ...formData }
+            : item
+        )
+      );
+    } else {
+      // Create new
+      const newLearner: Learner = {
+        id: Date.now().toString(),
+        ...formData,
+      };
+      setLearners((prev) => [newLearner, ...prev]);
+    }
+
+    setIsModalOpen(false);
+  };
+
+  // Handle Delete Confirmation
+  const confirmDelete = (id: string) => {
+    setLearners((prev) => prev.filter((item) => item.id !== id));
+    setDeleteId(null);
+  };
+
+  // Export CSV
+  const handleExportCSV = () => {
+    const headers = ['Adm No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
+    const rows = filteredLearners.map((l) => [
+      l.admNo,
+      `"${l.name}"`,
+      l.grade,
+      l.stream,
+      l.gender,
+      `"${l.guardian}"`,
+      `"${l.phone}"`,
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `learners_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // Print
+  const handlePrint = () => {
+    window.print();
+  };
 
   return (
-    <div className="p-8 bg-[#FAF8F5] min-h-screen text-slate-800">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+    <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
+      
+      {/* 2. Top Header & Action Controls */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Students</h1>
-          <p className="text-sm font-medium text-slate-500 mt-1">{filteredStudents.length} total</p>
+          <div className="flex items-center gap-3 mb-1">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learners Management</h1>
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+              TERM 1, 2025
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500">
+            {filteredLearners.length} learners found {learners.length !== filteredLearners.length && `(filtered from ${learners.length} total)`}
+          </p>
         </div>
-        
-        {/* Trigger Buttons */}
-        <div className="flex items-center gap-3">
-          <button 
+
+        <div className="flex flex-wrap items-center gap-3">
+          <button
             type="button"
-            onClick={() => setActiveForm(activeForm === 'bulk' ? 'none' : 'bulk')}
-            className={`flex items-center gap-2 px-5 py-2.5 border rounded-full font-medium shadow-sm transition-all text-sm ${
-              activeForm === 'bulk' ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
-            }`}
+            onClick={handleExportCSV}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
           >
-            <SlidersHorizontal className="w-4 h-4" />
-            Bulk Add
+            <Download className="w-4 h-4 text-slate-500" />
+            Export CSV
           </button>
-          
-          <button 
+
+          <button
             type="button"
-            onClick={() => setActiveForm(activeForm === 'single' ? 'none' : 'single')}
-            className={`flex items-center gap-2 px-5 py-2.5 font-semibold text-slate-900 rounded-full shadow-sm transition-all text-sm ${
-              activeForm === 'single' ? 'bg-slate-900 text-white' : 'bg-[#C5F251] hover:bg-[#B7E642]'
-            }`}
+            onClick={handlePrint}
+            className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
+          >
+            <Printer className="w-4 h-4 text-slate-500" />
+            Print
+          </button>
+
+          <button
+            type="button"
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
           >
             <Plus className="w-4 h-4 stroke-[2.5]" />
-            Add Student
+            + Add Learner
           </button>
         </div>
       </div>
 
-      {/* INLINE REGISTRATION FORM: SINGLE LEARNER */}
-      {activeForm === 'single' && (
-        <div className="mb-6 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm transition-all">
-          <div className="flex justify-between items-center mb-4">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-              <UserPlus className="w-5 h-5 text-slate-700" /> Register New Learner
-            </h3>
-            <button type="button" onClick={() => setActiveForm('none')} className="text-slate-400 hover:text-slate-600">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <form onSubmit={handleAddSingle} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">ULI / ADMISSION NO</label>
-              <input
-                type="text"
-                placeholder="e.g. 1024"
-                value={uliNo}
-                onChange={(e) => setUliNo(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">FULL NAME *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Joy Chebet"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-                className="w-full px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-slate-300"
-              />
-            </div>
-
-            {/* DYNAMIC GRADE SELECT DROPDOWN */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">GRADE / CLASS</label>
-              <select
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
-              >
-                {gradesList.length > 0 ? (
-                  gradesList.map((g: any) => {
-                    const val = g.name || g.label || g.id;
-                    return (
-                      <option key={val} value={val}>
-                        {val}
-                      </option>
-                    );
-                  })
-                ) : (
-                  <>
-                    <option value="Grade 1">Grade 1</option>
-                    <option value="Grade 2">Grade 2</option>
-                    <option value="Grade 3">Grade 3</option>
-                    <option value="Grade 4">Grade 4</option>
-                    <option value="Grade 5">Grade 5</option>
-                    <option value="Grade 6">Grade 6</option>
-                    <option value="Grade 7">Grade 7</option>
-                    <option value="Grade 8">Grade 8</option>
-                    <option value="Grade 9">Grade 9</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            {/* DYNAMIC STREAM SELECT DROPDOWN */}
-            <div>
-              <label className="block text-xs font-semibold text-slate-500 mb-1">STREAM</label>
-              <select
-                value={stream}
-                onChange={(e) => setStream(e.target.value)}
-                className="w-full px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
-              >
-                {formAvailableStreams.length > 0 ? (
-                  formAvailableStreams.map((st: string) => (
-                    <option key={st} value={st}>
-                      {st}
-                    </option>
-                  ))
-                ) : (
-                  <>
-                    <option value="Yellow">Yellow</option>
-                    <option value="Red">Red</option>
-                    <option value="Blue">Blue</option>
-                    <option value="Green">Green</option>
-                  </>
-                )}
-              </select>
-            </div>
-
-            <div className="sm:col-span-2 lg:col-span-4 flex justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setActiveForm('none')}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-[#C5F251] hover:bg-[#B7E642] text-slate-900 font-semibold rounded-xl text-sm shadow-sm"
-              >
-                Save to Local Storage
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* INLINE REGISTRATION FORM: BULK ADD */}
-      {activeForm === 'bulk' && (
-        <div className="mb-6 bg-white border border-slate-200 p-6 rounded-2xl shadow-sm transition-all">
-          <div className="flex justify-between items-center mb-2">
-            <h3 className="font-bold text-slate-900 flex items-center gap-2">
-              <Upload className="w-5 h-5 text-slate-700" /> Bulk Import Learners
-            </h3>
-            <button type="button" onClick={() => setActiveForm('none')} className="text-slate-400 hover:text-slate-600">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <p className="text-xs text-slate-500 mb-3">
-            Enter each learner on a new line. Format: <code className="bg-slate-100 px-1.5 py-0.5 rounded text-slate-700 font-mono">AdmissionNo, Full Name, Grade, Stream</code>
-          </p>
-          <form onSubmit={handleAddBulk} className="space-y-4">
-            <textarea
-              rows={5}
-              placeholder="1001, Kiprono Koech, Grade 4, Yellow&#10;1002, Faith Akoth, Grade 4, Blue"
-              value={bulkText}
-              onChange={(e) => setBulkText(e.target.value)}
-              className="w-full p-3 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-300"
-            />
-            <div className="flex justify-end gap-2 border-t border-slate-100 pt-3">
-              <button
-                type="button"
-                onClick={() => setActiveForm('none')}
-                className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                className="px-6 py-2 bg-[#C5F251] hover:bg-[#B7E642] text-slate-900 font-semibold rounded-xl text-sm shadow-sm"
-              >
-                Import & Save All
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-
-      {/* Search & Filter Bar */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        <div className="relative flex-1 min-w-[280px]">
-          <Search className="absolute left-4 top-3.5 h-4 w-4 text-slate-400" />
+      {/* 3. Filters Bar */}
+      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs mb-6 flex flex-col md:flex-row items-center gap-4">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by name or admission no..."
+            placeholder="Search by learner Name or Adm No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-full text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300 shadow-sm"
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
           />
         </div>
 
-        <select
-          value={filterGrade}
-          onChange={(e) => setFilterGrade(e.target.value)}
-          className="bg-white border border-slate-200 rounded-full px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none cursor-pointer min-w-[140px]"
-        >
-          <option value="all">All Grades</option>
-          {gradesList.map((g: any) => (
-            <option key={g.id || g.name} value={g.name || g.id}>
-              {g.name || g.label}
-            </option>
-          ))}
-        </select>
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Grade Dropdown */}
+          <div className="w-full md:w-48">
+            <select
+              value={gradeFilter}
+              onChange={(e) => setGradeFilter(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="All">All Grades</option>
+              {GRADES_LIST.map((grade) => (
+                <option key={grade} value={grade}>{grade}</option>
+              ))}
+            </select>
+          </div>
 
-        <select
-          value={filterStream}
-          onChange={(e) => setFilterStream(e.target.value)}
-          className="bg-white border border-slate-200 rounded-full px-5 py-2.5 text-sm font-medium text-slate-700 shadow-sm focus:outline-none cursor-pointer min-w-[140px]"
-        >
-          {filterAvailableStreams.map((s) => (
-            <option key={s} value={s}>
-              {s === 'all' ? 'All Streams' : s}
-            </option>
-          ))}
-        </select>
+          {/* Stream Dropdown */}
+          <div className="w-full md:w-48">
+            <select
+              value={streamFilter}
+              onChange={(e) => setStreamFilter(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
+            >
+              <option value="All">All Streams</option>
+              {STREAMS_LIST.map((stream) => (
+                <option key={stream} value={stream}>{stream}</option>
+              ))}
+            </select>
+          </div>
+        </div>
       </div>
 
-      {/* Students Table */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-sm overflow-hidden">
-        <table className="w-full text-left border-collapse">
-          <thead>
-            <tr className="border-b border-slate-100 text-[11px] font-bold text-slate-400 uppercase tracking-wider bg-white">
-              <th className="py-4 px-6">ULI NO</th>
-              <th className="py-4 px-6">NAME</th>
-              <th className="py-4 px-6">GRADE</th>
-              <th className="py-4 px-6">STREAM</th>
-              <th className="py-4 px-6 text-right">ACTIONS</th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-slate-100 text-sm font-medium">
-            {filteredStudents.length > 0 ? (
-              filteredStudents.map((student: any, idx: number) => {
-                const sId = student.id || student.admNo || student.uliNo || idx;
-                return (
-                  <tr key={sId} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-4 px-6 text-slate-400 font-mono text-xs">
-                      {student.uliNo || student.admNo || student.id || 'N/A'}
+      {/* 4. Table Layout & Styling */}
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+                <th className="py-4 px-6">ADM NO.</th>
+                <th className="py-4 px-6">NAME</th>
+                <th className="py-4 px-6">GRADE</th>
+                <th className="py-4 px-6">STREAM</th>
+                <th className="py-4 px-6">GENDER</th>
+                <th className="py-4 px-6">PARENT/GUARDIAN</th>
+                <th className="py-4 px-6">PHONE</th>
+                <th className="py-4 px-6 text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 text-sm">
+              {filteredLearners.length > 0 ? (
+                filteredLearners.map((learner) => (
+                  <tr key={learner.id} className="hover:bg-slate-50/60 transition-colors group">
+                    <td className="py-4 px-6 font-mono text-xs font-semibold text-indigo-600">
+                      {learner.admNo}
                     </td>
-                    <td className="py-4 px-6 font-semibold text-slate-900">
-                      {student.name || student.fullName}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#F1EFE9] text-slate-800">
-                        {student.class || student.grade || 'Grade 4'}
-                      </span>
+                    <td className="py-4 px-6 font-bold text-slate-900">
+                      {learner.name}
                     </td>
                     <td className="py-4 px-6">
-                      <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#EFF8CF] text-[#4A6400]">
-                        {student.stream || 'Yellow'}
+                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
+                        {learner.grade}
                       </span>
+                    </td>
+                    <td className="py-4 px-6 text-slate-600 font-medium">
+                      {learner.stream}
+                    </td>
+                    <td className="py-4 px-6">
+                      {learner.gender === 'Female' ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200">
+                          Female
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                          {learner.gender}
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-4 px-6 text-slate-700 font-medium">
+                      {learner.guardian}
+                    </td>
+                    <td className="py-4 px-6 text-slate-600 font-mono text-xs">
+                      {learner.phone}
                     </td>
                     <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-3 text-slate-400">
-                        <button type="button" className="hover:text-slate-700 p-1">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button type="button" className="hover:text-slate-700 p-1">
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenEdit(learner)}
+                          title="Edit learner"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                        >
                           <Edit3 className="w-4 h-4" />
                         </button>
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => handleDelete(sId)}
-                          className="hover:text-red-500 p-1 text-red-400"
+                          onClick={() => setDeleteId(learner.id)}
+                          title="Delete learner"
+                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                );
-              })
-            ) : (
-              <tr>
-                <td colSpan={5} className="py-12 text-center text-slate-400 text-sm">
-                  No students found. Click "+ Add Student" or "Bulk Add" above to register learners into Local Storage.
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={8} className="py-16 text-center text-slate-400">
+                    <div className="flex flex-col items-center justify-center gap-2">
+                      <AlertCircle className="w-8 h-8 text-slate-300" />
+                      <p className="font-medium text-slate-600">No learners found matching your filter criteria.</p>
+                      <p className="text-xs text-slate-400">Try adjusting your search query or filters.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
+
+      {/* 5. Modal Dialog for Add / Edit Learner */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="flex items-center justify-between px-6 py-5 border-b border-slate-100 bg-slate-50/50">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
+                  <UserPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-lg text-slate-900">
+                    {editingLearnerId ? 'Edit Learner Details' : 'Register New Learner'}
+                  </h3>
+                  <p className="text-xs text-slate-500">Fill in student bio and guardian details below</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 p-1.5 hover:bg-slate-100 rounded-xl transition-all"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveLearner} className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                  <span>{formError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Admission Number *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.admNo}
+                    onChange={(e) => setFormData({ ...formData, admNo: e.target.value })}
+                    placeholder="e.g. MPS/2025/006"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    placeholder="e.g. Brian Kiprop"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Grade *
+                  </label>
+                  <select
+                    value={formData.grade}
+                    onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  >
+                    {GRADES_LIST.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Stream *
+                  </label>
+                  <select
+                    value={formData.stream}
+                    onChange={(e) => setFormData({ ...formData, stream: e.target.value })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  >
+                    {STREAMS_LIST.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Gender *
+                  </label>
+                  <select
+                    value={formData.gender}
+                    onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
+                    className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  >
+                    <option value="Female">Female</option>
+                    <option value="Male">Male</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Parent / Guardian Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={formData.guardian}
+                    onChange={(e) => setFormData({ ...formData, guardian: e.target.value })}
+                    placeholder="e.g. Mary Kiprop"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold text-slate-600 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="e.g. +254 711 223 344"
+                    className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 mt-6">
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-100 transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
+                >
+                  {editingLearnerId ? 'Update Learner' : 'Save Learner'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Prompt Modal */}
+      {deleteId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
+          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm p-6 text-center animate-in zoom-in-95 duration-200">
+            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <Trash2 className="w-6 h-6" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900 mb-1">Remove Learner?</h3>
+            <p className="text-sm text-slate-500 mb-6">
+              Are you sure you want to remove this learner from LocalStorage? This action cannot be undone.
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={() => setDeleteId(null)}
+                className="flex-1 px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm font-medium text-slate-700 transition-all"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => confirmDelete(deleteId)}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold shadow-md transition-all"
+              >
+                Yes, Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
