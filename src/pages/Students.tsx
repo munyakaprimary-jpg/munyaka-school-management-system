@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { 
-  Search, Plus, Edit3, Trash2, SlidersHorizontal, X, UserPlus, 
-  Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles
+import {
+  Search, Plus, Edit3, Trash2, SlidersHorizontal, X, UserPlus,
+  Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles, ChevronDown, FileText, Users
 } from 'lucide-react';
 
 interface Learner {
