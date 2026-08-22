@@ -8,6 +8,7 @@ import { Download, Loader2, Edit3, Check, Calendar, Clock } from "lucide-react";
 import { useAttendance } from '@/hooks/useAttendance';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 
 const CLASS_OPTIONS = [
   { value: 'PP1', label: 'PP1' },
