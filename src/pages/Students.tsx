@@ -86,6 +86,48 @@ export default function Students() {
     return DEFAULT_LEARNERS;
   });
 
+  // Dynamic Active Term Reader from LocalStorage
+  const getActiveTermString = () => {
+    try {
+      const keys = ['current_academic_term', 'school_term', 'academic_session', 'term_info'];
+      for (const key of keys) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          // If it's stored as JSON
+          try {
+            const parsed = JSON.parse(val);
+            if (typeof parsed === 'string') return parsed;
+            if (parsed && typeof parsed === 'object') {
+              const t = parsed.term || parsed.name || parsed.activeTerm;
+              const y = parsed.year || parsed.academicYear;
+              if (t && y) return `${t.toUpperCase()}, ${y}`;
+              if (t) return t.toUpperCase();
+            }
+          } catch {
+            // It's a raw string
+            if (val.trim().length > 0) return val.trim().toUpperCase();
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error reading academic term from localStorage', e);
+    }
+    return 'TERM 1, 2025';
+  };
+
+  const [activeTermText, setActiveTermText] = useState(getActiveTermString);
+
+  // Sync active term on window focus or storage updates
+  useEffect(() => {
+    const handleStorageChange = () => {
+      setActiveTermText(getActiveTermString());
+    };
+    window.addEventListener('storage', handleStorageChange);
+    // Also check on mount
+    setActiveTermText(getActiveTermString());
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
   // Automatically sync learners back to localStorage on change
   useEffect(() => {
     try {
@@ -320,7 +362,7 @@ export default function Students() {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learners Management</h1>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
-              TERM 1, 2025
+              {activeTermText}
             </span>
           </div>
           <p className="text-sm font-medium text-slate-500">
