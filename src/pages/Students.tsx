@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Search, Plus, Edit3, Trash2, SlidersHorizontal, X, UserPlus, 
   Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles
@@ -68,17 +68,8 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
 ];
 
-const GRADES_LIST = [
-  'PP1', 'PP2', 
-  'Grade 1', 'Grade 2', 'Grade 3', 
-  'Grade 4', 'Grade 5', 'Grade 6', 
-  'Grade 7', 'Grade 8'
-];
-
-const STREAMS_LIST = ['North', 'South', 'East', 'West'];
-
 export default function Students() {
-  // 1. LocalStorage Persistence Setup
+  // 1. LocalStorage Persistence Setup for Learners
   const [learners, setLearners] = useState<Learner[]>(() => {
     try {
       const saved = localStorage.getItem('school_learners_data');
@@ -91,7 +82,6 @@ export default function Students() {
     } catch (e) {
       console.error('Error loading learners from localStorage', e);
     }
-    // Seed default learners
     localStorage.setItem('school_learners_data', JSON.stringify(DEFAULT_LEARNERS));
     return DEFAULT_LEARNERS;
   });
@@ -104,6 +94,70 @@ export default function Students() {
       console.error('Error saving learners to localStorage', e);
     }
   }, [learners]);
+
+  // 2. Dynamic Grades & Streams Reader from LocalStorage
+  const getDynamicGradesAndStreams = () => {
+    try {
+      // Check multiple keys as specified: 'school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'
+      const keys = ['school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'];
+      let rawData: any = null;
+      for (const key of keys) {
+        const val = localStorage.getItem(key);
+        if (val) {
+          rawData = JSON.parse(val);
+          break;
+        }
+      }
+
+      let gradesSet = new Set<string>();
+      let streamsSet = new Set<string>();
+
+      if (Array.isArray(rawData)) {
+        rawData.forEach((item: any) => {
+          if (item && typeof item === 'object') {
+            const gName = item.name || item.grade || item.label;
+            if (gName) gradesSet.add(gName);
+
+            const streams = item.streams || item.classes;
+            if (Array.isArray(streams)) {
+              streams.forEach((s: any) => {
+                const sName = typeof s === 'string' ? s : (s.name || s.label);
+                if (sName) streamsSet.add(sName);
+              });
+            }
+          }
+        });
+      }
+
+      // Fallback if empty or not found in LS: extract from learners records or defaults
+      if (gradesSet.size === 0) {
+        ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'].forEach(g => gradesSet.add(g));
+      }
+      if (streamsSet.size === 0) {
+        ['North', 'South', 'East', 'West'].forEach(s => streamsSet.add(s));
+        learners.forEach(l => {
+          if (l.stream) streamsSet.add(l.stream);
+        });
+      }
+
+      return {
+        grades: Array.from(gradesSet),
+        streams: Array.from(streamsSet)
+      };
+    } catch (e) {
+      return {
+        grades: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'],
+        streams: ['North', 'South', 'East', 'West']
+      };
+    }
+  };
+
+  const dynamicData = useMemo(() => {
+    return getDynamicGradesAndStreams();
+  }, [learners]);
+
+  const GRADES_LIST = dynamicData.grades;
+  const STREAMS_LIST = dynamicData.streams;
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -118,8 +172,8 @@ export default function Students() {
   const [formData, setFormData] = useState({
     admNo: 'MPS/2025/0' + Math.floor(10 + Math.random() * 90),
     name: '',
-    grade: 'Grade 4',
-    stream: 'North',
+    grade: GRADES_LIST[0] || 'Grade 4',
+    stream: STREAMS_LIST[0] || 'North',
     gender: 'Female' as 'Male' | 'Female' | 'Other',
     guardian: '',
     phone: '',
@@ -151,8 +205,8 @@ export default function Students() {
     setFormData({
       admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
       name: '',
-      grade: 'Grade 4',
-      stream: 'North',
+      grade: GRADES_LIST[0] || 'Grade 4',
+      stream: STREAMS_LIST[0] || 'North',
       gender: 'Female',
       guardian: '',
       phone: '',
@@ -288,7 +342,7 @@ export default function Students() {
         </div>
       </div>
 
-      {/* 3. Filters Bar */}
+      {/* 3. Filters Bar (Dynamic Grades & Streams from LocalStorage) */}
       <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs mb-6 flex flex-col md:flex-row items-center gap-4">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
@@ -316,7 +370,7 @@ export default function Students() {
             </select>
           </div>
 
-          {/* Stream Dropdown */}
+          {/* Stream Dropdown (Dynamically loaded from LocalStorage keys) */}
           <div className="w-full md:w-48">
             <select
               value={streamFilter}
@@ -421,7 +475,7 @@ export default function Students() {
         </div>
       </div>
 
-      {/* 5. Modal Dialog for Add / Edit Learner */}
+      {/* 5. Modal Dialog for Add / Edit Learner (Dynamic Grades & Streams) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg overflow-hidden animate-in zoom-in-95 duration-200">
