@@ -124,14 +124,21 @@ export default function Students() {
 
   // 2. Real-Time LocalStorage Event Listener
   useEffect(() => {
-    const updateTerm = () => setTermBadge(getActiveTermLabel());
-    updateTerm();
-    window.addEventListener('storage', updateTerm);
-    // Also poll/listen to custom storage events if dispatched within the same app
-    const interval = setInterval(updateTerm, 1000);
+    const syncTermBadge = () => {
+      const config = JSON.parse(localStorage.getItem('system_config') || localStorage.getItem('academic_setup') || '{}');
+      const term = config.activeTerm || config.term || "Term 1";
+      const year = config.activeAcademicYear || config.year || "2026";
+      setTermBadge(`${term.toUpperCase()}, ${year}`);
+    };
+
+    syncTermBadge(); // Sync on route render
+
+    window.addEventListener('storage', syncTermBadge);
+    window.addEventListener('academicConfigUpdated', syncTermBadge);
+
     return () => {
-      window.removeEventListener('storage', updateTerm);
-      clearInterval(interval);
+      window.removeEventListener('storage', syncTermBadge);
+      window.removeEventListener('academicConfigUpdated', syncTermBadge);
     };
   }, []);
 
@@ -349,7 +356,24 @@ export default function Students() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.setAttribute('href', url);
-    link.setAttribute('download', `learners_export_${new Date().toISOString().slice(0, 10)}.csv`);
+
+    const dateStr = new Date().toISOString().slice(0, 10);
+    const hasGrade = selectedGrade && selectedGrade !== 'all';
+    const hasStream = selectedStream && selectedStream !== 'all';
+    
+    let filename = `learners_Complete_Register_${dateStr}.csv`;
+    const cleanGrade = hasGrade ? selectedGrade.replace(/\s+/g, '_') : '';
+    const cleanStream = hasStream ? selectedStream.replace(/\s+/g, '_') : '';
+
+    if (hasGrade && hasStream) {
+      filename = `learners_${cleanGrade}_${cleanStream}_${dateStr}.csv`;
+    } else if (hasGrade && !hasStream) {
+      filename = `learners_${cleanGrade}_All_Streams_${dateStr}.csv`;
+    } else if (!hasGrade && hasStream) {
+      filename = `learners_All_Grades_${cleanStream}_${dateStr}.csv`;
+    }
+
+    link.setAttribute('download', filename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
