@@ -9,28 +9,6 @@ import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 
 // ============================================
-// MISSING HELPER FUNCTION - GET TIER KEY
-// ============================================
-const getTierKey = (gradeName: string): string => {
-  if (!gradeName) return "lower_primary";
-  const g = gradeName.toString().toLowerCase().trim();
-  if (g.includes("pp1") || g.includes("pp2") || g.includes("playgroup")) return "pre_primary";
-  if (g.includes("1") || g.includes("2") || g.includes("3")) return "lower_primary";
-  if (g.includes("4") || g.includes("5") || g.includes("6")) return "upper_primary";
-  if (g.includes("7") || g.includes("8") || g.includes("9")) return "junior_school";
-  return "lower_primary";
-};
-
-const getLevelNameForGrade = (gradeName: string): string => {
-  const g = gradeName.toLowerCase();
-  if (g.includes("pp1") || g.includes("pp2") || g.includes("pre-primary")) return "Pre-Primary";
-  if (g.includes("grade 1") || g.includes("grade 2") || g.includes("grade 3")) return "Lower Primary";
-  if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "Upper Primary";
-  if (g.includes("grade 7") || g.includes("grade 8") || g.includes("grade 9") || g.includes("junior")) return "Junior Secondary";
-  return "Lower Primary";
-};
-
-// ============================================
 // SAFE LOCALSTORAGE READER - ALL WRAPPED IN TRY/CATCH
 // ============================================
 const safeGetItem = (key: string, defaultValue: any = null): any => {
@@ -96,50 +74,6 @@ const getAssessmentScores = (): Record<string, Record<string, string>> => {
   return {};
 };
 
-// Educational Tier Subject Mappings & Parsing Logic
-const TIER_SUBJECTS: Record<string, string[]> = {
-  "pre_primary": [
-    "Language Activities",
-    "Mathematical Activities",
-    "Environmental Activities",
-    "Psychomotor & Creative Activities",
-    "Religious Education"
-  ],
-  "lower_primary": [
-    "Literacy",
-    "Kiswahili/Indigenous Language",
-    "English Language",
-    "Mathematical Activities",
-    "Environmental Activities",
-    "Hygiene & Nutrition Activities",
-    "Religious Education",
-    "Movement & Creative Activities"
-  ],
-  "upper_primary": [
-    "English",
-    "Kiswahili",
-    "Mathematics",
-    "Science & Technology",
-    "Agriculture & Nutrition",
-    "Social Studies",
-    "Religious Education (CRE/IRE/HRE)",
-    "Creative Arts"
-  ],
-  "junior_school": [
-    "English",
-    "Kiswahili",
-    "Mathematics",
-    "Integrated Science",
-    "Health Education",
-    "Agriculture & Nutrition",
-    "Social Studies",
-    "Religious Education",
-    "Pre-Technical Studies",
-    "Computer Science",
-    "Creative Arts & Sports"
-  ]
-};
-
 // ============================================
 // Assessments Component
 // ============================================
@@ -173,7 +107,7 @@ const Assessments = () => {
   // Null-safe grade getter
   const currentGrade = grade || "Grade 1";
   const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
-  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower_primary"], [tierKey]);
+  const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
   // ============================================
   // FILTERED STUDENTS - DECLARED BEFORE USE EFFECT
@@ -205,7 +139,7 @@ const Assessments = () => {
       const matchesSearch = searchTerm.trim() === "" ||
         (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assation.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
