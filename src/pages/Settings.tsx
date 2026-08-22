@@ -327,14 +327,6 @@ const Settings = () => {
         sessionSecurity,
         auditLogs
       };
-      localStorage.setItem('system_config', JSON.stringify({
-        activeTerm: academicConfig.activeTerm,
-        activeAcademicYear: academicConfig.activeYear,
-        termStartDate: academicConfig.termStartDate,
-        termEndDate: academicConfig.termEndDate
-      }));
-      window.dispatchEvent(new Event('academicConfigUpdated'));
-
       localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
       setGeofenceConfig(geofenceConfig);
 
