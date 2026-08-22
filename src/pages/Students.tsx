@@ -89,15 +89,15 @@ export default function Students() {
   // Dynamic Active Term Reader from LocalStorage (System Config, Academic Setup, School Settings)
   const getActiveTermString = () => {
     try {
-      const configKeys = ['system_config', 'academic_setup', 'school_settings', 'current_academic_term', 'school_term', 'academic_session'];
+      const configKeys = ['system_config', 'academic_setup', 'school_settings', 'active_term', 'current_academic_term', 'school_term', 'academic_session'];
       for (const key of configKeys) {
         const val = localStorage.getItem(key);
         if (val) {
           try {
             const parsed = JSON.parse(val);
             if (parsed && typeof parsed === 'object') {
-              const termVal = parsed.currentTerm || parsed.term || parsed.activeTerm || parsed.name;
-              const yearVal = parsed.currentYear || parsed.year || parsed.academicYear;
+              const termVal = parsed.activeTerm || parsed.currentTerm || parsed.term || parsed.name;
+              const yearVal = parsed.activeAcademicYear || parsed.currentYear || parsed.year || parsed.academicYear;
               if (termVal && yearVal) {
                 return `${String(termVal).toUpperCase()}, ${yearVal}`;
               }
@@ -117,7 +117,7 @@ export default function Students() {
     } catch (e) {
       console.error('Error reading academic config from localStorage', e);
     }
-    return 'TERM 1, 2026';
+    return 'TERM 2, 2026';
   };
 
   const [activeTermText, setActiveTermText] = useState(getActiveTermString);
