@@ -68,6 +68,9 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
 ];
 
+// Keys for persisting filter state in localStorage
+const FILTER_STATE_KEY = 'learners_filter_state';
+
 export default function Students() {
   // 1. LocalStorage Persistence Setup for Learners
   const [learners, setLearners] = useState<Learner[]>(() => {
@@ -145,10 +148,11 @@ export default function Students() {
   }, [learners]);
 
   // 2. Dynamic Grades & Streams Reader from LocalStorage
+  // Reads the grade-stream mapping from 'gradeStreamSettings' or the school setup configuration keys.
   const getDynamicGradesAndStreams = () => {
     try {
-      // Check multiple keys as specified: 'school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'
-      const keys = ['school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'];
+      // Check multiple keys as specified: 'gradeStreamSettings', 'school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'
+      const keys = ['gradeStreamSettings', 'school_grades_streams_data', 'school_streams', 'cbc_structure', 'munyaka_grades'];
       let rawData: any = null;
       for (const key of keys) {
         const val = localStorage.getItem(key);
@@ -160,19 +164,27 @@ export default function Students() {
 
       let gradesSet = new Set<string>();
       let streamsSet = new Set<string>();
+      // Map of grade name -> array of stream names
+      const gradeStreamMap: Record<string, string[]> = {};
 
       if (Array.isArray(rawData)) {
         rawData.forEach((item: any) => {
           if (item && typeof item === 'object') {
             const gName = item.name || item.grade || item.label;
-            if (gName) gradesSet.add(gName);
-
-            const streams = item.streams || item.classes;
-            if (Array.isArray(streams)) {
-              streams.forEach((s: any) => {
-                const sName = typeof s === 'string' ? s : (s.name || s.label);
-                if (sName) streamsSet.add(sName);
-              });
+            if (gName) {
+              gradesSet.add(gName);
+              const streams = item.streams || item.classes;
+              const streamNames: string[] = [];
+              if (Array.isArray(streams)) {
+                streams.forEach((s: any) => {
+                  const sName = typeof s === 'string' ? s : (s.name || s.label);
+                  if (sName) {
+                    streamsSet.add(sName);
+                    streamNames.push(sName);
+                  }
+                });
+              }
+              gradeStreamMap[gName] = streamNames;
             }
           }
         });
@@ -191,12 +203,14 @@ export default function Students() {
 
       return {
         grades: Array.from(gradesSet),
-        streams: Array.from(streamsSet)
+        streams: Array.from(streamsSet),
+        gradeStreamMap,
       };
     } catch (e) {
       return {
         grades: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8'],
-        streams: ['North', 'South', 'East', 'West']
+        streams: ['North', 'South', 'East', 'West'],
+        gradeStreamMap: {},
       };
     }
   };
@@ -206,12 +220,88 @@ export default function Students() {
   }, [learners]);
 
   const GRADES_LIST = dynamicData.grades;
-  const STREAMS_LIST = dynamicData.streams;
+  const ALL_STREAMS_LIST = dynamicData.streams;
+  const GRADE_STREAM_MAP = dynamicData.gradeStreamMap;
 
-  // Filters state
-  const [searchTerm, setSearchTerm] = useState('');
-  const [gradeFilter, setGradeFilter] = useState('All');
-  const [streamFilter, setStreamFilter] = useState('All');
+  // Filters state — initialized from localStorage if available
+  const [searchTerm, setSearchTerm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_STATE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.searchTerm || '';
+      }
+    } catch (e) {
+      console.error('Error loading searchTerm from localStorage', e);
+    }
+    return '';
+  });
+
+  const [gradeFilter, setGradeFilter] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_STATE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.gradeFilter || 'All';
+      }
+    } catch (e) {
+      console.error('Error loading gradeFilter from localStorage', e);
+    }
+    return 'All';
+  });
+
+  const [streamFilter, setStreamFilter] = useState(() => {
+    try {
+      const saved = localStorage.getItem(FILTER_STATE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return parsed.streamFilter || 'All';
+      }
+    } catch (e) {
+      console.error('Error loading streamFilter from localStorage', e);
+    }
+    return 'All';
+  });
+
+  // Persist filter states to localStorage whenever they change
+  useEffect(() => {
+    try {
+      localStorage.setItem(FILTER_STATE_KEY, JSON.stringify({
+        searchTerm,
+        gradeFilter,
+        streamFilter,
+      }));
+    } catch (e) {
+      console.error('Error saving filter state to localStorage', e);
+    }
+  }, [searchTerm, gradeFilter, streamFilter]);
+
+  // Computed list of streams available for the currently selected grade.
+  // If "All Grades" or no grade is selected, show all unique streams in the school.
+  const availableStreams = useMemo(() => {
+    if (gradeFilter === 'All' || !gradeFilter) {
+      return ALL_STREAMS_LIST;
+    }
+    const mapped = GRADE_STREAM_MAP[gradeFilter];
+    if (mapped && mapped.length > 0) {
+      return mapped;
+    }
+    // Fallback: derive streams from learners that belong to the selected grade
+    const streamsForGrade = new Set<string>();
+    learners.forEach((l) => {
+      if (l.grade === gradeFilter && l.stream) {
+        streamsForGrade.add(l.stream);
+      }
+    });
+    return Array.from(streamsForGrade);
+  }, [gradeFilter, ALL_STREAMS_LIST, GRADE_STREAM_MAP, learners]);
+
+  // When the grade filter changes, automatically reset the stream filter to "All Streams"
+  const handleGradeFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newGrade = e.target.value;
+    setGradeFilter(newGrade);
+    setStreamFilter('All');
+  };
 
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -222,7 +312,7 @@ export default function Students() {
     admNo: 'MPS/2025/0' + Math.floor(10 + Math.random() * 90),
     name: '',
     grade: GRADES_LIST[0] || 'Grade 4',
-    stream: STREAMS_LIST[0] || 'North',
+    stream: ALL_STREAMS_LIST[0] || 'North',
     gender: 'Female' as 'Male' | 'Female' | 'Other',
     guardian: '',
     phone: '',
@@ -236,7 +326,7 @@ export default function Students() {
   // Filtered learners
   const filteredLearners = useMemo(() => {
     return learners.filter((learner) => {
-      const matchesSearch = 
+      const matchesSearch =
         learner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         learner.admNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
         learner.guardian.toLowerCase().includes(searchTerm.toLowerCase());
@@ -255,7 +345,7 @@ export default function Students() {
       admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
-      stream: STREAMS_LIST[0] || 'North',
+      stream: ALL_STREAMS_LIST[0] || 'North',
       gender: 'Female',
       guardian: '',
       phone: '',
@@ -318,7 +408,7 @@ export default function Students() {
       admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
-      stream: STREAMS_LIST[0] || 'North',
+      stream: ALL_STREAMS_LIST[0] || 'North',
       gender: 'Female',
       guardian: '',
       phone: '',
@@ -467,7 +557,7 @@ export default function Students() {
           <div className="w-full md:w-48">
             <select
               value={gradeFilter}
-              onChange={(e) => setGradeFilter(e.target.value)}
+              onChange={handleGradeFilterChange}
               className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
             >
               <option value="All">All Grades</option>
@@ -477,7 +567,7 @@ export default function Students() {
             </select>
           </div>
 
-          {/* Stream Dropdown (Dynamically loaded from LocalStorage keys) */}
+          {/* Stream Dropdown (Dynamically populated based on selected Grade) */}
           <div className="w-full md:w-48">
             <select
               value={streamFilter}
@@ -485,7 +575,7 @@ export default function Students() {
               className="w-full px-3.5 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
             >
               <option value="All">All Streams</option>
-              {STREAMS_LIST.map((stream) => (
+              {availableStreams.map((stream) => (
                 <option key={stream} value={stream}>{stream}</option>
               ))}
             </select>
@@ -678,7 +768,7 @@ export default function Students() {
                       onChange={(e) => setFormData({ ...formData, stream: e.target.value })}
                       className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     >
-                      {STREAMS_LIST.map((s) => (
+                      {ALL_STREAMS_LIST.map((s) => (
                         <option key={s} value={s}>{s}</option>
                       ))}
                     </select>
