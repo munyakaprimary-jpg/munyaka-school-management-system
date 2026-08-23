@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,14 +10,81 @@ import Modal from '@/components/ui/Modal';
 import { ChevronLeft, ChevronRight, Plus, Calendar as CalendarIcon, Clock } from 'lucide-react';
 import { EVENTS as initialEvents } from '@/lib/mock-data';
 import { showSuccess } from '@/utils/toast';
+import { format, startOfMonth, endOfMonth, startOfWeek, addDays, isSameMonth, isToday } from 'date-fns';
 
 const SchoolCalendar = () => {
+  // 1. LocalStorage State Persistence
+  const [currentDate, setCurrentDate] = useState<Date>(() => {
+    const saved = localStorage.getItem('selectedCalendarDate');
+    if (saved) {
+      try {
+        return new Date(saved);
+      } catch (e) {
+        console.error('Error parsing saved calendar date:', e);
+      }
+    }
+    return new Date();
+  });
+
   const [eventsList, setEventsList] = useState(initialEvents);
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [type, setType] = useState("Internal");
+
+  // Persist currentDate to LocalStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('selectedCalendarDate', currentDate.toISOString());
+  }, [currentDate]);
+
+  // Derived calendar data
+  const year = currentDate.getFullYear();
+  const month = currentDate.getMonth();
+  
+  const monthYearString = useMemo(() => {
+    return currentDate.toLocaleString('default', { month: 'long', year: 'numeric' });
+  }, [currentDate]);
+
+  const daysInMonth = useMemo(() => {
+    return new Date(year, month + 1, 0).getDate();
+  }, [year, month]);
+
+  const firstDayOfMonth = useMemo(() => {
+    return new Date(year, month, 1).getDay(); // 0 = Sunday, 6 = Saturday
+  }, [year, month]);
+
+  const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  // Generate calendar grid cells
+  const calendarCells = useMemo(() => {
+    const cells = [];
+    
+    // Leading empty cells for days before the 1st
+    for (let i = 0; i < firstDayOfMonth; i++) {
+      cells.push({ day: null, isCurrentMonth: false, isToday: false, events: [] });
+    }
+    
+    // Days of the current month
+    for (let day = 1; day <= daysInMonth; day++) {
+      const cellDate = new Date(year, month, day);
+      const dayEvents = eventsList.filter(e => {
+        const eventDate = new Date(e.date);
+        return eventDate.getFullYear() === year && 
+               eventDate.getMonth() === month && 
+               eventDate.getDate() === day;
+      });
+      
+      cells.push({
+        day,
+        isCurrentMonth: true,
+        isToday: isToday(cellDate),
+        events: dayEvents
+      });
+    }
+    
+    return cells;
+  }, [year, month, firstDayOfMonth, daysInMonth, eventsList]);
 
   const handleAddEvent = () => {
     if (!title || !date || !time) return;
@@ -28,8 +95,17 @@ const SchoolCalendar = () => {
     showSuccess("New event added to calendar!");
   };
 
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const dates = Array.from({ length: 35 }, (_, i) => i - 3);
+  const handlePrevMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() - 1, 1));
+  };
+
+  const handleNextMonth = () => {
+    setCurrentDate(prev => new Date(prev.getFullYear(), prev.getMonth() + 1, 1));
+  };
+
+  const handleToday = () => {
+    setCurrentDate(new Date());
+  };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -44,20 +120,69 @@ const SchoolCalendar = () => {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-3">
           <Card className="rounded-[2rem] bg-white overflow-hidden">
+            {/* Dynamic Month & Year Header */}
             <div className="p-8 border-b flex items-center justify-between bg-slate-50/50">
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">October 2024</h2>
-              <div className="flex gap-1">
-                <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8"><ChevronLeft size={18} /></Button>
-                <Button variant="ghost" size="icon" className="rounded-xl h-8 w-8"><ChevronRight size={18} /></Button>
+              <h2 className="text-2xl font-black text-slate-900 tracking-tight">{monthYearString}</h2>
+              <div className="flex items-center gap-2">
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-xl h-10 w-10"
+                  onClick={handlePrevMonth}
+                  aria-label="Previous month"
+                >
+                  <ChevronLeft size={20} />
+                </Button>
+                <Button 
+                  variant="outline"
+                  className="rounded-xl h-10 px-4 bg-white border-slate-200 text-slate-700 font-medium"
+                  onClick={handleToday}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="rounded-xl h-10 w-10"
+                  onClick={handleNextMonth}
+                  aria-label="Next month"
+                >
+                  <ChevronRight size={20} />
+                </Button>
               </div>
             </div>
-            <div className="grid grid-cols-7 border-b">{days.map(d => <div key={d} className="px-4 py-3 text-center text-[10px] font-black uppercase text-slate-400">{d}</div>)}</div>
-            <div className="grid grid-cols-7 border-b">{dates.map((d, i) => (
-              <div key={i} className={`min-h-[120px] p-4 border-r border-b hover:bg-slate-50/50 ${d <= 0 || d > 31 ? 'bg-slate-50/30' : ''}`}>
-                <span className={`text-sm font-black ${d === 24 ? 'bg-indigo-600 text-white p-2 rounded-lg' : ''}`}>{d > 0 && d <= 31 ? d : ''}</span>
-                {d === 25 && <div className="mt-2 p-1.5 rounded-lg bg-indigo-50 text-[10px] font-bold text-indigo-700">Staff Meeting</div>}
-              </div>
-            ))}</div>
+
+            {/* Day Headers */}
+            <div className="grid grid-cols-7 border-b bg-slate-50/50">
+              {daysOfWeek.map(d => (
+                <div key={d} className="px-4 py-3 text-center text-[10px] font-black uppercase text-slate-400">
+                  {d}
+                </div>
+              ))}
+            </div>
+
+            {/* Calendar Grid */}
+            <div className="grid grid-cols-7">
+              {calendarCells.map((cell, index) => (
+                <div 
+                  key={index} 
+                  className={`min-h-[120px] p-4 border-r border-b hover:bg-slate-50/50 ${
+                    !cell.isCurrentMonth ? 'bg-slate-50/30' : ''
+                  } ${cell.isToday ? 'bg-indigo-50/50 ring-2 ring-indigo-200' : ''}`}
+                >
+                  {cell.day !== null && (
+                    <span className={`text-sm font-black ${cell.isToday ? 'text-indigo-600 bg-indigo-100 p-2 rounded-lg' : ''}`}>
+                      {cell.day}
+                    </span>
+                  )}
+                  {cell.events.map((event, i) => (
+                    <div key={i} className="mt-2 p-1.5 rounded-lg bg-indigo-50 text-[10px] font-bold text-indigo-700 truncate flex items-center gap-1">
+                      <Clock size={10} /> {event.time} {event.title}
+                    </div>
+                  ))}
+                </div>
+              ))}
+            </div>
           </Card>
         </div>
         <Card className="rounded-[2rem] bg-white p-8">
@@ -65,7 +190,7 @@ const SchoolCalendar = () => {
           <div className="space-y-6">{eventsList.map(e => (
             <div key={e.id} className="flex gap-4">
               <div className="w-10 h-10 rounded-2xl bg-slate-50 flex flex-col items-center justify-center font-black">
-                <span className="text-[10px] text-slate-400">Oct</span><span className="text-sm">{e.date.split('-')[2] || '??'}</span>
+                <span className="text-[10px] text-slate-400">{format(new Date(e.date), 'MMM')}</span><span className="text-sm">{format(new Date(e.date), 'dd')}</span>
               </div>
               <div><p className="text-sm font-bold">{e.title}</p><p className="text-[10px] text-slate-400 uppercase font-black tracking-widest"><Clock size={10} className="inline mr-1" /> {e.time}</p></div>
             </div>
