@@ -1,11 +1,14 @@
-import React, { useState, useMemo } from "react";
+"use client";
+
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import BackButton from "@/components/ui/BackButton";
+import { Progress } from "@/components/ui/progress";
+import BackButton from '@/components/ui/BackButton';
 import { 
   BarChart3, 
   Printer, 
@@ -21,14 +24,20 @@ import {
   Trophy,
   Loader2,
   Calendar,
-  Layers
+  Layers,
+  GraduationCap,
+  FileText,
+  ChevronDown,
+  ChevronRight,
+  X,
+  Download
 } from 'lucide-react';
 import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
-import { FALLBACK_CLUSTERS, DEFAULT_EXAM_TYPES } from '@/lib/assessment-constants';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV } from '@/utils/downloadHelper';
 
+// Types
 interface StudentResult {
   rank: number;
   studentId: string;
@@ -52,6 +61,20 @@ interface SubjectSummary {
 
 const STORAGE_KEY = 'munyaka_marks_records';
 
+// Grade level ordering for sorting
+const GRADE_ORDER = [
+  'playgroup', 'pp1', 'pp2', 'grade 1', 'grade 2', 'grade 3',
+  'grade 4', 'grade 5', 'grade 6', 'grade 7', 'grade 8', 'grade 9',
+  'grade 10', 'grade 11', 'grade 12'
+];
+
+const getGradeSortIndex = (gradeName: string): number => {
+  const normalized = gradeName.toLowerCase().trim();
+  const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
+  return index !== -1 ? index : 999;
+};
+
+// Deterministic score generation for demo data
 const getScoreForStudentSubject = (
   studentId: string, 
   subjectId: string, 
@@ -61,37 +84,80 @@ const getScoreForStudentSubject = (
     const parsed = parseInt(savedMarks[studentId][subjectId], 10);
     if (!isNaN(parsed)) return parsed;
   }
-  // Deterministic seed for sample data so analysis is always active and realistic
+  // Deterministic seed
   let hash = 0;
   const str = `${studentId}-${subjectId}`;
   for (let i = 0; i < str.length; i++) {
     hash = (hash << 5) - hash + str.charCodeAt(i);
     hash |= 0;
   }
-  return 55 + (Math.abs(hash) % 40); // 55 to 94 range
+  return 55 + (Math.abs(hash) % 40);
 };
 
 const ResultsAnalysis = () => {
   // Filter States
-  const [academicYear, setAcademicYear] = useState(() => new Date().getFullYear().toString());
-  const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[2]?.id || GRADES_DATA[0].id); // Default to Grade 4
+  const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
+  const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[0]?.id || '');
   const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
-  const [examType, setExamType] = useState<string>(DEFAULT_EXAM_TYPES[0].code);
+  const [examType, setExamType] = useState<string>("FORMATIVE");
   const [term, setTerm] = useState<string>("term1");
   const [searchTerm, setSearchTerm] = useState<string>("");
   const [isExporting, setIsExporting] = useState<boolean>(false);
+  const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  // Load grades from localStorage with fallback
+  const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
+    try {
+      const stored = localStorage.getItem("munyaka_grades");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading grades:", e);
+    }
+    return GRADES_DATA;
+  });
+
+  // Listen for storage changes
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const stored = localStorage.getItem("munyaka_grades");
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStoredGrades(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing grades:", e);
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+
+  // Sort grades logically
+  const sortedGrades = useMemo(() => {
+    return [...storedGrades].sort((a, b) => {
+      const nameA = a.name || '';
+      const nameB = b.name || '';
+      return getGradeSortIndex(nameA) - getGradeSortIndex(nameB);
+    });
+  }, [storedGrades]);
 
   // Selected Grade Object
   const currentGrade = useMemo(() => {
-    return GRADES_DATA.find(g => g.id === selectedGradeId) || GRADES_DATA[0];
-  }, [selectedGradeId]);
+    return storedGrades.find(g => g.id === selectedGradeId) || storedGrades[0];
+  }, [storedGrades, selectedGradeId]);
 
   // Available Streams for the selected Grade
   const availableStreams = useMemo(() => {
     return currentGrade ? currentGrade.streams : [];
   }, [currentGrade]);
 
-  // Learning Areas (Subjects) for the selected Grade - EXCLUDE PPI
+  // Learning Areas (Subjects) - filter out PPI and Pastoral
   const learningAreas = useMemo(() => {
     if (!currentGrade) return [];
     const gradeName = currentGrade.name.toLowerCase();
@@ -100,9 +166,16 @@ const ResultsAnalysis = () => {
     else if (gradeName.includes("pp")) clusterId = 'pre-primary';
     else if (currentGrade.category === 'Junior School') clusterId = 'junior-school';
     
-    const areas = FALLBACK_CLUSTERS.find(c => c.id === clusterId)?.learningAreas || [];
-    // EXCLUDE PPI and Pastoral from examinable subjects
-    return areas.filter(area => !area.name.toLowerCase().includes('ppi') && !area.name.toLowerCase().includes('pastoral'));
+    // Use hardcoded subjects based on cluster
+    const subjectMap: Record<string, string[]> = {
+      'pre-primary': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Education'],
+      'lower-primary': ['Literacy', 'Kiswahili/Indigenous Language', 'English Language', 'Mathematical Activities', 'Environmental Activities', 'Hygiene & Nutrition Activities', 'Religious Education', 'Movement & Creative Activities'],
+      'upper-primary': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Agriculture & Nutrition', 'Social Studies', 'Religious Education (CRE/IRE/HRE)', 'Creative Arts'],
+      'junior-school': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Health Education', 'Agriculture & Nutrition', 'Social Studies', 'Religious Education', 'Pre-Technical Studies', 'Computer Science', 'Creative Arts & Sports']
+    };
+    
+    const subjects = subjectMap[clusterId] || subjectMap['lower-primary'];
+    return subjects.filter(subj => !subj.toLowerCase().includes('ppi') && !subj.toLowerCase().includes('pastoral'));
   }, [currentGrade]);
 
   // Filtered Students matching Grade, Stream, and Search
@@ -126,8 +199,10 @@ const ResultsAnalysis = () => {
 
       const matchesSearch = 
         !searchTerm.trim() ||
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) || 
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });
@@ -146,8 +221,8 @@ const ResultsAnalysis = () => {
       let total = 0;
       
       learningAreas.forEach(area => {
-        const score = getScoreForStudentSubject(student.id, area.id, savedMarks);
-        scores[area.id] = score;
+        const score = getScoreForStudentSubject(student.id, area, savedMarks);
+        scores[area] = score;
         total += score;
       });
 
@@ -155,13 +230,13 @@ const ResultsAnalysis = () => {
       
       let level: 'EE' | 'ME' | 'AE' | 'BE' = 'BE';
       if (mean >= 80) level = 'EE';
-      else if (mean >= 50) level = 'ME';
-      else if (mean >= 30) level = 'AE';
+      else if (mean >= 65) level = 'ME';
+      else if (mean >= 50) level = 'AE';
 
       return {
         studentId: student.id,
         name: student.name,
-        assessmentNo: student.assessment,
+        assessmentNo: student.admissionNumber || student.assessment || student.id,
         stream: student.stream,
         scores,
         totalMarks: total,
@@ -171,13 +246,19 @@ const ResultsAnalysis = () => {
       };
     });
 
-    // Sort descending by Total Marks to establish Rank
+    // Sort descending by Total Marks to establish Rank (handle ties)
     rawResults.sort((a, b) => b.totalMarks - a.totalMarks);
 
-    return rawResults.map((item, index) => ({
-      ...item,
-      rank: index + 1
-    }));
+    // Assign ranks with tie handling
+    let currentRank = 1;
+    let previousScore = -1;
+    return rawResults.map((item, index) => {
+      if (item.totalMarks !== previousScore) {
+        currentRank = index + 1;
+        previousScore = item.totalMarks;
+      }
+      return { ...item, rank: currentRank };
+    });
   }, [filteredStudents, learningAreas]);
 
   // Overall Class Mean Score
@@ -187,7 +268,7 @@ const ResultsAnalysis = () => {
     return Math.round((sum / studentResults.length) * 10) / 10;
   }, [studentResults]);
 
-  // Top 3 Performers
+  // Top 3 Performing Students
   const topPerformers = useMemo(() => {
     return studentResults.slice(0, 3);
   }, [studentResults]);
@@ -212,7 +293,7 @@ const ResultsAnalysis = () => {
     if (studentResults.length === 0 || learningAreas.length === 0) return [];
 
     const summaries = learningAreas.map(area => {
-      const allScores = studentResults.map(s => s.scores[area.id] || 0);
+      const allScores = studentResults.map(s => s.scores[area] || 0);
       const sum = allScores.reduce((a, b) => a + b, 0);
       const mean = Math.round((sum / allScores.length) * 10) / 10;
       const highest = Math.max(...allScores);
@@ -221,8 +302,8 @@ const ResultsAnalysis = () => {
       const passRate = Math.round((passing / allScores.length) * 100);
 
       return {
-        id: area.id,
-        name: area.name,
+        id: area,
+        name: area,
         mean,
         highest,
         lowest,
@@ -256,16 +337,14 @@ const ResultsAnalysis = () => {
       const line3 = "ACADEMIC RESULTS ANALYSIS REPORT";
       
       const termLabel = term === 'term1' ? 'Term 1' : term === 'term2' ? 'Term 2' : 'Term 3';
-      const examObj = DEFAULT_EXAM_TYPES.find(e => e.code === examType);
-      const examLabel = examObj ? examObj.name : examType;
 
-      const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examLabel}`;
+      const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examType}`;
       const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
 
       const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
 
       const rows = studentResults.map(s => {
-        const subjectScores = learningAreas.map(a => s.scores[a.id] || 0);
+        const subjectScores = learningAreas.map(a => s.scores[a] || 0);
         return [
           s.rank,
           `"${s.assessmentNo}"`,
@@ -289,7 +368,6 @@ const ResultsAnalysis = () => {
         ...rows.map(r => r.join(","))
       ].join("\n");
 
-      // Use global download helper
       downloadCSV(csvContent, `results_analysis_${currentGrade.name.toLowerCase().replace(/\s+/g, '_')}_${selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${term}.csv`);
 
       setIsExporting(false);
@@ -312,7 +390,7 @@ const ResultsAnalysis = () => {
             <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Results Analysis</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
-                <CheckCircle2 size={12} /> Saved to LocalStorage
+                <CheckCircle2 size={12} /> Saved
               </span>
             )}
           </div>
@@ -321,22 +399,23 @@ const ResultsAnalysis = () => {
           </p>
         </div>
 
-        {/* Action Controls */}
         <div className="flex items-center gap-3">
-          <Button 
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadCSV}
             disabled={isExporting}
-            className="rounded-2xl h-12 px-5 border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 shadow-sm gap-2"
           >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <FileSpreadsheet size={18} className="text-emerald-600" />}
+            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} className="text-emerald-600" />}
             Download CSV / Excel
           </Button>
 
-          <Button 
+          <Button
+            variant="outline"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handlePrint}
-            className="rounded-2xl h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 gap-2"
           >
-            <Printer size={18} /> Print Report / Save PDF
+            <Printer size={16} /> Print Report / Save PDF
           </Button>
         </div>
       </div>
@@ -354,41 +433,42 @@ const ResultsAnalysis = () => {
           <span>Grade Level: {currentGrade.name}</span>
           <span>Stream: {selectedStreamName}</span>
           <span>Term: {term.toUpperCase()}</span>
-          <span>Exam: {DEFAULT_EXAM_TYPES.find(e => e.code === examType)?.name || examType}</span>
+          <span>Exam: {examType}</span>
         </div>
       </div>
 
       {/* Filter Toolbar (Hidden on Print) */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+          
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase text-slate-400 px-1">Academic Year</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Academic Year</label>
             <Select value={academicYear} onValueChange={setAcademicYear}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                {["2024", "2025", "2026"].map(y => <SelectItem key={y} value={y}>{y}</SelectItem>)}
+                {["2024", "2025", "2026"].map(yr => <SelectItem key={yr} value={yr}>{yr}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Grade Level</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Grade</label>
             <Select value={selectedGradeId} onValueChange={(val) => { setSelectedGradeId(val); setSelectedStreamId("all"); }}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                {GRADES_DATA.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category})</SelectItem>)}
+                {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category})</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Stream Cohort</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Stream</label>
             <Select value={selectedStreamId} onValueChange={setSelectedStreamId}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
@@ -401,21 +481,24 @@ const ResultsAnalysis = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Exam Type</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Exam Type</label>
             <Select value={examType} onValueChange={setExamType}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
-                {DEFAULT_EXAM_TYPES.map(e => <SelectItem key={e.id} value={e.code}>{e.name}</SelectItem>)}
+                <SelectItem value="FORMATIVE">Formative Assessment</SelectItem>
+                <SelectItem value="SUMMATIVE">Summative Assessment</SelectItem>
+                <SelectItem value="OPENER">Opener Exam</SelectItem>
+                <SelectItem value="MIDTERM">Mid-Term Exam</SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Term</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Term</label>
             <Select value={term} onValueChange={setTerm}>
-              <SelectTrigger className="rounded-2xl h-12 bg-slate-50 border-none font-bold text-slate-800">
+              <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
@@ -427,17 +510,26 @@ const ResultsAnalysis = () => {
           </div>
 
           <div className="space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">Search Student</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Search Student</label>
             <div className="relative">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+              <Input
                 value={searchTerm} 
                 onChange={e => setSearchTerm(e.target.value)} 
-                placeholder="Name / ID..." 
-                className="pl-10 h-12 rounded-2xl bg-slate-50 border-none font-bold text-sm"
+                placeholder="Name/ID..." 
+                className="pl-9 h-11 rounded-xl bg-slate-50 border-none font-bold text-sm"
               />
             </div>
           </div>
+
+          <div className="space-y-1.5 flex flex-col justify-end">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Class Average</label>
+            <div className="h-11 rounded-xl bg-indigo-50 px-3 flex items-center justify-between">
+              <span className="font-black text-indigo-700 text-sm">{classMeanScore}%</span>
+              <span className="text-[10px] font-bold text-indigo-500">{studentResults.length} Students</span>
+            </div>
+          </div>
+
         </div>
       </Card>
 
@@ -473,7 +565,7 @@ const ResultsAnalysis = () => {
         <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 flex flex-col justify-between">
           <div className="flex justify-between items-start">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Highest Mean</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Top Performer</p>
               <h3 className="text-3xl font-black text-emerald-600 mt-1">
                 {studentResults[0] ? `${studentResults[0].meanScore}%` : '0%'}
               </h3>
@@ -529,7 +621,7 @@ const ResultsAnalysis = () => {
               <div className="bg-blue-50/70 p-4 rounded-2xl border border-blue-100">
                 <div className="flex items-center justify-between mb-1">
                   <Badge className="bg-blue-600 text-white font-black text-[10px]">ME</Badge>
-                  <span className="text-xs font-bold text-blue-700">50-79%</span>
+                  <span className="text-xs font-bold text-blue-700">65-79%</span>
                 </div>
                 <p className="text-2xl font-black text-blue-900">{gradeDistribution.ME.count}</p>
                 <p className="text-[10px] font-bold text-blue-600 uppercase mt-1">{gradeDistribution.ME.pct}% of class</p>
@@ -538,7 +630,7 @@ const ResultsAnalysis = () => {
               <div className="bg-amber-50/70 p-4 rounded-2xl border border-amber-100">
                 <div className="flex items-center justify-between mb-1">
                   <Badge className="bg-amber-600 text-white font-black text-[10px]">AE</Badge>
-                  <span className="text-xs font-bold text-amber-700">30-49%</span>
+                  <span className="text-xs font-bold text-amber-700">50-64%</span>
                 </div>
                 <p className="text-2xl font-black text-amber-900">{gradeDistribution.AE.count}</p>
                 <p className="text-[10px] font-bold text-amber-600 uppercase mt-1">{gradeDistribution.AE.pct}% of class</p>
@@ -547,14 +639,13 @@ const ResultsAnalysis = () => {
               <div className="bg-rose-50/70 p-4 rounded-2xl border border-rose-100">
                 <div className="flex items-center justify-between mb-1">
                   <Badge className="bg-rose-600 text-white font-black text-[10px]">BE</Badge>
-                  <span className="text-xs font-bold text-rose-700">0-29%</span>
+                  <span className="text-xs font-bold text-rose-700">0-49%</span>
                 </div>
                 <p className="text-2xl font-black text-rose-900">{gradeDistribution.BE.count}</p>
                 <p className="text-[10px] font-bold text-rose-600 uppercase mt-1">{gradeDistribution.BE.pct}% of class</p>
               </div>
             </div>
 
-            {/* Visual Distribution Stacked Progress */}
             <div className="space-y-2 pt-2">
               <p className="text-xs font-black uppercase tracking-widest text-slate-400">Class Performance Spread</p>
               <div className="h-4 w-full bg-slate-100 rounded-full overflow-hidden flex">
@@ -607,7 +698,7 @@ const ResultsAnalysis = () => {
         </Card>
       </div>
 
-      {/* Subjects Performance Ranking Table */}
+      {/* Subject Performance Ranking Table */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         <CardHeader className="p-8 border-b bg-slate-50/40">
           <CardTitle className="text-xl font-black text-slate-900">Subject Performance Ranking</CardTitle>
@@ -682,8 +773,8 @@ const ResultsAnalysis = () => {
                     </th>
                   )}
                   {learningAreas.map(area => (
-                    <th key={area.id} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[90px]">
-                      {area.name}
+                    <th key={area} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
+                      {area}
                     </th>
                   ))}
                   <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
@@ -716,8 +807,8 @@ const ResultsAnalysis = () => {
                         </td>
                       )}
                       {learningAreas.map(area => (
-                        <td key={area.id} className="px-3 py-4 border-r text-center font-bold text-slate-700">
-                          {student.scores[area.id] !== undefined ? student.scores[area.id] : "—"}
+                        <td key={area} className="px-3 py-4 border-r text-center font-bold text-slate-700">
+                          {student.scores[area] !== undefined ? student.scores[area] : "—"}
                         </td>
                       ))}
                       <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-900">

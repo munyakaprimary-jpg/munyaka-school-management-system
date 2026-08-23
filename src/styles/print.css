@@ -1,0 +1,370 @@
+/* Print Styles for Results Analysis Dashboard */
+
+@media print {
+  /* Hide non-essential UI elements */
+  .no-print,
+  [data-no-print],
+  .sidebar,
+  .mobile-bottom-nav,
+  .header-bar,
+  .action-buttons,
+  .filter-bar,
+  .pagination,
+  .export-buttons,
+  .save-button,
+  .dropdown-menu,
+  .modal-overlay,
+  .toast-container,
+  .notification-bell,
+  button.no-print,
+  [aria-label="Save"],
+  [aria-label="Edit"],
+  [aria-label="Delete"],
+  [aria-label="View"],
+  [aria-label="Print"],
+  [aria-label="Download"],
+  [aria-label="Export"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+  }
+
+  /* Page setup for A4 Landscape */
+  @page {
+    size: A4 landscape;
+    margin: 10mm 8mm;
+  }
+
+  /* Body styles for print */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  /* Main container adjustments */
+  #root {
+    max-width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Card adjustments */
+  .card {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Table styling for print */
+  table {
+    page-break-inside: auto;
+    font-size: 10px;
+  }
+
+  tr {
+    page-break-inside: avoid;
+    page-break-after: auto;
+  }
+
+  thead {
+    display: table-header-group;
+  }
+
+  tfoot {
+    display: table-footer-group;
+  }
+
+  /* Ensure headers repeat on each page */
+  th {
+    background-color: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Print header */
+  .print-header {
+    display: block !important;
+    text-align: center;
+    margin-bottom: 15px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #1e293b;
+  }
+
+  .print-header h1 {
+    font-size: 16px;
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0 0 4px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .print-header .school-info {
+    font-size: 9px;
+    color: #475569;
+    margin: 2px 0;
+  }
+
+  .print-header .report-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 6px 0;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .print-header .report-meta {
+    font-size: 9px;
+    color: #475569;
+    margin: 4px 0;
+  }
+
+  /* Hide elements with these classes during print */
+  .print\:hidden {
+    display: none !important;
+  }
+
+  .print\:block {
+    display: block !important;
+  }
+
+  /* Summary cards in print */
+  .summary-cards {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+    gap: 10px;
+  }
+
+  .summary-card {
+    flex: 1;
+    padding: 8px 12px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  .summary-card .label {
+    font-size: 8px;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #64748b;
+  }
+
+  .summary-card .value {
+    font-size: 18px;
+    font-weight: 900;
+    color: #0f172a;
+    margin-top: 2px;
+  }
+
+  /* Distribution matrix in print */
+  .distribution-matrix {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 15px;
+    gap: 8px;
+  }
+
+  .distribution-cell {
+    flex: 1;
+    padding: 6px 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    text-align: center;
+    page-break-inside: avoid;
+  }
+
+  .distribution-cell .count {
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  .distribution-cell .pct {
+    font-size: 8px;
+    font-weight: 600;
+  }
+
+  /* Performance spread bar */
+  .performance-spread {
+    height: 8px;
+    background: #e2e8f0;
+    border-radius: 4px;
+    overflow: hidden;
+    display: flex;
+    margin-bottom: 10px;
+  }
+
+  .performance-spread .bar {
+    height: 100%;
+    transition: width 0.3s;
+  }
+
+  /* Table cell adjustments for print */
+  td, th {
+    padding: 6px 8px;
+    vertical-align: middle;
+  }
+
+  /* Rank column */
+  .rank-column {
+    width: 40px;
+    text-align: center;
+  }
+
+  /* Sticky columns in print */
+  .sticky-left-0 {
+    position: sticky;
+    left: 0;
+    background: white;
+    z-index: 10;
+  }
+
+  .sticky-left-16 {
+    position: sticky;
+    left: 16px;
+    background: white;
+    z-index: 10;
+  }
+
+  /* Footer signature block */
+  .signature-block {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding-top: 10px;
+    border-top: 1px solid #cbd5e1;
+  }
+
+  .signature-line {
+    width: 200px;
+    border-top: 1px solid #0f172a;
+    padding-top: 4px;
+    text-align: center;
+    font-size: 9px;
+    color: #64748b;
+  }
+
+  /* Page break helpers */
+  .page-break-before {
+    page-break-before: always;
+  }
+
+  .page-break-after {
+    page-break-after: always;
+  }
+
+  .page-break-inside-avoid {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+  }
+
+  /* Color adjustments for print */
+  .bg-indigo-600 {
+    background-color: #4f46e5 !important;
+    color: white !important;
+  }
+
+  .bg-emerald-600 {
+    background-color: #059669 !important;
+    color: white !important;
+  }
+
+  .bg-blue-600 {
+    background-color: #2563eb !important;
+    color: white !important;
+  }
+
+  .bg-amber-600 {
+    background-color: #d97706 !important;
+    color: white !important;
+  }
+
+  .bg-rose-600 {
+    background-color: #dc2626 !important;
+    color: white !important;
+  }
+
+  .text-indigo-600 {
+    color: #4f46e5 !important;
+  }
+
+  .text-emerald-600 {
+    color: #059669 !important;
+  }
+
+  .text-blue-600 {
+    color: #2563eb !important;
+  }
+
+  .text-amber-600 {
+    color: #d97706 !important;
+  }
+
+  .text-rose-600 {
+    color: #dc2626 !important;
+  }
+
+  /* Ensure text colors are dark enough for print */
+  .text-slate-900 {
+    color: #0f172a !important;
+  }
+
+  .text-slate-800 {
+    color: #1e293b !important;
+  }
+
+  .text-slate-700 {
+    color: #334155 !important;
+  }
+
+  .text-slate-600 {
+    color: #475569 !important;
+  }
+
+  .text-slate-500 {
+    color: #64748b !important;
+  }
+
+  .text-slate-400 {
+    color: #94a3b8 !important;
+  }
+
+  /* Badge adjustments */
+  .badge {
+    border: 1px solid #cbd5e1 !important;
+    background: #f8fafc !important;
+    color: #334155 !important;
+  }
+
+  /* Progress bar adjustments */
+  .progress-bar {
+    background-color: #e2e8f0 !important;
+  }
+
+  .progress-fill {
+    background-color: #4f46e5 !important;
+  }
+}
+
+/* Screen-only utilities */
+@media screen {
+  .print\:only-screen {
+    display: block;
+  }
+}
+
+.print\:only-screen {
+  display: none;
+}
