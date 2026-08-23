@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send } from 'lucide-react';
+import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
@@ -153,6 +153,10 @@ const StaffPreRegistration = () => {
     }, 800);
   };
 
+  const handleManageAccessKeys = () => {
+    showSuccess("Key management features: Dispatch pending keys, copy access codes, or audit activation logs from the table below.");
+  };
+
   const clearFilters = () => {
     setSearchTerm("");
     setRoleFilter("all");
@@ -163,24 +167,37 @@ const StaffPreRegistration = () => {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton fallback="/staff" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Pre-Registration</h1>
             <p className="text-muted-foreground">Pre-authorize teacher system access credentials and manage activation keys.</p>
           </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button 
             variant="outline" 
-            className="h-11 px-6 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
+            className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
             onClick={handleExportCSV}
             disabled={isExporting}
           >
             {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
             Export CSV
           </Button>
-          <Button className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95" onClick={() => setIsAddModalOpen(true)}>
-            <Plus size={18} /> Add Staff
+          
+          <Button 
+            variant="outline"
+            className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
+            onClick={handleManageAccessKeys}
+          >
+            <Key size={18} /> Manage Access Keys
+          </Button>
+          
+          <Button 
+            variant="default"
+            className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95"
+            onClick={() => setIsAddModalOpen(true)}
+          >
+            <Plus size={18} /> Onboard Staff
           </Button>
         </div>
       </div>
@@ -350,9 +367,9 @@ const StaffPreRegistration = () => {
         description={`Enter your admin password to delete "${deleteTarget?.name}".`}
         footer={
           <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
+            <Button variant="ghost" className="rounded-xl font-bold flex-1" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
             <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1" 
               onClick={handleVerifyAuth}
               disabled={isVerifying}
             >

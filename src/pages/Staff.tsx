@@ -22,7 +22,8 @@ import {
   UserCheck, 
   Clock, 
   Plus,
-  X
+  X,
+  Save
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -42,8 +43,9 @@ const Staff = () => {
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
   
   // Edit Modal State
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
 
   // Load staff directory
   const staffDirectory = useMemo<StaffMember[]>(() => {
@@ -110,27 +112,127 @@ const Staff = () => {
   const activeCount = useMemo(() => masterStaffList.filter(s => s.status === 'Active').length, [masterStaffList]);
   const preRegCount = useMemo(() => masterStaffList.filter(s => s.status === 'Pre-Registered').length, [masterStaffList]);
 
-  const handleEditStaff = (staff: StaffMember) => {
-    setEditingStaff(staff);
-    setIsEditModalOpen(true);
+  // Form state for new/edit staff
+  const [formData, setFormData] = useState({
+    name: '',
+    role: '',
+    department: '',
+    phone: '',
+    email: '',
+    id: '',
+    id_no: '',
+    tsc_no: ''
+  });
+  const [formError, setFormError] = useState('');
+
+  const handleOpenAdd = () => {
+    setModalMode('add');
+    setEditingStaff(null);
+    setFormData({
+      name: '',
+      role: '',
+      department: '',
+      phone: '',
+      email: '',
+      id: '',
+      id_no: '',
+      tsc_no: ''
+    });
+    setFormError('');
+    setIsModalOpen(true);
   };
 
-  const handleSaveStaff = (updatedStaff: StaffMember) => {
-    // Update in localStorage
-    const saved = localStorage.getItem('munyaka_staff_directory');
-    const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
-    const updatedList = staffList.map(s => s.id === updatedStaff.id ? updatedStaff : s);
-    localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
-    
-    setIsEditModalOpen(false);
+  const handleOpenEdit = (staff: StaffMember) => {
+    setModalMode('edit');
+    setEditingStaff(staff);
+    setFormData({
+      name: staff.name,
+      role: staff.role,
+      department: staff.department,
+      phone: staff.phone,
+      email: staff.email,
+      id: staff.id,
+      id_no: staff.id_no,
+      tsc_no: staff.tsc_no || ''
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  const handleSaveStaff = () => {
+    if (!formData.name.trim() || !formData.id_no.trim()) {
+      setFormError('Please fill in all required fields (Full Name, National ID).');
+      return;
+    }
+
+    if (modalMode === 'add') {
+      // Add new staff to directory
+      const newStaff: StaffMember = {
+        id: formData.id || `ST-${Date.now()}`,
+        id_no: formData.id_no,
+        tsc_no: formData.tsc_no,
+        name: formData.name,
+        role: formData.role || 'TEACHER',
+        subjects: [],
+        phone: formData.phone,
+        email: formData.email,
+        status: 'Active',
+        joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        department: formData.department || 'School Administration'
+      };
+
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
+      const updatedList = [newStaff, ...staffList];
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+      
+      showSuccess(`Staff member "${newStaff.name}" added successfully!`);
+    } else if (editingStaff) {
+      // Update existing staff
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
+      const updatedList = staffList.map(s => 
+        s.id === editingStaff.id ? { ...s, ...formData } : s
+      );
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+      
+      showSuccess(`Staff member "${formData.name}" updated successfully!`);
+    }
+
+    setIsModalOpen(false);
     setEditingStaff(null);
-    showSuccess(`Staff member "${updatedStaff.name}" updated successfully!`);
+    setFormData({
+      name: '',
+      role: '',
+      department: '',
+      phone: '',
+      email: '',
+      id: '',
+      id_no: '',
+      tsc_no: ''
+    });
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormError('');
+    setFormData({
+      name: '',
+      role: '',
+      department: '',
+      phone: '',
+      email: '',
+      id: '',
+      id_no: '',
+      tsc_no: ''
+    });
   };
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
@@ -140,16 +242,12 @@ const Staff = () => {
         </div>
 
         <div className="flex gap-2">
-          <Link to="/staff/pre-registration">
-            <Button variant="outline" className="h-11 px-5 rounded-2xl border-slate-200 bg-white font-bold text-slate-700 hover:bg-slate-50 gap-2 shadow-sm">
-              <Key size={18} /> Manage Access Keys
-            </Button>
-          </Link>
-          <Link to="/staff/registration">
-            <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100">
-              <UserPlus size={18} /> Onboard Staff
-            </Button>
-          </Link>
+          <Button 
+            className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+            onClick={handleOpenAdd}
+          >
+            <UserPlus size={18} /> Add Staff
+          </Button>
         </div>
       </div>
 
@@ -299,7 +397,7 @@ const Staff = () => {
                             </DropdownMenuItem>
                             
                             <DropdownMenuItem 
-                              onClick={() => handleEditStaff(member)}
+                              onClick={() => handleOpenEdit(member)}
                               className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
                             >
                               <Edit size={15} /> Edit Profile
@@ -311,7 +409,7 @@ const Staff = () => {
                               onClick={() => navigate('/staff/pre-registration')}
                               className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
                             >
-                              <Key size={15} /> Manage Access Key
+                              <Key size={15} /> Manage Access Keys
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -336,93 +434,118 @@ const Staff = () => {
         </Card>
       </div>
 
-      {/* Edit Staff Modal */}
-      {isEditModalOpen && editingStaff && (
+      {/* Add/Edit Staff Modal */}
+      {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900">Edit Staff Profile</h3>
+              <h3 className="text-lg font-bold text-slate-900">
+                {modalMode === 'add' ? 'Add New Staff Member' : 'Edit Staff Profile'}
+              </h3>
               <button 
-                onClick={() => { setIsEditModalOpen(false); setEditingStaff(null); }}
+                onClick={handleCloseModal}
                 className="p-1 text-slate-400 hover:text-slate-600"
               >
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 space-y-4">
+              {formError && (
+                <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold">
+                  <AlertCircle size={14} /> {formError}
+                </div>
+              )}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
                 <Input 
-                  defaultValue={editingStaff.name}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  placeholder="e.g. Jane Mwangi" 
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation</Label>
                 <Input 
-                  defaultValue={editingStaff.role}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                  value={formData.role} 
+                  onChange={(e) => setFormData({...formData, role: e.target.value})} 
+                  placeholder="e.g. TEACHER, ADMINISTRATOR" 
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
                 <Input 
-                  defaultValue={editingStaff.department}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                  value={formData.department} 
+                  onChange={(e) => setFormData({...formData, department: e.target.value})} 
+                  placeholder="e.g. Mathematics & Science" 
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
                   <Input 
-                    defaultValue={editingStaff.phone}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    value={formData.phone} 
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})} 
+                    placeholder="+254..." 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
                   <Input 
                     type="email"
-                    defaultValue={editingStaff.email}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    value={formData.email} 
+                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
+                    placeholder="email@school.ac.ke" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Staff ID</Label>
+                  <Input 
+                    value={formData.id} 
+                    onChange={(e) => setFormData({...formData, id: e.target.value})} 
+                    placeholder="e.g. ST-101" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID</Label>
+                  <Input 
+                    value={formData.id_no} 
+                    onChange={(e) => setFormData({...formData, id_no: e.target.value})} 
+                    placeholder="e.g. 28374615" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Staff ID</Label>
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
                 <Input 
-                  defaultValue={editingStaff.id}
-                  readOnly
-                  className="rounded-xl h-12 bg-slate-100 border-none font-bold text-slate-500"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID</Label>
-                <Input 
-                  defaultValue={editingStaff.id_no}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number</Label>
-                <Input 
-                  defaultValue={editingStaff.tsc_no || ''}
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                  value={formData.tsc_no} 
+                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})} 
+                  placeholder="e.g. TSC-482910" 
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
                   variant="ghost" 
                   className="flex-1 rounded-xl h-11 font-bold"
-                  onClick={() => { setIsEditModalOpen(false); setEditingStaff(null); }}
+                  onClick={handleCloseModal}
                 >
                   Cancel
                 </Button>
                 <Button 
-                  className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100"
-                  onClick={() => handleSaveStaff(editingStaff)}
+                  className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+                  onClick={handleSaveStaff}
                 >
-                  Save Changes
+                  <Save size={16} />
+                  {modalMode === 'add' ? 'Add Staff' : 'Save Changes'}
                 </Button>
               </div>
             </div>
