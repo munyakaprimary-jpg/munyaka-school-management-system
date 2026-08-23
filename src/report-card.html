@@ -889,70 +889,83 @@
             }
         }
 
-        // 2. Client-Side PDF Export using html2pdf.js
-        async function exportPDF(downloadType) {
-            const currentBtn = document.getElementById('downloadCurrentBtn');
-            const allBtn = document.getElementById('downloadAllBtn');
-
-            currentBtn.disabled = true;
-            allBtn.disabled = true;
-
-            // DOM Textarea Value Syncing
-            const textareas = document.querySelectorAll('textarea.remarks-textarea, textarea');
-            textareas.forEach(textarea => {
-                textarea.innerHTML = textarea.value;
-                if (!textarea.hasAttribute('data-original-value')) {
-                    textarea.setAttribute('data-original-value', textarea.value);
-                }
+        // 2. Client-Side PDF Export using isolated print window pipeline
+        function exportPDF(downloadType) {
+            // 1. Sync live values from textareas so inputs appear in the print DOM
+            document.querySelectorAll('textarea').forEach(textarea => {
+              textarea.innerText = textarea.value;
             });
 
-            // Render Delay
-            await new Promise(r => setTimeout(r, 250));
+            // Save current data first
+            saveCurrentData();
 
-            const element = document.getElementById('reportsPrintWrapper');
-            const cleanName = studentProfile.name.toLowerCase().replace(/\s+/g, '_');
-            const year = document.getElementById('yearFilter').value;
-            const term = document.getElementById('termFilter').value.toLowerCase().replace(/\s+/g, '');
-            const grade = document.getElementById('gradeFilter').value.toLowerCase().replace(/\s+/g, '');
+            // 2. Clone the report card container
+            const reportElement = document.querySelector('.reports-print-wrapper');
+            if (!reportElement) return;
+            const printContent = reportElement.cloneNode(true);
 
-            const filename = downloadType === 'all'
-                ? `cbc_all_reports_${grade}_${term}_${year}.pdf`
-                : `cbc_report_${cleanName}_${grade}_${term}_${year}.pdf`;
+            // 3. Remove all save buttons and interactive UI elements from the clone
+            printContent.querySelectorAll('.no-print').forEach(el => el.remove());
 
-            const opt = {
-                margin: [4, 4, 4, 4],
-                filename: filename,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: {
-                    scale: 2,
-                    useCORS: true,
-                    logging: false,
-                    scrollY: 0,
-                    scrollX: 0,
-                    ignoreElements: function(el) {
-                        return el.classList.contains('no-print') || el.hasAttribute('data-no-print');
-                    }
-                },
-                jsPDF: {
-                    unit: 'mm',
-                    format: 'a4',
-                    orientation: 'portrait'
-                },
-                pagebreak: { mode: ['avoid-all', 'css'] }
-            };
-
-            try {
-                // Save before exporting
-                saveCurrentData();
-                await html2pdf().set(opt).from(element).save();
-                showToast(`PDF exported: ${filename}`);
-            } catch (err) {
-                console.error("PDF generation failed:", err);
-                alert("Failed to generate PDF. Check console for details.");
-            } finally {
-                currentBtn.disabled = false;
-                allBtn.disabled = false;
+            // 4. Open a print document context
+            const printWindow = window.open('', '_blank', 'width=800,height=1000');
+            if (!printWindow) {
+              alert('Please allow popups to download the PDF.');
+              return;
             }
+
+            // 5. Inject styles and cloned content into the window
+            printWindow.document.write(`
+              <!DOCTYPE html>
+              <html>
+                <head>
+                  <title>CBC_Report_Card</title>
+                  <style>
+                    * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+                    body { background: #ffffff; padding: 0; margin: 0; }
+                    @page { size: A4 portrait; margin: 5mm; }
+                    .reports-print-wrapper {
+                      width: 100%;
+                      padding: 10mm;
+                      border: none !important;
+                      box-shadow: none !important;
+                      font-size: 11px;
+                      line-height: 1.3;
+                    }
+                    .school-header { text-align: center; margin-bottom: 8px; }
+                    .school-name { font-size: 13px; font-weight: bold; }
+                    .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+                    .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+                    .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+                    .meta-item { display: flex; gap: 4px; }
+                    .meta-label { font-weight: bold; }
+                    .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+                    .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+                    .grading-table th { background: #f1f5f9; font-weight: bold; }
+                    .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+                    .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+                    .remark-header { font-weight: bold; margin-bottom: 4px; }
+                    .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+                    .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+                    .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+                    textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+                  </style>
+                </head>
+                <body>
+                  ${printContent.outerHTML}
+                </body>
+              </html>
+            `);
+            printWindow.document.close();
+            printWindow.focus();
+
+            // 6. Trigger print dialog (select "Save as PDF")
+            setTimeout(() => {
+              printWindow.print();
+              printWindow.close();
+            }, 250);
+
+            showToast(`PDF print dialog opened`);
         }
 
         // Initialize and bind all event listeners

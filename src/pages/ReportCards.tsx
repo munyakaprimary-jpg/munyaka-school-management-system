@@ -178,127 +178,160 @@ const ReportCards = () => {
 
   // Handler: "Download Current"
   const handleDownloadCurrent = async () => {
-    if (!searchTerm.trim()) {
-      showError("Please type a learner's name or ULI/Assessment No in the search box to download an individual report card.");
+    // 1. Sync live values from textareas so inputs appear in the print DOM
+    document.querySelectorAll('textarea').forEach(textarea => {
+      textarea.innerText = textarea.value;
+    });
+
+    // 2. Clone the report card container
+    const reportElement = wrapperRef.current || document.querySelector('.reports-print-wrapper');
+    if (!reportElement) {
+      showError("Report card container not found.");
+      return;
+    }
+    const printContent = reportElement.cloneNode(true);
+
+    // 3. Remove all save buttons and interactive UI elements from the clone
+    printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
+
+    // 4. Open a print document context
+    const printWindow = window.open('', '_blank', 'width=800,height=1000');
+    if (!printWindow) {
+      alert('Please allow popups to download the PDF.');
       return;
     }
 
-    if (filteredStudents.length === 0) {
-      showError(`No learner found matching "${searchTerm}".`);
-      return;
-    }
-
-    setIsExportingCurrent(true);
-
-    try {
-      const element = wrapperRef.current;
-      const targetLearner = filteredStudents[0];
-      const safeLearnerName = targetLearner.name.toLowerCase().replace(/\s+/g, '_');
-
-      if (element) {
-        const opt = {
-          margin: [8, 8, 8, 8],
-          filename: `report_card_${safeLearnerName}_${year}_${term}.pdf`,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { 
-            scale: 2, 
-            useCORS: true, 
-            letterRendering: true, 
-            scrollY: 0,
-            ignoreElements: (element: HTMLElement) => {
-              return element.hasAttribute('data-html2canvas-ignore') || 
-                     element.classList.contains('no-print') ||
-                     element.classList.contains('html2canvas-ignore');
+    // 5. Inject styles and cloned content into the window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CBC_Report_Card</title>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+            body { background: #ffffff; padding: 0; margin: 0; }
+            @page { size: A4 portrait; margin: 5mm; }
+            .reports-print-wrapper {
+              width: 100%;
+              padding: 10mm;
+              border: none !important;
+              box-shadow: none !important;
+              font-size: 11px;
+              line-height: 1.3;
             }
-          },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['avoid-all', 'css'] }
-        };
+            .school-header { text-align: center; margin-bottom: 8px; }
+            .school-name { font-size: 13px; font-weight: bold; }
+            .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+            .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+            .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+            .meta-item { display: flex; gap: 4px; }
+            .meta-label { font-weight: bold; }
+            .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+            .grading-table th { background: #f1f5f9; font-weight: bold; }
+            .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+            .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+            .remark-header { font-weight: bold; margin-bottom: 4px; }
+            .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+            .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+            .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+            textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+          </style>
+        </head>
+        <body>
+          ${printContent.outerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
 
-        await html2pdf().set(opt).from(element).save();
-        showSuccess(`Generated individual 1-page portrait report card for ${targetLearner.name}!`);
-      } else {
-        const content = [
-          SCHOOL_HEADERS.name,
-          SCHOOL_HEADERS.motto,
-          SCHOOL_HEADERS.address,
-          SCHOOL_HEADERS.phone,
-          SCHOOL_HEADERS.email,
-          "",
-          `MUNYAKA PRIMARY AND JUNIOR SCHOOL - INDIVIDUAL LEARNER REPORT`,
-          `Learner: ${targetLearner.name} | ULI: ${targetLearner.assessment}`,
-          `Grade: Grade ${targetLearner.grade} — ${targetLearner.stream} Stream`,
-          `Academic Year: ${year} | Term: ${term.toUpperCase()}`,
-          `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
-          `Generated: ${new Date().toLocaleString()}`,
-          `--------------------------------------------------`,
-          `Guardian: ${targetLearner.guardian} | Contact: ${targetLearner.phone}`
-        ].join('\n');
+    // 6. Trigger print dialog (select "Save as PDF")
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
 
-        const blob = new Blob([content], { type: 'text/plain' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `report_card_${safeLearnerName}_${year}.txt`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-
-        showSuccess(`Exported individual report card for ${targetLearner.name}`);
-      }
-    } catch (err) {
-      console.error("Error generating report:", err);
-      showError("Failed to generate individual learner report card.");
-    } finally {
-      setIsExportingCurrent(false);
-    }
+    showSuccess("PDF print dialog opened.");
   };
 
-  // Handler: "Download All" - CSV Export with standardized headers
+  // Handler: "Download All" - uses the same exportPDF native print window pipeline
   const handleDownloadAll = async () => {
-    setIsDownloadingAll(true);
+    // 1. Sync live values from textareas so inputs appear in the print DOM
+    document.querySelectorAll('textarea').forEach(textarea => {
+      textarea.innerText = textarea.value;
+    });
 
-    try {
-      await new Promise(r => setTimeout(r, 600));
-
-      const headers = ["Student Name", "Assessment No (ULI)", "Grade Level", "Stream", "Guardian", "Phone Contact", "Email"];
-      
-      const rows = STUDENTS.map(s => [
-        `"${s.name.replace(/"/g, '""')}"`,
-        `"${s.assessment.replace(/"/g, '""')}"`,
-        `"Grade ${s.grade}"`,
-        `"${s.stream.replace(/"/g, '""')}"`,
-        `"${s.guardian.replace(/"/g, '""')}"`,
-        `"${s.phone.replace(/"/g, '""')}"`,
-        `"${s.email.replace(/"/g, '""')}"`
-      ]);
-
-      const csvLines = [
-        ...generateCSVHeader(
-          "ALL ACADEMIC RECORDS & BULK REPORT DATASET",
-          [
-            `Generated: ${new Date().toLocaleString()}`,
-            `Closing Date: ${formatDateDisplay(closingDate)} | Opening Date: ${formatDateDisplay(openingDate)}`,
-            `Total Records Included: ${STUDENTS.length}`
-          ]
-        ),
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ];
-
-      const csvContent = csvLines.join("\n");
-
-      // Use global download helper
-      downloadCSV(csvContent, `all_school_records_master_${new Date().toISOString().split('T')[0]}.csv`);
-
-      showSuccess(`Bulk export completed! Downloaded all ${STUDENTS.length} student records across all grades.`);
-    } catch (err) {
-      console.error("Error during bulk export:", err);
-      showError("Failed to generate bulk report.");
-    } finally {
-      setIsDownloadingAll(false);
+    // 2. Clone the report card container
+    const reportElement = wrapperRef.current || document.querySelector('.reports-print-wrapper');
+    if (!reportElement) {
+      showError("Report card container not found.");
+      return;
     }
+    const printContent = reportElement.cloneNode(true);
+
+    // 3. Remove all save buttons and interactive UI elements from the clone
+    printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
+
+    // 4. Open a print document context
+    const printWindow = window.open('', '_blank', 'width=800,height=1000');
+    if (!printWindow) {
+      alert('Please allow popups to download the PDF.');
+      return;
+    }
+
+    // 5. Inject styles and cloned content into the window
+    printWindow.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CBC_Report_Card_All</title>
+          <style>
+            * { box-sizing: border-box; margin: 0; padding: 0; font-family: Arial, sans-serif; }
+            body { background: #ffffff; padding: 0; margin: 0; }
+            @page { size: A4 portrait; margin: 5mm; }
+            .reports-print-wrapper {
+              width: 100%;
+              padding: 10mm;
+              border: none !important;
+              box-shadow: none !important;
+              font-size: 11px;
+              line-height: 1.3;
+            }
+            .school-header { text-align: center; margin-bottom: 8px; }
+            .school-name { font-size: 13px; font-weight: bold; }
+            .school-motto { font-style: italic; color: #4b5563; margin: 2px 0; }
+            .report-subtitle { font-weight: bold; color: #1e3a8a; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; padding: 4px 0; margin-top: 4px; }
+            .metadata-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px; margin-bottom: 10px; }
+            .meta-item { display: flex; gap: 4px; }
+            .meta-label { font-weight: bold; }
+            .grading-table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
+            .grading-table th, .grading-table td { border: 1px solid #cbd5e1; padding: 5px 8px; text-align: left; }
+            .grading-table th { background: #f1f5f9; font-weight: bold; }
+            .admin-block { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+            .remark-box { border: 1px solid #e2e8f0; padding: 6px; }
+            .remark-header { font-weight: bold; margin-bottom: 4px; }
+            .signature-line { margin-top: 12px; border-top: 1px dotted #94a3b8; width: 180px; text-align: center; font-size: 10px; }
+            .dates-row { display: flex; justify-content: space-between; font-weight: bold; padding: 4px 0; }
+            .branding { text-align: right; font-size: 9px; color: #94a3b8; font-style: italic; }
+            textarea { width: 100%; border: none; font-family: inherit; font-size: 11px; resize: none; background: transparent; }
+          </style>
+        </head>
+        <body>
+          ${printContent.outerHTML}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+
+    // 6. Trigger print dialog (select "Save as PDF")
+    setTimeout(() => {
+      printWindow.print();
+      printWindow.close();
+    }, 250);
+
+    showSuccess("Bulk PDF print dialog opened.");
   };
 
   return (
