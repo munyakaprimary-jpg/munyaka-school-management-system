@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CBC Report Card Generator</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; }
+        
+        /* Top Control Panel */
+        .control-panel {
+            background: #ffffff;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            margin-bottom: 20px;
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        
+        .btn {
+            flex: 1;
+            min-width: 140px;
+            background: #1a1d20;
+            color: #a3e635;
+            border: none;
+            border-radius: 10px;
+            padding: 12px 16px;
+            font-weight: 600;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            transition: all 0.2s ease;
+        }
+        
+        .btn:hover {
+            background: #0f1114;
+            box-shadow: 0 4px 12px rgba(163, 230, 53, 0.2);
+        }
+        
+        .btn i {
+            font-size: 16px;
+        }
+        
+        .btn-download-all {
+            background: #1a1d20;
+        }
+        
+        .filter-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        
+        .filter-item {
+            position: relative;
+        }
+        
+        .filter-item select {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: 10px;
+            border: 1px solid #d1d5db;
+            background: #ffffff;
+            font-size: 14px;
+            cursor: pointer;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 16px;
+            padding-right: 40px;
+        }
+        
+        .filter-item select:hover {
+            border-color: #a3e635;
+        }
+        
+        /* A4 Printable Layout */
+        .reports-print-wrapper {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            background: #ffffff;
+            padding: 10mm 12mm;
+            border: 1px solid #d1d5db;
+            box-sizing: border-box;
+            font-size: 11px;
+            page-break-inside: avoid;
+        }
+        
+        /* Report Card Header */
+        .report-header {
+            text-align: center;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #e5e7eb;
+            padding-bottom: 16px;
+        }
+        
+        .school-name {
+            font-weight: 700;
+            font-size: 16px;
+            color: #111827;
+            margin-bottom: 4px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .school-address {
+            font-size: 13px;
+            color: #6b7280;
+            margin-bottom: 8px;
+        }
+        
+        .motto {
+            font-style: italic;
+            font-size: 12px;
+            color: #4b5563;
+            margin-bottom: 16px;
+        }
+        
+        .report-title {
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 10px 16px;
+            font-weight: 600;
+            font-size: 13px;
+            color: #111827;
+            margin-bottom: 20px;
+        }
+        
+        /* Metadata Grid */
+        .metadata-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        
+        .metadata-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 10px;
+            background: #f9fafb;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .metadata-label {
+            font-weight: 600;
+            font-size: 11px;
+            color: #6b7280;
+            text-transform: uppercase;
+        }
+        
+        .metadata-value {
+            font-weight: 500;
+            font-size: 12px;
+            color: #111827;
+        }
+        
+        /* Grading Table */
+        .grading-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            font-size: 11px;
+        }
+        
+        .grading-table th {
+            background: #f3f4f6;
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 600;
+            color: #374151;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .grading-table td {
+            padding: 10px 8px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .grading-table th:first-child,
+        .grading-table td:first-child {
+            min-width: 140px;
+        }
+        
+        .grading-table th:nth-child(2),
+        .grading-table th:nth-child(3),
+        .grading-table th:nth-child(4) {
+            text-align: center;
+        }
+        
+        .grading-table th:nth-child(5) {
+            text-align: center;
+            width: 100px;
+        }
+        
+        .subject-cell {
+            font-weight: 500;
+            color: #111827;
+        }
+        
+        .score-cell {
+            text-align: center;
+            font-weight: 500;
+        }
+        
+        .rubric-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 11px;
+        }
+        
+        .rubric-ee { background: #dcfce7; color: #166534; }
+        .rubric-me { background: #dbeafe; color: #1e40af; }
+        .rubric-ae { background: #fef3c7; color: #92400e; }
+        .rubric-be { background: #fee2e2; color: #991b1b; }
+        
+        /* Administrative Footer */
+        .remarks-section {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .remarks-row {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        
+        .remarks-block {
+            flex: 1;
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .remarks-title {
+            font-weight: 600;
+            font-size: 12px;
+            color: #374151;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .save-btn {
+            background: #1a1d20;
+            color: #a3e635;
+            border: none;
+            border-radius: 6px;
+            padding: 4px 10px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .save-btn:hover {
+            background: #0f1114;
+        }
+        
+        .remarks-textarea {
+            width: 100%;
+            min-height: 60px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            padding: 8px;
+            font-size: 11px;
+            resize: vertical;
+            background: #ffffff;
+            color: #333;
+        }
+        
+        .signature-line {
+            margin-top: 24px;
+            padding-top: 8px;
+            border-top: 1px dotted #9ca3af;
+            font-size: 11px;
+            color: #6b7280;
+        }
+        
+        .footer-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-top: 20px;
+            padding-top: 12px;
+            border-top: 1px solid #e5e7eb;
+        }
+        
+        .date-pair {
+            display: flex;
+            gap: 24px;
+        }
+        
+        .date-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        
+        .date-label {
+            font-size: 11px;
+            color: #6b7280;
+        }
+        
+        .date-value {
+            font-weight: 500;
+            color: #111827;
+        }
+        
+        .watermark {
+            font-size: 10px;
+            color: #9ca3af;
+            font-style: italic;
+            text-align: right;
+        }
+        
+        /* Print Styles */
+        @media print {
+            body {
+                background: #ffffff;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
+            }
+            
+            .no-print,
+            [data-no-print] {
+                display: none !important;
+                visibility: hidden !important;
+            }
+            
+            .control-panel {
+                display: none;
+            }
+            
+            .reports-print-wrapper {
+                width: 210mm !important;
+                min-height: 297mm !important;
+                margin: 0 !important;
+                padding: 10mm 12mm !important;
+                border: none !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+            }
+            
+            .report-card {
+                box-shadow: none !important;
+                border: 1px solid #e5e7eb !important;
+                margin-bottom: 20mm !important;
+                page-break-after: always;
+            }
+            
+            .report-card:last-child {
+                page-break-after: auto;
+            }
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .action-buttons {
+                flex-direction: column;
+            }
+            
+            .btn {
+                min-width: auto;
+            }
+            
+            .metadata-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .remarks-row {
+                flex-direction: column;
+            }
+            
+            .footer-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+            
+            .date-pair {
+                flex-direction: column;
+                gap: 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Top Control Panel -->
+    <div class="control-panel">
+        <div class="action-buttons">
+            <button class="btn btn-download-current no-print" id="downloadCurrentBtn">
+                <i class="fas fa-download"></i>
+                Download Current
+            </button>
+            <button class="btn btn-download-all no-print" id="downloadAllBtn">
+                <i class="fas fa-file-csv"></i>
+                Download All
+            </button>
+        </div>
+        
+        <!-- Filter Stack -->
+        <div class="filter-stack">
+            <div class="filter-item">
+                <select id="yearFilter">
+                    <option value="2026">Year: 2026</option>
+                    <option value="2025">Year: 2025</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <select id="gradeFilter">
+                    <option value="PP1">Grade: PP1</option>
+                    <option value="PP2">Grade: PP2</option>
+                    <option value="1">Grade: Grade 1</option>
+                    <option value="2">Grade: Grade 2</option>
+                    <option value="3">Grade: Grade 3</option>
+                    <option value="4">Grade: Grade 4</option>
+                    <option value="5">Grade: Grade 5</option>
+                    <option value="6">Grade: Grade 6</option>
+                    <option value="7">Grade: Grade 7</option>
+                    <option value="8">Grade: Grade 8</option>
+                    <option value="9">Grade: Grade 9</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <select id="streamFilter">
+                    <option value="Stream A">Stream: Stream A</option>
+                    <option value="Stream B">Stream: Stream B</option>
+                    <option value="Stream C">Stream: Stream C</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <select id="termFilter">
+                    <option value="Term 1">Term: Term 1</option>
+                    <option value="Term 2">Term: Term 2</option>
+                    <option value="Term 3">Term: Term 3</option>
+                </select>
+            </div>
+            <div class="filter-item">
+                <select id="reportTypeFilter">
+                    <option value="Opener">Report Type: Opener</option>
+                    <option value="Midterm">Report Type: Midterm</option>
+                    <option value="Endterm">Report Type: Endterm</option>
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <!-- A4 Printable Layout -->
+    <div class="reports-print-wrapper" id="printWrapper">
+        <div class="report-card" id="reportCard">
+            <!-- Report Card Header -->
+            <div class="report-header">
+                <h2 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
+                <p class="school-address">P.O.BOX 5239-30100, ELDORET</p>
+                <p class="motto">MOTTO: Knowledge is Power</p>
+                <div class="report-title" id="reportTitle">
+                    Competency-Based Curriculum Progress Report - Term 1 · Academic Year 2026
+                </div>
+            </div>
+            
+            <!-- Metadata Grid -->
+            <div class="metadata-grid" id="metadataGrid">
+                <div class="metadata-item">
+                    <span class="metadata-label">Name</span>
+                    <span class="metadata-value">JUMA KEVIN WAMBUA</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Assessment Number</span>
+                    <span class="metadata-value">CBC-2026-8942</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Grade Stream</span>
+                    <span class="metadata-value" id="gradeStream">Grade 4 - Stream A</span>
+                </div>
+                <div class="metadata-item">
+                    <span class="metadata-label">Overall Rank</span>
+                    <span class="metadata-value" id="overallRank">4 / 42</span>
+                </div>
+            </div>
+            
+            <!-- Grading Table -->
+            <table class="grading-table" id="gradingTable">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Mid Term</th>
+                        <th>End Term</th>
+                        <th>Average</th>
+                        <th>Rubric</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                    <!-- Rows will be generated dynamically -->
+                </tbody>
+            </table>
+            
+            <!-- Administrative Footer -->
+            <div class="remarks-section">
+                <div class="remarks-row">
+                    <div class="remarks-block">
+                        <div class="remarks-title">
+                            <span>Class Teacher's Remarks</span>
+                            <button class="save-btn no-print" onclick="saveRemarks('teacher')">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                        <textarea class="remarks-textarea" id="teacherRemarks" placeholder="Enter class teacher's remarks...">
+Excellent performance. Very disciplined learner.
+                        </textarea>
+                        <div class="signature-line">Sign: .......................................</div>
+                    </div>
+                    
+                    <div class="remarks-block">
+                        <div class="remarks-title">
+                            <span>Head of Institution (HOI) Remarks</span>
+                            <button class="save-btn no-print" onclick="saveRemarks('hoi')">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                        <textarea class="remarks-textarea" id="hoiRemarks" placeholder="Enter HOI remarks...">
+Maintain the same effort in Term 2.
+                        </textarea>
+                        <div class="signature-line">Sign & Stamp: .......................</div>
+                    </div>
+                </div>
+                
+                <div class="footer-row">
+                    <div class="date-pair">
+                        <div class="date-item">
+                            <span class="date-label">Closing Date:</span>
+                            <span class="date-value" id="closingDate">10/04/2026</span>
+                        </div>
+                        <div class="date-item">
+                            <span class="date-label">Next Term Opening Date:</span>
+                            <span class="date-value" id="openingDate">04/05/2026</span>
+                        </div>
+                    </div>
+                    <div class="watermark no-print">
+                        System Powered by Jamlyan Analytics
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // Subject data by grade
+        const subjectsByGrade = {
+            'PP1': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Activities'],
+            'PP2': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Activities'],
+            '1': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            '2': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            '3': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            '4': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            '5': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            '6': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            '7': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
+            '8': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
+            '9': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education']
+        };
+        
+        // Student data
+        const studentData = {
+            name: 'JUMA KEVIN WAMBUA',
+            assessmentNumber: 'CBC-2026-8942',
+            grade: 'Grade 4',
+            stream: 'Stream A',
+            rank: 4,
+            totalStudents: 42
+        };
+        
+        // Get rubric based on score
+        function getRubric(score) {
+            if (score >= 80) return { code: 'EE', label: 'Exceeding Expectations' };
+            if (score >= 65) return { code: 'ME', label: 'Meets Expectations' };
+            if (score >= 50) return { code: 'AE', label: 'Approaching Expectations' };
+            return { code: 'BE', label: 'Below Expectations' };
+        }
+        
+        // Generate table rows
+        function generateTableRows(grade) {
+            const subjects = subjectsByGrade[grade] || subjectsByGrade['4'];
+            const tableBody = document.getElementById('tableBody');
+            tableBody.innerHTML = '';
+            
+            subjects.forEach((subject, index) => {
+                const midScore = 70 + (index % 25);
+                const endScore = 72 + (index % 20);
+                const avgScore = Math.round((midScore + endScore) / 2);
+                const rubric = getRubric(avgScore);
+                
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td class="subject-cell">${subject}</td>
+                    <td class="score-cell">${midScore}</td>
+                    <td class="score-cell">${endScore}</td>
+                    <td class="score-cell">${avgScore}%</td>
+                    <td class="rubric-badge rubric-${rubric.code.toLowerCase()}">${rubric.code}</td>
+                `;
+                tableBody.appendChild(row);
+            });
+        }
+        
+        // Update report title
+        function updateReportTitle() {
+            const term = document.getElementById('termFilter').value;
+            const year = document.getElementById('yearFilter').value;
+            document.getElementById('reportTitle').textContent = 
+                `Competency-Based Curriculum Progress Report - ${term} · Academic Year ${year}`;
+        }
+        
+        // Update grade stream display
+        function updateGradeStream() {
+            const gradeSelect = document.getElementById('gradeFilter');
+            const streamSelect = document.getElementById('streamFilter');
+            const grade = gradeSelect.options[gradeSelect.selectedIndex].text.replace('Grade: ', '');
+            const stream = streamSelect.options[streamSelect.selectedIndex].text.replace('Stream: ', '');
+            document.getElementById('gradeStream').textContent = `Grade ${grade} - ${stream}`;
+        }
+        
+        // Initialize
+        function init() {
+            generateTableRows('4');
+            updateReportTitle();
+            updateGradeStream();
+            
+            // Event listeners
+            document.getElementById('yearFilter').addEventListener('change', updateReportTitle);
+            document.getElementById('termFilter').addEventListener('change', updateReportTitle);
+            document.getElementById('gradeFilter').addEventListener('change', function() {
+                const grade = this.options[this.selectedIndex].value;
+                generateTableRows(grade);
+                updateGradeStream();
+            });
+            document.getElementById('streamFilter').addEventListener('change', updateGradeStream);
+            
+            // Download buttons
+            document.getElementById('downloadCurrentBtn').addEventListener('click', function() {
+                const studentName = studentData.name.toLowerCase().replace(/\s+/g, '_');
+                const year = document.getElementById('yearFilter').value;
+                const term = document.getElementById('termFilter').value;
+                const filename = `report_card_${studentName}_${year}_${term}.pdf`;
+                
+                // For demo, trigger print instead of actual PDF generation
+                window.print();
+            });
+            
+            document.getElementById('downloadAllBtn').addEventListener('click', function() {
+                alert('Download All: This would generate a CSV with all student records.');
+            });
+        }
+        
+        // Save remarks function
+        function saveRemarks(type) {
+            const textarea = document.getElementById(type === 'teacher' ? 'teacherRemarks' : 'hoiRemarks');
+            const content = textarea.value.trim();
+            if (content) {
+                alert(`Saved ${type === 'teacher' ? 'Class Teacher' : 'HOI'} remarks: "${content.substring(0, 50)}..."`);
+            }
+        }
+        
+        // Initialize on DOM loaded
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
