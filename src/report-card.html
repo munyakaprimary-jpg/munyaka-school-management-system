@@ -897,6 +897,18 @@
             currentBtn.disabled = true;
             allBtn.disabled = true;
 
+            // DOM Textarea Value Syncing
+            const textareas = document.querySelectorAll('textarea.remarks-textarea, textarea');
+            textareas.forEach(textarea => {
+                textarea.innerHTML = textarea.value;
+                if (!textarea.hasAttribute('data-original-value')) {
+                    textarea.setAttribute('data-original-value', textarea.value);
+                }
+            });
+
+            // Render Delay
+            await new Promise(r => setTimeout(r, 250));
+
             const element = document.getElementById('reportsPrintWrapper');
             const cleanName = studentProfile.name.toLowerCase().replace(/\s+/g, '_');
             const year = document.getElementById('yearFilter').value;
@@ -908,22 +920,23 @@
                 : `cbc_report_${cleanName}_${grade}_${term}_${year}.pdf`;
 
             const opt = {
-                margin: 4,
+                margin: [4, 4, 4, 4],
                 filename: filename,
                 image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 2, 
+                html2canvas: {
+                    scale: 2,
                     useCORS: true,
-                    letterRendering: true,
+                    logging: false,
                     scrollY: 0,
+                    scrollX: 0,
                     ignoreElements: function(el) {
                         return el.classList.contains('no-print') || el.hasAttribute('data-no-print');
                     }
                 },
-                jsPDF: { 
-                    unit: 'mm', 
-                    format: 'a4', 
-                    orientation: 'portrait' 
+                jsPDF: {
+                    unit: 'mm',
+                    format: 'a4',
+                    orientation: 'portrait'
                 },
                 pagebreak: { mode: ['avoid-all', 'css'] }
             };
