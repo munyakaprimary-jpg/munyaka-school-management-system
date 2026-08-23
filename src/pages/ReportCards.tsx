@@ -178,31 +178,44 @@ const ReportCards = () => {
 
   // Handler: "Download Current"
   const handleDownloadCurrent = async () => {
-    // 1. Sync live values from textareas so inputs appear in the print DOM
+    // 1. Sync live values from textareas into DOM text
     document.querySelectorAll('textarea').forEach(textarea => {
       textarea.innerText = textarea.value;
     });
 
-    // 2. Clone the report card container
-    const reportElement = wrapperRef.current || document.querySelector('.reports-print-wrapper');
+    // 2. Clone the report card element
+    const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
     if (!reportElement) {
       showError("Report card container not found.");
       return;
     }
-    const printContent = reportElement.cloneNode(true);
+    const printContent = reportElement.cloneNode(true) as HTMLElement;
 
-    // 3. Remove all save buttons and interactive UI elements from the clone
+    // 3. Remove .no-print elements (save buttons, top controls)
     printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-    // 4. Open a print document context
-    const printWindow = window.open('', '_blank', 'width=800,height=1000');
-    if (!printWindow) {
-      alert('Please allow popups to download the PDF.');
-      return;
+    // 4. Create or reuse a hidden iframe
+    let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
+    if (!printFrame) {
+      printFrame = document.createElement('iframe');
+      printFrame.id = 'pdf-print-frame';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      document.body.appendChild(printFrame);
     }
 
-    // 5. Inject styles and cloned content into the window
-    printWindow.document.write(`
+    // 5. Write the printable content into the iframe
+    const frameDoc = printFrame.contentWindow?.document;
+    if (!frameDoc) {
+      showError("Could not access print iframe document.");
+      return;
+    }
+    frameDoc.open();
+    frameDoc.write(`
       <!DOCTYPE html>
       <html>
         <head>
@@ -243,45 +256,57 @@ const ReportCards = () => {
         </body>
       </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
+    frameDoc.close();
 
-    // 6. Trigger print dialog (select "Save as PDF")
+    // 6. Trigger print cleanly inside the frame
     setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+    }, 300);
 
     showSuccess("PDF print dialog opened.");
   };
 
-  // Handler: "Download All" - uses the same exportPDF native print window pipeline
+  // Handler: "Download All" - uses the same hidden inline iframe pipeline
   const handleDownloadAll = async () => {
-    // 1. Sync live values from textareas so inputs appear in the print DOM
+    // 1. Sync live values from textareas into DOM text
     document.querySelectorAll('textarea').forEach(textarea => {
       textarea.innerText = textarea.value;
     });
 
-    // 2. Clone the report card container
-    const reportElement = wrapperRef.current || document.querySelector('.reports-print-wrapper');
+    // 2. Clone the report card element
+    const reportElement = wrapperRef.current || (document.querySelector('.reports-print-wrapper') as HTMLElement | null);
     if (!reportElement) {
       showError("Report card container not found.");
       return;
     }
-    const printContent = reportElement.cloneNode(true);
+    const printContent = reportElement.cloneNode(true) as HTMLElement;
 
-    // 3. Remove all save buttons and interactive UI elements from the clone
+    // 3. Remove .no-print elements (save buttons, top controls)
     printContent.querySelectorAll('.no-print, [data-html2canvas-ignore]').forEach(el => el.remove());
 
-    // 4. Open a print document context
-    const printWindow = window.open('', '_blank', 'width=800,height=1000');
-    if (!printWindow) {
-      alert('Please allow popups to download the PDF.');
-      return;
+    // 4. Create or reuse a hidden iframe
+    let printFrame = document.getElementById('pdf-print-frame') as HTMLIFrameElement;
+    if (!printFrame) {
+      printFrame = document.createElement('iframe');
+      printFrame.id = 'pdf-print-frame';
+      printFrame.style.position = 'fixed';
+      printFrame.style.right = '0';
+      printFrame.style.bottom = '0';
+      printFrame.style.width = '0';
+      printFrame.style.height = '0';
+      printFrame.style.border = '0';
+      document.body.appendChild(printFrame);
     }
 
-    // 5. Inject styles and cloned content into the window
-    printWindow.document.write(`
+    // 5. Write the printable content into the iframe
+    const frameDoc = printFrame.contentWindow?.document;
+    if (!frameDoc) {
+      showError("Could not access print iframe document.");
+      return;
+    }
+    frameDoc.open();
+    frameDoc.write(`
       <!DOCTYPE html>
       <html>
         <head>
@@ -322,14 +347,13 @@ const ReportCards = () => {
         </body>
       </html>
     `);
-    printWindow.document.close();
-    printWindow.focus();
+    frameDoc.close();
 
-    // 6. Trigger print dialog (select "Save as PDF")
+    // 6. Trigger print cleanly inside the frame
     setTimeout(() => {
-      printWindow.print();
-      printWindow.close();
-    }, 250);
+      printFrame.contentWindow?.focus();
+      printFrame.contentWindow?.print();
+    }, 300);
 
     showSuccess("Bulk PDF print dialog opened.");
   };

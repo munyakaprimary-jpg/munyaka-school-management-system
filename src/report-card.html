@@ -889,9 +889,9 @@
             }
         }
 
-        // 2. Client-Side PDF Export using isolated print window pipeline
+        // 2. Client-Side PDF Export using hidden inline iframe pipeline
         function exportPDF(downloadType) {
-            // 1. Sync live values from textareas so inputs appear in the print DOM
+            // 1. Sync live values from textareas into DOM text
             document.querySelectorAll('textarea').forEach(textarea => {
               textarea.innerText = textarea.value;
             });
@@ -899,23 +899,32 @@
             // Save current data first
             saveCurrentData();
 
-            // 2. Clone the report card container
+            // 2. Clone the report card element
             const reportElement = document.querySelector('.reports-print-wrapper');
             if (!reportElement) return;
             const printContent = reportElement.cloneNode(true);
 
-            // 3. Remove all save buttons and interactive UI elements from the clone
+            // 3. Remove .no-print elements (save buttons, top controls)
             printContent.querySelectorAll('.no-print').forEach(el => el.remove());
 
-            // 4. Open a print document context
-            const printWindow = window.open('', '_blank', 'width=800,height=1000');
-            if (!printWindow) {
-              alert('Please allow popups to download the PDF.');
-              return;
+            // 4. Create or reuse a hidden iframe
+            let printFrame = document.getElementById('pdf-print-frame');
+            if (!printFrame) {
+              printFrame = document.createElement('iframe');
+              printFrame.id = 'pdf-print-frame';
+              printFrame.style.position = 'fixed';
+              printFrame.style.right = '0';
+              printFrame.style.bottom = '0';
+              printFrame.style.width = '0';
+              printFrame.style.height = '0';
+              printFrame.style.border = '0';
+              document.body.appendChild(printFrame);
             }
 
-            // 5. Inject styles and cloned content into the window
-            printWindow.document.write(`
+            // 5. Write the printable content into the iframe
+            const frameDoc = printFrame.contentWindow.document;
+            frameDoc.open();
+            frameDoc.write(`
               <!DOCTYPE html>
               <html>
                 <head>
@@ -956,14 +965,13 @@
                 </body>
               </html>
             `);
-            printWindow.document.close();
-            printWindow.focus();
+            frameDoc.close();
 
-            // 6. Trigger print dialog (select "Save as PDF")
+            // 6. Trigger print cleanly inside the frame
             setTimeout(() => {
-              printWindow.print();
-              printWindow.close();
-            }, 250);
+              printFrame.contentWindow.focus();
+              printFrame.contentWindow.print();
+            }, 300);
 
             showToast(`PDF print dialog opened`);
         }
