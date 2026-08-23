@@ -4,55 +4,77 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CBC Report Card Generator</title>
+    <!-- FontAwesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- html2pdf.js Bundle -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; color: #333; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; 
+            background: #f1f5f9; 
+            color: #1e293b;
+            padding: 24px 16px;
+        }
+
+        .main-container {
+            max-width: 220mm;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
         
-        /* Top Control Panel */
+        /* 1. Top Control Panel */
         .control-panel {
             background: #ffffff;
             padding: 20px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
-            margin-bottom: 20px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px -2px rgba(0,0,0,0.06);
+            border: 1px solid #e2e8f0;
         }
         
         .action-buttons {
             display: flex;
-            gap: 12px;
+            gap: 14px;
             margin-bottom: 16px;
         }
         
         .btn {
             flex: 1;
-            min-width: 140px;
             background: #1a1d20;
             color: #a3e635;
-            border: none;
-            border-radius: 10px;
-            padding: 12px 16px;
-            font-weight: 600;
+            border: 1px solid #272b30;
+            border-radius: 12px;
+            padding: 12px 20px;
+            font-weight: 700;
             font-size: 14px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
             transition: all 0.2s ease;
         }
         
         .btn:hover {
             background: #0f1114;
-            box-shadow: 0 4px 12px rgba(163, 230, 53, 0.2);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 14px rgba(163, 230, 53, 0.25);
+        }
+
+        .btn:active {
+            transform: translateY(0);
         }
         
         .btn i {
             font-size: 16px;
+            color: #a3e635;
         }
-        
-        .btn-download-all {
-            background: #1a1d20;
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         
         .filter-stack {
@@ -63,30 +85,59 @@
         
         .filter-item {
             position: relative;
+            width: 100%;
+        }
+
+        .filter-label {
+            display: block;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: #64748b;
+            margin-bottom: 4px;
+            margin-left: 2px;
         }
         
         .filter-item select {
             width: 100%;
-            padding: 12px 16px;
+            padding: 11px 16px;
             border-radius: 10px;
-            border: 1px solid #d1d5db;
+            border: 1px solid #cbd5e1;
             background: #ffffff;
-            font-size: 14px;
+            font-size: 13.5px;
+            font-weight: 600;
+            color: #1e293b;
             cursor: pointer;
             appearance: none;
             -webkit-appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
             background-repeat: no-repeat;
-            background-position: right 12px center;
-            background-size: 16px;
-            padding-right: 40px;
+            background-position: right 14px center;
+            background-size: 14px;
+            padding-right: 42px;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
         }
         
-        .filter-item select:hover {
-            border-color: #a3e635;
+        .filter-item select:focus {
+            outline: none;
+            border-color: #84cc16;
+            box-shadow: 0 0 0 3px rgba(163, 230, 53, 0.25);
+        }
+
+        .save-toast {
+            display: none;
+            background: #1a1d20;
+            color: #a3e635;
+            padding: 8px 16px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-top: 10px;
+            text-align: center;
         }
         
-        /* A4 Printable Layout */
+        /* 2. Single A4 Printable Layout */
         .reports-print-wrapper {
             width: 210mm;
             min-height: 297mm;
@@ -96,264 +147,331 @@
             border: 1px solid #d1d5db;
             box-sizing: border-box;
             font-size: 11px;
-            page-break-inside: avoid;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.06);
         }
         
-        /* Report Card Header */
+        /* 3. Report Card Header & Content */
         .report-header {
             text-align: center;
-            margin-bottom: 24px;
-            border-bottom: 2px solid #e5e7eb;
-            padding-bottom: 16px;
+            margin-bottom: 12px;
+            border-bottom: 2px solid #e2e8f0;
+            padding-bottom: 10px;
         }
         
         .school-name {
-            font-weight: 700;
-            font-size: 16px;
-            color: #111827;
-            margin-bottom: 4px;
+            font-weight: 900;
+            font-size: 14.5px;
+            color: #0f172a;
+            margin-bottom: 2px;
             text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-        
-        .school-address {
-            font-size: 13px;
-            color: #6b7280;
-            margin-bottom: 8px;
+            letter-spacing: 0.5px;
+            line-height: 1.3;
         }
         
         .motto {
             font-style: italic;
-            font-size: 12px;
-            color: #4b5563;
-            margin-bottom: 16px;
+            font-size: 11px;
+            font-weight: 600;
+            color: #475569;
+            margin: 3px 0 10px 0;
         }
         
-        .report-title {
-            background: #f9fafb;
-            border: 1px solid #e5e7eb;
+        .report-subtitle {
+            background: #f8fafc;
+            border: 1px solid #cbd5e1;
             border-radius: 6px;
-            padding: 10px 16px;
-            font-weight: 600;
-            font-size: 13px;
-            color: #111827;
-            margin-bottom: 20px;
+            padding: 6px 12px;
+            font-weight: 800;
+            font-size: 11.5px;
+            color: #0f172a;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: block;
         }
         
         /* Metadata Grid */
         .metadata-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 8px 16px;
+            margin-bottom: 12px;
+            background: #f8fafc;
+            padding: 10px 14px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
         }
         
         .metadata-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 8px 10px;
-            background: #f9fafb;
-            border-radius: 6px;
-            border: 1px solid #e5e7eb;
+            font-size: 11px;
         }
         
         .metadata-label {
-            font-weight: 600;
-            font-size: 11px;
-            color: #6b7280;
+            font-weight: 800;
+            font-size: 10px;
+            color: #64748b;
             text-transform: uppercase;
+            letter-spacing: 0.4px;
         }
         
         .metadata-value {
-            font-weight: 500;
-            font-size: 12px;
-            color: #111827;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .metadata-value.rank-val {
+            color: #2563eb;
         }
         
-        /* Grading Table */
+        /* 4. Dynamic Academic Grading Table */
+        .table-container {
+            margin-bottom: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
         .grading-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 20px;
-            font-size: 11px;
+            font-size: 10.5px;
         }
         
         .grading-table th {
-            background: #f3f4f6;
-            padding: 10px 8px;
+            background: #f1f5f9;
+            padding: 7px 8px;
             text-align: left;
-            font-weight: 600;
-            color: #374151;
-            border: 1px solid #e5e7eb;
+            font-weight: 800;
+            color: #334155;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            border-bottom: 1px solid #cbd5e1;
+            border-right: 1px solid #cbd5e1;
+        }
+
+        .grading-table th:last-child {
+            border-right: none;
         }
         
         .grading-table td {
-            padding: 10px 8px;
-            border: 1px solid #e5e7eb;
+            padding: 5px 8px;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            vertical-align: middle;
         }
-        
-        .grading-table th:first-child,
-        .grading-table td:first-child {
-            min-width: 140px;
+
+        .grading-table td:last-child {
+            border-right: none;
         }
-        
-        .grading-table th:nth-child(2),
-        .grading-table th:nth-child(3),
-        .grading-table th:nth-child(4) {
-            text-align: center;
-        }
-        
-        .grading-table th:nth-child(5) {
-            text-align: center;
-            width: 100px;
+
+        .grading-table tr:last-child td {
+            border-bottom: none;
         }
         
         .subject-cell {
-            font-weight: 500;
-            color: #111827;
+            font-weight: 700;
+            color: #1e293b;
+            width: 44%;
         }
         
-        .score-cell {
+        .score-input {
+            width: 52px;
+            padding: 3px 4px;
             text-align: center;
-            font-weight: 500;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        .score-input:focus {
+            outline: none;
+            border-color: #84cc16;
+            background: #f7fee7;
         }
         
+        .avg-cell {
+            text-align: center;
+            font-weight: 800;
+            color: #1d4ed8;
+            background: #f0fdf4;
+            width: 13%;
+        }
+        
+        .rubric-cell {
+            text-align: center;
+            width: 19%;
+        }
+
         .rubric-badge {
             display: inline-block;
-            padding: 4px 8px;
+            padding: 2px 7px;
             border-radius: 4px;
-            font-weight: 600;
-            font-size: 11px;
+            font-weight: 800;
+            font-size: 10px;
+            letter-spacing: 0.3px;
         }
         
-        .rubric-ee { background: #dcfce7; color: #166534; }
-        .rubric-me { background: #dbeafe; color: #1e40af; }
-        .rubric-ae { background: #fef3c7; color: #92400e; }
-        .rubric-be { background: #fee2e2; color: #991b1b; }
+        .rubric-ee { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+        .rubric-me { background: #dbeafe; color: #1d4ed8; border: 1px solid #bfdbfe; }
+        .rubric-ae { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+        .rubric-be { background: #fee2e2; color: #b91c1c; border: 1px solid #fecaca; }
         
-        /* Administrative Footer */
-        .remarks-section {
-            margin-top: 24px;
-            padding-top: 16px;
-            border-top: 1px solid #e5e7eb;
+        /* 5. Administrative Footer */
+        .admin-footer {
+            margin-top: 8px;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 10px;
         }
         
-        .remarks-row {
+        .remarks-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+        
+        .remarks-card {
+            background: #f8fafc;
+            border-radius: 6px;
+            padding: 8px 10px;
+            border: 1px solid #e2e8f0;
             display: flex;
-            gap: 16px;
-            margin-bottom: 16px;
+            flex-direction: column;
+            justify-content: space-between;
         }
         
-        .remarks-block {
-            flex: 1;
-            background: #f9fafb;
-            border-radius: 8px;
-            padding: 12px;
-            border: 1px solid #e5e7eb;
-        }
-        
-        .remarks-title {
-            font-weight: 600;
-            font-size: 12px;
-            color: #374151;
-            margin-bottom: 8px;
+        .remarks-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
+            margin-bottom: 4px;
         }
         
-        .save-btn {
+        .remarks-title {
+            font-weight: 800;
+            font-size: 10px;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+        }
+        
+        .save-btn-inline {
             background: #1a1d20;
             color: #a3e635;
             border: none;
-            border-radius: 6px;
-            padding: 4px 10px;
-            font-size: 11px;
-            font-weight: 600;
+            border-radius: 4px;
+            padding: 3px 8px;
+            font-size: 9.5px;
+            font-weight: 700;
             cursor: pointer;
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 4px;
+            transition: all 0.15s ease;
         }
         
-        .save-btn:hover {
+        .save-btn-inline:hover {
             background: #0f1114;
+            box-shadow: 0 2px 6px rgba(163, 230, 53, 0.3);
         }
         
         .remarks-textarea {
             width: 100%;
-            min-height: 60px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            padding: 8px;
-            font-size: 11px;
-            resize: vertical;
+            min-height: 48px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 10px;
+            font-family: inherit;
+            resize: none;
             background: #ffffff;
-            color: #333;
+            color: #334155;
+            line-height: 1.35;
+        }
+
+        .remarks-textarea:focus {
+            outline: none;
+            border-color: #84cc16;
         }
         
-        .signature-line {
-            margin-top: 24px;
-            padding-top: 8px;
-            border-top: 1px dotted #9ca3af;
-            font-size: 11px;
-            color: #6b7280;
+        .dotted-sign-line {
+            margin-top: 6px;
+            font-size: 9.5px;
+            color: #64748b;
+            font-weight: 600;
         }
         
-        .footer-row {
+        .term-dates-bar {
             display: flex;
             justify-content: space-between;
-            align-items: flex-end;
-            margin-top: 20px;
-            padding-top: 12px;
-            border-top: 1px solid #e5e7eb;
+            align-items: center;
+            background: #f1f5f9;
+            padding: 6px 12px;
+            border-radius: 6px;
+            border: 1px solid #e2e8f0;
+            margin-bottom: 8px;
+            font-size: 10px;
         }
         
-        .date-pair {
+        .date-group {
             display: flex;
-            gap: 24px;
-        }
-        
-        .date-item {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            align-items: center;
+            gap: 6px;
         }
         
         .date-label {
-            font-size: 11px;
-            color: #6b7280;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 9.5px;
         }
         
-        .date-value {
-            font-weight: 500;
-            color: #111827;
-        }
-        
-        .watermark {
+        .date-input {
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            padding: 3px 6px;
             font-size: 10px;
-            color: #9ca3af;
+            font-weight: 700;
+            color: #0f172a;
+            background: #ffffff;
+        }
+
+        .date-input:focus {
+            outline: none;
+            border-color: #84cc16;
+        }
+        
+        .watermark-label {
+            font-size: 9px;
             font-style: italic;
+            font-weight: 700;
+            color: #94a3b8;
             text-align: right;
+            margin-top: 4px;
         }
         
         /* Print Styles */
         @media print {
             body {
-                background: #ffffff;
+                background: #ffffff !important;
+                padding: 0 !important;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
             
             .no-print,
-            [data-no-print] {
+            .control-panel,
+            .save-btn-inline {
                 display: none !important;
                 visibility: hidden !important;
-            }
-            
-            .control-panel {
-                display: none;
             }
             
             .reports-print-wrapper {
@@ -365,326 +483,485 @@
                 box-shadow: none !important;
                 page-break-inside: avoid;
             }
-            
-            .report-card {
-                box-shadow: none !important;
-                border: 1px solid #e5e7eb !important;
-                margin-bottom: 20mm !important;
-                page-break-after: always;
+
+            .remarks-textarea {
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
             }
-            
-            .report-card:last-child {
-                page-break-after: auto;
-            }
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .action-buttons {
-                flex-direction: column;
-            }
-            
-            .btn {
-                min-width: auto;
-            }
-            
-            .metadata-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .remarks-row {
-                flex-direction: column;
-            }
-            
-            .footer-row {
-                flex-direction: column;
-                gap: 12px;
-            }
-            
-            .date-pair {
-                flex-direction: column;
-                gap: 16px;
+
+            .score-input, .date-input {
+                border: none !important;
+                background: transparent !important;
             }
         }
     </style>
 </head>
 <body>
-    <!-- Top Control Panel -->
-    <div class="control-panel">
-        <div class="action-buttons">
-            <button class="btn btn-download-current no-print" id="downloadCurrentBtn">
-                <i class="fas fa-download"></i>
-                Download Current
-            </button>
-            <button class="btn btn-download-all no-print" id="downloadAllBtn">
-                <i class="fas fa-file-csv"></i>
-                Download All
-            </button>
+    <div class="main-container">
+        <!-- 1. Top Control Panel -->
+        <div class="control-panel no-print">
+            <div class="action-buttons">
+                <button class="btn btn-download-current" id="downloadCurrentBtn">
+                    <i class="fas fa-file-pdf"></i>
+                    <span>Download Current</span>
+                </button>
+                <button class="btn btn-download-all" id="downloadAllBtn">
+                    <i class="fas fa-download"></i>
+                    <span>Download All</span>
+                </button>
+            </div>
+            
+            <!-- 5 Vertical Dropdown Filters in Exact Required Order -->
+            <div class="filter-stack">
+                <div class="filter-item">
+                    <label class="filter-label" for="yearFilter">Year</label>
+                    <select id="yearFilter">
+                        <option value="2026">2026</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
+                    <label class="filter-label" for="gradeFilter">Grade</label>
+                    <select id="gradeFilter">
+                        <option value="PP1">PP1</option>
+                        <option value="PP2">PP2</option>
+                        <option value="Grade 1">Grade 1</option>
+                        <option value="Grade 2">Grade 2</option>
+                        <option value="Grade 3">Grade 3</option>
+                        <option value="Grade 4" selected>Grade 4</option>
+                        <option value="Grade 5">Grade 5</option>
+                        <option value="Grade 6">Grade 6</option>
+                        <option value="Grade 7">Grade 7</option>
+                        <option value="Grade 8">Grade 8</option>
+                        <option value="Grade 9">Grade 9</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
+                    <label class="filter-label" for="streamFilter">Stream</label>
+                    <select id="streamFilter">
+                        <option value="Stream A" selected>Stream A</option>
+                        <option value="Stream B">Stream B</option>
+                        <option value="Stream C">Stream C</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
+                    <label class="filter-label" for="termFilter">Term</label>
+                    <select id="termFilter">
+                        <option value="Term 1" selected>Term 1</option>
+                        <option value="Term 2">Term 2</option>
+                        <option value="Term 3">Term 3</option>
+                    </select>
+                </div>
+
+                <div class="filter-item">
+                    <label class="filter-label" for="reportTypeFilter">Report Type</label>
+                    <select id="reportTypeFilter">
+                        <option value="Opener">Opener</option>
+                        <option value="Midterm">Midterm</option>
+                        <option value="Endterm" selected>Endterm</option>
+                    </select>
+                </div>
+            </div>
+
+            <div id="saveToast" class="save-toast">Data saved to localStorage successfully!</div>
         </div>
         
-        <!-- Filter Stack -->
-        <div class="filter-stack">
-            <div class="filter-item">
-                <select id="yearFilter">
-                    <option value="2026">Year: 2026</option>
-                    <option value="2025">Year: 2025</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <select id="gradeFilter">
-                    <option value="PP1">Grade: PP1</option>
-                    <option value="PP2">Grade: PP2</option>
-                    <option value="1">Grade: Grade 1</option>
-                    <option value="2">Grade: Grade 2</option>
-                    <option value="3">Grade: Grade 3</option>
-                    <option value="4">Grade: Grade 4</option>
-                    <option value="5">Grade: Grade 5</option>
-                    <option value="6">Grade: Grade 6</option>
-                    <option value="7">Grade: Grade 7</option>
-                    <option value="8">Grade: Grade 8</option>
-                    <option value="9">Grade: Grade 9</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <select id="streamFilter">
-                    <option value="Stream A">Stream: Stream A</option>
-                    <option value="Stream B">Stream: Stream B</option>
-                    <option value="Stream C">Stream: Stream C</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <select id="termFilter">
-                    <option value="Term 1">Term: Term 1</option>
-                    <option value="Term 2">Term: Term 2</option>
-                    <option value="Term 3">Term: Term 3</option>
-                </select>
-            </div>
-            <div class="filter-item">
-                <select id="reportTypeFilter">
-                    <option value="Opener">Report Type: Opener</option>
-                    <option value="Midterm">Report Type: Midterm</option>
-                    <option value="Endterm">Report Type: Endterm</option>
-                </select>
-            </div>
-        </div>
-    </div>
-    
-    <!-- A4 Printable Layout -->
-    <div class="reports-print-wrapper" id="printWrapper">
-        <div class="report-card" id="reportCard">
-            <!-- Report Card Header -->
-            <div class="report-header">
-                <h2 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL</h2>
-                <p class="school-address">P.O.BOX 5239-30100, ELDORET</p>
-                <p class="motto">MOTTO: Knowledge is Power</p>
-                <div class="report-title" id="reportTitle">
-                    Competency-Based Curriculum Progress Report - Term 1 · Academic Year 2026
-                </div>
-            </div>
-            
-            <!-- Metadata Grid -->
-            <div class="metadata-grid" id="metadataGrid">
-                <div class="metadata-item">
-                    <span class="metadata-label">Name</span>
-                    <span class="metadata-value">JUMA KEVIN WAMBUA</span>
-                </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Assessment Number</span>
-                    <span class="metadata-value">CBC-2026-8942</span>
-                </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Grade Stream</span>
-                    <span class="metadata-value" id="gradeStream">Grade 4 - Stream A</span>
-                </div>
-                <div class="metadata-item">
-                    <span class="metadata-label">Overall Rank</span>
-                    <span class="metadata-value" id="overallRank">4 / 42</span>
-                </div>
-            </div>
-            
-            <!-- Grading Table -->
-            <table class="grading-table" id="gradingTable">
-                <thead>
-                    <tr>
-                        <th>Subject</th>
-                        <th>Mid Term</th>
-                        <th>End Term</th>
-                        <th>Average</th>
-                        <th>Rubric</th>
-                    </tr>
-                </thead>
-                <tbody id="tableBody">
-                    <!-- Rows will be generated dynamically -->
-                </tbody>
-            </table>
-            
-            <!-- Administrative Footer -->
-            <div class="remarks-section">
-                <div class="remarks-row">
-                    <div class="remarks-block">
-                        <div class="remarks-title">
-                            <span>Class Teacher's Remarks</span>
-                            <button class="save-btn no-print" onclick="saveRemarks('teacher')">
-                                <i class="fas fa-save"></i> Save
-                            </button>
-                        </div>
-                        <textarea class="remarks-textarea" id="teacherRemarks" placeholder="Enter class teacher's remarks...">
-Excellent performance. Very disciplined learner.
-                        </textarea>
-                        <div class="signature-line">Sign: .......................................</div>
-                    </div>
-                    
-                    <div class="remarks-block">
-                        <div class="remarks-title">
-                            <span>Head of Institution (HOI) Remarks</span>
-                            <button class="save-btn no-print" onclick="saveRemarks('hoi')">
-                                <i class="fas fa-save"></i> Save
-                            </button>
-                        </div>
-                        <textarea class="remarks-textarea" id="hoiRemarks" placeholder="Enter HOI remarks...">
-Maintain the same effort in Term 2.
-                        </textarea>
-                        <div class="signature-line">Sign & Stamp: .......................</div>
+        <!-- 2. Single A4 Printable Layout (reports-print-wrapper) -->
+        <div class="reports-print-wrapper" id="reportsPrintWrapper">
+            <div>
+                <!-- 3. Report Card Header -->
+                <div class="report-header">
+                    <h1 class="school-name">MUNYAKA PRIMARY AND JUNIOR SCHOOL<br>P.O.BOX 5239-30100, ELDORET</h1>
+                    <p class="motto">MOTTO: Knowledge is Power</p>
+                    <div class="report-subtitle" id="reportSubtitle">
+                        Competency-Based Curriculum Progress Report - Term 1 · Academic Year 2026
                     </div>
                 </div>
                 
-                <div class="footer-row">
-                    <div class="date-pair">
-                        <div class="date-item">
-                            <span class="date-label">Closing Date:</span>
-                            <span class="date-value" id="closingDate">10/04/2026</span>
-                        </div>
-                        <div class="date-item">
-                            <span class="date-label">Next Term Opening Date:</span>
-                            <span class="date-value" id="openingDate">04/05/2026</span>
-                        </div>
+                <!-- Metadata Grid -->
+                <div class="metadata-grid">
+                    <div class="metadata-item">
+                        <span class="metadata-label">NAME:</span>
+                        <span class="metadata-value" id="studentName">JUMA KEVIN WAMBUA</span>
                     </div>
-                    <div class="watermark no-print">
-                        System Powered by Jamlyan Analytics
+                    <div class="metadata-item">
+                        <span class="metadata-label">ASSESSMENT NUMBER:</span>
+                        <span class="metadata-value" id="studentAssessment">CBC-2026-8942</span>
                     </div>
+                    <div class="metadata-item">
+                        <span class="metadata-label">GRADE STREAM:</span>
+                        <span class="metadata-value" id="gradeStreamDisplay">Grade 4 - Stream A</span>
+                    </div>
+                    <div class="metadata-item">
+                        <span class="metadata-label">OVERALL RANK:</span>
+                        <span class="metadata-value rank-val" id="overallRank">4 / 42</span>
+                    </div>
+                </div>
+                
+                <!-- 4. Dynamic Academic Grading Table -->
+                <div class="table-container">
+                    <table class="grading-table" id="gradingTable">
+                        <thead>
+                            <tr>
+                                <th>Subject</th>
+                                <th style="text-align: center; width: 12%;">Mid Term</th>
+                                <th style="text-align: center; width: 12%;">End Term</th>
+                                <th style="text-align: center; width: 13%;">Average</th>
+                                <th style="text-align: center; width: 19%;">Rubric</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody">
+                            <!-- Dynamic rows rendered by JavaScript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- 5. Administrative Footer -->
+            <div class="admin-footer">
+                <div class="remarks-grid">
+                    <!-- Class Teacher's Remarks -->
+                    <div class="remarks-card">
+                        <div class="remarks-header">
+                            <span class="remarks-title">Class Teacher's Remarks</span>
+                            <button type="button" class="save-btn-inline no-print" onclick="saveCurrentData('Class Teacher remarks saved!')">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                        <textarea class="remarks-textarea" id="teacherRemarks" placeholder="Enter Class Teacher's Remarks..."></textarea>
+                        <div class="dotted-sign-line">Sign: ...........................................................</div>
+                    </div>
+                    
+                    <!-- Head of Institution (HOI) Remarks -->
+                    <div class="remarks-card">
+                        <div class="remarks-header">
+                            <span class="remarks-title">Head of Institution (HOI) Remarks</span>
+                            <button type="button" class="save-btn-inline no-print" onclick="saveCurrentData('HOI remarks saved!')">
+                                <i class="fas fa-save"></i> Save
+                            </button>
+                        </div>
+                        <textarea class="remarks-textarea" id="hoiRemarks" placeholder="Enter HOI Remarks..."></textarea>
+                        <div class="dotted-sign-line">Sign &amp; Stamp: ...............................................</div>
+                    </div>
+                </div>
+                
+                <!-- Closing & Next Term Dates -->
+                <div class="term-dates-bar">
+                    <div class="date-group">
+                        <span class="date-label">Closing Date:</span>
+                        <input type="date" class="date-input" id="closingDateInput" value="2026-04-10">
+                    </div>
+                    <div class="date-group">
+                        <span class="date-label">Next Term Opening Date:</span>
+                        <input type="date" class="date-input" id="openingDateInput" value="2026-05-04">
+                    </div>
+                </div>
+
+                <!-- Watermark Label -->
+                <div class="watermark-label">
+                    System Powered by Jamlyan Analytics
                 </div>
             </div>
         </div>
     </div>
     
     <script>
-        // Subject data by grade
-        const subjectsByGrade = {
+        // Subject definitions per CBC curriculum specifications
+        const SUBJECTS_CONFIG = {
             'PP1': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Activities'],
             'PP2': ['Language Activities', 'Mathematical Activities', 'Environmental Activities', 'Psychomotor & Creative Activities', 'Religious Activities'],
-            '1': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
-            '2': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
-            '3': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
-            '4': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
-            '5': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
-            '6': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
-            '7': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
-            '8': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
-            '9': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education']
+            'Grade 1': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            'Grade 2': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            'Grade 3': ['Literacy', 'English Language', 'Kiswahili Language', 'Mathematical Activities', 'Environmental Activities', 'Creative Activities', 'Religious Education'],
+            'Grade 4': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            'Grade 5': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            'Grade 6': ['English', 'Kiswahili', 'Mathematics', 'Science & Technology', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts', 'Religious Education'],
+            'Grade 7': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
+            'Grade 8': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education'],
+            'Grade 9': ['English', 'Kiswahili', 'Mathematics', 'Integrated Science', 'Pre-Technical Studies', 'Social Studies', 'Agriculture & Nutrition', 'Creative Arts & Sports', 'Religious Education']
         };
-        
-        // Student data
-        const studentData = {
+
+        const studentProfile = {
             name: 'JUMA KEVIN WAMBUA',
             assessmentNumber: 'CBC-2026-8942',
-            grade: 'Grade 4',
-            stream: 'Stream A',
-            rank: 4,
-            totalStudents: 42
+            rank: '4 / 42'
         };
-        
-        // Get rubric based on score
+
+        // Rubric calculation
         function getRubric(score) {
             if (score >= 80) return { code: 'EE', label: 'Exceeding Expectations' };
             if (score >= 65) return { code: 'ME', label: 'Meets Expectations' };
             if (score >= 50) return { code: 'AE', label: 'Approaching Expectations' };
             return { code: 'BE', label: 'Below Expectations' };
         }
-        
-        // Generate table rows
-        function generateTableRows(grade) {
-            const subjects = subjectsByGrade[grade] || subjectsByGrade['4'];
-            const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '';
-            
-            subjects.forEach((subject, index) => {
-                const midScore = 70 + (index % 25);
-                const endScore = 72 + (index % 20);
-                const avgScore = Math.round((midScore + endScore) / 2);
-                const rubric = getRubric(avgScore);
-                
+
+        // Generate standardized Composite Key: cbc_report_CBC-2026-8942_Grade1_Term1_2026
+        function getCompositeStorageKey() {
+            const assessment = studentProfile.assessmentNumber;
+            const rawGrade = document.getElementById('gradeFilter').value.replace(/\s+/g, '');
+            const rawTerm = document.getElementById('termFilter').value.replace(/\s+/g, '');
+            const year = document.getElementById('yearFilter').value;
+            return `cbc_report_${assessment}_${rawGrade}_${rawTerm}_${year}`;
+        }
+
+        // Show brief notification
+        function showToast(message) {
+            const toast = document.getElementById('saveToast');
+            toast.textContent = message || 'Saved successfully!';
+            toast.style.display = 'block';
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2500);
+        }
+
+        // Render Table Rows with current or stored scores
+        function renderGradingTable(grade, storedScores = null) {
+            const subjects = SUBJECTS_CONFIG[grade] || SUBJECTS_CONFIG['Grade 4'];
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            subjects.forEach((subject, idx) => {
+                let midVal, endVal;
+
+                if (storedScores && storedScores[subject]) {
+                    midVal = storedScores[subject].mid;
+                    endVal = storedScores[subject].end;
+                } else if (storedScores === null) {
+                    // Default calculated scores for default initial state
+                    midVal = 70 + (idx % 18);
+                    endVal = 72 + (idx % 16);
+                } else {
+                    // Blank/clear state
+                    midVal = '';
+                    endVal = '';
+                }
+
                 const row = document.createElement('tr');
+                row.dataset.subject = subject;
+
+                const midNum = parseInt(midVal, 10);
+                const endNum = parseInt(endVal, 10);
+                let avgText = '—';
+                let rubricHtml = '—';
+
+                if (!isNaN(midNum) && !isNaN(endNum)) {
+                    const avg = Math.round((midNum + endNum) / 2);
+                    avgText = avg + '%';
+                    const rubric = getRubric(avg);
+                    rubricHtml = `<span class="rubric-badge rubric-${rubric.code.toLowerCase()}">${rubric.code}</span>`;
+                } else if (!isNaN(midNum) || !isNaN(endNum)) {
+                    const single = !isNaN(midNum) ? midNum : endNum;
+                    avgText = single + '%';
+                    const rubric = getRubric(single);
+                    rubricHtml = `<span class="rubric-badge rubric-${rubric.code.toLowerCase()}">${rubric.code}</span>`;
+                }
+
                 row.innerHTML = `
                     <td class="subject-cell">${subject}</td>
-                    <td class="score-cell">${midScore}</td>
-                    <td class="score-cell">${endScore}</td>
-                    <td class="score-cell">${avgScore}%</td>
-                    <td class="rubric-badge rubric-${rubric.code.toLowerCase()}">${rubric.code}</td>
+                    <td style="text-align: center;">
+                        <input type="number" min="0" max="100" class="score-input mid-score" value="${midVal !== '' ? midVal : ''}" placeholder="0-100" oninput="onScoreChange(this)">
+                    </td>
+                    <td style="text-align: center;">
+                        <input type="number" min="0" max="100" class="score-input end-score" value="${endVal !== '' ? endVal : ''}" placeholder="0-100" oninput="onScoreChange(this)">
+                    </td>
+                    <td class="avg-cell">${avgText}</td>
+                    <td class="rubric-cell">${rubricHtml}</td>
                 `;
-                tableBody.appendChild(row);
+
+                tbody.appendChild(row);
             });
         }
-        
-        // Update report title
-        function updateReportTitle() {
-            const term = document.getElementById('termFilter').value;
-            const year = document.getElementById('yearFilter').value;
-            document.getElementById('reportTitle').textContent = 
-                `Competency-Based Curriculum Progress Report - ${term} · Academic Year ${year}`;
-        }
-        
-        // Update grade stream display
-        function updateGradeStream() {
-            const gradeSelect = document.getElementById('gradeFilter');
-            const streamSelect = document.getElementById('streamFilter');
-            const grade = gradeSelect.options[gradeSelect.selectedIndex].text.replace('Grade: ', '');
-            const stream = streamSelect.options[streamSelect.selectedIndex].text.replace('Stream: ', '');
-            document.getElementById('gradeStream').textContent = `Grade ${grade} - ${stream}`;
-        }
-        
-        // Initialize
-        function init() {
-            generateTableRows('4');
-            updateReportTitle();
-            updateGradeStream();
-            
-            // Event listeners
-            document.getElementById('yearFilter').addEventListener('change', updateReportTitle);
-            document.getElementById('termFilter').addEventListener('change', updateReportTitle);
-            document.getElementById('gradeFilter').addEventListener('change', function() {
-                const grade = this.options[this.selectedIndex].value;
-                generateTableRows(grade);
-                updateGradeStream();
-            });
-            document.getElementById('streamFilter').addEventListener('change', updateGradeStream);
-            
-            // Download buttons
-            document.getElementById('downloadCurrentBtn').addEventListener('click', function() {
-                const studentName = studentData.name.toLowerCase().replace(/\s+/g, '_');
-                const year = document.getElementById('yearFilter').value;
-                const term = document.getElementById('termFilter').value;
-                const filename = `report_card_${studentName}_${year}_${term}.pdf`;
-                
-                // For demo, trigger print instead of actual PDF generation
-                window.print();
-            });
-            
-            document.getElementById('downloadAllBtn').addEventListener('click', function() {
-                alert('Download All: This would generate a CSV with all student records.');
-            });
-        }
-        
-        // Save remarks function
-        function saveRemarks(type) {
-            const textarea = document.getElementById(type === 'teacher' ? 'teacherRemarks' : 'hoiRemarks');
-            const content = textarea.value.trim();
-            if (content) {
-                alert(`Saved ${type === 'teacher' ? 'Class Teacher' : 'HOI'} remarks: "${content.substring(0, 50)}..."`);
+
+        // Live calculation when user changes an individual score
+        function onScoreChange(inputElement) {
+            const row = inputElement.closest('tr');
+            const midInput = row.querySelector('.mid-score');
+            const endInput = row.querySelector('.end-score');
+            const avgCell = row.querySelector('.avg-cell');
+            const rubricCell = row.querySelector('.rubric-cell');
+
+            const mid = parseInt(midInput.value, 10);
+            const end = parseInt(endInput.value, 10);
+
+            if (!isNaN(mid) && !isNaN(end)) {
+                const avg = Math.round((mid + end) / 2);
+                avgCell.textContent = avg + '%';
+                const r = getRubric(avg);
+                rubricCell.innerHTML = `<span class="rubric-badge rubric-${r.code.toLowerCase()}">${r.code}</span>`;
+            } else if (!isNaN(mid) || !isNaN(end)) {
+                const val = !isNaN(mid) ? mid : end;
+                avgCell.textContent = val + '%';
+                const r = getRubric(val);
+                rubricCell.innerHTML = `<span class="rubric-badge rubric-${r.code.toLowerCase()}">${r.code}</span>`;
+            } else {
+                avgCell.textContent = '—';
+                rubricCell.textContent = '—';
             }
         }
-        
-        // Initialize on DOM loaded
-        document.addEventListener('DOMContentLoaded', init);
+
+        // Update Dynamic UI Titles & Metadata
+        function updateHeadersAndLabels() {
+            const year = document.getElementById('yearFilter').value;
+            const grade = document.getElementById('gradeFilter').value;
+            const stream = document.getElementById('streamFilter').value;
+            const term = document.getElementById('termFilter').value;
+
+            document.getElementById('reportSubtitle').textContent = 
+                `Competency-Based Curriculum Progress Report - ${term} · Academic Year ${year}`;
+            
+            document.getElementById('gradeStreamDisplay').textContent = `${grade} - ${stream}`;
+        }
+
+        // Collect all scores from the active table
+        function getScoresFromDOM() {
+            const scores = {};
+            const rows = document.querySelectorAll('#tableBody tr');
+            rows.forEach(row => {
+                const subject = row.dataset.subject;
+                const mid = row.querySelector('.mid-score')?.value || '';
+                const end = row.querySelector('.end-score')?.value || '';
+                scores[subject] = { mid, end };
+            });
+            return scores;
+        }
+
+        // Save active state into localStorage
+        function saveCurrentData(successMsg) {
+            const key = getCompositeStorageKey();
+            const dataToSave = {
+                teacherRemarks: document.getElementById('teacherRemarks').value,
+                hoiRemarks: document.getElementById('hoiRemarks').value,
+                closingDate: document.getElementById('closingDateInput').value,
+                openingDate: document.getElementById('openingDateInput').value,
+                scores: getScoresFromDOM(),
+                updatedAt: new Date().toISOString()
+            };
+
+            try {
+                localStorage.setItem(key, JSON.stringify(dataToSave));
+                showToast(successMsg || `Saved records for ${key}!`);
+            } catch (err) {
+                console.error("LocalStorage save error:", err);
+                alert("Failed to save to local storage.");
+            }
+        }
+
+        // Load data corresponding to selected filters from localStorage
+        function loadCurrentData() {
+            updateHeadersAndLabels();
+            const key = getCompositeStorageKey();
+            const savedJson = localStorage.getItem(key);
+            const selectedGrade = document.getElementById('gradeFilter').value;
+
+            if (savedJson) {
+                try {
+                    const data = JSON.parse(savedJson);
+                    document.getElementById('teacherRemarks').value = data.teacherRemarks || '';
+                    document.getElementById('hoiRemarks').value = data.hoiRemarks || '';
+                    if (data.closingDate) document.getElementById('closingDateInput').value = data.closingDate;
+                    if (data.openingDate) document.getElementById('openingDateInput').value = data.openingDate;
+
+                    renderGradingTable(selectedGrade, data.scores || {});
+                    return;
+                } catch (e) {
+                    console.error("Failed to parse stored report card data:", e);
+                }
+            }
+
+            // Default fallbacks when no custom saved entry exists
+            if (key === `cbc_report_${studentProfile.assessmentNumber}_Grade4_Term1_2026`) {
+                document.getElementById('teacherRemarks').value = "Excellent performance. Very disciplined learner.";
+                document.getElementById('hoiRemarks').value = "Maintain the same effort in Term 2.";
+                document.getElementById('closingDateInput').value = "2026-04-10";
+                document.getElementById('openingDateInput').value = "2026-05-04";
+                renderGradingTable(selectedGrade, null);
+            } else {
+                // Clear state for fresh combinations
+                document.getElementById('teacherRemarks').value = "";
+                document.getElementById('hoiRemarks').value = "";
+                document.getElementById('closingDateInput').value = "2026-04-10";
+                document.getElementById('openingDateInput').value = "2026-05-04";
+                renderGradingTable(selectedGrade, {});
+            }
+        }
+
+        // 2. Client-Side PDF Export using html2pdf.js
+        async function exportPDF(downloadType) {
+            const currentBtn = document.getElementById('downloadCurrentBtn');
+            const allBtn = document.getElementById('downloadAllBtn');
+
+            currentBtn.disabled = true;
+            allBtn.disabled = true;
+
+            const element = document.getElementById('reportsPrintWrapper');
+            const cleanName = studentProfile.name.toLowerCase().replace(/\s+/g, '_');
+            const year = document.getElementById('yearFilter').value;
+            const term = document.getElementById('termFilter').value.toLowerCase().replace(/\s+/g, '');
+            const grade = document.getElementById('gradeFilter').value.toLowerCase().replace(/\s+/g, '');
+
+            const filename = downloadType === 'all'
+                ? `cbc_all_reports_${grade}_${term}_${year}.pdf`
+                : `cbc_report_${cleanName}_${grade}_${term}_${year}.pdf`;
+
+            const opt = {
+                margin: 4,
+                filename: filename,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    letterRendering: true,
+                    scrollY: 0,
+                    ignoreElements: function(el) {
+                        return el.classList.contains('no-print') || el.hasAttribute('data-no-print');
+                    }
+                },
+                jsPDF: { 
+                    unit: 'mm', 
+                    format: 'a4', 
+                    orientation: 'portrait' 
+                },
+                pagebreak: { mode: ['avoid-all', 'css'] }
+            };
+
+            try {
+                // Save before exporting
+                saveCurrentData();
+                await html2pdf().set(opt).from(element).save();
+                showToast(`PDF exported: ${filename}`);
+            } catch (err) {
+                console.error("PDF generation failed:", err);
+                alert("Failed to generate PDF. Check console for details.");
+            } finally {
+                currentBtn.disabled = false;
+                allBtn.disabled = false;
+            }
+        }
+
+        // Initialize and bind all event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Initial data load
+            loadCurrentData();
+
+            // Dropdown filter change listeners (instant reload from localStorage)
+            ['yearFilter', 'gradeFilter', 'streamFilter', 'termFilter', 'reportTypeFilter'].forEach(id => {
+                document.getElementById(id).addEventListener('change', () => {
+                    loadCurrentData();
+                });
+            });
+
+            // Auto-persist date inputs on change
+            document.getElementById('closingDateInput').addEventListener('change', () => saveCurrentData());
+            document.getElementById('openingDateInput').addEventListener('change', () => saveCurrentData());
+
+            // Action Buttons
+            document.getElementById('downloadCurrentBtn').addEventListener('click', () => exportPDF('current'));
+            document.getElementById('downloadAllBtn').addEventListener('click', () => exportPDF('all'));
+        });
     </script>
 </body>
 </html>
