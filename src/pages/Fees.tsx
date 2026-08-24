@@ -338,12 +338,12 @@ const Fees = () => {
         oldTotal = feeData.termFee || feeData.total || 0;
         oldPaid = feeData.feePaid || feeData.paid || 0;
       } catch (e) {
-        const oldFee = feesList.find(f => f.id === studentId);
+        const oldFee = feesList.find((f: any) => f.id === studentId);
         oldTotal = oldFee?.total || 0;
         oldPaid = oldFee?.paid || 0;
       }
     } else {
-      const oldFee = feesList.find(f => f.id === studentId);
+      const oldFee = feesList.find((f: any) => f.id === studentId);
       oldTotal = oldFee?.total || 0;
       oldPaid = oldFee?.paid || 0;
     }
@@ -360,7 +360,7 @@ const Fees = () => {
     }
 
     // Update the fee record in state and localStorage immediately
-    const updatedFees = feesList.map(fee => {
+    const updatedFees = feesList.map((fee: any) => {
       if (fee.id === studentId) {
         return { ...fee, total: termFee, paid: feePaid, balance, status };
       }
