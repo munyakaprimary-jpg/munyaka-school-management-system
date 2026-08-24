@@ -20,7 +20,6 @@ import {
 import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import html2pdf from 'html2pdf.js';
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
 
 // Rubric Logic
