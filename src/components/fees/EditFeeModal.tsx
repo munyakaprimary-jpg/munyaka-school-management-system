@@ -149,7 +149,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
       }
     }
 
-    // Success - call the onSave callback
+    // Success - call the onSave callback with all updated parameters
     if (student) {
       onSave(student.id, termFeeNum, feePaidNum, reason.trim());
     }
