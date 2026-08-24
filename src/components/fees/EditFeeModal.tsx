@@ -42,8 +42,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
     if (saved) {
       try {
         const data = JSON.parse(saved);
-        setTermFee(data.termFee || student.total.toString());
-        setFeePaid(data.feePaid || student.paid.toString());
+        setTermFee(data.termFee !== undefined ? data.termFee.toString() : student.total.toString());
+        setFeePaid(data.feePaid !== undefined ? data.feePaid.toString() : student.paid.toString());
         setReason(data.reason || "");
         return;
       } catch (e) {
@@ -52,8 +52,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
     }
 
     // Fall back to student prop values if no LocalStorage data
-    setTermFee(student.total.toString());
-    setFeePaid(student.paid.toString());
+    setTermFee(student.total?.toString() || "0");
+    setFeePaid(student.paid?.toString() || "0");
     setReason("");
   }, [isOpen, student]);
 
@@ -96,13 +96,52 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
     // Save to LocalStorage before calling onSave
     if (student) {
       const storageKey = `munyaka_fee_${student.id}`;
+      
+      // Calculate status based on updated amounts
+      const balance = Math.max(0, termFeeNum - feePaidNum);
+      let status = "Pending";
+      if (balance <= 0) {
+        status = "Cleared";
+      } else if (feePaidNum > 0 && balance > 0) {
+        status = "Partial";
+      } else {
+        status = "Pending";
+      }
+
       const feeData = {
+        id: student.id,
+        student: student.student,
         termFee: termFeeNum,
         feePaid: feePaidNum,
-        reason: reason.trim()
+        balance,
+        status,
+        reason: reason.trim(),
+        updatedAt: new Date().toISOString()
       };
+
       try {
         localStorage.setItem(storageKey, JSON.stringify(feeData));
+        
+        // Also updatemunyaka_fees_records array in localStorage if present
+        const savedRecords = localStorage.getItem('munyaka_fees_records');
+        if (savedRecords) {
+          try {
+            const records = JSON.parse(savedRecords);
+            const updatedRecords = records.map((r: any) => {
+              if (r.id === student.id) {
+                return { ...r, total: termFeeNum, paid: feePaidNum, status, balance };
+              }
+              return r;
+            });
+            localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedRecords));
+          } catch (err) {
+            console.error("Failed to update munyaka_fees_records array:", err);
+          }
+        }
+
+        // Dispatch custom event for instant cross-component sync
+        window.dispatchEvent(new Event('munyaka_fees_updated'));
+
         showSuccess("Fee record saved to LocalStorage");
       } catch (e) {
         console.error("Failed to save to LocalStorage:", e);

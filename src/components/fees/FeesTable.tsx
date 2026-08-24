@@ -22,6 +22,7 @@ interface FeesTableProps {
   onDownloadPDF: (fee: FeeRecord) => void;
   onEdit: (fee: FeeRecord) => void;
   onDelete?: (fee: FeeRecord) => void;
+  onRecordUpdated?: () => void;
 }
 
 const FeesTable: React.FC<FeesTableProps> = ({
@@ -29,7 +30,8 @@ const FeesTable: React.FC<FeesTableProps> = ({
   onViewStatement,
   onDownloadPDF,
   onEdit,
-  onDelete
+  onDelete,
+  onRecordUpdated
 }) => {
   const [feeRecords, setFeeRecords] = useState<FeeRecord[]>(() => {
     if (propFees && propFees.length > 0) return propFees;
@@ -68,8 +70,9 @@ const FeesTable: React.FC<FeesTableProps> = ({
                   const itemData = JSON.parse(itemSaved);
                   return {
                     ...fee,
-                    total: itemData.termFee !== undefined ? itemData.termFee : fee.total,
-                    paid: itemData.feePaid !== undefined ? itemData.feePaid : fee.paid,
+                    total: itemData.termFee !== undefined ? itemData.termFee : (itemData.total !== undefined ? itemData.total : fee.total),
+                    paid: itemData.feePaid !== undefined ? itemData.feePaid : (itemData.paid !== undefined ? itemData.paid : fee.paid),
+                    status: itemData.status !== undefined ? itemData.status : fee.status,
                   };
                 } catch (e) {
                   return fee;
@@ -78,6 +81,9 @@ const FeesTable: React.FC<FeesTableProps> = ({
               return fee;
             });
             setFeeRecords(enriched);
+            if (onRecordUpdated) {
+              onRecordUpdated();
+            }
           }
         } catch (e) {
           console.error("Failed to parse localStorage fee records:", e);
@@ -104,7 +110,7 @@ const FeesTable: React.FC<FeesTableProps> = ({
       window.removeEventListener('storage', handleStorageChange);
       window.removeEventListener('munyaka_fees_updated', handleCustomSync);
     };
-  }, []);
+  }, [onRecordUpdated]);
 
   return (
     <div className="overflow-x-auto">

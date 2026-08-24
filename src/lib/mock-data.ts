@@ -268,7 +268,7 @@ export const ATTENDANCE_TREND = [
 ];
 
 export const FEES_DATA = [
-  { id: "1", student: "Brian Kiptoo", total: 15000, paid: 12000, status: "Partial" },
+  { id: "1", student: "Brian Kiptoo", total: 15000, paid: 0, status: "Pending" },
   { id: "2", student: "Mary Atieno", total: 15000, paid: 15000, status: "Cleared" },
   { id: "3", student: "Emmanuel Maina", total: 15000, paid: 5000, status: "Pending" },
 ];

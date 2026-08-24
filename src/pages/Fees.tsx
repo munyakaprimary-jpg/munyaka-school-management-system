@@ -325,78 +325,108 @@ const Fees = () => {
   };
 
   // Edit Fee Handler
-    const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
-      // Read current fee record from LocalStorage for accurate old values
-      const storageKey = `munyaka_fee_${studentId}`;
-      const savedFee = localStorage.getItem(storageKey);
-      let oldTotal = 0;
-      let oldPaid = 0;
-  
-      if (savedFee) {
-        try {
-          const feeData = JSON.parse(savedFee);
-          oldTotal = feeData.termFee || 0;
-          oldPaid = feeData.feePaid || 0;
-        } catch (e) {
-          // Fall back to feesList state
-          const oldFee = feesList.find(f => f.id === studentId);
-          oldTotal = oldFee?.total || 0;
-          oldPaid = oldFee?.paid || 0;
-        }
-      } else {
+  const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
+    // Read current fee record from LocalStorage for accurate old values
+    const storageKey = `munyaka_fee_${studentId}`;
+    const savedFee = localStorage.getItem(storageKey);
+    let oldTotal = 0;
+    let oldPaid = 0;
+
+    if (savedFee) {
+      try {
+        const feeData = JSON.parse(savedFee);
+        oldTotal = feeData.termFee || feeData.total || 0;
+        oldPaid = feeData.feePaid || feeData.paid || 0;
+      } catch (e) {
         const oldFee = feesList.find(f => f.id === studentId);
         oldTotal = oldFee?.total || 0;
         oldPaid = oldFee?.paid || 0;
       }
-  
-      // Update the fee record
-      setFeesList(prev => prev.map(fee => {
-        if (fee.id === studentId) {
-          return { ...fee, total: termFee, paid: feePaid };
-        }
-        return fee;
-      }));
-  
-      // Add a transaction record for the adjustment if feePaid changed
-      const matchedStudent = STUDENTS.find(s => s.id === studentId);
-      const studentName = matchedStudent ? matchedStudent.name : "Learner";
-      const studentGrade = matchedStudent ? matchedStudent.grade : "";
-  
-      // Calculate the difference
-      const diff = feePaid - oldPaid;
-  
-      if (diff !== 0) {
-        setTransactionsList([{
-          id: `TX-${Math.floor(100 + Math.random() * 900)}`,
-          date: new Date().toLocaleDateString(),
-          amount: diff,
-          method: "Admin Adjustment",
-          ref: "ADJ-" + Date.now().toString().slice(-6),
-          category: "Adjustment",
-          studentId,
-          grade: studentGrade,
-        }, ...transactionsList]);
+    } else {
+      const oldFee = feesList.find(f => f.id === studentId);
+      oldTotal = oldFee?.total || 0;
+      oldPaid = oldFee?.paid || 0;
+    }
+
+    // Calculate new status
+    const balance = Math.max(0, termFee - feePaid);
+    let status = "Pending";
+    if (balance <= 0) {
+      status = "Cleared";
+    } else if (feePaid > 0 && balance > 0) {
+      status = "Partial";
+    } else {
+      status = "Pending";
+    }
+
+    // Update the fee record in state and localStorage immediately
+    const updatedFees = feesList.map(fee => {
+      if (fee.id === studentId) {
+        return { ...fee, total: termFee, paid: feePaid, balance, status };
       }
-  
-      // Create audit log entry
-      const auditEntry: AuditLogEntry = {
-        id: `AUD-${Date.now()}`,
-        timestamp: new Date().toISOString(),
-        admin: "System Admin",
-        action: "Fee Record Modified",
-        studentName,
-        studentId,
-        changes: [
-          { field: "Term Fee", oldValue: oldTotal.toString(), newValue: termFee.toString() },
-          { field: "Fee Paid", oldValue: oldPaid.toString(), newValue: feePaid.toString() },
-        ],
-        reason: reason || "No reason provided"
-      };
-  
-      setAuditLogs(prev => [auditEntry, ...prev]);
-  
-      showSuccess(`Fee record updated for ${studentName}. Balance and status recalculated.`);
+      return fee;
+    });
+
+    setFeesList(updatedFees);
+    localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedFees));
+
+    // Save individual student override in localStorage
+    const feeData = {
+      id: studentId,
+      termFee,
+      feePaid,
+      balance,
+      status,
+      reason
     };
+    localStorage.setItem(storageKey, JSON.stringify(feeData));
+
+    // Add a transaction record for the adjustment if feePaid changed
+    const matchedStudent = STUDENTS.find(s => s.id === studentId);
+    const studentName = matchedStudent ? matchedStudent.name : "Brian Kiptoo";
+    const studentGrade = matchedStudent ? matchedStudent.grade : "";
+
+    const diff = feePaid - oldPaid;
+
+    if (diff !== 0) {
+      const newTransactions = [{
+        id: `TX-${Math.floor(100 + Math.random() * 900)}`,
+        date: new Date().toLocaleDateString(),
+        amount: diff,
+        method: "Admin Adjustment",
+        ref: "ADJ-" + Date.now().toString().slice(-6),
+        category: "Adjustment",
+        studentId,
+        grade: studentGrade,
+      }, ...transactionsList];
+      setTransactionsList(newTransactions);
+      localStorage.setItem('munyaka_transactions', JSON.stringify(newTransactions));
+    }
+
+    // Create audit log entry
+    const auditEntry: AuditLogEntry = {
+      id: `AUD-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      admin: "System Admin",
+      action: "Fee Record Modified",
+      studentName,
+      studentId,
+      changes: [
+        { field: "Term Fee", oldValue: oldTotal.toString(), newValue: termFee.toString() },
+        { field: "Fee Paid", oldValue: oldPaid.toString(), newValue: feePaid.toString() },
+      ],
+      reason: reason || "No reason provided"
+    };
+
+    const newAuditLogs = [auditEntry, ...auditLogs];
+    setAuditLogs(newAuditLogs);
+    localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(newAuditLogs));
+
+    // Dispatch update event for multi-component reactivity
+    window.dispatchEvent(new Event('munyaka_fees_updated'));
+
+    showSuccess(`Fee record updated for ${studentName}. Status updated to ${status}.`);
+  };
 
   const handleOpenEditModal = (fee: any) => {
       // Read from LocalStorage first if available, to get the most up-to-date values
