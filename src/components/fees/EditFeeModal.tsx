@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import Modal from '@/components/ui/Modal';
+import Modal from "@/components/ui/Modal";
 import { Save, Loader2, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -31,20 +31,35 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // Initialize form with current values when modal opens
+  // Initialize form: read from LocalStorage first, then fall back to student prop
   useEffect(() => {
-    if (isOpen && student) {
-      setTermFee(student.total.toString());
-      setFeePaid(student.paid.toString());
-      setReason("");
-      setAdminPassword("");
-      setAuthError("");
+    if (!isOpen || !student) return;
+
+    // Try to read from LocalStorage first using student.id as key
+    const storageKey = `munyaka_fee_${student.id}`;
+    const saved = localStorage.getItem(storageKey);
+
+    if (saved) {
+      try {
+        const data = JSON.parse(saved);
+        setTermFee(data.termFee || student.total.toString());
+        setFeePaid(data.feePaid || student.paid.toString());
+        setReason(data.reason || "");
+        return;
+      } catch (e) {
+        console.error("Failed to parse saved fee data:", e);
+      }
     }
+
+    // Fall back to student prop values if no LocalStorage data
+    setTermFee(student.total.toString());
+    setFeePaid(student.paid.toString());
+    setReason("");
   }, [isOpen, student]);
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!adminPassword.trim()) {
       setAuthError("Admin password is required");
       return;
@@ -78,6 +93,23 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
       return;
     }
 
+    // Save to LocalStorage before calling onSave
+    if (student) {
+      const storageKey = `munyaka_fee_${student.id}`;
+      const feeData = {
+        termFee: termFeeNum,
+        feePaid: feePaidNum,
+        reason: reason.trim()
+      };
+      try {
+        localStorage.setItem(storageKey, JSON.stringify(feeData));
+        showSuccess("Fee record saved to LocalStorage");
+      } catch (e) {
+        console.error("Failed to save to LocalStorage:", e);
+        showError("Failed to save fee record");
+      }
+    }
+
     // Success - call the onSave callback
     if (student) {
       onSave(student.id, termFeeNum, feePaidNum, reason.trim());
@@ -102,8 +134,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={isSaving} className="rounded-xl font-bold h-11 px-6">
             Cancel
           </Button>
-          <Button 
-            onClick={handleSave} 
+          <Button
+            onClick={handleSave}
             disabled={isSaving}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-8 text-white shadow-lg shadow-indigo-100 gap-2"
           >
@@ -124,7 +156,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Term Fee (KES)</Label>
-            <Input 
+            <Input
               type="number"
               min="0"
               value={termFee}
@@ -135,7 +167,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
           </div>
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Fee Paid (KES)</Label>
-            <Input 
+            <Input
               type="number"
               min="0"
               value={feePaid}
@@ -148,7 +180,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
 
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Adjustment Reason / Notes</Label>
-          <Textarea 
+          <Textarea
             value={reason}
             onChange={(e) => setReason(e.target.value)}
             placeholder="e.g. Partial payment received, fee waiver, correction..."
@@ -160,7 +192,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
         <div className="space-y-1.5">
           <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
           <div className="relative">
-            <Input 
+            <Input
               type={showPassword ? "text" : "password"}
               value={adminPassword}
               onChange={(e) => { setAdminPassword(e.target.value); setAuthError(""); }}

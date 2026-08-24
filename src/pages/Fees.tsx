@@ -325,62 +325,103 @@ const Fees = () => {
   };
 
   // Edit Fee Handler
-  const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
-    // Update the fee record
-    setFeesList(prev => prev.map(fee => {
-      if (fee.id === studentId) {
-        return { ...fee, total: termFee, paid: feePaid };
+    const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
+      // Read current fee record from LocalStorage for accurate old values
+      const storageKey = `munyaka_fee_${studentId}`;
+      const savedFee = localStorage.getItem(storageKey);
+      let oldTotal = 0;
+      let oldPaid = 0;
+  
+      if (savedFee) {
+        try {
+          const feeData = JSON.parse(savedFee);
+          oldTotal = feeData.termFee || 0;
+          oldPaid = feeData.feePaid || 0;
+        } catch (e) {
+          // Fall back to feesList state
+          const oldFee = feesList.find(f => f.id === studentId);
+          oldTotal = oldFee?.total || 0;
+          oldPaid = oldFee?.paid || 0;
+        }
+      } else {
+        const oldFee = feesList.find(f => f.id === studentId);
+        oldTotal = oldFee?.total || 0;
+        oldPaid = oldFee?.paid || 0;
       }
-      return fee;
-    }));
-
-    // Add a transaction record for the adjustment if feePaid changed
-    const matchedStudent = STUDENTS.find(s => s.id === studentId);
-    const studentName = matchedStudent ? matchedStudent.name : "Learner";
-    const studentGrade = matchedStudent ? matchedStudent.grade : "";
-    
-    // Calculate the difference
-    const oldFee = feesList.find(f => f.id === studentId);
-    const oldPaid = oldFee ? oldFee.paid : 0;
-    const diff = feePaid - oldPaid;
-    
-    if (diff !== 0) {
-      setTransactionsList([{ 
-        id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
-        date: new Date().toLocaleDateString(), 
-        amount: diff, 
-        method: "Admin Adjustment", 
-        ref: "ADJ-" + Date.now().toString().slice(-6), 
-        category: "Adjustment",
+  
+      // Update the fee record
+      setFeesList(prev => prev.map(fee => {
+        if (fee.id === studentId) {
+          return { ...fee, total: termFee, paid: feePaid };
+        }
+        return fee;
+      }));
+  
+      // Add a transaction record for the adjustment if feePaid changed
+      const matchedStudent = STUDENTS.find(s => s.id === studentId);
+      const studentName = matchedStudent ? matchedStudent.name : "Learner";
+      const studentGrade = matchedStudent ? matchedStudent.grade : "";
+  
+      // Calculate the difference
+      const diff = feePaid - oldPaid;
+  
+      if (diff !== 0) {
+        setTransactionsList([{
+          id: `TX-${Math.floor(100 + Math.random() * 900)}`,
+          date: new Date().toLocaleDateString(),
+          amount: diff,
+          method: "Admin Adjustment",
+          ref: "ADJ-" + Date.now().toString().slice(-6),
+          category: "Adjustment",
+          studentId,
+          grade: studentGrade,
+        }, ...transactionsList]);
+      }
+  
+      // Create audit log entry
+      const auditEntry: AuditLogEntry = {
+        id: `AUD-${Date.now()}`,
+        timestamp: new Date().toISOString(),
+        admin: "System Admin",
+        action: "Fee Record Modified",
+        studentName,
         studentId,
-        grade: studentGrade,
-      }, ...transactionsList]);
-    }
-
-    // Create audit log entry
-    const auditEntry: AuditLogEntry = {
-      id: `AUD-${Date.now()}`,
-      timestamp: new Date().toISOString(),
-      admin: "System Admin",
-      action: "Fee Record Modified",
-      studentName,
-      studentId,
-      changes: [
-        { field: "Term Fee", oldValue: oldFee?.total.toString() || "0", newValue: termFee.toString() },
-        { field: "Fee Paid", oldValue: oldFee?.paid.toString() || "0", newValue: feePaid.toString() },
-      ],
-      reason: reason || "No reason provided"
+        changes: [
+          { field: "Term Fee", oldValue: oldTotal.toString(), newValue: termFee.toString() },
+          { field: "Fee Paid", oldValue: oldPaid.toString(), newValue: feePaid.toString() },
+        ],
+        reason: reason || "No reason provided"
+      };
+  
+      setAuditLogs(prev => [auditEntry, ...prev]);
+  
+      showSuccess(`Fee record updated for ${studentName}. Balance and status recalculated.`);
     };
-    
-    setAuditLogs(prev => [auditEntry, ...prev]);
-    
-    showSuccess(`Fee record updated for ${studentName}. Balance and status recalculated.`);
-  };
 
   const handleOpenEditModal = (fee: any) => {
-    setActiveStudent(fee);
-    setIsEditOpen(true);
-  };
+      // Read from LocalStorage first if available, to get the most up-to-date values
+      const storageKey = `munyaka_fee_${fee.id}`;
+      const savedFee = localStorage.getItem(storageKey);
+  
+      if (savedFee) {
+        try {
+          const feeData = JSON.parse(savedFee);
+          const updatedFee = {
+            ...fee,
+            total: feeData.termFee || fee.total,
+            paid: feeData.feePaid || fee.paid
+          };
+          setActiveStudent(updatedFee);
+          setIsEditOpen(true);
+          return;
+        } catch (e) {
+          // Fall back to original fee
+        }
+      }
+  
+      setActiveStudent(fee);
+      setIsEditOpen(true);
+    };
 
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
 
