@@ -31,6 +31,7 @@ import Inventory from "./pages/Inventory";
 import Library from "./pages/Library";
 import Communication from "./pages/Communication";
 import SchoolCalendar from "./pages/SchoolCalendar";
+import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
 import GradesStreams from "./pages/GradesStreams";
 import LearningAreas from "./pages/LearningAreas";
@@ -81,8 +82,7 @@ const App = () => (
                 <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
                 
                 <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
-                <Route path="/notices" element={<ProtectedRoute><Layout><Notices /></Layout></ProtectedRoute>} />
-                <Route path="/calendar" element={<ProtectedRoute><Layout><SchoolCalendar /></Layout></ProtectedRoute>} />
+                <Route path="/notice-events" element={<ProtectedRoute><Layout><NoticeAndEvents /></Layout></ProtectedRoute>} />
                 <Route path="/timetable" element={<ProtectedRoute><Layout><Timetable /></Layout></ProtectedRoute>} />
                 <Route path="/registration" element={<ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>} />
                 <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />

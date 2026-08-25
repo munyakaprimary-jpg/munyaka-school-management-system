@@ -1,13 +1,23 @@
+import React from 'react';
+
 export interface Notice {
   id: string;
   title: string;
-  message: string;
+  content: string;
+  description: string;
   date: string;
-  priority: 'low' | 'medium' | 'high';
+  category: 'Urgent' | 'General' | 'Finance' | 'Notice' | 'Event';
+  color?: string;
+  attachmentName?: string;
+  attachmentUrl?: string;
+  pinned?: boolean;
 }
 
-export interface NoticeInput {
+export interface SchoolEvent {
+  id: string | number;
   title: string;
-  message: string;
-  priority?: 'low' | 'medium' | 'high';
+  date: string; // YYYY-MM-DD
+  time: string; // HH:mm
+  location?: string;
+  type?: string;
 }
