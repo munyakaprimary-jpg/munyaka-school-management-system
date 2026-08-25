@@ -42,8 +42,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     email: "",
     phone: "",
     systemRole: "subject_teacher" as SystemRole,
-    department: "Languages & Humanities",
-    assignedSubjects: "Mathematics, Science & Tech",
+    assignedSubjects: ["Mathematics", "Science & Tech"],
     tempAccessCode: ""
   });
 
@@ -84,8 +83,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
         email: "",
         phone: "",
         systemRole: "subject_teacher",
-        department: "Languages & Humanities",
-        assignedSubjects: "Mathematics, Science & Tech",
+        assignedSubjects: ["Mathematics", "Science & Tech"],
         tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`
       });
     }
@@ -104,8 +102,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
           email: staff?.email ?? "",
           phone: staff?.phone ?? "",
           systemRole: mapRoleToSystemRole(staff?.role ?? ""),
-          department: staff?.department || "Languages & Humanities",
-          assignedSubjects: staff?.subjects ? staff.subjects.join(", ") : "Mathematics, Science & Tech"
+          assignedSubjects: staff?.subjects ? staff.subjects : ["Mathematics", "Science & Tech"]
         }));
   };
 
@@ -279,20 +276,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
-            <Select value={formData.department} onValueChange={val => setFormData({...formData, department: val})}>
-              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="Mathematics & Science">Mathematics & Science</SelectItem>
-                <SelectItem value="Languages & Humanities">Languages & Humanities</SelectItem>
-                <SelectItem value="Technical & Vocational">Technical & Vocational</SelectItem>
-                <SelectItem value="Creative Arts">Creative Arts</SelectItem>
-                <SelectItem value="School Administration">School Administration</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
             <div className="flex gap-2">
