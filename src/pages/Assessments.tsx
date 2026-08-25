@@ -404,7 +404,7 @@ const Assessments = () => {
         }
       };
 
-      // 3. History Preservation & Merging: Save into specific targetKey
+      // 3. History Preservation & Merging: Save into specific targetKey and masterObj
       try {
         localStorage.setItem(targetKey, JSON.stringify(updated));
 
@@ -418,6 +418,14 @@ const Assessments = () => {
           }
         }
         masterObj[targetKey] = updated;
+        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+      } catch (err) {
+        console.error("Error autosaving mark:", err);
+      }
+
+      return updated;
+    });
+  }, [targetKey]);
         localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
       } catch (e) {
         console.error("Autosave/History preservation error:", e);
