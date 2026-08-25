@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck } from 'lucide-react';
@@ -153,10 +153,6 @@ const StaffPreRegistration = () => {
     }, 800);
   };
 
-  const handleManageAccessKeys = () => {
-    showSuccess("Key management features: Dispatch pending keys, copy access codes, or audit activation logs from the table below.");
-  };
-
   const clearFilters = () => {
     setSearchTerm("");
     setRoleFilter("all");
@@ -174,8 +170,8 @@ const StaffPreRegistration = () => {
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
             onClick={handleExportCSV}
             disabled={isExporting}
@@ -184,15 +180,7 @@ const StaffPreRegistration = () => {
             Export CSV
           </Button>
           
-          <Button 
-            variant="outline"
-            className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
-            onClick={handleManageAccessKeys}
-          >
-            <Key size={18} /> Manage Access Keys
-          </Button>
-          
-          <Button 
+          <Button
             variant="default"
             className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95"
             onClick={() => setIsAddModalOpen(true)}
