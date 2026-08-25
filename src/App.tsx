@@ -47,6 +47,7 @@ import SystemAndAccountManagement from "./pages/SystemAndAccountManagement";
 import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
 import ScienceLab from "./pages/ScienceLab";
+import CentralDataService from "./pages/CentralDataService";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +94,7 @@ const App = () => (
                 <Route path="/library" element={<ProtectedRoute><Layout><Library /></Layout></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
                 <Route path="/fees" element={<ProtectedRoute><Layout><Fees /></Layout></ProtectedRoute>} />
+                <Route path="/central-data" element={<ProtectedRoute><Layout><CentralDataService /></Layout></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><Layout><ReportCards /></Layout></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
