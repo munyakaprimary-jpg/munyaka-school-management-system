@@ -158,6 +158,9 @@ importers:
       next-themes:
         specifier: 0.2.1
         version: 0.2.1(next@16.2.11(@babel/core@7.29.7(supports-color@7.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0))(react-dom@18.2.0(react@18.2.0))(react@18.2.0)
+      pocketbase:
+        specifier: ^0.28.0
+        version: 0.28.0
       react:
         specifier: 18.2.0
         version: 18.2.0
@@ -2605,6 +2608,9 @@ packages:
   plist@3.1.1:
     resolution: {integrity: sha512-ZIfcLJC+7E7FBFnDxm9MPmt7D+DidyQ26lewieO75AdhA2ayMtsJSES0iWzqJQbcVRSrTufQoy0DR94xHue0oA==}
     engines: {node: '>=10.4.0'}
+
+  pocketbase@0.28.0:
+    resolution: {integrity: sha512-aCrab5XPPQ40iKIKicQLdUvrAvJQCHZ3cwZD5i22A8PVM/EcemUta7WFw0x4G6WQEOBMa/8kioqCR62ozk4KvQ==}
 
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
@@ -5533,6 +5539,8 @@ snapshots:
       '@xmldom/xmldom': 0.9.10
       base64-js: 1.5.1
       xmlbuilder: 15.1.1
+
+  pocketbase@0.28.0: {}
 
   postcss-import@15.1.0(postcss@8.5.10):
     dependencies:
