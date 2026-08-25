@@ -104,7 +104,7 @@ const INITIAL_EVENTS: SchoolEvent[] = [
   }
 ];
 
-export default function NoticeAndEvents() {
+export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defaultTab?: 'announcements' | 'events' }) {
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
@@ -126,8 +126,13 @@ export default function NoticeAndEvents() {
     return INITIAL_EVENTS;
   });
 
-  // Mobile segmented toggle: 'announcements' | 'events'
-  const [mobileTab, setMobileTab] = useState<'announcements' | 'events'>('announcements');
+  // Mobile/responsive segmented toggle: 'announcements' | 'events'
+  const [mobileTab, setMobileTab] = useState<'announcements' | 'events'>(defaultTab);
+
+  // Update tab when route changes or defaultTab prop updates
+  useEffect(() => {
+    setMobileTab(defaultTab);
+  }, [defaultTab]);
 
   // Publish Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);

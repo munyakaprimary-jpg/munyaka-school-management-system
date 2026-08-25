@@ -82,9 +82,8 @@ const App = () => (
                 <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
                 
                 <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
-                <Route path="/notices" element={<Navigate to="/notice-events" replace />} />
-                <Route path="/calendar" element={<Navigate to="/notice-events" replace />} />
-                <Route path="/notice-events" element={<ProtectedRoute><Layout><NoticeAndEvents /></Layout></ProtectedRoute>} />
+                <Route path="/notices" element={<ProtectedRoute><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></ProtectedRoute>} />
+                <Route path="/calendar" element={<ProtectedRoute><Layout><NoticeAndEvents defaultTab="events" /></Layout></ProtectedRoute>} />
                 <Route path="/timetable" element={<ProtectedRoute><Layout><Timetable /></Layout></ProtectedRoute>} />
                 <Route path="/registration" element={<ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>} />
                 <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />
