@@ -134,6 +134,12 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     setMobileTab(defaultTab);
   }, [defaultTab]);
 
+  // Determine header title & subtext based on current tab / route context
+  const headerTitle = mobileTab === 'announcements' ? 'Notice Board' : 'School Calendar';
+  const headerSubtext = mobileTab === 'announcements'
+    ? 'Official school announcements and urgent alerts'
+    : 'Upcoming events, schedules, and important dates';
+
   // Publish Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [publishType, setPublishType] = useState<'notice' | 'event'>('notice');
@@ -214,17 +220,17 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   }, [notices]);
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-24">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-indigo-100 dark:shadow-none">
-              <Megaphone size={24} />
+              {mobileTab === 'announcements' ? <Megaphone size={24} /> : <CalendarDays size={24} />}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Notice & Events</h1>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">Official announcements, urgent alerts, and upcoming school calendar dates.</p>
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{headerTitle}</h1>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{headerSubtext}</p>
             </div>
           </div>
         </div>
