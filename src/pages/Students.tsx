@@ -342,7 +342,7 @@ export default function Students() {
   const handleOpenAdd = () => {
     setEditingLearnerId(null);
     setFormData({
-      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
       stream: ALL_STREAMS_LIST[0] || 'North',
@@ -374,7 +374,13 @@ export default function Students() {
   const handleSaveLearner = (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.admNo.trim() || !formData.name.trim() || !formData.guardian.trim()) {
-      setFormError('Please fill in all required fields (Admission No, Full Name, Parent/Guardian).');
+      setFormError('Please fill in all required fields (Assessment No, Full Name, Parent/Guardian).');
+      return;
+    }
+
+    const assessmentRegex = /^[A-Za-z].*/;
+    if (!assessmentRegex.test(formData.admNo)) {
+      setFormError('Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).');
       return;
     }
 
@@ -405,7 +411,7 @@ export default function Students() {
     setFormError('');
     setEditingLearnerId(null);
     setFormData({
-      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
       stream: ALL_STREAMS_LIST[0] || 'North',
@@ -716,14 +722,14 @@ export default function Students() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Admission Number *
+                      Assessment Number *
                     </label>
                     <input
                       type="text"
                       required
                       value={formData.admNo}
                       onChange={(e) => setFormData({ ...formData, admNo: e.target.value })}
-                      placeholder="e.g. MPS/2025/006"
+                      placeholder="e.g. A827361"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
