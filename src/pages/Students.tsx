@@ -18,7 +18,7 @@ interface Learner {
 const DEFAULT_LEARNERS: Learner[] = [
   {
     id: '1',
-    admNo: 'MPS/2025/001',
+    admNo: 'REG/MPS/2025/001',
     name: 'Esther Njeri Mwangi',
     grade: 'Grade 4',
     stream: 'North',
@@ -28,7 +28,7 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
   {
     id: '2',
-    admNo: 'MPS/2025/002',
+    admNo: 'REG/MPS/2025/002',
     name: 'Felix Mutua Kioko',
     grade: 'Grade 5',
     stream: 'South',
