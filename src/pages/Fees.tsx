@@ -104,21 +104,59 @@ const Fees = () => {
   const [configAmount, setConfigAmount] = useState("");
 
   // Persist data to localStorage
-  useEffect(() => {
-    localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
-  }, [feeStructures]);
-
-  useEffect(() => {
-    localStorage.setItem('munyaka_fees_records', JSON.stringify(feesList));
-  }, [feesList]);
-
-  useEffect(() => {
-    localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
-  }, [transactionsList]);
-
-  useEffect(() => {
-    localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
-  }, [auditLogs]);
+    useEffect(() => {
+      localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
+    }, [feeStructures]);
+  
+    useEffect(() => {
+      localStorage.setItem('munyaka_fees_records', JSON.stringify(feesList));
+    }, [feesList]);
+  
+    useEffect(() => {
+      localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
+    }, [transactionsList]);
+  
+    useEffect(() => {
+      localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
+    }, [auditLogs]);
+  
+    // Listen for fee update events from EditFeeModal and refresh state
+    useEffect(() => {
+      const handleFeesUpdated = () => {
+        // Refresh feesList from localStorage to get latest values
+        const savedFees = localStorage.getItem('munyaka_fees_records');
+        if (savedFees) {
+          try {
+            setFeesList(JSON.parse(savedFees));
+          } catch (e) {
+            console.error("Failed to refresh fees from localStorage:", e);
+          }
+        }
+        // Refresh transactions from localStorage
+        const savedTransactions = localStorage.getItem('munyaka_transactions');
+        if (savedTransactions) {
+          try {
+            setTransactionsList(JSON.parse(savedTransactions));
+          } catch (e) {
+            console.error("Failed to refresh transactions from localStorage:", e);
+          }
+        }
+        // Refresh audit logs from localStorage
+        const savedAuditLogs = localStorage.getItem('munyaka_fee_audit_logs');
+        if (savedAuditLogs) {
+          try {
+            setAuditLogs(JSON.parse(savedAuditLogs));
+          } catch (e) {
+            console.error("Failed to refresh audit logs from localStorage:", e);
+          }
+        }
+      };
+  
+      window.addEventListener('munyaka_fees_updated', handleFeesUpdated);
+      return () => {
+        window.removeEventListener('munyaka_fees_updated', handleFeesUpdated);
+      };
+    }, []);
 
   // ============================================
   // DYNAMIC FEE CALCULATIONS
@@ -146,10 +184,51 @@ const Fees = () => {
   // Build calculated fees with dynamic data
   const calculatedFees = useMemo(() => {
     return feesList.map(fee => {
+      // Check for manual override stored in localStorage (from Edit Fee Modal)
+      const overrideKey = `munyaka_fee_${fee.id}`;
+      const overrideSaved = localStorage.getItem(overrideKey);
+      let hasOverride = false;
+
+      if (overrideSaved) {
+        try {
+          const overrideData = JSON.parse(overrideSaved);
+          if (overrideData && (
+            overrideData.termFee !== undefined ||
+            overrideData.feePaid !== undefined ||
+            overrideData.total !== undefined ||
+            overrideData.paid !== undefined
+          )) {
+            hasOverride = true;
+            const overrideTermFee = overrideData.termFee !== undefined
+              ? overrideData.termFee
+              : (overrideData.total !== undefined ? overrideData.total : 0);
+            const overrideFeePaid = overrideData.feePaid !== undefined
+              ? overrideData.feePaid
+              : (overrideData.paid !== undefined ? overrideData.paid : 0);
+            const overrideBalance = Math.max(0, overrideTermFee - overrideFeePaid);
+            let overrideStatus: "Cleared" | "Partial" | "Pending" = "Pending";
+            if (overrideBalance <= 0) {
+              overrideStatus = "Cleared";
+            } else if (overrideFeePaid > 0) {
+              overrideStatus = "Partial";
+            }
+            return {
+              ...fee,
+              total: overrideTermFee,
+              paid: overrideFeePaid,
+              balance: overrideBalance,
+              status: overrideStatus,
+            };
+          }
+        } catch (e) {
+          // Fall through to dynamic calculation
+        }
+      }
+
       // Find the student to get their grade
       const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
-      const studentGradeId = studentObj ? 
-        GRADES_DATA.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id 
+      const studentGradeId = studentObj ?
+        GRADES_DATA.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id
         : selectedGrade;
       
       const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
@@ -166,13 +245,13 @@ const Fees = () => {
         status = "Pending";
       }
       
-      return { 
-        ...fee, 
-        total: termFee, 
-        paid: totalPaid, 
-        balance, 
+      return {
+        ...fee,
+        total: termFee,
+        paid: totalPaid,
+        balance,
         status,
-        studentGradeId 
+        studentGradeId
       };
     });
   }, [feesList, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent]);
