@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, AlertCircle } from 'lucide-react';
-import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, STUDENTS, Grade, Stream } from '@/lib/mock-data';
 
 interface StudentItem {
   id: string;
@@ -25,12 +25,15 @@ interface RecordPaymentModalProps {
   studentsData?: StudentItem[];
 }
 
+const GRADES_STORAGE_KEY = 'munyaka_grades';
+const STUDENTS_STORAGE_KEY = 'munyaka_students';
+
 const RecordPaymentModal = ({
   isOpen,
   onClose,
   onSubmitPayment,
-  gradesData = GRADES_DATA,
-  studentsData = STUDENTS,
+  gradesData: propGradesData = GRADES_DATA,
+  studentsData: propStudentsData = STUDENTS,
 }: RecordPaymentModalProps) => {
   // Cascading Selection States
   const [selectedGradeId, setSelectedGradeId] = useState<string>("");
@@ -38,6 +41,65 @@ const RecordPaymentModal = ({
   const [selectedStudentId, setSelectedStudentId] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
   const [errorMsg, setErrorMsg] = useState<string>("");
+
+  // LocalStorage data states
+  const [gradesData, setGradesData] = useState<Grade[]>(() => {
+    try {
+      const stored = localStorage.getItem(GRADES_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_grades:", e);
+    }
+    return propGradesData;
+  });
+
+  const [studentsData, setStudentsData] = useState<StudentItem[]>(() => {
+    try {
+      const stored = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {
+      console.error("Error loading munyaka_students:", e);
+    }
+    return propStudentsData;
+  });
+
+  // Listen for localStorage changes (cross-tab sync)
+  useEffect(() => {
+    const handleStorageChange = () => {
+      try {
+        const storedGrades = localStorage.getItem(GRADES_STORAGE_KEY);
+        if (storedGrades) {
+          const parsed = JSON.parse(storedGrades);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setGradesData(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing munyaka_grades:", e);
+      }
+
+      try {
+        const storedStudents = localStorage.getItem(STUDENTS_STORAGE_KEY);
+        if (storedStudents) {
+          const parsed = JSON.parse(storedStudents);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setStudentsData(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Error parsing munyaka_students:", e);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
 
   // Reset all fields when the modal opens/closes
   useEffect(() => {
@@ -67,11 +129,12 @@ const RecordPaymentModal = ({
   const filteredStudents = useMemo(() => {
     if (!selectedGradeObj || !selectedStreamObj) return [];
 
-    const gradeNum = selectedGradeObj?.name?.replace(/[^0-9]/g, '') ?? '';
+    // Extract grade number from grade name (e.g., "Grade 4 (Primary)" -> "4")
+    const gradeNum = selectedGradeObj.name?.replace(/[^0-9]/g, '') ?? '';
 
     return studentsData.filter(s => {
       const matchesGrade = s.grade === gradeNum || s.grade === selectedGradeObj?.name;
-            const matchesStream = s.stream.toLowerCase() === selectedStreamObj?.name?.toLowerCase();
+      const matchesStream = s.stream.toLowerCase() === selectedStreamObj?.name?.toLowerCase();
       return matchesGrade && matchesStream;
     });
   }, [selectedGradeObj, selectedStreamObj, studentsData]);
@@ -152,10 +215,10 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {gradesData.map(g => (
-                              <SelectItem key={g.id} value={g.id}>
-                                {g?.name ?? ''} ({g?.category ?? ''})
-                              </SelectItem>
-                            ))}
+                <SelectItem key={g.id} value={g.id}>
+                  {g?.name ?? ''} ({g?.category ?? ''})
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -183,10 +246,10 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {availableStreams.map(s => (
-                              <SelectItem key={s.id} value={s.id}>
-                                Stream {s?.name ?? ''} ({s?.studentsCount ?? 0} Learners)
-                              </SelectItem>
-                            ))}
+                <SelectItem key={s.id} value={s.id}>
+                  Stream {s?.name ?? ''} ({s?.studentsCount ?? 0} Learners)
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
         </div>
@@ -217,18 +280,18 @@ const RecordPaymentModal = ({
             </SelectTrigger>
             <SelectContent>
               {filteredStudents.length > 0 ? (
-                              filteredStudents.map(student => (
-                                <SelectItem key={student.id} value={student.id}>
-                                  {student?.name ?? ''} — Assessment #{student?.assessment ?? ''}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              studentsData.map(student => (
-                                <SelectItem key={student.id} value={student.id}>
-                                  {student?.name ?? ''} (Grade {student?.grade ?? ''} - {student?.stream ?? ''})
-                                </SelectItem>
-                              ))
-                            )}
+                filteredStudents.map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student?.name ?? ''} — Assessment #{student?.assessment ?? ''}
+                  </SelectItem>
+                ))
+              ) : (
+                studentsData.map(student => (
+                  <SelectItem key={student.id} value={student.id}>
+                    {student?.name ?? ''} (Grade {student?.grade ?? ''} - {student?.stream ?? ''})
+                  </SelectItem>
+                ))
+              )}
             </SelectContent>
           </Select>
         </div>
