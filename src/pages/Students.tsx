@@ -342,7 +342,7 @@ export default function Students() {
   const handleOpenAdd = () => {
     setEditingLearnerId(null);
     setFormData({
-      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      admNo: `REG/2025/0${Math.floor(10 + Math.random() * 90)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
       stream: ALL_STREAMS_LIST[0] || 'North',
@@ -405,7 +405,7 @@ export default function Students() {
     setFormError('');
     setEditingLearnerId(null);
     setFormData({
-      admNo: `MPS/2025/0${Math.floor(10 + Math.random() * 90)}`,
+      admNo: `REG/2025/0${Math.floor(10 + Math.random() * 90)}`,
       name: '',
       grade: GRADES_LIST[0] || 'Grade 4',
       stream: ALL_STREAMS_LIST[0] || 'North',
