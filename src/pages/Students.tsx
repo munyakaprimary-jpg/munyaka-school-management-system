@@ -38,7 +38,7 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
   {
     id: '3',
-    admNo: 'MPS/2025/003',
+    admNo: 'REG/2025/003',
     name: 'Gloria Nekesa Wafula',
     grade: 'Grade 3',
     stream: 'East',
@@ -48,7 +48,7 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
   {
     id: '4',
-    admNo: 'MPS/2025/004',
+    admNo: 'REG/2025/004',
     name: 'Hassan Abdi Omar',
     grade: 'Grade 6',
     stream: 'West',
@@ -58,7 +58,7 @@ const DEFAULT_LEARNERS: Learner[] = [
   },
   {
     id: '5',
-    admNo: 'MPS/2025/005',
+    admNo: 'REG/2025/005',
     name: 'Irene Chebet Langat',
     grade: 'Grade 4',
     stream: 'North',
@@ -309,7 +309,7 @@ export default function Students() {
 
   // Form State
   const [formData, setFormData] = useState({
-    admNo: 'MPS/2025/0' + Math.floor(10 + Math.random() * 90),
+    admNo: 'REG/2025/0' + Math.floor(10 + Math.random() * 90),
     name: '',
     grade: GRADES_LIST[0] || 'Grade 4',
     stream: ALL_STREAMS_LIST[0] || 'North',
@@ -723,7 +723,7 @@ export default function Students() {
                       required
                       value={formData.admNo}
                       onChange={(e) => setFormData({ ...formData, admNo: e.target.value })}
-                      placeholder="e.g. MPS/2025/006"
+                      placeholder="e.g. REG/2025/006"
                       className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
                     />
                   </div>
