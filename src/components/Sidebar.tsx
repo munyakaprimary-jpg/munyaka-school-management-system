@@ -113,7 +113,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['super_admin'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
-    { icon: Megaphone, label: 'Notice & Events', path: '/notice-events', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Bell, label: 'Notice & Events', path: '/notice-events', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
