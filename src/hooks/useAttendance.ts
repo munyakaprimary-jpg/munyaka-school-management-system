@@ -14,7 +14,7 @@ interface StudentAttendance {
 }
 
 const STORAGE_KEY = 'munyaka_attendance_records';
-const STUDENTS_KEY = 'munyaka_students';
+const STUDENTS_KEY = 'school_learners_data';
 const SELECTED_CLASS_KEY = 'munyaka_selected_class';
 const SELECTED_STREAM_KEY = 'munyaka_selected_stream';
 const SELECTED_DATE_KEY = 'munyaka_selected_date';

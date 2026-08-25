@@ -95,16 +95,16 @@ const Assessments = () => {
   const tierKey = useMemo(() => getTierKey(currentGrade), [currentGrade]);
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
-  // 1. Retrieve Students Directory from localStorage with munyaka_students and fallback
+  // 1. Retrieve Students Directory from localStorage with school_learners_data (unified Learner Management state) and fallbacks
   const studentsList = useMemo(() => {
     try {
-      const stored = localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
+      const stored = localStorage.getItem("school_learners_data") || localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
     } catch (e) {
-      console.error("Error loading munyaka_students:", e);
+      console.error("Error loading school_learners_data / learners:", e);
     }
     return STUDENTS;
   }, []);

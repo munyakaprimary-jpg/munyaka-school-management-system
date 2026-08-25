@@ -26,7 +26,7 @@ interface RecordPaymentModalProps {
 }
 
 const GRADES_STORAGE_KEY = 'munyaka_grades';
-const STUDENTS_STORAGE_KEY = 'munyaka_students';
+const STUDENTS_STORAGE_KEY = 'school_learners_data';
 
 const RecordPaymentModal = ({
   isOpen,
