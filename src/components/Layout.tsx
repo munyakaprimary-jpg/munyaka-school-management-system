@@ -132,6 +132,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     
     // Staff Attendance
     { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['super_admin', 'head_teacher'] },
     { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['super_admin', 'head_teacher'] },
     
     // Academic Assessment & Analysis
