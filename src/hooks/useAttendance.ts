@@ -19,21 +19,46 @@ const SELECTED_CLASS_KEY = 'munyaka_selected_class';
 const SELECTED_STREAM_KEY = 'munyaka_selected_stream';
 const SELECTED_DATE_KEY = 'munyaka_selected_date';
 const GRADES_KEY = 'munyaka_grades';
-
-// New key for global submission tracking
 const SUBMISSION_STATUS_KEY = 'munyaka_attendance_submission_status';
 
-export const useAttendance = (selectedGradeId?: string) => {
-  // Initialize filters from localStorage
+interface UseAttendanceOptions {
+  selectedGrade?: string;
+  selectedStream?: string;
+  selectedDate?: string;
+}
+
+export const useAttendance = (options: UseAttendanceOptions = {}) => {
+  const { selectedGrade: propSelectedGrade, selectedStream: propSelectedStream, selectedDate: propSelectedDate } = options;
+
+  // Initialize filters from localStorage or props
   const [selectedClass, setSelectedClass] = useState(() => 
-    localStorage.getItem(SELECTED_CLASS_KEY) || 'Grade 6'
+    propSelectedGrade || localStorage.getItem(SELECTED_CLASS_KEY) || 'Grade 6'
   );
   const [selectedStream, setSelectedStream] = useState(() => 
-    localStorage.getItem(SELECTED_STREAM_KEY) || 'all'
+    propSelectedStream || localStorage.getItem(SELECTED_STREAM_KEY) || 'all'
   );
   const [selectedDate, setSelectedDate] = useState(() => 
-    localStorage.getItem(SELECTED_DATE_KEY) || format(new Date(), "yyyy-MM-dd")
+    propSelectedDate || localStorage.getItem(SELECTED_DATE_KEY) || format(new Date(), "yyyy-MM-dd")
   );
+
+  // Sync with props when they change
+  useEffect(() => {
+    if (propSelectedGrade && propSelectedGrade !== selectedClass) {
+      setSelectedClass(propSelectedGrade);
+    }
+  }, [propSelectedGrade, selectedClass]);
+
+  useEffect(() => {
+    if (propSelectedStream && propSelectedStream !== selectedStream) {
+      setSelectedStream(propSelectedStream);
+    }
+  }, [propSelectedStream, selectedStream]);
+
+  useEffect(() => {
+    if (propSelectedDate && propSelectedDate !== selectedDate) {
+      setSelectedDate(propSelectedDate);
+    }
+  }, [propSelectedDate, selectedDate]);
 
   // Load grades/streams from localStorage
   const [gradesData, setGradesData] = useState<any[]>(() => {
@@ -82,16 +107,14 @@ export const useAttendance = (selectedGradeId?: string) => {
     localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
   }, [selectedDate]);
 
-  // --- NEW: Check if attendance has been submitted globally ---
+  // Check if attendance has been submitted globally
   const [isRegisterSubmitted, setIsRegisterSubmitted] = useState(false);
   
   useEffect(() => {
-    // Check global submission status
     const stored = localStorage.getItem(SUBMISSION_STATUS_KEY);
     if (stored) {
       try {
         const submissionData = JSON.parse(stored);
-        // Check if submission exists for current class/stream/date
         const key = `${selectedClass}_${selectedStream}_${selectedDate}`;
         if (submissionData[key]) {
           setIsRegisterSubmitted(true);
@@ -100,24 +123,22 @@ export const useAttendance = (selectedGradeId?: string) => {
         console.error("Error parsing submission status:", e);
       }
     }
-    setIsRegisterSubmitted(false); // Default if no data
+    setIsRegisterSubmitted(false);
   }, [selectedClass, selectedStream, selectedDate]);
 
-  // Persist submission status when it changes
   useEffect(() => {
     const submissionData = {};
     submissionData[`${selectedClass}_${selectedStream}_${selectedDate}`] = isRegisterSubmitted;
     localStorage.setItem(SUBMISSION_STATUS_KEY, JSON.stringify(submissionData));
   }, [isRegisterSubmitted, selectedClass, selectedStream, selectedDate]);
 
-  // --- EXACT getAvailableStreams IMPLEMENTATION ---
+  // Get available streams for the selected class
   const getAvailableStreams = (): string[] => {
     try {
       const rawGrades = localStorage.getItem('munyaka_grades');
       if (!rawGrades) return ['All Streams'];
 
       const grades = JSON.parse(rawGrades);
-      // Find the currently selected class object in munyaka_grades
       const currentGradeObj = grades.find(
         (g: any) => g.name === selectedClass || g.id === selectedClass || g.code === selectedClass
       );
@@ -129,7 +150,6 @@ export const useAttendance = (selectedGradeId?: string) => {
         return ['All Streams', ...extractedStreams];
       }
 
-      // Fallback: If no class-specific match, flatten streams across ALL grades in munyaka_grades
       const allUniqueStreams = new Set<string>();
       grades.forEach((g: any) => {
         if (Array.isArray(g.streams)) {
@@ -147,7 +167,6 @@ export const useAttendance = (selectedGradeId?: string) => {
     }
   };
 
-  // Use the exact getAvailableStreams function
   const availableStreams = getAvailableStreams();
 
   // Reset stream to "all" if previously selected stream doesn't exist for new class
@@ -164,7 +183,6 @@ export const useAttendance = (selectedGradeId?: string) => {
   const learnersInGrade = useMemo(() => {
     let students = [];
     
-    // Try to load from munyaka_students first
     const storedStudents = localStorage.getItem(STUDENTS_KEY);
     if (storedStudents) {
       try {
@@ -177,19 +195,29 @@ export const useAttendance = (selectedGradeId?: string) => {
       students = STUDENTS;
     }
 
+    // Normalize the selected class for comparison
+    const normalizeGrade = (grade: string) => {
+      return grade.replace(/^Grade\s*/i, '').trim();
+    };
+
+    const selectedGradeNormalized = normalizeGrade(selectedClass);
+    
     // Filter by class (grade) - handle both "Grade 6" and "6" formats
     const classStudents = students.filter(s => {
       const studentGrade = s.grade || s.class || '';
-      return studentGrade === selectedClass || 
-             `Grade ${studentGrade}` === selectedClass ||
-             studentGrade === selectedClass.replace('Grade ', '');
+      const studentGradeNormalized = normalizeGrade(studentGrade);
+      return studentGradeNormalized === selectedGradeNormalized;
     });
 
     // Filter by stream - handle case-insensitive matching
-    if (selectedStream !== 'all') {
+    if (selectedStream !== 'all' && selectedStream !== 'All Streams') {
       return classStudents.filter(s => 
         s.stream?.toLowerCase() === selectedStream.toLowerCase()
-      );
+      ).map(s => ({
+        id: parseInt(s.id) || Math.random(),
+        name: s.name,
+        assessment: s.assessment
+      }));
     }
     
     return classStudents.map(s => ({
@@ -202,10 +230,8 @@ export const useAttendance = (selectedGradeId?: string) => {
   const [markedStudents, setMarkedStudents] = useState<Record<number, StudentAttendance>>({});
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // Storage key is specific to the class, stream, and date
   const currentStorageKey = `${STORAGE_KEY}_${selectedClass}_${selectedStream}_${selectedDate}`;
 
-  // Load/Initialize attendance for the current filters
   useEffect(() => {
     setIsInitialized(false);
     const saved = localStorage.getItem(currentStorageKey);
@@ -236,7 +262,6 @@ export const useAttendance = (selectedGradeId?: string) => {
     setMarkedStudents(defaultRecord);
   };
 
-  // Persist changes
   useEffect(() => {
     if (isInitialized && Object.keys(markedStudents).length > 0) {
       localStorage.setItem(currentStorageKey, JSON.stringify(markedStudents));
@@ -254,7 +279,6 @@ export const useAttendance = (selectedGradeId?: string) => {
     }));
   };
 
-  // NEW: Function to mark register as submitted
   const submitRegister = () => {
     setIsRegisterSubmitted(true);
   };
