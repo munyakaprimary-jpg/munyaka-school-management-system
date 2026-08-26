@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Button } from "@/components/ui/button";
 import { showSuccess, showError } from '@/utils/toast';
@@ -55,7 +53,11 @@ const Attendance = () => {
     markAttendance,
     availableStreams: hookAvailableStreams,
     isRegisterSubmitted
-  } = useAttendance();
+  } = useAttendance({
+    selectedGrade: selectedClass,
+    selectedStream: selectedStream,
+    selectedDate: selectedDate
+  });
 
   // Update streams when class changes
   useEffect(() => {
@@ -140,6 +142,7 @@ const Attendance = () => {
   const showAfternoonOnly = isToday && currentHour >= 12;
 
   // Transform students for AttendanceTable component
+  // Use the students from useAttendance hook which are already filtered
   const tableStudents = useMemo(() => {
     return students.map(s => ({
       id: s.id,
@@ -249,6 +252,7 @@ const Attendance = () => {
         markedStudents={markedStudents}
         onMarkAttendance={markAttendance}
         isEditing={isEditing}
+        activeSession={activeSession}
       />
 
       <div className="flex justify-end gap-3">
