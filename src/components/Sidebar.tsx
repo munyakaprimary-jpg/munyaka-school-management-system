@@ -28,6 +28,7 @@ import {
   School,
   Menu,
   Search,
+  Activity,
   Bell,
   LogOut,
   ChevronLeft,
