@@ -139,7 +139,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['super_admin', 'head_teacher'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
   ];
@@ -284,8 +283,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             )} />
             {!isCollapsed && <span className="truncate">Central Data & APK</span>}
           </Link>
-
-        {/* User Account Footer */}
+                  </nav>
+          
+                  {/* User Account Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
