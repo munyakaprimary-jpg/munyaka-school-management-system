@@ -3,6 +3,7 @@ import {
   Search, Plus, Edit3, Trash2, SlidersHorizontal, X, UserPlus,
   Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles, ChevronDown, FileText, Users
 } from 'lucide-react';
+import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 
 interface Learner {
   id: string;
@@ -89,54 +90,12 @@ export default function Students() {
     return DEFAULT_LEARNERS;
   });
 
-  // 1. Dynamic Reader Function for Active Term & Year
-  const getActiveTermLabel = () => {
-    try {
-      const configKeys = ['system_config', 'academic_setup', 'school_settings', 'active_term', 'current_academic_term', 'school_term', 'academic_session'];
-      for (const key of configKeys) {
-        const val = localStorage.getItem(key);
-        if (val) {
-          try {
-            const parsed = JSON.parse(val);
-            if (parsed && typeof parsed === 'object') {
-              const termVal = parsed.activeTerm || parsed.currentTerm || parsed.term || parsed.name;
-              const yearVal = parsed.activeAcademicYear || parsed.currentYear || parsed.year || parsed.academicYear;
-              if (termVal && yearVal) {
-                return `${String(termVal).toUpperCase()}, ${yearVal}`;
-              }
-              if (termVal) {
-                return String(termVal).toUpperCase();
-              }
-            } else if (typeof parsed === 'string' && parsed.trim().length > 0) {
-              return parsed.trim().toUpperCase();
-            }
-          } catch {
-            if (val.trim().length > 0) {
-              return val.trim().toUpperCase();
-            }
-          }
-        }
-      }
-    } catch (e) {
-      console.error('Error reading academic config from localStorage', e);
-    }
-    return 'TERM 2, 2026';
-  };
-
-  const [termBadge, setTermBadge] = useState<string>(getActiveTermLabel);
-
-  // 2. Real-Time LocalStorage Event Listener
-  useEffect(() => {
-    const updateTerm = () => setTermBadge(getActiveTermLabel());
-    updateTerm();
-    window.addEventListener('storage', updateTerm);
-    // Also poll/listen to custom storage events if dispatched within the same app
-    const interval = setInterval(updateTerm, 1000);
-    return () => {
-      window.removeEventListener('storage', updateTerm);
-      clearInterval(interval);
-    };
-  }, []);
+  // 2. Use the academic calendar hook for dynamic term/year
+  const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
+  const termBadge = useMemo(() => {
+    if (isLoading) return `TERM ${activeTerm}, ${activeYear}`; // Shows fallback while loading
+    return `TERM ${activeTerm.toUpperCase()}, ${activeYear}`;
+  }, [activeTerm, activeYear, isLoading]);
 
   // Automatically sync learners back to localStorage on change
   useEffect(() => {
