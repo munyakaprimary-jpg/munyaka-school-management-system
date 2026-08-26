@@ -134,19 +134,14 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     setMobileTab(defaultTab);
   }, [defaultTab]);
 
-  // Determine header title & subtext based on current tab / route context
-  const headerTitle = mobileTab === 'announcements' ? 'Notice Board' : 'School Calendar';
-  const headerSubtext = mobileTab === 'announcements'
-    ? 'Official school announcements and urgent alerts'
-    : 'Upcoming events, schedules, and important dates';
-
-  // Publish Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [publishType, setPublishType] = useState<'notice' | 'event'>('notice');
+  // Separate modal states for Notice and Event
+  const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
+  const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
-  const [noticeCategory, setNoticeCategory] = useState<'Urgent' | 'General' | 'Finance'>('General');
+  const [noticeCategory, setNoticeCategory] = useState<'Normal' | 'Important' | 'Urgent Alert'>('Normal');
+  const [noticeAudience, setNoticeAudience] = useState<'All' | 'Staff' | 'Parents' | 'Learners'>('All');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeAttachment, setNoticeAttachment] = useState('');
 
@@ -155,6 +150,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [eventDate, setEventDate] = useState('');
   const [eventTime, setEventTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
+  const [eventDetails, setEventDetails] = useState('');
   const [eventType, setEventType] = useState('Academic');
 
   useEffect(() => {
@@ -165,53 +161,59 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
   }, [events]);
 
-  const handlePublish = (e: React.FormEvent) => {
+  const handlePublishNotice = (e: React.FormEvent) => {
     e.preventDefault();
-    if (publishType === 'notice') {
-      if (!noticeTitle.trim() || !noticeContent.trim()) return;
-      
-      let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
-      if (noticeCategory === 'Urgent') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
-      if (noticeCategory === 'Finance') badgeColor = 'bg-amber-50 text-amber-600 border-amber-200';
+    if (!noticeTitle.trim() || !noticeContent.trim()) return;
+    
+    let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
+    if (noticeCategory === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
+    if (noticeCategory === 'Important') badgeColor = 'bg-amber-50 text-amber-600 border-amber-200';
 
-      const newNotice: Notice = {
-        id: Date.now().toString(),
-        title: noticeTitle.trim(),
-        content: noticeContent.trim(),
-        description: noticeContent.trim().substring(0, 120) + '...',
-        date: 'Just now',
-        category: noticeCategory,
-        pinned: noticeCategory === 'Urgent',
-        attachmentName: noticeAttachment ? noticeAttachment.split(/(\\|\/)/g).pop() : undefined,
-        attachmentUrl: noticeAttachment ? '#' : undefined,
-        color: badgeColor
-      };
+    const newNotice: Notice = {
+      id: Date.now().toString(),
+      title: noticeTitle.trim(),
+      content: noticeContent.trim(),
+      description: noticeContent.trim().substring(0, 120) + '...',
+      date: 'Just now',
+      category: noticeCategory,
+      pinned: noticeCategory === 'Urgent Alert',
+      attachmentName: noticeAttachment ? noticeAttachment.split(/(\\|\/)/g).pop() : undefined,
+      attachmentUrl: noticeAttachment ? '#' : undefined,
+      color: badgeColor
+    };
 
-      setNotices([newNotice, ...notices]);
-      setNoticeTitle('');
-      setNoticeContent('');
-      setNoticeAttachment('');
-      showSuccess("New Notice published successfully!");
-    } else {
-      if (!eventTitle.trim() || !eventDate || !eventTime) return;
+    setNotices([newNotice, ...notices]);
+    setNoticeTitle('');
+    setNoticeContent('');
+    setNoticeAttachment('');
+    setNoticeCategory('Normal');
+    setNoticeAudience('All');
+    setIsNoticeModalOpen(false);
+    showSuccess("New Notice published successfully!");
+  };
 
-      const newEvent: SchoolEvent = {
-        id: Date.now(),
-        title: eventTitle.trim(),
-        date: eventDate,
-        time: eventTime,
-        location: eventLocation.trim() || 'School Grounds',
-        type: eventType
-      };
+  const handleAddEvent = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!eventTitle.trim() || !eventDate || !eventTime) return;
 
-      setEvents([...events, newEvent].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-      setEventTitle('');
-      setEventDate('');
-      setEventTime('');
-      setEventLocation('');
-      showSuccess("New Event added to School Calendar!");
-    }
-    setIsModalOpen(false);
+    const newEvent: SchoolEvent = {
+      id: Date.now(),
+      title: eventTitle.trim(),
+      date: eventDate,
+      time: eventTime,
+      location: eventLocation.trim() || 'School Grounds',
+      type: eventType
+    };
+
+    setEvents([...events, newEvent].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()));
+    setEventTitle('');
+    setEventDate('');
+    setEventTime('');
+    setEventLocation('');
+    setEventDetails('');
+    setEventType('Academic');
+    setIsEventModalOpen(false);
+    showSuccess("New Event added to School Calendar!");
   };
 
   // Urgent notices for sticky top banner
@@ -229,21 +231,21 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
               {mobileTab === 'announcements' ? <Megaphone size={24} /> : <CalendarDays size={24} />}
             </div>
             <div>
-              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{headerTitle}</h1>
-              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{headerSubtext}</p>
+              <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">{mobileTab === 'announcements' ? 'Notice Board' : 'School Calendar'}</h1>
+              <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{mobileTab === 'announcements' ? 'Official school announcements and urgent alerts' : 'Upcoming events, schedules, and important dates'}</p>
             </div>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
           <Button 
-            onClick={() => { setPublishType('notice'); setIsModalOpen(true); }}
+            onClick={() => setIsNoticeModalOpen(true)}
             className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
           >
             <Plus size={18} /> Publish Notice
           </Button>
           <Button 
-            onClick={() => { setPublishType('event'); setIsModalOpen(true); }}
+            onClick={() => setIsEventModalOpen(true)}
             variant="outline"
             className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
           >
@@ -440,7 +442,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
               <Button 
-                onClick={() => { setPublishType('event'); setIsModalOpen(true); }}
+                onClick={() => setIsEventModalOpen(true)}
                 variant="outline" 
                 className="w-full rounded-2xl font-bold h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
               >
@@ -452,150 +454,175 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
       </div>
 
-      {/* Publish Modal (Supports Notice or Event based on state) */}
+      {/* Publish Notice Modal */}
       <Modal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
-        title={publishType === 'notice' ? 'Publish New Notice' : 'Add New Calendar Event'}
+        isOpen={isNoticeModalOpen} 
+        onClose={() => setIsNoticeModalOpen(false)} 
+        title="Publish New Notice"
         footer={
           <>
-            <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="rounded-xl font-bold">
+            <Button variant="ghost" onClick={() => setIsNoticeModalOpen(false)} className="rounded-xl font-bold">
               Cancel
             </Button>
             <Button 
-              onClick={handlePublish} 
+              onClick={handlePublishNotice} 
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
             >
-              <Send size={16} /> {publishType === 'notice' ? 'Publish Notice' : 'Schedule Event'}
+              <Send size={16} /> Publish Notice
             </Button>
           </>
         }
       >
-        <div className="space-y-4 py-2">
-          {/* Switcher inside modal */}
-          <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl mb-4">
-            <button
-              type="button"
-              onClick={() => setPublishType('notice')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${publishType === 'notice' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
-            >
-              Notice Announcement
-            </button>
-            <button
-              type="button"
-              onClick={() => setPublishType('event')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${publishType === 'event' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
-            >
-              Calendar Event
-            </button>
+        <form onSubmit={handlePublishNotice} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Notice Title</Label>
+            <Input 
+              value={noticeTitle} 
+              onChange={(e) => setNoticeTitle(e.target.value)} 
+              placeholder="e.g. Term 3 Fee Payment Deadline" 
+              className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
+            />
           </div>
 
-          {publishType === 'notice' ? (
-            <>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority & Category</Label>
-                <Select value={noticeCategory} onValueChange={(v: any) => setNoticeCategory(v)}>
-                  <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Select Category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Urgent">Urgent (Red Badge)</SelectItem>
-                    <SelectItem value="General">General (Blue Badge)</SelectItem>
-                    <SelectItem value="Finance">Finance (Yellow Badge)</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority / Urgency Level</Label>
+              <Select value={noticeCategory} onValueChange={(v: any) => setNoticeCategory(v)}>
+                <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
+                  <SelectValue placeholder="Select Priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Normal">Normal</SelectItem>
+                  <SelectItem value="Important">Important</SelectItem>
+                  <SelectItem value="Urgent Alert">Urgent Alert</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Notice Title</Label>
-                <Input 
-                  value={noticeTitle} 
-                  onChange={(e) => setNoticeTitle(e.target.value)} 
-                  placeholder="e.g. Term 3 Closing Date & Report Card Collections" 
-                  className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
-                />
-              </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Target Audience</Label>
+              <Select value={noticeAudience} onValueChange={(v: any) => setNoticeAudience(v)}>
+                <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
+                  <SelectValue placeholder="Select Audience" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Staff">Staff</SelectItem>
+                  <SelectItem value="Parents">Parents</SelectItem>
+                  <SelectItem value="Learners">Learners</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Detailed Description</Label>
-                <Textarea 
-                  value={noticeContent} 
-                  onChange={(e) => setNoticeContent(e.target.value)} 
-                  placeholder="Type the full announcement content here..." 
-                  className="rounded-2xl border-slate-200 dark:border-slate-700 min-h-[120px]"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Description / Body Content</Label>
+            <Textarea 
+              value={noticeContent} 
+              onChange={(e) => setNoticeContent(e.target.value)} 
+              placeholder="Type the full announcement content here..." 
+              className="rounded-2xl border-slate-200 dark:border-slate-700 min-h-[120px]"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attachment (Optional PDF / Document)</Label>
-                <Input 
-                  type="file" 
-                  onChange={(e) => setNoticeAttachment(e.target.value)}
-                  className="rounded-xl border-slate-200 dark:border-slate-700 cursor-pointer"
-                />
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Title</Label>
-                <Input 
-                  value={eventTitle} 
-                  onChange={(e) => setEventTitle(e.target.value)} 
-                  placeholder="e.g. Annual Sports Day & Prize Giving" 
-                  className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
-                />
-              </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attachment (Optional PDF / Document)</Label>
+            <Input 
+              type="file" 
+              onChange={(e) => setNoticeAttachment(e.target.value)}
+              className="rounded-xl border-slate-200 dark:border-slate-700 cursor-pointer"
+            />
+          </div>
+        </form>
+      </Modal>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</Label>
-                  <Input 
-                    type="date" 
-                    value={eventDate} 
-                    onChange={(e) => setEventDate(e.target.value)} 
-                    className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Time Slot</Label>
-                  <Input 
-                    type="text" 
-                    value={eventTime} 
-                    onChange={(e) => setEventTime(e.target.value)} 
-                    placeholder="e.g. 09:00 AM - 02:00 PM" 
-                    className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-              </div>
+      {/* Add Event Modal */}
+      <Modal 
+        isOpen={isEventModalOpen} 
+        onClose={() => setIsEventModalOpen(false)} 
+        title="Add New Calendar Event"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setIsEventModalOpen(false)} className="rounded-xl font-bold">
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleAddEvent} 
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
+            >
+              <Send size={16} /> Schedule Event
+            </Button>
+          </>
+        }
+      >
+        <form onSubmit={handleAddEvent} className="space-y-4 py-2">
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Title</Label>
+            <Input 
+              value={eventTitle} 
+              onChange={(e) => setEventTitle(e.target.value)} 
+              placeholder="e.g. Annual Sports Day" 
+              className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
+            />
+          </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Location / Venue</Label>
-                <Input 
-                  value={eventLocation} 
-                  onChange={(e) => setEventLocation(e.target.value)} 
-                  placeholder="e.g. School Main Sports Ground" 
-                  className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
-                />
-              </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Date</Label>
+              <Input 
+                type="date" 
+                value={eventDate} 
+                onChange={(e) => setEventDate(e.target.value)} 
+                className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Time Slot</Label>
+              <Input 
+                type="text" 
+                value={eventTime} 
+                onChange={(e) => setEventTime(e.target.value)} 
+                placeholder="e.g. 09:00 AM - 02:00 PM" 
+                className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
+              />
+            </div>
+          </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Category</Label>
-                <Select value={eventType} onValueChange={setEventType}>
-                  <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Academic">Academic</SelectItem>
-                    <SelectItem value="Sports">Sports & Athletics</SelectItem>
-                    <SelectItem value="Exhibition">Exhibition & Fair</SelectItem>
-                    <SelectItem value="Ceremony">Ceremony & Assembly</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </>
-          )}
-        </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Location / Venue</Label>
+            <Input 
+              value={eventLocation} 
+              onChange={(e) => setEventLocation(e.target.value)} 
+              placeholder="e.g. School Main Sports Ground" 
+              className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Details</Label>
+            <Textarea 
+              value={eventDetails} 
+              onChange={(e) => setEventDetails(e.target.value)} 
+              placeholder="Additional details about the event..." 
+              className="rounded-2xl border-slate-200 dark:border-slate-700 min-h-[80px]"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Event Category</Label>
+            <Select value={eventType} onValueChange={setEventType}>
+              <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
+                <SelectValue placeholder="Select type" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Academic">Academic</SelectItem>
+                <SelectItem value="Sports">Sports & Athletics</SelectItem>
+                <SelectItem value="Exhibition">Exhibition & Fair</SelectItem>
+                <SelectItem value="Ceremony">Ceremony & Assembly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </form>
       </Modal>
     </div>
   );
