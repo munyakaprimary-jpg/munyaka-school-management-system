@@ -27,9 +27,10 @@ interface AttendanceTableProps {
   markedStudents: Record<number, StudentAttendance>;
   onMarkAttendance: (id: number, session: 'morning' | 'afternoon', status: string) => void;
   isEditing: boolean;
+  activeSession: 'morning' | 'afternoon';
 }
 
-const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing }: AttendanceTableProps) => {
+const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing, activeSession }: AttendanceTableProps) => {
   const getStatusBadge = (sessionData?: SessionAttendance) => {
     if (!sessionData) {
       return <span className="text-xs text-slate-400 italic">Not marked</span>;
@@ -62,12 +63,17 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing
     );
   };
 
+  const isMorningActive = activeSession === 'morning';
+  const isAfternoonActive = activeSession === 'afternoon';
+
   const renderSessionColumn = (
     record: StudentAttendance | undefined,
     session: 'morning' | 'afternoon',
     studentId: number
   ) => {
     const sessionData = record?.[session];
+    const isSessionActive = session === activeSession;
+    
     return (
       <td className="px-8 py-6 border-l border-slate-100">
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
@@ -75,7 +81,7 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing
             {getStatusBadge(sessionData)}
           </div>
           
-          {isEditing && (
+          {isEditing && isSessionActive && (
             <div className="flex gap-1.5 animate-in fade-in zoom-in-95 duration-200">
               <Button 
                 size="sm" 
@@ -112,6 +118,12 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing
               <Lock size={14} className="text-slate-300" />
             </div>
           )}
+
+          {isEditing && !isSessionActive && (
+            <div className="w-[102px] flex justify-center opacity-40 text-slate-400 text-xs font-medium">
+              {session === 'morning' ? 'Morning session closed' : 'Afternoon session opens at 12:00 PM'}
+            </div>
+          )}
         </div>
       </td>
     );
@@ -125,8 +137,12 @@ const AttendanceTable = ({ students, markedStudents, onMarkAttendance, isEditing
             <thead className="text-slate-500 border-b bg-slate-50/50">
               <tr>
                 <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest">Student Details</th>
-                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-center border-l border-slate-100">Morning Session</th>
-                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-center border-l border-slate-100">Afternoon Session</th>
+                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-center border-l border-slate-100">
+                  Morning Session {activeSession === 'morning' && <span className="ml-2 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[9px] font-bold rounded-full">ACTIVE</span>}
+                </th>
+                <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-center border-l border-slate-100">
+                  Afternoon Session {activeSession === 'afternoon' && <span className="ml-2 px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[9px] font-bold rounded-full">ACTIVE</span>}
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y">
