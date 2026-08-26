@@ -207,24 +207,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {/* HARDCODED CENTRAL DATA & APK LINK - Always visible right at the top */}
-          <Link
-            to="/central-data"
-            onClick={() => setIsOpen(false)}
-            className={cn(
-              "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-              location.pathname === '/central-data'
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200/50 dark:bg-emerald-600 dark:shadow-none"
-                : "text-slate-700 dark:text-slate-200 bg-emerald-50/70 hover:bg-emerald-100 dark:hover:bg-emerald-950/40 hover:text-emerald-700 dark:hover:text-emerald-400 border border-emerald-200/60"
-            )}
-          >
-            <Database size={20} className={cn(
-              "shrink-0",
-              location.pathname === '/central-data' ? "text-white" : "text-emerald-600 dark:text-emerald-400"
-            )} />
-            {!isCollapsed && <span className="truncate">Central Data & APK</span>}
-          </Link>
-
           {filteredMenu.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -266,23 +248,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             {!isCollapsed && <span className="truncate">Science Lab</span>}
           </Link>
 
-          {/* HARDCODED CENTRAL DATA & APK LINK - Always visible */}
-          <Link
-            to="/central-data"
-            onClick={() => setIsOpen(false)}
-            className={cn(
-              "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-              location.pathname === '/central-data'
-                ? "bg-emerald-600 text-white shadow-lg shadow-emerald-200/50 dark:bg-emerald-600 dark:shadow-none"
-                : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-emerald-600 dark:hover:text-emerald-400"
-            )}
-          >
-            <Database size={20} className={cn(
-              "shrink-0",
-              location.pathname === '/central-data' ? "text-white" : "text-slate-400 group-hover:text-emerald-600 dark:group-hover:text-emerald-400"
-            )} />
-            {!isCollapsed && <span className="truncate">Central Data & APK</span>}
-          </Link>
                   </nav>
           
                   {/* User Account Footer */}
