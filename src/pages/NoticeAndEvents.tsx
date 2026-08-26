@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
-import Modal from '@/components/ui/Modal';
+import Modal from "@/components/ui/Modal";
 import { 
   Bell, 
   Megaphone, 
@@ -140,8 +140,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
-  const [noticePriority, setNoticePriority] = useState<'General' | 'Urgent' | 'Academic'>('General');
-  const [noticeAudience, setNoticeAudience] = useState<'All Parents' | 'Staff' | 'Grade'>('All Parents');
+  const [noticePriority, setNoticePriority] = useState<'Normal' | 'Important' | 'Urgent Alert'>('Normal');
+  const [noticeAudience, setNoticeAudience] = useState<'All' | 'Staff' | 'Parents' | 'Learners'>('All');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeExpiryDate, setNoticeExpiryDate] = useState('');
 
@@ -166,8 +166,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     if (!noticeTitle.trim() || !noticeContent.trim()) return;
     
     let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
-    if (noticePriority === 'Urgent') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
-    if (noticePriority === 'Academic') badgeColor = 'bg-blue-50 text-blue-600 border-blue-200';
+    if (noticePriority === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
+    if (noticePriority === 'Important') badgeColor = 'bg-amber-50 text-amber-600 border-amber-200';
 
     const newNotice: Notice = {
       id: Date.now().toString(),
@@ -176,15 +176,15 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       description: noticeContent.trim().substring(0, 120) + '...',
       date: 'Just now',
       category: noticePriority,
-      pinned: noticePriority === 'Urgent',
+      pinned: noticePriority === 'Urgent Alert',
       color: badgeColor
     };
 
     setNotices([newNotice, ...notices]);
     setNoticeTitle('');
     setNoticeContent('');
-    setNoticePriority('General');
-    setNoticeAudience('All Parents');
+    setNoticePriority('Normal');
+    setNoticeAudience('All');
     setNoticeExpiryDate('');
     setIsNoticeModalOpen(false);
     showSuccess("New Notice published successfully!");
@@ -490,9 +490,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                   <SelectValue placeholder="Select Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="General">General</SelectItem>
-                  <SelectItem value="Urgent">Urgent</SelectItem>
-                  <SelectItem value="Academic">Academic</SelectItem>
+                  <SelectItem value="Normal">Normal</SelectItem>
+                  <SelectItem value="Important">Important</SelectItem>
+                  <SelectItem value="Urgent Alert">Urgent Alert</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -504,9 +504,10 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                   <SelectValue placeholder="Select Audience" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All Parents">All Parents</SelectItem>
+                  <SelectItem value="All">All</SelectItem>
                   <SelectItem value="Staff">Staff</SelectItem>
-                  <SelectItem value="Grade">Grade</SelectItem>
+                  <SelectItem value="Parents">Parents</SelectItem>
+                  <SelectItem value="Learners">Learners</SelectItem>
                 </SelectContent>
               </Select>
             </div>
