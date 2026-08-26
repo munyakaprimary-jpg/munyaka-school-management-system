@@ -1,6 +1,6 @@
 export const INITIAL_SEED_DATA = {
   "version": "3.5",
-  "exportDate": "2026-08-26T10:01:38.817Z",
+  "exportDate": "2026-08-26T13:37:54.683Z",
   "school": "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
   "students": [
     {
@@ -780,7 +780,7 @@ export const INITIAL_SEED_DATA = {
     },
     "academic": {
       "activeYear": "2026",
-      "activeTerm": "term3",
+      "activeTerm": "term2",
       "termStartDate": "2026-08-24",
       "termEndDate": "2026-04-10",
       "gradingScale": [
@@ -1011,7 +1011,7 @@ export const INITIAL_SEED_DATA = {
     "geofence": {
       "lat": 0.5142,
       "lng": 35.2698,
-      "radius": 150
+      "radius": 500
     },
     "geofenceEnabled": true,
     "devBypass": false,
