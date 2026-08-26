@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
-import Modal from "@/components/ui/Modal";
+import Modal from '@/components/ui/Modal';
 import { 
   Bell, 
   Megaphone, 
@@ -29,7 +29,7 @@ import {
   CalendarDays
 } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
-import { format, isToday, isSameDay } from 'date-fns';
+import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
 
 const INITIAL_NOTICES: Notice[] = [
@@ -76,7 +76,8 @@ const INITIAL_EVENTS: SchoolEvent[] = [
     date: '2025-08-28',
     time: '08:30 AM - 03:00 PM',
     location: 'Main School Sports Ground',
-    type: 'Sports'
+    type: 'Sports',
+    priority: 'high'
   },
   {
     id: 'e2',
@@ -84,7 +85,8 @@ const INITIAL_EVENTS: SchoolEvent[] = [
     date: '2025-08-30',
     time: '09:00 AM - 01:00 PM',
     location: 'Main Assembly Hall',
-    type: 'Academic'
+    type: 'Academic',
+    priority: 'normal'
   },
   {
     id: 'e3',
@@ -92,7 +94,8 @@ const INITIAL_EVENTS: SchoolEvent[] = [
     date: '2025-09-04',
     time: '10:00 AM - 04:00 PM',
     location: 'Computer Lab & Science Center',
-    type: 'Exhibition'
+    type: 'Exhibition',
+    priority: 'high'
   },
   {
     id: 'e4',
@@ -100,7 +103,8 @@ const INITIAL_EVENTS: SchoolEvent[] = [
     date: '2025-09-18',
     time: '09:00 AM - 12:00 PM',
     location: 'School Main Hall',
-    type: 'Ceremony'
+    type: 'Ceremony',
+    priority: 'normal'
   }
 ];
 
@@ -214,10 +218,39 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     showSuccess("New Event added to School Calendar!");
   };
 
-  // Urgent notices for sticky top banner
+  // Separate banner states for each tab
+  // Notice Board Banner: Latest urgent/pinned notice
   const urgentNotices = useMemo(() => {
     return notices.filter(n => n.category === 'Urgent' || n.pinned);
   }, [notices]);
+
+  // School Calendar Banner: Next upcoming high-priority event
+  const upcomingHighPriorityEvent = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return events
+      .filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today && (e.priority === 'high' || e.priority === 'urgent');
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  }, [events]);
+
+  // Fallback: next upcoming event if no high-priority events
+  const nextUpcomingEvent = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    return events
+      .filter(e => {
+        const eventDate = new Date(e.date);
+        eventDate.setHours(0, 0, 0, 0);
+        return eventDate >= today;
+      })
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
+  }, [events]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
@@ -252,8 +285,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
         </div>
       </div>
 
-      {/* Sticky Top Banner for Urgent / Pinned Notices */}
-      {urgentNotices.length > 0 && (
+      {/* Notice Board Banner - Urgent/Pinned Notices */}
+      {mobileTab === 'announcements' && urgentNotices.length > 0 && (
         <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-indigo-600 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-rose-500/10 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 animate-pulse">
@@ -274,6 +307,40 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
             }}
             size="sm"
             className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md"
+          >
+            View Details
+          </Button>
+        </div>
+      )}
+
+      {/* School Calendar Banner - Upcoming High-Priority Event */}
+      {mobileTab === 'events' && (upcomingHighPriorityEvent || nextUpcomingEvent) && (
+        <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-amber-500/10 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 animate-pulse">
+              <CalendarDays size={22} className="text-amber-100" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2">
+                <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
+                  {upcomingHighPriorityEvent ? 'High Priority Event' : 'Upcoming Event'}
+                </span>
+                <span className="text-xs font-medium text-amber-100 truncate">
+                  {upcomingHighPriorityEvent || nextUpcomingEvent ? format(new Date((upcomingHighPriorityEvent || nextUpcomingEvent)!.date), 'EEEE, MMM d') : ''}
+                </span>
+              </div>
+              <p className="font-bold text-sm sm:text-base truncate mt-0.5">
+                {(upcomingHighPriorityEvent || nextUpcomingEvent)!.title}
+              </p>
+            </div>
+          </div>
+          <Button 
+            onClick={() => {
+              const el = document.getElementById(`event-${(upcomingHighPriorityEvent || nextUpcomingEvent)!.id}`);
+              el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }}
+            size="sm"
+            className="bg-white text-amber-600 hover:bg-amber-50 rounded-xl font-bold shrink-0 text-xs shadow-md"
           >
             View Details
           </Button>
@@ -408,7 +475,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                 const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
 
                 return (
-                  <div key={event.id} className="flex items-start gap-4 group">
+                  <div key={event.id} id={`event-${event.id}`} className="flex items-start gap-4 group">
                     {/* Bold Date Badge */}
                     <div className="w-14 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex flex-col items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
                       <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500 group-hover:text-indigo-200">{monthStr}</span>
