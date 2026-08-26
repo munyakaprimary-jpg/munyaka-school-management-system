@@ -104,8 +104,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     setShowBottomNav(true);
   }, [location.pathname]);
 
+  // ============================================================
+  // THIS IS THE SOURCE ARRAY THAT FEEDS THE RENDER LOOP
+  // (filteredMenu = menuItems.filter(...))
+  // ============================================================
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    // ---- CENTRAL DATA & APK - placed directly after Dashboard ----
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
@@ -143,7 +148,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
   ];
 
+  // This is the EXACT array mapped in the JSX below
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
+
+  // Debug: verify Central Data & APK survives the filter
+  if (typeof window !== 'undefined' && user) {
+    const hasCentralData = filteredMenu.some(item => item.path === '/central-data');
+    if (!hasCentralData) {
+      console.warn('[Sidebar] Central Data & APK was filtered out!', { userRole: user.role, filteredMenu: filteredMenu.map(i => i.label) });
+    }
+  }
 
   // Bottom Navigation Bar Quick Links
   const bottomQuickNav = [
@@ -205,7 +219,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           </button>
         </div>
 
-        {/* Navigation List */}
+        {/* Navigation List - maps over filteredMenu (derived from menuItems above) */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
           {filteredMenu.map((item) => {
             const isActive = location.pathname === item.path;
