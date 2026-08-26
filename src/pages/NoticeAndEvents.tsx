@@ -7,8 +7,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import Modal from "@/components/ui/Modal";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
+import Modal from '@/components/ui/Modal';
 import { 
   Bell, 
   Megaphone, 
@@ -129,6 +129,11 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // Mobile/responsive segmented toggle: 'announcements' | 'events'
   const [mobileTab, setMobileTab] = useState<'announcements' | 'events'>(defaultTab);
 
+  // Update tab when route changes or defaultTab prop updates
+  useEffect(() => {
+    setMobileTab(defaultTab);
+  }, [defaultTab]);
+
   // Determine header title & subtext based on current tab / route context
   const headerTitle = mobileTab === 'announcements' ? 'Notice Board' : 'School Calendar';
   const headerSubtext = mobileTab === 'announcements'
@@ -137,7 +142,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   // Publish Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [publishSource, setPublishSource] = useState<'notice' | 'event'>('notice'); // Tracks source: 'notice' or 'event'
+  const [publishType, setPublishType] = useState<'notice' | 'event'>('notice');
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -151,7 +156,6 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [eventTime, setEventTime] = useState('');
   const [eventLocation, setEventLocation] = useState('');
   const [eventType, setEventType] = useState('Academic');
-  const [eventAudience, setEventAudience] = useState<string[]>(); // Audience dropdown
 
   useEffect(() => {
     localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
@@ -161,21 +165,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
   }, [events]);
 
-  // Determine if we're in notice or event mode based on source
-  const isNoticeMode = useMemo(() => publishSource === 'notice', [publishSource]);
-  const isEventMode = useMemo(() => publishSource === 'event', [publishSource]);
-
-  // Calculate header title based on mobile tab
-  const titleBasedOnMode = isNoticeMode ? 'Notice Board' : 'School Calendar';
-  const subtitleBasedOnMode = isNoticeMode
-    ? 'Official school announcements and urgent alerts'
-    : 'Upcoming events, schedules, and important dates';
-
-  // Publish Modal Handler
   const handlePublish = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (publishSource === 'notice') {
+    if (publishType === 'notice') {
       if (!noticeTitle.trim() || !noticeContent.trim()) return;
       
       let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
@@ -199,7 +191,6 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       setNoticeTitle('');
       setNoticeContent('');
       setNoticeAttachment('');
-      setPublishSource('notice'); // Reset to notice mode
       showSuccess("New Notice published successfully!");
     } else {
       if (!eventTitle.trim() || !eventDate || !eventTime) return;
@@ -218,7 +209,6 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       setEventDate('');
       setEventTime('');
       setEventLocation('');
-      setPublishSource('event'); // Reset to event mode
       showSuccess("New Event added to School Calendar!");
     }
     setIsModalOpen(false);
@@ -247,13 +237,13 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
         <div className="flex items-center gap-3">
           <Button 
-            onClick={() => { setPublishSource('notice'); setIsModalOpen(true); }}
+            onClick={() => { setPublishType('notice'); setIsModalOpen(true); }}
             className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
           >
-            <Megaphone size={18} /> Publish Notice
+            <Plus size={18} /> Publish Notice
           </Button>
           <Button 
-            onClick={() => { setPublishSource('event'); setIsModalOpen(true); }}
+            onClick={() => { setPublishType('event'); setIsModalOpen(true); }}
             variant="outline"
             className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
           >
@@ -265,11 +255,11 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       {/* Sticky Top Banner for Urgent / Pinned Notices */}
       {urgentNotices.length > 0 && (
         <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-indigo-600 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-rose-500/10 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 animate-pulse">
               <Flame size={22} className="text-amber-200" />
             </div>
-            <div className="flex-1 min-w-0">
+            <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">Urgent Alert</span>
                 <span className="text-xs font-medium text-rose-100 truncate">{urgentNotices[0].date}</span>
@@ -450,7 +440,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
             <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
               <Button 
-                onClick={() => { setPublishSource('event'); setIsModalOpen(true); }}
+                onClick={() => { setPublishType('event'); setIsModalOpen(true); }}
                 variant="outline" 
                 className="w-full rounded-2xl font-bold h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
               >
@@ -466,7 +456,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
-        title={isNoticeMode ? 'Publish New Notice' : 'Add New Calendar Event'}
+        title={publishType === 'notice' ? 'Publish New Notice' : 'Add New Calendar Event'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setIsModalOpen(false)} className="rounded-xl font-bold">
@@ -476,7 +466,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
               onClick={handlePublish} 
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
             >
-              {isNoticeMode ? <Send size={16} /> Publish Notice : <Save size={16} /> Save Event}
+              <Send size={16} /> {publishType === 'notice' ? 'Publish Notice' : 'Schedule Event'}
             </Button>
           </>
         }
@@ -486,21 +476,21 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
           <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-2xl mb-4">
             <button
               type="button"
-              onClick={() => setPublishSource('notice')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${isNoticeMode ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+              onClick={() => setPublishType('notice')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${publishType === 'notice' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
             >
               Notice Announcement
             </button>
             <button
               type="button"
-              onClick={() => setPublishSource('event')}
-              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${isEventMode ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
+              onClick={() => setPublishType('event')}
+              className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all ${publishType === 'event' ? 'bg-white dark:bg-slate-900 text-indigo-600 shadow-sm' : 'text-slate-500'}`}
             >
               Calendar Event
             </button>
           </div>
 
-          {isNoticeMode ? (
+          {publishType === 'notice' ? (
             <>
               <div className="space-y-2">
                 <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority & Category</Label>
