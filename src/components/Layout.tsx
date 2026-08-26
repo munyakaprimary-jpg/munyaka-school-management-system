@@ -41,7 +41,7 @@ import {
   UserCog,
   Keyboard,
   Target,
-  FlaskConical
+  Database
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -116,6 +116,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['super_admin', 'head_teacher'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['super_admin', 'head_teacher'] },
@@ -142,9 +143,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['super_admin', 'head_teacher'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['super_admin', 'head_teacher', 'teacher'] },
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    
-    // Science Lab
-    { icon: FlaskConical, label: 'Science Lab', path: '/science-lab', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
@@ -305,7 +303,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
               <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
             </div>
 
-            <div className="relative hidden md:block flex-1 min-w-0 max-md ml-4">
+            <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
                                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                                       <input
                                         type="text"
