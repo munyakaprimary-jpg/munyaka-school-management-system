@@ -248,9 +248,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             {!isCollapsed && <span className="truncate">Science Lab</span>}
           </Link>
 
-                  </nav>
-          
-                  {/* User Account Footer */}
+        </nav>
+
+        {/* User Account Footer */}
         <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
