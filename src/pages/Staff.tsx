@@ -23,7 +23,8 @@ import {
   Clock, 
   Plus,
   X,
-  Save
+  Save,
+  AlertCircle
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -71,7 +72,7 @@ const Staff = () => {
     const combined: StaffMember[] = [...staffDirectory];
 
     // Include pre-registered staff who are not yet in the main directory
-    preRegLedger.forEach(p => {
+    preRegLedger.forEach((p: any) => {
       if (!directoryMap.has(p.nationalId)) {
         combined.push({
           id: p.id,
