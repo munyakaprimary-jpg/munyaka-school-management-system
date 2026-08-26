@@ -4,6 +4,7 @@ import {
   Printer, Download, ShieldCheck, Phone, User, Check, AlertCircle, Sparkles, ChevronDown, FileText, Users
 } from 'lucide-react';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 interface Learner {
   id: string;
@@ -16,58 +17,7 @@ interface Learner {
   phone: string;
 }
 
-const DEFAULT_LEARNERS: Learner[] = [
-  {
-    id: '1',
-    admNo: 'MPS/2025/001',
-    name: 'Esther Njeri Mwangi',
-    grade: 'Grade 4',
-    stream: 'North',
-    gender: 'Female',
-    guardian: 'Grace Mwangi',
-    phone: '+254 712 345 678',
-  },
-  {
-    id: '2',
-    admNo: 'MPS/2025/002',
-    name: 'Felix Mutua Kioko',
-    grade: 'Grade 5',
-    stream: 'South',
-    gender: 'Male',
-    guardian: 'David Kioko',
-    phone: '+254 722 987 654',
-  },
-  {
-    id: '3',
-    admNo: 'MPS/2025/003',
-    name: 'Gloria Nekesa Wafula',
-    grade: 'Grade 3',
-    stream: 'East',
-    gender: 'Female',
-    guardian: 'Christine Wafula',
-    phone: '+254 733 456 789',
-  },
-  {
-    id: '4',
-    admNo: 'MPS/2025/004',
-    name: 'Hassan Abdi Omar',
-    grade: 'Grade 6',
-    stream: 'West',
-    gender: 'Male',
-    guardian: 'Fatuma Omar',
-    phone: '+254 701 112 233',
-  },
-  {
-    id: '5',
-    admNo: 'MPS/2025/005',
-    name: 'Irene Chebet Langat',
-    grade: 'Grade 4',
-    stream: 'North',
-    gender: 'Female',
-    guardian: 'Kiprono Langat',
-    phone: '+254 755 667 889',
-  },
-];
+const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
 
 // Keys for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';

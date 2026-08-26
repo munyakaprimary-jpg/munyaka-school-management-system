@@ -35,6 +35,7 @@ import {
 import { STAFF, StaffMember } from '@/lib/mock-data';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { showSuccess } from '@/utils/toast';
 
 const Staff = () => {
@@ -53,13 +54,13 @@ const Staff = () => {
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return STAFF;
+    return (INITIAL_SEED_DATA.staff as unknown as StaffMember[]) || STAFF;
   }, []);
 
   // Load pre-registered ledger to unify accounts
   const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
-    return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
+    return saved ? JSON.parse(saved) : (INITIAL_SEED_DATA.staffPrereg as unknown as PreRegisteredStaff[] || INITIAL_PRE_REGISTERED_STAFF);
   }, []);
 
   // Unified Staff Master List (Combines Directory & Pre-Registered)
