@@ -127,9 +127,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
     // Staff Attendance
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['super_admin', 'head_teacher'] },
-    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['super_admin', 'head_teacher'] },
+    { icon: Fingerprint, label: 'Staff Attendance', path: '/staff/attendance', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'],
+      subItems: [
+        { label: 'Check In/Out', path: '/staff/check-in' },
+        { label: 'Monitor', path: '/staff/attendance-monitor' }
+      ]
+    },
     
     // Academic Assessment & Analysis
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['super_admin', 'head_teacher', 'teacher'] },
