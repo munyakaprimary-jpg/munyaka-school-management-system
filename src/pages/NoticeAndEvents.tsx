@@ -140,10 +140,10 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
-  const [noticeCategory, setNoticeCategory] = useState<'Normal' | 'Important' | 'Urgent Alert'>('Normal');
-  const [noticeAudience, setNoticeAudience] = useState<'All' | 'Staff' | 'Parents' | 'Learners'>('All');
+  const [noticePriority, setNoticePriority] = useState<'General' | 'Urgent' | 'Academic'>('General');
+  const [noticeAudience, setNoticeAudience] = useState<'All Parents' | 'Staff' | 'Grade'>('All Parents');
   const [noticeContent, setNoticeContent] = useState('');
-  const [noticeAttachment, setNoticeAttachment] = useState('');
+  const [noticeExpiryDate, setNoticeExpiryDate] = useState('');
 
   // Event Form State
   const [eventTitle, setEventTitle] = useState('');
@@ -166,8 +166,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     if (!noticeTitle.trim() || !noticeContent.trim()) return;
     
     let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
-    if (noticeCategory === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
-    if (noticeCategory === 'Important') badgeColor = 'bg-amber-50 text-amber-600 border-amber-200';
+    if (noticePriority === 'Urgent') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
+    if (noticePriority === 'Academic') badgeColor = 'bg-blue-50 text-blue-600 border-blue-200';
 
     const newNotice: Notice = {
       id: Date.now().toString(),
@@ -175,19 +175,17 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       content: noticeContent.trim(),
       description: noticeContent.trim().substring(0, 120) + '...',
       date: 'Just now',
-      category: noticeCategory,
-      pinned: noticeCategory === 'Urgent Alert',
-      attachmentName: noticeAttachment ? noticeAttachment.split(/(\\|\/)/g).pop() : undefined,
-      attachmentUrl: noticeAttachment ? '#' : undefined,
+      category: noticePriority,
+      pinned: noticePriority === 'Urgent',
       color: badgeColor
     };
 
     setNotices([newNotice, ...notices]);
     setNoticeTitle('');
     setNoticeContent('');
-    setNoticeAttachment('');
-    setNoticeCategory('Normal');
-    setNoticeAudience('All');
+    setNoticePriority('General');
+    setNoticeAudience('All Parents');
+    setNoticeExpiryDate('');
     setIsNoticeModalOpen(false);
     showSuccess("New Notice published successfully!");
   };
@@ -454,7 +452,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
       </div>
 
-      {/* Publish Notice Modal */}
+      {/* Publish Notice Modal - Notice-specific form */}
       <Modal 
         isOpen={isNoticeModalOpen} 
         onClose={() => setIsNoticeModalOpen(false)} 
@@ -486,15 +484,15 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority / Urgency Level</Label>
-              <Select value={noticeCategory} onValueChange={(v: any) => setNoticeCategory(v)}>
+              <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Priority & Category</Label>
+              <Select value={noticePriority} onValueChange={(v: any) => setNoticePriority(v)}>
                 <SelectTrigger className="rounded-xl h-11 border-slate-200 dark:border-slate-700">
                   <SelectValue placeholder="Select Priority" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Normal">Normal</SelectItem>
-                  <SelectItem value="Important">Important</SelectItem>
-                  <SelectItem value="Urgent Alert">Urgent Alert</SelectItem>
+                  <SelectItem value="General">General</SelectItem>
+                  <SelectItem value="Urgent">Urgent</SelectItem>
+                  <SelectItem value="Academic">Academic</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -506,17 +504,16 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                   <SelectValue placeholder="Select Audience" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="All Parents">All Parents</SelectItem>
                   <SelectItem value="Staff">Staff</SelectItem>
-                  <SelectItem value="Parents">Parents</SelectItem>
-                  <SelectItem value="Learners">Learners</SelectItem>
+                  <SelectItem value="Grade">Grade</SelectItem>
                 </SelectContent>
               </Select>
             </div>
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Description / Body Content</Label>
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Detailed Description</Label>
             <Textarea 
               value={noticeContent} 
               onChange={(e) => setNoticeContent(e.target.value)} 
@@ -526,17 +523,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attachment (Optional PDF / Document)</Label>
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Expiry Date (Optional)</Label>
             <Input 
-              type="file" 
-              onChange={(e) => setNoticeAttachment(e.target.value)}
-              className="rounded-xl border-slate-200 dark:border-slate-700 cursor-pointer"
+              type="date" 
+              value={noticeExpiryDate} 
+              onChange={(e) => setNoticeExpiryDate(e.target.value)} 
+              className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
             />
           </div>
         </form>
       </Modal>
 
-      {/* Add Event Modal */}
+      {/* Add Event Modal - Calendar-specific form */}
       <Modal 
         isOpen={isEventModalOpen} 
         onClose={() => setIsEventModalOpen(false)} 
