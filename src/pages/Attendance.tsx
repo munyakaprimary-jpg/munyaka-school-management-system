@@ -46,7 +46,10 @@ const Attendance = () => {
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [availableStreams, setAvailableStreams] = useState<string[]>(['All Streams']);
-  const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>('morning');
+  const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>(() => {
+    const hour = new Date().getHours();
+    return hour >= 12 ? 'afternoon' : 'morning';
+  });
   const [registerLocked, setRegisterLocked] = useState(false);
 
   const { 
