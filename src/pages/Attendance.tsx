@@ -9,6 +9,7 @@ import { useAttendance } from '@/hooks/useAttendance';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import AttendanceTable from '@/components/attendance/AttendanceTable';
 
 const CLASS_OPTIONS = [
   { value: 'PP1', label: 'PP1' },
@@ -41,12 +42,20 @@ const getStreamsForClass = (selectedClass: string): string[] => {
 const Attendance = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [selectedClass, setSelectedClass] = useState('PP2');
+  const [selectedClass, setSelectedClass] = useState('Grade 6');
   const [selectedStream, setSelectedStream] = useState('all');
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [availableStreams, setAvailableStreams] = useState<string[]>(['All Streams']);
   const [activeSession, setActiveSession] = useState<'morning' | 'afternoon'>('morning');
   const [registerLocked, setRegisterLocked] = useState(false);
+
+  const { 
+    students, 
+    markedStudents, 
+    markAttendance,
+    availableStreams: hookAvailableStreams,
+    isRegisterSubmitted
+  } = useAttendance();
 
   // Update streams when class changes
   useEffect(() => {
@@ -129,6 +138,15 @@ const Attendance = () => {
   const currentHour = new Date().getHours();
   const showMorningOnly = isToday && currentHour < 12;
   const showAfternoonOnly = isToday && currentHour >= 12;
+
+  // Transform students for AttendanceTable component
+  const tableStudents = useMemo(() => {
+    return students.map(s => ({
+      id: s.id,
+      name: s.name,
+      assessment: s.assessment
+    }));
+  }, [students]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 table-scroll-viewport">
@@ -225,11 +243,15 @@ const Attendance = () => {
         </div>
       </div>
 
-      <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-        <p className="text-slate-400 font-bold">Attendance table will be rendered here based on active session.</p>
-      </div>
+      {/* Attendance Table - Now properly rendered! */}
+      <AttendanceTable
+        students={tableStudents}
+        markedStudents={markedStudents}
+        onMarkAttendance={markAttendance}
+        isEditing={isEditing}
+      />
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-3">
         {isEditing && (
           <Button 
             size="lg" 

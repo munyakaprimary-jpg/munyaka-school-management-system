@@ -1,11 +1,16 @@
 import { sortGrades, formatGradeName } from '@/utils/gradeSort';
 
 export const STUDENTS = [
-  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "4", stream: "Blue", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Football team captain, Science fair winner" },
-  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "4", stream: "Blue", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com", health: "Asthma", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Choir member, Debate team" },
-  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "4", stream: "Green", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com", health: "None", needs: "Vision Support", feeBalance: 5000, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Drama club, Chess team" },
-  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "5", stream: "Alpha", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Athletics, Student council" },
-  { id: "5", name: "David Mutua", assessment: "A827365", grade: "5", stream: "Alpha", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com", health: "Allergy: Peanuts", needs: "None", feeBalance: 3000, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Music, Drama club" },
+  { id: "1", name: "Brian Kiptoo", assessment: "A827361", grade: "6", stream: "Yellow", gender: "M", dob: "2014-05-12", guardian: "Samuel Kiptoo", phone: "+254 712 000 111", email: "sam.kiptoo@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Football team captain, Science fair winner" },
+  { id: "2", name: "Mary Atieno", assessment: "A827362", grade: "6", stream: "Yellow", gender: "F", dob: "2014-08-20", guardian: "Grace Atieno", phone: "+254 712 000 222", email: "g.atieno@email.com", health: "Asthma", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Choir member, Debate team" },
+  { id: "3", name: "Emmanuel Maina", assessment: "A827363", grade: "6", stream: "Yellow", gender: "M", dob: "2014-03-15", guardian: "David Maina", phone: "+254 712 000 333", email: "d.maina@email.com", health: "None", needs: "Vision Support", feeBalance: 5000, status: "Active", dateOfAdmission: "2020-01-15", coCurricularActivities: "Drama club, Chess team" },
+  { id: "4", name: "Sheila Chepkoech", assessment: "A827364", grade: "6", stream: "Yellow", gender: "F", dob: "2013-11-05", guardian: "Rose Chep", phone: "+254 712 000 444", email: "rose.chep@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Athletics, Student council" },
+  { id: "5", name: "David Mutua", assessment: "A827365", grade: "6", stream: "Yellow", gender: "M", dob: "2013-09-28", guardian: "John Mutua", phone: "+254 712 000 555", email: "j.mutua@email.com", health: "Allergy: Peanuts", needs: "None", feeBalance: 3000, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Music, Drama club" },
+  { id: "6", name: "Grace Wanjiku", assessment: "A827366", grade: "6", stream: "Yellow", gender: "F", dob: "2013-07-22", guardian: "Peter Wanjiku", phone: "+254 712 000 666", email: "p.wanjiku@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Art club" },
+  { id: "7", name: "Joseph Kariuki", assessment: "A827367", grade: "6", stream: "Yellow", gender: "M", dob: "2013-04-18", guardian: "James Kariuki", phone: "+254 712 000 777", email: "j.kariuki@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Scouting" },
+  { id: "8", name: "Faith Njeri", assessment: "A827368", grade: "6", stream: "Yellow", gender: "F", dob: "2013-02-10", guardian: "Esther Njeri", phone: "+254 712 000 888", email: "e.njeri@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Music" },
+  { id: "9", name: "George Ochieng", assessment: "A827369", grade: "6", stream: "Yellow", gender: "M", dob: "2013-12-05", guardian: "Paul Ochieng", phone: "+254 712 000 999", email: "p.ochieng@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Football" },
+  { id: "10", name: "Helen Moraa", assessment: "A827370", grade: "6", stream: "Yellow", gender: "F", dob: "2013-09-30", guardian: "Rose Moraa", phone: "+254 712 000 000", email: "r.moraa@email.com", health: "None", needs: "None", feeBalance: 0, status: "Active", dateOfAdmission: "2019-01-15", coCurricularActivities: "Drama" },
 ];
 
 export interface Stream {
@@ -91,8 +96,8 @@ export const GRADES_DATA: Grade[] = sortGrades([
     name: "Grade 6",
     category: "Primary",
     streams: [
-      { id: "s6a", name: "Alpha", teacher: "Unassigned", studentsCount: 38 },
-      { id: "s6b", name: "Beta", teacher: "Unassigned", studentsCount: 35 }
+      { id: "s6a", name: "Yellow", teacher: "Unassigned", studentsCount: 38 },
+      { id: "s6b", name: "Green", teacher: "Unassigned", studentsCount: 35 }
     ]
   },
   {
@@ -205,6 +210,7 @@ export const STAFF: StaffMember[] = [
   },
   {
     id: "ST-103",
+    id: "ST-103",
     id_no: "25839102",
     tsc_no: "TSC-382910",
     name: "Peter Omondi",
@@ -252,7 +258,7 @@ export const EVENTS = [
 
 export const TIMETABLE = [
   { time: "08:00 - 08:30", mon: "Assembly", tue: "Pastoral", wed: "Assembly", thu: "Pastoral", fri: "Assembly" },
-  { time: "08:30 - 09:10", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Science", fri: "Creative Arts" },
+  { time: "08:30 - 09:10", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Kiswahili", fri: "Creative Arts" },
   { time: "09:10 - 09:50", mon: "Mathematics", tue: "English", wed: "Kiswahili", thu: "Science", fri: "Creative Arts" },
   { time: "09:50 - 10:30", mon: "English", tue: "Mathematics", wed: "Science", thu: "Kiswahili", fri: "Social Studies" },
   { time: "10:30 - 11:00", mon: "BREAK", tue: "BREAK", wed: "BREAK", thu: "BREAK", fri: "BREAK" },

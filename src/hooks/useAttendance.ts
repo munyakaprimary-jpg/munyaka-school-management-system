@@ -26,7 +26,7 @@ const SUBMISSION_STATUS_KEY = 'munyaka_attendance_submission_status';
 export const useAttendance = (selectedGradeId?: string) => {
   // Initialize filters from localStorage
   const [selectedClass, setSelectedClass] = useState(() => 
-    localStorage.getItem(SELECTED_CLASS_KEY) || 'PP2'
+    localStorage.getItem(SELECTED_CLASS_KEY) || 'Grade 6'
   );
   const [selectedStream, setSelectedStream] = useState(() => 
     localStorage.getItem(SELECTED_STREAM_KEY) || 'all'
@@ -177,15 +177,19 @@ export const useAttendance = (selectedGradeId?: string) => {
       students = STUDENTS;
     }
 
-    // Filter by class (grade)
+    // Filter by class (grade) - handle both "Grade 6" and "6" formats
     const classStudents = students.filter(s => {
       const studentGrade = s.grade || s.class || '';
-      return studentGrade === selectedClass || `Grade ${studentGrade}` === selectedClass;
+      return studentGrade === selectedClass || 
+             `Grade ${studentGrade}` === selectedClass ||
+             studentGrade === selectedClass.replace('Grade ', '');
     });
 
-    // Filter by stream
+    // Filter by stream - handle case-insensitive matching
     if (selectedStream !== 'all') {
-      return classStudents.filter(s => s.stream === selectedStream);
+      return classStudents.filter(s => 
+        s.stream?.toLowerCase() === selectedStream.toLowerCase()
+      );
     }
     
     return classStudents.map(s => ({
