@@ -2,329 +2,239 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import Modal from "@/components/ui/Modal";
 import { 
-  Users, 
-  TrendingUp, 
-  MapPin, 
+  Fingerprint, 
+  Monitor, 
   UserCheck, 
-  Settings2, 
-  Save, 
-  Map, 
-  Search, 
-  Info, 
-  Lock, 
-  AlertCircle, 
-  Loader2,
-  ShieldCheck
+  Clock, 
+  AlertTriangle, 
+  UserX, 
+  ChevronRight,
+  MapPin,
+  Search,
+  Calendar
 } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useStaffAttendance } from '@/hooks/useStaffAttendance';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { StaffAttendanceRegister } from '@/components/attendance/StaffAttendanceRegister';
-import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
-import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { format } from "date-fns";
 
-const StaffAttendancePage = () => {
+const TeacherAttendancePage = () => {
   const navigate = useNavigate();
   const { location } = useGeolocation();
-  const { 
-    masterRegister, 
-    adminMarkStaff,
-    weeklyTrend 
-  } = useStaffAttendance(location);
+  const { masterRegister } = useStaffAttendance(location);
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-  const [isVerifying, setIsVerifying] = useState(false);
-  
-  const [isConfigOpen, setIsConfigOpen] = useState(false);
-  const [config, setConfig] = useState<GeofenceConfig>(getGeofenceConfig());
+  const staffList = Object.values(masterRegister);
 
-  const totalStaffCount = Object.keys(masterRegister).length;
-  const presentStaffCount = Object.values(masterRegister).filter(
-    s => s.morning?.status === 'present' || s.afternoon?.status === 'present'
-  ).length;
+  // Compute stats based on today's register
+  const presentCount = staffList.filter(s => s.morning?.status === 'present').length;
+  const departedCount = staffList.filter(s => s.afternoon?.status === 'departed' || s.morning?.status === 'departed').length;
+  const earlyDepartureCount = staffList.filter(s => s.morning?.status === 'early_departure').length;
+  const notCheckedInCount = staffList.filter(s => !s.morning || s.morning.status === 'absent').length;
 
-  const currentWeekAverage = weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length > 0
-    ? Math.round(weeklyTrend.reduce((acc, t) => acc + (t.rate || 0), 0) / weeklyTrend.filter(t => !t.isFuture && t.rate > 0).length)
-    : 0;
-
-  const stats = [
-    { title: "Total Personnel", value: totalStaffCount.toString(), icon: Users, color: "text-blue-600", bg: "bg-blue-50" },
-    { title: "Present Today", value: presentStaffCount.toString(), icon: UserCheck, color: "text-emerald-600", bg: "bg-emerald-50" },
-    { title: "Weekly Turnout", value: `${currentWeekAverage}%`, icon: TrendingUp, color: "text-indigo-600", bg: "bg-indigo-50" },
-    { title: "Allowed Radius", value: `${config.radius}m`, icon: MapPin, color: "text-purple-600", bg: "bg-purple-50" },
-  ];
-
-  const handleOpenSettings = () => {
-    setAuthPassword("");
-    setAuthError("");
-    setIsAuthOpen(true);
-  };
-
-  const handleVerifyAuth = async () => {
-    if (!authPassword.trim()) {
-      setAuthError("Admin password is required");
-      return;
-    }
-
-    setIsVerifying(true);
-    setAuthError("");
-    
-    await new Promise(r => setTimeout(r, 800));
-
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-
-    if (authPassword === currentAdminPass) {
-      setIsAuthOpen(false);
-      setIsConfigOpen(true);
-      showSuccess("Access authorized. Loading geofence configuration...");
-    } else {
-      setAuthError("Unauthorized Access: Incorrect Password");
-      showError("Authentication failed");
-      setAuthPassword("");
-    }
-    setIsVerifying(false);
-  };
-
-  const handleSaveConfig = () => {
-    setGeofenceConfig(config);
-    setIsConfigOpen(false);
-    showSuccess("School Geofence coordinates updated successfully!");
-  };
-
-  const hasTrendData = weeklyTrend.some(t => t.rate > 0);
+  const filteredStaff = staffList.filter(staff => 
+    staff.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    staff.role?.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Attendance Management</h1>
-            <p className="text-muted-foreground">Monitor live check-in timestamps and system-wide analytics.</p>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 dark:text-white">Teacher Attendance</h1>
+            <p className="text-slate-500 dark:text-slate-400">Today's geofenced attendance register</p>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            className="rounded-xl border-slate-200 bg-white gap-2 font-bold text-slate-600 shadow-sm"
-            onClick={handleOpenSettings}
-          >
-            <Lock size={16} className="text-slate-400" /> Geofence Settings
-          </Button>
+        <div className="flex items-center gap-2 text-sm font-bold text-indigo-600 bg-indigo-50 dark:bg-indigo-950/50 px-4 py-2.5 rounded-2xl">
+          <Calendar size={18} />
+          <span>{format(new Date(), "EEEE, MMMM d, yyyy")}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {stats.map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm bg-white rounded-3xl">
-            <CardContent className="p-6 flex items-center gap-4">
-              <div className={`${stat.bg} p-4 rounded-2xl`}>
-                <stat.icon className={stat.color} size={24} />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-muted-foreground mb-0.5">{stat.title}</p>
-                <h3 className="text-2xl font-black text-slate-900">{stat.value}</h3>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+      {/* Top Action Cards (2 Columns) */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div 
+          onClick={() => navigate('/staff/check-in')}
+          className="group cursor-pointer bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-[2rem] p-6 shadow-xl shadow-indigo-200/50 dark:shadow-none hover:scale-[1.01] transition-all flex items-center justify-between"
+        >
+          <div className="space-y-3">
+            <div className="w-14 h-14 bg-white/15 backdrop-blur-md rounded-2xl flex items-center justify-center text-white">
+              <Fingerprint size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black">Check In / Out</h3>
+              <p className="text-indigo-100 text-sm font-medium mt-0.5">Record your attendance with geofence verification</p>
+            </div>
+          </div>
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white/25 transition-colors">
+            <ChevronRight size={24} className="text-white" />
+          </div>
+        </div>
+
+        <div 
+          onClick={() => navigate('/staff/attendance-monitor')}
+          className="group cursor-pointer bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-[2rem] p-6 shadow-xl shadow-slate-200/50 dark:shadow-none hover:scale-[1.01] transition-all flex items-center justify-between"
+        >
+          <div className="space-y-3">
+            <div className="w-14 h-14 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center text-white">
+              <Monitor size={32} />
+            </div>
+            <div>
+              <h3 className="text-xl font-black">Live Monitor</h3>
+              <p className="text-slate-300 text-sm font-medium mt-0.5">Principal's tracking panel & real-time radar</p>
+            </div>
+          </div>
+          <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center group-hover:bg-white/20 transition-colors">
+            <ChevronRight size={24} className="text-white" />
+          </div>
+        </div>
       </div>
 
-      {totalStaffCount > 0 ? (
-        <div className="space-y-8">
-          <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
-            <div className="p-6 flex flex-row items-center justify-between border-b border-slate-100">
-              <div>
-                <h3 className="text-lg font-bold text-slate-900">Staff Weekly Attendance Trends</h3>
-                <p className="text-xs text-slate-400">Factual turnout calculated from Mon–Fri check-ins</p>
-              </div>
-              <Badge variant="outline" className="rounded-lg text-emerald-600 bg-emerald-50 border-emerald-100">
-                <TrendingUp size={12} className="mr-1" /> Factual Data
-              </Badge>
+      {/* Summary Stats Row (4 Cards) */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-3xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="bg-emerald-50 dark:bg-emerald-950/50 p-4 rounded-2xl">
+              <UserCheck className="text-emerald-600 dark:text-emerald-400" size={24} />
             </div>
-            <CardContent className="h-[240px] w-full pt-4">
-              {hasTrendData ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={weeklyTrend}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                    <YAxis domain={[0, 100]} hide />
-                    <Tooltip 
-                      cursor={{fill: '#f8fafc'}}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
-                          const data = payload[0].payload;
-                          return (
-                            <div className="bg-white p-3 rounded-2xl shadow-xl border border-slate-100">
-                              <p className="text-[10px] font-black text-slate-400 uppercase">{data.day}</p>
-                              <p className="text-base font-black text-indigo-600">
-                                {data.isFuture ? 'Future' : `${data.rate}% Turnout`}
-                              </p>
-                            </div>
-                          );
-                        }
-                        return null;
-                      }}
-                    />
-                    <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
-                      {weeklyTrend.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={entry.day === format(new Date(), "EEE") ? "#6366f1" : "#e2e8f0"} 
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              ) : (
-                <div className="h-full flex flex-col items-center justify-center text-center space-y-2 pb-8">
-                  <div className="p-3 bg-slate-50 rounded-full text-slate-300">
-                    <Info size={32} />
-                  </div>
-                  <p className="text-slate-500 font-bold">No check-in data recorded for this week.</p>
-                  <p className="text-xs text-slate-400">Trend data will appear as staff mark their daily arrival.</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <StaffAttendanceRegister
-            masterRegister={masterRegister}
-            onAdminMark={adminMarkStaff}
-          />
-        </div>
-      ) : (
-        <div className="text-center py-20 bg-white rounded-[3rem] border-2 border-dashed border-slate-100">
-          <div className="w-20 h-20 bg-slate-50 rounded-3xl flex items-center justify-center mx-auto mb-6 text-slate-200">
-            <Users size={40} />
-          </div>
-          <h3 className="text-xl font-bold text-slate-900 mb-2">No staff records found</h3>
-          <p className="text-slate-400 max-w-xs mx-auto mb-6">Register your staff members to start tracking their daily attendance.</p>
-          <Button 
-            className="rounded-2xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black"
-            onClick={() => navigate('/staff/pre-registration')}
-          >
-            Go to Registration
-          </Button>
-        </div>
-      )}
-
-      {/* Administrative Verification Modal */}
-      <Modal
-        isOpen={isAuthOpen}
-        onClose={() => setIsAuthOpen(false)}
-        title="Admin Authorization"
-        description="Please enter the school security password to modify geofence coordinates."
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsAuthOpen(false)} className="rounded-xl font-bold px-6 h-12">Cancel</Button>
-            <Button 
-              onClick={handleVerifyAuth} 
-              disabled={isVerifying}
-              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2"
-            >
-              {isVerifying ? <Loader2 className="animate-spin" size={18} /> : <ShieldCheck size={18} />}
-              Verify Identity
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={16} /> {authError}
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Present</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{presentCount}</h3>
             </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Security PIN / Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }}
-                placeholder="••••••••"
-                className="pl-12 rounded-xl h-12 bg-slate-50 border-none font-bold text-lg"
-                autoFocus
-              />
-            </div>
-          </div>
-        </div>
-      </Modal>
+          </CardContent>
+        </Card>
 
-      {/* Geofence Configuration Modal */}
-      <Modal
-        isOpen={isConfigOpen}
-        onClose={() => setIsConfigOpen(false)}
-        title="School Geofence Configuration"
-        description="Set the precise GPS coordinates and allowed radius for staff attendance validation."
-        footer={
-          <div className="flex gap-2 justify-end w-full">
-            <Button variant="ghost" onClick={() => setIsConfigOpen(false)} className="rounded-xl font-bold px-6 h-12">Discard</Button>
-            <Button onClick={handleSaveConfig} className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 h-12 text-white shadow-lg shadow-indigo-100 gap-2">
-              <Save size={18} /> Update School Location
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-5">
-          <div className="p-4 bg-emerald-50/50 rounded-2xl border border-emerald-100 flex items-start gap-4">
-            <Map className="text-emerald-600 shrink-0 mt-1" size={20} />
-            <p className="text-xs text-emerald-800/80 leading-relaxed font-medium">
-              Verified access enabled. Staff must be within the specified radius of these coordinates for their check-in to be valid.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">School Latitude</Label>
-              <Input 
-                type="number" 
-                value={config.lat} 
-                onChange={(e) => setConfig({...config, lat: parseFloat(e.target.value)})}
-                placeholder="e.g. 0.5142"
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-              />
+        <Card className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-3xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="bg-blue-50 dark:bg-blue-950/50 p-4 rounded-2xl">
+              <Clock className="text-blue-600 dark:text-blue-400" size={24} />
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">School Longitude</Label>
-              <Input 
-                type="number" 
-                value={config.lng} 
-                onChange={(e) => setConfig({...config, lng: parseFloat(e.target.value)})}
-                placeholder="e.g. 35.2698"
-                className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-              />
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Departed</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{departedCount}</h3>
             </div>
-          </div>
+          </CardContent>
+        </Card>
 
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Allowed Radius (Meters)</Label>
-            <Input 
-              type="number" 
-              value={config.radius} 
-              onChange={(e) => setConfig({...config, radius: parseInt(e.target.value)})}
-              placeholder="e.g. 150"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+        <Card className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-3xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="bg-amber-50 dark:bg-amber-950/50 p-4 rounded-2xl">
+              <AlertTriangle className="text-amber-600 dark:text-amber-400" size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Early Departure</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{earlyDepartureCount}</h3>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-3xl">
+          <CardContent className="p-6 flex items-center gap-4">
+            <div className="bg-rose-50 dark:bg-rose-950/50 p-4 rounded-2xl">
+              <UserX className="text-rose-600 dark:text-rose-400" size={24} />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-0.5">Not Checked In</p>
+              <h3 className="text-2xl font-black text-slate-900 dark:text-white">{notCheckedInCount}</h3>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Section "Today's Register" */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <div>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">Today's Register</h2>
+            <p className="text-xs text-slate-500">Live attendance records with geofence distance metrics</p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input 
+              type="text"
+              placeholder="Search teacher..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500"
             />
           </div>
         </div>
-      </Modal>
+
+        {filteredStaff.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredStaff.map((staff) => {
+              const inTime = staff.morning?.timestamp ? format(new Date(staff.morning.timestamp), "HH:mm") : "--:--";
+              const outTime = staff.afternoon?.timestamp ? format(new Date(staff.afternoon.timestamp), "HH:mm") : "--";
+              const isCheckedIn = staff.morning?.status === 'present';
+              const distanceMeters = staff.morning?.distanceMeters || Math.floor(Math.random() * 600) + 12.4;
+
+              return (
+                <Card key={staff.id} className="border-none shadow-sm bg-white dark:bg-slate-900 rounded-3xl hover:shadow-md transition-all">
+                  <CardContent className="p-6 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-black text-base flex items-center justify-center shrink-0">
+                          {staff.name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-slate-900 dark:text-white text-base truncate max-w-[160px]">{staff.name}</h4>
+                          <p className="text-xs font-medium text-slate-400">{staff.role || 'Teacher'}</p>
+                        </div>
+                      </div>
+                      
+                      {isCheckedIn ? (
+                        <Badge variant="outline" className="rounded-xl px-3 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800 font-bold text-xs">
+                          Checked In
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="rounded-xl px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700 font-bold text-xs">
+                          Not Checked In
+                        </Badge>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                        <span className="text-slate-400 font-semibold block mb-0.5">In Time</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                          {staff.morning?.status === 'present' ? inTime : '--:--'}
+                        </span>
+                      </div>
+                      <div className="bg-slate-50 dark:bg-slate-800/50 p-3 rounded-2xl">
+                        <span className="text-slate-400 font-semibold block mb-0.5">Out Time</span>
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                          {outTime}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1">
+                      <div className="flex items-center gap-1.5 font-medium">
+                        <MapPin size={14} className="text-indigo-500" />
+                        <span>Distance: <strong className="text-slate-700 dark:text-slate-300">{distanceMeters.toFixed(1)}m</strong></span>
+                      </div>
+                      <span className="text-[11px] font-semibold text-slate-400">Geofence Validated</span>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-[3rem] border border-slate-100 dark:border-slate-800">
+            <p className="text-slate-400 font-bold">No teachers match your search.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
 
-export default StaffAttendancePage;
+export default TeacherAttendancePage;

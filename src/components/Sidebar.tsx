@@ -45,7 +45,8 @@ import {
   Keyboard,
   Target,
   Database,
-  FlaskConical
+  FlaskConical,
+  Fingerprint
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -226,26 +227,54 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List - maps over filteredMenu (derived from menuItems above) */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {filteredMenu.map((item) => {
-            const isActive = location.pathname === item.path;
+          {filteredMenu.map((item: any) => {
+            const isActive = location.pathname === item.path || (item.subItems && item.subItems.some((sub: any) => location.pathname === sub.path));
+            const hasSubItems = item.subItems && item.subItems.length > 0;
+            
             return (
-              <Link 
-                key={item.path} 
-                to={item.path}
-                onClick={() => setIsOpen(false)}
-                className={cn(
-                  "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                  isActive 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" 
-                    : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+              <div key={item.path} className="space-y-1">
+                <Link
+                  to={item.path}
+                  onClick={() => setIsOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
+                    isActive
+                      ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
+                      : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
+                  )}
+                >
+                  <item.icon size={20} className={cn(
+                    "shrink-0",
+                    isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
+                  )} />
+                  {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
+                </Link>
+
+                {/* Sub-menu items */}
+                {!isCollapsed && hasSubItems && (
+                  <div className="pl-9 pr-2 space-y-1 py-1">
+                    {item.subItems.map((sub: any) => {
+                      const isSubActive = location.pathname === sub.path;
+                      return (
+                        <Link
+                          key={sub.path}
+                          to={sub.path}
+                          onClick={() => setIsOpen(false)}
+                          className={cn(
+                            "flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors",
+                            isSubActive
+                              ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold"
+                              : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"
+                          )}
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
+                          <span className="truncate">{sub.label}</span>
+                        </Link>
+                      );
+                    })}
+                  </div>
                 )}
-              >
-                <item.icon size={20} className={cn(
-                  "shrink-0",
-                  isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400"
-                )} />
-                {!isCollapsed && <span className="truncate">{item.label}</span>}
-              </Link>
+              </div>
             );
           })}
 
