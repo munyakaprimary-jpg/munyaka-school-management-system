@@ -457,48 +457,68 @@ const Staff = () => {
                 </div>
               )}
 
-              {/* 1. Role / Designation - Full width at the top */}
+              {/* 1. Full Name - top text input */}
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation</Label>
-                <Input 
-                  value={formData.role} 
-                  onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                  placeholder="e.g. TEACHER, ADMINISTRATOR" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">FULL NAME</Label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  placeholder="e.g. John Doe"
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
 
-              {/* 2. Phone & Email - 2-column grid directly below Role/Designation */}
+              {/* 2. Role / Designation - dynamic select dropdown from localStorage */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">ROLE / DESIGNATION</Label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  className="w-full rounded-xl h-12 bg-slate-50 border-none font-bold px-3 text-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-100 cursor-pointer"
+                >
+                  <option value="">-- Select Role --</option>
+                  {availableRoles.map(role => (
+                    <option key={role.id} value={role.label}>
+                      {role.label}
+                    </option>
+                  ))}
+                  {formData.role && !availableRoles.some(r => r.label === formData.role) && (
+                    <option value={formData.role}>{formData.role}</option>
+                  )}
+                </select>
+              </div>
+
+              {/* 3. Phone & Email - 2-column grid */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
-                  <Input 
-                    value={formData.phone} 
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                    placeholder="+254..." 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+254..."
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
-                  <Input 
+                  <Input
                     type="email"
-                    value={formData.email} 
-                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                    placeholder="email@school.ac.ke" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="email@school.ac.ke"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
                 </div>
               </div>
 
-              {/* 3. TSC Number (Optional) - Full width directly below Phone/Email */}
+              {/* 4. TSC Number (Optional) - Full width */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-                <Input 
-                  value={formData.tsc_no} 
-                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})} 
-                  placeholder="e.g. TSC-482910" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                <Input
+                  value={formData.tsc_no}
+                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})}
+                  placeholder="e.g. TSC-482910"
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
 
