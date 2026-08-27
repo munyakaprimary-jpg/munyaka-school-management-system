@@ -11,6 +11,9 @@ export interface Notice {
   attachmentName?: string;
   attachmentUrl?: string;
   pinned?: boolean;
+  // ID of the user who created the notice. Used for permission checks
+  // (admins or the original author can delete a notice).
+  createdBy?: string;
 }
 
 export interface SchoolEvent {

@@ -9,15 +9,15 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/Select";
 import Modal from '@/components/ui/Modal';
-import { 
-  Bell, 
-  Megaphone, 
-  Calendar, 
-  Clock, 
-  MapPin, 
-  Pin, 
-  Plus, 
-  Send, 
+import {
+  Bell,
+  Megaphone,
+  Calendar,
+  Clock,
+  MapPin,
+  Pin,
+  Plus,
+  Send,
   Paperclip,
   FileText,
   UploadCloud,
@@ -28,11 +28,30 @@ import {
   ExternalLink,
   Flame,
   CheckCircle2,
-  CalendarDays
+  CalendarDays,
+  MoreVertical,
+  Trash2
 } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { showSuccess } from '@/utils/toast';
 import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
+import { useAuth } from '@/context/AuthContext';
 
 // Generate mock blob URLs at module load time so seed attachments are genuinely downloadable
 const createMockPdfBlob = (filename: string, content: string) => {
@@ -62,7 +81,8 @@ const INITIAL_NOTICES: Notice[] = [
     pinned: true,
     attachmentName: MOCK_ATTACHMENTS.feeGuidelines.name,
     attachmentUrl: MOCK_ATTACHMENTS.feeGuidelines.url,
-    color: 'bg-rose-50 text-rose-600 border-rose-200'
+    color: 'bg-rose-50 text-rose-600 border-rose-200',
+    createdBy: 'admin-001'
   },
   {
     id: 'n2',
@@ -74,7 +94,8 @@ const INITIAL_NOTICES: Notice[] = [
     pinned: false,
     attachmentName: MOCK_ATTACHMENTS.examSchedule.name,
     attachmentUrl: MOCK_ATTACHMENTS.examSchedule.url,
-    color: 'bg-indigo-50 text-indigo-600 border-indigo-200'
+    color: 'bg-indigo-50 text-indigo-600 border-indigo-200',
+    createdBy: 'admin-001'
   },
   {
     id: 'n3',
@@ -84,7 +105,8 @@ const INITIAL_NOTICES: Notice[] = [
     date: 'Oct 24, 2025',
     category: 'Finance',
     pinned: false,
-    color: 'bg-amber-50 text-amber-600 border-amber-200'
+    color: 'bg-amber-50 text-amber-600 border-amber-200',
+    createdBy: 'admin-001'
   }
 ];
 
@@ -136,6 +158,17 @@ const INITIAL_EVENTS: SchoolEvent[] = [
 ];
 
 export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defaultTab?: 'announcements' | 'events' }) {
+  const { user } = useAuth();
+
+  // Permission helper: only super admins, head teachers, and the original
+  // creator of the notice may delete it. All other roles see no action menu.
+  const canDeleteNotice = (notice: Notice): boolean => {
+    if (!user) return false;
+    const isAdmin =
+      user.role === 'super_admin' || user.role === 'head_teacher';
+    const isCreator = notice.createdBy === user.id;
+    return isAdmin || isCreator;
+  };
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
@@ -179,6 +212,15 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // Separate modal states for Notice and Event
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
+
+  // Delete confirmation state
+  const [noticePendingDelete, setNoticePendingDelete] = useState<Notice | null>(null);
+
+  const handleDeleteNotice = (notice: Notice) => {
+    setNotices(prev => prev.filter(n => n.id !== notice.id));
+    setNoticePendingDelete(null);
+    showSuccess('Notice deleted successfully');
+  };
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -255,7 +297,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       pinned: noticePriority === 'Urgent Alert',
       color: badgeColor,
       attachmentName: noticeAttachment?.name || undefined,
-      attachmentUrl
+      attachmentUrl,
+      createdBy: user?.id
     };
 
     setNotices([newNotice, ...notices]);
