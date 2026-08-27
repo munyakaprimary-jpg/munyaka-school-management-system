@@ -40,6 +40,11 @@ const GradesStreams = () => {
     localStorage.setItem('munyaka_grades', JSON.stringify(grades));
   }, [grades]);
 
+  // Broadcast changes to other tabs/pages via a custom event
+  useEffect(() => {
+    window.dispatchEvent(new Event('munyaka_grades_updated'));
+  }, [grades]);
+
   const sortedGrades = useMemo(() => {
     return [...grades].sort((a, b) => {
       const categories = { 'Pre-Primary': 1, 'Primary': 2, 'Junior School': 3 };
@@ -109,8 +114,10 @@ const GradesStreams = () => {
 
     const parentGrade = grades.find(g => g.id === selectedGradeId);
     if (parentGrade) {
+      // Case-normalize the new stream name to deduplicate (e.g. "BLUE" vs "Blue")
+      const normalizedNew = trimmedStreamName.charAt(0).toUpperCase() + trimmedStreamName.slice(1).toLowerCase();
       const streamExists = parentGrade.streams.some(
-        s => s.name.trim().toLowerCase() === trimmedStreamName.toLowerCase()
+        s => s.name.trim().toLowerCase() === normalizedNew.toLowerCase()
       );
       if (streamExists) {
         showError(`Stream "${trimmedStreamName}" already exists in ${parentGrade.name}.`);
