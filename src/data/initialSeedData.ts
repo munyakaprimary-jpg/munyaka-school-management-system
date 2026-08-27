@@ -1,6 +1,6 @@
 export const INITIAL_SEED_DATA = {
-  "version": "3.6",
-  "exportDate": "2026-08-27T11:45:00.000Z",
+  "version": "3.5",
+  "exportDate": "2026-08-26T13:37:54.683Z",
   "school": "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
   "students": [
     {
