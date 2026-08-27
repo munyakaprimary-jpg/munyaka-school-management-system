@@ -169,6 +169,12 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     const isCreator = notice.createdBy === user.id;
     return isAdmin || isCreator;
   };
+
+  // Permission helper for deleting events. Same RBAC logic as notices for consistency.
+  const canDeleteEvent = (): boolean => {
+    if (!user) return false;
+    return user.role === 'super_admin' || user.role === 'head_teacher' || user.role === 'bursar';
+  };
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
@@ -213,13 +219,25 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [isNoticeModalOpen, setIsNoticeModalOpen] = useState(false);
   const [isEventModalOpen, setIsEventModalOpen] = useState(false);
 
-  // Delete confirmation state
+  // Delete confirmation states
   const [noticePendingDelete, setNoticePendingDelete] = useState<Notice | null>(null);
+  const [eventPendingDelete, setEventPendingDelete] = useState<SchoolEvent | null>(null);
 
   const handleDeleteNotice = (notice: Notice) => {
     setNotices(prev => prev.filter(n => n.id !== notice.id));
     setNoticePendingDelete(null);
     showSuccess('Notice deleted successfully');
+  };
+
+  /**
+   * Removes the selected event from state and the localStorage 'munyaka_events_v2'
+   * database. The events counter badge updates automatically because it derives
+   * from `events.length` in the render tree.
+   */
+  const onDeleteEvent = (event: SchoolEvent) => {
+    setEvents(prev => prev.filter(e => e.id !== event.id));
+    setEventPendingDelete(null);
+    showSuccess(`Event "${event.title}" deleted successfully`);
   };
 
   // Notice Form State
@@ -636,7 +654,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Upcoming Events</h3>
               </div>
               <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full">
-                {events.length} Dates
+                {events.length} {events.length === 1 ? 'Date' : 'Dates'}
               </span>
             </div>
 
@@ -655,7 +673,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                     </div>
 
                     <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md">
                           {event.type || 'School Event'}
                         </span>
@@ -672,6 +690,33 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                         </p>
                       )}
                     </div>
+
+                    {/* Delete 3-dot menu (RBAC-gated). Works for past and upcoming events. */}
+                    {canDeleteEvent() && (
+                      <div className="shrink-0 self-start">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={`Event options for ${event.title}`}
+                              className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
+                            >
+                              <MoreVertical size={18} />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-44 rounded-xl shadow-lg">
+                            <DropdownMenuItem
+                              onClick={() => setEventPendingDelete(event)}
+                              className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/40 cursor-pointer rounded-lg"
+                            >
+                              <Trash2 size={16} className="mr-2" />
+                              Delete Event
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    )}
                   </div>
                 );
               })}
@@ -949,6 +994,30 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
             >
               <Trash2 size={16} />
               Delete Notice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Delete Event Confirmation Dialog */}
+      <AlertDialog open={!!eventPendingDelete} onOpenChange={() => setEventPendingDelete(null)}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black">Delete Event?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500">
+              This will permanently remove "<strong>{eventPendingDelete?.title}</strong>" from the school calendar. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-xl font-bold border-slate-200 dark:border-slate-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => eventPendingDelete && onDeleteEvent(eventPendingDelete)}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold gap-2 shadow-lg shadow-rose-100"
+            >
+              <Trash2 size={16} />
+              Delete Event
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
