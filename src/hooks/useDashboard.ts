@@ -17,28 +17,14 @@ export const useDashboard = () => {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to load dashboard data';
       setError(message);
-      // Set fallback to indicate offline state with safe defaults
+      // Set fallback to indicate offline/error state
       setMetrics({
         totalStudents: 0,
         totalTeachers: 0,
         todaysAttendanceRate: null,
-        attendanceTrend: [
-          { day: 'Mon', rate: 0, isFactual: false },
-          { day: 'Tue', rate: 0, isFactual: false },
-          { day: 'Wed', rate: 0, isFactual: false },
-          { day: 'Thu', rate: 0, isFactual: false },
-          { day: 'Fri', rate: 0, isFactual: false }
-        ],
+        attendanceTrend: [],
         classParticipation: [],
-        recentAlerts: [
-          {
-            id: 'fallback-1',
-            time: '—',
-            msg: 'No recent activity',
-            type: 'system',
-            color: 'bg-slate-500'
-          }
-        ],
+        recentAlerts: [],
         isLive: false,
         lastSync: format(new Date(), 'HH:mm:ss')
       });
@@ -68,3 +54,6 @@ export const useDashboard = () => {
     refresh
   };
 };
+
+// Helper for formatting time
+import { format } from 'date-fns';
