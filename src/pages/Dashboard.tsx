@@ -4,7 +4,7 @@ import { Users, UserCheck, GraduationCap, Clock, TrendingUp, User, Loader2, Acti
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { showSuccess } from '@/utils/toast';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 interface RecentAlert {
   id: string;
@@ -20,6 +20,11 @@ const Dashboard = () => {
 
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
   const [hasLiveData, setHasLiveData] = useState<boolean>(false);
+
+  // Recompute hasLiveData from hook values immediately
+  useEffect(() => {
+    setHasLiveData(totalStudents > 0 || totalTeachers > 0);
+  }, [totalStudents, totalTeachers]);
 
   // Load recent activity alerts dynamically from localStorage
   useEffect(() => {
@@ -112,7 +117,6 @@ const Dashboard = () => {
       }
 
       setRecentAlerts(alerts);
-      setHasLiveData(totalStudents > 0 || totalTeachers > 0);
     } catch (err) {
       console.error('Failed to load recent alerts:', err);
       setRecentAlerts([{
@@ -238,7 +242,7 @@ const Dashboard = () => {
         }`}>
           {isLoading ? (
             <>
-              <Loader2 className="w-2 h-2 rounded-full bg-amber-500 animate-spin" />
+              <Loader2 className="w-4 h-4 text-amber-500 animate-spin" />
               <span className="text-xs font-bold uppercase tracking-wider text-amber-700">Loading...</span>
             </>
           ) : hasLiveData ? (
@@ -334,7 +338,7 @@ const Dashboard = () => {
             <CardTitle className="text-lg">Recent Alerts</CardTitle>
             {hasLiveData && (
               <Badge variant="outline" className="rounded-lg border-emerald-100 bg-emerald-50 text-emerald-700 text-[10px] font-bold">
-                LIVE
+                LIVE FACTUAL SYNC
               </Badge>
             )}
           </CardHeader>
