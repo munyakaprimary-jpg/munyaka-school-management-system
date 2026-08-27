@@ -230,6 +230,56 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Most recent past first
   }, [events, today]);
 
+  // Helper component for rendering past events to avoid parsing issues
+  const PastEventItem = ({ event, onDeleteClick }: { event: SchoolEvent; onDeleteClick: (id: string) => void }) => {
+    const dateObj = new Date(event.date);
+    const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
+    const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
+    const formattedDate = !isNaN(dateObj.getTime()) ? format(dateObj, 'EEEE, MMM d, yyyy') : event.date;
+
+    return (
+      <div key={event.id} id={`event-${event.id}`} className="flex items-start gap-4 group">
+        {/* Date Badge - Muted for past events */}
+        <div className="w-14 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-all duration-300">
+          <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{monthStr}</span>
+          <span className="text-lg font-black text-slate-700 dark:text-slate-300">{dayStr}</span>
+        </div>
+
+        <div className="flex-1 min-w-0 space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+              {event.type || 'School Event'}
+            </span>
+            {/* Delete button for past events */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+              onClick={() => onDeleteClick(event.id.toString())}
+              title="Delete this past event record"
+            >
+              <Trash2 size={16} />
+            </Button>
+          </div>
+          <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug truncate">
+            {event.title}
+          </h4>
+          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+            <Clock size={12} className="shrink-0" /> {event.time}
+          </p>
+          {event.location && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+              <MapPin size={12} className="shrink-0" /> {event.location}
+            </p>
+          )}
+          <p className="text-[10px] text-slate-400 font-medium">
+            Completed on {formattedDate}
+          </p>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
       {/* Page Header */}
@@ -517,54 +567,13 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
             <div className="space-y-4">
               {pastEvents.length > 0 ? (
-                pastEvents.map((event) => {
-                  const dateObj = new Date(event.date);
-                  const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
-                  const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
-                  const formattedDate = !isNaN(dateObj.getTime()) ? format(dateObj, 'EEEE, MMM d, yyyy') : event.date;
-
-                  return (
-                    <div key={event.id} id={`event-${event.id}`} className="flex items-start gap-4 group">
-                      {/* Date Badge - Muted for past events */}
-                      <div className="w-14 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-all duration-300">
-                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{monthStr}</span>
-                        <span className="text-lg font-black text-slate-700 dark:text-slate-300">{dayStr}</span>
-                      </div>
-
-                      <div className="flex-1 min-w-0 space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                            {event.type || 'School Event'}
-                          </span>
-                          {/* Delete button for past events */}
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                            onClick={() => setDeleteConfirmId(event.id.toString())}
-                            title="Delete this past event record"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug truncate">
-                          {event.title}
-                        </h4>
-                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                          <Clock size={12} className="shrink-0" /> {event.time}
-                        </p>
-                        {event.location && (
-                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                            <MapPin size={12} className="shrink-0" /> {event.location}
-                          </p>
-                        )}
-                        <p className="text-[10px] text-slate-400 font-medium">
-                          Completed on {formattedDate}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                pastEvents.map((event) => (
+                  <PastEventItem 
+                    key={event.id} 
+                    event={event} 
+                    onDeleteClick={setDeleteConfirmId} 
+                  />
+                ))
               ) : (
                 <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
                   <CalendarDays size={48} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
