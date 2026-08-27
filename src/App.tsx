@@ -30,7 +30,6 @@ import Notices from "./pages/Notices";
 import Inventory from "./pages/Inventory";
 import Library from "./pages/Library";
 import Communication from "./pages/Communication";
-import SchoolCalendar from "./pages/SchoolCalendar";
 import NoticeAndEvents from "./pages/NoticeAndEvents";
 import AdminProfile from "./pages/AdminProfile";
 import GradesStreams from "./pages/GradesStreams";
@@ -86,7 +85,6 @@ const App = () => (
                 
                 <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
                 <Route path="/notices" element={<ProtectedRoute><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></ProtectedRoute>} />
-                <Route path="/calendar" element={<ProtectedRoute><Layout><NoticeAndEvents defaultTab="events" /></Layout></ProtectedRoute>} />
                 <Route path="/timetable" element={<ProtectedRoute><Layout><Timetable /></Layout></ProtectedRoute>} />
                 <Route path="/registration" element={<ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>} />
                 <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />
