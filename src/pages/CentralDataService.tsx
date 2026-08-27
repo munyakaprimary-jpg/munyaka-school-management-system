@@ -44,7 +44,7 @@ export default function CentralDataService() {
   const handleExportDatabase = () => {
     try {
       const dbBundle = {
-        version: "3.5",
+        version: "4.0",
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
         students: JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]'),
@@ -62,7 +62,26 @@ export default function CentralDataService() {
         settings: JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || '{}')
       };
 
-      const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(dbBundle, null, 2)};\n`;
+      // Serialize EVERY single key stored in localStorage into a clean key-value dictionary object
+      const allLocalStorageData: Record<string, any> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key !== 'app_seed_version') {
+          const val = localStorage.getItem(key);
+          try {
+            allLocalStorageData[key] = val ? JSON.parse(val) : val;
+          } catch {
+            allLocalStorageData[key] = val;
+          }
+        }
+      }
+
+      const fullExportObject = {
+        ...dbBundle,
+        localStorageSnapshot: allLocalStorageData
+      };
+
+      const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
       
       const blob = new Blob([jsonString], { type: 'text/typescript' });
       const url = URL.createObjectURL(blob);
