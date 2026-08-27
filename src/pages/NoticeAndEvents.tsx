@@ -287,19 +287,22 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
         </div>
 
         <div className="flex items-center gap-3">
-          <Button 
-            onClick={() => setIsNoticeModalOpen(true)}
-            className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
-          >
-            <Plus size={18} /> Publish Notice
-          </Button>
-          <Button 
-            onClick={() => setIsEventModalOpen(true)}
-            variant="outline"
-            className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
-          >
-            <CalendarDays size={18} /> Add Event
-          </Button>
+          {mobileTab === 'announcements' ? (
+            <Button
+              onClick={() => setIsNoticeModalOpen(true)}
+              className="rounded-2xl gap-2 h-12 px-6 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-200 dark:shadow-none active:scale-95 transition-transform"
+            >
+              <Plus size={18} /> Publish Notice
+            </Button>
+          ) : (
+            <Button
+              onClick={() => setIsEventModalOpen(true)}
+              variant="outline"
+              className="rounded-2xl gap-2 h-12 px-6 border-slate-200 dark:border-slate-800 font-bold hover:bg-slate-100 dark:hover:bg-slate-800 active:scale-95 transition-transform"
+            >
+              <Plus size={18} /> Add Event
+            </Button>
+          )}
         </div>
       </div>
 
