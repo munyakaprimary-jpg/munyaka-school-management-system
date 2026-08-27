@@ -34,6 +34,23 @@ import { showSuccess } from '@/utils/toast';
 import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
 
+// Generate mock blob URLs at module load time so seed attachments are genuinely downloadable
+const createMockPdfBlob = (filename: string, content: string) => {
+  const blob = new Blob([content], { type: 'application/pdf' });
+  return { name: filename, url: URL.createObjectURL(blob) };
+};
+
+const MOCK_ATTACHMENTS = {
+  feeGuidelines: createMockPdfBlob(
+    'Term3_Fee_Guidelines_2025.pdf',
+    'Term 3 Fee Guidelines\n\n1. All balances must be cleared by the end of Week 10.\n2. Payment via bank slip or M-Pesa is accepted.\n3. Contact bursar@munyakaschool.ac.ke for queries.'
+  ),
+  examSchedule: createMockPdfBlob(
+    'MidTerm_Exam_Schedule.pdf',
+    'Mid-Term Examination Schedule\n\nGrade 1-3: Mon-Thu, Week 5\nGrade 4-7: Mon-Thu, Week 5\nGrade 8-9: Fri of Week 5 + Mon-Thu, Week 6\n\nAll exams start at 8:00 AM.'
+  ),
+};
+
 const INITIAL_NOTICES: Notice[] = [
   {
     id: 'n1',
@@ -43,8 +60,8 @@ const INITIAL_NOTICES: Notice[] = [
     date: 'Today, 08:30 AM',
     category: 'Urgent',
     pinned: true,
-    attachmentName: 'Term3_Fee_Guidelines_2025.pdf',
-    attachmentUrl: '#',
+    attachmentName: MOCK_ATTACHMENTS.feeGuidelines.name,
+    attachmentUrl: MOCK_ATTACHMENTS.feeGuidelines.url,
     color: 'bg-rose-50 text-rose-600 border-rose-200'
   },
   {
@@ -55,8 +72,8 @@ const INITIAL_NOTICES: Notice[] = [
     date: 'Yesterday, 02:15 PM',
     category: 'General',
     pinned: false,
-    attachmentName: 'MidTerm_Exam_Schedule.pdf',
-    attachmentUrl: '#',
+    attachmentName: MOCK_ATTACHMENTS.examSchedule.name,
+    attachmentUrl: MOCK_ATTACHMENTS.examSchedule.url,
     color: 'bg-indigo-50 text-indigo-600 border-indigo-200'
   },
   {
@@ -70,6 +87,14 @@ const INITIAL_NOTICES: Notice[] = [
     color: 'bg-amber-50 text-amber-600 border-amber-200'
   }
 ];
+
+// Regenerates a valid blob: URL for a seed attachment so it survives page reloads.
+// This creates a tiny placeholder file whose name reflects the original.
+function regenerateAttachmentUrl(filename: string): string {
+  const content = `This is a placeholder file for "${filename}" — a real file would be stored on the server.`;
+  const blob = new Blob([content], { type: 'application/octet-stream' });
+  return URL.createObjectURL(blob);
+}
 
 const INITIAL_EVENTS: SchoolEvent[] = [
   {
@@ -115,7 +140,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
       const saved = localStorage.getItem('munyaka_notices_v2');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed: Notice[] = JSON.parse(saved) as Notice[];
+        // Refresh any dead blob: URLs from seed attachments so downloads keep working
+        // across page reloads (blob URLs are session-scoped and don't survive).
+        return parsed.map(n => {
+          if (!n.attachmentName) return n;
+          const urlIsDead = !n.attachmentUrl || n.attachmentUrl === '#' || n.attachmentUrl.startsWith('blob:');
+          if (!urlIsDead) return n;
+          const regenerated = regenerateAttachmentUrl(n.attachmentName);
+          return { ...n, attachmentUrl: regenerated };
+        });
+      }
     } catch (e) {
       console.error(e);
     }
@@ -154,6 +190,16 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
+  // Read a File into a base64 data URL so it can be persisted to localStorage
+  // and remain downloadable after a page reload.
+  const readFileAsDataUrl = (file: File): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+
   // Event Form State
   const [eventTitle, setEventTitle] = useState('');
   const [eventDate, setEventDate] = useState('');
@@ -180,13 +226,24 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
   }, [events]);
 
-  const handlePublishNotice = (e: React.FormEvent) => {
+  const handlePublishNotice = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeTitle.trim() || !noticeContent.trim()) return;
     
     let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
     if (noticePriority === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
     if (noticePriority === 'Important') badgeColor = 'bg-amber-50 text-amber-600 border-amber-200';
+
+    // For uploaded files, read as a data URL so the file remains downloadable
+    // across page reloads (data URLs are persisted in localStorage).
+    let attachmentUrl: string | undefined;
+    if (noticeAttachment) {
+      try {
+        attachmentUrl = await readFileAsDataUrl(noticeAttachment);
+      } catch {
+        attachmentUrl = URL.createObjectURL(noticeAttachment);
+      }
+    }
 
     const newNotice: Notice = {
       id: Date.now().toString(),
@@ -198,7 +255,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       pinned: noticePriority === 'Urgent Alert',
       color: badgeColor,
       attachmentName: noticeAttachment?.name || undefined,
-      attachmentUrl: noticeAttachment ? URL.createObjectURL(noticeAttachment) : undefined
+      attachmentUrl
     };
 
     setNotices([newNotice, ...notices]);
@@ -234,6 +291,28 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     setEventType('Academic');
     setIsEventModalOpen(false);
     showSuccess("New Event added to School Calendar!");
+  };
+
+  // Trigger an actual file download for a notice's attachment.
+  // Works for both blob: URLs (user uploads, mock seeds) and http(s) URLs.
+  const handleAttachmentDownload = (notice: Notice) => {
+    if (!notice.attachmentUrl) return;
+    try {
+      const link = document.createElement('a');
+      link.href = notice.attachmentUrl;
+      // The `download` attribute prompts the browser to save rather than navigate.
+      // For blob: URLs the filename is respected; for cross-origin URLs the browser
+      // falls back to opening the URL in a new tab.
+      link.download = notice.attachmentName || 'attachment';
+      link.rel = 'noopener noreferrer';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      showSuccess(`Downloading ${notice.attachmentName}`);
+    } catch (err) {
+      // Fallback: open in a new tab if the programmatic click fails
+      window.open(notice.attachmentUrl, '_blank', 'noopener,noreferrer');
+    }
   };
 
   // Separate banner states for each tab
@@ -455,15 +534,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
                       {notice.attachmentName && (
                         <div className="pt-2">
-                          <a 
-                            href={notice.attachmentUrl || '#'} 
-                            onClick={(e) => { e.preventDefault(); showSuccess(`Downloading ${notice.attachmentName}`); }}
-                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 transition-colors"
+                          <button
+                            type="button"
+                            onClick={() => handleAttachmentDownload(notice)}
+                            data-testid={`notice-attachment-${notice.id}`}
+                            aria-label={`Download ${notice.attachmentName}`}
+                            title={`Download ${notice.attachmentName}`}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors active:scale-[0.98]"
                           >
                             <Paperclip size={14} />
                             <span>{notice.attachmentName}</span>
                             <ExternalLink size={12} className="ml-1 text-slate-400" />
-                          </a>
+                          </button>
                         </div>
                       )}
                     </div>
