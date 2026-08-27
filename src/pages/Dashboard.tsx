@@ -103,6 +103,8 @@ const Dashboard = () => {
     return metrics.recentAlerts;
   }, [metrics?.recentAlerts]);
 
+  const hasFactualData = metrics?.attendanceTrend?.some(d => d.isFactual) ?? false;
+
   const renderStatCard = ({ title, value, icon: Icon, color, bg, loading }: typeof stats[0]) => {
     if (loading) {
       return <MetricCardSkeleton />;
@@ -216,13 +218,21 @@ const Dashboard = () => {
             <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
             <Badge variant="outline" className={cn(
               "rounded-lg",
-              metrics?.attendanceTrend?.some(d => d.isFactual) 
+              hasFactualData 
                 ? "text-emerald-600 bg-emerald-50 border-emerald-100" 
                 : "text-slate-500 border-slate-200"
             )}>
-              {metrics?.attendanceTrend?.some(d => d.isFactual) 
-                ? <TrendingUp size={12} className="mr-1" /> Real-time Data 
-                : <TrendingUp size={12} className="mr-1" /> Awaiting Data}
+              {hasFactualData 
+                ? (
+                  <>
+                    <TrendingUp size={12} className="mr-1" /> Real-time Data
+                  </>
+                ) 
+                : (
+                  <>
+                    <TrendingUp size={12} className="mr-1" /> Awaiting Data
+                  </>
+                )}
             </Badge>
           </CardHeader>
           <CardContent className="h-[300px] w-full pt-4">
