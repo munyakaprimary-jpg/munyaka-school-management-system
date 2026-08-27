@@ -115,14 +115,12 @@ const Staff = () => {
   const preRegCount = useMemo(() => masterStaffList.filter(s => s.status === 'Pre-Registered').length, [masterStaffList]);
 
   // Form state for new/edit staff
+  // Department, Staff ID, and National ID have been intentionally removed from formData.
   const [formData, setFormData] = useState({
     name: '',
     role: '',
-    department: '',
     phone: '',
     email: '',
-    id: '',
-    id_no: '',
     tsc_no: ''
   });
   const [formError, setFormError] = useState('');
@@ -133,11 +131,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
     setFormError('');
@@ -150,11 +145,8 @@ const Staff = () => {
     setFormData({
       name: staff.name,
       role: staff.role,
-      department: staff.department,
       phone: staff.phone,
       email: staff.email,
-      id: staff.id,
-      id_no: staff.id_no,
       tsc_no: staff.tsc_no || ''
     });
     setFormError('');
@@ -162,25 +154,27 @@ const Staff = () => {
   };
 
   const handleSaveStaff = () => {
-    if (!formData.name.trim() || !formData.id_no.trim()) {
-      setFormError('Please fill in all required fields (Full Name, National ID).');
+    // Validation: Department, Staff ID, and National ID are no longer required.
+    if (!formData.name.trim()) {
+      setFormError('Please enter the staff Full Name.');
       return;
     }
 
     if (modalMode === 'add') {
-      // Add new staff to directory
+      // Add new staff to directory. We do NOT generate or save Department, Staff ID, or National ID.
       const newStaff: StaffMember = {
-        id: formData.id || `ST-${Date.now()}`,
-        id_no: formData.id_no,
-        tsc_no: formData.tsc_no,
+        id: `ST-${Date.now()}`,
+        // Staff ID auto-generated; Department and National ID intentionally omitted.
         name: formData.name,
         role: formData.role || 'TEACHER',
         subjects: [],
         phone: formData.phone,
         email: formData.email,
+        tsc_no: formData.tsc_no,
         status: 'Active',
         joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        department: formData.department || 'School Administration'
+        // Department field omitted entirely from the save payload.
+        id_no: '' // Empty placeholder retained only because StaffMember type expects it.
       };
 
       const saved = localStorage.getItem('munyaka_staff_directory');
@@ -190,12 +184,23 @@ const Staff = () => {
       
       showSuccess(`Staff member "${newStaff.name}" added successfully!`);
     } else if (editingStaff) {
-      // Update existing staff
+      // Update existing staff - preserve immutable fields like ID and id_no on the original record.
       const saved = localStorage.getItem('munyaka_staff_directory');
       const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
-      const updatedList = staffList.map(s => 
-        s.id === editingStaff.id ? { ...s, ...formData } : s
-      );
+      const updatedList = staffList.map(s => {
+        if (s.id === editingStaff.id) {
+          // Merge the form input with the immutable original record data
+          return {
+            ...s, // preserve id, id_no, joined, status, department (and any other original fields)
+            name: formData.name,
+            role: formData.role,
+            phone: formData.phone,
+            email: formData.email,
+            tsc_no: formData.tsc_no,
+          };
+        }
+        return s;
+      });
       localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
       
       showSuccess(`Staff member "${formData.name}" updated successfully!`);
@@ -206,11 +211,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
   };
@@ -222,11 +224,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
   };
@@ -436,7 +435,7 @@ const Staff = () => {
         </Card>
       </div>
 
-      {/* Add/Edit Staff Modal */}
+      {/* Add/Edit Staff Modal - Refactored layout (no Department, Staff ID, or National ID) */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
@@ -457,15 +456,8 @@ const Staff = () => {
                   <AlertCircle size={14} /> {formError}
                 </div>
               )}
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
-                <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
-                  placeholder="e.g. Jane Mwangi" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                />
-              </div>
+
+              {/* 1. Role / Designation - Full width at the top */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation</Label>
                 <Input 
@@ -475,15 +467,8 @@ const Staff = () => {
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
-                <Input 
-                  value={formData.department} 
-                  onChange={(e) => setFormData({...formData, department: e.target.value})} 
-                  placeholder="e.g. Mathematics & Science" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                />
-              </div>
+
+              {/* 2. Phone & Email - 2-column grid directly below Role/Designation */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
@@ -505,26 +490,8 @@ const Staff = () => {
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Staff ID</Label>
-                  <Input 
-                    value={formData.id} 
-                    onChange={(e) => setFormData({...formData, id: e.target.value})} 
-                    placeholder="e.g. ST-101" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID</Label>
-                  <Input 
-                    value={formData.id_no} 
-                    onChange={(e) => setFormData({...formData, id_no: e.target.value})} 
-                    placeholder="e.g. 28374615" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                  />
-                </div>
-              </div>
+
+              {/* 3. TSC Number (Optional) - Full width directly below Phone/Email */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
                 <Input 
@@ -534,6 +501,7 @@ const Staff = () => {
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
+
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
                   variant="ghost" 
