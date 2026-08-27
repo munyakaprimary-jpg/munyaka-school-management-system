@@ -541,14 +541,40 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
               }
 
               return (
-                <div 
-                  key={notice.id} 
+                <div
+                  key={notice.id}
                   id={`notice-${notice.id}`}
                   className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 sm:p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all duration-300 group relative overflow-hidden"
                 >
                   {notice.pinned && (
-                    <div className="absolute top-0 right-0 bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1">
+                    <div className="absolute top-0 right-12 bg-rose-500 text-white text-[9px] font-black uppercase tracking-widest px-4 py-1 rounded-bl-2xl shadow-sm flex items-center gap-1">
                       <Pin size={10} /> Pinned
+                    </div>
+                  )}
+
+                  {canDeleteNotice(notice) && (
+                    <div className="absolute top-3 right-3 z-10">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="w-8 h-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                            aria-label="Notice options"
+                          >
+                            <MoreVertical size={18} />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48 rounded-xl shadow-lg">
+                          <DropdownMenuItem
+                            onClick={() => setNoticePendingDelete(notice)}
+                            className="text-rose-600 focus:text-rose-600 focus:bg-rose-50 dark:focus:bg-rose-950/40 cursor-pointer rounded-lg"
+                          >
+                            <Trash2 size={16} className="mr-2" />
+                            Delete Notice
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   )}
 
@@ -903,6 +929,30 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
           </div>
         </form>
       </Modal>
+
+      {/* Delete Notice Confirmation Dialog */}
+      <AlertDialog open={!!noticePendingDelete} onOpenChange={() => setNoticePendingDelete(null)}>
+        <AlertDialogContent className="rounded-3xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-black">Delete Notice?</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm text-slate-500">
+              This will permanently remove "<strong>{noticePendingDelete?.title}</strong>" from the notice board. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="rounded-xl font-bold border-slate-200 dark:border-slate-700">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => noticePendingDelete && handleDeleteNotice(noticePendingDelete)}
+              className="bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold gap-2 shadow-lg shadow-rose-100"
+            >
+              <Trash2 size={16} />
+              Delete Notice
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
