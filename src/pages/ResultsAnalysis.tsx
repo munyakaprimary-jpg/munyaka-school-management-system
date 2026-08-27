@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -35,7 +35,7 @@ import {
 import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import { downloadCSV } from '@/utils/downloadHelper';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 // Types
 interface StudentResult {
@@ -96,14 +96,16 @@ const getScoreForStudentSubject = (
 
 const ResultsAnalysis = () => {
   // Filter States
-  const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
+  const [academicYear, setAcademicYear] = useState<string>(new Date().getFullYear().toString());
   const [selectedGradeId, setSelectedGradeId] = useState<string>(GRADES_DATA[0]?.id || '');
   const [selectedStreamId, setSelectedStreamId] = useState<string>("all");
   const [examType, setExamType] = useState<string>("FORMATIVE");
   const [term, setTerm] = useState<string>("term1");
   const [searchTerm, setSearchTerm] = useState<string>("");
-  const [isExporting, setIsExporting] = useState<boolean>(false);
-  const [showSavedBadge, setShowSavedBadge] = useState(false);
+  const [showSavedBadge, setShowSavedBadge] = useState<boolean>(false);
+
+  // ====== Unified file-download state for CSV export ======
+  const resultsExport = useFileDownload();
 
   // Load grades from localStorage with fallback
   const [storedGrades, setStoredGrades] = useState<Grade[]>(() => {
@@ -322,57 +324,60 @@ const ResultsAnalysis = () => {
     return strObj ? `${strObj.name} Stream` : "Selected Stream";
   }, [selectedStreamId, availableStreams]);
 
-  // Download CSV Handler
-  const handleDownloadCSV = () => {
+  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  const handleDownloadCSV = async () => {
     if (studentResults.length === 0) {
       showSuccess("No result records available to export.");
       return;
     }
 
-    setIsExporting(true);
+    const line1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+    const line2 = "P.O. BOX 5239-30100, ELDORET • TEL: +254 712 345 678";
+    const line3 = "ACADEMIC RESULTS ANALYSIS REPORT";
+    
+    const termLabel = term === 'term1' ? 'Term 1' : term === 'term2' ? 'Term 2' : 'Term 3';
 
-    setTimeout(() => {
-      const line1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-      const line2 = "P.O. BOX 5239-30100, ELDORET • TEL: +254 712 345 678";
-      const line3 = "ACADEMIC RESULTS ANALYSIS REPORT";
-      
-      const termLabel = term === 'term1' ? 'Term 1' : term === 'term2' ? 'Term 2' : 'Term 3';
+    const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examType}`;
+    const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
 
-      const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examType}`;
-      const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
+    const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
 
-      const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
+    const rows = studentResults.map(s => {
+      const subjectScores = learningAreas.map(a => s.scores[a] || 0);
+      return [
+        s.rank,
+        `"${s.assessmentNo}"`,
+        `"${s.name.replace(/"/g, '""')}"`,
+        `"${s.stream}"`,
+        ...subjectScores,
+        s.totalMarks,
+        s.meanScore,
+        `"${s.level}"`
+      ];
+    });
 
-      const rows = studentResults.map(s => {
-        const subjectScores = learningAreas.map(a => s.scores[a] || 0);
-        return [
-          s.rank,
-          `"${s.assessmentNo}"`,
-          `"${s.name.replace(/"/g, '""')}"`,
-          `"${s.stream}"`,
-          ...subjectScores,
-          s.totalMarks,
-          s.meanScore,
-          `"${s.level}"`
-        ];
-      });
+    const csvContent = [
+      line1,
+      line2,
+      line3,
+      line4,
+      line5,
+      "",
+      headers.join(","),
+      ...rows.map(r => r.join(","))
+    ].join("\n");
 
-      const csvContent = [
-        line1,
-        line2,
-        line3,
-        line4,
-        line5,
-        "",
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ].join("\n");
+    const filename = `results_analysis_${currentGrade.name.toLowerCase().replace(/\s+/g, '_')}_${selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${term}.csv`;
 
-      downloadCSV(csvContent, `results_analysis_${currentGrade.name.toLowerCase().replace(/\s+/g, '_')}_${selectedStreamName.toLowerCase().replace(/[^a-z0-9]/g, '_')}_${term}.csv`);
-
-      setIsExporting(false);
-      showSuccess(`Exported results analysis for ${studentResults.length} learners!`);
-    }, 600);
+    await resultsExport.download({
+      filename,
+      data: csvContent,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+      pendingMessage: 'Downloading results analysis...',
+      successMessage: `Exported results analysis for ${studentResults.length} learners!`,
+      errorMessage: 'Download failed. Please check app permissions.',
+    });
   };
 
   // Print Handler
@@ -404,9 +409,9 @@ const ResultsAnalysis = () => {
             variant="outline"
             className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadCSV}
-            disabled={isExporting}
+            disabled={resultsExport.isDownloading}
           >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} className="text-emerald-600" />}
+            {resultsExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileSpreadsheet size={16} className="text-emerald-600" />}
             Download CSV / Excel
           </Button>
 
@@ -447,7 +452,7 @@ const ResultsAnalysis = () => {
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent>
                 {["2024", "2025", "2026"].map(yr => <SelectItem key={yr} value={yr}>{yr}</SelectItem>)}
               </SelectContent>
             </Select>
@@ -459,7 +464,7 @@ const ResultsAnalysis = () => {
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent>
                 {sortedGrades.map(g => <SelectItem key={g.id} value={g.id}>{g.name} ({g.category})</SelectItem>)}
               </SelectContent>
             </Select>
@@ -471,7 +476,7 @@ const ResultsAnalysis = () => {
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent>
                 <SelectItem value="all">Combined (All Streams)</SelectItem>
                 {availableStreams.map(s => (
                   <SelectItem key={s.id} value={s.id}>{s.name} Stream ({s.studentsCount} Students)</SelectItem>
@@ -486,7 +491,7 @@ const ResultsAnalysis = () => {
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent>
                 <SelectItem value="FORMATIVE">Formative Assessment</SelectItem>
                 <SelectItem value="SUMMATIVE">Summative Assessment</SelectItem>
                 <SelectItem value="OPENER">Opener Exam</SelectItem>
@@ -501,7 +506,7 @@ const ResultsAnalysis = () => {
               <SelectTrigger className="rounded-xl h-11 bg-slate-50 border-none font-bold text-slate-700">
                 <SelectValue />
               </SelectTrigger>
-              <SelectContent className="rounded-2xl">
+              <SelectContent>
                 <SelectItem value="term1">Term 1</SelectItem>
                 <SelectItem value="term2">Term 2</SelectItem>
                 <SelectItem value="term3">Term 3</SelectItem>
