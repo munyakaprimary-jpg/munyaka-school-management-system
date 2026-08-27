@@ -1,27 +1,17 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";  // Added this import
+import { Users, UserCheck, GraduationCap, Clock, TrendingUp, User, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
-import { 
-  Users, 
-  UserCheck, 
-  GraduationCap, 
-  Clock, 
-  TrendingUp, 
-  User, 
-  AlertCircle, 
-  CheckCircle2 
-} from 'lucide-react';
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
-  Cell 
-} from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { useDashboard
+</div><dyad-write path="src/pages/Dashboard.tsx">
+import React, { useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Users, UserCheck, GraduationCap, Clock, TrendingUp, User, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboard } from '@/hooks/useDashboard';
 import { 
   MetricCardSkeleton, 
