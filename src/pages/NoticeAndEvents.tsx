@@ -18,10 +18,12 @@ import {
   Pin, 
   Plus, 
   Send, 
-  Paperclip, 
-  FileText, 
-  ChevronLeft, 
-  ChevronRight, 
+  Paperclip,
+  FileText,
+  UploadCloud,
+  X,
+  ChevronLeft,
+  ChevronRight,
   Sparkles,
   ExternalLink,
   Flame,
@@ -148,6 +150,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [noticeAudience, setNoticeAudience] = useState<'All' | 'Staff' | 'Parents' | 'Learners'>('All');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeExpiryDate, setNoticeExpiryDate] = useState('');
+  const [noticeAttachment, setNoticeAttachment] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
 
   // Event Form State
   const [eventTitle, setEventTitle] = useState('');
@@ -191,7 +196,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       date: 'Just now',
       category: noticePriority,
       pinned: noticePriority === 'Urgent Alert',
-      color: badgeColor
+      color: badgeColor,
+      attachmentName: noticeAttachment?.name || undefined,
+      attachmentUrl: noticeAttachment ? URL.createObjectURL(noticeAttachment) : undefined
     };
 
     setNotices([newNotice, ...notices]);
@@ -200,6 +207,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     setNoticePriority('Normal');
     setNoticeAudience('All');
     setNoticeExpiryDate('');
+    setNoticeAttachment(null);
     setIsNoticeModalOpen(false);
     showSuccess("New Notice published successfully!");
   };
@@ -602,12 +610,79 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
           <div className="space-y-2">
             <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Expiry Date (Optional)</Label>
-            <Input 
-              type="date" 
-              value={noticeExpiryDate} 
-              onChange={(e) => setNoticeExpiryDate(e.target.value)} 
+            <Input
+              type="date"
+              value={noticeExpiryDate}
+              onChange={(e) => setNoticeExpiryDate(e.target.value)}
               className="rounded-xl h-11 border-slate-200 dark:border-slate-700"
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold text-slate-700 dark:text-slate-300">Attach File / Document (Optional)</Label>
+            {noticeAttachment ? (
+              <div className="flex items-center gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60">
+                <div className="w-10 h-10 rounded-xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <FileText size={20} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold text-slate-900 dark:text-white truncate">{noticeAttachment.name}</p>
+                  <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                    {(noticeAttachment.size / 1024).toFixed(1)} KB · {noticeAttachment.type || 'File'}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Remove attached file"
+                  onClick={() => setNoticeAttachment(null)}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors shrink-0"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            ) : (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
+                onDragLeave={() => setIsDragging(false)}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  setIsDragging(false);
+                  const dropped = e.dataTransfer.files?.[0];
+                  if (dropped) setNoticeAttachment(dropped);
+                }}
+                onClick={() => fileInputRef.current?.click()}
+                role="button"
+                tabIndex={0}
+                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInputRef.current?.click(); }}
+                data-testid="notice-attachment-zone"
+                className={`flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-2xl border-2 border-dashed cursor-pointer transition-colors ${
+                  isDragging
+                    ? 'border-indigo-500 bg-indigo-50 dark:bg-indigo-950/40'
+                    : 'border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/40 hover:border-indigo-400 hover:bg-indigo-50/50 dark:hover:bg-indigo-950/30'
+                }`}
+              >
+                <div className="w-11 h-11 rounded-2xl bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700">
+                  <UploadCloud size={22} />
+                </div>
+                <div className="text-center">
+                  <p className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    <span className="text-indigo-600 dark:text-indigo-400">Click to upload</span> or drag and drop
+                  </p>
+                  <p className="text-[11px] font-bold text-slate-400 mt-0.5">PDF, DOCX, images (max 10MB)</p>
+                </div>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.doc,.docx,.png,.jpg,.jpeg,.gif,.webp,.txt,.xls,.xlsx,.ppt,.pptx"
+                  onChange={(e) => {
+                    const f = e.target.files?.[0];
+                    if (f) setNoticeAttachment(f);
+                    e.target.value = '';
+                  }}
+                  className="hidden"
+                />
+              </div>
+            )}
           </div>
         </form>
       </Modal>
