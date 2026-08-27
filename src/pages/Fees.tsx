@@ -9,8 +9,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit } from 'lucide-react';
-import { FEES_DATA as initialFees, TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
+import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit, Database, RefreshCw } from 'lucide-react';
+import { TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV } from '@/utils/downloadHelper';
@@ -21,11 +21,12 @@ import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import EditFeeModal from '@/components/fees/EditFeeModal';
-import { FeeStructure, Transaction } from '@/types/fees';
+import { Transaction } from '@/types/fees';
 
 interface ExtendedTransaction extends Transaction {
   studentId?: string;
   grade?: string;
+  stream?: string;
 }
 
 interface AuditLogEntry {
@@ -43,6 +44,18 @@ interface AuditLogEntry {
   reason: string;
 }
 
+// Learner interface matching the one in Students.tsx
+interface Learner {
+  id: string;
+  admNo: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: 'Male' | 'Female' | 'Other';
+  guardian: string;
+  phone: string;
+}
+
 const GRADE_LEVEL_OPTIONS = [
   { value: "all", label: "All Grade Levels" },
   ...Array.from({ length: 12 }, (_, i) => ({
@@ -51,8 +64,39 @@ const GRADE_LEVEL_OPTIONS = [
   })),
 ];
 
+// Local storage keys
+const LEARNERS_KEY = 'school_learners_data';
+const FEE_OVERRIDES_KEY_PREFIX = 'munyaka_fee_';
+
+// Helper: Get normalized match key for grade (e.g. "Grade 4" -> "grade4")
+const getGradeMatchKey = (name: string): string => {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  const lower = trimmed.toLowerCase();
+  if (lower === 'pp1' || lower === 'pp2') return lower;
+  const digitMatch = lower.match(/(\d+)/);
+  if (digitMatch) return `grade${digitMatch[1]}`;
+  return lower.replace(/\s+/g, '');
+};
+
+// Helper: Normalize grade name to title case
+const normalizeGradeName = (name: string): string => {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+};
+
+// Helper: Normalize stream name to title case
+const normalizeStreamName = (name: string): string => {
+  if (!name) return '';
+  const trimmed = name.trim();
+  if (!trimmed) return '';
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+};
+
 const Fees = () => {
-  // Global Academic Context Filter States
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedTerm, setSelectedTerm] = useState("term1");
@@ -61,16 +105,66 @@ const Fees = () => {
   // Tab Grade Level View Filter
   const [tabGradeFilter, setTabGradeFilter] = useState<string>("all");
 
-  // Data States - Load from localStorage
-  const [feesList, setFeesList] = useState(() => {
-    const saved = localStorage.getItem('munyaka_fees_records');
-    return saved ? JSON.parse(saved) : initialFees;
+  // Load learners from localStorage (real data from Learners Management)
+  const [learners, setLearners] = useState<Learner[]>(() => {
+    try {
+      const saved = localStorage.getItem(LEARNERS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch (e) {
+      console.error("Failed to load learners from localStorage:", e);
+    }
+    return [];
   });
+
+  // Listen for learner data updates from Students Management page
+  useEffect(() => {
+    const handleLearnersUpdate = () => {
+      try {
+        const saved = localStorage.getItem(LEARNERS_KEY);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed)) {
+            setLearners(parsed);
+          }
+        }
+      } catch (e) {
+        console.error("Failed to refresh learners from localStorage:", e);
+      }
+    };
+
+    // Listen for both storage events (cross-tab) and custom events (same-tab)
+    window.addEventListener('storage', handleLearnersUpdate);
+    window.addEventListener('learners_data_updated', handleLearnersUpdate);
+    window.addEventListener('focus', handleLearnersUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleLearnersUpdate);
+      window.removeEventListener('learners_data_updated', handleLearnersUpdate);
+      window.removeEventListener('focus', handleLearnersUpdate);
+    };
+  }, []);
+
+  // Normalize all learners to ensure consistent grade/stream formatting
+  const normalizedLearners = useMemo(() => {
+    return learners.map((l) => ({
+      ...l,
+      grade: normalizeGradeName(l.grade),
+      stream: normalizeStreamName(l.stream),
+    }));
+  }, [learners]);
+
+  // Build fee records dynamically from real learner data
+  // No more hardcoded mock data — completely driven by Learners Management
   const [transactionsList, setTransactionsList] = useState<ExtendedTransaction[]>(() => {
     const saved = localStorage.getItem('munyaka_transactions');
     return saved ? JSON.parse(saved) : initialTransactions as ExtendedTransaction[];
   });
-  const [feeStructures, setFeeStructures] = useState<FeeStructure[]>(() => {
+  const [feeStructures, setFeeStructures] = useState(() => {
     const saved = localStorage.getItem('munyaka_fee_structures');
     return saved ? JSON.parse(saved) : [
       { year: "2024", term: "term1", gradeId: "g1", amount: 15000 },
@@ -104,62 +198,47 @@ const Fees = () => {
   const [configAmount, setConfigAmount] = useState("");
 
   // Persist data to localStorage
-    useEffect(() => {
-      localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
-    }, [feeStructures]);
-  
-    useEffect(() => {
-      localStorage.setItem('munyaka_fees_records', JSON.stringify(feesList));
-    }, [feesList]);
-  
-    useEffect(() => {
-      localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
-    }, [transactionsList]);
-  
-    useEffect(() => {
-      localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
-    }, [auditLogs]);
-  
-    // Listen for fee update events from EditFeeModal and refresh state
-    useEffect(() => {
-      const handleFeesUpdated = () => {
-        // Refresh feesList from localStorage to get latest values
-        const savedFees = localStorage.getItem('munyaka_fees_records');
-        if (savedFees) {
-          try {
-            setFeesList(JSON.parse(savedFees));
-          } catch (e) {
-            console.error("Failed to refresh fees from localStorage:", e);
-          }
+  useEffect(() => {
+    localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
+  }, [feeStructures]);
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
+  }, [transactionsList]);
+
+  useEffect(() => {
+    localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
+  }, [auditLogs]);
+
+  // Listen for fee update events from EditFeeModal and refresh state
+  useEffect(() => {
+    const handleFeesUpdated = () => {
+      const savedTransactions = localStorage.getItem('munyaka_transactions');
+      if (savedTransactions) {
+        try {
+          setTransactionsList(JSON.parse(savedTransactions));
+        } catch (e) {
+          console.error("Failed to refresh transactions from localStorage:", e);
         }
-        // Refresh transactions from localStorage
-        const savedTransactions = localStorage.getItem('munyaka_transactions');
-        if (savedTransactions) {
-          try {
-            setTransactionsList(JSON.parse(savedTransactions));
-          } catch (e) {
-            console.error("Failed to refresh transactions from localStorage:", e);
-          }
+      }
+      const savedAuditLogs = localStorage.getItem('munyaka_fee_audit_logs');
+      if (savedAuditLogs) {
+        try {
+          setAuditLogs(JSON.parse(savedAuditLogs));
+        } catch (e) {
+          console.error("Failed to refresh audit logs from localStorage:", e);
         }
-        // Refresh audit logs from localStorage
-        const savedAuditLogs = localStorage.getItem('munyaka_fee_audit_logs');
-        if (savedAuditLogs) {
-          try {
-            setAuditLogs(JSON.parse(savedAuditLogs));
-          } catch (e) {
-            console.error("Failed to refresh audit logs from localStorage:", e);
-          }
-        }
-      };
-  
-      window.addEventListener('munyaka_fees_updated', handleFeesUpdated);
-      return () => {
-        window.removeEventListener('munyaka_fees_updated', handleFeesUpdated);
-      };
-    }, []);
+      }
+    };
+
+    window.addEventListener('munyaka_fees_updated', handleFeesUpdated);
+    return () => {
+      window.removeEventListener('munyaka_fees_updated', handleFeesUpdated);
+    };
+  }, []);
 
   // ============================================
-  // DYNAMIC FEE CALCULATIONS
+  // DYNAMIC FEE CALCULATIONS — Built from real learners
   // ============================================
   
   // Get term fee for a specific grade
@@ -181,11 +260,19 @@ const Fees = () => {
     };
   }, [transactionsList]);
 
-  // Build calculated fees with dynamic data
+  // Helper: find grade ID matching a learner's grade name
+  const findGradeIdForLearner = (learnerGrade: string): string => {
+    const matchKey = getGradeMatchKey(learnerGrade);
+    const found = GRADES_DATA.find(g => getGradeMatchKey(g.name) === matchKey);
+    return found ? found.id : '';
+  };
+
+  // Build calculated fees DYNAMICALLY from real learner data
+  // No more hardcoded records — every fee record is derived from a real learner
   const calculatedFees = useMemo(() => {
-    return feesList.map(fee => {
+    return normalizedLearners.map(learner => {
       // Check for manual override stored in localStorage (from Edit Fee Modal)
-      const overrideKey = `munyaka_fee_${fee.id}`;
+      const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${learner.id}`;
       const overrideSaved = localStorage.getItem(overrideKey);
       let hasOverride = false;
 
@@ -213,11 +300,15 @@ const Fees = () => {
               overrideStatus = "Partial";
             }
             return {
-              ...fee,
+              id: learner.id,
+              student: learner.name,
               total: overrideTermFee,
               paid: overrideFeePaid,
               balance: overrideBalance,
               status: overrideStatus,
+              admNo: learner.admNo,
+              grade: learner.grade,
+              stream: learner.stream,
             };
           }
         } catch (e) {
@@ -225,14 +316,10 @@ const Fees = () => {
         }
       }
 
-      // Find the student to get their grade
-      const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
-      const studentGradeId = studentObj ?
-        GRADES_DATA.find(g => g.name === `Grade ${studentObj.grade}` || g.name === studentObj.grade)?.id
-        : selectedGrade;
-      
+      // Dynamically compute fee from the learner's grade configuration
+      const studentGradeId = findGradeIdForLearner(learner.grade);
       const termFee = studentGradeId ? getTermFeeForGrade(studentGradeId) : 0;
-      const totalPaid = studentObj ? getTotalPaidForStudent(studentObj.id) : 0;
+      const totalPaid = getTotalPaidForStudent(learner.id);
       const balance = Math.max(0, termFee - totalPaid);
       
       // Status logic
@@ -246,22 +333,27 @@ const Fees = () => {
       }
       
       return {
-        ...fee,
+        id: learner.id,
+        student: learner.name,
         total: termFee,
         paid: totalPaid,
         balance,
         status,
-        studentGradeId
+        admNo: learner.admNo,
+        grade: learner.grade,
+        stream: learner.stream,
+        studentGradeId,
       };
     });
-  }, [feesList, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent]);
+  }, [normalizedLearners, transactionsList, feeStructures, selectedYear, selectedTerm, getTermFeeForGrade, getTotalPaidForStudent]);
 
   // Filter calculated fees by Tab Grade Level Filter
   const filteredCalculatedFees = useMemo(() => {
     if (tabGradeFilter === "all") return calculatedFees;
     return calculatedFees.filter(fee => {
-      const studentObj = STUDENTS.find(s => s.id === fee.id || s.name === fee.student);
-      return studentObj && studentObj.grade === tabGradeFilter;
+      // Match the learner's grade against the tab filter using normalized match key
+      const feeGradeKey = getGradeMatchKey(fee.grade);
+      return feeGradeKey === getGradeMatchKey(tabGradeFilter) || fee.studentGradeId === tabGradeFilter;
     });
   }, [calculatedFees, tabGradeFilter]);
 
@@ -269,7 +361,9 @@ const Fees = () => {
   const filteredTransactions = useMemo(() => {
     if (tabGradeFilter === "all") return transactionsList;
     return transactionsList.filter(tx => {
-      if (tx.grade) return tx.grade === tabGradeFilter;
+      if (tx.grade) {
+        return getGradeMatchKey(tx.grade) === getGradeMatchKey(tabGradeFilter);
+      }
       return true;
     });
   }, [transactionsList, tabGradeFilter]);
@@ -383,11 +477,9 @@ const Fees = () => {
   };
 
   const handleRecordPayment = (studentId: string, amountNum: number) => {
-    setFeesList(prev => prev.map(fee => fee.id === studentId ? { ...fee, paid: fee.paid + amountNum } : fee));
-    
-    const matchedStudent = STUDENTS.find(s => s.id === studentId);
-    const studentName = matchedStudent ? matchedStudent.name : "Learner";
-    const studentGrade = matchedStudent ? matchedStudent.grade : "";
+    const matchedLearner = normalizedLearners.find(l => l.id === studentId);
+    const studentName = matchedLearner ? matchedLearner.name : "Learner";
+    const studentGrade = matchedLearner ? matchedLearner.grade : "";
 
     setTransactionsList([{ 
       id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
@@ -405,8 +497,12 @@ const Fees = () => {
 
   // Edit Fee Handler
   const handleEditFee = (studentId: string, termFee: number, feePaid: number, reason: string) => {
+    const matchedLearner = normalizedLearners.find(l => l.id === studentId);
+    const studentName = matchedLearner ? matchedLearner.name : "Unknown Learner";
+    const studentGrade = matchedLearner ? matchedLearner.grade : "";
+
     // Read current fee record from LocalStorage for accurate old values
-    const storageKey = `munyaka_fee_${studentId}`;
+    const storageKey = `${FEE_OVERRIDES_KEY_PREFIX}${studentId}`;
     const savedFee = localStorage.getItem(storageKey);
     let oldTotal = 0;
     let oldPaid = 0;
@@ -417,12 +513,12 @@ const Fees = () => {
         oldTotal = feeData.termFee || feeData.total || 0;
         oldPaid = feeData.feePaid || feeData.paid || 0;
       } catch (e) {
-        const oldFee = feesList.find((f: any) => f.id === studentId);
+        const oldFee = calculatedFees.find(f => f.id === studentId);
         oldTotal = oldFee?.total || 0;
         oldPaid = oldFee?.paid || 0;
       }
     } else {
-      const oldFee = feesList.find((f: any) => f.id === studentId);
+      const oldFee = calculatedFees.find(f => f.id === studentId);
       oldTotal = oldFee?.total || 0;
       oldPaid = oldFee?.paid || 0;
     }
@@ -438,17 +534,6 @@ const Fees = () => {
       status = "Pending";
     }
 
-    // Update the fee record in state and localStorage immediately
-    const updatedFees = feesList.map((fee: any) => {
-      if (fee.id === studentId) {
-        return { ...fee, total: termFee, paid: feePaid, balance, status };
-      }
-      return fee;
-    });
-
-    setFeesList(updatedFees);
-    localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedFees));
-
     // Save individual student override in localStorage
     const feeData = {
       id: studentId,
@@ -461,10 +546,6 @@ const Fees = () => {
     localStorage.setItem(storageKey, JSON.stringify(feeData));
 
     // Add a transaction record for the adjustment if feePaid changed
-    const matchedStudent = STUDENTS.find(s => s.id === studentId);
-    const studentName = matchedStudent ? matchedStudent.name : "Brian Kiptoo";
-    const studentGrade = matchedStudent ? matchedStudent.grade : "";
-
     const diff = feePaid - oldPaid;
 
     if (diff !== 0) {
@@ -508,29 +589,29 @@ const Fees = () => {
   };
 
   const handleOpenEditModal = (fee: any) => {
-      // Read from LocalStorage first if available, to get the most up-to-date values
-      const storageKey = `munyaka_fee_${fee.id}`;
-      const savedFee = localStorage.getItem(storageKey);
-  
-      if (savedFee) {
-        try {
-          const feeData = JSON.parse(savedFee);
-          const updatedFee = {
-            ...fee,
-            total: feeData.termFee || fee.total,
-            paid: feeData.feePaid || fee.paid
-          };
-          setActiveStudent(updatedFee);
-          setIsEditOpen(true);
-          return;
-        } catch (e) {
-          // Fall back to original fee
-        }
+    // Read from LocalStorage first if available, to get the most up-to-date values
+    const storageKey = `${FEE_OVERRIDES_KEY_PREFIX}${fee.id}`;
+    const savedFee = localStorage.getItem(storageKey);
+
+    if (savedFee) {
+      try {
+        const feeData = JSON.parse(savedFee);
+        const updatedFee = {
+          ...fee,
+          total: feeData.termFee || fee.total,
+          paid: feeData.feePaid || fee.paid
+        };
+        setActiveStudent(updatedFee);
+        setIsEditOpen(true);
+        return;
+      } catch (e) {
+        // Fall back to original fee
       }
-  
-      setActiveStudent(fee);
-      setIsEditOpen(true);
-    };
+    }
+
+    setActiveStudent(fee);
+    setIsEditOpen(true);
+  };
 
   const selectedGradeObj = GRADES_DATA.find(g => g.id === configGrade);
 
@@ -561,6 +642,7 @@ const Fees = () => {
           <Button 
             className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm" 
             onClick={() => setIsRecordOpen(true)}
+            disabled={normalizedLearners.length === 0}
           >
             <CreditCard size={16} /> Record Payment
           </Button>
@@ -587,13 +669,13 @@ const Fees = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
             <TabsList className="bg-slate-100/80 p-1 rounded-lg h-10 border border-slate-200/60 inline-flex">
-              <TabsTrigger value="balances" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
-                Fee Records
+              <TabsTrigger value="balances" className="rounded-md px-4 h-full font-bold text-sm text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+                Fee Records ({filteredCalculatedFees.length})
               </TabsTrigger>
-              <TabsTrigger value="ledger" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+              <TabsTrigger value="ledger" className="rounded-md px-4 h-full font-bold text-sm text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
                 Transaction Ledger
               </TabsTrigger>
-              <TabsTrigger value="audit" className="rounded-md px-4 h-full text-sm font-medium text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
+              <TabsTrigger value="audit" className="rounded-md px-4 h-full font-bold text-sm text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
                 Audit Trail
               </TabsTrigger>
             </TabsList>
@@ -627,89 +709,107 @@ const Fees = () => {
           </Button>
         </div>
 
-        {/* Fee Records Table */}
+        {/* Fee Records Table — Fully dynamic from Learners Management */}
         <TabsContent value="balances" className="m-0">
-          <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left">
-                <thead className="bg-slate-50/80 border-b border-slate-200/80">
-                  <tr>
-                    <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Details</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Term Fee</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Paid</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
-                    <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
-                    <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredCalculatedFees.length > 0 ? (
-                    filteredCalculatedFees.map((fee) => (
-                      <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
-                        <td className="px-5 py-3.5">
-                          <p className="font-semibold text-slate-900">{fee.student}</p>
-                          <p className="text-xs text-slate-400">Assessment: A8273{fee.id}</p>
-                        </td>
-                        <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
-                        <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
-                        <td className="px-5 py-3.5 text-center font-semibold">
-                          <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
-                            {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
-                          </span>
-                        </td>
-                        <td className="px-5 py-3.5 text-center">
-                          <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
-                            fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
-                            fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
-                            "bg-slate-100 text-slate-600"
-                          )}>
-                            {fee.status}
-                          </Badge>
-                        </td>
-                        <td className="px-5 py-3.5 text-right">
-                          <div className="flex justify-end gap-1 no-print">
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
-                              onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
-                              title="View Statement"
-                            >
-                              <Eye size={16} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
-                              onClick={() => showSuccess("Downloading...")}
-                              title="Download PDF"
-                            >
-                              <FileDown size={16} />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
-                              onClick={() => handleOpenEditModal(fee)}
-                              title="Edit Fee Record"
-                            >
-                              <Edit size={16} />
-                            </Button>
-                          </div>
+          {normalizedLearners.length === 0 ? (
+            <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm p-12 text-center">
+              <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+                <div className="p-4 bg-amber-50 rounded-full">
+                  <Database className="w-10 h-10 text-amber-500" />
+                </div>
+                <h3 className="text-lg font-bold text-slate-900">No Learners Found</h3>
+                <p className="text-sm text-slate-500">
+                  No learners are currently registered. Please add learners in the 
+                  <strong className="text-slate-800"> Learners Management </strong> 
+                  section first, then return here to manage their fee records.
+                </p>
+              </div>
+            </Card>
+          ) : (
+            <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left">
+                  <thead className="bg-slate-50/80 border-b border-slate-200/80">
+                    <tr>
+                      <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Student Details</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Term Fee</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Fee Paid</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Balance</th>
+                      <th className="px-5 py-3 text-center text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+                      <th className="px-5 py-3 text-right text-xs font-semibold text-slate-500 uppercase tracking-wider">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredCalculatedFees.length > 0 ? (
+                      filteredCalculatedFees.map((fee) => (
+                        <tr key={fee.id} className="hover:bg-slate-50/60 transition-colors group">
+                          <td className="px-5 py-3.5">
+                            <p className="font-semibold text-slate-900">{fee.student}</p>
+                            <p className="text-xs text-slate-400">
+                              Adm No: {fee.admNo} • {fee.grade} {fee.stream ? `• ${fee.stream}` : ''}
+                            </p>
+                          </td>
+                          <td className="px-5 py-3.5 text-center font-medium text-slate-600">KES {fee.total.toLocaleString()}</td>
+                          <td className="px-5 py-3.5 text-center font-semibold text-emerald-600">KES {fee.paid.toLocaleString()}</td>
+                          <td className="px-5 py-3.5 text-center font-semibold">
+                            <span className={fee.balance > 0 ? "text-rose-600" : "text-slate-400"}>
+                              {fee.balance > 0 ? `KES ${fee.balance.toLocaleString()}` : "CLEARED"}
+                            </span>
+                          </td>
+                          <td className="px-5 py-3.5 text-center">
+                            <Badge className={cn("rounded-md border-none px-2.5 py-0.5 text-xs font-medium", 
+                              fee.status === 'Cleared' ? "bg-emerald-50 text-emerald-700" : 
+                              fee.status === 'Partial' ? "bg-amber-50 text-amber-700" : 
+                              "bg-slate-100 text-slate-600"
+                            )}>
+                              {fee.status}
+                            </Badge>
+                          </td>
+                          <td className="px-5 py-3.5 text-right">
+                            <div className="flex justify-end gap-1 no-print">
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
+                                onClick={() => { setActiveStudent(fee); setIsStatementOpen(true); }}
+                                title="View Statement"
+                              >
+                                <Eye size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
+                                onClick={() => showSuccess("Downloading...")}
+                                title="Download PDF"
+                              >
+                                <FileDown size={16} />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-8 w-8 rounded-lg text-slate-600 hover:text-indigo-600 hover:bg-indigo-50" 
+                                onClick={() => handleOpenEditModal(fee)}
+                                title="Edit Fee Record"
+                              >
+                                <Edit size={16} />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-400">
+                          No learners match the selected grade filter. Try selecting "All Grade Levels".
                         </td>
                       </tr>
-                    ))
-                  ) : (
-                    <tr>
-                      <td colSpan={6} className="px-5 py-8 text-center text-sm text-slate-400">
-                        No fee records found for the selected Grade Level.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </Card>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          )}
         </TabsContent>
 
         {/* Transaction Ledger Table */}
@@ -741,7 +841,7 @@ const Fees = () => {
                 ) : (
                   <tr>
                     <td colSpan={4} className="px-5 py-8 text-center text-sm text-slate-400">
-                      No transactions recorded for the selected Grade Level.
+                      No transactions recorded yet. Click "Record Payment" to add one.
                     </td>
                   </tr>
                 )}
@@ -905,13 +1005,13 @@ const Fees = () => {
         </div>
       </Modal>
 
-      {/* Record Payment Modal with Cascading Dropdowns */}
+      {/* Record Payment Modal with Cascading Dropdowns - Now using real learners */}
       <RecordPaymentModal
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
         onSubmitPayment={handleRecordPayment}
         gradesData={GRADES_DATA}
-        studentsData={STUDENTS}
+        studentsData={normalizedLearners}
       />
 
       {/* Edit Fee Modal */}
