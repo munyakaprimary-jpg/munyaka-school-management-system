@@ -118,11 +118,8 @@ const Staff = () => {
   const [formData, setFormData] = useState({
     name: '',
     role: '',
-    department: '',
     phone: '',
     email: '',
-    id: '',
-    id_no: '',
     tsc_no: ''
   });
   const [formError, setFormError] = useState('');
@@ -133,11 +130,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
     setFormError('');
@@ -150,11 +144,8 @@ const Staff = () => {
     setFormData({
       name: staff.name,
       role: staff.role,
-      department: staff.department,
       phone: staff.phone,
       email: staff.email,
-      id: staff.id,
-      id_no: staff.id_no,
       tsc_no: staff.tsc_no || ''
     });
     setFormError('');
@@ -162,25 +153,25 @@ const Staff = () => {
   };
 
   const handleSaveStaff = () => {
-    if (!formData.name.trim() || !formData.id_no.trim()) {
-      setFormError('Please fill in all required fields (Full Name, National ID).');
+    if (!formData.name.trim() || !formData.role.trim()) {
+      setFormError('Please fill in all required fields (Full Name, Role / Designation).');
       return;
     }
 
     if (modalMode === 'add') {
       // Add new staff to directory
       const newStaff: StaffMember = {
-        id: formData.id || `ST-${Date.now()}`,
-        id_no: formData.id_no,
-        tsc_no: formData.tsc_no,
+        id: `ST-${Date.now()}`,
+        id_no: `ID-${Date.now()}`,
+        tsc_no: formData.tsc_no || undefined,
         name: formData.name,
-        role: formData.role || 'TEACHER',
+        role: formData.role.toUpperCase(),
         subjects: [],
         phone: formData.phone,
         email: formData.email,
         status: 'Active',
         joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        department: formData.department || 'School Administration'
+        department: 'School Administration'
       };
 
       const saved = localStorage.getItem('munyaka_staff_directory');
@@ -193,8 +184,15 @@ const Staff = () => {
       // Update existing staff
       const saved = localStorage.getItem('munyaka_staff_directory');
       const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
-      const updatedList = staffList.map(s => 
-        s.id === editingStaff.id ? { ...s, ...formData } : s
+      const updatedList = staffList.map(s =>
+        s.id === editingStaff.id ? {
+          ...s,
+          name: formData.name,
+          role: formData.role.toUpperCase(),
+          phone: formData.phone,
+          email: formData.email,
+          tsc_no: formData.tsc_no || undefined
+        } : s
       );
       localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
       
@@ -206,11 +204,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
   };
@@ -222,11 +217,8 @@ const Staff = () => {
     setFormData({
       name: '',
       role: '',
-      department: '',
       phone: '',
       email: '',
-      id: '',
-      id_no: '',
       tsc_no: ''
     });
   };
@@ -466,72 +458,48 @@ const Staff = () => {
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
               </div>
+              {/* Role / Designation stays as a full-width input at the top */}
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation</Label>
-                <Input 
-                  value={formData.role} 
-                  onChange={(e) => setFormData({...formData, role: e.target.value})} 
-                  placeholder="e.g. TEACHER, ADMINISTRATOR" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
+                <Input
+                  value={formData.role}
+                  onChange={(e) => setFormData({...formData, role: e.target.value})}
+                  placeholder="e.g. TEACHER, ADMINISTRATOR"
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
-                <Input 
-                  value={formData.department} 
-                  onChange={(e) => setFormData({...formData, department: e.target.value})} 
-                  placeholder="e.g. Mathematics & Science" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                />
-              </div>
+
+              {/* Phone and Email should sit side-by-side in a 2-column grid directly below Role/Designation */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
-                  <Input 
-                    value={formData.phone} 
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})} 
-                    placeholder="+254..." 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                  <Input
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    placeholder="+254..."
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
-                  <Input 
+                  <Input
                     type="email"
-                    value={formData.email} 
-                    onChange={(e) => setFormData({...formData, email: e.target.value})} 
-                    placeholder="email@school.ac.ke" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    placeholder="email@school.ac.ke"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Staff ID</Label>
-                  <Input 
-                    value={formData.id} 
-                    onChange={(e) => setFormData({...formData, id: e.target.value})} 
-                    placeholder="e.g. ST-101" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID</Label>
-                  <Input 
-                    value={formData.id_no} 
-                    onChange={(e) => setFormData({...formData, id_no: e.target.value})} 
-                    placeholder="e.g. 28374615" 
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                  />
-                </div>
-              </div>
+
+              {/* TSC Number (Optional) should be placed full-width right below the Phone/Email row */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-                <Input 
-                  value={formData.tsc_no} 
-                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})} 
-                  placeholder="e.g. TSC-482910" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                <Input
+                  value={formData.tsc_no}
+                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})}
+                  placeholder="e.g. TSC-482910"
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
               <div className="flex gap-3 pt-4 border-t">
