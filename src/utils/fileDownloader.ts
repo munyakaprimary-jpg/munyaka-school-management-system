@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding, ReaddirResult } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
 export type FileType = 'csv' | 'pdf' | 'json' | 'txt';
@@ -51,12 +51,191 @@ function getFileTypeLabel(fileType?: FileType, mimeType?: string): string {
 }
 
 /**
+ * Convert a plain (UTF-8) string into a base64-encoded representation.
+ * This is what Capacitor's Filesystem API expects when writing a binary
+ * file to internal storage and we need to round-trip safely.
+ */
+function utf8ToBase64(text: string): string {
+  // Use TextEncoder for full UTF-8 compatibility, then convert to base64
+  const bytes = new TextEncoder().encode(text);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return btoa(binary);
+}
+
+/**
+ * Convert raw base64 (as produced by Capacitor for the target path scheme)
+ * into a Blob suitable for anchoring a web download fallback.
+ */
+function base64ToBlob(base64: string, mimeType: string): Blob {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i++) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType });
+}
+
+/**
+ * Determine which Capacitor Directory to write into for a given file type.
+ *
+ * - CSVs are written to the public Downloads folder (Directory.ExternalStorage
+ *   on Android, falling back to Directory.Documents on iOS or older devices).
+ * - All other file types (PDF, JSON, TXT) are saved to the app's Documents
+ *   directory as before.
+ */
+function getTargetDirectory(fileType?: FileType): Directory {
+  if (fileType === 'csv') {
+    // On Android 10+ this maps to the public Downloads folder.
+    return Directory.ExternalStorage;
+  }
+  return Directory.Documents;
+}
+
+/**
+ * Compose the public Downloads-relative path for a filename.
+ *
+ * On Android with Directory.ExternalStorage, the `path` argument is joined
+ * to the public Downloads folder. We strip any leading slash so Capacitor
+ * doesn't treat the value as an absolute filesystem path.
+ */
+function getPublicDownloadsPath(filename: string): string {
+  return filename.replace(/^\/+/, '');
+}
+
+/**
+ * Notify the system that a new file is available in the public Downloads
+ * directory so file-manager apps (and the Downloads app) can pick it up
+ * without a manual refresh.
+ *
+ * On platforms where MediaScanner is unavailable we silently fall back.
+ */
+async function notifyAndroidMediaScanner(nativeUri: string): Promise<void> {
+  try {
+    // We deliberately use `as any` to avoid importing optional native-only
+    // packages. The MediaScanner API on Capacitor is exposed via the
+    // `Capacitor.Plugins` registry when the android-media-scanner plugin
+    // is installed; otherwise this is a no-op.
+    const anyPlugins = (Capacitor as any)?.Plugins;
+    const MediaScanner = anyPlugins?.MediaScanner;
+    if (MediaScanner?.scanFile) {
+      await MediaScanner.scanFile({ path: nativeUri });
+    }
+  } catch {
+    // Best-effort: never block the download flow on this.
+  }
+}
+
+/**
+ * Trigger an actual file save on the device. On Android CSVs this writes
+ * directly to the public Downloads folder (no share sheet) and notifies
+ * the media scanner so the file shows up in the system Downloads app.
+ *
+ * For all other file types on native, the older Documents-directory +
+ * share-sheet flow is preserved so PDFs and JSON backups continue to
+ * behave the same way.
+ */
+async function saveToDevice(opts: {
+  filename: string;
+  data: string;
+  mimeType: string;
+  isBase64?: boolean;
+  fileType?: FileType;
+}): Promise<string> {
+  const isCsv = opts.fileType === 'csv' || opts.mimeType.includes('csv');
+  const usePublicDownloads = isCsv && Capacitor.getPlatform() === 'android';
+
+  const useBase64 = opts.isBase64 || opts.mimeType.startsWith('application/') || opts.mimeType.startsWith('image/');
+
+  // For plain text types (CSV/TXT) we want UTF-8 strings to be encoded
+  // correctly regardless of platform. Pre-pend the UTF-8 BOM for CSV so
+  // Excel detects encoding correctly when the file is opened.
+  let rawData = opts.data;
+  if (isCsv && !opts.isBase64) {
+    const bom = '\uFEFF';
+    if (!rawData.startsWith(bom)) rawData = bom + rawData;
+  }
+
+  // Pre-encode UTF-8 strings to base64 so Capacitor's writeFile can persist
+  // multibyte characters consistently across devices.
+  let writeData = rawData;
+  let encoding: Encoding | undefined = useBase64 ? undefined : Encoding.UTF8;
+
+  if (isCsv && !useBase64) {
+    // Encode to base64 so binary-safe round-trip is guaranteed.
+    writeData = utf8ToBase64(rawData);
+    encoding = undefined;
+  }
+
+  if (usePublicDownloads) {
+    // ===== CSVs on Android: public Downloads folder, no share sheet =====
+    const relativePath = getPublicDownloadsPath(opts.filename);
+    try {
+      const result = await Filesystem.writeFile({
+        path: relativePath,
+        data: writeData,
+        directory: Directory.ExternalStorage,
+        ...(encoding ? { encoding } : {}),
+        recursive: true,
+      });
+
+      // Best-effort: refresh the system so the file shows up in Downloads.
+      await notifyAndroidMediaScanner(result.uri);
+
+      return result.uri;
+    } catch (publicErr) {
+      // Permission denied or older Android API — fall back to private
+      // Documents directory. The file is still accessible via the file
+      // manager under "Android/data/<package>/files/Documents".
+      const fallback = await Filesystem.writeFile({
+        path: opts.filename,
+        data: writeData,
+        directory: Directory.Documents,
+        ...(encoding ? { encoding } : {}),
+        recursive: false,
+      });
+      return fallback.uri;
+    }
+  }
+
+  // ===== All other file types / non-Android: Documents dir + Share =====
+  try {
+    const result = await Filesystem.writeFile({
+      path: opts.filename,
+      data: writeData,
+      directory: getTargetDirectory(opts.fileType),
+      ...(encoding ? { encoding } : {}),
+      recursive: false,
+    });
+    return result.uri;
+  } catch (nativeError) {
+    // Last-resort: try the Cache directory which never requires permissions.
+    const cache = await Filesystem.writeFile({
+      path: opts.filename,
+      data: writeData,
+      directory: Directory.Cache,
+      ...(encoding ? { encoding } : {}),
+      recursive: false,
+    });
+    return cache.uri;
+  }
+}
+
+/**
  * Unified file download helper.
  *
  * - Displays a "Downloading..." toast on initiation.
- * - On native platforms (Android/iOS), writes the file using
- *   @capacitor/filesystem and shares via the OS share sheet.
- * - On the web, triggers a standard HTML5 anchor blob download.
+ * - On native Android for CSVs: writes directly to the public Downloads
+ *   folder using the Capacitor Filesystem plugin and notifies the system
+ *   media scanner. The share sheet is intentionally NOT shown for this
+ *   path so the file lands in the system Downloads app like a normal
+ *   download.
+ * - On native for other file types: writes to Documents and shows the
+ *   share sheet (existing behaviour).
+ * - On the web: triggers a standard HTML5 anchor blob download.
  * - Updates the toast to a success or error message when complete.
  *
  * Returns a result describing the final state so callers can update local
@@ -76,58 +255,49 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
 
   const label = getFileTypeLabel(fileType, mimeType);
   const isNative = Capacitor.isNativePlatform();
+  const isAndroidCsv =
+    isNative &&
+    Capacitor.getPlatform() === 'android' &&
+    (fileType === 'csv' || mimeType.includes('csv'));
 
-  const pendingToastId = showPendingToast(pendingMessage ?? `Downloading ${label} report...`);
+  const pendingToastId = showPendingToast(
+    pendingMessage ?? (isAndroidCsv ? 'Saving to Downloads…' : `Downloading ${label} report…`)
+  );
 
   try {
     let nativeUri: string | undefined;
 
     if (isNative) {
       // ---- Native (Android / iOS) ----
-      // Prefer a writable directory that ships with the app so users can save
-      // or share the file via the OS share sheet. For "csv" and "json" we can
-      // write as UTF-8 text; for everything else we fall back to base64.
-      try {
-        const useBase64 = isBase64 || mimeType.startsWith('application/') || mimeType.startsWith('image/');
+      nativeUri = await saveToDevice({
+        filename,
+        data,
+        mimeType,
+        isBase64,
+        fileType,
+      });
 
-        const writeResult = await Filesystem.writeFile({
-          path: filename,
-          data,
-          directory: Directory.Documents,
-          encoding: useBase64 ? undefined : Encoding.UTF8,
-          recursive: false,
-        });
-
-        nativeUri = writeResult.uri;
-      } catch (nativeError) {
-        // Fall back to Cache directory if Documents fails (e.g. permission
-        // errors on some Android builds).
-        const useBase64 = isBase64 || mimeType.startsWith('application/') || mimeType.startsWith('image/');
-        const fallbackResult = await Filesystem.writeFile({
-          path: filename,
-          data,
-          directory: Directory.Cache,
-          encoding: useBase64 ? undefined : Encoding.UTF8,
-          recursive: false,
-        });
-        nativeUri = fallbackResult.uri;
-      }
-
-      // Best-effort: present the OS share sheet so the user can save or
-      // forward the file. We intentionally wrap this in a try/catch so a
-      // user cancelling the share sheet doesn't fail the whole download.
-      try {
-        if (nativeUri) {
-          await Share.share({
-            title: filename,
-            text: `Download ${filename}`,
-            url: nativeUri,
-            dialogTitle: `Save or Share ${filename}`,
-          });
+      if (isAndroidCsv) {
+        // Intentionally DO NOT call the Share plugin for CSVs. The user
+        // expects the file to appear in their public Downloads folder
+        // just like a browser download, without the OS share sheet
+        // popping up.
+      } else {
+        // For non-CSV native files (PDF, JSON, TXT), keep the original
+        // behaviour of surfacing the OS share sheet so the user can
+        // forward the file via email, messaging apps, etc.
+        try {
+          if (nativeUri) {
+            await Share.share({
+              title: filename,
+              text: `Download ${filename}`,
+              url: nativeUri,
+              dialogTitle: `Save or Share ${filename}`,
+            });
+          }
+        } catch (shareErr) {
+          console.warn('Native share dialog dismissed or unavailable:', shareErr);
         }
-      } catch (shareErr) {
-        // Swallow share errors – the file has still been written.
-        console.warn('Native share dialog dismissed or unavailable:', shareErr);
       }
     } else {
       // ---- Web (Browser) ----
@@ -160,7 +330,10 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
 
     // ---- Success toast ----
     dismissPendingToast(pendingToastId);
-    showSuccessToast(successMessage ?? `${label} report downloaded successfully.`);
+    const defaultMessage = isAndroidCsv
+      ? `Saved ${filename} to your Downloads folder.`
+      : `${label} report downloaded successfully.`;
+    showSuccessToast(successMessage ?? defaultMessage);
 
     return {
       success: true,
@@ -177,7 +350,7 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     return {
       success: false,
       state: 'error',
-      error: error instanceof Error ? error : new Error(String(error)),
+      error: error instanceof Error ? new Error(String(error)) : error,
     };
   }
 }
@@ -186,12 +359,6 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
 // Toast helpers (Sonner-backed, no direct imports
 // in this file to avoid circular dependencies)
 // ============================================
-
-// We keep a tiny indirection so callers can show loading / success / error
-// states. Sonner exposes `toast.loading` and `toast.success` / `toast.error`
-// directly; the `useToast` helper from `@/components/ui/use-toast` is for
-// shadcn toast. Munyaka School uses Sonner for live notifications, so we
-// import dynamically inside each helper.
 
 type PendingToast = number | string;
 
