@@ -40,31 +40,7 @@ const StaffRegistration = () => {
           </CardHeader>
           <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <Label>Full Name</Label>
-              <Input placeholder="e.g. Jane Mwangi" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-            </div>
-            <div className="space-y-2">
-              <Label>National ID Number</Label>
-              <Input placeholder="e.g. 12345678" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-            </div>
-            <div className="space-y-2">
-              <Label>Phone Number</Label>
-              <Input placeholder="e.g. +254 700 000 000" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-            </div>
-            <div className="space-y-2">
-              <Label>Email Address</Label>
-              <Input type="email" placeholder="e.g. jane@munyaka.sc.ke" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b">
-            <CardTitle>Professional Information</CardTitle>
-          </CardHeader>
-          <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <Label>Role / Position</Label>
+              <Label>Role / Designation</Label>
               <Select required>
                 <SelectTrigger className="rounded-xl h-12 bg-slate-50/50 border-slate-100">
                   <SelectValue placeholder="Select Role" />
@@ -78,12 +54,28 @@ const StaffRegistration = () => {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label>TSC Number (If applicable)</Label>
-              <Input placeholder="e.g. TSC-123456" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
+              <Label>Full Name</Label>
+              <Input placeholder="e.g. Jane Mwangi" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <CardHeader className="p-8 border-b">
+            <CardTitle>Contact Information</CardTitle>
+          </CardHeader>
+          <CardContent className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-2">
+              <Label>Phone Number</Label>
+              <Input placeholder="e.g. +254 700 000 000" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
+            </div>
+            <div className="space-y-2">
+              <Label>Email Address</Label>
+              <Input type="email" placeholder="e.g. jane@munyaka.sc.ke" required className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
             </div>
             <div className="space-y-2 md:col-span-2">
-              <Label>Subjects / Areas of Specialization</Label>
-              <Input placeholder="e.g. Math, Science, Creative Arts" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
+              <Label>TSC Number (Optional)</Label>
+              <Input placeholder="e.g. TSC-123456" className="rounded-xl h-12 bg-slate-50/50 border-slate-100" />
             </div>
           </CardContent>
           <div className="p-8 pt-0 flex justify-end">
