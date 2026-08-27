@@ -39,6 +39,7 @@ import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
 import StaffAttendancePage from "./pages/StaffAttendance";
 import StaffCheckIn from "./pages/StaffCheckIn";
+import TeacherSelection from "./pages/StaffCheckInSelector";
 import AttendanceMonitor from "./pages/AttendanceMonitor";
 import DigitalHub from "./pages/DigitalHub";
 import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
@@ -79,6 +80,7 @@ const App = () => (
                 <Route path="/staff/registration" element={<ProtectedRoute><Layout><StaffRegistration /></Layout></ProtectedRoute>} />
                 <Route path="/staff/pre-registration" element={<ProtectedRoute><Layout><StaffPreRegistration /></Layout></ProtectedRoute>} />
                 <Route path="/staff/attendance" element={<ProtectedRoute><Layout><StaffAttendancePage /></Layout></ProtectedRoute>} />
+                <Route path="/staff/select-teacher" element={<ProtectedRoute><Layout><TeacherSelection /></Layout></ProtectedRoute>} />
                 <Route path="/staff/check-in" element={<ProtectedRoute><Layout><StaffCheckIn /></Layout></ProtectedRoute>} />
                 <Route path="/staff/attendance-monitor" element={<ProtectedRoute><Layout><AttendanceMonitor /></Layout></ProtectedRoute>} />
                 <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
