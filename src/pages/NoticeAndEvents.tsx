@@ -161,6 +161,16 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
   }, [notices]);
 
+  const formatTime12h = (time24: string): string => {
+    if (!time24) return '';
+    const [hours, minutes] = time24.split(':');
+    if (!hours || !minutes) return '';
+    const h = parseInt(hours, 10);
+    const ampm = h >= 12 ? 'PM' : 'AM';
+    const h12 = h % 12 || 12;
+    return `${h12}:${minutes} ${ampm}`;
+  };
+
   useEffect(() => {
     localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
   }, [events]);
