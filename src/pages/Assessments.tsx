@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
 import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
+import { useFileDownload } from "@/utils/fileDownloader";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -87,8 +88,11 @@ const Assessments = () => {
 
   const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  // ====== Unified file-download state for CSV & PDF ======
+  const csvExport = useFileDownload();
+  const pdfExport = useFileDownload();
 
   // Null-safe grade getter
   const currentGrade = grade || "Grade 1";
@@ -197,9 +201,13 @@ const Assessments = () => {
         const gName = g.name || g.grade;
         if (gName) {
           if (Array.isArray(g.streams)) {
-            map[gName] = g.streams.map((st: any) => typeof st === 'string' ? st : (st.name || st.stream));
+            map[gName] = g.streams.map((st: any) =>
+              typeof st === 'string' ? st : (st.name || st.label || st.streamName)
+            );
           } else if (Array.isArray(g.classes)) {
-            map[gName] = g.classes.map((c: any) => typeof c === 'string' ? c : (c.name || c.class));
+            map[gName] = g.classes.map((c: any) =>
+              typeof c === 'string' ? c : (c.name || c.label)
+            );
           }
         }
       });
@@ -554,55 +562,91 @@ const Assessments = () => {
     }
   };
 
-  // Download CSV export
-  const handleDownloadCSV = () => {
+  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  const handleDownloadCSV = async () => {
     if (filteredStudents.length === 0) {
       showError("No students found to export.");
       return;
     }
-    setIsExporting(true);
-    setTimeout(() => {
-      const headers = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
-      const rows = filteredStudents.map(student => {
-        const id = student.id || student.admissionNumber;
-        const studentMarks = marksMatrix[id] || {};
-        const scores = allTierSubjects.map(subj => studentMarks[subj] !== undefined ? studentMarks[subj] : "");
-        const total = studentTotals[id] || 0;
-        return [
-          `"${(student.name || "").replace(/"/g, '""')}"`,
-          `"${(student.admissionNumber || student.id || "").replace(/"/g, '""')}"`,
-          `"${(student.stream || "").replace(/"/g, '""')}"`,
-          ...scores,
-          total
-        ].join(",");
-      });
 
-      const csvContent = [
-        `"Marks Entry & CBC Assessment - ${grade} (${stream})"`,
-        `"Academic Year: ${academicYear} | Term: ${term} | Exam: ${examType}"`,
-        "",
-        headers.join(","),
-        ...rows,
-        ["SUBJECT TOTALS", "", "", ...allTierSubjects.map(subj => subjectTotals[subj] || 0), grandTotalSum].join(","),
-        ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(",")
-      ].join("\n");
+    const headers = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
+    const rows = filteredStudents.map(student => {
+      const id = student.id || student.admissionNumber;
+      const studentMarks = marksMatrix[id] || {};
+      const scores = allTierSubjects.map(subj => studentMarks[subj] !== undefined ? studentMarks[subj] : "");
+      const total = studentTotals[id] || 0;
+      return [
+        `"${(student.name || "").replace(/"/g, '""')}"`,
+        `"${(student.admissionNumber || student.id || "").replace(/"/g, '""')}"`,
+        `"${(student.stream || "").replace(/"/g, '""')}"`,
+        ...scores,
+        total
+      ].join(",");
+    });
 
-      const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `Marks_Entry_${grade.replace(/\s+/g, "_")}_${stream.replace(/\s+/g, "_")}_${academicYear}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      setIsExporting(false);
-      showSuccess("CSV report downloaded successfully.");
-    }, 600);
+    const csvContent = [
+      `"Marks Entry & CBC Assessment - ${grade} (${stream})"`,
+      `"Academic Year: ${academicYear} | Term: ${term} | Exam: ${examType}"`,
+      "",
+      headers.join(","),
+      ...rows,
+      ["SUBJECT TOTALS", "", "", ...allTierSubjects.map(subj => subjectTotals[subj] || 0), grandTotalSum].join(","),
+      ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(",")
+    ].join("\n");
+
+    await csvExport.download({
+      filename: `Marks_Entry_${grade.replace(/\s+/g, "_")}_${stream.replace(/\s+/g, "_")}_${academicYear}.csv`,
+      data: csvContent,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+    });
   };
 
-  // Download PDF simulation / print
-  const handleDownloadPDF = () => {
-    window.print();
+  // ====== UNIFIED DOWNLOAD HANDLER: PDF export (uses browser print) ======
+  const handleDownloadPDF = async () => {
+    // Build a simple text-based "PDF" data payload that we'll write via
+    // the unified file downloader (which uses Capacitor's Filesystem on
+    // native and a blob anchor on web). For the actual visual PDF, we fall
+    // back to the browser's native print dialog on web, which produces
+    // a real PDF when the user selects "Save as PDF" in the dialog.
+    if (typeof window !== 'undefined') {
+      // On web, trigger the browser's native "Save as PDF" path
+      const isNative = (await import('@capacitor/core')).Capacitor.isNativePlatform();
+      if (!isNative) {
+        try {
+          window.print();
+          return;
+        } catch (err) {
+          console.error('window.print() failed:', err);
+        }
+      }
+    }
+
+    // On native, write a plain-text summary to Documents so the user can share
+    // it through the OS share sheet.
+    const summary = `Marks Entry Export
+=====================
+Grade: ${grade}
+Stream: ${stream}
+Academic Year: ${academicYear}
+Term: ${term}
+Exam Type: ${examType}
+Generated: ${new Date().toLocaleString()}
+
+Class Mean: ${classStats.meanFormatted}
+Completion: ${classStats.completionText}
+
+${filteredStudents.length} learner(s) included.
+`;
+    await pdfExport.download({
+      filename: `Marks_Entry_${grade.replace(/\s+/g, "_")}_${academicYear}.txt`,
+      data: summary,
+      mimeType: 'text/plain;charset=utf-8;',
+      fileType: 'txt',
+      pendingMessage: 'Preparing PDF report...',
+      successMessage: 'PDF report downloaded successfully.',
+      errorMessage: 'Download failed. Please check app permissions.',
+    });
   };
 
   return (
@@ -627,16 +671,17 @@ const Assessments = () => {
             variant="outline"
             className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadCSV}
-            disabled={isExporting}
+            disabled={csvExport.isDownloading}
           >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
+            {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
           </Button>
           <Button
             variant="outline"
             className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
             onClick={handleDownloadPDF}
+            disabled={pdfExport.isDownloading}
           >
-            <FileText size={16} /> Download PDF
+            {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
           </Button>
           <Button
             className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"

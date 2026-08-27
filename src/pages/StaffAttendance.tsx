@@ -11,13 +11,16 @@ import { useGeolocation } from '@/hooks/useGeolocation';
 import BackButton from '@/components/ui/BackButton';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
-import { downloadCSV } from '@/utils/downloadHelper';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 const StaffAttendancePage = () => {
   const navigate = useNavigate();
   const { location } = useGeolocation();
   const { masterRegister } = useStaffAttendance(location);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ====== Unified file-download state for CSV export ======
+  const attendanceExport = useFileDownload();
 
   const staffList = Object.values(masterRegister);
 
@@ -32,7 +35,13 @@ const StaffAttendancePage = () => {
     staff.role?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleExport = () => {
+  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  const handleExport = async () => {
+    if (filteredStaff.length === 0) {
+      showError("No staff records available to export.");
+      return;
+    }
+
     const currentDateStr = format(new Date(), "PP");
     
     const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
@@ -43,12 +52,17 @@ const StaffAttendancePage = () => {
     const headers = ["Staff Name", "Role", "Morning Check-In", "Morning Time", "Afternoon Check-Out", "Afternoon Time", "Status"];
 
     const rows = filteredStaff.map(staff => {
-      const morningStatus = staff.morning?.status ? (staff.morning.status === 'present' ? 'Present' : staff.morning.status === 'absent' ? 'Absent' : 'Early Departure') : 'Not Marked';
+      const morningStatus = staff.morning?.status 
+        ? (staff.morning.status === 'present' ? 'Present' : staff.morning.status === 'absent' ? 'Absent' : 'Early Departure') 
+        : 'Not Marked';
       const morningTime = staff.morning?.time || '—';
-      const afternoonStatus = staff.afternoon?.status ? (staff.afternoon.status === 'departed' ? 'Departed' : staff.afternoon.status) : 'Not Marked';
+      const afternoonStatus = staff.afternoon?.status 
+        ? (staff.afternoon.status === 'departed' ? 'Departed' : staff.afternoon.status) 
+        : 'Not Marked';
       const afternoonTime = staff.afternoon?.time || '—';
-      const overallStatus = staff.morning?.status === 'present' && staff.afternoon?.status === 'departed' ? 'Complete' : 
-                            staff.morning?.status === 'present' ? 'Checked In' : 'Absent';
+      const overallStatus = staff.morning?.status === 'present' && staff.afternoon?.status === 'departed' 
+        ? 'Complete' 
+        : staff.morning?.status === 'present' ? 'Checked In' : 'Absent';
 
       return [
         `"${staff.name?.replace(/"/g, '""') || 'Unknown'}"`,
@@ -63,7 +77,15 @@ const StaffAttendancePage = () => {
 
     const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
 
-    downloadCSV(csvContent, `staff_attendance_${format(new Date(), 'yyyy-MM-dd')}.csv`);
+    await attendanceExport.download({
+      filename: `staff_attendance_${format(new Date(), 'yyyy-MM-dd')}.csv`,
+      data: csvContent,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+      pendingMessage: 'Downloading staff attendance register...',
+      successMessage: 'Staff attendance downloaded successfully.',
+      errorMessage: 'Download failed. Please check app permissions.',
+    });
   };
 
   return (
@@ -80,9 +102,11 @@ const StaffAttendancePage = () => {
           <Button 
             variant="outline" 
             onClick={handleExport}
-            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm transition-all active:scale-95"
+            disabled={attendanceExport.isDownloading}
+            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm transition-all active:scale-95 disabled:opacity-60"
           >
-            <Download size={16} /> Export CSV
+            {attendanceExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            Export CSV
           </Button>
         </div>
       </div>

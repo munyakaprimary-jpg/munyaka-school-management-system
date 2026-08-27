@@ -6,10 +6,10 @@ import { showSuccess, showError } from '@/utils/toast';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Download, Loader2, Edit3, Check, Calendar, Clock } from "lucide-react";
 import { useAttendance } from '@/hooks/useAttendance';
-import { downloadCSV } from '@/utils/downloadHelper';
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import AttendanceTable from '@/components/attendance/AttendanceTable';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 const CLASS_OPTIONS = [
   { value: 'PP1', label: 'PP1' },
@@ -33,14 +33,15 @@ const getStreamsForClass = (selectedClass: string): string[] => {
     const parsed = JSON.parse(raw);
     const activeGrade = parsed.find((g: any) => g.name === selectedClass || g.id === selectedClass);
     if (activeGrade && Array.isArray(activeGrade.streams)) {
-      return ['All Streams', ...activeGrade.streams.map((s: any) => typeof s === 'string' ? s : s.name)];
+      return ['All Streams', ...activeGrade.streams.map((s: any) =>
+        typeof s === 'string' ? s : s.name
+      )];
     }
   } catch (e) {}
   return ['All Streams'];
 };
 
 const Attendance = () => {
-  const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [selectedClass, setSelectedClass] = useState('Grade 6');
   const [selectedStream, setSelectedStream] = useState('all');
@@ -51,6 +52,9 @@ const Attendance = () => {
     return hour >= 12 ? 'afternoon' : 'morning';
   });
   const [registerLocked, setRegisterLocked] = useState(false);
+
+  // ====== Unified file-download state for CSV export ======
+  const registerExport = useFileDownload();
 
   const { 
     students, 
@@ -105,12 +109,53 @@ const Attendance = () => {
     setRegisterLocked(checkLock());
   }, [selectedClass, selectedStream, selectedDate, activeSession]);
 
-  const handleExport = () => {
-    setIsExporting(true);
-    setTimeout(() => {
-      setIsExporting(false);
-      showSuccess(`Attendance register exported successfully!`);
-    }, 500);
+  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  const handleExport = async () => {
+    if (students.length === 0) {
+      showError("No students available to export.");
+      return;
+    }
+
+    const currentDateStr = format(new Date(selectedDate), "PP");
+    const streamLabel = selectedStream === 'all' ? 'All Streams' : selectedStream;
+    
+    const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
+    const row2 = "P.O. BOX 5239-30100, ELDORET";
+    const row3 = "MOTTO: KNOWLEDGE POWER";
+    const row4 = `CLASS ATTENDANCE REGISTER - ${selectedClass.toUpperCase()} - ${streamLabel.toUpperCase()} - DATE: ${currentDateStr}`;
+
+    const headers = ["Learner Name", "Assessment ID", "Morning Session", "Morning Time", "Afternoon Session", "Afternoon Time"];
+
+    const getStatusLabel = (status?: string) => {
+      if (status === 'P') return "Present";
+      if (status === 'A') return "Absent";
+      if (status === 'L') return "Late";
+      return "Not Marked";
+    };
+
+    const rows = students.map(learner => {
+      const record = markedStudents[learner.id] || {};
+      return [
+        `"${learner.name.replace(/"/g, '""')}"`,
+        `"${learner.assessment.replace(/"/g, '""')}"`,
+        `"${getStatusLabel(record.morning?.status)}"`,
+        `"${record.morning?.time || '—'}"`,
+        `"${getStatusLabel(record.afternoon?.status)}"`,
+        `"${record.afternoon?.time || '—'}"`
+      ];
+    });
+
+    const csvContent = [row1, row2, row3, row4, "", headers.join(","), ...rows.map(r => r.join(","))].join("\n");
+
+    await registerExport.download({
+      filename: `attendance_${selectedClass.replace(/\s+/g, '_')}_${selectedStream}_${selectedDate}.csv`,
+      data: csvContent,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+      pendingMessage: 'Downloading attendance register...',
+      successMessage: 'Attendance register downloaded successfully.',
+      errorMessage: 'Download failed. Please check app permissions.',
+    });
   };
 
   const handleSave = () => {
@@ -222,10 +267,10 @@ const Attendance = () => {
           <Button 
             variant="outline" 
             onClick={handleExport}
-            disabled={isExporting}
-            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm transition-all active:scale-95"
+            disabled={registerExport.isDownloading}
+            className="rounded-xl border-slate-200 bg-white text-slate-700 font-bold gap-2 hover:bg-slate-50 shadow-sm transition-all active:scale-95 disabled:opacity-60"
           >
-            {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            {registerExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
             Export
           </Button>
         </div>

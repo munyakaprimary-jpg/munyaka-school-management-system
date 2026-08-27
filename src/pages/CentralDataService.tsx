@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Download, Upload, Database, RefreshCw, CheckCircle, FileCode, HardDrive, ShieldCheck, AlertCircle, Sparkles } from 'lucide-react';
+import { Download, Upload, Database, RefreshCw, CheckCircle, FileCode, HardDrive, ShieldCheck, AlertCircle, Sparkles, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 export default function CentralDataService() {
   const [stats, setStats] = useState({
@@ -17,6 +18,10 @@ export default function CentralDataService() {
 
   const [importJsonText, setImportJsonText] = useState('');
   const [isImporting, setIsImporting] = useState(false);
+
+  // ====== Unified file-download state ======
+  const seedExport = useFileDownload();
+  const jsonExport = useFileDownload();
 
   const loadStats = () => {
     try {
@@ -41,7 +46,8 @@ export default function CentralDataService() {
     loadStats();
   }, []);
 
-  const handleExportDatabase = () => {
+  // ====== UNIFIED EXPORT: Central database as initialSeedData.ts ======
+  const handleExportDatabase = async () => {
     try {
       const dbBundle = {
         version: "4.0",
@@ -83,27 +89,27 @@ export default function CentralDataService() {
 
       const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
       
-      const blob = new Blob([jsonString], { type: 'text/typescript' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'initialSeedData.ts';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-
       const nowStr = new Date().toLocaleString();
       localStorage.setItem('munyaka_last_export_date', nowStr);
       setStats(prev => ({ ...prev, lastExportDate: nowStr }));
-      showSuccess("Central database successfully exported as initialSeedData.ts!");
+
+      await seedExport.download({
+        filename: 'initialSeedData.ts',
+        data: jsonString,
+        mimeType: 'text/typescript;charset=utf-8;',
+        fileType: 'txt',
+        pendingMessage: 'Exporting central database...',
+        successMessage: 'Central database successfully exported as initialSeedData.ts!',
+        errorMessage: 'Failed to export database bundle.',
+      });
     } catch (e) {
       console.error(e);
       showError("Failed to export database bundle.");
     }
   };
 
-  const handleExportJson = () => {
+  // ====== UNIFIED EXPORT: JSON backup ======
+  const handleExportJson = async () => {
     try {
       const dbBundle = {
         version: "3.5",
@@ -117,17 +123,18 @@ export default function CentralDataService() {
       };
 
       const jsonString = JSON.stringify(dbBundle, null, 2);
-      const blob = new Blob([jsonString], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'munyaka_school_db_backup.json';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      showSuccess("JSON database backup downloaded!");
+
+      await jsonExport.download({
+        filename: 'munyaka_school_db_backup.json',
+        data: jsonString,
+        mimeType: 'application/json;charset=utf-8;',
+        fileType: 'json',
+        pendingMessage: 'Generating JSON backup...',
+        successMessage: 'JSON database backup downloaded!',
+        errorMessage: 'Failed to export JSON.',
+      });
     } catch (e) {
+      console.error(e);
       showError("Failed to export JSON.");
     }
   };
@@ -201,9 +208,10 @@ export default function CentralDataService() {
         </div>
         <Button 
           onClick={handleExportDatabase}
-          className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-lg flex items-center gap-2 px-5 py-3 h-auto"
+          disabled={seedExport.isDownloading}
+          className="bg-emerald-500 hover:bg-emerald-600 text-slate-950 font-bold shadow-lg flex items-center gap-2 px-5 py-3 h-auto disabled:opacity-60"
         >
-          <Download className="w-5 h-5" />
+          {seedExport.isDownloading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Download className="w-5 h-5" />}
           Export as initialSeedData.ts
         </Button>
       </div>
@@ -282,8 +290,13 @@ export default function CentralDataService() {
             </div>
 
             <div className="pt-4 border-t flex items-center gap-3">
-              <Button variant="outline" onClick={handleExportJson} className="flex items-center gap-2">
-                <FileCode className="w-4 h-4 text-blue-600" />
+              <Button 
+                variant="outline" 
+                onClick={handleExportJson}
+                disabled={jsonExport.isDownloading}
+                className="flex items-center gap-2 disabled:opacity-60"
+              >
+                {jsonExport.isDownloading ? <Loader2 className="w-4 h-4 animate-spin" /> : <FileCode className="w-4 h-4 text-blue-600" />}
                 Download JSON Backup
               </Button>
               <Button variant="outline" onClick={loadStats} className="flex items-center gap-2">
