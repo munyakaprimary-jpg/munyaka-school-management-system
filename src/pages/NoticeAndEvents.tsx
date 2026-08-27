@@ -26,11 +26,16 @@ import {
   ExternalLink,
   Flame,
   CheckCircle2,
-  CalendarDays
+  CalendarDays,
+  Trash2,
+  AlertCircle
 } from 'lucide-react';
-import { showSuccess } from '@/utils/toast';
-import { format, isToday, isSameDay, addDays } from 'date-fns';
+import { showSuccess, showError } from '@/utils/toast';
+import { format, isToday, isSameDay, addDays, parseISO, startOfDay } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
+
+const NOTICES_STORAGE_KEY = 'munyaka_notices_v2';
+const EVENTS_STORAGE_KEY = 'munyaka_events_v2';
 
 const INITIAL_NOTICES: Notice[] = [
   {
@@ -69,50 +74,11 @@ const INITIAL_NOTICES: Notice[] = [
   }
 ];
 
-const INITIAL_EVENTS: SchoolEvent[] = [
-  {
-    id: 'e1',
-    title: 'Annual Inter-House Athletics Championship',
-    date: '2025-08-28',
-    time: '08:30 AM - 03:00 PM',
-    location: 'Main School Sports Ground',
-    type: 'Sports',
-    priority: 'high'
-  },
-  {
-    id: 'e2',
-    title: 'Grade 6 & 9 Parent-Teacher Consultation Day',
-    date: '2025-08-30',
-    time: '09:00 AM - 01:00 PM',
-    location: 'Main Assembly Hall',
-    type: 'Academic',
-    priority: 'normal'
-  },
-  {
-    id: 'e3',
-    title: 'National Science & ICT Fair Exhibition',
-    date: '2025-09-04',
-    time: '10:00 AM - 04:00 PM',
-    location: 'Computer Lab & Science Center',
-    type: 'Exhibition',
-    priority: 'high'
-  },
-  {
-    id: 'e4',
-    title: 'End of Term 3 Closing Ceremony',
-    date: '2025-09-18',
-    time: '09:00 AM - 12:00 PM',
-    location: 'School Main Hall',
-    type: 'Ceremony',
-    priority: 'normal'
-  }
-];
-
 export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defaultTab?: 'announcements' | 'events' }) {
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_notices_v2');
+      const saved = localStorage.getItem(NOTICES_STORAGE_KEY);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
@@ -122,12 +88,12 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const [events, setEvents] = useState<SchoolEvent[]>(() => {
     try {
-      const saved = localStorage.getItem('munyaka_events_v2');
+      const saved = localStorage.getItem(EVENTS_STORAGE_KEY);
       if (saved) return JSON.parse(saved);
     } catch (e) {
       console.error(e);
     }
-    return INITIAL_EVENTS;
+    return []; // Start with empty events - no hardcoded mock data
   });
 
   // Mobile/responsive segmented toggle: 'announcements' | 'events'
@@ -157,8 +123,11 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   const [eventDetails, setEventDetails] = useState('');
   const [eventType, setEventType] = useState('Academic');
 
+  // Delete confirmation state
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+
   useEffect(() => {
-    localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
+    localStorage.setItem(NOTICES_STORAGE_KEY, JSON.stringify(notices));
   }, [notices]);
 
   const formatTime12h = (time24: string): string => {
@@ -172,7 +141,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   };
 
   useEffect(() => {
-    localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
+    localStorage.setItem(EVENTS_STORAGE_KEY, JSON.stringify(events));
   }, [events]);
 
   const handlePublishNotice = (e: React.FormEvent) => {
@@ -228,39 +197,38 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
     showSuccess("New Event added to School Calendar!");
   };
 
+  const handleDeleteEvent = (eventId: string) => {
+    setEvents(events.filter(e => e.id !== eventId));
+    setDeleteConfirmId(null);
+    showSuccess("Event removed from history.");
+  };
+
   // Separate banner states for each tab
   // Notice Board Banner: Latest urgent/pinned notice
   const urgentNotices = useMemo(() => {
     return notices.filter(n => n.category === 'Urgent' || n.pinned);
   }, [notices]);
 
-  // School Calendar Banner: Next upcoming high-priority event
-  const upcomingHighPriorityEvent = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
+  // Dynamic separation of events based on current date
+  const today = useMemo(() => startOfDay(new Date()), []);
+  
+  const upcomingEvents = useMemo(() => {
     return events
       .filter(e => {
-        const eventDate = new Date(e.date);
-        eventDate.setHours(0, 0, 0, 0);
-        return eventDate >= today && (e.priority === 'high' || e.priority === 'urgent');
-      })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-  }, [events]);
-
-  // Fallback: next upcoming event if no high-priority events
-  const nextUpcomingEvent = useMemo(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    return events
-      .filter(e => {
-        const eventDate = new Date(e.date);
-        eventDate.setHours(0, 0, 0, 0);
+        const eventDate = startOfDay(parseISO(e.date));
         return eventDate >= today;
       })
-      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())[0];
-  }, [events]);
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+  }, [events, today]);
+
+  const pastEvents = useMemo(() => {
+    return events
+      .filter(e => {
+        const eventDate = startOfDay(parseISO(e.date));
+        return eventDate < today;
+      })
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()); // Most recent past first
+  }, [events, today]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-32">
@@ -323,8 +291,8 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
         </div>
       )}
 
-      {/* School Calendar Banner - Upcoming High-Priority Event */}
-      {mobileTab === 'events' && (upcomingHighPriorityEvent || nextUpcomingEvent) && (
+      {/* School Calendar Banner - Next Upcoming Event */}
+      {mobileTab === 'events' && upcomingEvents.length > 0 && (
         <div className="bg-gradient-to-r from-amber-500 via-amber-600 to-orange-600 rounded-3xl p-4 sm:p-5 text-white shadow-xl shadow-amber-500/10 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-10 h-10 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 animate-pulse">
@@ -333,20 +301,18 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
             <div className="min-w-0">
               <div className="flex items-center gap-2">
                 <span className="bg-white/20 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full">
-                  {upcomingHighPriorityEvent ? 'High Priority Event' : 'Upcoming Event'}
+                  Next Upcoming Event
                 </span>
                 <span className="text-xs font-medium text-amber-100 truncate">
-                  {upcomingHighPriorityEvent || nextUpcomingEvent ? format(new Date((upcomingHighPriorityEvent || nextUpcomingEvent)!.date), 'EEEE, MMM d') : ''}
+                  {format(new Date(upcomingEvents[0].date), 'EEEE, MMM d')}
                 </span>
               </div>
-              <p className="font-bold text-sm sm:text-base truncate mt-0.5">
-                {(upcomingHighPriorityEvent || nextUpcomingEvent)!.title}
-              </p>
+              <p className="font-bold text-sm sm:text-base truncate mt-0.5">{upcomingEvents[0].title}</p>
             </div>
           </div>
           <Button 
             onClick={() => {
-              const el = document.getElementById(`event-${(upcomingHighPriorityEvent || nextUpcomingEvent)!.id}`);
+              const el = document.getElementById(`event-${upcomingEvents[0].id}`);
               el?.scrollIntoView({ behavior: 'smooth', block: 'center' });
             }}
             size="sm"
@@ -377,7 +343,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
               : 'text-slate-600 dark:text-slate-400'
           }`}
         >
-          <CalendarDays size={16} /> Upcoming Events ({events.length})
+          <CalendarDays size={16} /> Upcoming Events ({upcomingEvents.length})
         </button>
       </div>
 
@@ -463,8 +429,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
           </div>
         </div>
 
-        {/* Right Column: Upcoming Events Feed Sidebar */}
+        {/* Right Column: Upcoming Events & Past Events History */}
         <div className={`lg:col-span-4 space-y-6 ${mobileTab !== 'events' ? 'hidden lg:block' : ''}`}>
+          {/* Upcoming Events Section */}
           <Card className="rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8">
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div className="flex items-center gap-2.5">
@@ -474,56 +441,171 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
                 <h3 className="text-lg font-black text-slate-900 dark:text-white">Upcoming Events</h3>
               </div>
               <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full">
-                {events.length} Dates
+                {upcomingEvents.length} Scheduled
               </span>
             </div>
 
             <div className="space-y-5">
-              {events.map((event) => {
-                const dateObj = new Date(event.date);
-                const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
-                const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
+              {upcomingEvents.length > 0 ? (
+                upcomingEvents.map((event) => {
+                  const dateObj = new Date(event.date);
+                  const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
+                  const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
+                  const isTodayEvent = isToday(dateObj);
 
-                return (
-                  <div key={event.id} id={`event-${event.id}`} className="flex items-start gap-4 group">
-                    {/* Bold Date Badge */}
-                    <div className="w-14 h-16 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 flex flex-col items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm">
-                      <span className="text-[10px] font-black uppercase tracking-wider text-indigo-500 group-hover:text-indigo-200">{monthStr}</span>
-                      <span className="text-lg font-black text-slate-900 dark:text-white group-hover:text-white">{dayStr}</span>
-                    </div>
-
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-center justify-between">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md">
-                          {event.type || 'School Event'}
-                        </span>
+                  return (
+                    <div key={event.id} id={`event-${event.id}`} className={`flex items-start gap-4 group ${isTodayEvent ? 'ring-2 ring-indigo-500/50' : ''}`}>
+                      {/* Bold Date Badge */}
+                      <div className={`w-14 h-16 rounded-2xl flex flex-col items-center justify-center shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-all duration-300 shadow-sm ${
+                        isTodayEvent 
+                          ? 'bg-indigo-600 text-white animate-pulse' 
+                          : 'bg-indigo-50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50'
+                      }`}>
+                        <span className={`text-[10px] font-black uppercase tracking-wider ${isTodayEvent ? 'text-indigo-200' : 'text-indigo-500'}`}>{monthStr}</span>
+                        <span className={`text-lg font-black ${isTodayEvent ? 'text-white' : 'text-slate-900 dark:text-white'}`}>{dayStr}</span>
                       </div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug truncate">
-                        {event.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                        <Clock size={12} className="shrink-0" /> {event.time}
-                      </p>
-                      {event.location && (
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-indigo-500 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/50 px-2 py-0.5 rounded-md">
+                            {event.type || 'School Event'}
+                          </span>
+                          {isTodayEvent && (
+                            <Badge className="bg-emerald-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                              TODAY
+                            </Badge>
+                          )}
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug truncate">
+                          {event.title}
+                        </h4>
                         <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
-                          <MapPin size={12} className="shrink-0" /> {event.location}
+                          <Clock size={12} className="shrink-0" /> {event.time}
                         </p>
-                      )}
+                        {event.location && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                            <MapPin size={12} className="shrink-0" /> {event.location}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              ) : (
+                <div className="text-center py-8 text-slate-400">
+                  <CalendarDays size={32} className="mx-auto mb-2 text-slate-300" />
+                  <p className="text-sm font-medium">No upcoming events scheduled.</p>
+                  <p className="text-xs text-slate-500 mt-1">Click "Add Event" to schedule a new event.</p>
+                </div>
+              )}
+            </div>
+          </Card>
+
+          {/* Past Events History Section */}
+          <Card className="rounded-[2.5rem] bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 shadow-sm p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 flex items-center justify-center">
+                  <CalendarDays size={18} />
+                </div>
+                <h3 className="text-lg font-black text-slate-900 dark:text-white">Past Events History</h3>
+              </div>
+              <span className="text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full">
+                {pastEvents.length} Completed
+              </span>
+            </div>
+
+            <div className="space-y-4">
+              {pastEvents.length > 0 ? (
+                pastEvents.map((event) => {
+                  const dateObj = new Date(event.date);
+                  const monthStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'MMM').toUpperCase() : 'AUG';
+                  const dayStr = !isNaN(dateObj.getTime()) ? format(dateObj, 'dd') : '28';
+                  const formattedDate = !isNaN(dateObj.getTime()) ? format(dateObj, 'EEEE, MMM d, yyyy') : event.date;
+
+                  return (
+                    <div key={event.id} id={`event-${event.id}`} className="flex items-start gap-4 group">
+                      {/* Date Badge - Muted for past events */}
+                      <div className="w-14 h-16 rounded-2xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center shrink-0 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 transition-all duration-300">
+                        <span className="text-[10px] font-black uppercase tracking-wider text-slate-500">{monthStr}</span>
+                        <span className="text-lg font-black text-slate-700 dark:text-slate-300">{dayStr}</span>
+                      </div>
+
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                            {event.type || 'School Event'}
+                          </span>
+                          {/* Delete button for past events */}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                            onClick={() => setDeleteConfirmId(event.id.toString())}
+                            title="Delete this past event record"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </div>
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors leading-snug truncate">
+                          {event.title}
+                        </h4>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                          <Clock size={12} className="shrink-0" /> {event.time}
+                        </p>
+                        {event.location && (
+                          <p className="text-xs text-slate-500 dark:text-slate-400 flex items-center gap-1 truncate">
+                            <MapPin size={12} className="shrink-0" /> {event.location}
+                          </p>
+                        )}
+                        <p className="text-[10px] text-slate-400 font-medium">
+                          Completed on {formattedDate}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })}
+              ) : (
+                <div className="text-center py-12 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl">
+                  <CalendarDays size={48} className="mx-auto mb-3 text-slate-300 dark:text-slate-600" />
+                  <p className="text-slate-500 dark:text-slate-400 font-medium">No past events recorded</p>
+                  <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Events will appear here automatically after their scheduled date passes.</p>
+                </div>
+              )}
+            </div>
+
+            {/* Delete Confirmation Modal for Past Events */}
+            {deleteConfirmId && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-rose-100 dark:bg-rose-900/30 text-rose-600 dark:text-rose-400 rounded-xl flex items-center justify-center">
+                      <AlertCircle size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-slate-900 dark:text-white">Delete Past Event?</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">This will permanently remove the event from history.</p>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-slate-100 dark:border-slate-800 text-center">
-              <Button 
-                onClick={() => setIsEventModalOpen(true)}
-                variant="outline" 
-                className="w-full rounded-2xl font-bold h-11 border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-              >
-                <Plus size={16} className="mr-2" /> Add Calendar Event
-              </Button>
-            </div>
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="ghost" 
+                      className="flex-1 rounded-xl h-11 font-bold"
+                      onClick={() => setDeleteConfirmId(null)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      variant="destructive"
+                      className="flex-1 rounded-xl h-11 font-bold"
+                      onClick={() => handleDeleteEvent(parseInt(deleteConfirmId))}
+                    >
+                      <Trash2 size={16} className="mr-2" /> Delete Permanently
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
           </Card>
         </div>
 
