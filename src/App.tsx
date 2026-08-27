@@ -1,4 +1,3 @@
-TeacherSelection -> StaffCheckIn with full back-arrow support.">
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -40,7 +39,7 @@ import NotFound from "./pages/NotFound";
 import Promote from "./pages/Promote";
 import StaffAttendancePage from "./pages/StaffAttendance";
 import StaffCheckIn from "./pages/StaffCheckIn";
-import TeacherSelection from "./pages/TeacherSelection";
+import TeacherSelection from "./pages/StaffCheckInSelector";
 import AttendanceMonitor from "./pages/AttendanceMonitor";
 import DigitalHub from "./pages/DigitalHub";
 import DigitalLiteracyVideos from "./pages/DigitalLiteracyVideos";
