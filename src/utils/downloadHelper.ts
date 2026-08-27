@@ -1,4 +1,4 @@
-import { clsx, type ClassValue } from "clsx";
+import { ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -30,69 +30,84 @@ export const generateCSVHeader = (reportTitle: string, extraInfo?: string[]) => 
   return lines;
 };
 
-// PDF Header HTML Generator
-export const generatePDFHeaderHTML = (reportTitle: string, extraInfo?: string[]) => {
-  const extraLines = extraInfo?.map(info => `<p class="pdf-header-info">${info}</p>`).join('') || '';
-  return `
-    <div class="pdf-header">
-      <h1 class="pdf-school-name">${SCHOOL_HEADERS.name}</h1>
-      <p class="pdf-motto">${SCHOOL_HEADERS.motto}</p>
-      <p class="pdf-address">${SCHOOL_HEADERS.address}</p>
-      <p class="pdf-contact">${SCHOOL_HEADERS.phone} | ${SCHOOL_HEADERS.email}</p>
-      <div class="pdf-divider"></div>
-      <h2 class="pdf-report-title">${reportTitle}</h2>
-      ${extraLines}
-    </div>
-  `;
-};
+/**
+ * Backward-compatible wrapper that builds a CSV string and routes it through
+ * the unified file download pipeline. Prepends a UTF-8 BOM for Excel
+ * compatibility, and resolves with a `FileDownloadResult` so callers can
+ * update their UI state in response to success/failure.
+ */
+export async function downloadCSV(csvContent: string, fileName: string) {
+  const { downloadFile } = await import('./fileDownloader');
+  return downloadFile({
+    filename: fileName,
+    data: csvContent,
+    mimeType: 'text/csv;charset=utf-8;',
+    fileType: 'csv',
+  });
+}
 
-// Download CSV with standardized headers
-export const downloadCSV = (csvContent: string, fileName: string): void => {
-  const BOM = '\uFEFF';
-  const encodedData = encodeURIComponent(BOM + csvContent);
-  const href = `data:text/csv;charset=utf-8,${encodedData}`;
-  
-  const link = document.createElement('a');
-  link.setAttribute('href', href);
-  link.setAttribute('download', fileName);
-  link.style.display = 'none';
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+/**
+ * Backward-compatible wrapper for downloading text/JSON content via the
+ * unified file downloader.
+ */
+export async function downloadText(textContent: string, fileName: string) {
+  const { downloadFile } = await import('./fileDownloader');
+  return downloadFile({
+    filename: fileName,
+    data: textContent,
+    mimeType: 'text/plain;charset=utf-8',
+    fileType: 'txt',
+  });
+}
 
-// Download text file
-export const downloadText = (textContent: string, fileName: string): void => {
-  const blob = new Blob([textContent], { type: 'text/plain;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+/**
+ * Backward-compatible wrapper for downloading from a URL by triggering
+ * a standard anchor element. (Used for blob: or http(s) URLs that have
+ * already been produced elsewhere.)
+ */
+export async function downloadFromUrl(url: string, fileName: string, _mimeType: string = 'application/octet-stream') {
+  const { downloadFile } = await import('./fileDownloader');
+  // We don't have raw data for arbitrary URLs, so we fetch and re-route
+  // through the unified pipeline so the user gets a consistent toast.
+  try {
+    const response = await fetch(url);
+    if (!response.ok) throw new Error(`Failed to fetch file: ${response.statusText}`);
+    const blob = await response.blob();
+    const mimeType = blob.type || 'application/octet-stream';
+    const reader = new FileReader();
+    const data: string = await new Promise((resolve, reject) => {
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(blob);
+    });
+    const base64 = data.split(',')[1] || data;
+    return downloadFile({
+      filename: fileName,
+      data: base64,
+      mimeType,
+      isBase64: true,
+    });
+  } catch (err) {
+    const { downloadFile: df } = await import('./fileDownloader');
+    return df({
+      filename: fileName,
+      data: '',
+      mimeType: 'text/plain',
+      errorMessage: 'Download failed. Please check app permissions.',
+    });
+  }
+}
 
-// Download from URL
-export const downloadFromUrl = (url: string, fileName: string, mimeType: string = 'application/octet-stream'): void => {
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
-
-// Download JSON/Blob file (missing export that was causing the error)
-export const downloadFile = (content: string, fileName: string, mimeType: string = 'application/json'): void => {
-  const blob = new Blob([content], { type: `${mimeType};charset=utf-8` });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = fileName;
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-};
+/**
+ * Backward-compatible wrapper for downloading JSON content via the
+ * unified file downloader.
+ */
+export async function downloadFile(content: string, fileName: string, mimeType: string = 'application/json') {
+  const { downloadFile: df } = await import('./fileDownloader');
+  return df({
+    filename: fileName,
+    data: content,
+    mimeType,
+    isBase64: false,
+  });
+}

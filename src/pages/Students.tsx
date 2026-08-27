@@ -2,10 +2,12 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  AlertCircle
+  AlertCircle, Loader2
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 interface Learner {
   id: string;
@@ -55,7 +57,6 @@ const getGradeMatchKey = (name: string): string => {
   if (!name) return '';
   const trimmed = name.trim();
   if (!trimmed) return '';
-  // Check if it's a Pre-Primary grade (PP1/PP2)
   const lower = trimmed.toLowerCase();
   if (lower === 'pp1' || lower === 'pp2') return lower;
   // Extract digit-only suffix for Grade X names
@@ -455,10 +456,16 @@ export default function Students() {
     setDeleteId(null);
   };
 
+  // === Unified file-download state ===
+  // We track a single download state for the export menu's "all / current view"
+  // buttons and a separate print state for the print action.
+  const allLearnersExport = useFileDownload();
+  const currentViewExport = useFileDownload();
+
   // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
-  const exportToCSV = (datasetToExport: Learner[]) => {
+  const buildCsvForDataset = (datasetToExport: Learner[]): string => {
     const headers = ['Adm No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
     const rows = datasetToExport.map((l) => [
       l.admNo,
@@ -469,37 +476,47 @@ export default function Students() {
       `"${l.guardian}"`,
       `"${l.phone}"`,
     ]);
-
-    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', `learners_export_${new Date().toISOString().slice(0, 10)}.csv`);
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    setIsExportMenuOpen(false);
+    return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
   };
 
-  const handleExportAll = () => {
+  const handleExportAll = async () => {
+    setIsExportMenuOpen(false);
+    let targetDataset = learners;
     try {
       const fullDataset = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      const targetDataset = Array.isArray(fullDataset) && fullDataset.length > 0 ? fullDataset : learners;
-      exportToCSV(targetDataset);
+      if (Array.isArray(fullDataset) && fullDataset.length > 0) {
+        targetDataset = fullDataset;
+      }
     } catch {
-      exportToCSV(learners);
+      targetDataset = learners;
     }
+    const csv = buildCsvForDataset(targetDataset);
+    await allLearnersExport.download({
+      filename: `learners_export_${new Date().toISOString().slice(0, 10)}.csv`,
+      data: csv,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+    });
   };
 
-  const handleExportCurrentView = () => {
-    exportToCSV(filteredLearners);
+  const handleExportCurrentView = async () => {
+    setIsExportMenuOpen(false);
+    const csv = buildCsvForDataset(filteredLearners);
+    await currentViewExport.download({
+      filename: `learners_view_${new Date().toISOString().slice(0, 10)}.csv`,
+      data: csv,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+    });
   };
 
   // Print
   const handlePrint = () => {
     window.print();
   };
+
+  const isAnyExportInProgress =
+    allLearnersExport.isDownloading || currentViewExport.isDownloading;
 
   return (
     <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
@@ -523,10 +540,15 @@ export default function Students() {
             <button
               type="button"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all"
+              disabled={isAnyExportInProgress}
+              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              <Download className="w-4 h-4 text-slate-500" />
-              Export CSV
+              {isAnyExportInProgress ? (
+                <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
+              ) : (
+                <Download className="w-4 h-4 text-slate-500" />
+              )}
+              {isAnyExportInProgress ? "Exporting…" : "Export CSV"}
               <ChevronDown className="w-3.5 h-3.5 text-slate-400 ml-1" />
             </button>
 
@@ -535,7 +557,8 @@ export default function Students() {
                 <button
                   type="button"
                   onClick={handleExportAll}
-                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                  disabled={isAnyExportInProgress}
+                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <Users className="w-3.5 h-3.5 text-indigo-500" />
                   All Learners
@@ -543,7 +566,8 @@ export default function Students() {
                 <button
                   type="button"
                   onClick={handleExportCurrentView}
-                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2 border-t border-slate-100"
+                  disabled={isAnyExportInProgress}
+                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2 border-t border-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <FileText className="w-3.5 h-3.5 text-slate-500" />
                   Current View ({filteredLearners.length})

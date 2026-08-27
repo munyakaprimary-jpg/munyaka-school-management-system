@@ -13,7 +13,7 @@ import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, L
 import { TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
-import { downloadCSV } from '@/utils/downloadHelper';
+import { useFileDownload } from '@/utils/fileDownloader';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';
@@ -185,7 +185,6 @@ const Fees = () => {
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
-  const [isDownloading, setIsDownloading] = useState(false);
 
   // Admin Auth States for Set Term Fees
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -196,6 +195,9 @@ const Fees = () => {
   // Config States
   const [configGrade, setConfigGrade] = useState<string>("all");
   const [configAmount, setConfigAmount] = useState("");
+
+  // ====== Unified file-download state for CSV statement ======
+  const statementExport = useFileDownload();
 
   // Persist data to localStorage
   useEffect(() => {
@@ -378,14 +380,39 @@ const Fees = () => {
     };
   }, [calculatedFees]);
 
-  // Download Handler respecting active Grade Level filter
+  // ====== UNIFIED DOWNLOAD HANDLER for the fee statement CSV ======
   const handleDownloadFeeStatement = async () => {
-    setIsDownloading(true);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-    setIsDownloading(false);
-    
     const activeGradeLabel = GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "Selected Grade";
-    showSuccess(`Fee statement for ${activeGradeLabel} downloaded successfully!`);
+    const filename = `fee_statement_${activeGradeLabel.replace(/\s+/g, '_')}_${selectedTerm}_${new Date().toISOString().slice(0, 10)}.csv`;
+    
+    // Build a single CSV string with school header + filter context
+    const headers = [
+      "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+      `Active Filter: ${activeGradeLabel} | ${selectedTerm} | ${selectedYear}`,
+      `Total Students: ${filteredCalculatedFees.length} | Generated: ${new Date().toLocaleString()}`,
+      "",
+      ["Adm No", "Student Name", "Grade", "Stream", "Term Fee (KES)", "Fee Paid (KES)", "Balance (KES)", "Status"].join(","),
+    ];
+    const rows = filteredCalculatedFees.map((fee) => [
+      fee.admNo || "",
+      `"${fee.student}"`,
+      fee.grade,
+      fee.stream,
+      fee.total,
+      fee.paid,
+      fee.balance,
+      fee.status,
+    ].join(","));
+    const csv = [headers.join("\n"), ...rows].join("\n");
+
+    await statementExport.download({
+      filename,
+      data: csv,
+      mimeType: 'text/csv;charset=utf-8;',
+      fileType: 'csv',
+      successMessage: `Fee statement for ${activeGradeLabel} downloaded successfully.`,
+      errorMessage: "Download failed. Please check app permissions.",
+    });
   };
 
   // Auth Handlers for Set Term Fees
@@ -697,10 +724,10 @@ const Fees = () => {
 
           <Button 
             onClick={handleDownloadFeeStatement}
-            disabled={isDownloading}
-            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg h-10 px-4 text-sm font-medium shadow-sm gap-2 transition-all shrink-0"
+            disabled={statementExport.isDownloading}
+            className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white rounded-lg h-10 px-4 text-sm font-medium shadow-sm gap-2 transition-all disabled:opacity-60"
           >
-            {isDownloading ? (
+            {statementExport.isDownloading ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
               <FileDown size={16} />
