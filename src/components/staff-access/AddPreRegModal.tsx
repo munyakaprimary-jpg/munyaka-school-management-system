@@ -37,11 +37,13 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
 
   const [formData, setFormData] = useState({
     fullName: "",
+    nationalId: "",
     tscNumber: "",
     email: "",
     phone: "",
     systemRole: "subject_teacher" as SystemRole,
-    assignedSubjects: ["Mathematics", "Science & Tech"]
+    assignedSubjects: ["Mathematics", "Science & Tech"],
+    tempAccessCode: ""
   });
 
   // Get available directory staff members from localStorage or STAFF
@@ -76,11 +78,13 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
       setSearchQuery("");
       setFormData({
         fullName: "",
+        nationalId: "",
         tscNumber: "",
         email: "",
         phone: "",
         systemRole: "subject_teacher",
-        assignedSubjects: ["Mathematics", "Science & Tech"]
+        assignedSubjects: ["Mathematics", "Science & Tech"],
+        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`
       });
     }
   }, [isOpen]);
@@ -91,14 +95,15 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     setComboboxOpen(false);
 
     setFormData(prev => ({
-      ...prev,
-      fullName: staff?.name ?? "",
-      tscNumber: staff?.tsc_no || "",
-      email: staff?.email ?? "",
-      phone: staff?.phone ?? "",
-      systemRole: mapRoleToSystemRole(staff?.role ?? ""),
-      assignedSubjects: staff?.subjects ? staff.subjects : ["Mathematics", "Science & Tech"]
-    }));
+          ...prev,
+          fullName: staff?.name ?? "",
+          nationalId: staff?.id_no ?? "",
+          tscNumber: staff?.tsc_no || "",
+          email: staff?.email ?? "",
+          phone: staff?.phone ?? "",
+          systemRole: mapRoleToSystemRole(staff?.role ?? ""),
+          assignedSubjects: staff?.subjects ? staff.subjects : ["Mathematics", "Science & Tech"]
+        }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -149,7 +154,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
                 {selectedStaffId ? (
                   <div className="flex items-center gap-2 truncate">
                     <User size={16} className="text-indigo-600 shrink-0" />
-                    <span>{formData.fullName} ({formData.email})</span>
+                    <span>{formData.fullName} ({formData.nationalId})</span>
                   </div>
                 ) : (
                   <span className="text-slate-400 font-normal">Type staff name or National ID to search...</span>
@@ -198,45 +203,56 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
         </div>
 
         {/* Form Inputs (Autofilled or Manual) */}
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
-          <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})}>
-            <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent className="rounded-2xl">
-              <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
-              <SelectItem value="class_teacher">Class Teacher</SelectItem>
-              <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
-              <SelectItem value="head_teacher">Head Teacher</SelectItem>
-              <SelectItem value="bursar">Bursar / Accounts</SelectItem>
-              <SelectItem value="support_admin">System Admin</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
-          <Input 
-            value={formData.fullName} 
-            onChange={e => setFormData({...formData, fullName: e.target.value})} 
-            placeholder="e.g. Jane Mwangi" 
-            className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
-            required 
-          />
-        </div>
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number *</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
             <Input 
-              value={formData.phone} 
-              onChange={e => setFormData({...formData, phone: e.target.value})} 
-              placeholder="+254..." 
+              value={formData.fullName} 
+              onChange={e => setFormData({...formData, fullName: e.target.value})} 
+              placeholder="e.g. Jane Mwangi" 
               className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
               required 
             />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID Number *</Label>
+            <Input 
+              value={formData.nationalId} 
+              onChange={e => setFormData({...formData, nationalId: e.target.value})} 
+              placeholder="e.g. 28374615" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
+            <Input 
+              value={formData.tscNumber} 
+              onChange={e => setFormData({...formData, tscNumber: e.target.value})} 
+              placeholder="e.g. TSC-482910" 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
+            <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})}>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
+              <SelectContent className="rounded-2xl">
+                <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
+                <SelectItem value="class_teacher">Class Teacher</SelectItem>
+                <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
+                <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                <SelectItem value="bursar">Bursar / Accounts</SelectItem>
+                <SelectItem value="support_admin">System Admin</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Official Email *</Label>
             <Input 
@@ -248,16 +264,26 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
               required 
             />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone Number *</Label>
+            <Input 
+              value={formData.phone} 
+              onChange={e => setFormData({...formData, phone: e.target.value})} 
+              placeholder="+254..." 
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
+              required 
+            />
+          </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-          <Input 
-            value={formData.tscNumber} 
-            onChange={e => setFormData({...formData, tscNumber: e.target.value})} 
-            placeholder="e.g. TSC-482910" 
-            className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900" 
-          />
+        <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Access Key</Label>
+            <div className="flex gap-2">
+              <Input value={formData.tempAccessCode} readOnly className="rounded-xl h-12 bg-slate-50 border-none font-black text-center text-indigo-700" />
+              <Button type="button" variant="outline" className="h-12 px-3 rounded-xl border-slate-200" onClick={generateRandomKey}><RefreshCw size={16} /></Button>
+            </div>
+          </div>
         </div>
       </form>
     </Modal>
