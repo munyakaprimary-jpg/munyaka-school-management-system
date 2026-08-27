@@ -44,36 +44,6 @@ export const INITIAL_SEED_DATA = {
       "phone": "07892356787"
     },
     {
-      "id": "1787655450822",
-      "admNo": "MPS/2025/086",
-      "name": "TOM OJIENDA",
-      "grade": "Grade 5",
-      "stream": "Yellow",
-      "gender": "Male",
-      "guardian": "AUSTIN MAKER",
-      "phone": "071233456"
-    },
-    {
-      "id": "1787654751456",
-      "admNo": "MPS /2025/015",
-      "name": "MARYANNE KEITANY",
-      "grade": "Grade 5",
-      "stream": "Blue",
-      "gender": "Female",
-      "guardian": "ANGEL MASWETI",
-      "phone": "078925688"
-    },
-    {
-      "id": "1",
-      "admNo": "MPS/2025/001",
-      "name": "Esther Njeri Mwangi",
-      "grade": "Grade 4",
-      "stream": "North",
-      "gender": "Female",
-      "guardian": "Grace Mwangi",
-      "phone": "+254 712 345 678"
-    },
-    {
       "id": "2",
       "admNo": "B004779091",
       "name": "PETER WAITITU",
@@ -92,26 +62,6 @@ export const INITIAL_SEED_DATA = {
       "gender": "Male",
       "guardian": "PHANICE NASIMIYU KIRISWA",
       "phone": "0141893904"
-    },
-    {
-      "id": "4",
-      "admNo": "MPS/2025/004",
-      "name": "Hassan Abdi Omar",
-      "grade": "Grade 6",
-      "stream": "West",
-      "gender": "Male",
-      "guardian": "Fatuma Omar",
-      "phone": "+254 701 112 233"
-    },
-    {
-      "id": "5",
-      "admNo": "MPS/2025/005",
-      "name": "Irene Chebet Langat",
-      "grade": "Grade 4",
-      "stream": "North",
-      "gender": "Female",
-      "guardian": "Kiprono Langat",
-      "phone": "+254 755 667 889"
     }
   ],
   "staff": [

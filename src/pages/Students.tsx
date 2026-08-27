@@ -218,7 +218,7 @@ export default function Students() {
 
   // Form State
   const [formData, setFormData] = useState({
-    admNo: 'MPS/2025/0' + Math.floor(10 + Math.random() * 90),
+    admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
     name: '',
     grade: GRADES_LIST[0] || 'Grade 4',
     stream: ALL_STREAMS_LIST[0] || 'North',
