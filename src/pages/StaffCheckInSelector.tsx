@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Clock, ChevronRight, UserCheck, GraduationCap, BookOpen, FlaskConical } from 'lucide-react';
 import { Card } from '@/components/ui/card';
@@ -22,6 +22,59 @@ const StaffCheckInSelector = () => {
   const navigate = useNavigate();
   const [selectedStaffId, setSelectedStaffId] = useState<string>("");
   const [staffDirectory, setStaffDirectory] = useState<DirectoryStaff[]>([]);
+
+  // Live clock state - stores current Date object
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+
+  // Live clock interval reference for cleanup
+  const clockIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // Update time every 1000ms with proper cleanup on unmount
+  useEffect(() => {
+    // Set initial time immediately
+    setCurrentTime(new Date());
+
+    // Start the 1-second interval
+    clockIntervalRef.current = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+
+    // Cleanup function - clears interval on component unmount to prevent memory leaks
+    return () => {
+      if (clockIntervalRef.current) {
+        clearInterval(clockIntervalRef.current);
+        clockIntervalRef.current = null;
+      }
+    };
+  }, []);
+
+  // Format time as HH:MM:SS AM/PM
+  const formattedTime = useMemo(() => {
+    let hours = currentTime.getHours();
+    const minutes = currentTime.getMinutes();
+    const seconds = currentTime.getSeconds();
+    const ampm = hours >= 12 ? 'PM' : 'AM';
+
+    hours = hours % 12;
+    if (hours === 0) hours = 12;
+
+    const hh = String(hours).padStart(2, '0');
+    const mm = String(minutes).padStart(2, '0');
+    const ss = String(seconds).padStart(2, '0');
+
+    return `${hh}:${mm}:${ss} ${ampm}`;
+  }, [currentTime]);
+
+  // Format date as "Thursday, Aug 27, 2026"
+  const formattedDate = useMemo(() => {
+    const weekdayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const weekday = weekdayNames[currentTime.getDay()];
+    const month = monthNames[currentTime.getMonth()];
+    const day = currentTime.getDate();
+    const year = currentTime.getFullYear();
+    return `${weekday}, ${month} ${day}, ${year}`;
+  }, [currentTime]);
 
   // Load staff from localStorage with fallback to mock data
   useEffect(() => {
@@ -75,8 +128,45 @@ const StaffCheckInSelector = () => {
           <div className="p-8 sm:p-10 space-y-8">
             {/* Header Section */}
             <div className="text-center space-y-4">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-indigo-500 to-violet-500 shadow-2xl shadow-indigo-500/50 mb-2 ring-4 ring-indigo-500/20">
-                <Clock className="text-white drop-shadow-lg" size={40} strokeWidth={2.5} />
+              {/* Live Clock Widget - replaced static icon with dynamic clock */}
+              <div className="flex justify-center mb-2">
+                <div
+                  className="
+                    relative inline-flex flex-col items-center justify-center
+                    px-6 py-4 rounded-3xl
+                    bg-gradient-to-tr from-indigo-500 to-violet-500
+                    shadow-2xl shadow-indigo-500/50
+                    ring-4 ring-indigo-500/20
+                    animate-pulse
+                  "
+                  aria-label="Live clock"
+                >
+                  {/* Soft radial glow layer (sits behind text) */}
+                  <div
+                    className="absolute inset-0 rounded-3xl pointer-events-none"
+                    style={{
+                      background:
+                        'radial-gradient(circle at center, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0) 70%)',
+                    }}
+                  />
+
+                  {/* Time row with live indicator dot */}
+                  <div className="relative flex items-center gap-2.5">
+                    <div className="relative flex h-2.5 w-2.5">
+                      <span className="absolute inline-flex h-full w-full rounded-full bg-emerald-300 opacity-75 animate-ping" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-400" />
+                    </div>
+                    <Clock className="text-white drop-shadow-lg" size={26} strokeWidth={2.5} />
+                    <span className="font-mono font-black text-white text-2xl tracking-wider drop-shadow-md tabular-nums">
+                      {formattedTime}
+                    </span>
+                  </div>
+
+                  {/* Date row */}
+                  <div className="relative mt-1.5 text-[11px] font-bold uppercase tracking-widest text-indigo-100/90">
+                    {formattedDate}
+                  </div>
+                </div>
               </div>
 
               <div className="space-y-2">
