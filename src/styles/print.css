@@ -49,7 +49,6 @@
 }
 
 @media print {
-  /* Force the institutional header to render even if hidden on screen. */
   .munyaka-institutional-header {
     page-break-after: avoid;
     break-after: avoid;
@@ -273,27 +272,6 @@
   td, th {
     padding: 6px 8px;
     vertical-align: middle;
-  }
-
-  /* Rank column */
-  .rank-column {
-    width: 40px;
-    text-align: center;
-  }
-
-  /* Sticky columns in print */
-  .sticky-left-0 {
-    position: sticky;
-    left: 0;
-    background: white;
-    z-index: 10;
-  }
-
-  .sticky-left-16 {
-    position: sticky;
-    left: 16px;
-    background: white;
-    z-index: 10;
   }
 
   /* Footer signature block */

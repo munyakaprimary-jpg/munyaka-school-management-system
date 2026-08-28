@@ -200,6 +200,7 @@
 main h1, main h2, main h3, main p {
   overflow-wrap: break-word;
   word-break: break-word;
+  min-width: 0;
 }
 
 /* Mobile Safe Areas (Notches, Home Indicator) */
