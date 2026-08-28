@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
+import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 
 export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -122,6 +123,9 @@ const initializeUsersStorage = () => {
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Auto-logout after 15 minutes of user inactivity.
+  useInactivityTimeout();
 
   useEffect(() => {
     initializeUsersStorage();
