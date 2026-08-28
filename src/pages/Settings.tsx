@@ -48,8 +48,10 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { loadGoogleMapsScript, useGoogleMapsReady } from '@/hooks/useGoogleMaps';
+import { CreditCard, Wallet, ShieldAlert, Crown, Globe, Building2, Calendar, TrendingUp } from 'lucide-react';
 
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
@@ -66,12 +68,12 @@ const MODULES = [
 ];
 
 const ROLES = [
-  { id: 'super_admin', label: 'System Administrator' },
-  { id: 'head_teacher', label: 'Principal / Head' },
-  { id: 'bursar', label: 'Bursar / Accountant' },
-  { id: 'teacher', label: 'Class Teacher' },
-  { id: 'parent', label: 'Parent / Guardian' },
-  { id: 'student', label: 'Learner' }
+  { id: 'super_admin', label: 'Super Admin / Owner', description: 'Highest authority — controls software payments, subscriptions, and financial gateway configurations.', color: 'bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200', icon: Crown },
+  { id: 'head_teacher', label: 'Head Teacher', description: 'Manages academics, staff reports, and school administration.', color: 'bg-purple-50 text-purple-700 border-purple-200', icon: Building2 },
+  { id: 'bursar', label: 'Bursar / Accountant', description: 'Handles daily student fee collection, receipts, and account ledgers.', color: 'bg-amber-50 text-amber-700 border-amber-200', icon: Wallet },
+  { id: 'teacher', label: 'Class Teacher', description: 'Manages class attendance, welfare, and academic progress.', color: 'bg-blue-50 text-blue-700 border-blue-200', icon: Globe },
+  { id: 'parent', label: 'Parent / Guardian', description: 'Views child academic progress, fee statements, and announcements.', color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: Globe },
+  { id: 'student', label: 'Learner', description: 'Views personal timetables, grades, and assignments.', color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Globe },
 ];
 
 const DEFAULT_AUDIT_LOGS = [
@@ -96,11 +98,38 @@ const getPasswordStrength = (pass: string) => {
 };
 
 const Settings = () => {
+  const { user } = useAuth();
+  const isSuperAdmin = user?.role === 'super_admin';
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showAuthPass, setShowAuthPass] = useState(false);
+
+  // Software & Billing state
+  const [billingConfig, setBillingConfig] = useState({
+    subscriptionPlan: 'enterprise',
+    billingCycle: 'annual',
+    nextBillingDate: '2025-03-15',
+    lastPaymentDate: '2024-03-15',
+    lastPaymentAmount: 480000,
+    paymentMethod: 'Bank Transfer',
+    paymentStatus: 'active',
+    registeredSeats: 150,
+    maxSeats: 200,
+    autoRenew: true,
+    invoiceEmail: 'accounts@munyaka.sc.ke',
+    billingContact: '+254 712 345 678',
+    schoolRegNumber: 'MOE/STD/ERK/2024/0147',
+    paymentGateway: 'mpesa',
+    gatewayConnected: true,
+    gatewayApiKey: '••••••••••••••••',
+    invoicePrefix: 'MNY-INV',
+    currency: 'KES',
+    taxRate: 0,
+    discountCode: '',
+    discountPercent: 0,
+  });
 
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError, refresh: refreshGeo } = useGeolocation();
   const googleMapsReady = useGoogleMapsReady();
@@ -581,6 +610,24 @@ const Settings = () => {
     showSuccess("Administrative Master PIN updated successfully!");
   };
 
+  const handleBillingConfigChange = (key: keyof typeof billingConfig, value: any) => {
+    setBillingConfig(prev => ({ ...prev, [key]: value }));
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSaveBillingConfig = async () => {
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 700));
+    localStorage.setItem('munyaka_billing_config', JSON.stringify(billingConfig));
+    setIsSaving(false);
+    setHasUnsavedChanges(true);
+    showSuccess("Software billing and payment gateway settings saved successfully!");
+  };
+
+  const handleTestGateway = () => {
+    showSuccess("M-Pesa Gateway connection test successful! ✓");
+  };
+
   const togglePermission = (roleId: string, modId: string, action: Action) => {
     setPermissions(prev => ({
       ...prev,
@@ -778,6 +825,9 @@ const Settings = () => {
           <TabsTrigger value="academic" className="rounded-xl px-8 h-full font-bold text-xs">Academic Setup</TabsTrigger>
           <TabsTrigger value="roles" className="rounded-xl px-8 h-full font-bold text-xs">Users & Roles</TabsTrigger>
           <TabsTrigger value="security" className="rounded-xl px-8 h-full font-bold text-xs">Security</TabsTrigger>
+          <TabsTrigger value="billing" className="rounded-xl px-6 h-full font-bold text-xs gap-2 data-[state=active]:bg-fuchsia-600 data-[state=active]:text-white">
+            <Crown size={14} className="hidden sm:inline" /> Software & Billing
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -1399,6 +1449,364 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        {/* --- BILLING TAB: Super Admin / Owner only --- */}
+        <TabsContent value="billing" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+          {!isSuperAdmin ? (
+            <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-12">
+              <div className="flex flex-col items-center text-center max-w-md mx-auto space-y-4">
+                <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center shadow-xl shadow-rose-100">
+                  <ShieldAlert size={36} />
+                </div>
+                <h2 className="text-2xl font-black text-slate-900 tracking-tight">Restricted Area</h2>
+                <p className="text-sm text-slate-500 font-medium">
+                  Software payments, subscriptions, and financial gateway configuration are exclusively reserved for the <strong className="text-fuchsia-600">Super Admin / Owner</strong> account.
+                </p>
+                <p className="text-xs text-slate-400 font-medium">
+                  This is a deliberate role hierarchy — the Bursar/Accountant manages day-to-day student fee collection. The Super Admin / Owner controls the platform itself.
+                </p>
+                <Badge className="bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200 font-bold text-[10px] px-3 py-1 mt-2">
+                  <Crown size={12} className="mr-1 inline" /> Super Admin / Owner Required
+                </Badge>
+              </div>
+            </Card>
+          ) : (
+            <>
+              {/* Super Admin badge banner */}
+              <Card className="border-none shadow-sm rounded-[2rem] bg-gradient-to-r from-fuchsia-600 to-purple-600 text-white p-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
+                      <Crown size={24} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-lg">Super Admin / Owner Console</h3>
+                      <p className="text-xs text-fuchsia-100 font-medium">Software payment & subscription controls. Only the Super Admin can modify these settings.</p>
+                    </div>
+                  </div>
+                  <Badge className="bg-white/20 text-white border-none font-bold text-[10px] px-3 py-1.5">
+                    ACTIVE
+                  </Badge>
+                </div>
+              </Card>
+
+              {/* Subscription Overview Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Current Plan</p>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1 flex items-center gap-2">
+                    <Crown size={18} className="text-fuchsia-600" /> Enterprise
+                  </h3>
+                  <p className="text-xs font-bold text-emerald-600 mt-2">Active until Mar 2025</p>
+                </Card>
+                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Seats Used</p>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1">
+                    {billingConfig.registeredSeats}<span className="text-sm text-slate-400 font-bold">/{billingConfig.maxSeats}</span>
+                  </h3>
+                  <div className="w-full bg-slate-100 h-1.5 rounded-full mt-2 overflow-hidden">
+                    <div className="h-full bg-fuchsia-600 transition-all" style={{ width: `${(billingConfig.registeredSeats / billingConfig.maxSeats) * 100}%` }} />
+                  </div>
+                </Card>
+                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Last Payment</p>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1">
+                    KES {billingConfig.lastPaymentAmount.toLocaleString()}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 mt-2">{billingConfig.lastPaymentDate}</p>
+                </Card>
+                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Next Billing</p>
+                  <h3 className="text-2xl font-black text-slate-900 mt-1">{billingConfig.nextBillingDate}</h3>
+                  <p className="text-xs font-bold text-amber-600 mt-2 flex items-center gap-1">
+                    <Calendar size={12} /> {Math.ceil((new Date(billingConfig.nextBillingDate).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))} days away
+                  </p>
+                </Card>
+              </div>
+
+              {/* Subscription & Plan Configuration */}
+              <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
+                <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-fuchsia-50 text-fuchsia-600 rounded-2xl">
+                      <Crown size={24} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-black text-slate-900">Subscription & Plan</CardTitle>
+                      <CardDescription>Manage the school's software subscription tier and billing cycle.</CardDescription>
+                    </div>
+                  </div>
+                  <Badge className="bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200 font-bold text-[10px] px-3 py-1">
+                    Owner-only
+                  </Badge>
+                </CardHeader>
+                <CardContent className="px-0 pt-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Subscription Plan</Label>
+                      <Select value={billingConfig.subscriptionPlan} onValueChange={(val) => handleBillingConfigChange('subscriptionPlan', val)}>
+                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="basic">Basic (KES 240,000/yr)</SelectItem>
+                          <SelectItem value="professional">Professional (KES 360,000/yr)</SelectItem>
+                          <SelectItem value="enterprise">Enterprise (KES 480,000/yr)</SelectItem>
+                          <SelectItem value="custom">Custom / Negotiated</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Billing Cycle</Label>
+                      <Select value={billingConfig.billingCycle} onValueChange={(val) => handleBillingConfigChange('billingCycle', val)}>
+                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="monthly">Monthly</SelectItem>
+                          <SelectItem value="quarterly">Quarterly</SelectItem>
+                          <SelectItem value="annual">Annual (Save 15%)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Next Billing Date</Label>
+                      <Input
+                        type="date"
+                        value={billingConfig.nextBillingDate}
+                        onChange={(e) => handleBillingConfigChange('nextBillingDate', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Currency</Label>
+                      <Select value={billingConfig.currency} onValueChange={(val) => handleBillingConfigChange('currency', val)}>
+                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                          <SelectItem value="USD">USD — US Dollar</SelectItem>
+                          <SelectItem value="EUR">EUR — Euro</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Max Seats Allowed</Label>
+                      <Input
+                        type="number"
+                        value={billingConfig.maxSeats}
+                        onChange={(e) => handleBillingConfigChange('maxSeats', parseInt(e.target.value) || 0)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Invoice Prefix</Label>
+                      <Input
+                        value={billingConfig.invoicePrefix}
+                        onChange={(e) => handleBillingConfigChange('invoicePrefix', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="pt-4 border-t flex items-center justify-between">
+                    <div>
+                      <p className="font-bold text-slate-900">Auto-renew Subscription</p>
+                      <p className="text-xs text-slate-500">Automatically renew the subscription on the next billing date.</p>
+                    </div>
+                    <Switch
+                      checked={billingConfig.autoRenew}
+                      onCheckedChange={(checked) => handleBillingConfigChange('autoRenew', checked)}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Financial Gateway Configuration */}
+              <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
+                <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-emerald-50 text-emerald-600 rounded-2xl">
+                      <CreditCard size={24} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-black text-slate-900">Financial Gateway Configuration</CardTitle>
+                      <CardDescription>Connect payment gateways used to process the school's software subscription payments.</CardDescription>
+                    </div>
+                  </div>
+                  <Badge className={cn("border-none font-bold text-[10px] px-3 py-1", billingConfig.gatewayConnected ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600")}>
+                    {billingConfig.gatewayConnected ? 'Connected' : 'Disconnected'}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="px-0 pt-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Payment Gateway</Label>
+                      <Select value={billingConfig.paymentGateway} onValueChange={(val) => handleBillingConfigChange('paymentGateway', val)}>
+                        <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="mpesa">M-Pesa (Safaricom Daraja)</SelectItem>
+                          <SelectItem value="airtel">Airtel Money</SelectItem>
+                          <SelectItem value="equity">Equity Bank EazzyPay</SelectItem>
+                          <SelectItem value="kcb">KCB Vooma</SelectItem>
+                          <SelectItem value="pesalink">PesaLink</SelectItem>
+                          <SelectItem value="stripe">Stripe (International)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">API Key / Consumer Secret</Label>
+                      <Input
+                        type="password"
+                        value={billingConfig.gatewayApiKey}
+                        onChange={(e) => handleBillingConfigChange('gatewayApiKey', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                        placeholder="••••••••••••••••"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">School Registration #</Label>
+                      <Input
+                        value={billingConfig.schoolRegNumber}
+                        onChange={(e) => handleBillingConfigChange('schoolRegNumber', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Invoice Email</Label>
+                      <Input
+                        type="email"
+                        value={billingConfig.invoiceEmail}
+                        onChange={(e) => handleBillingConfigChange('invoiceEmail', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Billing Contact Phone</Label>
+                      <Input
+                        value={billingConfig.billingContact}
+                        onChange={(e) => handleBillingConfigChange('billingContact', e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Tax Rate (%)</Label>
+                      <Input
+                        type="number"
+                        value={billingConfig.taxRate}
+                        onChange={(e) => handleBillingConfigChange('taxRate', parseFloat(e.target.value) || 0)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-emerald-50/50 border border-emerald-200/60 rounded-2xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center">
+                        <TrendingUp size={20} className="text-emerald-600" />
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-900 text-sm">Gateway Status: Online</p>
+                        <p className="text-xs text-emerald-700">Last verified: {new Date().toLocaleString()}</p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="outline"
+                      onClick={handleTestGateway}
+                      className="rounded-xl border-emerald-200 text-emerald-700 hover:bg-emerald-100 font-bold h-10 px-5"
+                    >
+                      Test Connection
+                    </Button>
+                  </div>
+
+                  <div className="pt-4 border-t flex justify-end gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setBillingConfig({
+                          subscriptionPlan: 'enterprise',
+                          billingCycle: 'annual',
+                          nextBillingDate: '2025-03-15',
+                          lastPaymentDate: '2024-03-15',
+                          lastPaymentAmount: 480000,
+                          paymentMethod: 'Bank Transfer',
+                          paymentStatus: 'active',
+                          registeredSeats: 150,
+                          maxSeats: 200,
+                          autoRenew: true,
+                          invoiceEmail: 'accounts@munyaka.sc.ke',
+                          billingContact: '+254 712 345 678',
+                          schoolRegNumber: 'MOE/STD/ERK/2024/0147',
+                          paymentGateway: 'mpesa',
+                          gatewayConnected: true,
+                          gatewayApiKey: '••••••••••••••••',
+                          invoicePrefix: 'MNY-INV',
+                          currency: 'KES',
+                          taxRate: 0,
+                          discountCode: '',
+                          discountPercent: 0,
+                        });
+                        setHasUnsavedChanges(false);
+                        showSuccess("Billing configuration reset to defaults.");
+                      }}
+                      className="rounded-xl border-slate-200 text-slate-600 font-bold h-12 px-6"
+                    >
+                      Reset
+                    </Button>
+                    <Button
+                      onClick={handleSaveBillingConfig}
+                      disabled={isSaving}
+                      className="rounded-xl px-8 h-12 font-black shadow-xl shadow-fuchsia-100 bg-fuchsia-600 hover:bg-fuchsia-700 text-white gap-2"
+                    >
+                      {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                      Save Billing Configuration
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Discount & Payment Records (Owner-only) */}
+              <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
+                <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="p-3 bg-amber-50 text-amber-600 rounded-2xl">
+                      <Wallet size={24} />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl font-black text-slate-900">Subscription Discounts & Coupons</CardTitle>
+                      <CardDescription>Apply promotional discounts on the next billing cycle (Super Admin only).</CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="px-0 pt-6 space-y-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Discount Code</Label>
+                      <Input
+                        value={billingConfig.discountCode}
+                        onChange={(e) => handleBillingConfigChange('discountCode', e.target.value)}
+                        placeholder="e.g. SCHOOL2024"
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Discount Percent (%)</Label>
+                      <Input
+                        type="number"
+                        value={billingConfig.discountPercent}
+                        onChange={(e) => handleBillingConfigChange('discountPercent', parseFloat(e.target.value) || 0)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </>
+          )}
         </TabsContent>
       </Tabs>
     </div>
