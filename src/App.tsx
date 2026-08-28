@@ -53,15 +53,33 @@ import PaymentManagement from "./pages/PaymentManagement";
 
 const queryClient = new QueryClient();
 
+/**
+ * App component.
+ *
+ * Provider hierarchy (top → bottom):
+ *   1. QueryClientProvider        — React Query
+ *   2. BrowserRouter              — MUST sit above AuthProvider because
+ *   3. AuthProvider               — its useInactivityTimeout hook calls
+ *   4. NotificationProvider       —   useNavigate(); if AuthProvider is
+ *   5. ThemeProvider               —   above BrowserRouter the hook throws
+ *   6. TooltipProvider            —   the "useNavigate() may be used only
+ *   7. Toaster / Sonner            —   in the context of a <Router>"
+ *                                    invariant on first render.
+ *   8. <Routes />                 — application routes
+ *
+ * This order was tightened so that every child hook and component
+ * (including the inactivity timer that AuthProvider mounts internally)
+ * has access to the router context on its very first render.
+ */
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <AuthProvider>
-      <NotificationProvider>
-        <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
+    <BrowserRouter>
+      <AuthProvider>
+        <NotificationProvider>
+          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
@@ -113,11 +131,11 @@ const App = () => (
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </BrowserRouter>
-          </TooltipProvider>
-        </ThemeProvider>
-      </NotificationProvider>
-    </AuthProvider>
+            </TooltipProvider>
+          </ThemeProvider>
+        </NotificationProvider>
+      </AuthProvider>
+    </BrowserRouter>
   </QueryClientProvider>
 );
 
