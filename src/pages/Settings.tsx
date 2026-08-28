@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -1161,7 +1159,7 @@ const Settings = () => {
                     <div 
                       id="admin-location-map" 
                       className="w-full" 
-                      style={{ height: '500px', minHeight: '400px' }}
+                      style={{ minHeight: '350px', width: '100%', display: 'block' }}
                       data-testid="admin-location-map"
                       aria-label="Interactive map for setting school geofence location"
                     />
@@ -1290,6 +1288,18 @@ const Settings = () => {
                     )}
                   </div>
                 </div>
+
+                {/* Save & Update Target Location Button */}
+                <div className="pt-4 border-t flex justify-end">
+                  <Button
+                    onClick={handleSaveAllSettings}
+                    disabled={isSaving}
+                    className="rounded-xl px-8 h-12 font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-100"
+                  >
+                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                    Save & Update Target Location
+                  </Button>
+                </div>
               </div>
 
               <div className="space-y-4 pt-4 border-t">
@@ -1340,59 +1350,6 @@ const Settings = () => {
                   checked={devBypass}
                   onCheckedChange={checked => { setDevBypass(checked); setHasUnsavedChanges(true); }}
                 />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="p-3 bg-purple-50 text-purple-600 rounded-2xl">
-                  <Clock size={24} />
-                </div>
-                <div>
-                  <CardTitle className="text-2xl font-black text-slate-900">Session & Access Security</CardTitle>
-                  <CardDescription>Idle logout intervals and temporary key activation policies.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-
-            <CardContent className="px-0 pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Idle Session Timeout</Label>
-                  <Select 
-                    value={sessionSecurity.idleTimeout}
-                    onValueChange={val => {
-                      setSessionSecurity({...sessionSecurity, idleTimeout: val});
-                      setHasUnsavedChanges(true);
-                    }}
-                  >
-                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-2xl">
-                      <SelectItem value="15m">15 Minutes (High Security)</SelectItem>
-                      <SelectItem value="30m">30 Minutes (Recommended)</SelectItem>
-                      <SelectItem value="1h">1 Hour</SelectItem>
-                      <SelectItem value="never">Never (Shared Display)</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                  <div>
-                    <p className="font-bold text-slate-900 text-sm">Force First-Login Password Reset</p>
-                    <p className="text-xs text-slate-500">Require staff signing in with temporary keys (MUNYAKA-XXXX) to set a private password.</p>
-                  </div>
-                  <Switch 
-                    checked={sessionSecurity.requirePasswordOnFirstLogin}
-                    onCheckedChange={checked => {
-                      setSessionSecurity({...sessionSecurity, requirePasswordOnFirstLogin: checked});
-                      setHasUnsavedChanges(true);
-                    }}
-                  />
-                </div>
               </div>
             </CardContent>
           </Card>
