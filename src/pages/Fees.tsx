@@ -9,12 +9,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit, Database, RefreshCw, Crown, ShieldAlert } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit, Database, RefreshCw } from 'lucide-react';
 import { TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
-import { useAuth } from '@/context/AuthContext';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';
@@ -98,9 +97,6 @@ const normalizeStreamName = (name: string): string => {
 };
 
 const Fees = () => {
-  const { user } = useAuth();
-  const isSuperAdmin = user?.role === 'super_admin';
-  const isBursar = user?.role === 'bursar';
   const currentYear = new Date().getFullYear().toString();
   const [selectedYear, setSelectedYear] = useState(currentYear);
   const [selectedTerm, setSelectedTerm] = useState("term1");
@@ -663,35 +659,15 @@ const Fees = () => {
           <p className="text-sm text-slate-500">Manage fee structures and student account ledgers.</p>
         </div>
         <div className="flex items-center gap-2">
-          {/* Set Term Fees: Super Admin / Owner only */}
-          {isSuperAdmin ? (
-            <Button
-              variant="outline"
-              className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50"
-              onClick={handleOpenAuthModal}
-            >
-              <Lock size={15} className="text-slate-400" /> Set Term Fees
-            </Button>
-          ) : (
-            <div className="group relative">
-              <Button
-                variant="outline"
-                disabled
-                className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-300 cursor-not-allowed"
-              >
-                <Lock size={15} /> Set Term Fees
-              </Button>
-              <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:block z-50 pointer-events-none">
-                <div className="bg-slate-900 text-white text-xs rounded-xl px-3 py-2 whitespace-nowrap shadow-xl">
-                  <Crown size={12} className="inline mr-1 text-amber-400" />
-                  Super Admin / Owner only
-                </div>
-              </div>
-            </div>
-          )}
-          {/* Record Payment: Bursar or Super Admin */}
-          <Button
-            className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm"
+          <Button 
+            variant="outline" 
+            className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50" 
+            onClick={handleOpenAuthModal}
+          >
+            <Lock size={15} className="text-slate-400" /> Set Term Fees
+          </Button>
+          <Button 
+            className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm" 
             onClick={() => setIsRecordOpen(true)}
             disabled={normalizedLearners.length === 0}
           >

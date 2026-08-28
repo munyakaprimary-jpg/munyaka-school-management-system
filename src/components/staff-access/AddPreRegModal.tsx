@@ -5,9 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Sparkles, Search, Check, ChevronsUpDown, User, Info, CheckCircle2, Crown } from "lucide-react";
+import { RefreshCw, Sparkles, Search, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
-import { SystemRole, PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
 import { STAFF, StaffMember } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -22,53 +22,13 @@ interface AddPreRegModalProps {
 
 const mapRoleToSystemRole = (role: string): SystemRole => {
   const normalized = role.toLowerCase();
-  if (normalized.includes('super') || normalized.includes('owner') || normalized.includes('founder')) return 'super_admin';
   if (normalized.includes('head') || normalized.includes('principal')) return 'head_teacher';
   if (normalized.includes('senior')) return 'senior_teacher';
   if (normalized.includes('class')) return 'class_teacher';
   if (normalized.includes('bursar') || normalized.includes('account')) return 'bursar';
-  if (normalized.includes('admin') && !normalized.includes('super')) return 'support_admin';
+  if (normalized.includes('admin')) return 'support_admin';
   return 'subject_teacher';
 };
-
-// Role options ordered with Super Admin / Owner at the top
-const SYSTEM_ROLE_OPTIONS: { value: SystemRole; label: string; description: string }[] = [
-  {
-    value: 'super_admin',
-    label: 'Super Admin / Owner',
-    description: 'Highest authority — controls software payments, subscriptions & financial gateway.',
-  },
-  {
-    value: 'support_admin',
-    label: 'System Administrator',
-    description: 'Day-to-day system config and user management.',
-  },
-  {
-    value: 'head_teacher',
-    label: 'Head Teacher',
-    description: 'Manages academics, staff reports, and school administration.',
-  },
-  {
-    value: 'senior_teacher',
-    label: 'Senior Teacher',
-    description: 'Leads curriculum delivery and mentors other teachers.',
-  },
-  {
-    value: 'class_teacher',
-    label: 'Class Teacher',
-    description: 'Manages class attendance, welfare, and academic progress.',
-  },
-  {
-    value: 'subject_teacher',
-    label: 'Subject Teacher',
-    description: 'Delivers specific learning areas and enters marks.',
-  },
-  {
-    value: 'bursar',
-    label: 'Bursar / Finance',
-    description: 'Handles daily fee collection and account ledgers.',
-  },
-];
 
 const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] }: AddPreRegModalProps) => {
   const [comboboxOpen, setComboboxOpen] = useState(false);
@@ -102,7 +62,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
 
     return directoryStaffList.filter(s => 
       !preRegEmailSet.has(s.email.toLowerCase()) && 
-      !preRegNatIdSet.has(s.nationalId)
+      !preRegNatIdSet.has(s.id_no)
     );
   }, [directoryStaffList, existingPreRegistered]);
 
@@ -135,15 +95,15 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     setComboboxOpen(false);
 
     setFormData(prev => ({
-      ...prev,
-      fullName: staff?.name ?? "",
-      nationalId: staff?.id_no ?? "",
-      tscNumber: staff?.tsc_no || "",
-      email: staff?.email ?? "",
-      phone: staff?.phone ?? "",
-      systemRole: mapRoleToSystemRole(staff?.role ?? ""),
-      assignedSubjects: staff?.subjects ? staff.subjects : ["Mathematics", "Science & Tech"]
-    }));
+          ...prev,
+          fullName: staff?.name ?? "",
+          nationalId: staff?.id_no ?? "",
+          tscNumber: staff?.tsc_no || "",
+          email: staff?.email ?? "",
+          phone: staff?.phone ?? "",
+          systemRole: mapRoleToSystemRole(staff?.role ?? ""),
+          assignedSubjects: staff?.subjects ? staff.subjects : ["Mathematics", "Science & Tech"]
+        }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -151,8 +111,6 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     if (!formData.fullName.trim() || !formData.email.trim()) return;
     onSubmit(formData);
   };
-
-  const selectedRoleInfo = SYSTEM_ROLE_OPTIONS.find(r => r.value === formData.systemRole);
 
   return (
     <Modal
@@ -213,24 +171,24 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
                   </CommandEmpty>
                   <CommandGroup heading="Available Staff Members">
                     {availableStaff.map((staff) => (
-                      <CommandItem
-                        key={staff.id}
-                        value={`${staff?.name ?? ''} ${staff?.id_no ?? ''} ${staff?.email ?? ''}`}
-                        onSelect={() => handleSelectStaff(staff)}
-                        className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
-                      >
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">{staff?.name ?? ''}</p>
-                          <p className="text-xs text-slate-500 font-medium">ID: {staff?.id_no ?? ''} • {staff?.role ?? ''} • {staff?.email ?? ''}</p>
-                        </div>
-                        <Check
-                          className={cn(
-                            "h-4 w-4 text-indigo-600",
-                            selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
-                          )}
-                        />
-                      </CommandItem>
-                    ))}
+                                          <CommandItem
+                                            key={staff.id}
+                                            value={`${staff?.name ?? ''} ${staff?.id_no ?? ''} ${staff?.email ?? ''}`}
+                                            onSelect={() => handleSelectStaff(staff)}
+                                            className="rounded-xl p-3 cursor-pointer hover:bg-slate-50 flex items-center justify-between"
+                                          >
+                                            <div>
+                                              <p className="font-bold text-slate-900 text-sm">{staff?.name ?? ''}</p>
+                                              <p className="text-xs text-slate-500 font-medium">ID: {staff?.id_no ?? ''} • {staff?.role ?? ''} • {staff?.email ?? ''}</p>
+                                            </div>
+                                            <Check
+                                              className={cn(
+                                                "h-4 w-4 text-indigo-600",
+                                                selectedStaffId === staff.id ? "opacity-100" : "opacity-0"
+                                              )}
+                                            />
+                                          </CommandItem>
+                                        ))}
                   </CommandGroup>
                 </CommandList>
               </Command>
@@ -281,41 +239,16 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
           <div className="space-y-1.5">
             <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">System Access Role *</Label>
             <Select value={formData.systemRole} onValueChange={(val: SystemRole) => setFormData({...formData, systemRole: val})}>
-              <SelectTrigger className={cn(
-                "rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900",
-                formData.systemRole === 'super_admin' && "border-2 border-fuchsia-300 bg-fuchsia-50/30"
-              )}>
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold text-slate-900"><SelectValue /></SelectTrigger>
               <SelectContent className="rounded-2xl">
-                {SYSTEM_ROLE_OPTIONS.map((role) => (
-                  <SelectItem key={role.value} value={role.value}>
-                    <div className="flex items-center gap-2">
-                      {role.value === 'super_admin' && (
-                        <Crown size={13} className="text-fuchsia-600 shrink-0" />
-                      )}
-                      <span className={cn(
-                        role.value === 'super_admin' && "text-fuchsia-700 font-bold"
-                      )}>
-                        {role.label}
-                      </span>
-                    </div>
-                  </SelectItem>
-                ))}
+                <SelectItem value="subject_teacher">Subject Teacher</SelectItem>
+                <SelectItem value="class_teacher">Class Teacher</SelectItem>
+                <SelectItem value="senior_teacher">Senior Teacher</SelectItem>
+                <SelectItem value="head_teacher">Head Teacher</SelectItem>
+                <SelectItem value="bursar">Bursar / Accounts</SelectItem>
+                <SelectItem value="support_admin">System Admin</SelectItem>
               </SelectContent>
             </Select>
-            {/* Role description tooltip */}
-            {selectedRoleInfo && (
-              <p className={cn(
-                "text-[10px] font-medium mt-1 px-1",
-                formData.systemRole === 'super_admin'
-                  ? "text-fuchsia-600"
-                  : "text-slate-400"
-              )}>
-                {formData.systemRole === 'super_admin' && '⚠️ Highest privilege level — use sparingly.'}
-                {formData.systemRole !== 'super_admin' && selectedRoleInfo.description}
-              </p>
-            )}
           </div>
         </div>
 
