@@ -10,7 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
   XCircle, Clock, ShieldCheck, UserCheck, Users, AlertCircle,
-  FileDown, Search, Sun, Moon, Lock, Unlock, Info
+  FileDown, Search, Sun, Moon, Lock, Unlock, Info, 
+  LockKeyhole, ShieldAlert, Shield
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,13 @@ interface SessionAttendance {
 interface StudentAttendance {
   morning?: SessionAttendance;
   afternoon?: SessionAttendance;
+}
+
+interface RegisterLock {
+  locked: boolean;
+  lockedAt?: string; // ISO timestamp
+  lockedBy?: string; // admin/teacher who locked
+  reason?: string;
 }
 
 interface Filters {
@@ -72,6 +80,8 @@ const SESSION_WINDOWS: Record<SessionType, SessionWindow> = {
 };
 
 const ATTENDANCE_ADMIN_BYPASS_KEY = 'munyaka_attendance_admin_bypass';
+const ATTENDANCE_LOCKS_KEY = 'munyaka_attendance_locks';
+const ATTENDANCE_DEFAULT_PASSWORD = 'munyaka5239';
 
 // Mock data — in real implementation, this comes from useStudents() or localStorage
 const MOCK_LEARNERS: Learner[] = [
@@ -137,6 +147,47 @@ const getActiveSession = (date: Date): SessionType | null => {
   return null;
 };
 
+/**
+ * Compose the per-class/stream/date storage key for the lock state.
+ * Lock state is persisted in `localStorage` under a single map keyed
+ * by this composite so that re-opening the page for a different class
+ * or date correctly restores the previous lock status.
+ */
+const buildLockKey = (grade: string, stream: string, date: string): string =>
+  `${grade}__${stream}__${date}`;
+
+/**
+ * Read the master map of register locks from localStorage. Returns an
+ * empty object on any failure so the rest of the page still renders.
+ */
+const readLocksMap = (): Record<string, RegisterLock> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(ATTENDANCE_LOCKS_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, RegisterLock>;
+    return {};
+  } catch (e) {
+    console.error('Error reading attendance locks map:', e);
+    return {};
+  }
+};
+
+/**
+ * Persist the full lock map back to localStorage. We write the entire
+ * map at once so a single setter governs all keys and there is no risk
+ * of partial writes leaving a stale entry in the localStorage cache.
+ */
+const writeLocksMap = (next: Record<string, RegisterLock>): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ATTENDANCE_LOCKS_KEY, JSON.stringify(next));
+  } catch (e) {
+    console.error('Error persisting attendance locks map:', e);
+  }
+};
+
 const Attendance = () => {
   // Filters state
   const [filters, setFilters] = useState<Filters>({
@@ -149,6 +200,41 @@ const Attendance = () => {
   const [attendance, setAttendance] = useState<Record<number, StudentAttendance>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+
+  // ============================================
+  // Register lock state
+  // ============================================
+  // `locksMap` is the master persisted map of {compositeKey -> RegisterLock}.
+  // `registerLock` is the current key's lock state derived from that map.
+  const [locksMap, setLocksMap] = useState<Record<string, RegisterLock>>(() => readLocksMap());
+
+  // Whenever the lock map changes, mirror it to localStorage so the
+  // lock state survives a page refresh. (We don't depend on the
+  // per-record state for persistence to keep the localStorage write
+  // centralized and avoid race conditions.)
+  useEffect(() => {
+    writeLocksMap(locksMap);
+  }, [locksMap]);
+
+  // Compute the current register lock by looking up the composite key
+  // in the master map. If the entry doesn't exist the register is
+  // considered unlocked.
+  const currentLockKey = buildLockKey(filters.grade, filters.stream, filters.date);
+  const registerLock: RegisterLock = useMemo(() => {
+    return locksMap[currentLockKey] || { locked: false };
+  }, [locksMap, currentLockKey]);
+
+  const isRegisterLocked = registerLock.locked;
+
+  // ============================================
+  // Lock / unlock confirmation modal state
+  // ============================================
+  const [lockAuthOpen, setLockAuthOpen] = useState<boolean>(false);
+  const [lockAction, setLockAction] = useState<'lock' | 'unlock' | null>(null);
+  const [adminAuthPassword, setAdminAuthPassword] = useState<string>('');
+  const [adminAuthError, setAdminAuthError] = useState<string>('');
+  const [isAdminAuthVerifying, setIsAdminAuthVerifying] = useState<boolean>(false);
+  const [lockReason, setLockReason] = useState<string>('');
 
   // ============================================
   // Time-window state
@@ -206,18 +292,20 @@ const Attendance = () => {
    * Per-session accessibility logic
    * ============================================
    *
-   * A session is "editable" when EITHER:
-   *   1. The selected date is today AND the live clock falls inside
-   *      the session's time window; OR
-   *   2. The teacher has enabled the admin override, in which case
-   *      BOTH sessions are always editable regardless of the time
-   *      of day (used for late submissions and corrections).
+   * A session is "editable" when ALL of the following are true:
+   *   1. The register is NOT locked.
+   *   2. Either the admin override is on, OR
+   *      the selected date is today AND the live clock falls inside
+   *      the session's time window.
    *
    * For dates in the past, the session is "read-only" unless the
-   * admin override is enabled — teachers can review entries but must
-   * acknowledge they're editing a past record.
+   * admin override is enabled. For dates in the future, the session
+   * is also locked. The register lock always wins — even if admin
+   * override is on, a locked register cannot be edited (but the
+   * admin can unlock it from the Lock Register button).
    */
   const isSessionEditable = (session: SessionType): boolean => {
+    if (isRegisterLocked) return false;
     if (adminBypass) return true;
     if (!isSelectedDateToday) return false;
     return getActiveSession(currentTime) === session;
@@ -309,11 +397,101 @@ const Attendance = () => {
     };
   }, [filteredLearners, attendance]);
 
+  // ============================================
+  // Register lock handlers
+  // ============================================
+
+  /**
+   * Open the admin auth modal in either "lock" or "unlock" mode.
+   * Clearing the form state here guarantees a fresh modal every time.
+   */
+  const openLockAuthModal = (action: 'lock' | 'unlock') => {
+    setLockAction(action);
+    setAdminAuthPassword('');
+    setAdminAuthError('');
+    setLockReason('');
+    setLockAuthOpen(true);
+  };
+
+  /**
+   * Close the auth modal and wipe any sensitive fields from state so
+   * the password doesn't linger in memory after the modal closes.
+   */
+  const closeLockAuthModal = () => {
+    setLockAuthOpen(false);
+    setAdminAuthPassword('');
+    setAdminAuthError('');
+    setLockReason('');
+    setIsAdminAuthVerifying(false);
+    setLockAction(null);
+  };
+
+  /**
+   * Verify the supplied admin password against the value in
+   * `localStorage.munyaka_admin_pass` (with a hardcoded default
+   * fallback) and then either lock or unlock the register.
+   *
+   * Locking persists a `RegisterLock` with the current timestamp,
+   * the operator "admin" (the system admin in this offline build),
+   * and an optional reason string. Unlocking simply clears the lock
+   * entry from the master map.
+   */
+  const handleConfirmLockAction = async () => {
+    if (!lockAction) return;
+    if (!adminAuthPassword.trim()) {
+      setAdminAuthError('Please enter the admin password to continue.');
+      return;
+    }
+
+    setIsAdminAuthVerifying(true);
+    setAdminAuthError('');
+
+    // Simulate a quick auth round-trip so the spinner is visible
+    // even when the password check is instant.
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    const storedPass = (typeof window !== 'undefined'
+      ? localStorage.getItem('munyaka_admin_pass')
+      : null) || ATTENDANCE_DEFAULT_PASSWORD;
+
+    if (adminAuthPassword !== storedPass) {
+      setAdminAuthError('Incorrect admin password. Please try again.');
+      setIsAdminAuthVerifying(false);
+      return;
+    }
+
+    if (lockAction === 'lock') {
+      const next: RegisterLock = {
+        locked: true,
+        lockedAt: new Date().toISOString(),
+        lockedBy: 'System Admin',
+        reason: lockReason.trim() || 'No reason provided',
+      };
+      setLocksMap(prev => ({ ...prev, [currentLockKey]: next }));
+      showSuccess(`Attendance register for ${filters.grade} ${filters.stream} on ${filters.date} has been locked.`);
+    } else {
+      setLocksMap(prev => {
+        const updated = { ...prev };
+        delete updated[currentLockKey];
+        return updated;
+      });
+      showSuccess(`Attendance register for ${filters.grade} ${filters.stream} on ${filters.date} has been unlocked.`);
+    }
+
+    setIsAdminAuthVerifying(false);
+    closeLockAuthModal();
+  };
+
   // Toggle individual student session status
   const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
-    // Guard: silently ignore the click if the session is locked.
-    // The button is also disabled, but this is a defense-in-depth check
-    // so we never write data outside an authorized time window.
+    // Guard: silently ignore the click if the register is locked.
+    if (isRegisterLocked) {
+      showError(
+        `The register is locked. Tap "Unlock Register" in the header to make corrections.`
+      );
+      return;
+    }
+    // Guard: silently ignore the click if the session is time-locked.
     if (!isSessionEditable(session)) {
       showError(
         `The ${SESSION_WINDOWS[session].label} session is outside its recording window. Enable admin override to edit past or future sessions.`
@@ -350,6 +528,10 @@ const Attendance = () => {
 
   // Bulk action: set all students in a given session to a status
   const markAllAs = (status: AttendanceStatus, session: SessionType = 'morning') => {
+    if (isRegisterLocked) {
+      showError('The register is locked. Unlock the register to perform bulk actions.');
+      return;
+    }
     if (!isSessionEditable(session)) {
       showError(
         `The ${SESSION_WINDOWS[session].label} session is locked. Enable admin override to use bulk actions.`
@@ -486,6 +668,10 @@ const Attendance = () => {
         ? 'Afternoon Session'
         : 'Morning Session');
 
+  // ============================================
+  // Render
+  // ============================================
+
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
       
@@ -523,12 +709,32 @@ const Attendance = () => {
           </Button>
           <Button
             onClick={handleSaveAttendance}
-            disabled={isSaving}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100"
+            disabled={isSaving || isRegisterLocked}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
           >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
             Save Attendance
           </Button>
+
+          {/* Lock / Unlock Register button (primary lock control) */}
+          {isRegisterLocked ? (
+            <Button
+              onClick={() => openLockAuthModal('unlock')}
+              className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-amber-200"
+            >
+              <Unlock size={16} />
+              Unlock Register
+            </Button>
+          ) : (
+            <Button
+              onClick={() => openLockAuthModal('lock')}
+              disabled={(metrics.present + metrics.absent + metrics.late + metrics.excused) === 0}
+              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-rose-200 disabled:opacity-50"
+            >
+              <Lock size={16} />
+              Lock Register
+            </Button>
+          )}
         </div>
       </div>
 
@@ -614,7 +820,8 @@ const Attendance = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
                 onClick={() => markAllAs('P', activeSession ?? 'morning')}
-                className="h-11 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={isRegisterLocked}
+                className="h-11 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Mark all as Present"
               >
                 <CheckCircle2 size={14} />
@@ -622,7 +829,8 @@ const Attendance = () => {
               </button>
               <button
                 onClick={() => markAllAs('A', activeSession ?? 'morning')}
-                className="h-11 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={isRegisterLocked}
+                className="h-11 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Mark all as Absent"
               >
                 <XCircle size={14} />
@@ -630,7 +838,8 @@ const Attendance = () => {
               </button>
               <button
                 onClick={() => markAllAs('L', activeSession ?? 'morning')}
-                className="h-11 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={isRegisterLocked}
+                className="h-11 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Mark all as Late"
               >
                 <Clock size={14} />
@@ -638,7 +847,8 @@ const Attendance = () => {
               </button>
               <button
                 onClick={() => markAllAs('E', activeSession ?? 'morning')}
-                className="h-11 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                disabled={isRegisterLocked}
+                className="h-11 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
                 title="Mark all as Excused"
               >
                 <ShieldCheck size={14} />
@@ -648,6 +858,44 @@ const Attendance = () => {
           </div>
         </div>
       </Card>
+
+      {/* ============================================
+          2a. REGISTER STATUS BANNER (LOCKED)
+          ============================================ */}
+      {isRegisterLocked && (
+        <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 rounded-3xl p-5 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="flex items-center gap-3.5 min-w-0">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
+              <LockKeyhole size={24} className="text-white animate-pulse" />
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
+                  Status: Locked
+                </span>
+                <span className="text-xs font-medium text-rose-100 truncate">
+                  {registerLock.lockedAt 
+                    ? `Locked on ${new Date(registerLock.lockedAt).toLocaleString()}`
+                    : 'This register is sealed against further edits.'}
+                </span>
+              </div>
+              <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
+                Register is sealed. Individual status buttons and bulk actions are disabled.
+                {registerLock.reason && registerLock.reason !== 'No reason provided' && (
+                  <span className="font-medium text-rose-100/80 ml-2">Reason: {registerLock.reason}</span>
+                )}
+              </p>
+            </div>
+          </div>
+          <Button
+            onClick={() => openLockAuthModal('unlock')}
+            className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+          >
+            <Unlock size={14} />
+            Request Unlock
+          </Button>
+        </div>
+      )}
 
       {/* ============================================
           2b. TIME WINDOW BANNER + ADMIN OVERRIDE
@@ -668,16 +916,17 @@ const Attendance = () => {
                   {format12h(currentTime)}
                 </p>
                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                  {activeSession === 'morning' && (
+                  {isRegisterLocked ? (
+                    <span className="text-rose-600 flex items-center gap-1">
+                      <Lock size={11} /> Register is locked. Status buttons are read-only.
+                    </span>
+                  ) : activeSession === 'morning' ? (
                     <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
-                  )}
-                  {activeSession === 'afternoon' && (
+                  ) : activeSession === 'afternoon' ? (
                     <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
-                  )}
-                  {activeSession === null && isSelectedDateToday && (
+                  ) : activeSession === null && isSelectedDateToday ? (
                     <span className="text-rose-600">⏰ No session is currently active. Morning begins at 6:00 AM.</span>
-                  )}
-                  {!isSelectedDateToday && (
+                  ) : (
                     <span className="text-slate-500">📅 Viewing {selectedDateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} — sessions are read-only unless admin override is enabled.</span>
                   )}
                 </p>
@@ -820,20 +1069,35 @@ const Attendance = () => {
       {/* ============================================
           4. STUDENT ATTENDANCE TABLE (Morning & Afternoon)
           ============================================ */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+      <Card className={cn(
+        "border-none shadow-sm rounded-[2rem] bg-white overflow-hidden transition-all",
+        isRegisterLocked && "ring-2 ring-rose-200/60"
+      )}>
         
         {/* Section header */}
         <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
-              <UserCheck size={22} />
+            <div className={cn(
+              "p-2.5 rounded-xl",
+              isRegisterLocked ? "bg-rose-100 text-rose-600" : "bg-indigo-100 text-indigo-600"
+            )}>
+              {isRegisterLocked ? <Lock size={22} /> : <UserCheck size={22} />}
             </div>
             <div>
-              <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                {filters.grade} {filters.stream} — {filters.date}
-              </h2>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                  {filters.grade} {filters.stream} — {filters.date}
+                </h2>
+                {isRegisterLocked && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest border border-rose-200">
+                    <Lock size={10} /> Sealed
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500 font-medium">
-                Click a status button to mark each session. Click again to clear.
+                {isRegisterLocked
+                  ? "Register is read-only. Tap \"Unlock Register\" in the header to make corrections."
+                  : "Click a status button to mark each session. Click again to clear."}
               </p>
             </div>
           </div>
@@ -867,12 +1131,17 @@ const Attendance = () => {
                     <div className="flex items-center gap-2">
                       <Sun size={14} />
                       <span>Morning Session</span>
-                      {activeSession === 'morning' && !adminBypass && (
+                      {activeSession === 'morning' && !isRegisterLocked && (
                         <span className="ml-1 px-1.5 py-0.5 rounded-md bg-amber-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
                       )}
-                      {!isMorningEditable && !adminBypass && (
+                      {!isMorningEditable && !isRegisterLocked && (
                         <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
                           <Lock size={9} /> LOCKED
+                        </span>
+                      )}
+                      {isRegisterLocked && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
+                          <Lock size={9} /> SEALED
                         </span>
                       )}
                     </div>
@@ -886,12 +1155,17 @@ const Attendance = () => {
                     <div className="flex items-center gap-2">
                       <Moon size={14} />
                       <span>Afternoon Session</span>
-                      {activeSession === 'afternoon' && !adminBypass && (
+                      {activeSession === 'afternoon' && !isRegisterLocked && (
                         <span className="ml-1 px-1.5 py-0.5 rounded-md bg-indigo-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
                       )}
-                      {!isAfternoonEditable && !adminBypass && (
+                      {!isAfternoonEditable && !isRegisterLocked && (
                         <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
                           <Lock size={9} /> LOCKED
+                        </span>
+                      )}
+                      {isRegisterLocked && (
+                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
+                          <Lock size={9} /> SEALED
                         </span>
                       )}
                     </div>
@@ -929,7 +1203,7 @@ const Attendance = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className={cn("divide-y divide-slate-100", isRegisterLocked && "opacity-95")}>
               {filteredLearners.length > 0 ? (
                 filteredLearners.map((learner, index) => {
                   const record = attendance[learner.id] || {};
@@ -1109,8 +1383,12 @@ const Attendance = () => {
 
         {/* Footer summary */}
         {filteredLearners.length > 0 && (
-          <div className="px-6 sm:px-8 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-2">
-            <p className="text-xs font-bold text-slate-500">
+          <div className={cn(
+            "px-6 sm:px-8 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2",
+            isRegisterLocked ? "bg-rose-50/40" : "bg-slate-50/50"
+          )}>
+            <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
+              {isRegisterLocked && <Lock size={12} className="text-rose-500" />}
               <span className="text-slate-900 font-black">{metrics.total}</span> learners × 2 sessions = <span className="text-slate-900 font-black">{metrics.total * 2}</span> total slots
             </p>
             <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -1122,6 +1400,143 @@ const Attendance = () => {
           </div>
         )}
       </Card>
+
+      {/* ============================================
+          5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
+          ============================================ */}
+      {lockAuthOpen && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            // Close on backdrop click
+            if (e.target === e.currentTarget) closeLockAuthModal();
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className={cn(
+              "p-6 border-b",
+              lockAction === 'lock' ? "bg-rose-50 border-rose-100" : "bg-amber-50 border-amber-100"
+            )}>
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "w-12 h-12 rounded-2xl flex items-center justify-center",
+                  lockAction === 'lock' ? "bg-rose-100 text-rose-600" : "bg-amber-100 text-amber-600"
+                )}>
+                  {lockAction === 'lock' ? <LockKeyhole size={24} /> : <Unlock size={24} />}
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                    {lockAction === 'lock' ? 'Lock Register' : 'Unlock Register'}
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">
+                    {lockAction === 'lock'
+                      ? 'Seal the register to prevent further edits.'
+                      : 'Re-open the register to make corrections.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 space-y-4">
+              {/* Context card showing the register that will be locked/unlocked */}
+              <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Register</p>
+                <p className="text-sm font-bold text-slate-900">
+                  {filters.grade} {filters.stream}
+                </p>
+                <p className="text-xs text-slate-500 font-medium">{filters.date}</p>
+              </div>
+
+              {adminAuthError && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                  <ShieldAlert size={16} className="shrink-0" />
+                  {adminAuthError}
+                </div>
+              )}
+
+              {/* Optional reason field — only shown when locking, since
+                  we want a short justification that gets stored in the
+                  persistent lock entry for audit purposes. */}
+              {lockAction === 'lock' && (
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Lock Reason (Optional)
+                  </label>
+                  <Input
+                    value={lockReason}
+                    onChange={(e) => setLockReason(e.target.value)}
+                    placeholder="e.g. Finalized and signed off by class teacher"
+                    className="rounded-xl h-11 bg-slate-50 border-none font-medium"
+                  />
+                </div>
+              )}
+
+              {/* Admin password field */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Admin Password
+                </label>
+                <Input
+                  type="password"
+                  value={adminAuthPassword}
+                  onChange={(e) => {
+                    setAdminAuthPassword(e.target.value);
+                    if (adminAuthError) setAdminAuthError('');
+                  }}
+                  placeholder="••••••••"
+                  className="rounded-xl h-11 bg-slate-50 border-none font-bold"
+                  autoFocus
+                />
+              </div>
+
+              <div className="p-3 bg-amber-50/50 border border-amber-100 rounded-2xl flex items-start gap-2">
+                <Shield size={14} className="text-amber-600 shrink-0 mt-0.5" />
+                <p className="text-[11px] text-amber-800 font-medium">
+                  {lockAction === 'lock'
+                    ? 'Locking is permanent until the admin explicitly unlocks the register.'
+                    : 'Unlocking re-opens the register for edits. Any further changes will be logged in the audit trail.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className={cn(
+              "p-5 border-t flex gap-2 justify-end",
+              lockAction === 'lock' ? "bg-rose-50/30 border-rose-100" : "bg-amber-50/30 border-amber-100"
+            )}>
+              <Button
+                variant="ghost"
+                onClick={closeLockAuthModal}
+                disabled={isAdminAuthVerifying}
+                className="rounded-xl font-bold h-11 px-5"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleConfirmLockAction}
+                disabled={isAdminAuthVerifying}
+                className={cn(
+                  "rounded-xl font-bold h-11 px-6 text-white shadow-lg gap-2",
+                  lockAction === 'lock' 
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-100" 
+                    : "bg-amber-600 hover:bg-amber-700 shadow-amber-100"
+                )}
+              >
+                {isAdminAuthVerifying ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : lockAction === 'lock' ? (
+                  <Lock size={16} />
+                ) : (
+                  <Unlock size={16} />
+                )}
+                {lockAction === 'lock' ? 'Confirm Lock' : 'Confirm Unlock'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
