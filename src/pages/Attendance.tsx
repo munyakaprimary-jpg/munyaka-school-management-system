@@ -16,6 +16,7 @@ import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
+type SessionType = 'morning' | 'afternoon';
 
 interface Learner {
   id: number;
@@ -26,14 +27,14 @@ interface Learner {
   stream?: string;
 }
 
-interface AttendanceRecord {
+interface SessionAttendance {
   status: AttendanceStatus;
   time: string;
 }
 
 interface StudentAttendance {
-  morning?: AttendanceRecord;
-  afternoon?: AttendanceRecord;
+  morning?: SessionAttendance;
+  afternoon?: SessionAttendance;
 }
 
 interface Filters {
@@ -69,8 +70,8 @@ const Attendance = () => {
     stream: 'YELLOW',
   });
 
-  // Attendance state — keyed by student id
-  const [attendance, setAttendance] = useState<Record<number, AttendanceStatus>>({});
+  // Attendance state — keyed by student id, then session type
+  const [attendance, setAttendance] = useState<Record<number, StudentAttendance>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -84,16 +85,11 @@ const Attendance = () => {
       const saved = localStorage.getItem(storageKey);
       if (saved) {
         const parsed = JSON.parse(saved);
-        // Normalize: accept either a direct map {studentId: status} or a wrapper {morning, afternoon}
-        const normalized: Record<number, AttendanceStatus> = {};
-        Object.entries(parsed).forEach(([key, val]) => {
-          if (val && typeof val === 'object' && 'status' in val) {
-            normalized[Number(key)] = (val as AttendanceRecord).status;
-          } else if (typeof val === 'string') {
-            normalized[Number(key)] = val as AttendanceStatus;
-          }
-        });
-        setAttendance(normalized);
+        if (typeof parsed === 'object' && parsed !== null) {
+          setAttendance(parsed as Record<number, StudentAttendance>);
+        } else {
+          setAttendance({});
+        }
       } else {
         setAttendance({});
       }
@@ -113,44 +109,100 @@ const Attendance = () => {
     );
   }, [searchTerm]);
 
-  // Compute summary metrics
+  // Compute summary metrics — combined across both sessions
   const metrics = useMemo(() => {
     const total = filteredLearners.length;
-    let present = 0;
-    let absent = 0;
-    let late = 0;
-    let excused = 0;
+    let presentMorning = 0;
+    let absentMorning = 0;
+    let lateMorning = 0;
+    let excusedMorning = 0;
+    let presentAfternoon = 0;
+    let absentAfternoon = 0;
+    let lateAfternoon = 0;
+    let excusedAfternoon = 0;
+
     filteredLearners.forEach(s => {
-      const status = attendance[s.id];
-      if (status === 'P') present++;
-      else if (status === 'A') absent++;
-      else if (status === 'L') late++;
-      else if (status === 'E') excused++;
+      const record = attendance[s.id] || {};
+      if (record.morning?.status === 'P') presentMorning++;
+      if (record.morning?.status === 'A') absentMorning++;
+      if (record.morning?.status === 'L') lateMorning++;
+      if (record.morning?.status === 'E') excusedMorning++;
+      if (record.afternoon?.status === 'P') presentAfternoon++;
+      if (record.afternoon?.status === 'A') absentAfternoon++;
+      if (record.afternoon?.status === 'L') lateAfternoon++;
+      if (record.afternoon?.status === 'E') excusedAfternoon++;
     });
-    const rate = total > 0 ? Math.round((present / total) * 100) : 0;
-    return { total, present, absent, late, excused, rate };
+
+    // Combined totals
+    const present = presentMorning + presentAfternoon;
+    const absent = absentMorning + absentAfternoon;
+    const late = lateMorning + lateAfternoon;
+    const excused = excusedMorning + excusedAfternoon;
+    const totalMarks = present + absent + late + excused;
+    const rate = totalMarks > 0 ? Math.round((present / totalMarks) * 100) : 0;
+
+    return { 
+      total, 
+      present, 
+      absent, 
+      late, 
+      excused, 
+      rate,
+      presentMorning,
+      absentMorning,
+      lateMorning,
+      excusedMorning,
+      presentAfternoon,
+      absentAfternoon,
+      lateAfternoon,
+      excusedAfternoon,
+    };
   }, [filteredLearners, attendance]);
 
-  // Toggle individual student status
-  const setStudentStatus = (studentId: number, status: AttendanceStatus) => {
+  // Toggle individual student session status
+  const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
     setAttendance(prev => {
+      const currentRecord = prev[studentId] || {};
+      const currentSession = currentRecord[session];
+      
       // Click the active button again to deselect (clear status)
-      if (prev[studentId] === status) {
+      if (currentSession?.status === status) {
+        const { [session]: _, ...rest } = currentRecord;
         const updated = { ...prev };
-        delete updated[studentId];
+        if (Object.keys(rest).length === 0) {
+          delete updated[studentId];
+        } else {
+          updated[studentId] = rest;
+        }
         return updated;
       }
-      return { ...prev, [studentId]: status };
+
+      const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      return {
+        ...prev,
+        [studentId]: {
+          ...currentRecord,
+          [session]: { status, time: timestamp }
+        }
+      };
     });
   };
 
-  // Bulk action: set all students to a given status
-  const markAllAs = (status: AttendanceStatus) => {
-    const bulk: Record<number, AttendanceStatus> = {};
-    filteredLearners.forEach(s => { bulk[s.id] = status; });
+  // Bulk action: set all students in a given session to a status
+  const markAllAs = (status: AttendanceStatus, session: SessionType = 'morning') => {
+    const bulk: Record<number, StudentAttendance> = {};
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    filteredLearners.forEach(s => {
+      const existing = attendance[s.id] || {};
+      bulk[s.id] = {
+        ...existing,
+        [session]: { status, time: timestamp }
+      };
+    });
     setAttendance(prev => ({ ...prev, ...bulk }));
     const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' } as const;
-    showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]}.`);
+    const sessionLabel = session === 'morning' ? 'morning' : 'afternoon';
+    showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
   };
 
   // Save attendance
@@ -159,7 +211,7 @@ const Attendance = () => {
     await new Promise(r => setTimeout(r, 500));
     try {
       const storageKey = `munyaka_attendance_v2_${filters.grade}_${filters.stream}_${filters.date}`;
-      // Store as {studentId: status} for compactness
+      // Store as {studentId: {morning: {...}, afternoon: {...}}}
       localStorage.setItem(storageKey, JSON.stringify(attendance));
       
       // Also update the master record map used by the dashboard
@@ -202,7 +254,7 @@ const Attendance = () => {
     const row3 = "MOTTO: KNOWLEDGE POWER";
     const row4 = `ATTENDANCE REGISTER - ${filters.grade.toUpperCase()} ${filters.stream.toUpperCase()} - DATE: ${currentDateStr}`;
 
-    const headers = ["#", "Learner Name", "Admission/ID", "Gender", "Status", "Time Recorded"];
+    const headers = ["#", "Learner Name", "Admission/ID", "Gender", "Morning Status", "Morning Time", "Afternoon Status", "Afternoon Time"];
 
     const getStatusLabel = (status?: AttendanceStatus) => {
       if (status === 'P') return "Present";
@@ -213,24 +265,26 @@ const Attendance = () => {
     };
 
     const rows = filteredLearners.map((learner, idx) => {
-      const status = attendance[learner.id];
+      const record = attendance[learner.id] || {};
       return [
         idx + 1,
         `"${learner.name.replace(/"/g, '""')}"`,
         `"${learner.assessment.replace(/"/g, '""')}"`,
         learner.gender === 'M' ? 'Male' : learner.gender === 'F' ? 'Female' : 'Other',
-        getStatusLabel(status),
-        status ? new Date().toLocaleTimeString() : '—'
+        getStatusLabel(record.morning?.status),
+        record.morning?.time || '—',
+        getStatusLabel(record.afternoon?.status),
+        record.afternoon?.time || '—'
       ];
     });
 
     // Summary rows
     const summaryRows = [
-      ["", "", "", "Present", metrics.present, ""],
-      ["", "", "", "Absent", metrics.absent, ""],
-      ["", "", "", "Late", metrics.late, ""],
-      ["", "", "", "Excused", metrics.excused, ""],
-      ["", "", "", "Attendance Rate", `${metrics.rate}%`, ""],
+      ["", "", "", "Morning Present", metrics.presentMorning, "", "Afternoon Present", metrics.presentAfternoon],
+      ["", "", "", "Morning Absent", metrics.absentMorning, "", "Afternoon Absent", metrics.absentAfternoon],
+      ["", "", "", "Morning Late", metrics.lateMorning, "", "Afternoon Late", metrics.lateAfternoon],
+      ["", "", "", "Morning Excused", metrics.excusedMorning, "", "Afternoon Excused", metrics.excusedAfternoon],
+      ["", "", "", "Overall Rate", `${metrics.rate}%`, "", "", ""],
     ];
 
     const csvContent = [
@@ -242,7 +296,7 @@ const Attendance = () => {
       headers.join(","),
       ...rows.map(r => r.join(",")),
       "",
-      ["SUMMARY", "", "", "", ""],
+      ["SUMMARY", "", "", "", "", "", "", ""],
       ...summaryRows.map(r => r.map(c => `"${c}"`).join(","))
     ].join("\n");
 
@@ -374,40 +428,40 @@ const Attendance = () => {
           {/* Global bulk action buttons */}
           <div className="md:col-span-4 space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-              Bulk Actions
+              Bulk Actions (Morning Session)
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
-                onClick={() => markAllAs('P')}
-                className="h-11 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                title="Mark all as Present"
+                onClick={() => markAllAs('P', 'morning')}
+                className="h-11 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                title="Mark all as Present in morning"
               >
                 <CheckCircle2 size={14} />
-                <span>Mark All Present</span>
+                <span>Present</span>
               </button>
               <button
-                onClick={() => markAllAs('A')}
-                className="h-11 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                title="Mark all as Absent"
+                onClick={() => markAllAs('A', 'morning')}
+                className="h-11 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                title="Mark all as Absent in morning"
               >
                 <XCircle size={14} />
-                <span>Mark All Absent</span>
+                <span>Absent</span>
               </button>
               <button
-                onClick={() => markAllAs('L')}
-                className="h-11 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                title="Mark all as Late"
+                onClick={() => markAllAs('L', 'morning')}
+                className="h-11 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                title="Mark all as Late in morning"
               >
                 <Clock size={14} />
-                <span>Mark All Late</span>
+                <span>Late</span>
               </button>
               <button
-                onClick={() => markAllAs('E')}
-                className="h-11 px-3 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-2"
-                title="Mark all as Excused"
+                onClick={() => markAllAs('E', 'morning')}
+                className="h-11 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                title="Mark all as Excused in morning"
               >
                 <ShieldCheck size={14} />
-                <span>Mark All Excused</span>
+                <span>Excused</span>
               </button>
             </div>
           </div>
@@ -415,7 +469,7 @@ const Attendance = () => {
       </Card>
 
       {/* ============================================
-          3. SUMMARY METRICS CARDS
+          3. SUMMARY METRICS CARDS (Combined totals)
           ============================================ */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
         
@@ -439,7 +493,7 @@ const Attendance = () => {
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Present</p>
               <h3 className="text-3xl font-black text-emerald-700 mt-1">{metrics.present}</h3>
-              <p className="text-[10px] font-bold text-emerald-600 mt-1">on campus</p>
+              <p className="text-[10px] font-bold text-emerald-600 mt-1">sessions marked</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
               <CheckCircle2 size={22} />
@@ -453,7 +507,7 @@ const Attendance = () => {
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">Absent</p>
               <h3 className="text-3xl font-black text-rose-700 mt-1">{metrics.absent}</h3>
-              <p className="text-[10px] font-bold text-rose-600 mt-1">unexcused</p>
+              <p className="text-[10px] font-bold text-rose-600 mt-1">sessions missed</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center">
               <XCircle size={22} />
@@ -467,7 +521,7 @@ const Attendance = () => {
             <div>
               <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Late</p>
               <h3 className="text-3xl font-black text-amber-700 mt-1">{metrics.late}</h3>
-              <p className="text-[10px] font-bold text-amber-600 mt-1">tardy arrivals</p>
+              <p className="text-[10px] font-bold text-amber-600 mt-1">tardy sessions</p>
             </div>
             <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
               <Clock size={22} />
@@ -493,13 +547,13 @@ const Attendance = () => {
                 style={{ width: `${metrics.rate}%` }}
               />
             </div>
-            <p className="text-[10px] font-bold text-indigo-600 mt-1.5">attendance rate</p>
+            <p className="text-[10px] font-bold text-indigo-600 mt-1.5">overall attendance rate</p>
           </div>
         </Card>
       </div>
 
       {/* ============================================
-          4. STUDENT ATTENDANCE LIST
+          4. STUDENT ATTENDANCE TABLE (Morning & Afternoon)
           ============================================ */}
       <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
         
@@ -514,7 +568,7 @@ const Attendance = () => {
                 {filters.grade} {filters.stream} — {filters.date}
               </h2>
               <p className="text-xs text-slate-500 font-medium">
-                Click a status button to mark each learner. Click again to clear.
+                Click a status button to mark each session. Click again to clear.
               </p>
             </div>
           </div>
@@ -531,105 +585,232 @@ const Attendance = () => {
           </div>
         </div>
 
-        {/* Table / list */}
-        <div className="divide-y divide-slate-100">
-          {filteredLearners.length > 0 ? (
-            filteredLearners.map((learner, index) => {
-              const currentStatus = attendance[learner.id];
-              return (
-                <div 
-                  key={learner.id} 
-                  className="px-6 sm:px-8 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 transition-colors"
+        {/* Structured Table with Morning/Afternoon sub-rows */}
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm text-left border-collapse min-w-[900px]">
+            <thead>
+              {/* Group header */}
+              <tr className="bg-slate-100/80 border-b border-slate-200">
+                <th 
+                  rowSpan={2} 
+                  className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 border-r border-slate-200 align-bottom min-w-[260px]"
                 >
-                  {/* Left: index, name, ID, gender */}
-                  <div className="flex items-center gap-4 flex-1 min-w-0">
-                    <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
-                      #{index + 1}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-slate-900 text-sm truncate">{learner.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          {learner.assessment}
-                        </p>
-                        <span className="text-slate-300">•</span>
-                        <Badge 
-                          variant="outline" 
-                          className={cn(
-                            "rounded-md font-black text-[9px] uppercase tracking-widest px-1.5 py-0 leading-tight",
-                            learner.gender === 'M' 
-                              ? "bg-blue-50 text-blue-700 border-blue-200" 
-                              : "bg-pink-50 text-pink-700 border-pink-200"
-                          )}
-                        >
-                          {learner.gender === 'M' ? 'Male' : 'Female'}
-                        </Badge>
-                      </div>
-                    </div>
+                  Learners
+                </th>
+                <th colSpan={4} className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-700 text-center border-r border-slate-200">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>☀</span> Morning Session
                   </div>
+                </th>
+                <th colSpan={4} className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <span>🌙</span> Afternoon Session
+                  </div>
+                </th>
+              </tr>
+              {/* Sub-header row with status column names */}
+              <tr className="bg-slate-50 border-b border-slate-200">
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Present
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Absent
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Late
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Excused
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Present
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Absent
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
+                  Late
+                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center min-w-[80px]">
+                  Excused
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {filteredLearners.length > 0 ? (
+                filteredLearners.map((learner, index) => {
+                  const record = attendance[learner.id] || {};
+                  const morningStatus = record.morning?.status;
+                  const afternoonStatus = record.afternoon?.status;
+                  return (
+                    <tr key={learner.id} className="hover:bg-slate-50/50 transition-colors">
+                      {/* Learners column: index, name, ID, gender */}
+                      <td className="px-6 py-4 border-r border-slate-100 min-w-[260px]">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
+                            #{index + 1}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-slate-900 text-sm truncate">{learner.name}</p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                {learner.assessment}
+                              </p>
+                              <span className="text-slate-300">•</span>
+                              <Badge 
+                                variant="outline" 
+                                className={cn(
+                                  "rounded-md font-black text-[9px] uppercase tracking-widest px-1.5 py-0 leading-tight",
+                                  learner.gender === 'M' 
+                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                    : "bg-pink-50 text-pink-700 border-pink-200"
+                                )}
+                              >
+                                {learner.gender === 'M' ? 'Male' : 'Female'}
+                              </Badge>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
 
-                  {/* Right: status toggle buttons */}
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <StatusButton
-                      status="P"
-                      isActive={currentStatus === 'P'}
-                      onClick={() => setStudentStatus(learner.id, 'P')}
-                      label="Present"
-                      icon={<CheckCircle2 size={14} />}
-                      activeClass="bg-emerald-500 border-emerald-500 text-white shadow-lg shadow-emerald-200"
-                      inactiveClass="bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100"
-                    />
-                    <StatusButton
-                      status="A"
-                      isActive={currentStatus === 'A'}
-                      onClick={() => setStudentStatus(learner.id, 'A')}
-                      label="Absent"
-                      icon={<XCircle size={14} />}
-                      activeClass="bg-rose-500 border-rose-500 text-white shadow-lg shadow-rose-200"
-                      inactiveClass="bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100"
-                    />
-                    <StatusButton
-                      status="L"
-                      isActive={currentStatus === 'L'}
-                      onClick={() => setStudentStatus(learner.id, 'L')}
-                      label="Late"
-                      icon={<Clock size={14} />}
-                      activeClass="bg-amber-500 border-amber-500 text-white shadow-lg shadow-amber-200"
-                      inactiveClass="bg-amber-50 border-amber-200 text-amber-700 hover:bg-amber-100"
-                    />
-                    <StatusButton
-                      status="E"
-                      isActive={currentStatus === 'E'}
-                      onClick={() => setStudentStatus(learner.id, 'E')}
-                      label="Excused"
-                      icon={<ShieldCheck size={14} />}
-                      activeClass="bg-sky-500 border-sky-500 text-white shadow-lg shadow-sky-200"
-                      inactiveClass="bg-sky-50 border-sky-200 text-sky-700 hover:bg-sky-100"
-                    />
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="px-8 py-20 text-center">
-              <div className="flex flex-col items-center gap-3">
-                <div className="p-4 bg-slate-50 rounded-full text-slate-300">
-                  <Search size={32} />
-                </div>
-                <p className="text-slate-800 font-bold">No learners match your search.</p>
-                <p className="text-xs text-slate-400 max-w-sm">
-                  Try a different name or admission number above.
-                </p>
-              </div>
-            </div>
-          )}
+                      {/* Morning session — Present */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="P"
+                          session="morning"
+                          studentId={learner.id}
+                          currentStatus={morningStatus}
+                          currentTime={record.morning?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-emerald-500 border-emerald-500 text-white shadow-md"
+                          inactiveClass="bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100"
+                        />
+                      </td>
+
+                      {/* Morning session — Absent */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="A"
+                          session="morning"
+                          studentId={learner.id}
+                          currentStatus={morningStatus}
+                          currentTime={record.morning?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-rose-500 border-rose-500 text-white shadow-md"
+                          inactiveClass="bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100"
+                        />
+                      </td>
+
+                      {/* Morning session — Late */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="L"
+                          session="morning"
+                          studentId={learner.id}
+                          currentStatus={morningStatus}
+                          currentTime={record.morning?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-amber-500 border-amber-500 text-white shadow-md"
+                          inactiveClass="bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
+                        />
+                      </td>
+
+                      {/* Morning session — Excused */}
+                      <td className="px-2 py-3 border-r border-slate-200 text-center">
+                        <SessionStatusButton
+                          status="E"
+                          session="morning"
+                          studentId={learner.id}
+                          currentStatus={morningStatus}
+                          currentTime={record.morning?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-sky-500 border-sky-500 text-white shadow-md"
+                          inactiveClass="bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
+                        />
+                      </td>
+
+                      {/* Afternoon session — Present */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="P"
+                          session="afternoon"
+                          studentId={learner.id}
+                          currentStatus={afternoonStatus}
+                          currentTime={record.afternoon?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-emerald-500 border-emerald-500 text-white shadow-md"
+                          inactiveClass="bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100"
+                        />
+                      </td>
+
+                      {/* Afternoon session — Absent */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="A"
+                          session="afternoon"
+                          studentId={learner.id}
+                          currentStatus={afternoonStatus}
+                          currentTime={record.afternoon?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-rose-500 border-rose-500 text-white shadow-md"
+                          inactiveClass="bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100"
+                        />
+                      </td>
+
+                      {/* Afternoon session — Late */}
+                      <td className="px-2 py-3 border-r border-slate-100 text-center">
+                        <SessionStatusButton
+                          status="L"
+                          session="afternoon"
+                          studentId={learner.id}
+                          currentStatus={afternoonStatus}
+                          currentTime={record.afternoon?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-amber-500 border-amber-500 text-white shadow-md"
+                          inactiveClass="bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
+                        />
+                      </td>
+
+                      {/* Afternoon session — Excused */}
+                      <td className="px-2 py-3 text-center">
+                        <SessionStatusButton
+                          status="E"
+                          session="afternoon"
+                          studentId={learner.id}
+                          currentStatus={afternoonStatus}
+                          currentTime={record.afternoon?.time}
+                          onSetStatus={setSessionStatus}
+                          activeClass="bg-sky-500 border-sky-500 text-white shadow-md"
+                          inactiveClass="bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
+                        />
+                      </td>
+                    </tr>
+                  );
+                })
+              ) : (
+                <tr>
+                  <td colSpan={9} className="px-8 py-20 text-center">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <Search size={32} />
+                      </div>
+                      <p className="text-slate-800 font-bold">No learners match your search.</p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        Try a different name or admission number above.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Footer summary */}
         {filteredLearners.length > 0 && (
           <div className="px-6 sm:px-8 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between flex-wrap gap-2">
             <p className="text-xs font-bold text-slate-500">
-              <span className="text-slate-900 font-black">{metrics.present + metrics.late + metrics.absent + metrics.excused}</span> of <span className="text-slate-900 font-black">{metrics.total}</span> learners marked
+              <span className="text-slate-900 font-black">{metrics.total}</span> learners × 2 sessions = <span className="text-slate-900 font-black">{metrics.total * 2}</span> total slots
             </p>
             <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
               <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500"></span> {metrics.present} P</span>
@@ -644,39 +825,42 @@ const Attendance = () => {
   );
 };
 
-// Reusable status toggle button subcomponent
-interface StatusButtonProps {
+// Session-specific status toggle button
+interface SessionStatusButtonProps {
   status: AttendanceStatus;
-  isActive: boolean;
-  onClick: () => void;
-  label: string;
-  icon: React.ReactNode;
+  session: SessionType;
+  studentId: number;
+  currentStatus?: AttendanceStatus;
+  currentTime?: string;
+  onSetStatus: (studentId: number, session: SessionType, status: AttendanceStatus) => void;
   activeClass: string;
   inactiveClass: string;
 }
 
-const StatusButton: React.FC<StatusButtonProps> = ({ 
-  isActive, 
-  onClick, 
-  label, 
-  icon, 
+const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({ 
+  status, 
+  session, 
+  studentId, 
+  currentStatus, 
+  onSetStatus,
   activeClass, 
   inactiveClass 
 }) => {
+  const isActive = currentStatus === status;
+  const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' };
   return (
     <button
       type="button"
-      onClick={onClick}
-      title={label}
-      aria-label={label}
+      onClick={() => onSetStatus(studentId, session, status)}
+      title={`${labels[status]} (${session})`}
+      aria-label={`${labels[status]} (${session})`}
       aria-pressed={isActive}
       className={cn(
-        "h-9 px-3 rounded-xl border font-bold text-[10px] uppercase tracking-widest transition-all duration-200 active:scale-95 flex items-center gap-1.5",
+        "w-8 h-8 rounded-lg border-2 font-bold text-[10px] uppercase tracking-widest transition-all duration-200 active:scale-90 flex items-center justify-center mx-auto",
         isActive ? activeClass : inactiveClass
       )}
     >
-      {icon}
-      <span className="hidden md:inline">{label}</span>
+      {isActive ? <CheckCircle2 size={14} /> : <span className="text-[9px]">{labels[status][0]}</span>}
     </button>
   );
 };
