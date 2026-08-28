@@ -112,7 +112,15 @@ const Settings = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
-  const [activeTab, setActiveTab] = useState('roles');
+  const [activeTab, setActiveTab] = useState(() => {
+    // Honour a ?tab= URL param so other parts of the app can deep-link
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      const tab = params.get('tab');
+      if (['general', 'academic', 'roles', 'security'].includes(tab ?? '')) return tab as string;
+    }
+    return 'roles';
+  });
 
   const [generalConfig, setGeneralConfig] = useState({
     schoolName: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
@@ -782,7 +790,12 @@ const Settings = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={(tab) => {
+        setActiveTab(tab);
+        const url = new URL(window.location.href);
+        url.searchParams.set('tab', tab);
+        window.history.replaceState({}, '', url.toString());
+      }} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex overflow-x-auto">
           <TabsTrigger value="general" className="rounded-xl px-8 h-full font-bold text-xs">General</TabsTrigger>
           <TabsTrigger value="academic" className="rounded-xl px-8 h-full font-bold text-xs">Academic Setup</TabsTrigger>
@@ -1217,14 +1230,56 @@ const Settings = () => {
                       </div>
                       <p className="text-sm font-bold text-slate-700">Google Maps API Key Missing</p>
                       <p className="text-xs max-w-xs leading-relaxed text-slate-400">
-                        Add a valid Google Maps API key in System Configuration (General tab) to enable the interactive location picker.
+                        Add your Google Maps API key here or go to the General tab.
                       </p>
-                      <a
-                        href="#general"
-                        className="mt-2 text-xs font-bold text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
-                      >
-                        Open General Settings →
-                      </a>
+
+                      {/* Inline API key quick-setup */}
+                      <div className="mt-2 w-full max-w-sm space-y-2">
+                        <Input
+                          id="quick-api-key-input"
+                          type="password"
+                          placeholder="Paste Google Maps API key here…"
+                          value={generalConfig.googleMapsApiKey}
+                          onChange={e => { setGeneralConfig({...generalConfig, googleMapsApiKey: e.target.value}); setHasUnsavedChanges(true); }}
+                          className="h-10 rounded-xl bg-white border border-slate-200 font-mono text-xs text-center"
+                        />
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            className="flex-1 h-9 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs gap-1.5 shadow"
+                            onClick={async () => {
+                              // Save directly to localStorage and re-trigger the key fetch
+                              const savedMaster = localStorage.getItem('munyaka_system_settings_v3');
+                              const parsed = savedMaster ? JSON.parse(savedMaster) : {};
+                              const updated = {
+                                ...parsed,
+                                general: {
+                                  ...(parsed.general || {}),
+                                  googleMapsApiKey: generalConfig.googleMapsApiKey
+                                }
+                              };
+                              localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(updated));
+                              setHasUnsavedChanges(true);
+                              await handleSaveAllSettings();
+                            }}
+                          >
+                            <Save size={13} /> Save & Load Map
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="flex-1 h-9 rounded-xl border-slate-200 text-slate-600 font-bold text-xs gap-1.5"
+                            onClick={() => {
+                              setActiveTab('general');
+                              const url = new URL(window.location.href);
+                              url.searchParams.set('tab', 'general');
+                              window.history.replaceState({}, '', url.toString());
+                            }}
+                          >
+                            <ChevronRight size={13} /> General Tab
+                          </Button>
+                        </div>
+                      </div>
                     </div>
                   ) : googleMapsReady ? (
                     <>
