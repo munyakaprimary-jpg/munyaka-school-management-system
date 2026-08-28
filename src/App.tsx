@@ -49,9 +49,6 @@ import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
 import ScienceLab from "./pages/ScienceLab";
 import CentralDataService from "./pages/CentralDataService";
-import SchoolsManagement from "./pages/SchoolsManagement";
-import MonthlyCodesManagement from "./pages/MonthlyCodesManagement";
-import AccessTracking from "./pages/AccessTracking";
 
 const queryClient = new QueryClient();
 
@@ -111,9 +108,6 @@ const App = () => (
                 <Route path="/digital-skills" element={<ProtectedRoute><Layout><DigitalSkillsAssessment /></Layout></ProtectedRoute>} />
                 <Route path="/practical-competencies" element={<ProtectedRoute><Layout><PracticalCompetencies /></Layout></ProtectedRoute>} />
                 <Route path="/science-lab" element={<ProtectedRoute><Layout><ScienceLab /></Layout></ProtectedRoute>} />
-                <Route path="/schools-management" element={<ProtectedRoute><Layout><SchoolsManagement /></Layout></ProtectedRoute>} />
-                <Route path="/monthly-codes" element={<ProtectedRoute><Layout><MonthlyCodesManagement /></Layout></ProtectedRoute>} />
-                <Route path="/access-tracking" element={<ProtectedRoute><Layout><AccessTracking /></Layout></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
