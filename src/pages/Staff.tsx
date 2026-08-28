@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,9 +24,7 @@ import {
   Plus,
   X,
   Save,
-  AlertCircle,
-  Loader2,
-  Users
+  AlertCircle
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -35,77 +33,73 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { showSuccess, showError } from '@/utils/toast';
-import { staffService, StaffRecord, CreateStaffData } from '@/services/staffService';
+import { STAFF, StaffMember } from '@/lib/mock-data';
+import { PreRegisteredStaff } from '@/types/staff-access';
+import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+import { showSuccess } from '@/utils/toast';
 
 const Staff = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Inactive' | 'Pre-Registered'>('All');
-  const [staffList, setStaffList] = useState<StaffRecord[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
   
   // Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingStaff, setEditingStaff] = useState<StaffRecord | null>(null);
+  const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
 
-  // Form state for new/edit staff
-  const [formData, setFormData] = useState({
-    full_name: '',
-    role: '',
-    phone: '',
-    email: '',
-    tsc_number: '',
-    national_id: '',
-    department: 'School Administration',
-    status: 'Active' as 'Active' | 'Inactive' | 'Pre-Registered'
-  });
-  const [formError, setFormError] = useState('');
-
-  // Fetch staff from database
-  const fetchStaff = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const staff = await staffService.getAllStaff();
-      setStaffList(staff);
-    } catch (error) {
-      console.error('Failed to fetch staff:', error);
-      showError('Failed to load staff directory');
-      setStaffList([]);
-    } finally {
-      setIsLoading(false);
+  // Load staff directory
+  const staffDirectory = useMemo<StaffMember[]>(() => {
+    const saved = localStorage.getItem('munyaka_staff_directory');
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
+    return (INITIAL_SEED_DATA.staff as unknown as StaffMember[]) || STAFF;
   }, []);
 
-  // Initial load and subscribe to real-time changes
-  useEffect(() => {
-    fetchStaff();
-    
-    // Subscribe to real-time changes
-    const unsubscribe = staffService.subscribeToChanges((record) => {
-      setStaffList(prev => {
-        const exists = prev.find(s => s.id === record.id);
-        if (exists) {
-          return prev.map(s => s.id === record.id ? record : s);
-        }
-        return [record, ...prev];
-      });
+  // Load pre-registered ledger to unify accounts
+  const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
+    const saved = localStorage.getItem('munyaka_staff_prereg');
+    return saved ? JSON.parse(saved) : (INITIAL_SEED_DATA.staffPrereg as unknown as PreRegisteredStaff[] || INITIAL_PRE_REGISTERED_STAFF);
+  }, []);
+
+  // Unified Staff Master List (Combines Directory & Pre-Registered)
+  const masterStaffList = useMemo(() => {
+    const directoryMap = new Map<string, StaffMember>();
+    staffDirectory.forEach(s => directoryMap.set(s.id_no, s));
+
+    const combined: StaffMember[] = [...staffDirectory];
+
+    // Include pre-registered staff who are not yet in the main directory
+    preRegLedger.forEach((p: any) => {
+      if (!directoryMap.has(p.nationalId)) {
+        combined.push({
+          id: p.id,
+          id_no: p.nationalId,
+          tsc_no: p.tscNumber,
+          name: p.fullName,
+          role: p.systemRole.replace('_', ' ').toUpperCase(),
+          subjects: p.assignedSubjects || [p.department || 'General'],
+          phone: p.phone,
+          email: p.email,
+          status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
+          joined: p.datePreRegistered,
+          department: p.department || 'School Administration'
+        });
+      }
     });
 
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
-  }, [fetchStaff]);
+    return combined;
+  }, [staffDirectory, preRegLedger]);
 
   // Filter staff by Search Term & Status Tabs
-  const filteredStaff = React.useMemo(() => {
-    return staffList.filter(s => {
+  const filteredStaff = useMemo(() => {
+    return masterStaffList.filter(s => {
       const matchesSearch = 
-        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.national_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.id_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.role.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -115,109 +109,105 @@ const Staff = () => {
 
       return matchesSearch && matchesStatus;
     });
-  }, [staffList, searchTerm, statusFilter]);
+  }, [masterStaffList, searchTerm, statusFilter]);
 
-  const activeCount = React.useMemo(() => staffList.filter(s => s.status === 'Active').length, [staffList]);
-  const inactiveCount = React.useMemo(() => staffList.filter(s => s.status === 'Inactive').length, [staffList]);
-  const preRegCount = React.useMemo(() => staffList.filter(s => s.status === 'Pre-Registered').length, [staffList]);
+  const activeCount = useMemo(() => masterStaffList.filter(s => s.status === 'Active').length, [masterStaffList]);
+  const preRegCount = useMemo(() => masterStaffList.filter(s => s.status === 'Pre-Registered').length, [masterStaffList]);
+
+  // Form state for new/edit staff
+  const [formData, setFormData] = useState({
+    name: '',
+    role: '',
+    phone: '',
+    email: '',
+    tsc_no: ''
+  });
+  const [formError, setFormError] = useState('');
 
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
     setFormData({
-      full_name: '',
+      name: '',
       role: '',
       phone: '',
       email: '',
-      tsc_number: '',
-      national_id: '',
-      department: 'School Administration',
-      status: 'Active'
+      tsc_no: ''
     });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleOpenEdit = (staff: StaffRecord) => {
+  const handleOpenEdit = (staff: StaffMember) => {
     setModalMode('edit');
     setEditingStaff(staff);
     setFormData({
-      full_name: staff.full_name,
+      name: staff.name,
       role: staff.role,
       phone: staff.phone,
       email: staff.email,
-      tsc_number: staff.tsc_number || '',
-      national_id: staff.national_id || '',
-      department: staff.department || 'School Administration',
-      status: staff.status
+      tsc_no: staff.tsc_no || ''
     });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleSaveStaff = async () => {
-    if (!formData.full_name.trim() || !formData.role.trim()) {
+  const handleSaveStaff = () => {
+    if (!formData.name.trim() || !formData.role.trim()) {
       setFormError('Please fill in all required fields (Full Name, Role / Designation).');
       return;
     }
 
-    if (!formData.email.trim() || !formData.phone.trim()) {
-      setFormError('Please fill in Email and Phone Number.');
-      return;
+    if (modalMode === 'add') {
+      // Add new staff to directory
+      const newStaff: StaffMember = {
+        id: `ST-${Date.now()}`,
+        id_no: `ID-${Date.now()}`,
+        tsc_no: formData.tsc_no || undefined,
+        name: formData.name,
+        role: formData.role.toUpperCase(),
+        subjects: [],
+        phone: formData.phone,
+        email: formData.email,
+        status: 'Active',
+        joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+        department: 'School Administration'
+      };
+
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
+      const updatedList = [newStaff, ...staffList];
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+      
+      showSuccess(`Staff member "${newStaff.name}" added successfully!`);
+    } else if (editingStaff) {
+      // Update existing staff
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
+      const updatedList = staffList.map(s =>
+        s.id === editingStaff.id ? {
+          ...s,
+          name: formData.name,
+          role: formData.role.toUpperCase(),
+          phone: formData.phone,
+          email: formData.email,
+          tsc_no: formData.tsc_no || undefined
+        } : s
+      );
+      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
+      
+      showSuccess(`Staff member "${formData.name}" updated successfully!`);
     }
 
-    setIsSaving(true);
-    setFormError('');
-
-    try {
-      if (modalMode === 'add') {
-        const createData: CreateStaffData = {
-          full_name: formData.full_name.trim(),
-          role: formData.role.trim(),
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          tsc_number: formData.tsc_number?.trim() || undefined,
-          national_id: formData.national_id?.trim() || undefined,
-          department: formData.department?.trim() || 'School Administration',
-          status: formData.status
-        };
-        
-        await staffService.createStaff(createData);
-        showSuccess(`Staff member "${formData.full_name}" added successfully!`);
-      } else if (editingStaff) {
-        const updateData: Partial<CreateStaffData> = {
-          full_name: formData.full_name.trim(),
-          role: formData.role.trim(),
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          tsc_number: formData.tsc_number?.trim() || undefined,
-          national_id: formData.national_id?.trim() || undefined,
-          department: formData.department?.trim() || 'School Administration',
-          status: formData.status
-        };
-        
-        await staffService.updateStaff(editingStaff.id, updateData);
-        showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
-      }
-
-      setIsModalOpen(false);
-      setEditingStaff(null);
-      setFormData({
-        full_name: '',
-        role: '',
-        phone: '',
-        email: '',
-        tsc_number: '',
-        national_id: '',
-        department: 'School Administration',
-        status: 'Active'
-      });
-    } catch (error: any) {
-      console.error('Error saving staff:', error);
-      setFormError(error.message || 'Failed to save staff member. Please try again.');
-    } finally {
-      setIsSaving(false);
-    }
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormData({
+      name: '',
+      role: '',
+      phone: '',
+      email: '',
+      tsc_no: ''
+    });
   };
 
   const handleCloseModal = () => {
@@ -225,29 +215,12 @@ const Staff = () => {
     setEditingStaff(null);
     setFormError('');
     setFormData({
-      full_name: '',
+      name: '',
       role: '',
       phone: '',
       email: '',
-      tsc_number: '',
-      national_id: '',
-      department: 'School Administration',
-      status: 'Active'
+      tsc_no: ''
     });
-  };
-
-  const handleDeleteStaff = async (id: string, name: string) => {
-    if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
-      return;
-    }
-
-    try {
-      await staffService.deleteStaff(id);
-      showSuccess(`Staff member "${name}" deleted successfully!`);
-    } catch (error) {
-      console.error('Error deleting staff:', error);
-      showError('Failed to delete staff member');
-    }
   };
 
   return (
@@ -266,23 +239,21 @@ const Staff = () => {
           <Button 
             className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
             onClick={handleOpenAdd}
-            disabled={isSaving}
           >
-            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <UserPlus size={18} />}
-            Add Staff
+            <UserPlus size={18} /> Add Staff
           </Button>
         </div>
       </div>
 
       {/* Metrics Summary Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
           <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl">
-            <Users size={22} />
+            <Briefcase size={22} />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p>
-            <p className="text-2xl font-black text-slate-900">{staffList.length}</p>
+            <p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p>
           </div>
         </div>
 
@@ -297,21 +268,11 @@ const Staff = () => {
         </div>
 
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
-          <div className="p-3.5 bg-rose-50 text-rose-600 rounded-2xl">
-            <UserX size={22} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inactive</p>
-            <p className="text-2xl font-black text-slate-900">{inactiveCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
           <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl">
             <Clock size={22} />
           </div>
           <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered</p>
+            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered Keys</p>
             <p className="text-2xl font-black text-slate-900">{preRegCount}</p>
           </div>
         </div>
@@ -330,7 +291,7 @@ const Staff = () => {
         </div>
 
         <div className="flex gap-1.5 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-full md:w-auto">
-          {(['All', 'Active', 'Inactive', 'Pre-Registered'] as const).map((status) => (
+          {(['All', 'Active', 'Pre-Registered'] as const).map((status) => (
             <Button
               key={status}
               variant="ghost"
@@ -347,77 +308,8 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Staff Data Table or Empty State */}
-      {isLoading ? (
-        <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left min-w-[900px]">
-                <thead className="text-slate-500 bg-slate-50/50 border-b">
-                  <tr>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {[1,2,3].map((i) => (
-                    <tr key={i} className="animate-pulse">
-                      <td className="px-8 py-5 min-w-[200px]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                          <div className="flex flex-col min-w-0">
-                            <div className="h-4 w-48 bg-slate-200 rounded" />
-                            <div className="h-3 w-32 bg-slate-200 rounded mt-1" />
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 min-w-[180px]">
-                        <div className="h-4 w-36 bg-slate-200 rounded" />
-                        <div className="h-3 w-28 bg-slate-200 rounded mt-1" />
-                      </td>
-                      <td className="px-8 py-5 min-w-[220px]">
-                        <div className="h-3 w-40 bg-slate-200 rounded mb-1" />
-                        <div className="h-3 w-40 bg-slate-200 rounded" />
-                      </td>
-                      <td className="px-8 py-5 text-center min-w-[140px]">
-                        <div className="h-5 w-24 bg-slate-200 rounded-xl mx-auto" />
-                      </td>
-                      <td className="px-8 py-5 text-right min-w-[120px]">
-                        <div className="h-8 w-24 bg-slate-200 rounded-xl mx-auto" />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
-      ) : filteredStaff.length === 0 ? (
-        /* Empty State */
-        <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-16 text-center">
-          <div className="flex flex-col items-center gap-6">
-            <div className="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center">
-              <Users size={48} className="text-slate-300" />
-            </div>
-            <div>
-              <h3 className="text-xl font-bold text-slate-900 mb-2">No staff members registered yet</h3>
-              <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-                The staff directory is currently empty. Add your first staff member to get started.
-              </p>
-              <Button 
-                className="rounded-2xl gap-2 h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
-                onClick={handleOpenAdd}
-              >
-                <UserPlus size={20} /> Add New Staff Member
-              </Button>
-            </div>
-          </div>
-        </Card>
-      ) : (
-        /* Staff Data Table */
+      {/* Master Staff Data Table */}
+      <div className="table-scroll-viewport">
         <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
           <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
             <div>
@@ -446,18 +338,18 @@ const Staff = () => {
                       <td className="px-8 py-5 min-w-[200px]">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            {member.full_name.split(' ').map(n => n[0]).join('')}
+                            {member.name.split(' ').map(n => n[0]).join('')}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
-                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.national_id || 'N/A'}</p>
+                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.name}</p>
+                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
                           </div>
                         </div>
                       </td>
 
                       <td className="px-8 py-5 min-w-[180px]">
                         <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
-                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department || 'School Administration'}</p>
+                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
                       </td>
 
                       <td className="px-8 py-5 min-w-[220px]">
@@ -477,8 +369,6 @@ const Staff = () => {
                         <Badge className={
                           member.status === 'Active'
                             ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
-                            : member.status === 'Inactive'
-                            ? "bg-rose-50 text-rose-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
                             : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
                         }>
                           {member.status}
@@ -510,22 +400,33 @@ const Staff = () => {
                             <DropdownMenuSeparator className="my-1" />
                             
                             <DropdownMenuItem 
-                              onClick={() => handleDeleteStaff(member.id, member.full_name)}
-                              className="rounded-xl gap-2 font-bold cursor-pointer text-rose-600 hover:bg-rose-50"
+                              onClick={() => navigate('/staff/pre-registration')}
+                              className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
                             >
-                              <Trash2 size={15} /> Delete
+                              <Key size={15} /> Manage Access Keys
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </td>
                     </tr>
                   ))}
+
+                  {filteredStaff.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="px-8 py-20 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <Search size={32} className="text-slate-200" />
+                          <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </Card>
-      )}
+      </div>
 
       {/* Add/Edit Staff Modal */}
       {isModalOpen && (
@@ -549,13 +450,12 @@ const Staff = () => {
                 </div>
               )}
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name *</Label>
+                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
                 <Input 
-                  value={formData.full_name} 
-                  onChange={(e) => setFormData({...formData, full_name: e.target.value})} 
+                  value={formData.name} 
+                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
                   placeholder="e.g. Jane Mwangi" 
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                  required
                 />
               </div>
               {/* Role / Designation stays as a full-width input at the top */}
@@ -566,31 +466,28 @@ const Staff = () => {
                   onChange={(e) => setFormData({...formData, role: e.target.value})}
                   placeholder="e.g. TEACHER, ADMINISTRATOR"
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  required
                 />
               </div>
 
               {/* Phone and Email should sit side-by-side in a 2-column grid directly below Role/Designation */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone *</Label>
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
                   <Input
                     value={formData.phone}
                     onChange={(e) => setFormData({...formData, phone: e.target.value})}
                     placeholder="+254..."
                     className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                    required
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email *</Label>
+                  <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
                   <Input
                     type="email"
                     value={formData.email}
                     onChange={(e) => setFormData({...formData, email: e.target.value})}
                     placeholder="email@school.ac.ke"
                     className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                    required
                   />
                 </div>
               </div>
@@ -599,65 +496,25 @@ const Staff = () => {
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
                 <Input
-                  value={formData.tsc_number}
-                  onChange={(e) => setFormData({...formData, tsc_number: e.target.value})}
+                  value={formData.tsc_no}
+                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})}
                   placeholder="e.g. TSC-482910"
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
               </div>
-
-              {/* National ID (Optional) */}
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID (Optional)</Label>
-                <Input
-                  value={formData.national_id}
-                  onChange={(e) => setFormData({...formData, national_id: e.target.value})}
-                  placeholder="e.g. 28374615"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-
-              {/* Department */}
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
-                <Input
-                  value={formData.department}
-                  onChange={(e) => setFormData({...formData, department: e.target.value})}
-                  placeholder="e.g. Mathematics & Science"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-
-              {/* Status */}
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label>
-                <Select value={formData.status} onValueChange={(val: 'Active' | 'Inactive' | 'Pre-Registered') => setFormData({...formData, status: val})}>
-                  <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="Active">Active</SelectItem>
-                    <SelectItem value="Inactive">Inactive</SelectItem>
-                    <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
               <div className="flex gap-3 pt-4 border-t">
                 <Button 
                   variant="ghost" 
                   className="flex-1 rounded-xl h-11 font-bold"
                   onClick={handleCloseModal}
-                  disabled={isSaving}
                 >
                   Cancel
                 </Button>
                 <Button 
                   className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
                   onClick={handleSaveStaff}
-                  disabled={isSaving}
                 >
-                  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+                  <Save size={16} />
                   {modalMode === 'add' ? 'Add Staff' : 'Save Changes'}
                 </Button>
               </div>
