@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils';
@@ -22,11 +22,9 @@ const ResultsBreakdownTable: React.FC<ResultsBreakdownTableProps> = ({
   const tableContainerRef = useRef<HTMLDivElement>(null);
   const [hoveredRow, setHoveredRow] = useState<string | null>(null);
 
-  // Auto-scroll to the left edge on mount (for visual cue)
   useEffect(() => {
     if (tableContainerRef.current && learningAreas.length > 0) {
       const scroller = tableContainerRef.current;
-      // Reset to left edge to show the rank/name columns first
       scroller.scrollLeft = 0;
     }
   }, [learningAreas.length, studentResults.length]);
