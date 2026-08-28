@@ -45,6 +45,7 @@ declare namespace google {
       getPosition(): LatLng;
       setTitle(title: string): void;
       setIcon(icon: string | Icon | Symbol): void;
+      addListener(eventName: string, handler: Function): MapsEventListener;
     }
 
     interface MarkerOptions {
@@ -159,6 +160,11 @@ declare namespace google {
         short_name: string;
         types: string[];
       }
+    }
+
+    namespace event {
+      function clearInstanceListeners(instance: any): void;
+      function addListener(instance: any, eventName: string, handler: Function): MapsEventListener;
     }
 
     namespace geometry {

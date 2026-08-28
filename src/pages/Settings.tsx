@@ -27,6 +27,7 @@ import {
   Clock,
   History,
   AlertTriangle,
+  AlertCircle,
   UserCog,
   Search,
   UploadCloud,
@@ -50,6 +51,7 @@ import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, Geofence
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import { loadGoogleMapsScript, useGoogleMapsReady } from '@/hooks/useGoogleMaps';
+import { useGoogleMapsApiKey } from '@/hooks/useGoogleMapsApiKey';
 
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
@@ -103,7 +105,8 @@ const Settings = () => {
   const [showAuthPass, setShowAuthPass] = useState(false);
 
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError, refresh: refreshGeo } = useGeolocation();
-  const googleMapsReady = useGoogleMapsReady();
+  const { apiKey: googleMapsApiKey, isLoading: isLoadingApiKey, refetch: refetchApiKey } = useGoogleMapsApiKey();
+  const googleMapsReady = useGoogleMapsReady(googleMapsApiKey);
 
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -118,7 +121,8 @@ const Settings = () => {
     phone: "+254 712 345 678",
     email: "info@munyaka.sc.ke",
     location: "Munyaka, Eldoret East, Uasin Gishu County",
-    maintenanceMode: false
+    maintenanceMode: false,
+    googleMapsApiKey: ""
   });
 
   const [academicConfig, setAcademicConfig] = useState({
@@ -241,7 +245,8 @@ const Settings = () => {
           phone: data.phone || "+254 712 345 678",
           email: data.email || "info@munyaka.sc.ke",
           location: data.location || "Munyaka, Eldoret East, Uasin Gishu County",
-          maintenanceMode: !!data.maintenance_mode
+          maintenanceMode: !!data.maintenance_mode,
+          googleMapsApiKey: data.google_maps_api_key || ""
         });
 
         setAcademicConfig({
@@ -451,6 +456,7 @@ const Settings = () => {
       email: generalConfig.email,
       location: generalConfig.location,
       maintenance_mode: generalConfig.maintenanceMode,
+      google_maps_api_key: generalConfig.googleMapsApiKey,
       active_year: academicConfig.activeYear,
       active_term: academicConfig.activeTerm,
       term_start_date: academicConfig.termStartDate,
@@ -491,6 +497,10 @@ const Settings = () => {
       // isWithinGeofence() / getGeofenceConfig() everywhere else in
       // the app picks it up immediately.
       persistGeofenceConfig(geofenceConfig);
+
+      // Re-fetch the Google Maps API key so the map reloads with any
+      // updated credentials saved in System Configuration.
+      refetchApiKey();
 
       setHasUnsavedChanges(false);
       showSuccess("System settings saved successfully!");
@@ -814,11 +824,47 @@ const Settings = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Contact Phone</Label>
-                  <Input 
-                    value={generalConfig.phone} 
+                  <Input
+                    value={generalConfig.phone}
                     onChange={e => { setGeneralConfig({...generalConfig, phone: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Google Maps API Key</Label>
+                    <Badge
+                      className={cn(
+                        "font-bold text-[10px] px-2 py-0.5",
+                        generalConfig.googleMapsApiKey
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-700"
+                      )}
+                    >
+                      {generalConfig.googleMapsApiKey ? "✓ Configured" : "✗ Missing"}
+                    </Badge>
+                  </div>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      type={showAuthPass ? "text" : "password"}
+                      value={generalConfig.googleMapsApiKey}
+                      onChange={e => { setGeneralConfig({...generalConfig, googleMapsApiKey: e.target.value}); setHasUnsavedChanges(true); }}
+                      placeholder="AIzaSy… (paste your Google Maps JavaScript API key here)"
+                      className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAuthPass(!showAuthPass)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      title={showAuthPass ? "Hide key" : "Show key"}
+                    >
+                      {showAuthPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Required by the Admin Location Picker and other map views. Generate a key with the <em>Maps JavaScript API</em> enabled in the Google Cloud Console and restrict it to this domain.
+                  </p>
                 </div>
               </div>
 
@@ -1144,44 +1190,66 @@ const Settings = () => {
                     value={searchQuery}
                     onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(false); }}
                   />
-                  {googleMapsReady ? (
+                  {isLoadingApiKey ? (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-600" size={18} />
+                  ) : googleMapsReady ? (
                     <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] px-2 py-0.5 pointer-events-none">
                       ✓ Live search
                     </Badge>
                   ) : (
-                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-600" size={18} />
+                    <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px] px-2 py-0.5 pointer-events-none">
+                      ✗ Unavailable
+                    </Badge>
                   )}
                 </div>
 
                 {/* Live Map */}
-                <div className="relative w-full overflow-hidden rounded-2xl border-2 border-slate-200 shadow-lg">
-                  {googleMapsReady ? (
-                    <div 
-                      id="admin-location-map" 
-                      className="w-full" 
-                      style={{ minHeight: '350px', width: '100%', display: 'block' }}
-                      data-testid="admin-location-map"
-                      aria-label="Interactive map for setting school geofence location"
-                    />
+                <div
+                  className="relative w-full overflow-hidden rounded-2xl border-2 border-slate-200 shadow-lg"
+                  style={{ height: '400px' }}
+                  data-testid="admin-location-map-container"
+                >
+                  {/* No API key in System Configuration — show actionable error */}
+                  {!isLoadingApiKey && !googleMapsApiKey ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 text-slate-500 p-8 text-center">
+                      <div className="w-14 h-14 bg-rose-100 text-rose-500 rounded-2xl flex items-center justify-center">
+                        <MapPin size={28} />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Google Maps API Key Missing</p>
+                      <p className="text-xs max-w-xs leading-relaxed text-slate-400">
+                        Add a valid Google Maps API key in System Configuration (General tab) to enable the interactive location picker.
+                      </p>
+                      <a
+                        href="#general"
+                        className="mt-2 text-xs font-bold text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
+                      >
+                        Open General Settings →
+                      </a>
+                    </div>
+                  ) : googleMapsReady ? (
+                    <>
+                      <div
+                        id="admin-location-map"
+                        style={{ width: '100%', height: '100%', display: 'block' }}
+                        data-testid="admin-location-map"
+                        aria-label="Interactive map for setting school geofence location"
+                      />
+                      <Button
+                        onClick={handleCenterOnMe}
+                        disabled={!currentGeoLoc}
+                        size="icon"
+                        className="absolute top-4 right-4 z-10 rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 border border-slate-200"
+                        title="Centre map on my current location"
+                      >
+                        <Crosshair size={20} />
+                      </Button>
+                    </>
                   ) : (
-                    <div className="w-full h-[500px] bg-slate-50 flex flex-col items-center justify-center text-slate-400 gap-3">
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 text-slate-400">
                       <Loader2 className="animate-spin" size={32} />
                       <p className="text-sm font-bold">Loading Google Maps…</p>
                       <p className="text-xs">First-time load may take a few seconds.</p>
                     </div>
-                  )}
-
-                  {/* Floating "Centre on Me" button */}
-                  {googleMapsReady && (
-                    <Button
-                      onClick={handleCenterOnMe}
-                      disabled={!currentGeoLoc}
-                      size="icon"
-                      className="absolute top-4 right-4 z-10 rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 border border-slate-200"
-                      title="Centre map on my current location"
-                    >
-                      <Crosshair size={20} />
-                    </Button>
                   )}
                 </div>
 
