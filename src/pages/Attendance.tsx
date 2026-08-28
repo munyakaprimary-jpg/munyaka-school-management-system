@@ -38,7 +38,7 @@ interface StudentAttendance {
   afternoon?: SessionAttendance;
 }
 
-interface RegisterLock {
+interface SessionLock {
   locked: boolean;
   lockedAt?: string; // ISO timestamp
   lockedBy?: string; // admin/teacher who locked
@@ -148,25 +148,24 @@ const getActiveSession = (date: Date): SessionType | null => {
 };
 
 /**
- * Compose the per-class/stream/date storage key for the lock state.
- * Lock state is persisted in `localStorage` under a single map keyed
- * by this composite so that re-opening the page for a different class
- * or date correctly restores the previous lock status.
+ * Compose the per-class/stream/date/session storage key for the lock
+ * state. The session segment is included so the Morning and Afternoon
+ * sessions can be locked/unlocked independently.
  */
-const buildLockKey = (grade: string, stream: string, date: string): string =>
-  `${grade}__${stream}__${date}`;
+const buildLockKey = (grade: string, stream: string, date: string, session: SessionType): string =>
+  `${grade}__${stream}__${date}__${session}`;
 
 /**
- * Read the master map of register locks from localStorage. Returns an
+ * Read the master map of session locks from localStorage. Returns an
  * empty object on any failure so the rest of the page still renders.
  */
-const readLocksMap = (): Record<string, RegisterLock> => {
+const readLocksMap = (): Record<string, SessionLock> => {
   if (typeof window === 'undefined') return {};
   try {
     const raw = localStorage.getItem(ATTENDANCE_LOCKS_KEY);
     if (!raw) return {};
     const parsed = JSON.parse(raw);
-    if (parsed && typeof parsed === 'object') return parsed as Record<string, RegisterLock>;
+    if (parsed && typeof parsed === 'object') return parsed as Record<string, SessionLock>;
     return {};
   } catch (e) {
     console.error('Error reading attendance locks map:', e);
@@ -179,13 +178,34 @@ const readLocksMap = (): Record<string, RegisterLock> => {
  * map at once so a single setter governs all keys and there is no risk
  * of partial writes leaving a stale entry in the localStorage cache.
  */
-const writeLocksMap = (next: Record<string, RegisterLock>): void => {
+const writeLocksMap = (next: Record<string, SessionLock>): void => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(ATTENDANCE_LOCKS_KEY, JSON.stringify(next));
   } catch (e) {
     console.error('Error persisting attendance locks map:', e);
   }
+};
+
+/**
+ * Format a "locked at" ISO timestamp as a human-readable string like
+ * "Aug 28, 2026 at 8:32 AM". Returns "Just now" for very recent
+ * timestamps, since the auto-lock usually happens seconds before the
+ * teacher looks at the page.
+ */
+const formatLockedAt = (iso: string | undefined): string => {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return '—';
+  const now = Date.now();
+  const diffSec = Math.floor((now - d.getTime()) / 1000);
+  if (diffSec < 30) return 'Just now';
+  if (diffSec < 60) return `${diffSec} sec ago`;
+  if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
+  return d.toLocaleString(undefined, {
+    month: 'short', day: 'numeric', year: 'numeric',
+    hour: '2-digit', minute: '2-digit'
+  });
 };
 
 const Attendance = () => {
@@ -202,35 +222,43 @@ const Attendance = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // ============================================
-  // Register lock state
+  // Per-session lock state
   // ============================================
-  // `locksMap` is the master persisted map of {compositeKey -> RegisterLock}.
-  // `registerLock` is the current key's lock state derived from that map.
-  const [locksMap, setLocksMap] = useState<Record<string, RegisterLock>>(() => readLocksMap());
+  // `locksMap` is the master persisted map of
+  // {compositeKey (grade__stream__date__session) -> SessionLock}.
+  // The morning and afternoon sessions each have their own lock
+  // entry, so they can be locked and unlocked independently.
+  const [locksMap, setLocksMap] = useState<Record<string, SessionLock>>(() => readLocksMap());
 
   // Whenever the lock map changes, mirror it to localStorage so the
-  // lock state survives a page refresh. (We don't depend on the
-  // per-record state for persistence to keep the localStorage write
-  // centralized and avoid race conditions.)
+  // lock state survives a page refresh.
   useEffect(() => {
     writeLocksMap(locksMap);
   }, [locksMap]);
 
-  // Compute the current register lock by looking up the composite key
-  // in the master map. If the entry doesn't exist the register is
+  // Compute the current session locks by looking up the composite keys
+  // in the master map. If the entry doesn't exist the session is
   // considered unlocked.
-  const currentLockKey = buildLockKey(filters.grade, filters.stream, filters.date);
-  const registerLock: RegisterLock = useMemo(() => {
-    return locksMap[currentLockKey] || { locked: false };
-  }, [locksMap, currentLockKey]);
+  const morningLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'morning');
+  const afternoonLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'afternoon');
 
-  const isRegisterLocked = registerLock.locked;
+  const morningLock: SessionLock = useMemo(() => {
+    return locksMap[morningLockKey] || { locked: false };
+  }, [locksMap, morningLockKey]);
+
+  const afternoonLock: SessionLock = useMemo(() => {
+    return locksMap[afternoonLockKey] || { locked: false };
+  }, [locksMap, afternoonLockKey]);
+
+  const isMorningLocked = morningLock.locked;
+  const isAfternoonLocked = afternoonLock.locked;
 
   // ============================================
   // Lock / unlock confirmation modal state
   // ============================================
   const [lockAuthOpen, setLockAuthOpen] = useState<boolean>(false);
   const [lockAction, setLockAction] = useState<'lock' | 'unlock' | null>(null);
+  const [lockTargetSession, setLockTargetSession] = useState<SessionType | null>(null);
   const [adminAuthPassword, setAdminAuthPassword] = useState<string>('');
   const [adminAuthError, setAdminAuthError] = useState<string>('');
   const [isAdminAuthVerifying, setIsAdminAuthVerifying] = useState<boolean>(false);
@@ -293,19 +321,20 @@ const Attendance = () => {
    * ============================================
    *
    * A session is "editable" when ALL of the following are true:
-   *   1. The register is NOT locked.
+   *   1. The session is NOT locked.
    *   2. Either the admin override is on, OR
    *      the selected date is today AND the live clock falls inside
    *      the session's time window.
    *
    * For dates in the past, the session is "read-only" unless the
    * admin override is enabled. For dates in the future, the session
-   * is also locked. The register lock always wins — even if admin
-   * override is on, a locked register cannot be edited (but the
-   * admin can unlock it from the Lock Register button).
+   * is also locked. The session lock always wins — even if admin
+   * override is on, a locked session cannot be edited (but the
+   * admin can unlock it from the "Unlock Session" button).
    */
   const isSessionEditable = (session: SessionType): boolean => {
-    if (isRegisterLocked) return false;
+    const sessionLock = session === 'morning' ? morningLock : afternoonLock;
+    if (sessionLock.locked) return false;
     if (adminBypass) return true;
     if (!isSelectedDateToday) return false;
     return getActiveSession(currentTime) === session;
@@ -346,6 +375,23 @@ const Attendance = () => {
            s.assessment.toLowerCase().includes(term)
     );
   }, [searchTerm]);
+
+  /**
+   * Per-session "all learners fully marked" check. Returns true when
+   * every filtered learner has a non-empty status for the given
+   * session — this is the trigger for auto-locking when the teacher
+   * saves attendance with no gaps left in the register.
+   */
+  const isSessionFullyMarked = (session: SessionType): boolean => {
+    if (filteredLearners.length === 0) return false;
+    return filteredLearners.every(s => {
+      const record = attendance[s.id];
+      return !!(record?.[session]?.status);
+    });
+  };
+
+  const isMorningFullyMarked = isSessionFullyMarked('morning');
+  const isAfternoonFullyMarked = isSessionFullyMarked('afternoon');
 
   // Compute summary metrics — combined across both sessions
   const metrics = useMemo(() => {
@@ -398,15 +444,17 @@ const Attendance = () => {
   }, [filteredLearners, attendance]);
 
   // ============================================
-  // Register lock handlers
+  // Per-session lock handlers
   // ============================================
 
   /**
-   * Open the admin auth modal in either "lock" or "unlock" mode.
-   * Clearing the form state here guarantees a fresh modal every time.
+   * Open the admin auth modal in either "lock" or "unlock" mode for
+   * a specific session. Clearing the form state here guarantees a
+   * fresh modal every time.
    */
-  const openLockAuthModal = (action: 'lock' | 'unlock') => {
+  const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
     setLockAction(action);
+    setLockTargetSession(session);
     setAdminAuthPassword('');
     setAdminAuthError('');
     setLockReason('');
@@ -424,20 +472,50 @@ const Attendance = () => {
     setLockReason('');
     setIsAdminAuthVerifying(false);
     setLockAction(null);
+    setLockTargetSession(null);
+  };
+
+  /**
+   * Build a `SessionLock` for the given session, persist it to the
+   * master map, and return the lock object so the caller can show
+   * the locked-at timestamp in a toast.
+   */
+  const buildAndPersistLock = (session: SessionType, opts: { reason: string }): SessionLock => {
+    const next: SessionLock = {
+      locked: true,
+      lockedAt: new Date().toISOString(),
+      lockedBy: 'Class Teacher',
+      reason: opts.reason.trim() || 'Auto-locked after saving attendance',
+    };
+    const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
+    setLocksMap(prev => ({ ...prev, [targetKey]: next }));
+    return next;
+  };
+
+  /**
+   * Apply a session lock directly (bypassing the admin password
+   * modal). Used internally by the auto-lock path triggered when
+   * the teacher saves attendance with a fully-marked register.
+   */
+  const applySessionLock = (session: SessionType) => {
+    const lock = buildAndPersistLock(session, { reason: 'Auto-locked after saving attendance' });
+    const sessionLabel = SESSION_WINDOWS[session].label;
+    showSuccess(
+      `Attendance saved and ${sessionLabel} session successfully locked at ${formatLockedAt(lock.lockedAt)}.`
+    );
   };
 
   /**
    * Verify the supplied admin password against the value in
    * `localStorage.munyaka_admin_pass` (with a hardcoded default
-   * fallback) and then either lock or unlock the register.
+   * fallback) and then either lock or unlock the targeted session.
    *
-   * Locking persists a `RegisterLock` with the current timestamp,
-   * the operator "admin" (the system admin in this offline build),
-   * and an optional reason string. Unlocking simply clears the lock
+   * Locking persists a `SessionLock` with the current timestamp and
+   * an optional reason string. Unlocking simply clears the lock
    * entry from the master map.
    */
   const handleConfirmLockAction = async () => {
-    if (!lockAction) return;
+    if (!lockAction || !lockTargetSession) return;
     if (!adminAuthPassword.trim()) {
       setAdminAuthError('Please enter the admin password to continue.');
       return;
@@ -460,22 +538,21 @@ const Attendance = () => {
       return;
     }
 
+    const targetLockKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
+    const sessionLabel = SESSION_WINDOWS[lockTargetSession].label;
+
     if (lockAction === 'lock') {
-      const next: RegisterLock = {
-        locked: true,
-        lockedAt: new Date().toISOString(),
-        lockedBy: 'System Admin',
-        reason: lockReason.trim() || 'No reason provided',
-      };
-      setLocksMap(prev => ({ ...prev, [currentLockKey]: next }));
-      showSuccess(`Attendance register for ${filters.grade} ${filters.stream} on ${filters.date} has been locked.`);
+      const lock = buildAndPersistLock(lockTargetSession, { reason: lockReason });
+      showSuccess(
+        `${sessionLabel} session locked at ${formatLockedAt(lock.lockedAt)}.`
+      );
     } else {
       setLocksMap(prev => {
         const updated = { ...prev };
-        delete updated[currentLockKey];
+        delete updated[targetLockKey];
         return updated;
       });
-      showSuccess(`Attendance register for ${filters.grade} ${filters.stream} on ${filters.date} has been unlocked.`);
+      showSuccess(`${sessionLabel} session unlocked. You may make corrections now.`);
     }
 
     setIsAdminAuthVerifying(false);
@@ -484,10 +561,11 @@ const Attendance = () => {
 
   // Toggle individual student session status
   const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
-    // Guard: silently ignore the click if the register is locked.
-    if (isRegisterLocked) {
+    // Guard: silently ignore the click if the targeted session is locked.
+    const sessionLock = session === 'morning' ? morningLock : afternoonLock;
+    if (sessionLock.locked) {
       showError(
-        `The register is locked. Tap "Unlock Register" in the header to make corrections.`
+        `The ${SESSION_WINDOWS[session].label} session is locked. Tap "Unlock Session" in the session header to make corrections.`
       );
       return;
     }
@@ -528,8 +606,9 @@ const Attendance = () => {
 
   // Bulk action: set all students in a given session to a status
   const markAllAs = (status: AttendanceStatus, session: SessionType = 'morning') => {
-    if (isRegisterLocked) {
-      showError('The register is locked. Unlock the register to perform bulk actions.');
+    const sessionLock = session === 'morning' ? morningLock : afternoonLock;
+    if (sessionLock.locked) {
+      showError(`The ${SESSION_WINDOWS[session].label} session is locked. Unlock the session to perform bulk actions.`);
       return;
     }
     if (!isSessionEditable(session)) {
@@ -554,32 +633,80 @@ const Attendance = () => {
     showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
   };
 
-  // Save attendance
+  /**
+   * Save attendance to localStorage AND trigger the auto-lock:
+   *   1. Persist the attendance matrix to localStorage.
+   *   2. For each session that is fully marked, auto-lock it (no
+   *      admin password required — this is a teacher-driven action).
+   *   3. Show a confirmation toast.
+   *
+   * Sessions that are not yet fully marked are left in their current
+   * state (locked or unlocked) so the teacher can come back to them.
+   */
   const handleSaveAttendance = async () => {
+    if (filteredLearners.length === 0) {
+      showError('No learners to save. Adjust the filters and try again.');
+      return;
+    }
     setIsSaving(true);
-    await new Promise(r => setTimeout(r, 500));
     try {
       const storageKey = `munyaka_attendance_v2_${filters.grade}_${filters.stream}_${filters.date}`;
-      // Store as {studentId: {morning: {...}, afternoon: {...}}}
+      // Persist as {studentId: {morning: {...}, afternoon: {...}}}
       localStorage.setItem(storageKey, JSON.stringify(attendance));
-      
+
       // Also update the master record map used by the dashboard
       const masterRaw = localStorage.getItem('munyaka_attendance_records') || '{}';
       const master = JSON.parse(masterRaw);
       const masterKey = `${filters.grade}_${filters.stream}_${filters.date}`;
-      master[masterKey] = { 
-        class: filters.grade, 
-        stream: filters.stream, 
-        date: filters.date, 
-        savedAt: new Date().toISOString() 
+      master[masterKey] = {
+        class: filters.grade,
+        stream: filters.stream,
+        date: filters.date,
+        savedAt: new Date().toISOString()
       };
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
-      
+
       setIsSaving(false);
-      showSuccess(`Attendance for ${filters.grade} ${filters.stream} on ${filters.date} saved!`);
+
+      // ============================================
+      // AUTO-LOCK: After saving, if every learner has a status
+      // for a given session, that session is auto-locked to prevent
+      // any further changes. The teacher can still unlock via
+      // the "Unlock Session" button (which requires an admin
+      // password).
+      // ============================================
+      const sessionsLocked: SessionType[] = [];
+      if (isMorningFullyMarked && !isMorningLocked) {
+        applySessionLock('morning');
+        sessionsLocked.push('morning');
+      }
+      if (isAfternoonFullyMarked && !isAfternoonLocked) {
+        applySessionLock('afternoon');
+        sessionsLocked.push('afternoon');
+      }
+
+      // Build the save confirmation message
+      let msg = 'Attendance saved successfully.';
+      if (sessionsLocked.length === 2) {
+        msg = 'Attendance saved and both sessions successfully locked.';
+      } else if (sessionsLocked.length === 1) {
+        msg = `Attendance saved and ${sessionsLocked[0]} session successfully locked.`;
+      } else if (isMorningFullyMarked && isMorningLocked && isAfternoonFullyMarked && isAfternoonLocked) {
+        // Both sessions were already locked (re-save case)
+        msg = 'Attendance updated. Both sessions remain locked.';
+      } else if (!isMorningFullyMarked && !isAfternoonFullyMarked) {
+        // No session is fully marked yet
+        msg = 'Attendance saved. Complete all learners to auto-lock sessions.';
+      } else {
+        // One session is fully marked, the other is not
+        const pending = !isMorningFullyMarked ? 'morning' : 'afternoon';
+        const locked = isMorningFullyMarked ? 'morning' : 'afternoon';
+        msg = `Attendance saved. ${locked.charAt(0).toUpperCase() + locked.slice(1)} session auto-locked. Complete ${pending} to lock it too.`;
+      }
+      showSuccess(msg);
     } catch (e) {
       setIsSaving(false);
-      showError("Failed to save attendance.");
+      showError('Failed to save attendance.');
     }
   };
 
@@ -593,24 +720,24 @@ const Attendance = () => {
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
   const handleExportCSV = async () => {
     if (filteredLearners.length === 0) {
-      showError("No students available to export.");
+      showError('No students available to export.');
       return;
     }
 
     const currentDateStr = filters.date;
-    const row1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
-    const row2 = "P.O. BOX 5239-30100, ELDORET";
-    const row3 = "MOTTO: KNOWLEDGE POWER";
+    const row1 = 'MUNYAKA PRIMARY AND JUNIOR SCHOOL';
+    const row2 = 'P.O. BOX 5239-30100, ELDORET';
+    const row3 = 'MOTTO: KNOWLEDGE POWER';
     const row4 = `ATTENDANCE REGISTER - ${filters.grade.toUpperCase()} ${filters.stream.toUpperCase()} - DATE: ${currentDateStr}`;
 
-    const headers = ["#", "Learner Name", "Admission/ID", "Gender", "Morning Status", "Morning Time", "Afternoon Status", "Afternoon Time"];
+    const headers = ['#', 'Learner Name', 'Admission/ID', 'Gender', 'Morning Status', 'Morning Time', 'Afternoon Status', 'Afternoon Time'];
 
     const getStatusLabel = (status?: AttendanceStatus) => {
-      if (status === 'P') return "Present";
-      if (status === 'A') return "Absent";
-      if (status === 'L') return "Late";
-      if (status === 'E') return "Excused";
-      return "Not Marked";
+      if (status === 'P') return 'Present';
+      if (status === 'A') return 'Absent';
+      if (status === 'L') return 'Late';
+      if (status === 'E') return 'Excused';
+      return 'Not Marked';
     };
 
     const rows = filteredLearners.map((learner, idx) => {
@@ -629,11 +756,11 @@ const Attendance = () => {
 
     // Summary rows
     const summaryRows = [
-      ["", "", "", "Morning Present", metrics.presentMorning, "", "Afternoon Present", metrics.presentAfternoon],
-      ["", "", "", "Morning Absent", metrics.absentMorning, "", "Afternoon Absent", metrics.absentAfternoon],
-      ["", "", "", "Morning Late", metrics.lateMorning, "", "Afternoon Late", metrics.lateAfternoon],
-      ["", "", "", "Morning Excused", metrics.excusedMorning, "", "Afternoon Excused", metrics.excusedAfternoon],
-      ["", "", "", "Overall Rate", `${metrics.rate}%`, "", "", ""],
+      ['', '', '', 'Morning Present', metrics.presentMorning, '', 'Afternoon Present', metrics.presentAfternoon],
+      ['', '', '', 'Morning Absent', metrics.absentMorning, '', 'Afternoon Absent', metrics.absentAfternoon],
+      ['', '', '', 'Morning Late', metrics.lateMorning, '', 'Afternoon Late', metrics.lateAfternoon],
+      ['', '', '', 'Morning Excused', metrics.excusedMorning, '', 'Afternoon Excused', metrics.excusedAfternoon],
+      ['', '', '', 'Overall Rate', `${metrics.rate}%`, '', '', ''],
     ];
 
     const csvContent = [
@@ -641,13 +768,13 @@ const Attendance = () => {
       row2,
       row3,
       row4,
-      "",
-      headers.join(","),
-      ...rows.map(r => r.join(",")),
-      "",
-      ["SUMMARY", "", "", "", "", "", "", ""],
-      ...summaryRows.map(r => r.map(c => `"${c}"`).join(","))
-    ].join("\n");
+      '',
+      headers.join(','),
+      ...rows.map(r => r.join(',')),
+      '',
+      ['SUMMARY', '', '', '', '', '', '', ''],
+      ...summaryRows.map(r => r.map(c => `"${c}"`).join(','))
+    ].join('\n');
 
     await csvExport.download({
       filename: `attendance_${filters.grade.replace(/\s+/g, '_')}_${filters.stream}_${filters.date}.csv`,
@@ -655,6 +782,51 @@ const Attendance = () => {
       mimeType: 'text/csv;charset=utf-8;',
       fileType: 'csv',
     });
+  };
+
+  // ============================================
+  // Render helpers
+  // ============================================
+
+  /**
+   * The session column header with the LIVE / LOCKED / SEALED badge
+   * and a "Locked at" timestamp when the session is auto-locked.
+   * Extracted to a small component so both the Morning and Afternoon
+   * columns render consistently.
+   */
+  const SessionHeader: React.FC<{ session: SessionType; label: string }> = ({ session, label }) => {
+    const sessionLock = session === 'morning' ? morningLock : afternoonLock;
+    const isEditable = session === 'morning' ? isMorningEditable : isAfternoonEditable;
+    const isLocked = sessionLock.locked;
+    const sessionColor = session === 'morning'
+      ? { dot: 'bg-amber-500', tint: 'bg-amber-50', text: 'text-amber-700', sub: 'text-amber-600/80' }
+      : { dot: 'bg-indigo-500', tint: 'bg-indigo-50', text: 'text-indigo-700', sub: 'text-indigo-600/80' };
+    const isLive = !isLocked && activeSession === session;
+
+    return (
+      <div className="flex flex-col items-center justify-center gap-0.5">
+        <div className="flex items-center gap-2">
+          {session === 'morning' ? <Sun size={14} /> : <Moon size={14} />}
+          <span>{label}</span>
+          {isLive && !isLocked && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
+          )}
+          {!isEditable && !isLocked && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
+              <Lock size={9} /> LOCKED
+            </span>
+          )}
+          {isLocked && (
+            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
+              <Lock size={9} /> SEALED
+            </span>
+          )}
+        </div>
+        <span className={`text-[9px] font-black tracking-widest ${sessionColor.sub}`}>
+          {SESSION_WINDOWS[session].description}
+        </span>
+      </div>
+    );
   };
 
   // Determine which session label to show in the bulk-actions section.
@@ -709,32 +881,17 @@ const Attendance = () => {
           </Button>
           <Button
             onClick={handleSaveAttendance}
-            disabled={isSaving || isRegisterLocked}
+            disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
+            title={
+              (isMorningLocked && isAfternoonLocked)
+                ? 'Both sessions are already locked. Unlock a session to make changes.'
+                : 'Save attendance and auto-lock any fully-marked sessions.'
+            }
           >
             {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
             Save Attendance
           </Button>
-
-          {/* Lock / Unlock Register button (primary lock control) */}
-          {isRegisterLocked ? (
-            <Button
-              onClick={() => openLockAuthModal('unlock')}
-              className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-amber-200"
-            >
-              <Unlock size={16} />
-              Unlock Register
-            </Button>
-          ) : (
-            <Button
-              onClick={() => openLockAuthModal('lock')}
-              disabled={(metrics.present + metrics.absent + metrics.late + metrics.excused) === 0}
-              className="rounded-xl bg-rose-600 hover:bg-rose-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-rose-200 disabled:opacity-50"
-            >
-              <Lock size={16} />
-              Lock Register
-            </Button>
-          )}
         </div>
       </div>
 
@@ -820,36 +977,36 @@ const Attendance = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
                 onClick={() => markAllAs('P', activeSession ?? 'morning')}
-                disabled={isRegisterLocked}
+                disabled={activeSession === 'afternoon' ? isAfternoonLocked : isMorningLocked}
                 className="h-11 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Mark all as Present"
+                title={activeSession === 'afternoon' ? "Mark all as Present (Afternoon)" : "Mark all as Present (Morning)"}
               >
                 <CheckCircle2 size={14} />
                 <span>Present</span>
               </button>
               <button
                 onClick={() => markAllAs('A', activeSession ?? 'morning')}
-                disabled={isRegisterLocked}
+                disabled={activeSession === 'afternoon' ? isAfternoonLocked : isMorningLocked}
                 className="h-11 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Mark all as Absent"
+                title={activeSession === 'afternoon' ? "Mark all as Absent (Afternoon)" : "Mark all as Absent (Morning)"}
               >
                 <XCircle size={14} />
                 <span>Absent</span>
               </button>
               <button
                 onClick={() => markAllAs('L', activeSession ?? 'morning')}
-                disabled={isRegisterLocked}
+                disabled={activeSession === 'afternoon' ? isAfternoonLocked : isMorningLocked}
                 className="h-11 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Mark all as Late"
+                title={activeSession === 'afternoon' ? "Mark all as Late (Afternoon)" : "Mark all as Late (Morning)"}
               >
                 <Clock size={14} />
                 <span>Late</span>
               </button>
               <button
                 onClick={() => markAllAs('E', activeSession ?? 'morning')}
-                disabled={isRegisterLocked}
+                disabled={activeSession === 'afternoon' ? isAfternoonLocked : isMorningLocked}
                 className="h-11 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
-                title="Mark all as Excused"
+                title={activeSession === 'afternoon' ? "Mark all as Excused (Afternoon)" : "Mark all as Excused (Morning)"}
               >
                 <ShieldCheck size={14} />
                 <span>Excused</span>
@@ -860,10 +1017,15 @@ const Attendance = () => {
       </Card>
 
       {/* ============================================
-          2a. REGISTER STATUS BANNER (LOCKED)
-          ============================================ */}
-      {isRegisterLocked && (
-        <div className="bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 rounded-3xl p-5 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+          2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
+          ============================================
+          Shows a single banner when one or both sessions are
+          auto-locked after a save. We display the per-session
+          "locked at" timestamp in the banner so the teacher
+          knows exactly when the register was sealed.
+      */}
+      {(isMorningLocked || isAfternoonLocked) && (
+        <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
               <LockKeyhole size={24} className="text-white animate-pulse" />
@@ -871,29 +1033,49 @@ const Attendance = () => {
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
-                  Status: Locked
+                  {isMorningLocked && isAfternoonLocked
+                    ? 'Both Sessions Sealed'
+                    : isMorningLocked
+                    ? 'Morning Sealed'
+                    : 'Afternoon Sealed'}
                 </span>
                 <span className="text-xs font-medium text-rose-100 truncate">
-                  {registerLock.lockedAt 
-                    ? `Locked on ${new Date(registerLock.lockedAt).toLocaleString()}`
-                    : 'This register is sealed against further edits.'}
+                  {isMorningLocked && isAfternoonLocked
+                    ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
+                    : isMorningLocked
+                    ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
+                    : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
                 </span>
               </div>
               <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
-                Register is sealed. Individual status buttons and bulk actions are disabled.
-                {registerLock.reason && registerLock.reason !== 'No reason provided' && (
-                  <span className="font-medium text-rose-100/80 ml-2">Reason: {registerLock.reason}</span>
+                Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
+                {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
+                  <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
                 )}
               </p>
             </div>
           </div>
-          <Button
-            onClick={() => openLockAuthModal('unlock')}
-            className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-          >
-            <Unlock size={14} />
-            Request Unlock
-          </Button>
+          {/* Quick unlock shortcuts: one button per locked session */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0">
+            {isMorningLocked && (
+              <Button
+                onClick={() => openLockAuthModal('unlock', 'morning')}
+                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+              >
+                <Unlock size={14} />
+                Unlock Morning
+              </Button>
+            )}
+            {isAfternoonLocked && (
+              <Button
+                onClick={() => openLockAuthModal('unlock', 'afternoon')}
+                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+              >
+                <Unlock size={14} />
+                Unlock Afternoon
+              </Button>
+            )}
+          </div>
         </div>
       )}
 
@@ -916,11 +1098,7 @@ const Attendance = () => {
                   {format12h(currentTime)}
                 </p>
                 <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                  {isRegisterLocked ? (
-                    <span className="text-rose-600 flex items-center gap-1">
-                      <Lock size={11} /> Register is locked. Status buttons are read-only.
-                    </span>
-                  ) : activeSession === 'morning' ? (
+                  {activeSession === 'morning' ? (
                     <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
                   ) : activeSession === 'afternoon' ? (
                     <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
@@ -1071,7 +1249,7 @@ const Attendance = () => {
           ============================================ */}
       <Card className={cn(
         "border-none shadow-sm rounded-[2rem] bg-white overflow-hidden transition-all",
-        isRegisterLocked && "ring-2 ring-rose-200/60"
+        (isMorningLocked || isAfternoonLocked) && "ring-2 ring-rose-200/60"
       )}>
         
         {/* Section header */}
@@ -1079,25 +1257,30 @@ const Attendance = () => {
           <div className="flex items-center gap-3">
             <div className={cn(
               "p-2.5 rounded-xl",
-              isRegisterLocked ? "bg-rose-100 text-rose-600" : "bg-indigo-100 text-indigo-600"
+              (isMorningLocked || isAfternoonLocked)
+                ? "bg-rose-100 text-rose-600"
+                : "bg-indigo-100 text-indigo-600"
             )}>
-              {isRegisterLocked ? <Lock size={22} /> : <UserCheck size={22} />}
+              {(isMorningLocked && isAfternoonLocked) ? <Lock size={22} /> : <UserCheck size={22} />}
             </div>
             <div>
               <div className="flex items-center gap-2 flex-wrap">
                 <h2 className="text-xl font-black text-slate-900 tracking-tight">
                   {filters.grade} {filters.stream} — {filters.date}
                 </h2>
-                {isRegisterLocked && (
-                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-rose-100 text-rose-700 text-[10px] font-black uppercase tracking-widest border border-rose-200">
-                    <Lock size={10} /> Sealed
+                {isMorningLocked && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-amber-100 text-amber-700 text-[10px] font-black uppercase tracking-widest border border-amber-200">
+                    <Lock size={10} /> Morning Sealed
+                  </span>
+                )}
+                {isAfternoonLocked && (
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-100 text-indigo-700 text-[10px] font-black uppercase tracking-widest border border-indigo-200">
+                    <Lock size={10} /> Afternoon Sealed
                   </span>
                 )}
               </div>
               <p className="text-xs text-slate-500 font-medium">
-                {isRegisterLocked
-                  ? "Register is read-only. Tap \"Unlock Register\" in the header to make corrections."
-                  : "Click a status button to mark each session. Click again to clear."}
+                Click a status button to mark each session. Click again to clear. Sessions auto-lock once every learner is marked and saved.
               </p>
             </div>
           </div>
@@ -1127,52 +1310,10 @@ const Attendance = () => {
                   Learners
                 </th>
                 <th colSpan={4} className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-700 text-center border-r border-slate-200">
-                  <div className="flex flex-col items-center justify-center gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <Sun size={14} />
-                      <span>Morning Session</span>
-                      {activeSession === 'morning' && !isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-amber-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
-                      )}
-                      {!isMorningEditable && !isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
-                          <Lock size={9} /> LOCKED
-                        </span>
-                      )}
-                      {isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
-                          <Lock size={9} /> SEALED
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[9px] font-black tracking-widest text-amber-600/80">
-                      {SESSION_WINDOWS.morning.description}
-                    </span>
-                  </div>
+                  <SessionHeader session="morning" label="Morning Session" />
                 </th>
                 <th colSpan={4} className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center">
-                  <div className="flex flex-col items-center justify-center gap-0.5">
-                    <div className="flex items-center gap-2">
-                      <Moon size={14} />
-                      <span>Afternoon Session</span>
-                      {activeSession === 'afternoon' && !isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-indigo-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
-                      )}
-                      {!isAfternoonEditable && !isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
-                          <Lock size={9} /> LOCKED
-                        </span>
-                      )}
-                      {isRegisterLocked && (
-                        <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
-                          <Lock size={9} /> SEALED
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-[9px] font-black tracking-widest text-indigo-600/80">
-                      {SESSION_WINDOWS.afternoon.description}
-                    </span>
-                  </div>
+                  <SessionHeader session="afternoon" label="Afternoon Session" />
                 </th>
               </tr>
               {/* Sub-header row with status column names */}
@@ -1203,7 +1344,7 @@ const Attendance = () => {
                 </th>
               </tr>
             </thead>
-            <tbody className={cn("divide-y divide-slate-100", isRegisterLocked && "opacity-95")}>
+            <tbody className={cn("divide-y divide-slate-100", (isMorningLocked && isAfternoonLocked) && "opacity-95")}>
               {filteredLearners.length > 0 ? (
                 filteredLearners.map((learner, index) => {
                   const record = attendance[learner.id] || {};
@@ -1250,6 +1391,7 @@ const Attendance = () => {
                           currentTime={record.morning?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isMorningEditable}
+                          isLocked={isMorningLocked}
                           activeClass="bg-emerald-500 border-emerald-500 text-white shadow-md"
                           inactiveClass="bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100"
                         />
@@ -1265,6 +1407,7 @@ const Attendance = () => {
                           currentTime={record.morning?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isMorningEditable}
+                          isLocked={isMorningLocked}
                           activeClass="bg-rose-500 border-rose-500 text-white shadow-md"
                           inactiveClass="bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100"
                         />
@@ -1280,6 +1423,7 @@ const Attendance = () => {
                           currentTime={record.morning?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isMorningEditable}
+                          isLocked={isMorningLocked}
                           activeClass="bg-amber-500 border-amber-500 text-white shadow-md"
                           inactiveClass="bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
                         />
@@ -1295,6 +1439,7 @@ const Attendance = () => {
                           currentTime={record.morning?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isMorningEditable}
+                          isLocked={isMorningLocked}
                           activeClass="bg-sky-500 border-sky-500 text-white shadow-md"
                           inactiveClass="bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
                         />
@@ -1310,6 +1455,7 @@ const Attendance = () => {
                           currentTime={record.afternoon?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isAfternoonEditable}
+                          isLocked={isAfternoonLocked}
                           activeClass="bg-emerald-500 border-emerald-500 text-white shadow-md"
                           inactiveClass="bg-emerald-50 border-emerald-200 text-emerald-600 hover:bg-emerald-100"
                         />
@@ -1325,6 +1471,7 @@ const Attendance = () => {
                           currentTime={record.afternoon?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isAfternoonEditable}
+                          isLocked={isAfternoonLocked}
                           activeClass="bg-rose-500 border-rose-500 text-white shadow-md"
                           inactiveClass="bg-rose-50 border-rose-200 text-rose-600 hover:bg-rose-100"
                         />
@@ -1340,6 +1487,7 @@ const Attendance = () => {
                           currentTime={record.afternoon?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isAfternoonEditable}
+                          isLocked={isAfternoonLocked}
                           activeClass="bg-amber-500 border-amber-500 text-white shadow-md"
                           inactiveClass="bg-amber-50 border-amber-200 text-amber-600 hover:bg-amber-100"
                         />
@@ -1355,6 +1503,7 @@ const Attendance = () => {
                           currentTime={record.afternoon?.time}
                           onSetStatus={setSessionStatus}
                           isEditable={isAfternoonEditable}
+                          isLocked={isAfternoonLocked}
                           activeClass="bg-sky-500 border-sky-500 text-white shadow-md"
                           inactiveClass="bg-sky-50 border-sky-200 text-sky-600 hover:bg-sky-100"
                         />
@@ -1385,10 +1534,10 @@ const Attendance = () => {
         {filteredLearners.length > 0 && (
           <div className={cn(
             "px-6 sm:px-8 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2",
-            isRegisterLocked ? "bg-rose-50/40" : "bg-slate-50/50"
+            (isMorningLocked && isAfternoonLocked) ? "bg-rose-50/40" : "bg-slate-50/50"
           )}>
             <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
-              {isRegisterLocked && <Lock size={12} className="text-rose-500" />}
+              {(isMorningLocked || isAfternoonLocked) && <Lock size={12} className="text-rose-500" />}
               <span className="text-slate-900 font-black">{metrics.total}</span> learners × 2 sessions = <span className="text-slate-900 font-black">{metrics.total * 2}</span> total slots
             </p>
             <div className="flex items-center gap-3 text-[10px] font-bold uppercase tracking-widest text-slate-500">
@@ -1427,12 +1576,14 @@ const Attendance = () => {
                 </div>
                 <div>
                   <h3 className="text-xl font-black text-slate-900 tracking-tight">
-                    {lockAction === 'lock' ? 'Lock Register' : 'Unlock Register'}
+                    {lockAction === 'lock'
+                      ? `Lock ${lockTargetSession ? SESSION_WINDOWS[lockTargetSession].label : ''} Session`
+                      : `Unlock ${lockTargetSession ? SESSION_WINDOWS[lockTargetSession].label : ''} Session`}
                   </h3>
                   <p className="text-xs font-bold text-slate-500 mt-0.5">
                     {lockAction === 'lock'
-                      ? 'Seal the register to prevent further edits.'
-                      : 'Re-open the register to make corrections.'}
+                      ? 'Seal the session to prevent further edits.'
+                      : 'Re-open the session to make corrections.'}
                   </p>
                 </div>
               </div>
@@ -1446,7 +1597,18 @@ const Attendance = () => {
                 <p className="text-sm font-bold text-slate-900">
                   {filters.grade} {filters.stream}
                 </p>
-                <p className="text-xs text-slate-500 font-medium">{filters.date}</p>
+                <p className="text-xs text-slate-500 font-medium">
+                  {filters.date} — {lockTargetSession ? SESSION_WINDOWS[lockTargetSession].label : ''} session
+                </p>
+                {lockAction === 'unlock' && lockTargetSession && (
+                  <p className="text-[10px] font-bold text-slate-500 mt-1">
+                    Locked: {formatLockedAt(
+                      lockTargetSession === 'morning'
+                        ? morningLock.lockedAt
+                        : afternoonLock.lockedAt
+                    )}
+                  </p>
+                )}
               </div>
 
               {adminAuthError && (
@@ -1476,7 +1638,7 @@ const Attendance = () => {
               {/* Admin password field */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Admin Password
+                  Admin Password / PIN
                 </label>
                 <Input
                   type="password"
@@ -1495,8 +1657,8 @@ const Attendance = () => {
                 <Shield size={14} className="text-amber-600 shrink-0 mt-0.5" />
                 <p className="text-[11px] text-amber-800 font-medium">
                   {lockAction === 'lock'
-                    ? 'Locking is permanent until the admin explicitly unlocks the register.'
-                    : 'Unlocking re-opens the register for edits. Any further changes will be logged in the audit trail.'}
+                    ? 'Locking is permanent until the admin explicitly unlocks the session.'
+                    : 'Unlocking re-opens the session for edits. The session will auto-lock again the next time it is saved with all learners marked.'}
                 </p>
               </div>
             </div>
@@ -1531,7 +1693,9 @@ const Attendance = () => {
                 ) : (
                   <Unlock size={16} />
                 )}
-                {lockAction === 'lock' ? 'Confirm Lock' : 'Confirm Unlock'}
+                {lockAction === 'lock'
+                  ? `Confirm Lock${lockTargetSession ? ` (${SESSION_WINDOWS[lockTargetSession].label})` : ''}`
+                  : `Confirm Unlock${lockTargetSession ? ` (${SESSION_WINDOWS[lockTargetSession].label})` : ''}`}
               </Button>
             </div>
           </div>
@@ -1550,6 +1714,7 @@ interface SessionStatusButtonProps {
   currentTime?: string;
   onSetStatus: (studentId: number, session: SessionType, status: AttendanceStatus) => void;
   isEditable: boolean;
+  isLocked: boolean;
   activeClass: string;
   inactiveClass: string;
 }
@@ -1560,34 +1725,39 @@ const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({
   studentId, 
   currentStatus, 
   isEditable,
+  isLocked,
   onSetStatus,
   activeClass, 
   inactiveClass 
 }) => {
   const isActive = currentStatus === status;
   const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' };
+  
+  // Build a contextual tooltip that explains why the button is disabled
+  const disabledReason = isLocked
+    ? `${labels[status]} (${session}) — session is locked. Tap "Unlock Session" to make corrections.`
+    : !isEditable
+    ? `${labels[status]} (${session}) — session is outside its recording window. Enable admin override to edit.`
+    : `${labels[status]} (${session})`;
+
   return (
     <button
       type="button"
       onClick={() => onSetStatus(studentId, session, status)}
-      disabled={!isEditable}
-      title={
-        isEditable
-          ? `${labels[status]} (${session})`
-          : `${labels[status]} (${session}) — session locked. Enable admin override to edit.`
-      }
-      aria-label={`${labels[status]} (${session})`}
+      disabled={!isEditable || isLocked}
+      title={disabledReason}
+      aria-label={disabledReason}
       aria-pressed={isActive}
       className={cn(
         "w-8 h-8 rounded-lg border-2 font-bold text-[10px] uppercase tracking-widest transition-all duration-200 active:scale-90 flex items-center justify-center mx-auto",
-        !isEditable
+        (!isEditable || isLocked)
           ? "bg-slate-50 border-slate-200 text-slate-300 cursor-not-allowed opacity-60"
           : isActive
             ? activeClass
             : inactiveClass
       )}
     >
-      {!isEditable ? (
+      {(!isEditable || isLocked) ? (
         <Lock size={12} />
       ) : isActive ? (
         <CheckCircle2 size={14} />
