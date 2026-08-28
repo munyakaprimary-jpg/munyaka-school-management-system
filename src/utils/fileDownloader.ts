@@ -1,5 +1,5 @@
 import { Capacitor } from '@capacitor/core';
-import { Filesystem, Directory, Encoding, ReaddirResult } from '@capacitor/filesystem';
+import { Filesystem, Directory, Encoding } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 
 export type FileType = 'csv' | 'pdf' | 'json' | 'txt';
@@ -18,6 +18,10 @@ export interface FileDownloadOptions {
   pendingMessage?: string;
   /** Optional: custom error message shown on failure. */
   errorMessage?: string;
+  /** Optional: custom success timeout in ms (default 4000). */
+  successTimeoutMs?: number;
+  /** Optional: custom error timeout in ms (default 5000). */
+  errorTimeoutMs?: number;
 }
 
 export interface FileDownloadResult {
@@ -288,23 +292,105 @@ async function saveToDevice(opts: {
   }
 }
 
+// ============================================
+// Toast helpers (Sonner-backed, no direct imports
+// in this file to avoid circular dependencies)
+// ============================================
+
+type PendingToast = number | string;
+
+// Default toast timeouts (ms). Sonner handles auto-dismiss internally; we
+// just need to make sure the loading toast is dismissed in all paths and
+// that the success/error toasts get an explicit, finite duration.
+const DEFAULT_SUCCESS_TIMEOUT = 4000;
+const DEFAULT_ERROR_TIMEOUT = 5000;
+const DEFAULT_LOADING_TIMEOUT = 1500; // Hard cap on loading state if something goes very wrong
+
 /**
- * Unified file download helper.
- *
- * - Displays a "Downloading..." toast on initiation.
- * - On native Android for CSVs: writes directly to the public Downloads
- *   folder using the Capacitor Filesystem plugin and notifies the system
- *   media scanner. The share sheet is intentionally NOT shown for this
- *   path so the file lands in the system Downloads app like a normal
- *   download.
- * - On native for other file types: writes to Documents and shows the
- *   share sheet (existing behaviour).
- * - On the web: triggers a standard HTML5 anchor blob download.
- * - Updates the toast to a success or error message when complete.
- *
- * Returns a result describing the final state so callers can update local
- * state (e.g. disabled flags) once the download finishes.
+ * Show a pending (loading) toast and return its id so we can dismiss it
+ * later. Sets an explicit duration of `Infinity` so the loading toast
+ * stays visible until we explicitly dismiss it — but we also set a
+ * defensive auto-clear timer in case the dismiss call never fires.
  */
+async function showPendingToast(message: string): Promise<PendingToast> {
+  try {
+    const sonner = await import('sonner');
+    const id = sonner.toast.loading(message, {
+      duration: Infinity,
+    });
+
+    // Defensive safety net: if the dismiss call never fires (e.g. the
+    // download promise hangs forever, or a third-party error leaks out
+    // without going through our catch block), this timer will guarantee
+    // the loading toast is cleared after a reasonable maximum wait.
+    setTimeout(() => {
+      try {
+        sonner.toast.dismiss(id as any);
+      } catch {
+        /* noop */
+      }
+    }, DEFAULT_LOADING_TIMEOUT * 6); // 9 seconds total
+
+    return id;
+  } catch {
+    return 'pending';
+  }
+}
+
+/**
+ * Safely dismiss a pending toast by id. Wraps in try/catch so that a
+ * failure in the toast library (e.g. Sonner not loaded) never throws
+ * out of our finally block.
+ */
+async function dismissPendingToast(id: PendingToast): Promise<void> {
+  try {
+    if (typeof id === 'string' || typeof id === 'number') {
+      const sonner = await import('sonner');
+      sonner.toast.dismiss(id as any);
+    }
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Show a success toast with an explicit, finite duration so it always
+ * auto-dismisses itself and never blocks the UI.
+ */
+async function showSuccessToast(message: string, durationMs: number = DEFAULT_SUCCESS_TIMEOUT): Promise<void> {
+  try {
+    const sonner = await import('sonner');
+    sonner.toast.success(message, { duration: durationMs });
+  } catch {
+    /* noop */
+  }
+}
+
+/**
+ * Show an error toast with an explicit, finite duration so it always
+ * auto-dismisses itself and never blocks the UI.
+ */
+async function showErrorToast(message: string, durationMs: number = DEFAULT_ERROR_TIMEOUT): Promise<void> {
+  try {
+    const sonner = await import('sonner');
+    sonner.toast.error(message, { duration: durationMs });
+  } catch {
+    /* noop */
+  }
+}
+
+// ============================================
+// Unified file download helper.
+//
+// CRITICAL: The full download lifecycle is now wrapped in try/catch/finally
+// so that:
+//   1. The loading toast is ALWAYS dismissed (in the finally block),
+//      regardless of whether the file write succeeded, failed, or threw
+//      a non-recoverable error.
+//   2. Success and error toasts are always shown with an explicit, finite
+//      duration so they auto-dismiss and don't stack up if the user
+//      downloads many files in a row.
+// ============================================
 export async function downloadFile(options: FileDownloadOptions): Promise<FileDownloadResult> {
   const {
     filename,
@@ -315,6 +401,8 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     successMessage,
     pendingMessage,
     errorMessage,
+    successTimeoutMs = DEFAULT_SUCCESS_TIMEOUT,
+    errorTimeoutMs = DEFAULT_ERROR_TIMEOUT,
   } = options;
 
   const label = getFileTypeLabel(fileType, mimeType);
@@ -328,11 +416,12 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     pendingMessage ?? (isAndroidCsv ? 'Saving to Downloads…' : `Downloading ${label} report…`)
   );
 
-  try {
-    let nativeUri: string | undefined;
+  let nativeUri: string | undefined;
+  let succeeded = false;
 
+  try {
+    // -------- Core write path --------
     if (isNative) {
-      // ---- Native (Android / iOS) ----
       nativeUri = await saveToDevice({
         filename,
         data,
@@ -364,7 +453,7 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
         }
       }
     } else {
-      // ---- Web (Browser) ----
+      // -------- Web (Browser) path --------
       let blob: Blob;
       if (isBase64) {
         const byteCharacters = atob(data);
@@ -392,13 +481,8 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
       setTimeout(() => URL.revokeObjectURL(url), 1500);
     }
 
-    // ---- Success toast ----
-    dismissPendingToast(pendingToastId);
-    const defaultMessage = isAndroidCsv
-      ? `Saved ${filename} to your Downloads folder.`
-      : `${label} report downloaded successfully.`;
-    showSuccessToast(successMessage ?? defaultMessage);
-
+    // -------- Success path --------
+    succeeded = true;
     return {
       success: true,
       state: 'success',
@@ -406,61 +490,33 @@ export async function downloadFile(options: FileDownloadOptions): Promise<FileDo
     };
   } catch (error) {
     console.error(`[downloadFile] Failed to download ${filename}:`, error);
-    dismissPendingToast(pendingToastId);
-    showErrorToast(
-      errorMessage ??
-        `Download failed. Please check app permissions.`
-    );
     return {
       success: false,
       state: 'error',
       error: error instanceof Error ? new Error(String(error)) : error,
     };
-  }
-}
+  } finally {
+    // ============================================
+    // ALWAYS dismiss the loading toast, no matter what happened above.
+    // This is the single source of truth for clearing the loading state.
+    // ============================================
+    await dismissPendingToast(pendingToastId);
 
-// ============================================
-// Toast helpers (Sonner-backed, no direct imports
-// in this file to avoid circular dependencies)
-// ============================================
-
-type PendingToast = number | string;
-
-async function showPendingToast(message: string): Promise<PendingToast> {
-  try {
-    const sonner = await import('sonner');
-    return sonner.toast.loading(message, { duration: Infinity });
-  } catch {
-    return 'pending';
-  }
-}
-
-async function dismissPendingToast(id: PendingToast): Promise<void> {
-  try {
-    if (typeof id === 'string' || typeof id === 'number') {
-      const sonner = await import('sonner');
-      sonner.toast.dismiss(id as any);
+    // Show success or error toast after dismissing the loading one.
+    // The success/error toasts get explicit finite durations so they
+    // always auto-dismiss themselves and never stack up.
+    if (succeeded) {
+      const defaultMessage = isAndroidCsv
+        ? `Saved ${filename} to your Downloads folder.`
+        : `${label} report downloaded successfully.`;
+      await showSuccessToast(successMessage ?? defaultMessage, successTimeoutMs);
+    } else {
+      await showErrorToast(
+        errorMessage ??
+          `Download failed. Please check app permissions.`,
+        errorTimeoutMs
+      );
     }
-  } catch {
-    /* noop */
-  }
-}
-
-async function showSuccessToast(message: string): Promise<void> {
-  try {
-    const sonner = await import('sonner');
-    sonner.toast.success(message);
-  } catch {
-    /* noop */
-  }
-}
-
-async function showErrorToast(message: string): Promise<void> {
-  try {
-    const sonner = await import('sonner');
-    sonner.toast.error(message);
-  } catch {
-    /* noop */
   }
 }
 
