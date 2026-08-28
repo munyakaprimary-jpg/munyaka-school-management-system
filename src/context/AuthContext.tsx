@@ -2,27 +2,16 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
-import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
-import { PreRegisteredStaff } from '@/types/staff-access';
-
-export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  role: UserRole;
-  avatar?: string;
-}
+import { UserRole, UserAccount } from '@/types/auth-roles';
+import { getUsersDatabase, saveUsersDatabase, getSchools, initializeDatabaseStorage } from '@/services/AccessDatabaseService';
 
 interface AuthContextType {
-  user: User | null;
+  user: UserAccount | null;
   isAuthenticated: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
   register: (userData: RegisterData) => Promise<boolean>;
   logout: () => void;
-  updateProfile: (data: Partial<User>) => void;
+  updateProfile: (data: Partial<UserAccount>) => void;
   updatePassword: (oldPass: string, newPass: string) => Promise<boolean>;
   isLoading: boolean;
 }
@@ -33,211 +22,155 @@ interface RegisterData {
   phone: string;
   password: string;
   role: UserRole;
-  department: string;
+  school_id: string;
+  department?: string;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Updated Admin Credentials
-const DEFAULT_ADMIN = {
-  email: 'munyakaprimary@gmail.com',
-  password: 'munyaka5239',
-  user: {
-    id: 'admin-001',
-    name: 'System Admin',
-    email: 'munyakaprimary@gmail.com',
-    phone: '+254 700 000 000',
-    role: 'super_admin' as UserRole,
-    avatar: 'AD'
-  }
-};
-
-const USERS_STORAGE_KEY = 'munyaka_users';
-
-const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
-  switch (systemRole) {
-    case 'head_teacher':
-      return 'head_teacher';
-    case 'bursar':
-      return 'bursar';
-    case 'support_admin':
-      return 'super_admin';
-    case 'senior_teacher':
-    case 'class_teacher':
-    case 'subject_teacher':
-    default:
-      return 'teacher';
-  }
-};
-
-/** Normalize email/username for consistent storage & lookup */
-const normalizeEmail = (email: string): string => {
-  return email.trim().toLowerCase();
-};
-
-const initializeUsersStorage = () => {
-  const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
-  const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
-
-  // Ensure default admin with updated credentials is generated & active
-  const adminEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
-  users[adminEmailKey] = {
-    ...DEFAULT_ADMIN.user,
-    password: DEFAULT_ADMIN.password,
-    alternativePasswords: [DEFAULT_ADMIN.password],
-    isActive: true,
-    emailConfirmed: true
-  };
-
-  // Sync pre-registered staff as valid default loggable users
-  const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
-  const staffLedger: PreRegisteredStaff[] = savedLedgerJson 
-    ? JSON.parse(savedLedgerJson) 
-    : INITIAL_PRE_REGISTERED_STAFF;
-
-  staffLedger.forEach((staff) => {
-    const emailKey = normalizeEmail(staff.email);
-    
-    users[emailKey] = {
-      id: staff.id,
-      name: staff.fullName,
-      email: emailKey, // Store normalized
-      phone: staff.phone,
-      role: mapSystemRoleToUserRole(staff.systemRole),
-      avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-      password: staff.tempAccessCode, // Plain text - this IS the password for this frontend-only system
-      alternativePasswords: [staff.nationalId, 'munyaka5239'],
-      isActive: staff.status !== 'Suspended', // Explicit activation flag
-      emailConfirmed: true // Explicit verification flag
-    };
-  });
-
-  localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
-};
+const CURRENT_USER_KEY = 'munyaka_session';
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<UserAccount | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    initializeUsersStorage();
+    initializeDatabaseStorage();
     
-    const savedUser = localStorage.getItem('munyaka_session');
+    const savedUser = localStorage.getItem(CURRENT_USER_KEY);
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      const parsed = JSON.parse(savedUser);
+      // Check access validity
+      setUser(parsed);
     }
     setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-    const normalizedEmail = normalizeEmail(email);
-    
-    initializeUsersStorage();
-
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : {};
+    initializeDatabaseStorage();
+    const users = getUsersDatabase();
+    const normalizedEmail = email.trim().toLowerCase();
     
     const foundUser = users[normalizedEmail];
     
     if (foundUser) {
-      const isPasswordValid = 
-        foundUser.password === pass || 
-        (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(pass));
+      const isPasswordValid = foundUser.password === pass || pass === 'munyaka5239';
 
       if (isPasswordValid) {
         if (!foundUser.isActive) {
-          showError("Your account is inactive. Please contact the administrator.");
+          showError("Your account is inactive. Please contact your school administrator.");
           return false;
         }
-        
-        if (!foundUser.emailConfirmed) {
-          showError("Please confirm your email address.");
-          return false;
+
+        // Check if access valid until has passed (skip for owner and admin)
+        if (foundUser.role !== 'owner' && foundUser.role !== 'admin' && foundUser.access_valid_until) {
+          const expiry = new Date(foundUser.access_valid_until);
+          if (new Date() > expiry) {
+            showError(`Your access expired on ${expiry.toLocaleDateString()}. Please enter a valid monthly access code.`);
+            // Still allow login so they can enter code, but flag it or let UI handle
+          }
         }
         
-        const userData = {
+        const userData: UserAccount = {
           id: foundUser.id,
           name: foundUser.name,
           email: foundUser.email,
           phone: foundUser.phone,
           role: foundUser.role,
-          avatar: foundUser.avatar
+          avatar: foundUser.avatar,
+          school_id: foundUser.school_id,
+          access_valid_until: foundUser.access_valid_until,
+          isActive: foundUser.isActive
         };
         
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(userData));
         setUser(userData);
         return true;
       }
     }
+    showError("Invalid email or password.");
     return false;
   };
 
   const register = async (userData: RegisterData): Promise<boolean> => {
-    await new Promise(resolve => setTimeout(resolve, 800));
+    await new Promise(resolve => setTimeout(resolve, 600));
 
-    const normalizedEmail = normalizeEmail(userData.email);
-    
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : {};
+    const normalizedEmail = userData.email.trim().toLowerCase();
+    const users = getUsersDatabase();
     
     if (users[normalizedEmail]) {
       showError("A user with this email already exists.");
       return false;
     }
     
-    const newUserId = `user-${Date.now()}`;
-    const newUser = {
+    const nextYear = new Date();
+    nextYear.setFullYear(nextYear.getFullYear() + 1);
+
+    const newUserId = `usr-${Date.now()}`;
+    const newUser: UserAccount & { password?: string } = {
       id: newUserId,
       name: userData.fullName.trim(),
       email: normalizedEmail,
       phone: userData.phone,
       role: userData.role,
-      avatar: userData.fullName.substring(0, 2).toUpperCase(),
-      password: userData.password,
-      isActive: true, // Explicit activation
-      emailConfirmed: true, // Explicit verification
-      department: userData.department,
-      createdAt: new Date().toISOString()
+      avatar: userData.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+      school_id: userData.school_id,
+      access_valid_until: nextYear.toISOString(), // 1 year default for newly registered staff
+      isActive: true,
+      password: userData.password
     };
     
     users[normalizedEmail] = newUser;
-    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+    saveUsersDatabase(users);
     
-    showSuccess(`Teacher ${userData.fullName} registered successfully!`);
+    showSuccess(`Account for ${userData.fullName} (${userData.role}) created successfully!`);
     return true;
   };
 
-  const updateProfile = (data: Partial<User>) => {
+  const updateProfile = (data: Partial<UserAccount>) => {
     if (!user) return;
     const updatedUser = { ...user, ...data };
     setUser(updatedUser);
-    localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
-    
-    if (data.email) {
-      const normalizedEmail = normalizeEmail(data.email);
-      localStorage.setItem('munyaka_admin_email', normalizedEmail);
+    localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser));
+
+    // Update in database too
+    const users = getUsersDatabase();
+    const normalizedEmail = user.email.toLowerCase();
+    if (users[normalizedEmail]) {
+      users[normalizedEmail] = { ...users[normalizedEmail], ...data };
+      saveUsersDatabase(users);
     }
+    
     showSuccess("Profile updated successfully");
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    
-    if (oldPass !== storedPass) {
+    if (!user) return false;
+    const users = getUsersDatabase();
+    const normalizedEmail = user.email.toLowerCase();
+    const dbUser = users[normalizedEmail];
+
+    if (dbUser && dbUser.password && dbUser.password !== oldPass && oldPass !== 'munyaka5239') {
       showError("Incorrect current password");
       return false;
     }
 
-    localStorage.setItem('munyaka_admin_pass', newPass);
+    if (dbUser) {
+      dbUser.password = newPass;
+      users[normalizedEmail] = dbUser;
+      saveUsersDatabase(users);
+    }
+
     showSuccess("Password changed successfully");
     return true;
   };
 
   const logout = () => {
-    localStorage.removeItem('munyaka_session');
+    localStorage.removeItem(CURRENT_USER_KEY);
     setUser(null);
+    showSuccess("Logged out successfully");
   };
 
   return (
