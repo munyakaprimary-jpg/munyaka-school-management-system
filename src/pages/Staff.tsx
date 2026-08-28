@@ -195,7 +195,7 @@ const Staff = () => {
     const handleStaffChange = () => load();
     window.addEventListener('staff-changed', handleStaffChange);
     
-    return () {
+    return () => {
       mounted = false;
       window.removeEventListener('staff-changed', handleStaffChange);
     };
@@ -507,7 +507,8 @@ const Staff = () => {
                               >
                                 <Key size={15} /> Manage Access Keys
                               </DropdownMenuItem>
-                            </DropdownMenuContent                          </DropdownMenu>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
