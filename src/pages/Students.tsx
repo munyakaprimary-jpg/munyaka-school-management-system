@@ -4,9 +4,10 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  AlertCircle, Loader2
+  AlertCircle, Loader2, ExternalLink
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Link } from 'react-router-dom';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
@@ -670,7 +671,13 @@ export default function Students() {
                       {learner.admNo}
                     </td>
                     <td className="py-4 px-6 font-bold text-slate-900">
-                      {learner.name}
+                      <Link
+                        to={`/students/${learner.id}`}
+                        className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
+                      >
+                        {learner.name}
+                        <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
+                      </Link>
                     </td>
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
@@ -699,6 +706,13 @@ export default function Students() {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
+                        <Link
+                          to={`/students/${learner.id}`}
+                          title="View full profile"
+                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all inline-flex items-center justify-center"
+                        >
+                          <UserPlus className="w-4 h-4" />
+                        </Link>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(learner)}
