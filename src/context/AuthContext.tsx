@@ -39,7 +39,6 @@ interface RegisterData {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Updated Admin Credentials
 const DEFAULT_ADMIN = {
   email: 'munyakaprimary@gmail.com',
   password: 'munyaka5239',
@@ -124,7 +123,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Auto-logout after 15 minutes of user inactivity.
   useInactivityTimeout();
 
   useEffect(() => {
