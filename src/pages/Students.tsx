@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
@@ -466,7 +468,7 @@ export default function Students() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   const buildCsvForDataset = (datasetToExport: Learner[]): string => {
-    const headers = ['Adm No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
+    const headers = ['Assessment No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
     const rows = datasetToExport.map((l) => [
       l.admNo,
       `"${l.name}"`,
@@ -602,7 +604,7 @@ export default function Students() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by learner Name or Adm No..."
+            placeholder="Search by learner Name or Assessment No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -650,7 +652,7 @@ export default function Students() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-4 px-6">ADM NO.</th>
+                <th className="py-4 px-6">ASSESSMENT NO.</th>
                 <th className="py-4 px-6">NAME</th>
                 <th className="py-4 px-6">GRADE</th>
                 <th className="py-4 px-6">STREAM</th>
