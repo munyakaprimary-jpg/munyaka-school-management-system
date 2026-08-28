@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import {
   AlertTriangle,
   AlertCircle,
   UserCog,
+  Search,
   UploadCloud,
   CheckCircle2,
   XCircle,
@@ -42,13 +43,15 @@ import {
   RefreshCw,
   Unlock,
   ShieldAlert,
+  Crosshair
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
-import LeafletMapPicker from '@/components/LeafletMapPicker';
+import { loadGoogleMapsScript, useGoogleMapsReady } from '@/hooks/useGoogleMaps';
+import { useGoogleMapsApiKey } from '@/hooks/useGoogleMapsApiKey';
 
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
@@ -101,7 +104,9 @@ const Settings = () => {
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showAuthPass, setShowAuthPass] = useState(false);
 
-  const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
+  const { location: currentGeoLoc, isLoading: isLocating, error: geoError, refresh: refreshGeo } = useGeolocation();
+  const { apiKey: googleMapsApiKey, isLoading: isLoadingApiKey, refetch: refetchApiKey } = useGoogleMapsApiKey();
+  const googleMapsReady = useGoogleMapsReady(googleMapsApiKey);
 
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -116,7 +121,8 @@ const Settings = () => {
     phone: "+254 712 345 678",
     email: "info@munyaka.sc.ke",
     location: "Munyaka, Eldoret East, Uasin Gishu County",
-    maintenanceMode: false
+    maintenanceMode: false,
+    googleMapsApiKey: ""
   });
 
   const [academicConfig, setAcademicConfig] = useState({
@@ -175,6 +181,18 @@ const Settings = () => {
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
 
   // Admin Location Picker state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Refs to the underlying Google Maps objects so we can re-style them
+  // whenever the geofence config changes without rebuilding the map.
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const circleRef = useRef<any>(null);
+  const autocompleteRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleAuthorizeSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -227,7 +245,8 @@ const Settings = () => {
           phone: data.phone || "+254 712 345 678",
           email: data.email || "info@munyaka.sc.ke",
           location: data.location || "Munyaka, Eldoret East, Uasin Gishu County",
-          maintenanceMode: !!data.maintenance_mode
+          maintenanceMode: !!data.maintenance_mode,
+          googleMapsApiKey: data.google_maps_api_key || ""
         });
 
         setAcademicConfig({
@@ -280,6 +299,150 @@ const Settings = () => {
     fetchSettingsFromDatabase();
   }, [fetchSettingsFromDatabase]);
 
+  /**
+   * ============================================
+   * Admin Location Picker: Google Maps bootstrap
+   * ============================================
+   * When the Google Maps API is ready AND the user has the Security
+   * tab active, build an interactive map inside the
+   * #admin-location-map container. The map lets the admin:
+   *   1. Click anywhere to drop the school pin
+   *   2. Search for a place via the autocomplete
+   *   3. Use their current GPS as the school location
+   *
+   * All three actions update `geofenceConfig` and mark the form
+   * as having unsaved changes. A blue circle overlay renders the
+   * active geofence radius so the admin can visually validate the
+   * distance threshold they choose.
+   */
+  useEffect(() => {
+    if (!googleMapsReady || activeTab !== 'security') return;
+    if (typeof window === 'undefined' || !window.google?.maps) return;
+
+    const container = document.getElementById('admin-location-map');
+    if (!container) return;
+    if (mapRef.current) return; // Already initialised
+
+    // Clear any previous map contents (e.g. on re-render)
+    container.innerHTML = '';
+
+    const center = { lat: geofenceConfig.lat, lng: geofenceConfig.lng };
+
+    const map = new window.google.maps.Map(container, {
+      center,
+      zoom: 17,
+      mapTypeId: 'roadmap',
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      zoomControl: true,
+    });
+    mapRef.current = map;
+
+    // School pin (draggable so the admin can fine-tune)
+    const marker = new window.google.maps.Marker({
+      position: center,
+      map,
+      draggable: true,
+      title: 'School Location',
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#4f46e5',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+      },
+    });
+    markerRef.current = marker;
+
+    // Geofence circle overlay
+    const circle = new window.google.maps.Circle({
+      strokeColor: '#4f46e5',
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: '#4f46e5',
+      fillOpacity: 0.15,
+      map,
+      center,
+      radius: geofenceConfig.radius,
+    });
+    circleRef.current = circle;
+
+    // Click anywhere on the map to move the school pin
+    map.addListener('click', (e: any) => {
+      if (!e.latLng) return;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      marker.setPosition({ lat, lng });
+      circle.setCenter({ lat, lng });
+      setGeofenceState(prev => ({ ...prev, lat, lng }));
+      setHasUnsavedChanges(true);
+    });
+
+    // Drag the pin to fine-tune
+    marker.addListener('dragend', () => {
+      const pos = marker.getPosition();
+      if (!pos) return;
+      const lat = pos.lat();
+      const lng = pos.lng();
+      circle.setCenter({ lat, lng });
+      setGeofenceState(prev => ({ ...prev, lat, lng }));
+      setHasUnsavedChanges(true);
+    });
+
+    // Attach autocomplete to the search input
+    if (searchInputRef.current && window.google.maps.places) {
+      const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+        types: ['school', 'establishment', 'geocode'],
+        fields: ['place_id', 'name', 'geometry', 'formatted_address'],
+      });
+      autocompleteRef.current = autocomplete;
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          marker.setPosition({ lat, lng });
+          circle.setCenter({ lat, lng });
+          map.setCenter({ lat, lng });
+          map.setZoom(17);
+          setGeofenceState(prev => ({ ...prev, lat, lng }));
+          setSearchQuery(place.name || '');
+          setShowSearchResults(false);
+          setHasUnsavedChanges(true);
+          showSuccess(`School location set to: ${place.name}`);
+        }
+      });
+    }
+
+    return () => {
+      // Cleanup on unmount or when deps change
+      if (markerRef.current) markerRef.current.setMap(null);
+      if (circleRef.current) circleRef.current.setMap(null);
+      if (autocompleteRef.current && window.google?.maps?.event) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+      mapRef.current = null;
+      markerRef.current = null;
+      circleRef.current = null;
+      autocompleteRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleMapsReady, activeTab]);
+
+  /**
+   * Whenever the geofence radius or coordinates change in state,
+   * reflect those changes on the existing map objects so the
+   * admin sees the new circle and pin in real time.
+   */
+  useEffect(() => {
+    if (mapRef.current && markerRef.current && circleRef.current && window.google?.maps) {
+      markerRef.current.setPosition({ lat: geofenceConfig.lat, lng: geofenceConfig.lng });
+      circleRef.current.setCenter({ lat: geofenceConfig.lat, lng: geofenceConfig.lng });
+      circleRef.current.setRadius(geofenceConfig.radius);
+    }
+  }, [geofenceConfig.lat, geofenceConfig.lng, geofenceConfig.radius]);
 
   const handleSaveAllSettings = async () => {
     setIsSaving(true);
@@ -293,6 +456,7 @@ const Settings = () => {
       email: generalConfig.email,
       location: generalConfig.location,
       maintenance_mode: generalConfig.maintenanceMode,
+      google_maps_api_key: generalConfig.googleMapsApiKey,
       active_year: academicConfig.activeYear,
       active_term: academicConfig.activeTerm,
       term_start_date: academicConfig.termStartDate,
@@ -334,6 +498,10 @@ const Settings = () => {
       // the app picks it up immediately.
       persistGeofenceConfig(geofenceConfig);
 
+      // Re-fetch the Google Maps API key so the map reloads with any
+      // updated credentials saved in System Configuration.
+      refetchApiKey();
+
       setHasUnsavedChanges(false);
       showSuccess("System settings saved successfully!");
     } catch (err: any) {
@@ -354,7 +522,30 @@ const Settings = () => {
       const newLng = parseFloat(currentGeoLoc.lng.toFixed(6));
       setGeofenceState(prev => ({ ...prev, lat: newLat, lng: newLng }));
       setHasUnsavedChanges(true);
+      // Also push the change to the map immediately if it is loaded
+      if (markerRef.current && circleRef.current && mapRef.current && window.google?.maps) {
+        markerRef.current.setPosition({ lat: newLat, lng: newLng });
+        circleRef.current.setCenter({ lat: newLat, lng: newLng });
+        mapRef.current.setCenter({ lat: newLat, lng: newLng });
+      }
       showSuccess(`Auto-filled coordinates: ${newLat.toFixed(4)}, ${newLng.toFixed(4)}`);
+    } else if (geoError) {
+      showError(`Geolocation Error: ${geoError}`);
+    } else {
+      showError("Acquiring GPS signal. Please allow location permissions in your browser.");
+    }
+  };
+
+  /**
+   * Centre the map on the user's current GPS location. The pin stays
+   * where it is — only the viewport moves — so the admin can
+   * preview how their target school location looks relative to
+   * where they currently are.
+   */
+  const handleCenterOnMe = () => {
+    if (currentGeoLoc && mapRef.current && window.google?.maps) {
+      mapRef.current.setCenter({ lat: currentGeoLoc.lat, lng: currentGeoLoc.lng });
+      mapRef.current.setZoom(17);
     } else if (geoError) {
       showError(`Geolocation Error: ${geoError}`);
     } else {
@@ -638,6 +829,42 @@ const Settings = () => {
                     onChange={e => { setGeneralConfig({...generalConfig, phone: e.target.value}); setHasUnsavedChanges(true); }}
                     className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                   />
+                </div>
+                <div className="space-y-2 md:col-span-2">
+                  <div className="flex items-center justify-between">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Google Maps API Key</Label>
+                    <Badge
+                      className={cn(
+                        "font-bold text-[10px] px-2 py-0.5",
+                        generalConfig.googleMapsApiKey
+                          ? "bg-emerald-50 text-emerald-700"
+                          : "bg-rose-50 text-rose-700"
+                      )}
+                    >
+                      {generalConfig.googleMapsApiKey ? "✓ Configured" : "✗ Missing"}
+                    </Badge>
+                  </div>
+                  <div className="relative">
+                    <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                    <Input
+                      type={showAuthPass ? "text" : "password"}
+                      value={generalConfig.googleMapsApiKey}
+                      onChange={e => { setGeneralConfig({...generalConfig, googleMapsApiKey: e.target.value}); setHasUnsavedChanges(true); }}
+                      placeholder="AIzaSy… (paste your Google Maps JavaScript API key here)"
+                      className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-mono text-sm"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowAuthPass(!showAuthPass)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                      title={showAuthPass ? "Hide key" : "Show key"}
+                    >
+                      {showAuthPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-relaxed">
+                    Required by the Admin Location Picker and other map views. Generate a key with the <em>Maps JavaScript API</em> enabled in the Google Cloud Console and restrict it to this domain.
+                  </p>
                 </div>
               </div>
 
@@ -946,33 +1173,84 @@ const Settings = () => {
                 <div className="flex items-center justify-between flex-wrap gap-3">
                   <div>
                     <h3 className="text-lg font-black text-slate-900">Admin Location Picker</h3>
-                    <p className="text-sm text-slate-500">Click anywhere on the map to drop a pin for the school, or drag the pin to fine-tune. Use your current GPS location as a starting point. The blue circle shows the active geofence radius.</p>
+                    <p className="text-sm text-slate-500">Search for the school, click the map to drop a pin, or use your current GPS location. The blue circle shows the active geofence radius.</p>
                   </div>
                   <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700 font-bold px-3 py-1">
                     <MapPin size={12} className="mr-1 inline" /> Interactive Map
                   </Badge>
                 </div>
 
-                {/* Leaflet Map Picker — OpenStreetMap, no API key required */}
+                {/* Place Search / Autocomplete */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                  <Input 
+                    ref={searchInputRef}
+                    placeholder="Search for school, address, or landmark..." 
+                    className="pl-11 h-12 rounded-2xl border border-slate-200 bg-white font-medium focus:ring-2 ring-indigo-100"
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(false); }}
+                  />
+                  {isLoadingApiKey ? (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-600" size={18} />
+                  ) : googleMapsReady ? (
+                    <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] px-2 py-0.5 pointer-events-none">
+                      ✓ Live search
+                    </Badge>
+                  ) : (
+                    <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-amber-50 text-amber-700 border-amber-200 font-bold text-[10px] px-2 py-0.5 pointer-events-none">
+                      ✗ Unavailable
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Live Map */}
                 <div
                   className="relative w-full overflow-hidden rounded-2xl border-2 border-slate-200 shadow-lg"
-                  style={{ height: '420px' }}
+                  style={{ height: '400px' }}
                   data-testid="admin-location-map-container"
                 >
-                  <LeafletMapPicker
-                    lat={geofenceConfig.lat}
-                    lng={geofenceConfig.lng}
-                    radius={geofenceConfig.radius}
-                    onLocationChange={(lat, lng) => {
-                      setGeofenceState(prev => ({ ...prev, lat, lng }));
-                      setHasUnsavedChanges(true);
-                    }}
-                    onRadiusChange={(radius) => {
-                      setGeofenceState(prev => ({ ...prev, radius }));
-                      setHasUnsavedChanges(true);
-                    }}
-                    zoom={17}
-                  />
+                  {/* No API key in System Configuration — show actionable error */}
+                  {!isLoadingApiKey && !googleMapsApiKey ? (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 text-slate-500 p-8 text-center">
+                      <div className="w-14 h-14 bg-rose-100 text-rose-500 rounded-2xl flex items-center justify-center">
+                        <MapPin size={28} />
+                      </div>
+                      <p className="text-sm font-bold text-slate-700">Google Maps API Key Missing</p>
+                      <p className="text-xs max-w-xs leading-relaxed text-slate-400">
+                        Add a valid Google Maps API key in System Configuration (General tab) to enable the interactive location picker.
+                      </p>
+                      <a
+                        href="#general"
+                        className="mt-2 text-xs font-bold text-indigo-600 underline underline-offset-2 hover:text-indigo-700"
+                      >
+                        Open General Settings →
+                      </a>
+                    </div>
+                  ) : googleMapsReady ? (
+                    <>
+                      <div
+                        id="admin-location-map"
+                        style={{ width: '100%', height: '100%', display: 'block' }}
+                        data-testid="admin-location-map"
+                        aria-label="Interactive map for setting school geofence location"
+                      />
+                      <Button
+                        onClick={handleCenterOnMe}
+                        disabled={!currentGeoLoc}
+                        size="icon"
+                        className="absolute top-4 right-4 z-10 rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 border border-slate-200"
+                        title="Centre map on my current location"
+                      >
+                        <Crosshair size={20} />
+                      </Button>
+                    </>
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-3 bg-slate-50 text-slate-400">
+                      <Loader2 className="animate-spin" size={32} />
+                      <p className="text-sm font-bold">Loading Google Maps…</p>
+                      <p className="text-xs">First-time load may take a few seconds.</p>
+                    </div>
+                  )}
                 </div>
 
                 {/* Coordinate + Radius Inputs */}
