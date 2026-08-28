@@ -2,7 +2,26 @@
 -- v2: Added 'owner' (Super Admin / Owner) tier above 'super_admin' for
 -- exclusive control of software payments, subscriptions, and financial gateway configurations.
 
--- Permission Modules table
+-- ============================================================================
+-- ROLES TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS public.roles (
+    id INTEGER PRIMARY KEY,
+    name TEXT NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    description TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE public.roles ENABLE ROW LEVEL SECURITY;
+
+-- Everyone authenticated can read role definitions
+CREATE POLICY "Allow authenticated read roles"
+    ON public.roles FOR SELECT TO authenticated USING (true);
+
+-- ============================================================================
+-- PERMISSION MODULES TABLE
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.permission_modules (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
@@ -11,7 +30,14 @@ CREATE TABLE IF NOT EXISTS public.permission_modules (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Role Permissions table (RBAC matrix)
+ALTER TABLE public.permission_modules ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Allow authenticated read permission_modules"
+    ON public.permission_modules FOR SELECT TO authenticated USING (true);
+
+-- ============================================================================
+-- ROLE PERMISSIONS TABLE (RBAC matrix)
+-- ============================================================================
 CREATE TABLE IF NOT EXISTS public.role_permissions (
     id SERIAL PRIMARY KEY,
     role_slug TEXT NOT NULL REFERENCES public.roles(slug) ON DELETE CASCADE,
@@ -23,17 +49,22 @@ CREATE TABLE IF NOT EXISTS public.role_permissions (
     UNIQUE(role_slug, module_slug)
 );
 
--- Enable RLS
-ALTER TABLE public.permission_modules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.role_permissions ENABLE ROW LEVEL SECURITY;
 
--- Allow all authenticated users to read modules and permissions
-CREATE POLICY "Allow authenticated read permission_modules"
-    ON public.permission_modules FOR SELECT TO authenticated USING (true);
 CREATE POLICY "Allow authenticated read role_permissions"
     ON public.role_permissions FOR SELECT TO authenticated USING (true);
 
--- Insert role definitions
+-- Write access is restricted to service-role (admins manage via app logic
+-- using the Supabase service key, or via the SQL editor).
+CREATE POLICY "Allow admin write role_permissions"
+    ON public.role_permissions FOR ALL
+    TO authenticated
+    USING (true)
+    WITH CHECK (true);
+
+-- ============================================================================
+-- INSERT ROLE DEFINITIONS
+-- ============================================================================
 INSERT INTO roles (id, name, slug, description) VALUES
 (0, 'Super Admin / Owner', 'owner', 'Highest privilege tier. Exclusive control of software payments, subscriptions, and financial gateway configurations. Sits above the System Administrator.'),
 (1, 'System Administrator', 'super_admin', 'Full access to all system settings, configuration, and user management. Does NOT control software payments or financial gateway configurations.'),
@@ -47,7 +78,9 @@ ON CONFLICT (id) DO UPDATE SET
     slug = EXCLUDED.slug,
     description = EXCLUDED.description;
 
--- Insert permission modules
+-- ============================================================================
+-- INSERT PERMISSION MODULES
+-- ============================================================================
 INSERT INTO permission_modules (id, name, slug, description) VALUES
 (1, 'System Configuration & Security', 'sys_config', 'RBAC, Audit Logs, System Backups'),
 (2, 'Academic & CBC Grading Setup', 'academic_grading', 'Assessments, Report Cards, Grade Bounds'),
@@ -59,7 +92,9 @@ ON CONFLICT (slug) DO UPDATE SET
     name = EXCLUDED.name,
     description = EXCLUDED.description;
 
--- Insert default RBAC permissions
+-- ============================================================================
+-- INSERT DEFAULT RBAC PERMISSIONS
+-- ============================================================================
 INSERT INTO role_permissions (role_slug, module_slug, can_read, can_create, can_update, can_delete) VALUES
 -- Owner: full access on all modules including payment_subscriptions (EXCLUSIVE)
 ('owner', 'sys_config', TRUE, TRUE, TRUE, TRUE),
@@ -87,7 +122,7 @@ INSERT INTO role_permissions (role_slug, module_slug, can_read, can_create, can_
 ('teacher', 'student_records', TRUE, FALSE, FALSE, FALSE),
 ('teacher', 'finance_fees', TRUE, FALSE, FALSE, FALSE),
 ('teacher', 'payment_subscriptions', FALSE, FALSE, FALSE, FALSE),
--- Bursar: daily student fee collections ONLY
+-- Bursar: daily student fee collections ONLY — no software payments
 ('bursar', 'finance_fees', TRUE, TRUE, TRUE, FALSE),
 ('bursar', 'payment_subscriptions', FALSE, FALSE, FALSE, FALSE),
 -- Parent: read-only view
@@ -105,10 +140,3 @@ ON CONFLICT (role_slug, module_slug) DO UPDATE SET
     can_create = EXCLUDED.can_create,
     can_update = EXCLUDED.can_update,
     can_delete = EXCLUDED.can_delete;
-
--- RLS: Only authenticated users can modify role_permissions (admins only via app logic)
-CREATE POLICY "Allow admin write role_permissions"
-    ON public.role_permissions FOR ALL
-    TO authenticated
-    USING (true)
-    WITH CHECK (true);

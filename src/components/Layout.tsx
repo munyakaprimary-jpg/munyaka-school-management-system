@@ -149,7 +149,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
@@ -159,10 +159,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   // Bottom Navigation Bar Quick Links - Filtered by user role
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Learners', path: '/students', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
+    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
   ].filter(item => user && item.roles.includes(user.role));
 
   return (
