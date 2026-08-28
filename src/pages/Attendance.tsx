@@ -379,35 +379,35 @@ const Attendance = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
                 onClick={() => markAllAs('P')}
-                className="h-11 px-2 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="h-11 px-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-widest border border-emerald-200 transition-all active:scale-95 flex items-center justify-center gap-2"
                 title="Mark all as Present"
               >
                 <CheckCircle2 size={14} />
-                <span className="hidden sm:inline">Present</span>
+                <span>Mark All Present</span>
               </button>
               <button
                 onClick={() => markAllAs('A')}
-                className="h-11 px-2 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="h-11 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-[10px] uppercase tracking-widest border border-rose-200 transition-all active:scale-95 flex items-center justify-center gap-2"
                 title="Mark all as Absent"
               >
                 <XCircle size={14} />
-                <span className="hidden sm:inline">Absent</span>
+                <span>Mark All Absent</span>
               </button>
               <button
                 onClick={() => markAllAs('L')}
-                className="h-11 px-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="h-11 px-3 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold text-[10px] uppercase tracking-widest border border-amber-200 transition-all active:scale-95 flex items-center justify-center gap-2"
                 title="Mark all as Late"
               >
                 <Clock size={14} />
-                <span className="hidden sm:inline">Late</span>
+                <span>Mark All Late</span>
               </button>
               <button
                 onClick={() => markAllAs('E')}
-                className="h-11 px-2 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-1.5"
+                className="h-11 px-3 rounded-xl bg-sky-50 hover:bg-sky-100 text-sky-700 font-bold text-[10px] uppercase tracking-widest border border-sky-200 transition-all active:scale-95 flex items-center justify-center gap-2"
                 title="Mark all as Excused"
               >
                 <ShieldCheck size={14} />
-                <span className="hidden sm:inline">Excused</span>
+                <span>Mark All Excused</span>
               </button>
             </div>
           </div>
