@@ -99,6 +99,84 @@ const getPasswordStrength = (pass: string) => {
   return { score: 100, label: 'Strong', color: 'bg-emerald-500 text-emerald-600' };
 };
 
+/**
+ * Build a fully-populated RBAC matrix for every role & every module.
+ * Always returns a complete object — never undefined, never missing modules.
+ * This is the single source of truth used both for the initial state and
+ * as the merge base when loading stale/incomplete data from Supabase or
+ * localStorage.
+ */
+const buildDefaultPermissions = (): Record<string, PermissionState> => {
+  const initialState: Record<string, PermissionState> = {};
+  ROLES.forEach(role => {
+    initialState[role.id] = {};
+    MODULES.forEach(mod => {
+      initialState[role.id][mod.id] = {
+        read: true,
+        create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        delete: role.id === 'owner' || role.id === 'super_admin'
+      };
+    });
+  });
+  // Owner has exclusive payment_subscriptions access; super_admin and others do not
+  if (initialState['owner']) {
+    initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
+  }
+  ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
+    if (initialState[roleId]) {
+      initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
+    }
+  });
+  return initialState;
+};
+
+/**
+ * Merge incoming RBAC data on top of the default matrix.
+ * Guarantees every role & every module has a complete CRUD object,
+ * filling in any missing entries (e.g. when loading data from an older
+ * schema that did not include the new `payment_subscriptions` module).
+ */
+const mergePermissions = (
+  incoming: Record<string, PermissionState> | null | undefined
+): Record<string, PermissionState> => {
+  const base = buildDefaultPermissions();
+  if (!incoming || typeof incoming !== 'object') return base;
+
+  Object.keys(incoming).forEach(roleId => {
+    const incomingRole = incoming[roleId];
+    if (!incomingRole || typeof incomingRole !== 'object') return;
+    if (!base[roleId]) base[roleId] = {};
+    Object.keys(incomingRole).forEach(moduleId => {
+      const incomingModule = incomingRole[moduleId];
+      if (!incomingModule || typeof incomingModule !== 'object') return;
+      const safe = {
+        read: !!incomingModule.read,
+        create: !!incomingModule.create,
+        edit: !!incomingModule.edit,
+        delete: !!incomingModule.delete
+      };
+      base[roleId][moduleId] = safe;
+    });
+  });
+
+  return base;
+};
+
+/**
+ * Safe getter for a single permission flag.
+ * Returns `false` for any missing/undefined access path so deep
+ * property reads never throw.
+ */
+const getPermFlag = (
+  perms: Record<string, PermissionState> | null | undefined,
+  roleId: string,
+  moduleId: string,
+  action: Action
+): boolean => {
+  return !!perms?.[roleId]?.[moduleId]?.[action];
+};
+
 const Settings = () => {
   const [isAuthorized, setIsAuthorized] = useState(false);
   const [authPassword, setAuthPassword] = useState("");
@@ -149,30 +227,7 @@ const Settings = () => {
   });
 
   const [expandedRole, setExpandedRole] = useState<string | null>('owner');
-  const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => {
-    const initialState: Record<string, PermissionState> = {};
-    ROLES.forEach(role => {
-      initialState[role.id] = {};
-      MODULES.forEach(mod => {
-        initialState[role.id][mod.id] = {
-          read: true,
-          create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-          edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-          delete: role.id === 'owner' || role.id === 'super_admin'
-        };
-      });
-    });
-    // Owner has exclusive payment_subscriptions access; super_admin and others do not
-    if (initialState['owner']) {
-      initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
-    }
-    ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
-      if (initialState[roleId]) {
-        initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
-      }
-    });
-    return initialState;
-  });
+  const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => buildDefaultPermissions());
 
   const [pinForm, setPinForm] = useState({
     currentPin: "",
@@ -276,7 +331,7 @@ const Settings = () => {
           gradingScale: data.grading_scale || academicConfig.gradingScale
         });
 
-        if (data.rbac_permissions) setPermissions(data.rbac_permissions);
+        if (data.rbac_permissions) setPermissions(mergePermissions(data.rbac_permissions));
         if (data.geofence_lat !== undefined && data.geofence_lng !== undefined) {
           setGeofenceState({
             lat: data.geofence_lat,
@@ -295,7 +350,7 @@ const Settings = () => {
           const parsed = JSON.parse(savedMaster);
           if (parsed.general) setGeneralConfig(parsed.general);
           if (parsed.academic) setAcademicConfig(parsed.academic);
-          if (parsed.permissions) setPermissions(parsed.permissions);
+          if (parsed.permissions) setPermissions(mergePermissions(parsed.permissions));
           if (parsed.geofence) setGeofenceState(parsed.geofence);
           if (parsed.geofenceEnabled !== undefined) setGeofenceEnabled(parsed.geofenceEnabled);
           if (parsed.devBypass !== undefined) setDevBypass(parsed.devBypass);
@@ -611,26 +666,32 @@ const Settings = () => {
   };
 
   const togglePermission = (roleId: string, modId: string, action: Action) => {
-    setPermissions(prev => ({
-      ...prev,
-      [roleId]: {
-        ...prev[roleId],
-        [modId]: {
-          ...prev[roleId][modId],
-          [action]: !prev[roleId][modId][action]
+    setPermissions(prev => {
+      const safePrev = prev || buildDefaultPermissions();
+      const safeRole = safePrev[roleId] || {};
+      const safeModule = safeRole[modId] || { read: true, create: false, edit: false, delete: false };
+      return {
+        ...safePrev,
+        [roleId]: {
+          ...safeRole,
+          [modId]: {
+            ...safeModule,
+            [action]: !safeModule[action]
+          }
         }
-      }
-    }));
+      };
+    });
     setHasUnsavedChanges(true);
   };
 
   const toggleAllForRole = (roleId: string, checked: boolean) => {
     setPermissions(prev => {
-      const updatedRole = { ...prev[roleId] };
+      const safePrev = prev || buildDefaultPermissions();
+      const updatedRole = { ...(safePrev[roleId] || {}) };
       MODULES.forEach(mod => {
         updatedRole[mod.id] = { read: checked, create: checked, edit: checked, delete: checked };
       });
-      return { ...prev, [roleId]: updatedRole };
+      return { ...safePrev, [roleId]: updatedRole };
     });
     setHasUnsavedChanges(true);
   };
@@ -972,7 +1033,8 @@ const Settings = () => {
           <div className="space-y-4">
             {ROLES.map((role) => {
               const isOpen = expandedRole === role.id;
-              const rolePerms = permissions[role.id] || {};
+              const safePerms = permissions || buildDefaultPermissions();
+              const rolePerms = safePerms[role.id] || {};
               const allChecked = MODULES.every(m => rolePerms[m.id]?.read && rolePerms[m.id]?.create && rolePerms[m.id]?.edit && rolePerms[m.id]?.delete);
 
               return (
