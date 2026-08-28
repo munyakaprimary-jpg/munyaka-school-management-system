@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { showSuccess, showError } from "@/utils/toast";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-
 import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
+import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -563,14 +566,40 @@ const Assessments = () => {
   };
 
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  // Builds the CSV with EXACTLY these first rows in order:
+  //   1. MUNYAKA PRIMARY AND JUNIOR
+  //   2. P.O. BOX 5239, ELDORET
+  //   3. MOTTO: Knowledge Is Power
+  //   4. [blank]
+  //   5. Column headers
+  //   6. Data rows
   const handleDownloadCSV = async () => {
     if (filteredStudents.length === 0) {
       showError("No students found to export.");
       return;
     }
 
-    const headers = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
-    const rows = filteredStudents.map(student => {
+    // ============================================
+    // STEP 1: Build the first 4 institutional rows
+    // These are pushed to the array FIRST so they appear as the
+    // topmost rows in the exported CSV file.
+    // ============================================
+    const headerRows: string[] = [
+      MUNYAKA_HEADERS.schoolLine1,         // "MUNYAKA PRIMARY AND JUNIOR"
+      MUNYAKA_HEADERS.schoolLine2,         // "P.O. BOX 5239, ELDORET"
+      MUNYAKA_HEADERS.schoolLine3,         // "MOTTO: Knowledge Is Power"
+      "",                                  // Blank separator row
+    ];
+
+    // ============================================
+    // STEP 2: Build the column headers row
+    // ============================================
+    const columnHeaders = ["Learner Name", "Admission/ID", "Stream", ...allTierSubjects, "Total"];
+
+    // ============================================
+    // STEP 3: Build the per-student data rows
+    // ============================================
+    const dataRows: string[] = filteredStudents.map(student => {
       const id = student.id || student.admissionNumber;
       const studentMarks = marksMatrix[id] || {};
       const scores = allTierSubjects.map(subj => studentMarks[subj] !== undefined ? studentMarks[subj] : "");
@@ -584,14 +613,24 @@ const Assessments = () => {
       ].join(",");
     });
 
-    const csvContent = [
-      `"Marks Entry & CBC Assessment - ${grade} (${stream})"`,
-      `"Academic Year: ${academicYear} | Term: ${term} | Exam: ${examType}"`,
-      "",
-      headers.join(","),
-      ...rows,
+    // ============================================
+    // STEP 4: Build the optional summary rows
+    // (Subject Totals + Subject MSS) — these go AFTER the data.
+    // ============================================
+    const summaryRows: string[] = [
       ["SUBJECT TOTALS", "", "", ...allTierSubjects.map(subj => subjectTotals[subj] || 0), grandTotalSum].join(","),
-      ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(",")
+      ["SUBJECT MSS", "", "", ...allTierSubjects.map(subj => subjectMSS[subj] || 0), grandTotalMSS].join(","),
+    ];
+
+    // ============================================
+    // STEP 5: Concatenate every section in the EXACT order required:
+    //   institutional header (4 rows) -> column headers (1 row) -> data rows -> summary rows
+    // ============================================
+    const csvContent = [
+      ...headerRows,
+      columnHeaders.join(","),
+      ...dataRows,
+      ...summaryRows,
     ].join("\n");
 
     await csvExport.download({
