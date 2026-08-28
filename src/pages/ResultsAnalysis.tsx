@@ -36,7 +36,6 @@ import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
-import ResultsBreakdownTable from '@/components/reports/ResultsBreakdownTable';
 
 // Types
 interface StudentResult {
@@ -137,7 +136,6 @@ const ResultsAnalysis = () => {
         console.error("Error parsing grades:", e);
       }
     };
-
     window.addEventListener('storage', handleStorageChange);
     return () => window.removeEventListener('storage', handleStorageChange);
   }, []);
@@ -326,16 +324,6 @@ const ResultsAnalysis = () => {
     return strObj ? `${strObj.name} Stream` : "Selected Stream";
   }, [selectedStreamId, availableStreams]);
 
-  // Map level to bg/text color classes
-  const getRubricColor = (level: 'EE' | 'ME' | 'AE' | 'BE') => {
-    switch (level) {
-      case 'EE': return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-      case 'ME': return 'bg-blue-50 text-blue-700 border-blue-200';
-      case 'AE': return 'bg-amber-50 text-amber-700 border-amber-200';
-      default:   return 'bg-rose-50 text-rose-700 border-rose-200';
-    }
-  };
-
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
   const handleDownloadCSV = async () => {
     if (studentResults.length === 0) {
@@ -343,8 +331,6 @@ const ResultsAnalysis = () => {
       return;
     }
 
-    const currentDateStr = format(new Date(), "PP");
-    
     const line1 = "MUNYAKA PRIMARY AND JUNIOR SCHOOL";
     const line2 = "P.O. BOX 5239-30100, ELDORET • TEL: +254 712 345 678";
     const line3 = "ACADEMIC RESULTS ANALYSIS REPORT";
@@ -761,13 +747,103 @@ const ResultsAnalysis = () => {
         </CardContent>
       </Card>
 
-      {/* Complete Class Breakdown Table — using new unstuck component */}
-      <ResultsBreakdownTable
-        studentResults={studentResults}
-        learningAreas={learningAreas}
-        showStreamColumn={selectedStreamId === "all"}
-        getRubricColor={getRubricColor}
-      />
+      {/* Complete Class Breakdown Table */}
+      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden print:shadow-none print:rounded-none">
+        <CardHeader className="p-8 border-b bg-slate-50/40 print:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
+            <div>
+              <CardTitle className="text-2xl font-black text-slate-900">Class Results Breakdown</CardTitle>
+              <CardDescription>Official score sheet showing individual subject scores, total marks, mean score, and overall rank.</CardDescription>
+            </div>
+            <Badge className="bg-indigo-600 text-white font-bold px-4 py-1.5 rounded-xl print:hidden">
+              {studentResults.length} Students Ranked
+            </Badge>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left border-collapse">
+              <thead className="bg-slate-50/80 border-b">
+                <tr>
+                  <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
+                    Rank
+                  </th>
+                  <th className="sticky left-16 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
+                    Student Name & Admin No
+                  </th>
+                  {selectedStreamId === "all" && (
+                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
+                      Stream
+                    </th>
+                  )}
+                  {learningAreas.map(area => (
+                    <th key={area} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
+                      {area}
+                    </th>
+                  ))}
+                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                    Total Marks
+                  </th>
+                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                    Mean (%)
+                  </th>
+                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
+                    Level
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {studentResults.length > 0 ? (
+                  studentResults.map((student) => (
+                    <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
+                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 font-black text-center border-r text-slate-900">
+                        #{student.rank}
+                      </td>
+                      <td className="sticky left-16 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
+                        <p className="font-bold text-slate-900">{student.name}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
+                      </td>
+                      {selectedStreamId === "all" && (
+                        <td className="px-4 py-4 text-center font-bold text-slate-600 border-r">
+                          <Badge variant="outline" className="rounded-lg border-slate-200 text-xs">
+                            {student.stream}
+                          </Badge>
+                        </td>
+                      )}
+                      {learningAreas.map(area => (
+                        <td key={area} className="px-3 py-4 border-r text-center font-bold text-slate-700">
+                          {student.scores[area] !== undefined ? student.scores[area] : "—"}
+                        </td>
+                      ))}
+                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-900">
+                        {student.totalMarks}
+                      </td>
+                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-700 text-base">
+                        {student.meanScore}%
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <Badge variant="outline" className={cn("font-bold", student.level === 'EE' && "bg-emerald-50 text-emerald-700 border-emerald-200", student.level === 'ME' && "bg-blue-50 text-blue-700 border-blue-200", student.level === 'AE' && "bg-amber-50 text-amber-700 border-amber-200", student.level === 'BE' && "bg-rose-50 text-rose-700 border-rose-200")}>
+                          {student.level}
+                        </Badge>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={learningAreas.length + 6} className="px-8 py-16 text-center">
+                      <div className="flex flex-col items-center gap-3">
+                        <Search size={36} className="text-slate-200" />
+                        <p className="text-slate-500 font-bold">No student result records found for the selected Grade and Stream.</p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Official Footer Notice (Visible ONLY on Print) */}
       <div className="hidden print:block text-center pt-8 border-t border-slate-300 text-xs text-slate-500 space-y-2">
@@ -786,14 +862,6 @@ const ResultsAnalysis = () => {
 
     </div>
   );
-};
-
-// Local helper required for the export filename
-const format = (date: Date, fmt: string): string => {
-  if (fmt === "PP") {
-    return date.toLocaleDateString();
-  }
-  return date.toLocaleString();
 };
 
 export default ResultsAnalysis;
