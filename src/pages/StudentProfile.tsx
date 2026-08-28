@@ -17,14 +17,14 @@ import {
   UserX,
   Download
 } from 'lucide-react';
-import { STUDENTS } from '@/lib/mock-data';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import { showSuccess, showError } from '@/utils/toast';
 
 const StudentProfile = () => {
-  const student = STUDENTS[0]; 
+  const student = INITIAL_SEED_DATA.students[0]; 
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
@@ -95,9 +95,9 @@ const StudentProfile = () => {
               <UserCircle size={60} strokeWidth={1} />
             </div>
             <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
-            <p className="text-sm font-medium text-slate-400 mb-6">ID: {student.assessment}</p>
+            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">ID: {student.admNo}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
+              <Badge className="bg-indigo-600">{student.grade}</Badge>
               <Badge variant="outline">{student.stream}</Badge>
             </div>
             <div className="space-y-4 text-left border-t pt-8">
@@ -116,24 +116,15 @@ const StudentProfile = () => {
             </div>
           </Card>
 
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
-            <CardTitle className="text-lg mb-6">Quick Stats</CardTitle>
-            <div className="space-y-6">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-500">Attendance</span>
-                <span className="text-sm font-bold text-emerald-600">96%</span>
-              </div>
-              <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                <div className="bg-emerald-500 h-full w-[96%]" />
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-medium text-slate-500">Assessments</span>
-                <span className="text-sm font-bold text-indigo-600">Exceeding</span>
-              </div>
-              <div className="w-full bg-slate-50 h-2 rounded-full overflow-hidden">
-                <div className="bg-indigo-500 h-full w-[85%]" />
-              </div>
+          <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 overflow-hidden relative">
+            <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
+              <ShieldCheck size={140} />
             </div>
+            <CardTitle className="text-lg mb-4">Account Security</CardTitle>
+            <p className="text-sm text-indigo-200 mb-6">User has administrative access to assessment records.</p>
+            <Button className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl">
+              Reset Credentials
+            </Button>
           </Card>
         </div>
 
@@ -245,7 +236,7 @@ const StudentProfile = () => {
         studentsData={[{ 
           id: student.id, 
           name: student.name, 
-          assessment: student.assessment, 
+          assessment: student.admNo, 
           grade: student.grade, 
           stream: student.stream 
         }]}

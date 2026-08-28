@@ -262,23 +262,23 @@ export const INITIAL_SEED_DATA = {
     {
       "id": "1",
       "student": "Brian Kiptoo",
-      "total": 15000,
-      "paid": 0,
-      "status": "Pending"
+      total: 15000,
+      paid: 0,
+      status: "Pending"
     },
     {
       "id": "2",
       "student": "Mary Atieno",
-      "total": 15000,
-      "paid": 15000,
-      "status": "Cleared"
+      total: 15000,
+      paid: 15000,
+      status: "Cleared"
     },
     {
       "id": "3",
       "student": "Emmanuel Maina",
-      "total": 15000,
-      "paid": 5000,
-      "status": "Pending"
+      total: 15000,
+      paid: 5000,
+      status: "Pending"
     }
   ],
   "transactions": [
@@ -723,15 +723,15 @@ export const INITIAL_SEED_DATA = {
       "schoolName": "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
       "motto": "KNOWLEDGE IS POWER",
       "postalAddress": "P.O. BOX 5239-30100 ELDORET",
-      "phone": "+254 738873359",
-      "email": "munyakaprimary@gmail.com",
+      "phone": "+254 712 345 678",
+      "email": "info@munyaka.sc.ke",
       "location": "Munyaka, Eldoret East, Uasin Gishu County",
       "maintenanceMode": false
     },
     "academic": {
       "activeYear": "2026",
-      "activeTerm": "term2",
-      "termStartDate": "2026-08-24",
+      "activeTerm": "term1",
+      "termStartDate": "2026-01-05",
       "termEndDate": "2026-04-10",
       "gradingScale": [
         {
