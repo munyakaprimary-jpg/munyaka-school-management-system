@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,7 +24,9 @@ import {
   Plus,
   X,
   Save,
-  AlertCircle
+  AlertCircle,
+  Users,
+  Loader2
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -33,35 +35,99 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { STAFF, StaffMember } from '@/lib/mock-data';
-import { PreRegisteredStaff } from '@/types/staff-access';
-import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
+import { pb } from '@/lib/pocketbase';
+
+interface StaffMember {
+  id: string;
+  id_no: string;
+  tsc_no?: string;
+  full_name: string;
+  role: string;
+  subjects: string[];
+  phone: string;
+  email: string;
+  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  joined: string;
+  department: string;
+}
+
+interface PreRegisteredStaff {
+  id: string;
+  fullName: string;
+  nationalId: string;
+  tscNumber?: string;
+  email: string;
+  phone: string;
+  systemRole: string;
+  department: string;
+  assignedSubjects: string[];
+  tempAccessCode: string;
+  status: 'Pre-Registered' | 'Active' | 'Suspended';
+  datePreRegistered: string;
+}
 
 const Staff = () => {
   const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
+  const [isLoading, setIsLoading] = useState(true);
   
   // Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
+  const [isSaving, setIsSaving] = useState(false);
 
-  // Load staff directory
-  const staffDirectory = useMemo<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_directory');
-    if (saved) {
-      try { return JSON.parse(saved); } catch (e) { console.error(e); }
+  // Form state for new/edit staff
+  const [formData, setFormData] = useState({
+    full_name: '',
+    role: '',
+    phone: '',
+    email: '',
+    tsc_number: ''
+  });
+  const [formError, setFormError] = useState('');
+
+  // Load staff directory from PocketBase
+  const fetchStaffList = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const records = await pb.collection('staff').getFullList({
+        sort: '-created',
+        fields: 'id,id_no,tsc_no,full_name,role,subjects,phone,email,status,joined,department'
+      });
+      
+      const staffList: StaffMember[] = records.map(r => ({
+        id: r.id,
+        id_no: r.id_no,
+        tsc_no: r.tsc_no,
+        full_name: r.full_name,
+        role: r.role,
+        subjects: r.subjects || [],
+        phone: r.phone,
+        email: r.email,
+        status: r.status || 'Active',
+        joined: r.joined,
+        department: r.department || 'School Administration'
+      }));
+      
+      return staffList;
+    } catch (err: any) {
+      console.error('Failed to fetch staff from PocketBase:', err);
+      showError('Failed to load staff directory');
+      return [];
+    } finally {
+      setIsLoading(false);
     }
-    return (INITIAL_SEED_DATA.staff as unknown as StaffMember[]) || STAFF;
   }, []);
 
-  // Load pre-registered ledger to unify accounts
+  const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
+
+  // Load pre-registered ledger from localStorage (unchanged)
   const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
-    return saved ? JSON.parse(saved) : (INITIAL_SEED_DATA.staffPrereg as unknown as PreRegisteredStaff[] || INITIAL_PRE_REGISTERED_STAFF);
+    return saved ? JSON.parse(saved) : [];
   }, []);
 
   // Unified Staff Master List (Combines Directory & Pre-Registered)
@@ -78,7 +144,7 @@ const Staff = () => {
           id: p.id,
           id_no: p.nationalId,
           tsc_no: p.tscNumber,
-          name: p.fullName,
+          full_name: p.fullName,
           role: p.systemRole.replace('_', ' ').toUpperCase(),
           subjects: p.assignedSubjects || [p.department || 'General'],
           phone: p.phone,
@@ -97,7 +163,7 @@ const Staff = () => {
   const filteredStaff = useMemo(() => {
     return masterStaffList.filter(s => {
       const matchesSearch = 
-        s.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.id_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -114,25 +180,36 @@ const Staff = () => {
   const activeCount = useMemo(() => masterStaffList.filter(s => s.status === 'Active').length, [masterStaffList]);
   const preRegCount = useMemo(() => masterStaffList.filter(s => s.status === 'Pre-Registered').length, [masterStaffList]);
 
-  // Form state for new/edit staff
-  const [formData, setFormData] = useState({
-    name: '',
-    role: '',
-    phone: '',
-    email: '',
-    tsc_no: ''
-  });
-  const [formError, setFormError] = useState('');
+  // Initial load + listen for changes
+  useEffect(() => {
+    let mounted = true;
+    
+    const load = async () => {
+      const list = await fetchStaffList();
+      if (mounted) setStaffDirectory(list);
+    };
+    
+    load();
+
+    // Listen for staff changes from Add/Edit modal
+    const handleStaffChange = () => load();
+    window.addEventListener('staff-changed', handleStaffChange);
+    
+    return () {
+      mounted = false;
+      window.removeEventListener('staff-changed', handleStaffChange);
+    };
+  }, [fetchStaffList]);
 
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
     setFormData({
-      name: '',
+      full_name: '',
       role: '',
       phone: '',
       email: '',
-      tsc_no: ''
+      tsc_number: ''
     });
     setFormError('');
     setIsModalOpen(true);
@@ -142,72 +219,75 @@ const Staff = () => {
     setModalMode('edit');
     setEditingStaff(staff);
     setFormData({
-      name: staff.name,
+      full_name: staff.full_name,
       role: staff.role,
       phone: staff.phone,
       email: staff.email,
-      tsc_no: staff.tsc_no || ''
+      tsc_number: staff.tsc_no || ''
     });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleSaveStaff = () => {
-    if (!formData.name.trim() || !formData.role.trim()) {
+  const handleSaveStaff = async () => {
+    if (!formData.full_name.trim() || !formData.role.trim()) {
       setFormError('Please fill in all required fields (Full Name, Role / Designation).');
       return;
     }
 
-    if (modalMode === 'add') {
-      // Add new staff to directory
-      const newStaff: StaffMember = {
-        id: `ST-${Date.now()}`,
-        id_no: `ID-${Date.now()}`,
-        tsc_no: formData.tsc_no || undefined,
-        name: formData.name,
-        role: formData.role.toUpperCase(),
-        subjects: [],
-        phone: formData.phone,
-        email: formData.email,
-        status: 'Active',
-        joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-        department: 'School Administration'
-      };
+    setIsSaving(true);
+    setFormError('');
 
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
-      const updatedList = [newStaff, ...staffList];
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
-      
-      showSuccess(`Staff member "${newStaff.name}" added successfully!`);
-    } else if (editingStaff) {
-      // Update existing staff
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      const staffList: StaffMember[] = saved ? JSON.parse(saved) : STAFF;
-      const updatedList = staffList.map(s =>
-        s.id === editingStaff.id ? {
-          ...s,
-          name: formData.name,
+    try {
+      if (modalMode === 'add') {
+        // Add new staff to PocketBase
+        const newStaff = {
+          full_name: formData.full_name,
           role: formData.role.toUpperCase(),
           phone: formData.phone,
           email: formData.email,
-          tsc_no: formData.tsc_no || undefined
-        } : s
-      );
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(updatedList));
-      
-      showSuccess(`Staff member "${formData.name}" updated successfully!`);
-    }
+          tsc_number: formData.tsc_number || undefined,
+          subjects: [],
+          status: 'Active',
+          joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
+          department: 'School Administration',
+          id_no: `ID-${Date.now()}`
+        };
 
-    setIsModalOpen(false);
-    setEditingStaff(null);
-    setFormData({
-      name: '',
-      role: '',
-      phone: '',
-      email: '',
-      tsc_no: ''
-    });
+        await pb.collection('staff').create(newStaff);
+        showSuccess(`Staff member "${formData.full_name}" added successfully!`);
+      } else if (editingStaff) {
+        // Update existing staff in PocketBase
+        const updatedData = {
+          full_name: formData.full_name,
+          role: formData.role.toUpperCase(),
+          phone: formData.phone,
+          email: formData.email,
+          tsc_number: formData.tsc_number || undefined
+        };
+
+        await pb.collection('staff').update(editingStaff.id, updatedData);
+        showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
+      }
+
+      // Trigger refresh across all components
+      window.dispatchEvent(new Event('staff-changed'));
+      
+      setIsModalOpen(false);
+      setEditingStaff(null);
+      setFormData({
+        full_name: '',
+        role: '',
+        phone: '',
+        email: '',
+        tsc_number: ''
+      });
+    } catch (err: any) {
+      console.error('Failed to save staff:', err);
+      setFormError(err.message || 'Failed to save staff member');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCloseModal = () => {
@@ -215,11 +295,11 @@ const Staff = () => {
     setEditingStaff(null);
     setFormError('');
     setFormData({
-      name: '',
+      full_name: '',
       role: '',
       phone: '',
       email: '',
-      tsc_no: ''
+      tsc_number: ''
     });
   };
 
@@ -308,125 +388,147 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Master Staff Data Table */}
-      <div className="table-scroll-viewport">
-        <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-          <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Personnel Directory</CardTitle>
-              <p className="text-sm text-slate-500 font-medium">Full master ledger of internal school staff.</p>
+      {/* Empty State */}
+      {masterStaffList.length === 0 && (
+        <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm p-12 text-center">
+          <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+            <div className="p-4 bg-amber-50 rounded-full">
+              <Users className="w-10 h-10 text-amber-500" />
             </div>
-            <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
-              Showing {filteredStaff.length} Records
-            </Badge>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left min-w-[900px]">
-                <thead className="text-slate-500 bg-slate-50/50 border-b">
-                  <tr>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStaff.map((member) => (
-                    <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
-                      <td className="px-8 py-5 min-w-[200px]">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            {member.name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div className="flex flex-col min-w-0">
-                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.name}</p>
-                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-8 py-5 min-w-[180px]">
-                        <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
-                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
-                      </td>
-
-                      <td className="px-8 py-5 min-w-[220px]">
-                        <div className="space-y-0.5">
-                          <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
-                            <Phone size={13} className="text-slate-400 shrink-0" />
-                            <span className="whitespace-nowrap">{member.phone}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
-                            <Mail size={13} className="text-slate-400 shrink-0" />
-                            <span className="truncate max-w-[180px]">{member.email}</span>
-                          </div>
-                        </div>
-                      </td>
-
-                      <td className="px-8 py-5 text-center min-w-[140px]">
-                        <Badge className={
-                          member.status === 'Active'
-                            ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
-                            : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
-                        }>
-                          {member.status}
-                        </Badge>
-                      </td>
-
-                      <td className="px-8 py-5 text-right min-w-[120px]">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600">
-                              <MoreHorizontal size={18} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[180px] shadow-xl border-slate-100">
-                            <DropdownMenuItem 
-                              onClick={() => navigate(`/staff/${member.id}`)}
-                              className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
-                            >
-                              <Eye size={15} /> View Profile
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuItem 
-                              onClick={() => handleOpenEdit(member)}
-                              className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
-                            >
-                              <Edit size={15} /> Edit Profile
-                            </DropdownMenuItem>
-                            
-                            <DropdownMenuSeparator className="my-1" />
-                            
-                            <DropdownMenuItem 
-                              onClick={() => navigate('/staff/pre-registration')}
-                              className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
-                            >
-                              <Key size={15} /> Manage Access Keys
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {filteredStaff.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="px-8 py-20 text-center">
-                        <div className="flex flex-col items-center gap-3">
-                          <Search size={32} className="text-slate-200" />
-                          <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
-                        </div>
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
+            <h3 className="text-lg font-bold text-slate-900">No staff members registered yet</h3>
+            <p className="text-sm text-slate-500">
+              The staff directory is currently empty. Add your first staff member to get started.
+            </p>
+            <Button 
+              onClick={handleOpenAdd}
+              className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
+            >
+              <UserPlus size={18} /> Add New Staff Member
+            </Button>
+          </div>
         </Card>
-      </div>
+      )}
+
+      {/* Master Staff Data Table */}
+      {masterStaffList.length > 0 && (
+        <div className="table-scroll-viewport">
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Personnel Directory</CardTitle>
+                <p className="text-sm text-slate-500 font-medium">Full master ledger of internal school staff.</p>
+              </div>
+              <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
+                Showing {filteredStaff.length} Records
+              </Badge>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm text-left min-w-[900px]">
+                  <thead className="text-slate-500 bg-slate-50/50 border-b">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredStaff.map((member) => (
+                      <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-8 py-5 min-w-[200px]">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                              {member.full_name.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
+                              <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-8 py-5 min-w-[180px]">
+                          <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
+                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
+                        </td>
+
+                        <td className="px-8 py-5 min-w-[220px]">
+                          <div className="space-y-0.5">
+                            <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
+                              <Phone size={13} className="text-slate-400 shrink-0" />
+                              <span className="whitespace-nowrap">{member.phone}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
+                              <Mail size={13} className="text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[180px]">{member.email}</span>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-8 py-5 text-center min-w-[140px]">
+                          <Badge className={
+                            member.status === 'Active'
+                              ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
+                              : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
+                          }>
+                            {member.status}
+                          </Badge>
+                        </td>
+
+                        <td className="px-8 py-5 text-right min-w-[120px]">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="rounded-xl h-9 w-9 text-slate-400 hover:text-slate-600">
+                                <MoreHorizontal size={18} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[180px] shadow-xl border-slate-100">
+                              <DropdownMenuItem 
+                                onClick={() => navigate(`/staff/${member.id}`)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
+                              >
+                                <Eye size={15} /> View Profile
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuItem 
+                                onClick={() => handleOpenEdit(member)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
+                              >
+                                <Edit size={15} /> Edit Profile
+                              </DropdownMenuItem>
+                              
+                              <DropdownMenuSeparator className="my-1" />
+                              
+                              <DropdownMenuItem 
+                                onClick={() => navigate('/staff/pre-registration')}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
+                              >
+                                <Key size={15} /> Manage Access Keys
+                              </DropdownMenuItem>
+                            </DropdownMenuContent                          </DropdownMenu>
+                        </td>
+                      </tr>
+                    ))}
+
+                    {filteredStaff.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-20 text-center">
+                          <div className="flex flex-col items-center gap-3">
+                            <Search size={32} className="text-slate-200" />
+                            <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Add/Edit Staff Modal */}
       {isModalOpen && (
@@ -452,8 +554,8 @@ const Staff = () => {
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
                 <Input 
-                  value={formData.name} 
-                  onChange={(e) => setFormData({...formData, name: e.target.value})} 
+                  value={formData.full_name} 
+                  onChange={(e) => setFormData({...formData, full_name: e.target.value})} 
                   placeholder="e.g. Jane Mwangi" 
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
                 />
@@ -496,8 +598,8 @@ const Staff = () => {
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
                 <Input
-                  value={formData.tsc_no}
-                  onChange={(e) => setFormData({...formData, tsc_no: e.target.value})}
+                  value={formData.tsc_number}
+                  onChange={(e) => setFormData({...formData, tsc_number: e.target.value})}
                   placeholder="e.g. TSC-482910"
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
@@ -513,8 +615,9 @@ const Staff = () => {
                 <Button 
                   className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
                   onClick={handleSaveStaff}
+                  disabled={isSaving}
                 >
-                  <Save size={16} />
+                  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                   {modalMode === 'add' ? 'Add Staff' : 'Save Changes'}
                 </Button>
               </div>
