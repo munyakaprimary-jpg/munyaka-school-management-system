@@ -49,6 +49,7 @@ import DigitalSkillsAssessment from "./pages/DigitalSkillsAssessment";
 import PracticalCompetencies from "./pages/PracticalCompetencies";
 import ScienceLab from "./pages/ScienceLab";
 import CentralDataService from "./pages/CentralDataService";
+import PaymentManagement from "./pages/PaymentManagement";
 
 const queryClient = new QueryClient();
 
@@ -105,6 +106,7 @@ const App = () => (
                 <Route path="/digital-literacy-videos" element={<ProtectedRoute><Layout><DigitalLiteracyVideos /></Layout></ProtectedRoute>} />
                 <Route path="/ict-lab" element={<ProtectedRoute><Layout><ICTLabManagement /></Layout></ProtectedRoute>} />
                 <Route path="/system-management" element={<ProtectedRoute><Layout><SystemAndAccountManagement /></Layout></ProtectedRoute>} />
+                <Route path="/payment-management" element={<ProtectedRoute><Layout><PaymentManagement /></Layout></ProtectedRoute>} />
                 <Route path="/digital-skills" element={<ProtectedRoute><Layout><DigitalSkillsAssessment /></Layout></ProtectedRoute>} />
                 <Route path="/practical-competencies" element={<ProtectedRoute><Layout><PracticalCompetencies /></Layout></ProtectedRoute>} />
                 <Route path="/science-lab" element={<ProtectedRoute><Layout><ScienceLab /></Layout></ProtectedRoute>} />

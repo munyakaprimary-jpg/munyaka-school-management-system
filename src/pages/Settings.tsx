@@ -64,10 +64,12 @@ const MODULES = [
   { id: 'academic_grading', title: 'Academic & CBC Grading Setup', desc: 'Assessments, Report Cards, Grade Bounds' },
   { id: 'student_records', title: 'Student & Guardian Records', desc: 'Enrollment, Bio Data, Attendance' },
   { id: 'finance_fees', title: 'Fee Management & Finance', desc: 'Billing, Invoices, Payment Collections' },
+  { id: 'payment_subscriptions', title: 'Payment & Subscriptions', desc: 'Software Payments, Subscriptions, Financial Gateway' },
   { id: 'staff_mgmt', title: 'Staff Management & Geofence', desc: 'Staff Profiles, Compound GPS Tracking' }
 ];
 
 const ROLES = [
+  { id: 'owner', label: 'Super Admin / Owner' },
   { id: 'super_admin', label: 'System Administrator' },
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
@@ -77,10 +79,10 @@ const ROLES = [
 ];
 
 const DEFAULT_AUDIT_LOGS = [
-  { timestamp: "2026-03-31 09:14:02", admin: "System Admin", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
-  { timestamp: "2026-03-30 16:45:11", admin: "System Admin", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-31 09:14:02", admin: "School Owner", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-30 16:45:11", admin: "School Owner", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
   { timestamp: "2026-03-28 11:20:30", admin: "Head Teacher", action: "Grade Bounds Modified (Grade 4)", ip: "192.168.1.108 (Safari/Mac)" },
-  { timestamp: "2026-03-25 08:30:15", admin: "System Admin", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
+  { timestamp: "2026-03-25 08:30:15", admin: "School Owner", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
 ];
 
 const getPasswordStrength = (pass: string) => {
@@ -146,7 +148,7 @@ const Settings = () => {
     ]
   });
 
-  const [expandedRole, setExpandedRole] = useState<string | null>('super_admin');
+  const [expandedRole, setExpandedRole] = useState<string | null>('owner');
   const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => {
     const initialState: Record<string, PermissionState> = {};
     ROLES.forEach(role => {
@@ -154,11 +156,20 @@ const Settings = () => {
       MODULES.forEach(mod => {
         initialState[role.id][mod.id] = {
           read: true,
-          create: role.id === 'super_admin' || role.id === 'head_teacher',
-          edit: role.id === 'super_admin' || role.id === 'head_teacher',
-          delete: role.id === 'super_admin'
+          create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+          edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+          delete: role.id === 'owner' || role.id === 'super_admin'
         };
       });
+    });
+    // Owner has exclusive payment_subscriptions access; super_admin and others do not
+    if (initialState['owner']) {
+      initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
+    }
+    ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
+      if (initialState[roleId]) {
+        initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
+      }
     });
     return initialState;
   });

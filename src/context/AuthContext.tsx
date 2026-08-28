@@ -5,7 +5,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
 
-export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -44,11 +44,11 @@ const DEFAULT_ADMIN = {
   password: 'munyaka5239',
   user: {
     id: 'admin-001',
-    name: 'System Admin',
+    name: 'School Owner',
     email: 'munyakaprimary@gmail.com',
     phone: '+254 700 000 000',
-    role: 'super_admin' as UserRole,
-    avatar: 'AD'
+    role: 'owner' as UserRole,
+    avatar: 'OW'
   }
 };
 
@@ -56,6 +56,10 @@ const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
+    case 'owner':
+      return 'owner';
+    case 'super_admin':
+      return 'super_admin';
     case 'head_teacher':
       return 'head_teacher';
     case 'bursar':
@@ -79,7 +83,7 @@ const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
-  // Ensure default admin with updated credentials is generated & active
+  // Ensure default super admin with updated credentials is generated & active
   const adminEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
   users[adminEmailKey] = {
     ...DEFAULT_ADMIN.user,
@@ -205,7 +209,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     users[normalizedEmail] = newUser;
     localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
     
-    showSuccess(`Teacher ${userData.fullName} registered successfully!`);
+    showSuccess(`Staff ${userData.fullName} registered successfully!`);
     return true;
   };
 

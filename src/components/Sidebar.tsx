@@ -46,7 +46,8 @@ import {
   Target,
   Database,
   FlaskConical,
-  Fingerprint
+  Fingerprint,
+  CreditCard
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -120,7 +121,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['super_admin'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'] },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
