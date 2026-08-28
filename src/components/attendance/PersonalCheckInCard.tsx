@@ -18,7 +18,7 @@ import {
   ShieldOff
 } from "lucide-react";
 import { useGeolocation } from "@/hooks/useGeolocation";
-import { isWithinGeofence, getGeofenceConfig } from "@/lib/geofence";
+import { isWithinGeofence, getGeofenceConfig, calculateDistance } from "@/lib/geofence";
 import { format } from "date-fns";
 
 interface PersonalCheckInCardProps {
@@ -165,6 +165,12 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
     if (accuracy <= 75) return "Good signal";
     return "Approximate signal";
   })();
+
+  // Calculate live distance from user to school
+  const liveDistance = useMemo(() => {
+    if (!location) return null;
+    return calculateDistance(location.lat, location.lng, schoolLat, schoolLng);
+  }, [location, schoolLat, schoolLng]);
 
   return (
     <div className="space-y-6">
@@ -575,7 +581,7 @@ export const PersonalCheckInCard: React.FC<PersonalCheckInCardProps> = ({
                   </div>
                   <div className="flex items-center gap-6">
                     <div>
-                      <p className="text-[10px] font-black uppercase text-slate-400">Morning Arrival</p>
+                      <p className="text-[10px] font-black uppercase text-slate-400">Morning ArrArrival</p>
                       <p className="text-sm font-black text-emerald-600">{rec.morning?.time || '—'}</p>
                     </div>
                     <div>

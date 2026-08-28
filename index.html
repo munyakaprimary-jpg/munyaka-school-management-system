@@ -11,12 +11,31 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Munyaka School Portal</title>
     <link rel="manifest" href="/manifest.json">
+    <!-- Google Maps JavaScript API - Key loaded from VITE_GOOGLE_MAPS_API_KEY env variable -->
+    <script 
+      id="google-maps-api"
+      src="" 
+      async 
+      defer
+    ></script>
   </head>
 
   <body className="overflow-x-hidden antialiased select-none touch-manipulation">
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
+      // Load Google Maps API with key from environment
+      (function() {
+        const apiKey = import.meta.env?.VITE_GOOGLE_MAPS_API_KEY || '';
+        const script = document.getElementById('google-maps-api');
+        if (script && apiKey) {
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,geometry&v=weekly`;
+        } else if (script) {
+          // Fallback without API key (limited functionality)
+          script.src = 'https://maps.googleapis.com/maps/api/js?libraries=places,geometry&v=weekly';
+        }
+      })();
+      
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').then(registration => {

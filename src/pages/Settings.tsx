@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -43,19 +43,19 @@ import {
   EyeOff,
   RefreshCw,
   Unlock,
-  ShieldAlert
+  ShieldAlert,
+  Crosshair
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
-import { getGeofenceConfig, setGeofenceConfig, GeofenceConfig } from '@/lib/geofence';
+import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { loadGoogleMapsScript, useGoogleMapsReady } from '@/hooks/useGoogleMaps';
 
-// Persistent Storage Keys
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
 
-// Permission Types
 type Action = 'read' | 'create' | 'edit' | 'delete';
 type PermissionState = Record<string, Record<Action, boolean>>;
 
@@ -104,7 +104,8 @@ const Settings = () => {
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showAuthPass, setShowAuthPass] = useState(false);
 
-  const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
+  const { location: currentGeoLoc, isLoading: isLocating, error: geoError, refresh: refreshGeo } = useGeolocation();
+  const googleMapsReady = useGoogleMapsReady();
 
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -161,9 +162,10 @@ const Settings = () => {
   const [showNewPin, setShowNewPin] = useState(false);
   const [showConfirmPin, setShowConfirmPin] = useState(false);
 
+  // Geofence state — defaults to the new Munyaka School coordinates
   const [geofenceConfig, setGeofenceState] = useState<GeofenceConfig>({
     lat: 0.5304,
-    lng: 35.3077,
+    lng: 35.3078,
     radius: 150
   });
   const [geofenceEnabled, setGeofenceEnabled] = useState(true);
@@ -175,6 +177,20 @@ const Settings = () => {
   });
 
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
+
+  // Admin Location Picker state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [showSearchResults, setShowSearchResults] = useState(false);
+
+  // Refs to the underlying Google Maps objects so we can re-style them
+  // whenever the geofence config changes without rebuilding the map.
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+  const circleRef = useRef<any>(null);
+  const autocompleteRef = useRef<any>(null);
+  const searchInputRef = useRef<HTMLInputElement | null>(null);
 
   const handleAuthorizeSettings = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -280,6 +296,151 @@ const Settings = () => {
     fetchSettingsFromDatabase();
   }, [fetchSettingsFromDatabase]);
 
+  /**
+   * ============================================
+   * Admin Location Picker: Google Maps bootstrap
+   * ============================================
+   * When the Google Maps API is ready AND the user has the Security
+   * tab active, build an interactive map inside the
+   * #admin-location-map container. The map lets the admin:
+   *   1. Click anywhere to drop the school pin
+   *   2. Search for a place via the autocomplete
+   *   3. Use their current GPS as the school location
+   *
+   * All three actions update `geofenceConfig` and mark the form
+   * as having unsaved changes. A blue circle overlay renders the
+   * active geofence radius so the admin can visually validate the
+   * distance threshold they choose.
+   */
+  useEffect(() => {
+    if (!googleMapsReady || activeTab !== 'security') return;
+    if (typeof window === 'undefined' || !window.google?.maps) return;
+
+    const container = document.getElementById('admin-location-map');
+    if (!container) return;
+    if (mapRef.current) return; // Already initialised
+
+    // Clear any previous map contents (e.g. on re-render)
+    container.innerHTML = '';
+
+    const center = { lat: geofenceConfig.lat, lng: geofenceConfig.lng };
+
+    const map = new window.google.maps.Map(container, {
+      center,
+      zoom: 17,
+      mapTypeId: 'roadmap',
+      mapTypeControl: true,
+      streetViewControl: false,
+      fullscreenControl: true,
+      zoomControl: true,
+    });
+    mapRef.current = map;
+
+    // School pin (draggable so the admin can fine-tune)
+    const marker = new window.google.maps.Marker({
+      position: center,
+      map,
+      draggable: true,
+      title: 'School Location',
+      icon: {
+        path: window.google.maps.SymbolPath.CIRCLE,
+        scale: 10,
+        fillColor: '#4f46e5',
+        fillOpacity: 1,
+        strokeColor: '#ffffff',
+        strokeWeight: 2,
+      },
+    });
+    markerRef.current = marker;
+
+    // Geofence circle overlay
+    const circle = new window.google.maps.Circle({
+      strokeColor: '#4f46e5',
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: '#4f46e5',
+      fillOpacity: 0.15,
+      map,
+      center,
+      radius: geofenceConfig.radius,
+    });
+    circleRef.current = circle;
+
+    // Click anywhere on the map to move the school pin
+    map.addListener('click', (e: any) => {
+      if (!e.latLng) return;
+      const lat = e.latLng.lat();
+      const lng = e.latLng.lng();
+      marker.setPosition({ lat, lng });
+      circle.setCenter({ lat, lng });
+      setGeofenceState(prev => ({ ...prev, lat, lng }));
+      setHasUnsavedChanges(true);
+    });
+
+    // Drag the pin to fine-tune
+    marker.addListener('dragend', () => {
+      const pos = marker.getPosition();
+      if (!pos) return;
+      const lat = pos.lat();
+      const lng = pos.lng();
+      circle.setCenter({ lat, lng });
+      setGeofenceState(prev => ({ ...prev, lat, lng }));
+      setHasUnsavedChanges(true);
+    });
+
+    // Attach autocomplete to the search input
+    if (searchInputRef.current && window.google.maps.places) {
+      const autocomplete = new window.google.maps.places.Autocomplete(searchInputRef.current, {
+        types: ['school', 'establishment', 'geocode'],
+        fields: ['place_id', 'name', 'geometry', 'formatted_address'],
+      });
+      autocompleteRef.current = autocomplete;
+      autocomplete.addListener('place_changed', () => {
+        const place = autocomplete.getPlace();
+        if (place?.geometry?.location) {
+          const lat = place.geometry.location.lat();
+          const lng = place.geometry.location.lng();
+          marker.setPosition({ lat, lng });
+          circle.setCenter({ lat, lng });
+          map.setCenter({ lat, lng });
+          map.setZoom(17);
+          setGeofenceState(prev => ({ ...prev, lat, lng }));
+          setSearchQuery(place.name || '');
+          setShowSearchResults(false);
+          setHasUnsavedChanges(true);
+          showSuccess(`School location set to: ${place.name}`);
+        }
+      });
+    }
+
+    return () => {
+      // Cleanup on unmount or when deps change
+      if (markerRef.current) markerRef.current.setMap(null);
+      if (circleRef.current) circleRef.current.setMap(null);
+      if (autocompleteRef.current && window.google?.maps?.event) {
+        window.google.maps.event.clearInstanceListeners(autocompleteRef.current);
+      }
+      mapRef.current = null;
+      markerRef.current = null;
+      circleRef.current = null;
+      autocompleteRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [googleMapsReady, activeTab]);
+
+  /**
+   * Whenever the geofence radius or coordinates change in state,
+   * reflect those changes on the existing map objects so the
+   * admin sees the new circle and pin in real time.
+   */
+  useEffect(() => {
+    if (mapRef.current && markerRef.current && circleRef.current && window.google?.maps) {
+      markerRef.current.setPosition({ lat: geofenceConfig.lat, lng: geofenceConfig.lng });
+      circleRef.current.setCenter({ lat: geofenceConfig.lat, lng: geofenceConfig.lng });
+      circleRef.current.setRadius(geofenceConfig.radius);
+    }
+  }, [geofenceConfig.lat, geofenceConfig.lng, geofenceConfig.radius]);
+
   const handleSaveAllSettings = async () => {
     setIsSaving(true);
 
@@ -328,7 +489,10 @@ const Settings = () => {
         auditLogs
       };
       localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
-      setGeofenceConfig(geofenceConfig);
+      // Mirror the change into the canonical geofence key so that
+      // isWithinGeofence() / getGeofenceConfig() everywhere else in
+      // the app picks it up immediately.
+      persistGeofenceConfig(geofenceConfig);
 
       setHasUnsavedChanges(false);
       showSuccess("System settings saved successfully!");
@@ -346,13 +510,34 @@ const Settings = () => {
 
   const handleUseCurrentLocation = () => {
     if (currentGeoLoc) {
-      setGeofenceState(prev => ({
-        ...prev,
-        lat: parseFloat(currentGeoLoc.lat.toFixed(6)),
-        lng: parseFloat(currentGeoLoc.lng.toFixed(6))
-      }));
+      const newLat = parseFloat(currentGeoLoc.lat.toFixed(6));
+      const newLng = parseFloat(currentGeoLoc.lng.toFixed(6));
+      setGeofenceState(prev => ({ ...prev, lat: newLat, lng: newLng }));
       setHasUnsavedChanges(true);
-      showSuccess(`Auto-filled coordinates: ${currentGeoLoc.lat.toFixed(4)}, ${currentGeoLoc.lng.toFixed(4)}`);
+      // Also push the change to the map immediately if it is loaded
+      if (markerRef.current && circleRef.current && mapRef.current && window.google?.maps) {
+        markerRef.current.setPosition({ lat: newLat, lng: newLng });
+        circleRef.current.setCenter({ lat: newLat, lng: newLng });
+        mapRef.current.setCenter({ lat: newLat, lng: newLng });
+      }
+      showSuccess(`Auto-filled coordinates: ${newLat.toFixed(4)}, ${newLng.toFixed(4)}`);
+    } else if (geoError) {
+      showError(`Geolocation Error: ${geoError}`);
+    } else {
+      showError("Acquiring GPS signal. Please allow location permissions in your browser.");
+    }
+  };
+
+  /**
+   * Centre the map on the user's current GPS location. The pin stays
+   * where it is — only the viewport moves — so the admin can
+   * preview how their target school location looks relative to
+   * where they currently are.
+   */
+  const handleCenterOnMe = () => {
+    if (currentGeoLoc && mapRef.current && window.google?.maps) {
+      mapRef.current.setCenter({ lat: currentGeoLoc.lat, lng: currentGeoLoc.lng });
+      mapRef.current.setZoom(17);
     } else if (geoError) {
       showError(`Geolocation Error: ${geoError}`);
     } else {
@@ -425,6 +610,22 @@ const Settings = () => {
 
   const strength = useMemo(() => getPasswordStrength(pinForm.newPin), [pinForm.newPin]);
   const isPinMatching = pinForm.confirmPin.length > 0 && pinForm.newPin === pinForm.confirmPin;
+
+  /**
+   * Live distance from the admin's current GPS to the school's
+   * configured target. Used in the "Live Distance Check" panel
+   * so the admin can immediately see whether the radius they
+   * choose will catch their physical location on school grounds.
+   */
+  const liveDistanceMeters = useMemo(() => {
+    if (!currentGeoLoc) return null;
+    return calculateDistance(
+      currentGeoLoc.lat,
+      currentGeoLoc.lng,
+      geofenceConfig.lat,
+      geofenceConfig.lng
+    );
+  }, [currentGeoLoc, geofenceConfig.lat, geofenceConfig.lng]);
 
   if (!isAuthorized) {
     return (
@@ -923,48 +1124,171 @@ const Settings = () => {
             </CardHeader>
 
             <CardContent className="px-0 pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Target School Latitude</Label>
-                  <Input 
-                    type="number"
-                    step="0.000001"
-                    value={geofenceConfig.lat}
-                    onChange={e => {
-                      setGeofenceState({...geofenceConfig, lat: parseFloat(e.target.value) || 0});
-                      setHasUnsavedChanges(true);
-                    }}
-                    placeholder="e.g. 0.5304"
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  />
+              {/* Admin Location Picker - Interactive Google Map */}
+              <div className="space-y-6">
+                <div className="flex items-center justify-between flex-wrap gap-3">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-900">Admin Location Picker</h3>
+                    <p className="text-sm text-slate-500">Search for the school, click the map to drop a pin, or use your current GPS location. The blue circle shows the active geofence radius.</p>
+                  </div>
+                  <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-700 font-bold px-3 py-1">
+                    <MapPin size={12} className="mr-1 inline" /> Interactive Map
+                  </Badge>
                 </div>
 
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Target School Longitude</Label>
+                {/* Place Search / Autocomplete */}
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
                   <Input 
-                    type="number"
-                    step="0.000001"
-                    value={geofenceConfig.lng}
-                    onChange={e => {
-                      setGeofenceState({...geofenceConfig, lng: parseFloat(e.target.value) || 0});
-                      setHasUnsavedChanges(true);
-                    }}
-                    placeholder="e.g. 35.3077"
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    ref={searchInputRef}
+                    placeholder="Search for school, address, or landmark..." 
+                    className="pl-11 h-12 rounded-2xl border border-slate-200 bg-white font-medium focus:ring-2 ring-indigo-100"
+                    value={searchQuery}
+                    onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(false); }}
                   />
+                  {googleMapsReady ? (
+                    <Badge className="absolute right-3 top-1/2 -translate-y-1/2 bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-[10px] px-2 py-0.5 pointer-events-none">
+                      ✓ Live search
+                    </Badge>
+                  ) : (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-indigo-600" size={18} />
+                  )}
                 </div>
 
-                <div className="space-y-2 flex flex-col justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleUseCurrentLocation}
-                    disabled={isLocating}
-                    className="h-12 rounded-xl border-indigo-200 bg-indigo-50/50 text-indigo-700 font-bold hover:bg-indigo-100 gap-2"
-                  >
-                    {isLocating ? <Loader2 className="animate-spin" size={16} /> : <Navigation size={16} />}
-                    Use My Current Location
-                  </Button>
+                {/* Live Map */}
+                <div className="relative w-full overflow-hidden rounded-2xl border-2 border-slate-200 shadow-lg">
+                  {googleMapsReady ? (
+                    <div 
+                      id="admin-location-map" 
+                      className="w-full" 
+                      style={{ height: '500px', minHeight: '400px' }}
+                      data-testid="admin-location-map"
+                      aria-label="Interactive map for setting school geofence location"
+                    />
+                  ) : (
+                    <div className="w-full h-[500px] bg-slate-50 flex flex-col items-center justify-center text-slate-400 gap-3">
+                      <Loader2 className="animate-spin" size={32} />
+                      <p className="text-sm font-bold">Loading Google Maps…</p>
+                      <p className="text-xs">First-time load may take a few seconds.</p>
+                    </div>
+                  )}
+
+                  {/* Floating "Centre on Me" button */}
+                  {googleMapsReady && (
+                    <Button
+                      onClick={handleCenterOnMe}
+                      disabled={!currentGeoLoc}
+                      size="icon"
+                      className="absolute top-4 right-4 z-10 rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 disabled:opacity-50 border border-slate-200"
+                      title="Centre map on my current location"
+                    >
+                      <Crosshair size={20} />
+                    </Button>
+                  )}
+                </div>
+
+                {/* Coordinate + Radius Inputs */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Latitude</Label>
+                    <Input 
+                      type="number"
+                      step="0.000001"
+                      value={geofenceConfig.lat}
+                      onChange={e => {
+                        const lat = parseFloat(e.target.value) || 0;
+                        setGeofenceState({...geofenceConfig, lat});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="e.g. 0.5304"
+                      className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Longitude</Label>
+                    <Input 
+                      type="number"
+                      step="0.000001"
+                      value={geofenceConfig.lng}
+                      onChange={e => {
+                        const lng = parseFloat(e.target.value) || 0;
+                        setGeofenceState({...geofenceConfig, lng});
+                        setHasUnsavedChanges(true);
+                      }}
+                      placeholder="e.g. 35.3078"
+                      className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Geofence Radius (meters)</Label>
+                    <div className="flex items-center gap-2">
+                      <Input 
+                        type="number"
+                        min="50"
+                        max="1000"
+                        value={geofenceConfig.radius}
+                        onChange={e => {
+                          const radius = parseInt(e.target.value) || 50;
+                          setGeofenceState({...geofenceConfig, radius});
+                          setHasUnsavedChanges(true);
+                        }}
+                        className="w-24 h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
+                      />
+                      <span className="text-xs font-bold text-slate-500">Meters</span>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 flex flex-col justify-end">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={handleUseCurrentLocation}
+                      disabled={isLocating}
+                      className="h-12 rounded-xl border-indigo-200 bg-indigo-50/50 text-indigo-700 font-bold hover:bg-indigo-100 gap-2"
+                    >
+                      {isLocating ? <Loader2 className="animate-spin" size={16} /> : <Navigation size={16} />}
+                      Use My Current Location
+                    </Button>
+                  </div>
+                </div>
+
+                {/* Live Distance Verification Panel */}
+                <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-2xl flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <AlertTriangle className="text-amber-600 shrink-0" size={20} />
+                    <div>
+                      <p className="font-bold text-slate-900 text-sm">Live Distance Verification</p>
+                      <p className="text-xs text-amber-800">Distance from your current GPS to the configured school target</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    {currentGeoLoc && liveDistanceMeters !== null ? (
+                      <>
+                        <div className="text-right">
+                          <p className="text-2xl font-black text-slate-900">
+                            {Math.round(liveDistanceMeters)} m
+                          </p>
+                          <p className="text-[10px] font-bold text-slate-500 uppercase">from school</p>
+                        </div>
+                        <Badge className={cn("rounded-full font-bold px-3 py-1", 
+                          liveDistanceMeters <= geofenceConfig.radius 
+                            ? "bg-emerald-50 text-emerald-700" 
+                            : "bg-rose-50 text-rose-700"
+                        )}>
+                          {liveDistanceMeters <= geofenceConfig.radius 
+                            ? <><CheckCircle2 size={12} className="mr-1 inline" /> Inside {geofenceConfig.radius}m</>
+                            : <><AlertCircle size={12} className="mr-1 inline" /> Outside {geofenceConfig.radius}m</>
+                          }
+                        </Badge>
+                      </>
+                    ) : (
+                      <div className="text-slate-500 text-sm">
+                        <p>Enable location access to see live distance</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -979,7 +1303,8 @@ const Settings = () => {
                       type="number"
                       value={geofenceConfig.radius}
                       onChange={e => {
-                        setGeofenceState({...geofenceConfig, radius: parseInt(e.target.value) || 50});
+                        const radius = parseInt(e.target.value) || 50;
+                        setGeofenceState({...geofenceConfig, radius});
                         setHasUnsavedChanges(true);
                       }}
                       className="w-24 h-10 rounded-xl bg-slate-50 font-black text-center"
@@ -995,7 +1320,8 @@ const Settings = () => {
                   step="25"
                   value={geofenceConfig.radius}
                   onChange={e => {
-                    setGeofenceState({...geofenceConfig, radius: parseInt(e.target.value)});
+                    const radius = parseInt(e.target.value);
+                    setGeofenceState({...geofenceConfig, radius});
                     setHasUnsavedChanges(true);
                   }}
                   className="w-full accent-indigo-600 cursor-pointer"
