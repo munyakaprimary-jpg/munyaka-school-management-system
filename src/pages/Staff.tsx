@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BackButton from '@/components/ui/BackButton';
 import { 
   UserPlus, 
@@ -18,7 +19,6 @@ import {
   Eye, 
   Edit, 
   Key, 
-  ShieldCheck, 
   UserCheck, 
   Clock, 
   Plus,
@@ -26,7 +26,8 @@ import {
   Save,
   AlertCircle,
   Loader2,
-  Users
+  Users,
+  Trash2
 } from 'lucide-react';
 import { 
   DropdownMenu, 
@@ -46,13 +47,13 @@ const Staff = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   
-  // Edit Modal State
+  // Add/Edit Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffRecord | null>(null);
-  const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
+  const [modalMode, setModalMode] = useState<'add' | 'edit'>('add');
 
   // Form state for new/edit staff
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<CreateStaffData>({
     full_name: '',
     role: '',
     phone: '',
@@ -60,11 +61,16 @@ const Staff = () => {
     tsc_number: '',
     national_id: '',
     department: 'School Administration',
-    status: 'Active' as 'Active' | 'Inactive' | 'Pre-Registered'
+    status: 'Active'
   });
   const [formError, setFormError] = useState('');
 
-  // Fetch staff from database
+  /**
+   * Fetch all staff records from the data store and update the
+   * component state. This is the single source of truth for refresh
+   * operations and is called on mount, after a save, and on
+   * subscription events.
+   */
   const fetchStaff = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -79,23 +85,19 @@ const Staff = () => {
     }
   }, []);
 
-  // Initial load and subscribe to real-time changes
+  // Initial load + real-time subscription to staff data changes
   useEffect(() => {
     fetchStaff();
-    
-    // Subscribe to real-time changes
-    const unsubscribe = staffService.subscribeToChanges((record) => {
-      setStaffList(prev => {
-        const exists = prev.find(s => s.id === record.id);
-        if (exists) {
-          return prev.map(s => s.id === record.id ? record : s);
-        }
-        return [record, ...prev];
-      });
+
+    // Subscribe to any data changes (same-tab or cross-tab) so the
+    // table re-fetches automatically when other parts of the app add,
+    // edit, or delete staff records.
+    const subscription = staffService.subscribeToChanges((records) => {
+      setStaffList(records);
     });
 
     return () => {
-      if (unsubscribe) unsubscribe();
+      subscription.unsubscribe();
     };
   }, [fetchStaff]);
 
@@ -107,7 +109,8 @@ const Staff = () => {
         s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.national_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.role.toLowerCase().includes(searchTerm.toLowerCase());
+        s.role.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        s.department?.toLowerCase().includes(searchTerm.toLowerCase());
 
       const matchesStatus = 
         statusFilter === 'All' || 
@@ -121,6 +124,10 @@ const Staff = () => {
   const inactiveCount = React.useMemo(() => staffList.filter(s => s.status === 'Inactive').length, [staffList]);
   const preRegCount = React.useMemo(() => staffList.filter(s => s.status === 'Pre-Registered').length, [staffList]);
 
+  /**
+   * Open the modal in "add" mode. Resets the form to its empty state
+   * and clears any previous error message.
+   */
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
@@ -138,6 +145,10 @@ const Staff = () => {
     setIsModalOpen(true);
   };
 
+  /**
+   * Open the modal in "edit" mode and pre-fill the form with the
+   * selected staff record's current values.
+   */
   const handleOpenEdit = (staff: StaffRecord) => {
     setModalMode('edit');
     setEditingStaff(staff);
@@ -155,6 +166,12 @@ const Staff = () => {
     setIsModalOpen(true);
   };
 
+  /**
+   * Validate and submit the form. Creates a new staff record when in
+   * "add" mode or updates an existing one in "edit" mode. On success
+   * the modal is closed and the table is re-fetched so the new/updated
+   * record appears immediately.
+   */
   const handleSaveStaff = async () => {
     if (!formData.full_name.trim() || !formData.role.trim()) {
       setFormError('Please fill in all required fields (Full Name, Role / Designation).');
@@ -172,34 +189,25 @@ const Staff = () => {
     try {
       if (modalMode === 'add') {
         const createData: CreateStaffData = {
-          full_name: formData.full_name.trim(),
-          role: formData.role.trim(),
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          tsc_number: formData.tsc_number?.trim() || undefined,
-          national_id: formData.national_id?.trim() || undefined,
-          department: formData.department?.trim() || 'School Administration',
+          full_name: formData.full_name,
+          role: formData.role,
+          phone: formData.phone,
+          email: formData.email,
+          tsc_number: formData.tsc_number || undefined,
+          national_id: formData.national_id || undefined,
+          department: formData.department || 'School Administration',
           status: formData.status
         };
         
-        await staffService.createStaff(createData);
-        showSuccess(`Staff member "${formData.full_name}" added successfully!`);
+        const newStaff = await staffService.createStaff(createData);
+        showSuccess(`Staff member "${newStaff.full_name}" added successfully!`);
       } else if (editingStaff) {
-        const updateData: Partial<CreateStaffData> = {
-          full_name: formData.full_name.trim(),
-          role: formData.role.trim(),
-          phone: formData.phone.trim(),
-          email: formData.email.trim(),
-          tsc_number: formData.tsc_number?.trim() || undefined,
-          national_id: formData.national_id?.trim() || undefined,
-          department: formData.department?.trim() || 'School Administration',
-          status: formData.status
-        };
-        
-        await staffService.updateStaff(editingStaff.id, updateData);
+        await staffService.updateStaff(editingStaff.id, formData);
         showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
       }
 
+      // Close the modal and refresh the list so the user sees the
+      // new or updated record in the table immediately.
       setIsModalOpen(false);
       setEditingStaff(null);
       setFormData({
@@ -212,6 +220,7 @@ const Staff = () => {
         department: 'School Administration',
         status: 'Active'
       });
+      await fetchStaff();
     } catch (error: any) {
       console.error('Error saving staff:', error);
       setFormError(error.message || 'Failed to save staff member. Please try again.');
@@ -220,6 +229,10 @@ const Staff = () => {
     }
   };
 
+  /**
+   * Close the modal and clear all form state. The error message is
+   * also reset so a stale message doesn't linger between opens.
+   */
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setEditingStaff(null);
@@ -236,6 +249,10 @@ const Staff = () => {
     });
   };
 
+  /**
+   * Delete a staff record after a confirm() prompt. Calls the data
+   * service to remove the record and then refreshes the table.
+   */
   const handleDeleteStaff = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete "${name}"? This action cannot be undone.`)) {
       return;
@@ -244,6 +261,7 @@ const Staff = () => {
     try {
       await staffService.deleteStaff(id);
       showSuccess(`Staff member "${name}" deleted successfully!`);
+      await fetchStaff();
     } catch (error) {
       console.error('Error deleting staff:', error);
       showError('Failed to delete staff member');
@@ -298,7 +316,7 @@ const Staff = () => {
 
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
           <div className="p-3.5 bg-rose-50 text-rose-600 rounded-2xl">
-            <UserX size={22} />
+            <Clock size={22} />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Inactive</p>
@@ -308,7 +326,7 @@ const Staff = () => {
 
         <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
           <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl">
-            <Clock size={22} />
+            <Key size={22} />
           </div>
           <div>
             <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered</p>
@@ -347,7 +365,7 @@ const Staff = () => {
         </div>
       </div>
 
-      {/* Staff Data Table or Empty State */}
+      {/* Staff Data Table / Empty State / Loading Skeleton */}
       {isLoading ? (
         <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
           <CardContent className="p-0">
@@ -396,7 +414,7 @@ const Staff = () => {
           </CardContent>
         </Card>
       ) : filteredStaff.length === 0 ? (
-        /* Empty State */
+        /* Empty State - No staff registered */
         <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-16 text-center">
           <div className="flex flex-col items-center gap-6">
             <div className="w-24 h-24 bg-slate-100 rounded-3xl flex items-center justify-center">
@@ -405,7 +423,9 @@ const Staff = () => {
             <div>
               <h3 className="text-xl font-bold text-slate-900 mb-2">No staff members registered yet</h3>
               <p className="text-slate-500 mb-6 max-w-sm mx-auto">
-                The staff directory is currently empty. Add your first staff member to get started.
+                {searchTerm || statusFilter !== 'All' 
+                  ? 'No staff match the current search or filter criteria. Try adjusting your filters.'
+                  : 'The staff directory is currently empty. Add your first staff member to get started.'}
               </p>
               <Button 
                 className="rounded-2xl gap-2 h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
@@ -446,25 +466,31 @@ const Staff = () => {
                       <td className="px-8 py-5 min-w-[200px]">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                            {member.full_name.split(' ').map(n => n[0]).join('')}
+                            {member.full_name.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase()}
                           </div>
                           <div className="flex flex-col min-w-0">
-                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
-                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.national_id || 'N/A'}</p>
+                            <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap truncate">
+                              {member.full_name}
+                            </p>
+                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap truncate">
+                              {member.national_id ? `ID: ${member.national_id}` : 'No National ID'}
+                            </p>
                           </div>
                         </div>
                       </td>
 
                       <td className="px-8 py-5 min-w-[180px]">
                         <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
-                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department || 'School Administration'}</p>
+                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">
+                          {member.department || 'School Administration'}
+                        </p>
                       </td>
 
                       <td className="px-8 py-5 min-w-[220px]">
                         <div className="space-y-0.5">
                           <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
                             <Phone size={13} className="text-slate-400 shrink-0" />
-                            <span className="whitespace-nowrap">{member.phone}</span>
+                            <span className="truncate max-w-[180px]">{member.phone}</span>
                           </div>
                           <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
                             <Mail size={13} className="text-slate-400 shrink-0" />
@@ -538,13 +564,14 @@ const Staff = () => {
               <button 
                 onClick={handleCloseModal}
                 className="p-1 text-slate-400 hover:text-slate-600"
+                aria-label="Close modal"
               >
                 <X size={20} />
               </button>
             </div>
             <div className="p-6 space-y-4">
               {formError && (
-                <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold">
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold">
                   <AlertCircle size={14} /> {formError}
                 </div>
               )}
@@ -558,7 +585,6 @@ const Staff = () => {
                   required
                 />
               </div>
-              {/* Role / Designation stays as a full-width input at the top */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
                 <Input
@@ -570,7 +596,6 @@ const Staff = () => {
                 />
               </div>
 
-              {/* Phone and Email should sit side-by-side in a 2-column grid directly below Role/Designation */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone *</Label>
@@ -595,7 +620,6 @@ const Staff = () => {
                 </div>
               </div>
 
-              {/* TSC Number (Optional) should be placed full-width right below the Phone/Email row */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
                 <Input
@@ -606,7 +630,6 @@ const Staff = () => {
                 />
               </div>
 
-              {/* National ID (Optional) */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">National ID (Optional)</Label>
                 <Input
@@ -617,7 +640,6 @@ const Staff = () => {
                 />
               </div>
 
-              {/* Department */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Department</Label>
                 <Input
@@ -628,7 +650,6 @@ const Staff = () => {
                 />
               </div>
 
-              {/* Status */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label>
                 <Select value={formData.status} onValueChange={(val: 'Active' | 'Inactive' | 'Pre-Registered') => setFormData({...formData, status: val})}>
