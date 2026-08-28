@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
+import { useInactivityTimeout } from "@/hooks/useInactivityTimeout";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
@@ -53,6 +54,11 @@ import PaymentManagement from "./pages/PaymentManagement";
 
 const queryClient = new QueryClient();
 
+const AppContent = () => {
+  useInactivityTimeout();
+  return null;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <AuthProvider>
@@ -62,6 +68,7 @@ const App = () => (
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <AppContent />
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
