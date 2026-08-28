@@ -28,6 +28,18 @@ export interface FileDownloadResult {
   nativeUri?: string;
 }
 
+// ============================================
+// STANDARDIZED MUNYAKA INSTITUTIONAL HEADERS
+// (Mirrors the constants in src/utils/downloadHelper.ts so
+// every code path — wrapper or direct use of useFileDownload —
+// emits the same institutional block.)
+// ============================================
+export const MUNYAKA_HEADERS = {
+  schoolLine1: "MUNYAKA PRIMARY AND JUNIOR",
+  schoolLine2: "P.O. BOX 5239, ELDORET",
+  schoolLine3: "MOTTO: Knowledge Is Power",
+} as const;
+
 /**
  * Determines a friendly human-readable label for the file type to use in toast messages.
  */
@@ -48,6 +60,45 @@ function getFileTypeLabel(fileType?: FileType, mimeType?: string): string {
     if (mimeType.startsWith('text/')) return 'Text';
   }
   return 'File';
+}
+
+/**
+ * Inject the standard Munyaka institutional header into any CSV payload.
+ *
+ * The result always begins with the three canonical lines:
+ *   1. MUNYAKA PRIMARY AND JUNIOR
+ *   2. P.O. BOX 5239, ELDORET
+ *   3. MOTTO: Knowledge Is Power
+ *
+ * followed by an empty separator row, then whatever CSV content was passed in.
+ * Guarantees the header is NOT duplicated if the caller invokes it more than
+ * once (e.g. via downloadCSV wrapper AND direct downloadFile call).
+ */
+function ensureMunyakaCSVHeader(csvBody: string): string {
+  if (typeof csvBody !== 'string') return csvBody;
+
+  // Strip any BOM at the front so we can re-add it exactly once.
+  const bom = '\uFEFF';
+  let body = csvBody.startsWith(bom) ? csvBody.slice(1) : csvBody;
+
+  // If the caller (or the downloadCSV wrapper) already prepended the
+  // header, do nothing.
+  if (
+    body.includes(MUNYAKA_HEADERS.schoolLine1) &&
+    body.includes(MUNYAKA_HEADERS.schoolLine2) &&
+    body.includes(MUNYAKA_HEADERS.schoolLine3)
+  ) {
+    return bom + body;
+  }
+
+  const headerBlock = [
+    MUNYAKA_HEADERS.schoolLine1,
+    MUNYAKA_HEADERS.schoolLine2,
+    MUNYAKA_HEADERS.schoolLine3,
+    '',
+  ].join('\n');
+
+  return bom + headerBlock + '\n' + body;
 }
 
 /**
@@ -148,12 +199,25 @@ async function saveToDevice(opts: {
   const isCsv = opts.fileType === 'csv' || opts.mimeType.includes('csv');
   const usePublicDownloads = isCsv && Capacitor.getPlatform() === 'android';
 
+  // ============================================
+  // CRITICAL FIX: For CSV exports, ALWAYS inject the Munyaka institutional
+  // header at the very top of the data, regardless of whether the caller
+  // already added it or used a wrapper. This guarantees that every CSV
+  // file produced by the system — from any page, via any code path — has
+  // the same three-line institutional block as its first rows.
+  // ============================================
+  let rawData = opts.data;
+  if (isCsv && !opts.isBase64) {
+    rawData = ensureMunyakaCSVHeader(rawData);
+  }
+
   const useBase64 = opts.isBase64 || opts.mimeType.startsWith('application/') || opts.mimeType.startsWith('image/');
 
   // For plain text types (CSV/TXT) we want UTF-8 strings to be encoded
   // correctly regardless of platform. Pre-pend the UTF-8 BOM for CSV so
-  // Excel detects encoding correctly when the file is opened.
-  let rawData = opts.data;
+  // Excel detects encoding correctly when the file is opened. The BOM is
+  // already present in rawData (added by ensureMunyakaCSVHeader above or
+  // prepended by the wrapper), so we only add it if it's missing.
   if (isCsv && !opts.isBase64) {
     const bom = '\uFEFF';
     if (!rawData.startsWith(bom)) rawData = bom + rawData;
