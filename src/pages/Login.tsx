@@ -106,21 +106,11 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
-  // Live snapshot of stored credentials so role-card hints stay in sync with localStorage
-  const [liveCreds, setLiveCreds] = useState<Record<AdminRole, string>>(() => ({
-    system_admin: getRoleCredential('system_admin'),
-    super_admin: getRoleCredential('super_admin')
-  }));
 
   // Redirect if already authenticated
   useEffect(() => {
     // Make sure both credential keys exist on first visit so Settings can read them
     bootstrapCredentials();
-    // Keep live credential hints in sync with whatever is stored (incl. changes via Settings)
-    setLiveCreds({
-      system_admin: getRoleCredential('system_admin'),
-      super_admin: getRoleCredential('super_admin')
-    });
 
     if (isAuthenticated && user) {
       const userRole = user.role;
@@ -163,22 +153,18 @@ const Login: React.FC = () => {
 
     const config = ROLE_CONFIGS[selectedRole];
 
-    // Accept EITHER the currently stored PIN (honors Settings changes)
-    // OR the role's default PIN as a safety fallback.
-    const storedPassword = getRoleCredential(selectedRole);
-    const defaultPassword = DEFAULT_PASSWORDS[selectedRole];
-    const validPasswords = Array.from(new Set([storedPassword, defaultPassword]));
+    // Read credential from localStorage (honors any password changed via Settings)
+    const expectedPassword = getRoleCredential(selectedRole);
 
-    if (!validPasswords.includes(password)) {
+    if (password !== expectedPassword) {
       setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
       showError('Authentication failed');
       setIsVerifying(false);
       return;
     }
 
-    // Pass the stored (current) password to AuthContext so it matches the user record.
-    // AuthContext validates via alternativePasswords, so old PINs also work.
-    const success = await login(config.email, storedPassword);
+    // Use the AuthContext login to create a proper session
+    const success = await login(config.email, password);
     
     if (success) {
       // Save admin session info for the Settings page
@@ -190,8 +176,9 @@ const Login: React.FC = () => {
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
       
-      // Legacy key — kept for backward compat only; actual credential lives in CRED_KEYS
-      localStorage.setItem('munyaka_admin_pass', storedPassword);
+      // Do NOT overwrite stored credentials here — Settings may have set a new password.
+      // Only ensure legacy keys reflect the credential currently in use for backward compatibility.
+      localStorage.setItem('munyaka_admin_pass', expectedPassword);
       
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
@@ -252,7 +239,6 @@ const Login: React.FC = () => {
                   { Icon: Settings2, label: 'Settings' },
                   { Icon: Shield, label: 'RBAC' }
                 ]}
-                storedPin={liveCreds.system_admin}
               />
 
               {/* Super Admin (Owner) Card */}
@@ -270,7 +256,6 @@ const Login: React.FC = () => {
                   { Icon: Crown, label: 'Owner' },
                   { Icon: Shield, label: 'Billing' }
                 ]}
-                storedPin={liveCreds.super_admin}
               />
             </div>
 
@@ -426,7 +411,6 @@ interface RoleCardProps {
   borderColor: string;
   ringColor: string;
   featureIcons: { Icon: React.ComponentType<{ size?: number }>; label: string }[];
-  storedPin: string;
 }
 
 const RoleCard: React.FC<RoleCardProps> = ({
@@ -435,8 +419,7 @@ const RoleCard: React.FC<RoleCardProps> = ({
   bgColor,
   textColor,
   borderColor,
-  featureIcons,
-  storedPin
+  featureIcons
 }) => {
   const Icon = role.icon;
   
@@ -496,13 +479,13 @@ const RoleCard: React.FC<RoleCardProps> = ({
             ))}
           </div>
 
-          {/* Current Stored PIN Badge */}
+          {/* Default PIN Badge */}
           <Badge variant="outline" className={cn(
             "font-bold text-[10px] border",
             borderColor,
             textColor
           )}>
-            PIN: {storedPin}
+            {role.badgeText}
           </Badge>
         </div>
       </div>
