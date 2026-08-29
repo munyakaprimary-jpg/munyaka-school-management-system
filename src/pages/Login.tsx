@@ -162,35 +162,18 @@ const Login: React.FC = () => {
     await new Promise(r => setTimeout(r, 600));
 
     const config = ROLE_CONFIGS[selectedRole];
-    let storedPassword: string;
 
-    // System Admin: direct localStorage check with hardcoded fallback.
-    // Other roles continue to use the stored-or-default lookup below.
-    if (selectedRole === 'system_admin') {
-      const raw = localStorage.getItem('munyaka_sysadmin_pass');
-      const trimmed = raw?.trim() ?? '';
-      storedPassword = trimmed === '' ? 'sysadmin2026' : trimmed;
-      console.log("Entered:", password, "Stored:", storedPassword);
+    // Accept EITHER the currently stored PIN (honors Settings changes)
+    // OR the role's default PIN as a safety fallback.
+    const storedPassword = getRoleCredential(selectedRole);
+    const defaultPassword = DEFAULT_PASSWORDS[selectedRole];
+    const validPasswords = Array.from(new Set([storedPassword, defaultPassword]));
 
-      if (password.trim() !== storedPassword) {
-        setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
-        showError('Authentication failed');
-        setIsVerifying(false);
-        return;
-      }
-    } else {
-      // Accept EITHER the currently stored PIN (honors Settings changes)
-      // OR the role's default PIN as a safety fallback.
-      storedPassword = getRoleCredential(selectedRole);
-      const defaultPassword = DEFAULT_PASSWORDS[selectedRole];
-      const validPasswords = Array.from(new Set([storedPassword, defaultPassword]));
-
-      if (!validPasswords.includes(password)) {
-        setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
-        showError('Authentication failed');
-        setIsVerifying(false);
-        return;
-      }
+    if (!validPasswords.includes(password)) {
+      setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
+      showError('Authentication failed');
+      setIsVerifying(false);
+      return;
     }
 
     // Pass the stored (current) password to AuthContext so it matches the user record.
