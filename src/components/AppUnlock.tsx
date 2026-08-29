@@ -196,18 +196,22 @@ interface AppUnlockProps {
 }
 
 const AppUnlock = ({ children, forceShow = false }: AppUnlockProps) => {
-  const [activeLicense, setActiveLicense] = useState<License | null>(null);
-  const [stats, setStats] = useState({ total: 0, active: 0, expired: 0, revoked: 0 });
+  const [activeLicense, setActiveLicense] = useState<License | null>(() => getActiveLicense());
+  const [stats, setStats] = useState(() => getLicenseStats());
   const [isUnlocking, setIsUnlocking] = useState(false);
-  const [refreshKey, setRefreshKey] = useState(0);
 
   const refresh = () => {
     setActiveLicense(getActiveLicense());
     setStats(getLicenseStats());
-    setRefreshKey(k => k + 1);
   };
 
-  useEffect(() => { refresh(); }, [refreshKey]);
+  // Re-read from storage when the tab/window regains focus — no internal
+  // counter that could trigger an infinite re-render loop.
+  useEffect(() => {
+    const onFocus = () => refresh();
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
+  }, []);
 
   const isLocked = forceShow || !activeLicense;
 
@@ -280,7 +284,7 @@ const AppUnlock = ({ children, forceShow = false }: AppUnlockProps) => {
   return (
     <div className="relative">
       {/* Floating license indicator (top-right) */}
-      <div className="fixed top-3 right-3 z-50" key={refreshKey}>
+      <div className="fixed top-3 right-3 z-50">
         <button
           onClick={refresh}
           title={`Active License: ${activeLicense.activationKey.slice(0, 8)}... | ${daysRemaining(activeLicense.expiresAt)} days remaining`}

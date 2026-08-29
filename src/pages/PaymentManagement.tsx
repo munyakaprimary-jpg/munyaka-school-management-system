@@ -127,6 +127,17 @@ interface SoftwarePayment {
   paymentMethod: string;
 }
 
+/** A simple, offline payment log entry — no API integration required. */
+interface LocalPaymentEntry {
+  id: string;
+  mode: 'mpesa' | 'cash' | 'bank';
+  amount: string;
+  currency: string;
+  reference: string;
+  note?: string;
+  loggedAt: string;
+}
+
 /** A recorded monthly payment and its generated activation code. */
 interface MonthlyPayment {
   id: string;
@@ -186,27 +197,27 @@ const DEFAULT_GATEWAYS: PaymentGateway[] = [
     stripePublishableKey: '',
     stripeSecretKey: '',
     stripeWebhookSecret: '',
-    webhookUrl: 'https://api.munyaka.sc.ke/webhooks/mpesa',
+    webhookUrl: '',
     status: 'active',
     lastSync: '2026-03-31 08:00:00',
   },
   {
     id: 'gw-002',
-    name: 'PayPal Gateway',
-    provider: 'paypal',
-    enabled: false,
+    name: 'Bank Deposit',
+    provider: 'bank',
+    enabled: true,
     consumerKey: '',
     consumerSecret: '',
     passkey: '',
     shortcode: '',
     clientId: '',
     clientSecret: '',
-    environment: 'sandbox',
+    environment: 'live',
     stripePublishableKey: '',
     stripeSecretKey: '',
     stripeWebhookSecret: '',
-    webhookUrl: 'https://api.munyaka.sc.ke/webhooks/paypal',
-    status: 'pending',
+    webhookUrl: '',
+    status: 'active',
     lastSync: '2026-03-31 08:00:00',
   },
 ];
@@ -321,9 +332,16 @@ const PaymentManagement = () => {
 
   // ── State ──────────────────────────────
   const [gateways, setGateways] = useState<PaymentGateway[]>(DEFAULT_GATEWAYS);
-  const [editingGatewayId, setEditingGatewayId] = useState<string | null>(null);
-  const [visibleSecrets, setVisibleSecrets] = useState<Record<string, boolean>>({});
-  const [gatewayForm, setGatewayForm] = useState<Partial<PaymentGateway>>({});
+
+  // Local payment log (simple manual entries — no API keys needed)
+  const [localPayments, setLocalPayments] = useState<LocalPaymentEntry[]>([]);
+  const [lpForm, setLpForm] = useState({
+    mode: 'mpesa' as 'mpesa' | 'cash' | 'bank',
+    amount: '',
+    currency: 'KES',
+    reference: '',
+    note: '',
+  });
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(DEFAULT_SUBSCRIPTIONS);
   const [editingSubscriptionId, setEditingSubscriptionId] = useState<string | null>(null);
@@ -385,20 +403,55 @@ const PaymentManagement = () => {
     }
   }, []);
 
-  // When subscriptions load, prefill the form with the first enterprise one
+  // When subscriptions load, prefill the form once with the first one.
+  // Uses a ref to ensure this only runs a single time — otherwise React
+  // would re-fire on every subscriptions array identity change, which can
+  // happen when other state updates trigger a parent re-render.
+  const didPrefillRef = React.useRef(false);
   useEffect(() => {
-    if (subscriptions.length > 0 && !mpForm.subscriptionId) {
-      const enterprise = subscriptions.find(s => s.tier === 'enterprise') ?? subscriptions[0];
-      setMpForm(f => ({
-        ...f,
-        subscriptionId: enterprise.id,
-        amount: enterprise.amount,
-        currency: enterprise.currency,
-      }));
-    }
+    if (didPrefillRef.current) return;
+    if (subscriptions.length === 0) return;
+    const first = subscriptions[0];
+    didPrefillRef.current = true;
+    setMpForm(f => ({
+      ...f,
+      subscriptionId: first.id,
+      amount: first.amount,
+      currency: first.currency,
+    }));
   }, [subscriptions]);
 
   const markChanged = () => setHasUnsavedChanges(true);
+
+  // ── Local payment log ──────────────────────────────────────────────
+  useEffect(() => {
+    const raw = localStorage.getItem('munyaka_local_payments');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) setLocalPayments(parsed);
+      } catch { /* ignore */ }
+    }
+  }, []);
+
+  const addLocalPayment = () => {
+    if (!lpForm.amount.trim()) { showError('Enter an amount.'); return; }
+    if (!lpForm.reference.trim()) { showError('Enter a reference / receipt number.'); return; }
+    const entry: LocalPaymentEntry = {
+      id: `lp-${Date.now()}`,
+      mode: lpForm.mode,
+      amount: lpForm.amount.trim(),
+      currency: lpForm.currency,
+      reference: lpForm.reference.trim(),
+      note: lpForm.note.trim(),
+      loggedAt: new Date().toISOString().slice(0, 10),
+    };
+    const next = [entry, ...localPayments];
+    setLocalPayments(next);
+    localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
+    setLpForm(f => ({ ...f, amount: '', reference: '', note: '' }));
+    showSuccess('Local payment logged successfully.');
+  };
 
   // ── Save ───────────────────────────────
   const handleSave = async () => {
@@ -411,76 +464,6 @@ const PaymentManagement = () => {
     setHasUnsavedChanges(false);
     setIsSaving(false);
     showSuccess('Payment configuration saved successfully!');
-  };
-
-  // ── Gateway handlers ───────────────────
-  const toggleSecret = (id: string, field: string) => {
-    const key = `${id}-${field}`;
-    setVisibleSecrets(prev => ({ ...prev, [key]: !prev[key] }));
-  };
-
-  const updateGatewayField = (id: string, field: keyof PaymentGateway, value: unknown) => {
-    setGateways(prev =>
-      prev.map(gw =>
-        gw.id === id ? { ...gw, [field]: value } : gw
-      )
-    );
-    markChanged();
-  };
-
-  const startEditGateway = (gw: PaymentGateway) => {
-    setEditingGatewayId(gw.id);
-    setGatewayForm({ ...gw });
-    markChanged();
-  };
-
-  const cancelEditGateway = () => {
-    setEditingGatewayId(null);
-    setGatewayForm({});
-  };
-
-  const saveGatewayForm = () => {
-    if (!gatewayForm.id) return;
-    setGateways(prev =>
-      prev.map(gw => (gw.id === gatewayForm.id ? { ...gw, ...gatewayForm } as PaymentGateway : gw))
-    );
-    setEditingGatewayId(null);
-    setGatewayForm({});
-    markChanged();
-    showSuccess('Gateway configuration updated.');
-  };
-
-  const addGateway = () => {
-    const newGw: PaymentGateway = {
-      id: `gw-${Date.now()}`,
-      name: 'New Gateway',
-      provider: 'mpesa',
-      enabled: false,
-      consumerKey: '',
-      consumerSecret: '',
-      passkey: '',
-      shortcode: '',
-      clientId: '',
-      clientSecret: '',
-      environment: 'sandbox',
-      stripePublishableKey: '',
-      stripeSecretKey: '',
-      stripeWebhookSecret: '',
-      webhookUrl: '',
-      status: 'pending',
-      lastSync: new Date().toISOString().replace('T', ' ').slice(0, 19),
-    };
-    setGateways(prev => [...prev, newGw]);
-    setEditingGatewayId(newGw.id);
-    setGatewayForm(newGw);
-    markChanged();
-  };
-
-  const removeGateway = (id: string) => {
-    if (!confirm('Remove this payment gateway?')) return;
-    setGateways(prev => prev.filter(gw => gw.id !== id));
-    markChanged();
-    showSuccess('Gateway removed.');
   };
 
   // ── Subscription handlers ───────────────
@@ -678,319 +661,6 @@ const PaymentManagement = () => {
     markChanged();
     setRenewModalSub(null);
     showSuccess('Subscription renewed!');
-  };
-
-  // ── Render: gateway field by provider ───
-  const renderGatewayFields = (gw: PaymentGateway) => {
-    const form = editingGatewayId === gw.id ? gatewayForm : gw;
-
-    if (gw.provider === 'mpesa') {
-      const mk = (f: keyof PaymentGateway) =>
-        editingGatewayId === gw.id
-          ? (form[f] as string) ?? ''
-          : (gw[f] as string) ?? '';
-      return (
-        <div className="space-y-4 p-4 bg-slate-50 rounded-2xl">
-          <div className="flex items-center gap-2 mb-1">
-            <Smartphone size={14} className="text-emerald-600" />
-            <span className="text-xs font-black uppercase tracking-widest text-emerald-600">M-Pesa Credentials</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Shortcode (Paybill / Till)</Label>
-              <div className="relative">
-                <Hash className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  value={mk('shortcode')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, shortcode: e.target.value }));
-                    updateGatewayField(gw.id, 'shortcode', e.target.value);
-                  }}
-                  placeholder="e.g. 123456"
-                  className="h-11 pl-9 rounded-xl bg-white border-none font-mono text-sm"
-                />
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Passkey</Label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-passkey`] ? 'text' : 'password'}
-                  value={mk('passkey')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, passkey: e.target.value }));
-                    updateGatewayField(gw.id, 'passkey', e.target.value);
-                  }}
-                  placeholder="Enter passkey..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button
-                  type="button"
-                  onClick={() => toggleSecret(gw.id, 'passkey')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600"
-                >
-                  {visibleSecrets[`${gw.id}-passkey`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Consumer Key</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-consumerKey`] ? 'text' : 'password'}
-                  value={mk('consumerKey')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, consumerKey: e.target.value }));
-                    updateGatewayField(gw.id, 'consumerKey', e.target.value);
-                  }}
-                  placeholder="Consumer key..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'consumerKey')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-consumerKey`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Consumer Secret</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-consumerSecret`] ? 'text' : 'password'}
-                  value={mk('consumerSecret')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, consumerSecret: e.target.value }));
-                    updateGatewayField(gw.id, 'consumerSecret', e.target.value);
-                  }}
-                  placeholder="Consumer secret..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'consumerSecret')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-consumerSecret`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook URL</Label>
-            <div className="relative">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <Input
-                value={mk('webhookUrl')}
-                onChange={e => {
-                  if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, webhookUrl: e.target.value }));
-                  updateGatewayField(gw.id, 'webhookUrl', e.target.value);
-                }}
-                placeholder="https://your-domain.com/webhooks/mpesa"
-                className="h-11 pl-9 rounded-xl bg-white border-none font-mono text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (gw.provider === 'paypal') {
-      const mk = (f: keyof PaymentGateway) =>
-        editingGatewayId === gw.id
-          ? (form[f] as string) ?? ''
-          : (gw[f] as string) ?? '';
-      return (
-        <div className="space-y-4 p-4 bg-slate-50 rounded-2xl">
-          <div className="flex items-center gap-2 mb-1">
-            <CreditCardIcon size={14} className="text-blue-600" />
-            <span className="text-xs font-black uppercase tracking-widest text-blue-600">PayPal Credentials</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Client ID</Label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-clientId`] ? 'text' : 'password'}
-                  value={mk('clientId')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, clientId: e.target.value }));
-                    updateGatewayField(gw.id, 'clientId', e.target.value);
-                  }}
-                  placeholder="Client ID..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'clientId')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-clientId`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Client Secret</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-clientSecret`] ? 'text' : 'password'}
-                  value={mk('clientSecret')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, clientSecret: e.target.value }));
-                    updateGatewayField(gw.id, 'clientSecret', e.target.value);
-                  }}
-                  placeholder="Client secret..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'clientSecret')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-clientSecret`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Environment</Label>
-            <Select
-              value={editingGatewayId === gw.id ? (gatewayForm.environment ?? gw.environment) : gw.environment}
-              onValueChange={v => {
-                if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, environment: v as 'sandbox' | 'live' }));
-                updateGatewayField(gw.id, 'environment', v);
-              }}
-            >
-              <SelectTrigger className="h-11 rounded-xl bg-white border-none font-bold">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="sandbox">Sandbox (Testing)</SelectItem>
-                <SelectItem value="live">Live (Production)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook URL</Label>
-            <div className="relative">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <Input
-                value={mk('webhookUrl')}
-                onChange={e => {
-                  if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, webhookUrl: e.target.value }));
-                  updateGatewayField(gw.id, 'webhookUrl', e.target.value);
-                }}
-                placeholder="https://your-domain.com/webhooks/paypal"
-                className="h-11 pl-9 rounded-xl bg-white border-none font-mono text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    if (gw.provider === 'stripe') {
-      const mk = (f: keyof PaymentGateway) =>
-        editingGatewayId === gw.id
-          ? (form[f] as string) ?? ''
-          : (gw[f] as string) ?? '';
-      return (
-        <div className="space-y-4 p-4 bg-slate-50 rounded-2xl">
-          <div className="flex items-center gap-2 mb-1">
-            <CreditCardIcon size={14} className="text-violet-600" />
-            <span className="text-xs font-black uppercase tracking-widest text-violet-600">Stripe Credentials</span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Publishable Key</Label>
-              <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-stripePublishableKey`] ? 'text' : 'password'}
-                  value={mk('stripePublishableKey')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, stripePublishableKey: e.target.value }));
-                    updateGatewayField(gw.id, 'stripePublishableKey', e.target.value);
-                  }}
-                  placeholder="pk_live_..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'stripePublishableKey')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-stripePublishableKey`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Secret Key</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-stripeSecretKey`] ? 'text' : 'password'}
-                  value={mk('stripeSecretKey')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, stripeSecretKey: e.target.value }));
-                    updateGatewayField(gw.id, 'stripeSecretKey', e.target.value);
-                  }}
-                  placeholder="sk_live_..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'stripeSecretKey')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-stripeSecretKey`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
-              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook Secret</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                <Input
-                  type={visibleSecrets[`${gw.id}-stripeWebhookSecret`] ? 'text' : 'password'}
-                  value={mk('stripeWebhookSecret')}
-                  onChange={e => {
-                    if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, stripeWebhookSecret: e.target.value }));
-                    updateGatewayField(gw.id, 'stripeWebhookSecret', e.target.value);
-                  }}
-                  placeholder="whsec_..."
-                  className="h-11 pl-9 pr-10 rounded-xl bg-white border-none font-mono text-sm"
-                />
-                <button type="button" onClick={() => toggleSecret(gw.id, 'stripeWebhookSecret')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600">
-                  {visibleSecrets[`${gw.id}-stripeWebhookSecret`] ? <EyeOff size={14} /> : <Eye size={14} />}
-                </button>
-              </div>
-            </div>
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Webhook URL</Label>
-            <div className="relative">
-              <Link className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-              <Input
-                value={mk('webhookUrl')}
-                onChange={e => {
-                  if (editingGatewayId === gw.id) setGatewayForm(p => ({ ...p, webhookUrl: e.target.value }));
-                  updateGatewayField(gw.id, 'webhookUrl', e.target.value);
-                }}
-                placeholder="https://your-domain.com/webhooks/stripe"
-                className="h-11 pl-9 rounded-xl bg-white border-none font-mono text-sm"
-              />
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    // Generic bank / card
-    return null;
-  };
-
-  const providerIcon = (p: PaymentGateway['provider']) => {
-    switch (p) {
-      case 'mpesa': return <Smartphone size={20} />;
-      case 'paypal': return <CreditCardIcon size={20} />;
-      case 'stripe': return <CreditCardIcon size={20} />;
-      case 'card': return <CreditCardIcon size={20} />;
-      case 'bank': return <Landmark size={20} />;
-    }
-  };
-
-  const providerColor = (p: PaymentGateway['provider']) => {
-    switch (p) {
-      case 'mpesa': return 'bg-emerald-50 text-emerald-600';
-      case 'paypal': return 'bg-blue-50 text-blue-600';
-      case 'stripe': return 'bg-violet-50 text-violet-600';
-      case 'card': return 'bg-indigo-50 text-indigo-600';
-      case 'bank': return 'bg-slate-100 text-slate-600';
-    }
   };
 
   const tierBadge = (tier: Subscription['tier']) => {
@@ -1820,142 +1490,220 @@ const PaymentManagement = () => {
         {/* ──────────────────────────────────────── */}
         {/* PAYMENT GATEWAYS TAB */}
         {/* ──────────────────────────────────────── */}
-        <TabsContent value="gateways" className="space-y-6">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-black text-slate-900">Financial Gateway Configuration</h2>
-              <p className="text-sm text-slate-500">
-                Configure API keys, merchant credentials, and webhook endpoints for each payment processor.
-              </p>
-            </div>
-            <Button
-              onClick={addGateway}
-              className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg"
-            >
-              <Plus size={16} /> Add Gateway
-            </Button>
-          </div>
+        <TabsContent value="gateways" className="space-y-8">
 
-          <div className="space-y-4">
-            {gateways.map(gw => (
-              <Card key={gw.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={cn("p-3 rounded-2xl", providerColor(gw.provider))}>
-                        {providerIcon(gw.provider)}
-                      </div>
-                      <div>
-                        <CardTitle className="text-base font-black text-slate-900">
-                          {editingGatewayId === gw.id ? (
-                            <Input
-                              value={gatewayForm.name ?? gw.name}
-                              onChange={e => {
-                                setGatewayForm(p => ({ ...p, name: e.target.value }));
-                                updateGatewayField(gw.id, 'name', e.target.value);
-                              }}
-                              className="h-8 rounded-xl bg-slate-50 border-none font-bold text-base"
-                            />
-                          ) : gw.name}
-                        </CardTitle>
-                        <div className="flex items-center gap-2 mt-1">
-                          {editingGatewayId === gw.id ? (
-                            <Select
-                              value={gatewayForm.provider ?? gw.provider}
-                              onValueChange={v => {
-                                setGatewayForm(p => ({ ...p, provider: v as PaymentGateway['provider'] }));
-                                updateGatewayField(gw.id, 'provider', v);
-                              }}
-                            >
-                              <SelectTrigger className="h-7 rounded-lg bg-slate-50 border-none text-xs font-bold w-40">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                <SelectItem value="mpesa">M-Pesa</SelectItem>
-                                <SelectItem value="paypal">PayPal</SelectItem>
-                                <SelectItem value="stripe">Stripe</SelectItem>
-                                <SelectItem value="card">Card (Generic)</SelectItem>
-                                <SelectItem value="bank">Bank Transfer</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          ) : (
-                            <p className="text-xs text-slate-400 font-medium">
-                              {gw.provider.toUpperCase()} • Last sync: {gw.lastSync}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {getStatusBadge(gw.status)}
-                      <div className="flex items-center gap-2">
-                        <p className="text-xs font-bold text-slate-500">Enabled</p>
-                        <Switch
-                          checked={gw.enabled}
-                          onCheckedChange={() => updateGatewayField(gw.id, 'enabled', !gw.enabled)}
-                          className="data-[state=checked]:bg-emerald-600"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </CardHeader>
+          {/* ── Local payment entry form ── */}
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="p-8 border-b bg-slate-50/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl">
+                  <DollarSign size={20} />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black text-slate-900">Log a Local Payment</CardTitle>
+                  <CardDescription>Record cash, bank deposit, or M-Pesa payments manually — no API keys needed.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-5">
 
-                <CardContent className="space-y-4">
-                  {renderGatewayFields(gw)}
-
-                  <div className="flex justify-end gap-2 pt-2">
-                    {editingGatewayId === gw.id ? (
-                      <>
-                        <Button
-                          variant="outline"
-                          onClick={cancelEditGateway}
-                          className="rounded-xl h-10 font-bold border-slate-200"
-                        >
-                          Cancel
-                        </Button>
-                        <Button
-                          onClick={saveGatewayForm}
-                          className="rounded-xl h-10 bg-indigo-600 hover:bg-indigo-700 font-bold text-white shadow-lg gap-1.5"
-                        >
-                          <Check size={14} /> Save Gateway
-                        </Button>
-                      </>
-                    ) : (
-                      <>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => removeGateway(gw.id)}
-                          className="rounded-xl h-9 text-xs font-bold border-rose-200 text-rose-600 hover:bg-rose-50 gap-1.5"
-                        >
-                          <Trash2 size={14} /> Remove
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => startEditGateway(gw)}
-                          className="rounded-xl h-9 text-xs font-bold border-slate-200 gap-1.5"
-                        >
-                          <Edit3 size={14} /> Configure
-                        </Button>
-                      </>
+              {/* Mode selector */}
+              <div className="grid grid-cols-3 gap-3">
+                {([
+                  { value: 'mpesa', label: 'M-Pesa', icon: <Smartphone size={18} />, color: 'emerald' },
+                  { value: 'cash',  label: 'Cash',    icon: <DollarSign size={18} />, color: 'blue'   },
+                  { value: 'bank',  label: 'Bank',    icon: <Landmark size={18} />,   color: 'slate' },
+                ] as const).map(({ value, label, icon, color }) => (
+                  <button
+                    key={value}
+                    type="button"
+                    onClick={() => setLpForm(f => ({ ...f, mode: value }))}
+                    className={cn(
+                      "flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all",
+                      lpForm.mode === value
+                        ? color === 'emerald' ? "border-emerald-400 bg-emerald-50 text-emerald-700" :
+                          color === 'blue'   ? "border-blue-400 bg-blue-50 text-blue-700" :
+                          "border-slate-400 bg-slate-100 text-slate-700"
+                        : "border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200"
                     )}
+                  >
+                    {icon}
+                    <span className="text-xs font-black">{label}</span>
+                  </button>
+                ))}
+              </div>
+
+              {/* Amount + Currency */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Amount</Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
+                      {lpForm.currency === 'KES' ? 'KSh' : '$'}
+                    </span>
+                    <Input
+                      type="number"
+                      value={lpForm.amount}
+                      onChange={e => setLpForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="0.00"
+                      className="h-14 pl-10 rounded-2xl bg-slate-50 border-none font-black text-base"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Currency</Label>
+                  <Select
+                    value={lpForm.currency}
+                    onValueChange={v => setLpForm(f => ({ ...f, currency: v }))}
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                      <SelectItem value="USD">USD — US Dollar</SelectItem>
+                      <SelectItem value="EUR">EUR — Euro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Reference */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Transaction Reference / Receipt Number
+                </Label>
+                <div className="relative">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    value={lpForm.reference}
+                    onChange={e => setLpForm(f => ({ ...f, reference: e.target.value }))}
+                    placeholder={
+                      lpForm.mode === 'mpesa' ? 'e.g. MG23K4R5HT' :
+                      lpForm.mode === 'bank' ? 'e.g. DEP-2026-04-001' :
+                      'e.g. REC-001'
+                    }
+                    className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base"
+                  />
+                </div>
+              </div>
+
+              {/* Note */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Note (optional)
+                </Label>
+                <Input
+                  value={lpForm.note}
+                  onChange={e => setLpForm(f => ({ ...f, note: e.target.value }))}
+                  placeholder="e.g. School fees for April 2026, Class 4"
+                  className="h-14 rounded-2xl bg-slate-50 border-none font-medium text-base"
+                />
+              </div>
+
+              <Button
+                onClick={addLocalPayment}
+                className="w-full rounded-2xl h-14 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 font-black text-white shadow-xl shadow-emerald-100 text-base gap-2"
+              >
+                <Check size={18} /> Log Payment
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* ── Local payment log table ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">Payment Log</h2>
+                <p className="text-sm text-slate-500">All locally recorded payments — cash, bank, and M-Pesa.</p>
+              </div>
+              <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 font-bold text-xs gap-1.5 px-3 py-1.5">
+                <DollarSign size={12} />
+                {localPayments.length} record{localPayments.length !== 1 ? 's' : ''} logged
+              </Badge>
+            </div>
+
+            {localPayments.length === 0 ? (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-14 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                    <DollarSign size={28} />
+                  </div>
+                  <p className="text-base font-black text-slate-700">No payments logged yet</p>
+                  <p className="text-sm text-slate-400 font-medium">Use the form above to record a payment.</p>
+                </div>
+              </Card>
+            ) : (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left min-w-[700px]">
+                      <thead className="bg-slate-50/80 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Mode</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Reference</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Amount</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Note</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {localPayments.map((lp) => {
+                          const modeColors: Record<string, string> = {
+                            mpesa: 'bg-emerald-50 text-emerald-700',
+                            cash: 'bg-blue-50 text-blue-700',
+                            bank: 'bg-slate-100 text-slate-700',
+                          };
+                          const modeLabels: Record<string, string> = {
+                            mpesa: 'M-Pesa',
+                            cash: 'Cash',
+                            bank: 'Bank Deposit',
+                          };
+                          return (
+                            <tr key={lp.id} className="hover:bg-slate-50/40 transition-colors">
+                              <td className="px-6 py-4 font-medium text-slate-700">
+                                {new Date(lp.loggedAt).toLocaleDateString()}
+                              </td>
+                              <td className="px-6 py-4">
+                                <Badge className={cn('border-none font-bold text-[10px]', modeColors[lp.mode] ?? 'bg-slate-100 text-slate-600')}>
+                                  {modeLabels[lp.mode]}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
+                                  {lp.reference}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 font-black text-slate-900">
+                                {lp.currency} {lp.amount}
+                              </td>
+                              <td className="px-6 py-4 text-slate-500 text-xs">{lp.note || '—'}</td>
+                              <td className="px-6 py-4 text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                  title="Delete entry"
+                                  onClick={() => {
+                                    if (!confirm('Delete this payment log entry?')) return;
+                                    const next = localPayments.filter(p => p.id !== lp.id);
+                                    setLocalPayments(next);
+                                    localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
+                                    showSuccess('Entry deleted.');
+                                  }}
+                                >
+                                  <Trash2 size={14} />
+                                </Button>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
-            ))}
-
-            {gateways.length === 0 && (
-              <div className="flex flex-col items-center justify-center py-20 bg-slate-50 rounded-3xl border border-slate-100">
-                <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center mb-4">
-                  <Globe size={32} />
-                </div>
-                <p className="text-lg font-black text-slate-700">No Payment Gateways Configured</p>
-                <p className="text-sm text-slate-400 mt-1">Add a payment gateway to start accepting digital payments.</p>
-                <Button onClick={addGateway} className="mt-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2">
-                  <Plus size={16} /> Add Your First Gateway
-                </Button>
-              </div>
             )}
           </div>
         </TabsContent>
