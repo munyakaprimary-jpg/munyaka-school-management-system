@@ -21,7 +21,8 @@ import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
 import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
 import EditFeeModal from '@/components/fees/EditFeeModal';
-import { Transaction } from '@/types/fees';
+import FeeReceipt from '@/components/fees/FeeReceipt';
+import { Transaction, PaymentMethod, PaymentDetails } from '@/types/fees';
 
 interface ExtendedTransaction extends Transaction {
   studentId?: string;
@@ -185,6 +186,9 @@ const Fees = () => {
   const [isStatementOpen, setIsStatementOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [activeStudent, setActiveStudent] = useState<any>(null);
+  // Receipt modal state
+  const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [lastTransaction, setLastTransaction] = useState<ExtendedTransaction | null>(null);
 
   // Admin Auth States for Set Term Fees
   const [isAuthOpen, setIsAuthOpen] = useState(false);
@@ -503,23 +507,104 @@ const Fees = () => {
     showSuccess(`Fee structure updated for ${targetLabel}`);
   };
 
-  const handleRecordPayment = (studentId: string, amountNum: number) => {
-    const matchedLearner = normalizedLearners.find(l => l.id === studentId);
+  const handleRecordPayment = (tx: Transaction) => {
+    const matchedLearner = normalizedLearners.find(l => l.id === tx.studentId);
     const studentName = matchedLearner ? matchedLearner.name : "Learner";
-    const studentGrade = matchedLearner ? matchedLearner.grade : "";
+    const studentGrade = matchedLearner ? matchedLearner.grade : tx.grade ?? "";
 
-    setTransactionsList([{ 
-      id: `TX-${Math.floor(100 + Math.random() * 900)}`, 
-      date: new Date().toLocaleDateString(), 
-      amount: amountNum, 
-      method: "M-Pesa", 
-      ref: "AUTO-GEN", 
-      category: "Tuition",
-      studentId,
+    const enrichedTx: ExtendedTransaction = {
+      ...tx,
       grade: studentGrade,
-    }, ...transactionsList]);
+    };
 
-    showSuccess(`Recorded KES ${amountNum.toLocaleString()} payment for ${studentName}`);
+    // 1) Persist to state + localStorage
+    const nextList = [enrichedTx, ...transactionsList];
+    setTransactionsList(nextList);
+    try {
+      localStorage.setItem('munyaka_transactions', JSON.stringify(nextList));
+    } catch (e) {
+      console.error('Failed to persist transaction:', e);
+    }
+
+    // 2) Mirror into the per-student override store so the balance updates
+    //    immediately even if no payment ledger has been run yet.
+    try {
+      const overrideKey = `${FEE_OVERRIDES_KEY_PREFIX}${tx.studentId}`;
+      const prevOverride = localStorage.getItem(overrideKey);
+      let prevPaid = 0;
+      if (prevOverride) {
+        const parsed = JSON.parse(prevOverride);
+        prevPaid = parsed.feePaid ?? parsed.paid ?? 0;
+      }
+      // Use the current dynamic total if no override exists yet
+      let total = 0;
+      const fee = calculatedFees.find(f => f.id === tx.studentId);
+      if (prevOverride) {
+        const parsed = JSON.parse(prevOverride);
+        total = parsed.termFee ?? parsed.total ?? fee?.total ?? 0;
+      } else {
+        total = fee?.total ?? 0;
+      }
+      const newPaid = prevPaid + tx.amount;
+      const balance = Math.max(0, total - newPaid);
+      let status: "Cleared" | "Partial" | "Pending" = "Pending";
+      if (balance <= 0) status = "Cleared";
+      else if (newPaid > 0) status = "Partial";
+      localStorage.setItem(overrideKey, JSON.stringify({
+        id: tx.studentId,
+        termFee: total,
+        feePaid: newPaid,
+        balance,
+        status,
+        reason: `Auto-update from ${tx.method} payment ${tx.id}`,
+      }));
+    } catch (e) {
+      console.error('Failed to update student fee override:', e);
+    }
+
+    // 3) Update the audit log
+    const auditEntry: AuditLogEntry = {
+      id: `AUD-${Date.now()}`,
+      timestamp: new Date().toISOString(),
+      admin: tx.paymentMethod === 'cash' ? (tx.paymentDetails as any)?.receivedBy ?? 'Cashier' : 'System Admin',
+      action: `Payment Recorded (${tx.method})`,
+      studentName,
+      studentId: tx.studentId!,
+      changes: [
+        { field: 'Amount Received', oldValue: '0.00', newValue: `KES ${tx.amount.toLocaleString()}` },
+        { field: 'Method', oldValue: '—', newValue: tx.method },
+        { field: 'Reference', oldValue: '—', newValue: tx.ref },
+      ],
+      reason: `Recorded via Record Payment modal (TX: ${tx.id})`,
+    };
+    const newAuditLogs = [auditEntry, ...auditLogs];
+    setAuditLogs(newAuditLogs);
+    try {
+      localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(newAuditLogs));
+    } catch (e) { console.error('Failed to persist audit log:', e); }
+
+    // 4) Notify any other listeners (balance cards, dashboards) that the
+    //    fee/transaction state has changed.
+    window.dispatchEvent(new Event('munyaka_fees_updated'));
+
+    // 5) Build a lightweight student record for the receipt
+    const receiptStudent = {
+      student: studentName,
+      admNo: matchedLearner?.admNo ?? matchedLearner?.id ?? tx.studentId ?? '',
+      grade: matchedLearner?.grade ?? tx.grade ?? '',
+      stream: matchedLearner?.stream ?? tx.stream ?? '',
+      total: fee?.total ?? 0,
+      paid: (fee?.paid ?? 0) + tx.amount,
+      balance: Math.max(0, (fee?.total ?? 0) - ((fee?.paid ?? 0) + tx.amount)),
+      status: fee?.status ?? 'Partial',
+    };
+
+    // 6) Show the receipt modal so the cashier can print/download a receipt.
+    setActiveStudent(receiptStudent);
+    setLastTransaction(enrichedTx);
+    setIsReceiptOpen(true);
+
+    showSuccess(`KES ${tx.amount.toLocaleString()} ${tx.method} payment recorded for ${studentName}.`);
   };
 
   // Edit Fee Handler
@@ -1040,6 +1125,25 @@ const Fees = () => {
         gradesData={GRADES_DATA}
         studentsData={normalizedLearners}
       />
+
+      {/* ── Receipt Modal (shown after each successful payment) ── */}
+      {lastTransaction && activeStudent && (
+        <Modal
+          isOpen={isReceiptOpen}
+          onClose={() => { setIsReceiptOpen(false); setActiveStudent(null); setLastTransaction(null); }}
+          title="Payment Receipt"
+          description={`Receipt ${lastTransaction.id} — ${lastTransaction.method}`}
+          maxWidth="max-w-xl"
+        >
+          <FeeReceipt
+            student={activeStudent}
+            transaction={lastTransaction}
+            year={selectedYear}
+            term={selectedTerm}
+            onDownload={() => { setIsReceiptOpen(false); }}
+          />
+        </Modal>
+      )}
 
       {/* Edit Fee Modal */}
       <EditFeeModal
