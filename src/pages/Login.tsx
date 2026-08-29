@@ -24,7 +24,7 @@ import {
   Calculator,
   GraduationCap,
   Send,
-  IdCard,
+  User,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
@@ -552,7 +552,7 @@ const Login: React.FC = () => {
                         Staff ID / Username
                       </Label>
                       <div className="relative">
-                        <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
                           id="staff-id"
                           type="text"
@@ -610,7 +610,7 @@ const Login: React.FC = () => {
 
                   {/* Default test account hint */}
                   <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-3">
-                    <IdCard size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                    <User size={16} className="text-emerald-600 mt-0.5 shrink-0" />
                     <div className="text-xs text-emerald-900 font-medium leading-relaxed">
                       <p className="font-black text-[10px] uppercase tracking-widest text-emerald-700 mb-1">
                         Default Test Account
