@@ -1,13 +1,13 @@
 import { PreRegisteredStaff } from '@/types/staff-access';
 
 // Default staff ledger so that teachers, bursars, and other staff can
-// sign in to the portal. Each entry's `tempAccessCode` is the password
-// the staff member uses on the "Staff / Teacher / Bursar" login tab.
-// National IDs work as a fallback password and "munyaka5239" is the
-// universal backdoor (same convention as the pre-registration page).
+// sign in to the portal. Each entry's `staffId` is the login username
+// and `tempAccessCode` is the primary password. The National ID and
+// "munyaka5239" also work as fallback passwords.
 export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   {
     id: 'PR-1787658909839',
+    staffId: 'T001',
     fullName: 'Grace Njeri',
     nationalId: '30291847',
     tscNumber: 'TSC-719203',
@@ -21,6 +21,7 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   },
   {
     id: 'PR-1787658904111',
+    staffId: 'T002',
     fullName: 'Peter Omondi',
     nationalId: '25839102',
     tscNumber: 'TSC-382910',
@@ -34,6 +35,7 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   },
   {
     id: 'PR-1787658895559',
+    staffId: 'T003',
     fullName: 'Jane Mwangi',
     nationalId: '28374615',
     tscNumber: 'TSC-482910',
@@ -47,6 +49,7 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   },
   {
     id: 'PR-1787658885534',
+    staffId: 'T004',
     fullName: 'Sarah Chebet',
     nationalId: '29482019',
     tscNumber: 'TSC-610293',
@@ -60,6 +63,7 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   },
   {
     id: 'PR-1787658875279',
+    staffId: 'T005',
     fullName: 'John Kamau',
     nationalId: '31948201',
     tscNumber: 'TSC-592014',
@@ -73,6 +77,7 @@ export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
   },
   {
     id: 'PR-1787658841599',
+    staffId: 'T006',
     fullName: 'JOEL MWANGI',
     nationalId: '122654',
     tscNumber: '1234566',

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,13 @@ import {
   Users,
   CreditCard,
   ArrowRight,
-  Search,
-  User,
   BookOpen,
   Calculator,
   GraduationCap,
   Send,
+  IdCard,
 } from 'lucide-react';
-import { useAuth, normalizeEmail } from '@/context/AuthContext';
+import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
@@ -161,31 +160,11 @@ const Login: React.FC = () => {
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
   // ── Staff state ──────────────────────────────────────────────────────────
-  const [staffSearch, setStaffSearch] = useState('');
-  const [selectedStaff, setSelectedStaff] = useState<PreRegisteredStaff | null>(null);
-  const [staffAccessCode, setStaffAccessCode] = useState('');
-  const [showStaffCode, setShowStaffCode] = useState(false);
+  const [staffId, setStaffId] = useState('');
+  const [staffPassword, setStaffPassword] = useState('');
+  const [showStaffPassword, setShowStaffPassword] = useState(false);
   const [staffAuthError, setStaffAuthError] = useState('');
   const [isStaffVerifying, setIsStaffVerifying] = useState(false);
-  const [staffDropdownOpen, setStaffDropdownOpen] = useState(false);
-
-  // ── All pre-registered staff ──────────────────────────────────────────────
-  const allStaff = useMemo<PreRegisteredStaff[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_prereg');
-    return saved ? JSON.parse(saved) : [];
-  }, []);
-
-  const filteredStaff = useMemo(() => {
-    if (!staffSearch.trim()) return allStaff.slice(0, 8);
-    const q = staffSearch.toLowerCase();
-    return allStaff.filter(
-      s =>
-        s.fullName.toLowerCase().includes(q) ||
-        s.email.toLowerCase().includes(q) ||
-        s.nationalId.includes(q) ||
-        s.tempAccessCode.toLowerCase().includes(q),
-    ).slice(0, 8);
-  }, [allStaff, staffSearch]);
 
   // ── Redirect already-authenticated users ───────────────────────────────────
   useEffect(() => {
@@ -259,30 +238,17 @@ const Login: React.FC = () => {
   };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
-  const handleSelectStaff = (staff: PreRegisteredStaff) => {
-    setSelectedStaff(staff);
-    setStaffSearch(staff.fullName);
-    setStaffAccessCode('');
-    setStaffAuthError('');
-    setStaffDropdownOpen(false);
-  };
-
-  const handleClearStaff = () => {
-    setSelectedStaff(null);
-    setStaffSearch('');
-    setStaffAccessCode('');
-    setStaffAuthError('');
-    setStaffDropdownOpen(false);
-  };
-
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedStaff) {
-      setStaffAuthError('Please select your name from the list.');
+    const trimmedId = staffId.trim();
+    const trimmedPass = staffPassword.trim();
+
+    if (!trimmedId) {
+      setStaffAuthError('Please enter your Staff ID / Username.');
       return;
     }
-    if (!staffAccessCode.trim()) {
-      setStaffAuthError('Please enter your Access Code.');
+    if (!trimmedPass) {
+      setStaffAuthError('Please enter your Password.');
       return;
     }
 
@@ -290,24 +256,23 @@ const Login: React.FC = () => {
     setStaffAuthError('');
     await new Promise(r => setTimeout(r, 700));
 
-    const valid =
-      staffAccessCode === selectedStaff.tempAccessCode ||
-      staffAccessCode === selectedStaff.nationalId ||
-      staffAccessCode === 'munyaka5239';
-
-    if (!valid) {
-      setStaffAuthError('Invalid Access Code. Please check and try again.');
-      showError('Access denied');
-      setIsStaffVerifying(false);
-      return;
-    }
-
-    const success = await login(selectedStaff.email, staffAccessCode);
+    // AuthContext.login accepts both the staffId (e.g. "teacher1", "T001")
+    // and the email as the username field. Pass the staffId directly.
+    const success = await login(trimmedId, trimmedPass);
     if (success) {
-      showSuccess(`Welcome, ${selectedStaff.fullName}!`);
-      navigate(getStaffRedirectPath(selectedStaff.systemRole), { replace: true });
+      // Look up the staff ledger (if any) so we can route based on system role
+      const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
+      const staffLedger: PreRegisteredStaff[] = savedLedgerJson
+        ? JSON.parse(savedLedgerJson)
+        : [];
+      const match = staffLedger.find(
+        s => s.staffId && s.staffId.toLowerCase() === trimmedId.toLowerCase()
+      );
+      const systemRole = match?.systemRole ?? 'subject_teacher';
+      showSuccess(match ? `Welcome, ${match.fullName}!` : 'Welcome!');
+      navigate(getStaffRedirectPath(systemRole), { replace: true });
     } else {
-      setStaffAuthError('Login failed. Please try again.');
+      setStaffAuthError('Invalid Staff ID or Password. Please try again.');
       showError('Authentication failed');
     }
     setIsStaffVerifying(false);
@@ -581,133 +546,58 @@ const Login: React.FC = () => {
                   )}
 
                   <form onSubmit={handleStaffLogin} className="space-y-5">
-                    {/* Staff name search */}
+                    {/* Staff ID / Username */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Your Name / Email
+                      <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Staff ID / Username
                       </Label>
                       <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                        <input
+                        <IdCard className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Input
+                          id="staff-id"
                           type="text"
-                          value={staffSearch}
-                          onChange={e => {
-                            setStaffSearch(e.target.value);
-                            if (selectedStaff) handleClearStaff();
-                            setStaffDropdownOpen(true);
-                          }}
-                          onFocus={() => setStaffDropdownOpen(true)}
-                          placeholder="Search by name, email, or National ID..."
-                          className="w-full h-12 pl-11 pr-10 rounded-xl bg-slate-50 border-none font-medium text-slate-900 placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-emerald-200 focus:outline-none"
-                          autoComplete="off"
+                          value={staffId}
+                          onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          placeholder="e.g. teacher1 or T001"
+                          autoComplete="username"
+                          className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
+                          autoFocus
                         />
-                        {selectedStaff && (
-                          <button
-                            type="button"
-                            onClick={handleClearStaff}
-                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            <ShieldAlert size={16} />
-                          </button>
-                        )}
                       </div>
-
-                      {/* Dropdown */}
-                      {staffDropdownOpen && (
-                        <div className="relative z-50">
-                          <div className="absolute top-0 left-0 right-0 bg-white rounded-2xl shadow-xl border border-slate-100 max-h-64 overflow-y-auto">
-                            {filteredStaff.length === 0 ? (
-                              <div className="p-4 text-center text-xs font-bold text-slate-400">
-                                No staff members found.
-                              </div>
-                            ) : (
-                              filteredStaff.map(staff => {
-                                const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
-                                return (
-                                  <button
-                                    key={staff.id}
-                                    type="button"
-                                    onClick={() => handleSelectStaff(staff)}
-                                    className={cn(
-                                      'w-full px-4 py-3 text-left hover:bg-slate-50 transition-colors flex items-start gap-3 border-b border-slate-50 last:border-0',
-                                      selectedStaff?.id === staff.id && 'bg-emerald-50',
-                                    )}
-                                  >
-                                    <User size={16} className={cn('mt-0.5 shrink-0', selectedStaff?.id === staff.id ? 'text-emerald-600' : 'text-slate-400')} />
-                                    <div className="min-w-0">
-                                      <p className="font-bold text-slate-900 text-sm truncate">{staff.fullName}</p>
-                                      <p className="text-xs text-slate-500 font-medium truncate">{staff.email}</p>
-                                      <Badge className={cn('mt-1 font-bold text-[9px] border-none px-2 py-0.5 rounded-lg', roleInfo.badgeBg, roleInfo.color)}>
-                                        {roleInfo.label}
-                                      </Badge>
-                                    </div>
-                                  </button>
-                                );
-                              })
-                            )}
-                          </div>
-                        </div>
-                      )}
                     </div>
 
-                    {/* Selected staff info */}
-                    {selectedStaff && (
-                      <div className="flex items-center gap-3 p-4 bg-emerald-50 rounded-2xl border border-emerald-100">
-                        <div className="p-2 bg-emerald-100 rounded-xl">
-                          <User size={20} className="text-emerald-600" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="font-black text-slate-900 text-sm">{selectedStaff.fullName}</p>
-                          <p className="text-xs text-slate-500 font-medium">{selectedStaff.email}</p>
-                          <Badge className={cn(
-                            'mt-1 font-bold text-[10px] border-none px-2 py-0.5 rounded-lg',
-                            SYSTEM_ROLE_LABELS[selectedStaff.systemRole]?.badgeBg ?? 'bg-slate-100 text-slate-600',
-                            SYSTEM_ROLE_LABELS[selectedStaff.systemRole]?.color ?? 'text-slate-700',
-                          )}>
-                            {SYSTEM_ROLE_LABELS[selectedStaff.systemRole]?.label ?? selectedStaff.systemRole}
-                          </Badge>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={handleClearStaff}
-                          className="text-slate-400 hover:text-slate-600 transition-colors"
-                        >
-                          <ShieldAlert size={16} />
-                        </button>
-                      </div>
-                    )}
-
-                    {/* Access code */}
+                    {/* Password / Access Code */}
                     <div className="space-y-2">
-                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Access Code
+                      <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Access Code / Password
                       </Label>
                       <div className="relative">
                         <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
-                          type={showStaffCode ? 'text' : 'password'}
-                          value={staffAccessCode}
-                          onChange={e => { setStaffAccessCode(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. MUNYAKA-9020"
+                          id="staff-password"
+                          type={showStaffPassword ? 'text' : 'password'}
+                          value={staffPassword}
+                          onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          placeholder="Enter your password"
+                          autoComplete="current-password"
                           className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
-                          autoFocus={!!selectedStaff}
                         />
                         <button
                           type="button"
-                          onClick={() => setShowStaffCode(!showStaffCode)}
+                          onClick={() => setShowStaffPassword(!showStaffPassword)}
                           className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
                         >
-                          {showStaffCode ? <EyeOff size={18} /> : <Eye size={18} />}
+                          {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                         </button>
                       </div>
                       <p className="text-[10px] text-slate-400 font-medium">
-                        Your Access Code was shared via SMS/email. Fallback: National ID or <span className="font-bold">munyaka5239</span>.
+                        Your password was shared via SMS/email. Contact your administrator if forgotten.
                       </p>
                     </div>
 
                     <Button
                       type="submit"
-                      disabled={isStaffVerifying || !selectedStaff || !staffAccessCode.trim()}
+                      disabled={isStaffVerifying || !staffId.trim() || !staffPassword.trim()}
                       className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
                     >
                       {isStaffVerifying ? (
@@ -718,11 +608,22 @@ const Login: React.FC = () => {
                     </Button>
                   </form>
 
+                  {/* Default test account hint */}
+                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-3">
+                    <IdCard size={16} className="text-emerald-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-emerald-900 font-medium leading-relaxed">
+                      <p className="font-black text-[10px] uppercase tracking-widest text-emerald-700 mb-1">
+                        Default Test Account
+                      </p>
+                      Username: <span className="font-bold">teacher1</span> &middot; Password: <span className="font-bold">munyaka5239</span>
+                    </div>
+                  </div>
+
                   {/* Help note */}
                   <div className="p-4 bg-slate-50 rounded-2xl flex items-start gap-3">
                     <Send size={16} className="text-slate-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-slate-500 font-medium">
-                      Can't find your name? Contact the School Administrator to pre-register your account and receive an Access Code via SMS or email.
+                      Don't have credentials? Contact the School Administrator to pre-register your account.
                     </p>
                   </div>
                 </CardContent>

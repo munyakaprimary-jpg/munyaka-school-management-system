@@ -65,6 +65,20 @@ const DEFAULT_SYSTEM_ADMIN = {
   }
 };
 
+// Default test teacher account — staffId is used as the login username
+const DEFAULT_TEACHER = {
+  staffId: 'teacher1',
+  password: 'munyaka5239',
+  user: {
+    id: 'teacher-001',
+    name: 'Jane Mwangi',
+    email: 'jane.mwangi@munyaka.sc.ke',
+    phone: '+254 712 345 678',
+    role: 'teacher' as UserRole,
+    avatar: 'JM'
+  }
+};
+
 const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
@@ -116,6 +130,16 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
+  // Ensure default test teacher account is generated & active
+  const teacherKey = DEFAULT_TEACHER.staffId.toLowerCase();
+  users[teacherKey] = {
+    ...DEFAULT_TEACHER.user,
+    password: DEFAULT_TEACHER.password,
+    alternativePasswords: [DEFAULT_TEACHER.password, 'munyaka5239'],
+    isActive: true,
+    emailConfirmed: true
+  };
+
   // Sync pre-registered staff as valid default loggable users
   const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
   const staffLedger: PreRegisteredStaff[] = savedLedgerJson 
@@ -135,8 +159,17 @@ const initializeUsersStorage = () => {
       password: staff.tempAccessCode, // Plain text - this IS the password for this frontend-only system
       alternativePasswords: [staff.nationalId, 'munyaka5239'],
       isActive: staff.status !== 'Suspended', // Explicit activation flag
-      emailConfirmed: true // Explicit verification flag
+      emailConfirmed: true, // Explicit verification flag
+      staffId: staff.staffId // preserve the staffId on the stored record
     };
+
+    // Also make the staffId (e.g. "T001") a valid login key
+    if (staff.staffId) {
+      const staffIdKey = staff.staffId.toLowerCase();
+      if (!users[staffIdKey]) {
+        users[staffIdKey] = { ...users[emailKey] };
+      }
+    }
   });
 
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
@@ -161,14 +194,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const login = async (email: string, pass: string): Promise<boolean> => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
+    // Accept email OR staffId as the username field; normalise for lookup
     const normalizedEmail = normalizeEmail(email);
+    const normalizedStaffId = email.trim().toLowerCase();
     
     initializeUsersStorage();
 
     const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
     const users = usersJson ? JSON.parse(usersJson) : {};
     
-    const foundUser = users[normalizedEmail];
+    // Look up by email first, then fall back to staffId (case-insensitive)
+    const foundUser = users[normalizedEmail] || users[normalizedStaffId];
     
     if (foundUser) {
       const isPasswordValid = 

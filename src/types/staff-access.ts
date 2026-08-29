@@ -4,6 +4,7 @@ export type AccessStatus = 'Pre-Registered' | 'Pending Invite' | 'Active' | 'Sus
 
 export interface PreRegisteredStaff {
   id: string;
+  staffId: string;         // e.g. "T001" — used as the login username
   fullName: string;
   nationalId: string;
   tscNumber?: string;
@@ -13,7 +14,7 @@ export interface PreRegisteredStaff {
   assignedGrade?: string;
   assignedStream?: string;
   assignedSubjects: string[];
-  tempAccessCode: string;
+  tempAccessCode: string;  // primary password
   status: AccessStatus;
   datePreRegistered: string;
   activatedAt?: string;

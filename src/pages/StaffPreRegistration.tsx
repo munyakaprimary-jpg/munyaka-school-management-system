@@ -50,6 +50,7 @@ const StaffPreRegistration = () => {
   const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
     const newStaff: PreRegisteredStaff = {
       id: `PR-${Date.now()}`,
+      staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
       fullName: staffData.fullName || "",
       nationalId: staffData.nationalId || "",
       tscNumber: staffData.tscNumber,

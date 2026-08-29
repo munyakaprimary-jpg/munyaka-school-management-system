@@ -43,7 +43,8 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     phone: "",
     systemRole: "subject_teacher" as SystemRole,
     assignedSubjects: ["Mathematics", "Science & Tech"],
-    tempAccessCode: ""
+    tempAccessCode: "",
+    staffId: ""
   });
 
   // Get available directory staff members from localStorage or STAFF
@@ -71,6 +72,17 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     setFormData(prev => ({ ...prev, tempAccessCode: `MUNYAKA-${randDigits}` }));
   };
 
+  const generateStaffId = () => {
+    // T007, T008, ... — deterministic per existing ledger length
+    let ledger: PreRegisteredStaff[] = [];
+    try {
+      const saved = localStorage.getItem('munyaka_staff_prereg');
+      if (saved) ledger = JSON.parse(saved);
+    } catch { /* ignore */ }
+    const next = ledger.length + 7; // start at T007 to avoid colliding with seeded IDs
+    return `T${String(next).padStart(3, '0')}`;
+  };
+
   useEffect(() => {
     if (isOpen) {
       generateRandomKey();
@@ -84,7 +96,8 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
         phone: "",
         systemRole: "subject_teacher",
         assignedSubjects: ["Mathematics", "Science & Tech"],
-        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`
+        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
+        staffId: generateStaffId()
       });
     }
   }, [isOpen]);
