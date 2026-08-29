@@ -55,6 +55,13 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
+import RecordLicensePaymentModal from '@/components/RecordLicensePaymentModal';
+import {
+  getAllLicenses,
+  revokeLicense,
+  validityLabel as licenseValidityLabel,
+} from '@/services/licenseService';
+import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 
 // ─────────────────────────────────────────
 // STORAGE
@@ -343,6 +350,11 @@ const PaymentManagement = () => {
   const [renewModalSub, setRenewModalSub] = useState<Subscription | null>(null);
   const [payments] = useState<SoftwarePayment[]>(DEFAULT_PAYMENTS);
 
+  // ── License / activation key state ──
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
+
   // ── Load from localStorage ─────────────
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -355,6 +367,8 @@ const PaymentManagement = () => {
         // Use defaults
       }
     }
+    // Load issued licenses
+    setLicenses(getAllLicenses());
   }, []);
 
   const markChanged = () => setHasUnsavedChanges(true);
@@ -1075,19 +1089,32 @@ const PaymentManagement = () => {
                             className="rounded-xl h-9 text-xs font-bold border-slate-200 gap-1.5 flex-1"
                           >
                             <RefreshCcw size={14} /> Renew
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openRenew(sub)}
+                            className="rounded-xl h-9 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 gap-1.5 w-full"
+                          >
+                            <RefreshCcw size={14} /> Reactivate
                           </Button>
-                        </>
-                      ) : (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openRenew(sub)}
-                          className="rounded-xl h-9 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 gap-1.5 w-full"
-                        >
-                          <RefreshCcw size={14} /> Reactivate
-                        </Button>
-                      )}
-                    </div>
+                        )}
+                      </div>
+  
+                      {/* Record License Payment / Generate Activation Key */}
+                      <Button
+                        variant="default"
+                        size="sm"
+                        onClick={() => {
+                          setActiveSubscriptionForLicense(sub);
+                          setIsLicenseModalOpen(true);
+                        }}
+                        className="rounded-xl h-9 text-xs font-bold w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
+                      >
+                        <Key size={14} /> Record License Payment & Generate Key
+                      </Button>
 
                     <div className="flex gap-2">
                       {editingSubscriptionId === sub.id ? (
@@ -1123,6 +1150,139 @@ const PaymentManagement = () => {
                 </CardContent>
               </Card>
             ))}
+          </div>
+
+          {/* ── License History / Activation Key Log ── */}
+          <div className="space-y-4 mt-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">License History & Activation Keys</h2>
+                <p className="text-sm text-slate-500">
+                  All issued activation keys, their payment records, and status.
+                </p>
+              </div>
+              <Button
+                onClick={() => { setActiveSubscriptionForLicense(null); setIsLicenseModalOpen(true); }}
+                className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg"
+              >
+                <Key size={16} /> Issue New License
+              </Button>
+            </div>
+
+            {licenses.length === 0 ? (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-12 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                    <Key size={28} />
+                  </div>
+                  <p className="text-base font-black text-slate-700">No Licenses Issued Yet</p>
+                  <p className="text-sm text-slate-400 font-medium">Issue a license payment to generate an activation key.</p>
+                  <Button
+                    onClick={() => setIsLicenseModalOpen(true)}
+                    className="mt-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg"
+                  >
+                    <Key size={14} /> Issue First License
+                  </Button>
+                </div>
+              </Card>
+            ) : (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left min-w-[900px]">
+                      <thead className="bg-slate-50/80 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Key</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Issued To</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Device ID</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Valid For</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {licenses.map((lic) => {
+                          const isExpired = lic.expiresAt < new Date().toISOString().slice(0, 10);
+                          const statusColor = lic.status === 'revoked'
+                            ? 'bg-rose-50 text-rose-700'
+                            : isExpired
+                            ? 'bg-slate-100 text-slate-500'
+                            : 'bg-emerald-50 text-emerald-700';
+                          const statusIcon = lic.status === 'revoked'
+                            ? <XCircle size={10} />
+                            : isExpired
+                            ? <Ban size={10} />
+                            : <CheckCircle2 size={10} />;
+                          return (
+                            <tr key={lic.id} className="hover:bg-slate-50/40 transition-colors group">
+                              <td className="px-6 py-4">
+                                <p className="font-mono font-black text-indigo-600 text-[11px] leading-tight">
+                                  {lic.activationKey}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4 font-bold text-slate-900">{lic.issuedTo}</td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg">
+                                  {lic.deviceId}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="space-y-0.5">
+                                  <p className="font-medium text-slate-700">
+                                    {LICENSE_METHOD_LABELS[lic.payment.method] ?? lic.payment.method}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 font-mono">
+                                    {lic.payment.refNumber || '—'}
+                                  </p>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="text-slate-600 font-medium">{licenseValidityLabel(lic.validityDays)}</span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className={cn("font-bold", isExpired ? "text-slate-400 line-through" : "text-slate-700")}>
+                                  {new Date(lic.expiresAt).toLocaleDateString()}
+                                </p>
+                                <p className="text-[10px] text-slate-400">
+                                  Issued: {new Date(lic.issuedAt).toLocaleDateString()}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Badge className={cn("border font-bold text-[10px] gap-1", statusColor)}>
+                                  {statusIcon}
+                                  {lic.status === 'revoked' ? 'Revoked' : isExpired ? 'Expired' : 'Active'}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50"
+                                    title="Revoke license"
+                                    onClick={() => {
+                                      if (confirm(`Revoke license ${lic.activationKey.slice(0, 12)}...? This will lock the app.`)) {
+                                        revokeLicense(lic.activationKey, 'Manually revoked by owner');
+                                        setLicenses(getAllLicenses());
+                                        showSuccess('License revoked. App will require reactivation.');
+                                      }
+                                    }}
+                                  >
+                                    <Ban size={14} />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </TabsContent>
 
@@ -1468,6 +1628,19 @@ const PaymentManagement = () => {
       </Modal>
     </div>
   );
+
+  {/* ── Record License Payment Modal ── */}
+  <RecordLicensePaymentModal
+    isOpen={isLicenseModalOpen}
+    onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
+    onIssued={(license) => {
+      setIsLicenseModalOpen(false);
+      setActiveSubscriptionForLicense(null);
+      setLicenses(getAllLicenses());
+    }}
+    defaultIssuedTo={user?.name ?? 'Munyaka Primary & Junior School'}
+    defaultSubscriptionName={activeSubscriptionForLicense?.name}
+  />;
 };
 
 // Small Users icon helper

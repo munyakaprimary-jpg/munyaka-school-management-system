@@ -50,6 +50,7 @@ import PracticalCompetencies from "./pages/PracticalCompetencies";
 import ScienceLab from "./pages/ScienceLab";
 import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
+import AppUnlock from "./components/AppUnlock";
 
 const queryClient = new QueryClient();
 
@@ -84,50 +85,50 @@ const App = () => (
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 
-                {/* Protected Application Routes */}
-                <Route path="/" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
-                <Route path="/index" element={<ProtectedRoute><Layout><Index /></Layout></ProtectedRoute>} />
-                <Route path="/students" element={<ProtectedRoute><Layout><Students /></Layout></ProtectedRoute>} />
-                <Route path="/students/:id" element={<ProtectedRoute><Layout><StudentProfile /></Layout></ProtectedRoute>} />
-                <Route path="/grades" element={<ProtectedRoute><Layout><GradesStreams /></Layout></ProtectedRoute>} />
-                <Route path="/learning-areas" element={<ProtectedRoute><Layout><LearningAreas /></Layout></ProtectedRoute>} />
-                <Route path="/exam-types" element={<ProtectedRoute><Layout><ExamTypes /></Layout></ProtectedRoute>} />
+                {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
+                <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/grades" element={<ProtectedRoute><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/learning-areas" element={<ProtectedRoute><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/exam-types" element={<ProtectedRoute><AppUnlock><Layout><ExamTypes /></Layout></AppUnlock></ProtectedRoute>} />
                 
                 {/* Staff Routes */}
-                <Route path="/staff" element={<ProtectedRoute><Layout><Staff /></Layout></ProtectedRoute>} />
-                <Route path="/staff/registration" element={<ProtectedRoute><Layout><StaffRegistration /></Layout></ProtectedRoute>} />
-                <Route path="/staff/pre-registration" element={<ProtectedRoute><Layout><StaffPreRegistration /></Layout></ProtectedRoute>} />
-                <Route path="/staff/attendance" element={<ProtectedRoute><Layout><StaffAttendancePage /></Layout></ProtectedRoute>} />
-                <Route path="/staff/check-in" element={<ProtectedRoute><Layout><StaffCheckInSelector /></Layout></ProtectedRoute>} />
-                <Route path="/staff-checkin" element={<ProtectedRoute><Layout><StaffCheckIn /></Layout></ProtectedRoute>} />
-                <Route path="/staff/attendance-monitor" element={<ProtectedRoute><Layout><AttendanceMonitor /></Layout></ProtectedRoute>} />
-                <Route path="/staff/:id" element={<ProtectedRoute><Layout><StaffProfile /></Layout></ProtectedRoute>} />
+                <Route path="/staff" element={<ProtectedRoute><AppUnlock><Layout><Staff /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/registration" element={<ProtectedRoute><AppUnlock><Layout><StaffRegistration /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/pre-registration" element={<ProtectedRoute><AppUnlock><Layout><StaffPreRegistration /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/attendance" element={<ProtectedRoute><AppUnlock><Layout><StaffAttendancePage /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/check-in" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckInSelector /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff-checkin" element={<ProtectedRoute><AppUnlock><Layout><StaffCheckIn /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/attendance-monitor" element={<ProtectedRoute><AppUnlock><Layout><AttendanceMonitor /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/staff/:id" element={<ProtectedRoute><AppUnlock><Layout><StaffProfile /></Layout></AppUnlock></ProtectedRoute>} />
                 
-                <Route path="/communication" element={<ProtectedRoute><Layout><Communication /></Layout></ProtectedRoute>} />
-                <Route path="/notices" element={<ProtectedRoute><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></ProtectedRoute>} />
-                <Route path="/timetable" element={<ProtectedRoute><Layout><Timetable /></Layout></ProtectedRoute>} />
-                <Route path="/registration" element={<ProtectedRoute><Layout><Registration /></Layout></ProtectedRoute>} />
-                <Route path="/attendance" element={<ProtectedRoute><Layout><Attendance /></Layout></ProtectedRoute>} />
-                <Route path="/assessments" element={<ProtectedRoute><Layout><Assessments /></Layout></ProtectedRoute>} />
-                <Route path="/analysis" element={<ProtectedRoute><Layout><ResultsAnalysis /></Layout></ProtectedRoute>} />
-                <Route path="/portfolio" element={<ProtectedRoute><Layout><Portfolio /></Layout></ProtectedRoute>} />
-                <Route path="/library" element={<ProtectedRoute><Layout><Library /></Layout></ProtectedRoute>} />
-                <Route path="/inventory" element={<ProtectedRoute><Layout><Inventory /></Layout></ProtectedRoute>} />
-                <Route path="/fees" element={<ProtectedRoute><Layout><Fees /></Layout></ProtectedRoute>} />
-                <Route path="/central-data" element={<ProtectedRoute><Layout><CentralDataService /></Layout></ProtectedRoute>} />
-                <Route path="/reports" element={<ProtectedRoute><Layout><ReportCards /></Layout></ProtectedRoute>} />
-                <Route path="/settings" element={<ProtectedRoute><Layout><Settings /></Layout></ProtectedRoute>} />
-                <Route path="/profile" element={<ProtectedRoute><Layout><AdminProfile /></Layout></ProtectedRoute>} />
-                <Route path="/promote" element={<ProtectedRoute><Layout><Promote /></Layout></ProtectedRoute>} />
-                <Route path="/digital-hub" element={<ProtectedRoute><Layout><DigitalHub /></Layout></ProtectedRoute>} />
-                <Route path="/digital-literacy-videos" element={<ProtectedRoute><Layout><DigitalLiteracyVideos /></Layout></ProtectedRoute>} />
-                <Route path="/ict-lab" element={<ProtectedRoute><Layout><ICTLabManagement /></Layout></ProtectedRoute>} />
-                <Route path="/system-management" element={<ProtectedRoute><Layout><SystemAndAccountManagement /></Layout></ProtectedRoute>} />
-                <Route path="/payment-management" element={<ProtectedRoute><Layout><PaymentManagement /></Layout></ProtectedRoute>} />
-                <Route path="/digital-skills" element={<ProtectedRoute><Layout><DigitalSkillsAssessment /></Layout></ProtectedRoute>} />
-                <Route path="/practical-competencies" element={<ProtectedRoute><Layout><PracticalCompetencies /></Layout></ProtectedRoute>} />
-                <Route path="/science-lab" element={<ProtectedRoute><Layout><ScienceLab /></Layout></ProtectedRoute>} />
+                <Route path="/communication" element={<ProtectedRoute><AppUnlock><Layout><Communication /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/notices" element={<ProtectedRoute><AppUnlock><Layout><NoticeAndEvents defaultTab="announcements" /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/timetable" element={<ProtectedRoute><AppUnlock><Layout><Timetable /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/registration" element={<ProtectedRoute><AppUnlock><Layout><Registration /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/attendance" element={<ProtectedRoute><AppUnlock><Layout><Attendance /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/assessments" element={<ProtectedRoute><AppUnlock><Layout><Assessments /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/analysis" element={<ProtectedRoute><AppUnlock><Layout><ResultsAnalysis /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/fees" element={<ProtectedRoute><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/central-data" element={<ProtectedRoute><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/reports" element={<ProtectedRoute><AppUnlock><Layout><ReportCards /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><Settings /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/profile" element={<ProtectedRoute><AppUnlock><Layout><AdminProfile /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/promote" element={<ProtectedRoute><AppUnlock><Layout><Promote /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/digital-hub" element={<ProtectedRoute><AppUnlock><Layout><DigitalHub /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/digital-literacy-videos" element={<ProtectedRoute><AppUnlock><Layout><DigitalLiteracyVideos /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/ict-lab" element={<ProtectedRoute><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/system-management" element={<ProtectedRoute><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/payment-management" element={<ProtectedRoute><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/digital-skills" element={<ProtectedRoute><AppUnlock><Layout><DigitalSkillsAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/practical-competencies" element={<ProtectedRoute><AppUnlock><Layout><PracticalCompetencies /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
                 
                 <Route path="*" element={<NotFound />} />
               </Routes>
