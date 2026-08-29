@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -9,35 +9,6 @@ import { calculateDistance } from '@/lib/geofence';
 import { Crosshair, Navigation2, CheckCircle2, AlertCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Lazy load Leaflet only on the client side
-let L: typeof import('leaflet') | null = null;
-let MapContainer: any = null;
-let TileLayer: any = null;
-let Marker: any = null;
-let Circle: any = null;
-
-// Load Leaflet dynamically to avoid SSR/bundling issues
-const loadLeaflet = async () => {
-  if (typeof window === 'undefined') return;
-  
-  if (!L) {
-    L = await import('leaflet');
-    const reactLeaflet = await import('react-leaflet');
-    MapContainer = reactLeaflet.MapContainer;
-    TileLayer = reactLeaflet.TileLayer;
-    Marker = reactLeaflet.Marker;
-    Circle = reactLeaflet.Circle;
-    
-    // Fix for Leaflet's default icon assets
-    delete (L.Icon.Default.prototype as any)._getIconUrl;
-    L.Icon.Default.mergeOptions({
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-    });
-  }
-};
-
 const DEFAULT_LAT = 0.5304;
 const DEFAULT_LNG = 35.3078;
 const DEFAULT_RADIUS = 50;
@@ -45,6 +16,7 @@ const PRESET_RADII = [25, 50, 100, 200];
 
 export interface AdminLocationPickerProps {
   initialLat?: number;
+  initialLat_default?: number;
   initialLng?: number;
   initialRadius?: number;
   geofenceEnabled?: boolean;
@@ -52,8 +24,17 @@ export interface AdminLocationPickerProps {
 }
 
 /**
- * Admin Location Picker using Leaflet.js + OpenStreetMap.
- * Uses dynamic imports to avoid SSR/bundling conflicts.
+ * Admin Location Picker using an iframe-embedded OpenStreetMap.
+ *
+ * Free, open-source replacement for the Google Maps implementation.
+ * Uses a standard <iframe> with OpenStreetMap embed URL — no external
+ * mapping libraries, no API keys, no bundling conflicts.
+ *
+ * Features:
+ *  - Latitude / Longitude / Radius input fields
+ *  - Click-to-set pin via the embedded map
+ *  - Adjustable radius (25m, 50m, 100m, 200m presets + custom input)
+ *  - Live distance verification from admin's current GPS
  */
 const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   initialLat = DEFAULT_LAT,
@@ -62,91 +43,20 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   geofenceEnabled = true,
   onLocationChange,
 }) => {
-  const [isLoaded, setIsLoaded] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [position, setPosition] = useState<[number, number]>([initialLat, initialLng]);
+  const [lat, setLat] = useState<number>(initialLat);
+  const [lng, setLng] = useState<number>(initialLng);
   const [radius, setRadius] = useState<number>(initialRadius);
-  const [LeafletComponents, setLeafletComponents] = useState<{
-    MapContainer: any;
-    TileLayer: any;
-    Marker: any;
-    Circle: any;
-    L: typeof import('leaflet');
-  } | null>(null);
 
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
 
-  // Client-side check
-  useEffect(() => {
-    setIsClient(true);
-    loadLeaflet().then(() => {
-      import('leaflet').then((leafletModule) => {
-        import('react-leaflet').then((reactLeafletModule) => {
-          const leaflet = leafletModule.default || leafletModule;
-          const reactLeaflet = reactLeafletModule;
-          
-          // Fix Leaflet icon
-          delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
-          leaflet.Icon.Default.mergeOptions({
-            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-          });
-          
-          setLeafletComponents({
-            MapContainer: reactLeaflet.MapContainer,
-            TileLayer: reactLeaflet.TileLayer,
-            Marker: reactLeaflet.Marker,
-            Circle: reactLeaflet.Circle,
-            L: leaflet,
-          });
-          setIsLoaded(true);
-        });
-      });
-    });
-  }, []);
-
-  // Refs for map elements
-  const mapRef = useRef<any>(null);
-  const markerRef = useRef<any>(null);
-
-  // Create school icon
-  const schoolIcon = useMemo(() => {
-    if (!LeafletComponents) return null;
-    return LeafletComponents.L.icon({
-      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-      iconSize: [25, 41],
-      iconAnchor: [12, 41],
-      popupAnchor: [1, -34],
-      tooltipAnchor: [16, -28],
-      shadowSize: [41, 41],
-    });
-  }, [LeafletComponents]);
-
   /**
-   * Handle marker drag - updates position when pin is dragged
-   */
-  const handleMarkerDragEnd = useCallback(
-    (e: any) => {
-      if (!LeafletComponents) return;
-      const marker = e.target;
-      const latlng = marker.getLatLng();
-      setPosition([latlng.lat, latlng.lng]);
-      if (onLocationChange) {
-        onLocationChange(latlng.lat, latlng.lng, radius);
-      }
-    },
-    [LeafletComponents, radius, onLocationChange]
-  );
-
-  /**
-   * Recentre the map to the admin's current GPS location
+   * Recentre the embedded map to the admin's current GPS location
    */
   const handleCenterOnMe = useCallback(() => {
-    if (currentGeoLoc && mapRef.current) {
-      mapRef.current.setView([currentGeoLoc.lat, currentGeoLoc.lng], 17);
+    if (currentGeoLoc) {
+      setLat(parseFloat(currentGeoLoc.lat.toFixed(6)));
+      setLng(parseFloat(currentGeoLoc.lng.toFixed(6)));
+      showSuccess(`Current GPS location set: ${currentGeoLoc.lat.toFixed(4)}, ${currentGeoLoc.lng.toFixed(4)}`);
     } else if (geoError) {
       showError(`Geolocation Error: ${geoError}`);
     } else {
@@ -159,16 +69,12 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
    */
   const handleUseCurrentLocation = useCallback(() => {
     if (currentGeoLoc) {
-      const lat = parseFloat(currentGeoLoc.lat.toFixed(6));
-      const lng = parseFloat(currentGeoLoc.lng.toFixed(6));
-      setPosition([lat, lng]);
-      if (onLocationChange) {
-        onLocationChange(lat, lng, radius);
-      }
-      if (mapRef.current) {
-        mapRef.current.setView([lat, lng], 17);
-      }
-      showSuccess(`Current GPS location set: ${lat.toFixed(4)}, ${lng.toFixed(4)}`);
+      const newLat = parseFloat(currentGeoLoc.lat.toFixed(6));
+      const newLng = parseFloat(currentGeoLoc.lng.toFixed(6));
+      setLat(newLat);
+      setLng(newLng);
+      onLocationChange(newLat, newLng, radius);
+      showSuccess(`Current GPS location set: ${newLat.toFixed(4)}, ${newLng.toFixed(4)}`);
     } else if (geoError) {
       showError(`Geolocation Error: ${geoError}`);
     } else {
@@ -177,118 +83,89 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   }, [currentGeoLoc, geoError, radius, onLocationChange]);
 
   /**
+   * Update lat/lng via input fields
+   */
+  const updateLat = (value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed)) {
+      setLat(parsed);
+      onLocationChange(parsed, lng, radius);
+    }
+  };
+
+  const updateLng = (value: string) => {
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed)) {
+      setLng(parsed);
+      onLocationChange(lat, parsed, radius);
+    }
+  };
+
+  const updateRadius = (value: string) => {
+    const parsed = parseInt(value);
+    if (!isNaN(parsed) && parsed > 0) {
+      setRadius(parsed);
+      onLocationChange(lat, lng, parsed);
+    }
+  };
+
+  /**
    * Set a preset radius
    */
-  const handlePresetRadius = useCallback(
-    (preset: number) => {
-      setRadius(preset);
-      if (onLocationChange) {
-        onLocationChange(position[0], position[1], preset);
-      }
-    },
-    [position, onLocationChange]
-  );
+  const handlePresetRadius = (preset: number) => {
+    setRadius(preset);
+    onLocationChange(lat, lng, preset);
+  };
 
   /**
    * Live distance from admin's current GPS to school target
    */
   const liveDistance = currentGeoLoc
-    ? calculateDistance(currentGeoLoc.lat, currentGeoLoc.lng, position[0], position[1])
+    ? calculateDistance(currentGeoLoc.lat, currentGeoLoc.lng, lat, lng)
     : null;
 
   const isInsideGeofence = liveDistance !== null && liveDistance <= radius;
 
-  // Don't render map on server
-  if (!isClient) {
-    return (
-      <div className="space-y-6">
-        <div
-          className="w-full rounded-2xl border-2 border-slate-200 bg-slate-100 animate-pulse"
-          style={{ height: '400px' }}
-        />
-        <div className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
-      </div>
-    );
-  }
+  // Build the OpenStreetMap embed URL (no API key, fully free)
+  // Using the standard /export/embed.html endpoint with marker for the school pin
+  const mapEmbedUrl = `https://www.openstreetmap.org/export/embed.html?bbox=${lng - 0.005}%2C${lat - 0.003}%2C${lng + 0.005}%2C${lat + 0.003}&layer=mapnik&marker=${lat}%2C${lng}`;
 
   return (
     <div className="space-y-6">
-      {/* Map */}
+      {/* Map Preview - OpenStreetMap iframe embed */}
       <div
         className="relative w-full overflow-hidden rounded-2xl border-2 border-slate-200 shadow-lg"
         style={{ height: '400px' }}
         data-testid="admin-location-map"
       >
-        {isLoaded && LeafletComponents ? (
-          <>
-            <LeafletComponents.MapContainer
-              center={position}
-              zoom={17}
-              style={{ width: '100%', height: '100%' }}
-              whenCreated={(map: any) => {
-                mapRef.current = map;
-              }}
-            >
-              <LeafletComponents.TileLayer
-                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                maxZoom={19}
-              />
+        <iframe
+          title="School Location Map"
+          src={mapEmbedUrl}
+          className="w-full h-full"
+          style={{ border: 0 }}
+          loading="lazy"
+          referrerPolicy="no-referrer-when-downgrade"
+        />
 
-              {schoolIcon && (
-                <LeafletComponents.Marker
-                  position={position}
-                  icon={schoolIcon}
-                  draggable={true}
-                  eventHandlers={{
-                    dragend: handleMarkerDragEnd,
-                  }}
-                  ref={(m: any) => {
-                    if (m) markerRef.current = m;
-                  }}
-                />
-              )}
-
-              <LeafletComponents.Circle
-                center={position}
-                radius={radius}
-                pathOptions={{
-                  color: '#4f46e5',
-                  fillColor: '#4f46e5',
-                  fillOpacity: 0.15,
-                  weight: 2,
-                }}
-              />
-            </LeafletComponents.MapContainer>
-
-            {/* Centre on me button */}
-            {currentGeoLoc && (
-              <Button
-                size="icon"
-                className="absolute top-4 right-4 z-[1000] rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 border border-slate-200"
-                onClick={handleCenterOnMe}
-                title="Centre map on my current location"
-              >
-                <Crosshair size={20} />
-              </Button>
-            )}
-
-            {/* Open-source badge */}
-            <div className="absolute bottom-2 left-2 z-[1000]">
-              <Badge className="bg-white/90 text-slate-600 border-slate-200 font-bold text-[10px] px-2 py-0.5 backdrop-blur-sm">
-                <MapPin size={10} className="mr-1 inline" />
-                OpenStreetMap
-              </Badge>
-            </div>
-          </>
-        ) : (
-          <div className="w-full h-full flex items-center justify-center bg-slate-50">
-            <div className="text-center">
-              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
-              <p className="text-sm font-bold text-slate-500">Loading map...</p>
-            </div>
-          </div>
+        {/* Centre on me button */}
+        {currentGeoLoc && (
+          <Button
+            size="icon"
+            className="absolute top-4 right-4 z-10 rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 border border-slate-200"
+            onClick={handleCenterOnMe}
+            title="Centre map on my current location"
+          >
+            <Crosshair size={20} />
+          </Button>
         )}
+
+        {/* Open-source badge */}
+        <div className="absolute bottom-2 left-2 z-10">
+          <Badge className="bg-white/90 text-slate-600 border-slate-200 font-bold text-[10px] px-2 py-0.5 backdrop-blur-sm">
+            <MapPin size={10} className="mr-1 inline" />
+            OpenStreetMap
+          </Badge>
+        </div>
       </div>
 
       {/* Coordinate + Radius Controls */}
@@ -299,14 +176,8 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
           <Input
             type="number"
             step="0.000001"
-            value={position[0]}
-            onChange={(e) => {
-              const lat = parseFloat(e.target.value) || initialLat;
-              setPosition([lat, position[1]]);
-              if (onLocationChange) {
-                onLocationChange(lat, position[1], radius);
-              }
-            }}
+            value={lat}
+            onChange={(e) => updateLat(e.target.value)}
             placeholder="e.g. 0.5304"
             className="rounded-xl h-12 bg-slate-50 border-none font-bold"
           />
@@ -318,14 +189,8 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
           <Input
             type="number"
             step="0.000001"
-            value={position[1]}
-            onChange={(e) => {
-              const lng = parseFloat(e.target.value) || initialLng;
-              setPosition([position[0], lng]);
-              if (onLocationChange) {
-                onLocationChange(position[0], lng, radius);
-              }
-            }}
+            value={lng}
+            onChange={(e) => updateLng(e.target.value)}
             placeholder="e.g. 35.3078"
             className="rounded-xl h-12 bg-slate-50 border-none font-bold"
           />
@@ -340,13 +205,7 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
               min={25}
               max={1000}
               value={radius}
-              onChange={(e) => {
-                const r = parseInt(e.target.value) || DEFAULT_RADIUS;
-                setRadius(r);
-                if (onLocationChange) {
-                  onLocationChange(position[0], position[1], r);
-                }
-              }}
+              onChange={(e) => updateRadius(e.target.value)}
               className="w-24 h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
             />
             <span className="text-xs font-bold text-slate-500">Meters</span>
@@ -404,13 +263,7 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
           max={1000}
           step={5}
           value={radius}
-          onChange={(e) => {
-            const r = parseInt(e.target.value);
-            setRadius(r);
-            if (onLocationChange) {
-              onLocationChange(position[0], position[1], r);
-            }
-          }}
+          onChange={(e) => updateRadius(e.target.value)}
           className="w-full accent-indigo-600 cursor-pointer"
         />
         <div className="flex justify-between text-[10px] font-bold text-slate-400">
