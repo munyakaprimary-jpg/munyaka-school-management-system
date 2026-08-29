@@ -409,6 +409,34 @@ const Settings = () => {
     // Save the new password to the correct localStorage key
     localStorage.setItem(credKey, passwordForm.newPassword);
 
+    // Also sync the AuthContext user record so login() validates against the new PIN
+    try {
+      const USERS_KEY = 'munyaka_users';
+      const usersJson = localStorage.getItem(USERS_KEY);
+      if (usersJson) {
+        const users = JSON.parse(usersJson);
+        // Map the role to the admin email used to seed the user record
+        const adminEmail = currentRole === 'system_admin'
+          ? 'sysadmin@munyaka.sc.ke'
+          : 'munyakaprimary@gmail.com';
+        const normalized = adminEmail.trim().toLowerCase();
+        if (users[normalized]) {
+          // Preserve old password in alternativePasswords so it still works
+          if (!users[normalized].alternativePasswords) {
+            users[normalized].alternativePasswords = [];
+          }
+          if (!users[normalized].alternativePasswords.includes(users[normalized].password)) {
+            users[normalized].alternativePasswords.push(users[normalized].password);
+          }
+          users[normalized].password = passwordForm.newPassword;
+          localStorage.setItem(USERS_KEY, JSON.stringify(users));
+        }
+      }
+    } catch (e) {
+      // Non-fatal — the credKey update above is the source of truth for the Login screen
+      console.warn('Could not sync user record:', e);
+    }
+
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
       admin: session.roleLabel,
