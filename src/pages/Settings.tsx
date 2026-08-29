@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,32 +9,21 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import BackButton from '@/components/ui/BackButton';
+import Modal from '@/components/ui/Modal';
 import {
-  School,
   Save,
   Loader2,
-  Calendar,
-  Layers,
-  GraduationCap,
-  Plus,
-  Trash2,
-  Info,
   ChevronRight,
   ChevronDown,
   ShieldCheck,
   Lock,
-  Navigation,
   Clock,
   History,
   AlertTriangle,
-  AlertCircle,
   UserCog,
-  Search,
-  UploadCloud,
   CheckCircle2,
   XCircle,
   Shield,
-  FileSpreadsheet,
   RotateCcw,
   Key,
   MapPin,
@@ -43,7 +32,12 @@ import {
   RefreshCw,
   Unlock,
   ShieldAlert,
-  Crosshair
+  LogOut,
+  Users,
+  CreditCard,
+  Crown,
+  Settings2,
+  ArrowLeft
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
@@ -54,6 +48,26 @@ import AdminLocationPicker from '@/components/AdminLocationPicker';
 
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
+
+// Session persistence keys
+const SESSION_KEY = 'munyaka_admin_session';
+const CRED_KEYS = {
+  SYSTEM_ADMIN: 'munyaka_admin_pass',
+  SUPER_ADMIN: 'munyaka_owner_pass'
+};
+const DEFAULT_PASSWORDS = {
+  SYSTEM_ADMIN: 'munyaka5239',
+  SUPER_ADMIN: 'owner2026'
+};
+
+type AdminRole = 'system_admin' | 'super_admin';
+
+interface AdminSession {
+  role: AdminRole;
+  roleLabel: string;
+  roleIcon: string;
+  timestamp: number;
+}
 
 type Action = 'read' | 'create' | 'edit' | 'delete';
 type PermissionState = Record<string, Record<Action, boolean>>;
@@ -98,13 +112,6 @@ const getPasswordStrength = (pass: string) => {
   return { score: 100, label: 'Strong', color: 'bg-emerald-500 text-emerald-600' };
 };
 
-/**
- * Build a fully-populated RBAC matrix for every role & every module.
- * Always returns a complete object — never undefined, never missing modules.
- * This is the single source of truth used both for the initial state and
- * as the merge base when loading stale/incomplete data from Supabase or
- * localStorage.
- */
 const buildDefaultPermissions = (): Record<string, PermissionState> => {
   const initialState: Record<string, PermissionState> = {};
   ROLES.forEach(role => {
@@ -118,7 +125,6 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
       };
     });
   });
-  // Owner has exclusive payment_subscriptions access; super_admin and others do not
   if (initialState['owner']) {
     initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
   }
@@ -130,12 +136,6 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
   return initialState;
 };
 
-/**
- * Merge incoming RBAC data on top of the default matrix.
- * Guarantees every role & every module has a complete CRUD object,
- * filling in any missing entries (e.g. when loading data from an older
- * schema that did not include the new `payment_subscriptions` module).
- */
 const mergePermissions = (
   incoming: Record<string, PermissionState> | null | undefined
 ): Record<string, PermissionState> => {
@@ -162,28 +162,62 @@ const mergePermissions = (
   return base;
 };
 
-/**
- * Safe getter for a single permission flag.
- * Returns `false` for any missing/undefined access path so deep
- * property reads never throw.
- */
-const getPermFlag = (
-  perms: Record<string, PermissionState> | null | undefined,
-  roleId: string,
-  moduleId: string,
-  action: Action
-): boolean => {
-  return !!perms?.[roleId]?.[moduleId]?.[action];
+// Session management helpers
+const getStoredSession = (): AdminSession | null => {
+  try {
+    const stored = localStorage.getItem(SESSION_KEY);
+    if (!stored) return null;
+    const session = JSON.parse(stored) as AdminSession;
+    // Session expires after 8 hours
+    if (Date.now() - session.timestamp > 8 * 60 * 60 * 1000) {
+      localStorage.removeItem(SESSION_KEY);
+      return null;
+    }
+    return session;
+  } catch {
+    return null;
+  }
+};
+
+const saveSession = (role: AdminRole, roleLabel: string, roleIcon: string) => {
+  const session: AdminSession = {
+    role,
+    roleLabel,
+    roleIcon,
+    timestamp: Date.now()
+  };
+  localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+};
+
+const clearSession = () => {
+  localStorage.removeItem(SESSION_KEY);
+};
+
+const getCredential = (role: AdminRole): string => {
+  return localStorage.getItem(role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN) 
+    || (role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN);
 };
 
 const Settings = () => {
-  const [isAuthorized, setIsAuthorized] = useState(false);
+  // Session state
+  const [session, setSession] = useState<AdminSession | null>(null);
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifyingAuth, setIsVerifyingAuth] = useState(false);
   const [showAuthPass, setShowAuthPass] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isSwitchingRole, setIsSwitchingRole] = useState(false);
 
-  const { location: currentGeoLoc, isLoading: isLocating, error: geoError, refresh: refreshGeo } = useGeolocation();
+  // Password update modal state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+
+  const { location: currentGeoLoc } = useGeolocation();
 
   const [isLoadingSettings, setIsLoadingSettings] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -233,7 +267,6 @@ const Settings = () => {
   const [showNewPin, setShowNewPin] = useState(false);
   const [showConfirmPin, setShowConfirmPin] = useState(false);
 
-  // Geofence state — defaults to the Munyaka School coordinates with 50m default radius
   const [geofenceConfig, setGeofenceState] = useState<GeofenceConfig>({
     lat: 0.5304,
     lng: 35.3078,
@@ -249,13 +282,18 @@ const Settings = () => {
 
   const [auditLogs, setAuditLogs] = useState(DEFAULT_AUDIT_LOGS);
 
-  // Admin Location Picker state (Leaflet-based, no Google Maps)
-  const [searchQuery, setSearchQuery] = useState("");
+  // Check for existing session on mount
+  useEffect(() => {
+    const storedSession = getStoredSession();
+    if (storedSession) {
+      setSession(storedSession);
+    }
+  }, []);
 
-  const handleAuthorizeSettings = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!authPassword.trim()) {
-      setAuthError("Please enter your admin password.");
+  // Login handlers
+  const handleLogin = async (role: AdminRole, password: string) => {
+    if (!password.trim()) {
+      setAuthError("Please enter your password.");
       return;
     }
 
@@ -264,26 +302,97 @@ const Settings = () => {
 
     await new Promise(r => setTimeout(r, 600));
 
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+    const storedPassword = getCredential(role);
 
-    if (authPassword === currentAdminPass) {
-      setIsAuthorized(true);
+    if (password === storedPassword) {
+      const roleInfo = {
+        system_admin: { label: 'System Administrator', icon: 'settings' },
+        super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
+      }[role];
+      
+      const newSession: AdminSession = {
+        role,
+        roleLabel: roleInfo.label,
+        roleIcon: roleInfo.icon,
+        timestamp: Date.now()
+      };
+      
+      setSession(newSession);
+      saveSession(role, roleInfo.label, roleInfo.icon);
       setAuthPassword("");
-      showSuccess("Admin authorization granted. Opening System Configuration...");
+      setIsSwitchingRole(false);
+      showSuccess(`Welcome, ${roleInfo.label}!`);
     } else {
-      setAuthError("Invalid Admin Password. Access denied.");
-      setAuthPassword("");
+      setAuthError("Invalid password. Access denied.");
       showError("Authentication failed");
     }
     setIsVerifyingAuth(false);
   };
 
-  const handleLockSettings = () => {
-    setIsAuthorized(false);
+  // State for selected login role
+  const [selectedLoginRole, setSelectedLoginRole] = useState<AdminRole>('system_admin');
+
+  const handleLogout = () => {
+    clearSession();
+    setSession(null);
     setAuthPassword("");
     setAuthError("");
-    showSuccess("Configuration console locked.");
+    setIsSwitchingRole(false);
+    showSuccess("Logged out successfully.");
   };
+
+  const handleSwitchRole = () => {
+    setIsSwitchingRole(true);
+    setAuthPassword("");
+    setAuthError("");
+  };
+
+  // Password update handler
+  const handleUpdateCredential = async () => {
+    const currentRole = session?.role;
+    if (!currentRole) return;
+
+    const storedPassword = getCredential(currentRole);
+
+    if (passwordForm.currentPassword !== storedPassword) {
+      showError("Current password is incorrect.");
+      return;
+    }
+
+    if (!passwordForm.newPassword || passwordForm.newPassword.length < 6) {
+      showError("New password must be at least 6 characters long.");
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      showError("Passwords do not match.");
+      return;
+    }
+
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 600));
+
+    const credKey = currentRole === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
+    localStorage.setItem(credKey, passwordForm.newPassword);
+
+    const newLog = {
+      timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+      admin: session.roleLabel,
+      action: `Credential Updated for ${session.roleLabel}`,
+      ip: "192.168.1.102 (Chrome/Win)"
+    };
+    const updatedLogs = [newLog, ...auditLogs];
+    setAuditLogs(updatedLogs);
+
+    setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    setIsSaving(false);
+    setIsPasswordModalOpen(false);
+    setHasUnsavedChanges(true);
+    showSuccess(`${session.roleLabel} credential updated successfully!`);
+  };
+
+  const strength = useMemo(() => getPasswordStrength(passwordForm.newPassword), [passwordForm.newPassword]);
+  const isPasswordMatching = passwordForm.confirmPassword.length > 0 && passwordForm.newPassword === passwordForm.confirmPassword;
 
   const fetchSettingsFromDatabase = useCallback(async () => {
     setIsLoadingSettings(true);
@@ -353,15 +462,11 @@ const Settings = () => {
   }, []);
 
   useEffect(() => {
-    fetchSettingsFromDatabase();
-  }, [fetchSettingsFromDatabase]);
+    if (session) {
+      fetchSettingsFromDatabase();
+    }
+  }, [session, fetchSettingsFromDatabase]);
 
-  /**
-   * Handler invoked by the Leaflet-based AdminLocationPicker whenever
-   * the school pin or geofence radius changes on the map. Mirrors
-   * the change into the parent state so the rest of the screen
-   * (coordinate inputs, live distance panel) updates in real time.
-   */
   const handleLocationChange = useCallback(
     (lat: number, lng: number, radius: number) => {
       setGeofenceState({ lat, lng, radius });
@@ -418,9 +523,6 @@ const Settings = () => {
         auditLogs
       };
       localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
-      // Mirror the change into the canonical geofence key so that
-      // isWithinGeofence() / getGeofenceConfig() everywhere else in
-      // the app picks it up immediately.
       persistGeofenceConfig(geofenceConfig);
 
       setHasUnsavedChanges(false);
@@ -438,7 +540,7 @@ const Settings = () => {
   };
 
   const handleUpdateMasterPin = async () => {
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
+    const storedAdminPass = localStorage.getItem(CRED_KEYS.SYSTEM_ADMIN) || DEFAULT_PASSWORDS.SYSTEM_ADMIN;
     
     if (pinForm.currentPin !== storedAdminPass) {
       showError("Current Admin PIN/Password is incorrect.");
@@ -458,12 +560,12 @@ const Settings = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    localStorage.setItem('munyaka_admin_pass', pinForm.newPin);
+    localStorage.setItem(CRED_KEYS.SYSTEM_ADMIN, pinForm.newPin);
 
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-      admin: "System Admin",
-      action: "Admin Master Password / PIN Updated",
+      admin: session?.roleLabel || "System Admin",
+      action: "System Admin Password / PIN Updated",
       ip: "192.168.1.102 (Chrome/Win)"
     };
     const updatedLogs = [newLog, ...auditLogs];
@@ -472,7 +574,7 @@ const Settings = () => {
     setPinForm({ currentPin: "", newPin: "", confirmPin: "" });
     setIsSaving(false);
     setHasUnsavedChanges(true);
-    showSuccess("Administrative Master PIN updated successfully!");
+    showSuccess("System Admin credential updated successfully!");
   };
 
   const togglePermission = (roleId: string, modId: string, action: Action) => {
@@ -506,15 +608,6 @@ const Settings = () => {
     setHasUnsavedChanges(true);
   };
 
-  const strength = useMemo(() => getPasswordStrength(pinForm.newPin), [pinForm.newPin]);
-  const isPinMatching = pinForm.confirmPin.length > 0 && pinForm.newPin === pinForm.confirmPin;
-
-  /**
-   * Live distance from the admin's current GPS to the school's
-   * configured target. Used in the "Live Distance Check" panel
-   * so the admin can immediately see whether the radius they
-   * choose will catch their physical location on school grounds.
-   */
   const liveDistanceMeters = useMemo(() => {
     if (!currentGeoLoc) return null;
     return calculateDistance(
@@ -525,7 +618,8 @@ const Settings = () => {
     );
   }, [currentGeoLoc, geofenceConfig.lat, geofenceConfig.lng]);
 
-  if (!isAuthorized) {
+  // No session - show login screen
+  if (!session) {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex items-center gap-3 mb-6">
@@ -537,27 +631,88 @@ const Settings = () => {
         </div>
 
         <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden p-2">
-          <CardContent className="p-8 sm:p-10">
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-rose-100">
-                <Lock size={36} />
+          <CardContent className="p-6 md:p-8 sm:p-10">
+            <div className="text-center mb-6 md:mb-8">
+              <div className="w-16 h-16 md:w-20 md:h-20 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-indigo-100">
+                <Shield size={32} className="md:hidden" />
+                <Shield size={36} className="hidden md:inline" />
               </div>
-              <h2 className="text-2xl font-black text-slate-900 tracking-tight">Admin Authorization Required</h2>
-              <p className="text-xs text-slate-500 font-medium mt-1">
-                Enter your administrative PIN / password to access system configuration, RBAC permissions, and security parameters.
+              <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">Select Your Role</h2>
+              <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
+                Choose your administrative role and enter your credentials to access system configuration.
               </p>
             </div>
 
-            <form onSubmit={handleAuthorizeSettings} className="space-y-6">
-              {authError && (
-                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                  <ShieldAlert size={18} className="shrink-0" />
-                  <span>{authError}</span>
-                </div>
-              )}
+            {authError && (
+              <div className="mb-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                <ShieldAlert size={18} className="shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
 
+            {/* Role Selection */}
+            <div className="space-y-3 mb-6">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">Choose Role</p>
+              
+              <div className="grid grid-cols-1 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLoginRole('system_admin')}
+                  disabled={isVerifyingAuth}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                    selectedLoginRole === 'system_admin'
+                      ? "border-indigo-300 bg-indigo-50/30 ring-2 ring-indigo-200"
+                      : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    selectedLoginRole === 'system_admin' ? "bg-indigo-200 text-indigo-700" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200"
+                  )}>
+                    <Settings2 size={24} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900">System Administrator</p>
+                    <p className="text-xs text-slate-500">Manage system settings, users, academics, and RBAC</p>
+                  </div>
+                  <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-600 font-bold text-[10px]">
+                    Default: munyaka5239
+                  </Badge>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedLoginRole('super_admin')}
+                  disabled={isVerifyingAuth}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                    selectedLoginRole === 'super_admin'
+                      ? "border-amber-300 bg-amber-50/30 ring-2 ring-amber-200"
+                      : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
+                  )}
+                >
+                  <div className={cn(
+                    "p-3 rounded-xl transition-colors",
+                    selectedLoginRole === 'super_admin' ? "bg-amber-200 text-amber-700" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200"
+                  )}>
+                    <Crown size={24} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                    <p className="text-xs text-slate-500">Full access including payment module management</p>
+                  </div>
+                  <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
+                    Default: owner2026
+                  </Badge>
+                </button>
+              </div>
+            </div>
+
+            {/* Password Input */}
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(selectedLoginRole, authPassword); }} className="space-y-4">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Admin PIN / Password</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
                 <div className="relative">
                   <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                   <Input 
@@ -567,9 +722,8 @@ const Settings = () => {
                       setAuthPassword(e.target.value);
                       if (authError) setAuthError("");
                     }}
-                    placeholder="••••••••"
-                    className="h-14 pl-12 pr-12 rounded-2xl bg-slate-50 border-none font-bold text-lg focus:bg-white focus:ring-2 ring-indigo-100"
-                    autoFocus
+                    placeholder="Enter your password"
+                    className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 ring-indigo-100"
                   />
                   <button 
                     type="button" 
@@ -584,12 +738,12 @@ const Settings = () => {
               <Button 
                 type="submit" 
                 disabled={isVerifyingAuth || !authPassword.trim()}
-                className="w-full h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
               >
                 {isVerifyingAuth ? (
                   <>
                     <Loader2 className="animate-spin" size={20} />
-                    Verifying Credentials...
+                    Verifying...
                   </>
                 ) : (
                   <>
@@ -600,10 +754,154 @@ const Settings = () => {
               </Button>
             </form>
 
-            <div className="mt-8 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
-              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Admin Security Notice</p>
-              <p className="text-xs text-slate-500 font-medium">Default admin credential: <strong className="text-slate-800">munyaka5239</strong></p>
+            <div className="mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Security Notice</p>
+              <p className="text-xs text-slate-500 font-medium">
+                Default credentials can be changed in Security settings after login.
+              </p>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Switching role - show role selector
+  if (isSwitchingRole) {
+    return (
+      <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
+        <div className="flex items-center gap-3 mb-6">
+          <button
+            onClick={() => { setIsSwitchingRole(false); setAuthPassword(""); setAuthError(""); }}
+            className="rounded-xl h-10 w-10 text-slate-500 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 flex items-center justify-center"
+          >
+            <ArrowLeft size={20} />
+          </button>
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">Switch Role</h1>
+            <p className="text-xs text-slate-500 font-medium">Select a different administrative role</p>
+          </div>
+        </div>
+
+        <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden p-2">
+          <CardContent className="p-6 md:p-8 sm:p-10">
+            <div className="text-center mb-6">
+              <div className="w-16 h-16 bg-rose-50 text-rose-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-xl shadow-rose-100">
+                <LogOut size={32} />
+              </div>
+              <h2 className="text-xl font-black text-slate-900 tracking-tight">Switch to Another Role</h2>
+              <p className="text-xs text-slate-500 font-medium mt-1">
+                You'll need to log in with the credentials for the role you want to switch to.
+              </p>
+            </div>
+
+            {authError && (
+              <div className="mb-4 p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                <ShieldAlert size={18} className="shrink-0" />
+                <span>{authError}</span>
+              </div>
+            )}
+
+            <div className="space-y-3 mb-6">
+              <button
+                type="button"
+                onClick={() => handleLogin('system_admin', authPassword)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                  session.role === 'system_admin' 
+                    ? "border-indigo-300 bg-indigo-50/30 cursor-not-allowed opacity-60" 
+                    : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
+                )}
+                disabled={session.role === 'system_admin' || isVerifyingAuth}
+              >
+                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'system_admin' ? "bg-indigo-200 text-indigo-600" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200")}>
+                  <Settings2 size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">System Administrator</p>
+                  <p className="text-xs text-slate-500">Manage system settings, users, academics</p>
+                </div>
+                {session.role === 'system_admin' && (
+                  <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleLogin('super_admin', authPassword)}
+                className={cn(
+                  "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
+                  session.role === 'super_admin' 
+                    ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60" 
+                    : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
+                )}
+                disabled={session.role === 'super_admin' || isVerifyingAuth}
+              >
+                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'super_admin' ? "bg-amber-200 text-amber-600" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200")}>
+                  <Crown size={24} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                  <p className="text-xs text-slate-500">Full access including payment module</p>
+                </div>
+                {session.role === 'super_admin' && (
+                  <Badge className="bg-amber-100 text-amber-600 font-bold text-[10px]">Current</Badge>
+                )}
+              </button>
+            </div>
+
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin(session.role === 'super_admin' ? 'system_admin' : 'super_admin', authPassword); }} className="space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password for Selected Role</Label>
+                <div className="relative">
+                  <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Input 
+                    type={showAuthPass ? "text" : "password"}
+                    value={authPassword}
+                    onChange={(e) => {
+                      setAuthPassword(e.target.value);
+                      if (authError) setAuthError("");
+                    }}
+                    placeholder="Enter password for selected role"
+                    className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 ring-indigo-100"
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setShowAuthPass(!showAuthPass)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  >
+                    {showAuthPass ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
+              </div>
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Switching...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Switch Role
+                  </>
+                )}
+              </Button>
+
+              <Button 
+                type="button" 
+                variant="outline"
+                onClick={() => { setIsSwitchingRole(false); setAuthPassword(""); setAuthError(""); }}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl border-slate-200 text-slate-600 font-bold"
+              >
+                Cancel
+              </Button>
+            </form>
           </CardContent>
         </Card>
       </div>
@@ -620,16 +918,20 @@ const Settings = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div className="min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
               <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
-              <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold text-[10px] px-2.5 py-0.5">
-                <ShieldCheck size={12} className="mr-1 inline" /> Unlocked
+              <Badge className={cn(
+                "border-none font-bold text-[10px] px-2.5 py-0.5",
+                session.role === 'super_admin' ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"
+              )}>
+                <ShieldCheck size={12} className="mr-1 inline" /> {session.roleLabel}
               </Badge>
             </div>
             <p className="text-muted-foreground text-sm md:text-base">Master console for institutional policy, RBAC roles, and security parameters.</p>
@@ -638,30 +940,44 @@ const Settings = () => {
 
         <div className="flex flex-wrap items-center gap-2 md:gap-3">
           {hasUnsavedChanges && (
-            <>
-              <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
-                <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
-              </Badge>
-              <Button
-                variant="outline"
-                onClick={handleDiscardChanges}
-                disabled={isSaving}
-                className="rounded-xl md:rounded-2xl border-slate-200 text-slate-600 font-bold h-10 md:h-14 px-3 md:px-6 hover:bg-slate-50 text-sm md:text-base"
-              >
-                <RotateCcw size={14} className="mr-1.5 md:mr-2" /> <span className="hidden sm:inline">Discard</span>
-              </Button>
-            </>
+            <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
+              <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
+            </Badge>
           )}
-          
+
+          {/* Switch Role Button */}
           <Button
             variant="outline"
-            onClick={handleLockSettings}
+            onClick={handleSwitchRole}
+            className="rounded-xl md:rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
+          >
+            <Users size={14} className="md:hidden" />
+            <Users size={16} className="hidden md:inline" />
+            <span className="hidden sm:inline">Switch Role</span>
+            <span className="sm:hidden">Switch</span>
+          </Button>
+
+          {/* Update Password Button */}
+          <Button
+            variant="outline"
+            onClick={() => setIsPasswordModalOpen(true)}
+            className="rounded-xl md:rounded-2xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
+          >
+            <Key size={14} className="md:hidden" />
+            <Key size={16} className="hidden md:inline" />
+            <span className="hidden lg:inline">Update Password</span>
+            <span className="lg:hidden">Password</span>
+          </Button>
+          
+          {/* Logout Button */}
+          <Button
+            variant="outline"
+            onClick={handleLogout}
             className="rounded-xl md:rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
           >
-            <Lock size={14} className="md:hidden" />
-            <Lock size={16} className="hidden md:inline" />
-            <span className="hidden sm:inline">Lock Console</span>
-            <span className="sm:hidden">Lock</span>
+            <LogOut size={14} className="md:hidden" />
+            <LogOut size={16} className="hidden md:inline" />
+            <span className="hidden sm:inline">Logout</span>
           </Button>
 
           <Button
@@ -683,6 +999,107 @@ const Settings = () => {
         </div>
       </div>
 
+      {/* Password Update Modal */}
+      <Modal
+        isOpen={isPasswordModalOpen}
+        onClose={() => { setIsPasswordModalOpen(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }}
+        title={`Update ${session.roleLabel} Password`}
+        description={`Change the password for the ${session.roleLabel} account.`}
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button variant="ghost" onClick={() => { setIsPasswordModalOpen(false); setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' }); }} className="rounded-xl font-bold h-12 px-6">Cancel</Button>
+            <Button 
+              onClick={handleUpdateCredential} 
+              disabled={isSaving || !passwordForm.currentPassword || !isPasswordMatching}
+              className="rounded-xl bg-indigo-600 text-white font-bold h-12 px-6 gap-2"
+            >
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+              Update Password
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Current Password</Label>
+            <div className="relative">
+              <Input 
+                type={showAuthPass ? "text" : "password"}
+                value={passwordForm.currentPassword}
+                onChange={e => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                placeholder="Enter current password"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowAuthPass(!showAuthPass)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showAuthPass ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Password</Label>
+            <div className="relative">
+              <Input 
+                type={showNewPassword ? "text" : "password"}
+                value={passwordForm.newPassword}
+                onChange={e => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                placeholder="Enter new password"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowNewPassword(!showNewPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showNewPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {passwordForm.newPassword && (
+              <div className="space-y-1 pt-1">
+                <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
+                  <span className="text-slate-400">Strength</span>
+                  <span className={strength.color.split(' ')[1]}>{strength.label}</span>
+                </div>
+                <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
+                  <div className={`h-full transition-all duration-300 ${strength.color.split(' ')[0]}`} style={{ width: `${strength.score}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Confirm New Password</Label>
+            <div className="relative">
+              <Input 
+                type={showConfirmPassword ? "text" : "password"}
+                value={passwordForm.confirmPassword}
+                onChange={e => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                placeholder="Confirm new password"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              >
+                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+            {passwordForm.confirmPassword && (
+              <p className={`text-xs font-bold flex items-center gap-1 ${isPasswordMatching ? 'text-emerald-600' : 'text-rose-600'}`}>
+                {isPasswordMatching ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
+                {isPasswordMatching ? "Passwords match" : "Passwords do not match"}
+              </p>
+            )}
+          </div>
+        </div>
+      </Modal>
+
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={(tab) => {
         setActiveTab(tab);
         const url = new URL(window.location.href);
@@ -706,26 +1123,26 @@ const Settings = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                 <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">School Name</Label>
-                  <Input
-                    value={generalConfig.schoolName}
+                  <Input 
+                    value={generalConfig.schoolName} 
                     onChange={e => { setGeneralConfig({...generalConfig, schoolName: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0" 
                   />
                 </div>
                 <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Motto</Label>
-                  <Input
-                    value={generalConfig.motto}
+                  <Input 
+                    value={generalConfig.motto} 
                     onChange={e => { setGeneralConfig({...generalConfig, motto: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0" 
                   />
                 </div>
                 <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Official Email</Label>
-                  <Input
-                    value={generalConfig.email}
+                  <Input 
+                    value={generalConfig.email} 
                     onChange={e => { setGeneralConfig({...generalConfig, email: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0" 
                   />
                 </div>
                 <div className="space-y-2 min-w-0">
@@ -743,7 +1160,7 @@ const Settings = () => {
                   <p className="font-bold text-slate-900">System Maintenance Mode</p>
                   <p className="text-xs text-slate-500">Temporarily restrict portal access for parents and students during term rollover.</p>
                 </div>
-                <Switch
+                <Switch 
                   checked={generalConfig.maintenanceMode}
                   onCheckedChange={checked => { setGeneralConfig({...generalConfig, maintenanceMode: checked}); setHasUnsavedChanges(true); }}
                 />
@@ -762,8 +1179,8 @@ const Settings = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                 <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Active Academic Year</Label>
-                  <Select
-                    value={academicConfig.activeYear}
+                  <Select 
+                    value={academicConfig.activeYear} 
                     onValueChange={val => { setAcademicConfig({...academicConfig, activeYear: val}); setHasUnsavedChanges(true); }}
                   >
                     <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"><SelectValue /></SelectTrigger>
@@ -777,8 +1194,8 @@ const Settings = () => {
 
                 <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Active Term</Label>
-                  <Select
-                    value={academicConfig.activeTerm}
+                  <Select 
+                    value={academicConfig.activeTerm} 
                     onValueChange={val => { setAcademicConfig({...academicConfig, activeTerm: val}); setHasUnsavedChanges(true); }}
                   >
                     <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"><SelectValue /></SelectTrigger>
@@ -792,7 +1209,7 @@ const Settings = () => {
 
                 <div className="space-y-2 min-w-0 sm:col-span-2 lg:col-span-1">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Term Start Date</Label>
-                  <Input
+                  <Input 
                     type="date"
                     value={academicConfig.termStartDate}
                     onChange={e => { setAcademicConfig({...academicConfig, termStartDate: e.target.value}); setHasUnsavedChanges(true); }}
@@ -856,7 +1273,7 @@ const Settings = () => {
                           </div>
                         </div>
                         <Switch
-                          checked={allChecked}
+                          checked={allChecked} 
                           onCheckedChange={(checked) => toggleAllForRole(role.id, checked)}
                           className="data-[state=checked]:bg-indigo-600 shrink-0"
                         />
@@ -912,112 +1329,85 @@ const Settings = () => {
             <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="flex items-center gap-3">
                 <div className="p-2 md:p-3 bg-rose-50 text-rose-600 rounded-xl md:rounded-2xl shrink-0">
-                  <Key size={18} className="md:hidden" />
-                  <Key size={24} className="hidden md:inline" />
+                  <CreditCard size={18} className="md:hidden" />
+                  <CreditCard size={24} className="hidden md:inline" />
                 </div>
                 <div className="min-w-0">
-                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Master Administrative Credentials</CardTitle>
-                  <CardDescription className="text-xs md:text-sm">Protects sensitive operations like geofence overrides, grade deletions, and fee structure updates.</CardDescription>
+                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Admin Credentials</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Manage login credentials for both administrative roles.</CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 font-bold px-3 py-1 shrink-0">
-                High Privilege Level
+              <Badge variant="outline" className={cn(
+                "font-bold px-3 py-1 shrink-0",
+                session.role === 'super_admin' ? "border-amber-200 bg-amber-50 text-amber-700" : "border-indigo-200 bg-indigo-50 text-indigo-700"
+              )}>
+                {session.roleLabel}
               </Badge>
             </CardHeader>
 
             <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
-                
-                <div className="space-y-2 min-w-0">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Current Admin PIN / Password</Label>
-                  <div className="relative">
-                    <Input
-                      type={showCurrentPin ? "text" : "password"}
-                      value={pinForm.currentPin}
-                      onChange={e => setPinForm({...pinForm, currentPin: e.target.value})}
-                      placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowCurrentPin(!showCurrentPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showCurrentPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-                </div>
-
-                <div className="space-y-2 min-w-0">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Admin PIN / Password</Label>
-                  <div className="relative">
-                    <Input
-                      type={showNewPin ? "text" : "password"}
-                      value={pinForm.newPin}
-                      onChange={e => setPinForm({...pinForm, newPin: e.target.value})}
-                      placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPin(!showNewPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showNewPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
-                  </div>
-
-                  {pinForm.newPin && (
-                    <div className="space-y-1 pt-1">
-                      <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-widest">
-                        <span className="text-slate-400">Strength Indicator</span>
-                        <span className={strength.color.split(' ')[1]}>{strength.label}</span>
-                      </div>
-                      <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                        <div className={`h-full transition-all duration-300 ${strength.color.split(' ')[0]}`} style={{ width: `${strength.score}%` }} />
-                      </div>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+                {/* System Admin Credentials */}
+                <div className="p-4 bg-indigo-50/50 border border-indigo-100 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                      <Settings2 size={18} />
                     </div>
-                  )}
-                </div>
-
-                <div className="space-y-2 min-w-0">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Confirm New PIN / Password</Label>
-                  <div className="relative">
-                    <Input
-                      type={showConfirmPin ? "text" : "password"}
-                      value={pinForm.confirmPin}
-                      onChange={e => setPinForm({...pinForm, confirmPin: e.target.value})}
-                      placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowConfirmPin(!showConfirmPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showConfirmPin ? <EyeOff size={18} /> : <Eye size={18} />}
-                    </button>
+                    <div>
+                      <p className="font-bold text-slate-900">System Administrator</p>
+                      <p className="text-xs text-slate-500">Controls system settings, users, academics</p>
+                    </div>
                   </div>
-
-                  {pinForm.confirmPin && (
-                    <p className={`text-xs font-bold flex items-center gap-1 ${isPinMatching ? 'text-emerald-600' : 'text-rose-600'}`}>
-                      {isPinMatching ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
-                      {isPinMatching ? "PINs match" : "PINs do not match"}
-                    </p>
-                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      if (session.role === 'system_admin') {
+                        setIsPasswordModalOpen(true);
+                      } else {
+                        showError("Switch to System Administrator role to update this password.");
+                      }
+                    }}
+                    disabled={session.role !== 'system_admin'}
+                    className={cn(
+                      "w-full h-10 rounded-xl gap-2 font-bold",
+                      session.role !== 'system_admin' ? "opacity-50 cursor-not-allowed" : "border-indigo-200 text-indigo-600 hover:bg-indigo-100"
+                    )}
+                  >
+                    <Key size={14} /> Update System Admin Password
+                  </Button>
                 </div>
-              </div>
 
-              <div className="flex justify-end pt-4">
-                <Button
-                  onClick={handleUpdateMasterPin}
-                  disabled={isSaving || !pinForm.currentPin || !isPinMatching}
-                  className="rounded-xl px-6 md:px-8 h-10 md:h-12 font-bold bg-slate-900 text-white hover:bg-slate-800 gap-2 shadow-lg text-sm md:text-base w-full sm:w-auto"
-                >
-                  {isSaving ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} className="md:hidden" />}
-                  {isSaving ? <Loader2 className="animate-spin hidden md:inline" size={16} /> : <ShieldCheck size={16} className="hidden md:inline" />}
-                  Update Master PIN
-                </Button>
+                {/* Super Admin Credentials */}
+                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                      <Crown size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                      <p className="text-xs text-slate-500">Full access including payment module</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                      if (session.role === 'super_admin') {
+                        setIsPasswordModalOpen(true);
+                      } else {
+                        showError("Switch to Super Admin (Owner) role to update this password.");
+                      }
+                    }}
+                    disabled={session.role !== 'super_admin'}
+                    className={cn(
+                      "w-full h-10 rounded-xl gap-2 font-bold",
+                      session.role !== 'super_admin' ? "opacity-50 cursor-not-allowed" : "border-amber-200 text-amber-600 hover:bg-amber-100"
+                    )}
+                  >
+                    <Key size={14} /> Update Super Admin Password
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -1039,7 +1429,7 @@ const Settings = () => {
                 <Label htmlFor="geofence-master-toggle" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-indigo-900 cursor-pointer">
                   Geofence
                 </Label>
-                <Switch
+                <Switch 
                   id="geofence-master-toggle"
                   checked={geofenceEnabled}
                   onCheckedChange={checked => { setGeofenceEnabled(checked); setHasUnsavedChanges(true); }}
@@ -1048,7 +1438,6 @@ const Settings = () => {
             </CardHeader>
 
             <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
-              {/* Admin Location Picker - Leaflet/OpenStreetMap */}
               <div className="space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -1063,7 +1452,6 @@ const Settings = () => {
                   </Badge>
                 </div>
 
-                {/* Leaflet-based interactive map */}
                 {activeTab === 'security' && (
                   <AdminLocationPicker
                     initialLat={geofenceConfig.lat}
@@ -1074,7 +1462,6 @@ const Settings = () => {
                   />
                 )}
 
-                {/* Save & Update Target Location Button */}
                 <div className="pt-4 border-t flex justify-end">
                   <Button
                     onClick={handleSaveAllSettings}
@@ -1096,7 +1483,7 @@ const Settings = () => {
                     <p className="text-xs text-amber-800">Skip GPS distance enforcement for testing.</p>
                   </div>
                 </div>
-                <Switch
+                <Switch 
                   checked={devBypass}
                   onCheckedChange={checked => { setDevBypass(checked); setHasUnsavedChanges(true); }}
                   className="shrink-0"
