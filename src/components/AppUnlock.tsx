@@ -103,11 +103,12 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
     setIsActivating(false);
   };
 
-  // Auto-format: insert dashes every 4 chars
+  // Auto-format: strip non-alphanumeric, uppercase, then insert dashes every 4 chars.
+  // No maxLength — full keys like MUNYAKA-2026-A3B7-X9K2-M8N4-R7T1 (30 chars) paste cleanly.
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
     const formatted = raw.match(/.{1,4}/g)?.join('-') ?? raw;
-    setKey(formatted.slice(0, 28));
+    setKey(formatted);
     setError('');
   };
 
@@ -132,10 +133,9 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
             value={key}
             onChange={handleKeyChange}
             placeholder="MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX"
-            className="h-14 pl-12 pr-14 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base tracking-wider text-center"
+            className="h-14 pl-12 pr-14 rounded-2xl bg-slate-50 border-none font-mono font-bold text-sm tracking-wider text-center min-w-0"
             autoComplete="off"
             autoFocus
-            maxLength={28}
           />
           <button
             type="button"
@@ -148,6 +148,15 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
         <p className="text-[10px] text-slate-400 font-medium text-center">
           Format: MUNYAKA-YYYY-XXXX-XXXX-XXXX-XXXX
         </p>
+
+        {/* Emergency dev bypass — always visible, no key required */}
+        <button
+          type="button"
+          onClick={() => { devBypass(); onSuccess(); }}
+          className="w-full mt-1 text-[10px] font-mono text-indigo-400/70 hover:text-indigo-400 underline underline-offset-2 transition-colors"
+        >
+          Skip / Force Activate (dev)
+        </button>
       </div>
 
       {/* Sample code hint */}
