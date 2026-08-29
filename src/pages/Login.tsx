@@ -167,12 +167,10 @@ const Login: React.FC = () => {
     // System Admin: direct localStorage check with hardcoded fallback.
     // Other roles continue to use the stored-or-default lookup below.
     if (selectedRole === 'system_admin') {
-      const raw = localStorage.getItem('munyaka_sysadmin_pass');
-      const trimmed = raw?.trim() ?? '';
-      storedPassword = trimmed === '' ? 'sysadmin2026' : trimmed;
-      console.log("Entered:", password, "Stored:", storedPassword);
-
-      if (password.trim() !== storedPassword) {
+      const validPin = localStorage.getItem('munyaka_sysadmin_pass') || 'sysadmin2026';
+      if (password.trim() === validPin.trim()) {
+        storedPassword = validPin.trim();
+      } else {
         setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
         showError('Authentication failed');
         setIsVerifying(false);
