@@ -437,6 +437,24 @@ const PaymentManagement = () => {
   const addLocalPayment = () => {
     if (!lpForm.amount.trim()) { showError('Enter an amount.'); return; }
     if (!lpForm.reference.trim()) { showError('Enter a reference / receipt number.'); return; }
+
+    // Advance the subscription billing date and mark active.
+    const today = new Date();
+    const newNextBilling = new Date(today);
+    newNextBilling.setDate(newNextBilling.getDate() + 30);
+    const nextBillingStr = newNextBilling.toISOString().slice(0, 10);
+    const firstSubId = subscriptions[0]?.id;
+    const updatedSubscriptions = subscriptions.map(s =>
+      s.id === firstSubId
+        ? { ...s, status: 'active' as const, nextBilling: nextBillingStr }
+        : s
+    );
+    setSubscriptions(updatedSubscriptions);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+    );
+
     const entry: LocalPaymentEntry = {
       id: `lp-${Date.now()}`,
       mode: lpForm.mode,
@@ -450,7 +468,7 @@ const PaymentManagement = () => {
     setLocalPayments(next);
     localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
     setLpForm(f => ({ ...f, amount: '', reference: '', note: '' }));
-    showSuccess('Local payment logged successfully.');
+    showSuccess(`Payment logged! Subscription extended to ${nextBillingStr}.`);
   };
 
   // ── Save ───────────────────────────────
@@ -530,9 +548,8 @@ const PaymentManagement = () => {
     const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
     const subName = sub?.name ?? 'Subscription';
 
-    // 1) Issue a real license through the license service so it shows up
-    //    alongside other issued licenses and is fully compatible with the
-    //    activation screen (no truncation — full 30-char key).
+    // 1) Issue a real license — this also syncs is_activated and
+    //    activation_expires_at to localStorage so the lock screen stays open.
     const issued = issueLicense({
       issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
       deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
@@ -546,7 +563,27 @@ const PaymentManagement = () => {
       notes: `Monthly payment for ${subName}`,
     });
 
-    // 2) Persist a parallel monthly-payment record for this UI's history.
+    // 2) Advance the subscription billing date by 30 days and mark active.
+    //    This updates both the in-memory state and localStorage immediately.
+    const today = new Date();
+    const newNextBilling = new Date(today);
+    newNextBilling.setDate(newNextBilling.getDate() + 30);
+    const nextBillingStr = newNextBilling.toISOString().slice(0, 10);
+
+    const updatedSubscriptions = subscriptions.map(s =>
+      s.id === mpForm.subscriptionId
+        ? { ...s, status: 'active' as const, nextBilling: nextBillingStr }
+        : s
+    );
+    setSubscriptions(updatedSubscriptions);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+    );
+    // Mark the unsaved-changes banner as clear (state is already saved).
+    setHasUnsavedChanges(false);
+
+    // 3) Persist a parallel monthly-payment record for the history table.
     const record: MonthlyPayment = {
       id: `mp-${Date.now()}`,
       subscriptionId: mpForm.subscriptionId,
@@ -562,16 +599,19 @@ const PaymentManagement = () => {
       deviceId: issued.deviceId,
       expiresAt: issued.expiresAt,
     };
-    const next = [record, ...monthlyPayments];
-    setMonthlyPayments(next);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+    const nextPayments = [record, ...monthlyPayments];
+    setMonthlyPayments(nextPayments);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(nextPayments));
 
-    // 3) Refresh license list & reveal the code in the success banner.
+    // 4) Refresh license list & reveal the generated code.
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
     setMpForm(f => ({ ...f, transactionRef: '' }));
     setIsRecordingPayment(false);
-    showSuccess('Monthly payment recorded & activation code generated.');
+    showSuccess(
+      `Payment recorded! License extended to ${nextBillingStr}. ` +
+      `Activation code generated and ready to share.`
+    );
   };
 
   const copyToClipboard = (text: string) => {

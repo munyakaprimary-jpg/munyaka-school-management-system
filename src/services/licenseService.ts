@@ -110,16 +110,21 @@ export function issueLicense(params: {
   };
   licenses.push(license);
   writeLicenses(licenses);
-  // Also set as the currently active license
-  setActiveLicense(license.activationKey);
+  // Also set as the currently active license (and sync the is_activated
+  // flag + activation_expires_at in localStorage so the lock screen
+  // recognises the app as active for the next 30 days).
+  setActiveLicense(license.activationKey, expiresAt);
   return license;
 }
 
 /** Mark a license as the active (currently installed) license */
-export function setActiveLicense(activationKey: string): void {
+export function setActiveLicense(activationKey: string, expiresAt?: string): void {
   localStorage.setItem(ACTIVE_LICENSE_KEY, activationKey);
   localStorage.setItem(IS_ACTIVATED_KEY, 'true');
   localStorage.removeItem(APP_LOCKED_KEY);
+  if (expiresAt) {
+    localStorage.setItem('activation_expires_at', expiresAt);
+  }
 }
 
 /** Revoke / expire a license */
