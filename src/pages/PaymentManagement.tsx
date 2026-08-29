@@ -246,6 +246,26 @@ const DEFAULT_PAYMENTS: SoftwarePayment[] = [
 ];
 
 // ─────────────────────────────────────────
+// SHARED SYNC EVENTS
+// ─────────────────────────────────────────
+/** Fired (via window.dispatchEvent) after any payment is recorded.
+ *  Listeners re-read their data from localStorage so the UI stays in sync
+ *  across tabs, components, and page refreshes. */
+export const SUBSCRIPTION_UPDATED_EVENT = 'subscription-updated';
+
+export const PAYMENT_LOGGED_EVENT = 'payment-logged';
+
+/** Hook: dispatches a shared event and re-reads state from localStorage
+ *  whenever the named event fires on window (cross-tab / cross-component sync). */
+function useSyncEvent(eventName: string, callback: () => void) {
+  useEffect(() => {
+    const handler = () => callback();
+    window.addEventListener(eventName, handler);
+    return () => window.removeEventListener(eventName, handler);
+  }, [eventName, callback]);
+}
+
+// ─────────────────────────────────────────
 // HELPERS
 // ─────────────────────────────────────────
 function mask(value: string): string {
@@ -403,6 +423,86 @@ const PaymentManagement = () => {
     }
   }, []);
 
+  // ── Sync hooks ──────────────────────────────────────────────────────
+  // Re-read subscriptions and licenses from localStorage whenever another
+  // handler fires a payment event — covers cross-tab and cross-component sync.
+  useSyncEvent(SUBSCRIPTION_UPDATED_EVENT, () => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.subscriptions?.length) {
+          const localOnly = parsed.subscriptions.filter(
+            (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+          );
+          if (localOnly.length > 0) setSubscriptions(localOnly);
+        }
+      } catch { /* ignore */ }
+    }
+    setLicenses(getAllLicenses());
+  });
+
+  useSyncEvent(PAYMENT_LOGGED_EVENT, () => {
+    const mpRaw = localStorage.getItem('munyaka_monthly_payments');
+    if (mpRaw) {
+      try {
+        const parsed = JSON.parse(mpRaw);
+        if (Array.isArray(parsed)) setMonthlyPayments(parsed);
+      } catch { /* ignore */ }
+    }
+    const lpRaw = localStorage.getItem('munyaka_local_payments');
+    if (lpRaw) {
+      try {
+        const parsed = JSON.parse(lpRaw);
+        if (Array.isArray(parsed)) setLocalPayments(parsed);
+      } catch { /* ignore */ }
+    }
+  });
+
+  // Listen for cross-tab localStorage changes so a payment recorded in
+  // another tab (or window) instantly reflects here as well.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY || e.key === null) {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if (raw) {
+          try {
+            const parsed = JSON.parse(raw);
+            if (parsed.subscriptions?.length) {
+              const localOnly = parsed.subscriptions.filter(
+                (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+              );
+              if (localOnly.length > 0) setSubscriptions(localOnly);
+            }
+          } catch { /* ignore */ }
+        }
+        setLicenses(getAllLicenses());
+      }
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, []);
+
+  // When the user switches back to the Subscriptions tab, re-read all
+  // subscription data from localStorage so the card reflects the most
+  // recent payment without requiring a page refresh.
+  useEffect(() => {
+    if (activeTab !== 'subscriptions') return;
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.subscriptions?.length) {
+          const localOnly = parsed.subscriptions.filter(
+            (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+          );
+          if (localOnly.length > 0) setSubscriptions(localOnly);
+        }
+      } catch { /* ignore */ }
+    }
+    setLicenses(getAllLicenses());
+  }, [activeTab]);
+
   // When subscriptions load, prefill the form once with the first one.
   // Uses a ref to ensure this only runs a single time — otherwise React
   // would re-fire on every subscriptions array identity change, which can
@@ -468,6 +568,9 @@ const PaymentManagement = () => {
     setLocalPayments(next);
     localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
     setLpForm(f => ({ ...f, amount: '', reference: '', note: '' }));
+    // Notify the rest of the page (and any other tabs) to re-read state.
+    window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
+    window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
     showSuccess(`Payment logged! Subscription extended to ${nextBillingStr}.`);
   };
 
@@ -608,6 +711,9 @@ const PaymentManagement = () => {
     setLastGeneratedCode(issued.activationKey);
     setMpForm(f => ({ ...f, transactionRef: '' }));
     setIsRecordingPayment(false);
+    // Notify the rest of the page (and any other tabs) to re-read state.
+    window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
+    window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
     showSuccess(
       `Payment recorded! License extended to ${nextBillingStr}. ` +
       `Activation code generated and ready to share.`
