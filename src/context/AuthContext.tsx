@@ -41,7 +41,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const DEFAULT_ADMIN = {
   email: 'munyakaprimary@gmail.com',
-  password: 'munyaka5239',
+  password: 'ownerpass2026',
   user: {
     id: 'admin-001',
     name: 'School Owner',
@@ -49,6 +49,19 @@ const DEFAULT_ADMIN = {
     phone: '+254 700 000 000',
     role: 'owner' as UserRole,
     avatar: 'OW'
+  }
+};
+
+const DEFAULT_SYSTEM_ADMIN = {
+  email: 'sysadmin@munyaka.sc.ke',
+  password: 'sysadmin2026',
+  user: {
+    id: 'admin-002',
+    name: 'System Administrator',
+    email: 'sysadmin@munyaka.sc.ke',
+    phone: '+254 700 000 001',
+    role: 'super_admin' as UserRole,
+    avatar: 'SA'
   }
 };
 
@@ -83,12 +96,22 @@ const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
-  // Ensure default super admin with updated credentials is generated & active
-  const adminEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
-  users[adminEmailKey] = {
+  // Ensure default Super Admin (Owner) with updated credentials is generated & active
+  const ownerEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
+  users[ownerEmailKey] = {
     ...DEFAULT_ADMIN.user,
     password: DEFAULT_ADMIN.password,
     alternativePasswords: [DEFAULT_ADMIN.password],
+    isActive: true,
+    emailConfirmed: true
+  };
+
+  // Ensure default System Administrator with distinct credentials is generated & active
+  const sysAdminEmailKey = normalizeEmail(DEFAULT_SYSTEM_ADMIN.email);
+  users[sysAdminEmailKey] = {
+    ...DEFAULT_SYSTEM_ADMIN.user,
+    password: DEFAULT_SYSTEM_ADMIN.password,
+    alternativePasswords: [DEFAULT_SYSTEM_ADMIN.password],
     isActive: true,
     emailConfirmed: true
   };
@@ -229,14 +252,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   const updatePassword = async (oldPass: string, newPass: string): Promise<boolean> => {
-    const storedPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    
-    if (oldPass !== storedPass) {
+    if (!user) {
+      showError("No user logged in");
+      return false;
+    }
+
+    const normalizedEmail = normalizeEmail(user.email);
+    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+    const users = usersJson ? JSON.parse(usersJson) : {};
+    const foundUser = users[normalizedEmail];
+
+    if (!foundUser) {
+      showError("User not found");
+      return false;
+    }
+
+    const isPasswordValid =
+      foundUser.password === oldPass ||
+      (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(oldPass));
+
+    if (!isPasswordValid) {
       showError("Incorrect current password");
       return false;
     }
 
-    localStorage.setItem('munyaka_admin_pass', newPass);
+    // Update the specific user's password
+    foundUser.password = newPass;
+    if (!foundUser.alternativePasswords) {
+      foundUser.alternativePasswords = [];
+    }
+    if (!foundUser.alternativePasswords.includes(newPass)) {
+      foundUser.alternativePasswords.push(newPass);
+    }
+    users[normalizedEmail] = foundUser;
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+
+    // Keep legacy key in sync if updating the default admin
+    if (normalizedEmail === normalizeEmail(DEFAULT_ADMIN.email)) {
+      localStorage.setItem('munyaka_owner_pass', newPass);
+    }
+    if (normalizedEmail === normalizeEmail(DEFAULT_SYSTEM_ADMIN.email)) {
+      localStorage.setItem('munyaka_sysadmin_pass', newPass);
+    }
+
     showSuccess("Password changed successfully");
     return true;
   };

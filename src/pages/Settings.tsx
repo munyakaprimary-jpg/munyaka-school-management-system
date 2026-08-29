@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,12 +53,13 @@ const SETTINGS_ROW_ID = 'default';
 // Session persistence keys
 const SESSION_KEY = 'munyaka_admin_session';
 const CRED_KEYS = {
-  SYSTEM_ADMIN: 'munyaka_admin_pass',
+  SYSTEM_ADMIN: 'munyaka_sysadmin_pass',
   SUPER_ADMIN: 'munyaka_owner_pass'
 };
+// Distinct default passwords - NEVER the same for both roles
 const DEFAULT_PASSWORDS = {
-  SYSTEM_ADMIN: 'munyaka5239',
-  SUPER_ADMIN: 'owner2026'
+  SYSTEM_ADMIN: 'sysadmin2026',
+  SUPER_ADMIN: 'ownerpass2026'
 };
 
 type AdminRole = 'system_admin' | 'super_admin';
@@ -199,6 +201,7 @@ const getCredential = (role: AdminRole): string => {
 };
 
 const Settings = () => {
+  const navigate = useNavigate();
   // Session state
   const [session, setSession] = useState<AdminSession | null>(null);
   const [authPassword, setAuthPassword] = useState("");
@@ -321,9 +324,16 @@ const Settings = () => {
       saveSession(role, roleInfo.label, roleInfo.icon);
       setAuthPassword("");
       setIsSwitchingRole(false);
-      showSuccess(`Welcome, ${roleInfo.label}!`);
+      
+      // Role-specific success message
+      if (role === 'system_admin') {
+        showSuccess(`Welcome, System Administrator! Full system access granted.`);
+      } else {
+        showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
+      }
     } else {
-      setAuthError("Invalid password. Access denied.");
+      const otherRole = role === 'system_admin' ? 'Super Admin' : 'System Administrator';
+      setAuthError(`Invalid password. This is the ${role === 'system_admin' ? 'System Administrator' : 'Super Admin (Owner)'} login. Please use the correct credentials for this role.`);
       showError("Authentication failed");
     }
     setIsVerifyingAuth(false);
@@ -674,10 +684,10 @@ const Settings = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900">System Administrator</p>
-                    <p className="text-xs text-slate-500">Manage system settings, users, academics, and RBAC</p>
+                    <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
                   </div>
                   <Badge variant="outline" className="border-indigo-200 bg-indigo-50 text-indigo-600 font-bold text-[10px]">
-                    Default: munyaka5239
+                    PIN: sysadmin2026
                   </Badge>
                 </button>
 
@@ -700,10 +710,10 @@ const Settings = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold text-slate-900">Super Admin (Owner)</p>
-                    <p className="text-xs text-slate-500">Full access including payment module management</p>
+                    <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
                   </div>
                   <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
-                    Default: owner2026
+                    PIN: ownerpass2026
                   </Badge>
                 </button>
               </div>
@@ -819,7 +829,7 @@ const Settings = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-slate-900">System Administrator</p>
-                  <p className="text-xs text-slate-500">Manage system settings, users, academics</p>
+                  <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
                 </div>
                 {session.role === 'system_admin' && (
                   <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
@@ -831,8 +841,8 @@ const Settings = () => {
                 onClick={() => handleLogin('super_admin', authPassword)}
                 className={cn(
                   "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                  session.role === 'super_admin' 
-                    ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60" 
+                  session.role === 'super_admin'
+                    ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60"
                     : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
                 )}
                 disabled={session.role === 'super_admin' || isVerifyingAuth}
@@ -842,7 +852,7 @@ const Settings = () => {
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-slate-900">Super Admin (Owner)</p>
-                  <p className="text-xs text-slate-500">Full access including payment module</p>
+                  <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
                 </div>
                 {session.role === 'super_admin' && (
                   <Badge className="bg-amber-100 text-amber-600 font-bold text-[10px]">Current</Badge>
@@ -943,6 +953,28 @@ const Settings = () => {
             <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs shrink-0">
               <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
             </Badge>
+          )}
+
+          {/* Quick Navigation - Super Admin gets Payment link, System Admin gets System Management link */}
+          {session.role === 'super_admin' && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/payment-management')}
+              className="rounded-xl border-amber-200 text-amber-600 hover:bg-amber-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
+            >
+              <CreditCard size={16} />
+              <span className="hidden sm:inline">Payments</span>
+            </Button>
+          )}
+          {session.role === 'system_admin' && (
+            <Button
+              variant="outline"
+              onClick={() => navigate('/system-management')}
+              className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
+            >
+              <Settings2 size={16} />
+              <span className="hidden sm:inline">System Mgmt</span>
+            </Button>
           )}
 
           {/* Switch Role Button */}
