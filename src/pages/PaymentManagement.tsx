@@ -873,18 +873,18 @@ const PaymentManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex overflow-x-auto">
-          <TabsTrigger value="subscriptions" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <RefreshCw size={16} /> Subscriptions
+        <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-auto mb-8 flex flex-wrap gap-1 w-full">
+          <TabsTrigger value="subscriptions" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <RefreshCw size={15} /> Subscriptions
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <Sparkles size={16} /> Monthly Payments
+          <TabsTrigger value="monthly" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <Sparkles size={15} /> Monthly Payments
           </TabsTrigger>
-          <TabsTrigger value="gateways" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <Globe size={16} /> Payment Gateways
+          <TabsTrigger value="gateways" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <Globe size={15} /> Payment Gateways
           </TabsTrigger>
-          <TabsTrigger value="payments" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
-            <DollarSign size={16} /> Payment History
+          <TabsTrigger value="payments" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <DollarSign size={15} /> Payment History
           </TabsTrigger>
         </TabsList>
 
