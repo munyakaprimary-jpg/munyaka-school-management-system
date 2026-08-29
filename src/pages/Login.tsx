@@ -5,16 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { 
-  Loader2, 
-  Shield, 
-  Key, 
-  Eye, 
-  EyeOff, 
-  Settings2, 
-  Crown, 
-  ChevronLeft, 
-  ShieldAlert, 
+import {
+  Loader2,
+  Shield,
+  Key,
+  Eye,
+  EyeOff,
+  Settings2,
+  Crown,
+  ChevronLeft,
+  ShieldAlert,
   Unlock,
   Users,
   CreditCard,
@@ -26,12 +26,39 @@ import { cn } from '@/lib/utils';
 
 type AdminRole = 'system_admin' | 'super_admin';
 
+// Credential keys in localStorage
+const CRED_KEYS: Record<AdminRole, string> = {
+  system_admin: 'munyaka_sysadmin_pass',
+  super_admin: 'munyaka_owner_pass'
+};
+
+// Default credentials (only used if localStorage has no stored value)
+const DEFAULT_PASSWORDS: Record<AdminRole, string> = {
+  system_admin: 'sysadmin2026',
+  super_admin: 'ownerpass2026'
+};
+
+// Get the active credential for a role — reads from localStorage, falls back to default
+function getRoleCredential(role: AdminRole): string {
+  const stored = localStorage.getItem(CRED_KEYS[role]);
+  return stored || DEFAULT_PASSWORDS[role];
+}
+
+// Bootstrap credentials into localStorage ONLY if not already set
+function bootstrapCredentials() {
+  if (!localStorage.getItem(CRED_KEYS.system_admin)) {
+    localStorage.setItem(CRED_KEYS.system_admin, DEFAULT_PASSWORDS.system_admin);
+  }
+  if (!localStorage.getItem(CRED_KEYS.super_admin)) {
+    localStorage.setItem(CRED_KEYS.super_admin, DEFAULT_PASSWORDS.super_admin);
+  }
+}
+
 interface RoleConfig {
   id: AdminRole;
   label: string;
   description: string;
   fullDescription: string;
-  password: string;
   email: string;
   userName: string;
   userRole: 'owner' | 'super_admin';
@@ -47,7 +74,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'System Administrator',
     description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
-    password: 'sysadmin2026',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'System Administrator',
     userRole: 'super_admin',
@@ -61,7 +87,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'Super Admin (Owner)',
     description: 'Exclusive access to Payment & Subscriptions module',
     fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
-    password: 'ownerpass2026',
     email: 'munyakaprimary@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
@@ -84,6 +109,9 @@ const Login: React.FC = () => {
 
   // Redirect if already authenticated
   useEffect(() => {
+    // Make sure both credential keys exist on first visit so Settings can read them
+    bootstrapCredentials();
+
     if (isAuthenticated && user) {
       const userRole = user.role;
       if (userRole === 'owner') {
@@ -125,7 +153,10 @@ const Login: React.FC = () => {
 
     const config = ROLE_CONFIGS[selectedRole];
 
-    if (password !== config.password) {
+    // Read credential from localStorage (honors any password changed via Settings)
+    const expectedPassword = getRoleCredential(selectedRole);
+
+    if (password !== expectedPassword) {
       setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
       showError('Authentication failed');
       setIsVerifying(false);
@@ -145,13 +176,9 @@ const Login: React.FC = () => {
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
       
-      // Also set legacy keys for backward compatibility
-      localStorage.setItem('munyaka_admin_pass', config.password);
-      if (selectedRole === 'super_admin') {
-        localStorage.setItem('munyaka_owner_pass', config.password);
-      } else {
-        localStorage.setItem('munyaka_sysadmin_pass', config.password);
-      }
+      // Do NOT overwrite stored credentials here — Settings may have set a new password.
+      // Only ensure legacy keys reflect the credential currently in use for backward compatibility.
+      localStorage.setItem('munyaka_admin_pass', expectedPassword);
       
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
@@ -319,7 +346,7 @@ const Login: React.FC = () => {
                     </button>
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium pt-1">
-                    Default: <span className="font-bold">{config.password}</span>
+                    Stored PIN: <span className="font-bold">{getRoleCredential(selectedRole)}</span>
                   </p>
                 </div>
 
