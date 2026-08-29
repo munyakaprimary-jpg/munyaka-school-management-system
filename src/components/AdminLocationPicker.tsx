@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Circle, useMapEvents } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
 import L from 'leaflet';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { showSuccess, showError } from '@/utils/toast';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { calculateDistance } from '@/lib/geofence';
-import { Crosshair, Navigation2, CheckCircle2, AlertCircle, Save, AlertTriangle, MapPin } from 'lucide-react';
+import { Crosshair, Navigation2, CheckCircle2, AlertCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 // Fix for Leaflet's default icon assets in Vite/React environments
@@ -33,20 +33,6 @@ const SchoolIcon = L.icon({
   shadowSize: [41, 41],
 });
 
-/**
- * Inner component that captures map click events
- */
-const MapClickHandler: React.FC<{
-  onMapClick: (lat: number, lng: number) => void;
-}> = ({ onMapClick }) => {
-  useMapEvents({
-    click(e) {
-      onMapClick(e.latlng.lat, e.latlng.lng);
-    },
-  });
-  return null;
-};
-
 const DEFAULT_LAT = 0.5304;
 const DEFAULT_LNG = 35.3078;
 const DEFAULT_RADIUS = 50;
@@ -70,7 +56,7 @@ export interface AdminLocationPickerProps {
  *  - A radius slider with preset buttons (25m, 50m, 100m, 200m)
  *  - Live distance verification against the admin's current GPS
  */
-export const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
+const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   initialLat = DEFAULT_LAT,
   initialLng = DEFAULT_LNG,
   initialRadius = DEFAULT_RADIUS,
@@ -86,22 +72,6 @@ export const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   const mapRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
 
-  // Track the user's "centre on me" trigger
-  const centerOnMeRef = useRef(false);
-
-  /**
-   * Handle map clicks - moves the school pin to the clicked location
-   */
-  const handleMapClick = useCallback(
-    (lat: number, lng: number) => {
-      setPosition([lat, lng]);
-      if (onLocationChange) {
-        onLocationChange(lat, lng, radius);
-      }
-    },
-    [radius, onLocationChange]
-  );
-
   /**
    * Handle marker drag - updates position when pin is dragged
    */
@@ -116,16 +86,6 @@ export const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
     },
     [radius, onLocationChange]
   );
-
-  /**
-   * When the user toggles "Centre on me", pan the map to current GPS
-   */
-  useEffect(() => {
-    if (centerOnMeRef.current && currentGeoLoc && mapRef.current) {
-      mapRef.current.setView([currentGeoLoc.lat, currentGeoLoc.lng], 17);
-      centerOnMeRef.current = false;
-    }
-  }, [currentGeoLoc]);
 
   /**
    * Recentre the map to the admin's current GPS location
@@ -208,9 +168,6 @@ export const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             maxZoom={19}
           />
-
-          {/* Capture click events on the map */}
-          <MapClickHandler onMapClick={handleMapClick} />
 
           {/* School pin (draggable) */}
           <Marker
