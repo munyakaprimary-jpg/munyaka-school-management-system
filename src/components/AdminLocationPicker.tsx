@@ -1,6 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { MapContainer, TileLayer, Marker, Circle } from 'react-leaflet';
-import L from 'leaflet';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -11,27 +9,34 @@ import { calculateDistance } from '@/lib/geofence';
 import { Crosshair, Navigation2, CheckCircle2, AlertCircle, AlertTriangle, MapPin } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-// Fix for Leaflet's default icon assets in Vite/React environments
-delete (L.Icon.Default.prototype as any)._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-});
+// Lazy load Leaflet only on the client side
+let L: typeof import('leaflet') | null = null;
+let MapContainer: any = null;
+let TileLayer: any = null;
+let Marker: any = null;
+let Circle: any = null;
 
-/**
- * Custom marker icon for the school pin
- */
-const SchoolIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
-  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  tooltipAnchor: [16, -28],
-  shadowSize: [41, 41],
-});
+// Load Leaflet dynamically to avoid SSR/bundling issues
+const loadLeaflet = async () => {
+  if (typeof window === 'undefined') return;
+  
+  if (!L) {
+    L = await import('leaflet');
+    const reactLeaflet = await import('react-leaflet');
+    MapContainer = reactLeaflet.MapContainer;
+    TileLayer = reactLeaflet.TileLayer;
+    Marker = reactLeaflet.Marker;
+    Circle = reactLeaflet.Circle;
+    
+    // Fix for Leaflet's default icon assets
+    delete (L.Icon.Default.prototype as any)._getIconUrl;
+    L.Icon.Default.mergeOptions({
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+    });
+  }
+};
 
 const DEFAULT_LAT = 0.5304;
 const DEFAULT_LNG = 35.3078;
@@ -48,13 +53,7 @@ export interface AdminLocationPickerProps {
 
 /**
  * Admin Location Picker using Leaflet.js + OpenStreetMap.
- *
- * Free, open-source replacement for the Google Maps implementation.
- * Renders an interactive OpenStreetMap view with:
- *  - A clickable/draggable school pin
- *  - An adjustable blue geofence circle (radius in meters)
- *  - A radius slider with preset buttons (25m, 50m, 100m, 200m)
- *  - Live distance verification against the admin's current GPS
+ * Uses dynamic imports to avoid SSR/bundling conflicts.
  */
 const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   initialLat = DEFAULT_LAT,
@@ -63,28 +62,83 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
   geofenceEnabled = true,
   onLocationChange,
 }) => {
+  const [isLoaded, setIsLoaded] = useState(false);
+  const [isClient, setIsClient] = useState(false);
   const [position, setPosition] = useState<[number, number]>([initialLat, initialLng]);
   const [radius, setRadius] = useState<number>(initialRadius);
+  const [LeafletComponents, setLeafletComponents] = useState<{
+    MapContainer: any;
+    TileLayer: any;
+    Marker: any;
+    Circle: any;
+    L: typeof import('leaflet');
+  } | null>(null);
 
   const { location: currentGeoLoc, isLoading: isLocating, error: geoError } = useGeolocation();
 
-  // Refs for direct map access
-  const mapRef = useRef<L.Map | null>(null);
-  const markerRef = useRef<L.Marker | null>(null);
+  // Client-side check
+  useEffect(() => {
+    setIsClient(true);
+    loadLeaflet().then(() => {
+      import('leaflet').then((leafletModule) => {
+        import('react-leaflet').then((reactLeafletModule) => {
+          const leaflet = leafletModule.default || leafletModule;
+          const reactLeaflet = reactLeafletModule;
+          
+          // Fix Leaflet icon
+          delete (leaflet.Icon.Default.prototype as any)._getIconUrl;
+          leaflet.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+            iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+            shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+          });
+          
+          setLeafletComponents({
+            MapContainer: reactLeaflet.MapContainer,
+            TileLayer: reactLeaflet.TileLayer,
+            Marker: reactLeaflet.Marker,
+            Circle: reactLeaflet.Circle,
+            L: leaflet,
+          });
+          setIsLoaded(true);
+        });
+      });
+    });
+  }, []);
+
+  // Refs for map elements
+  const mapRef = useRef<any>(null);
+  const markerRef = useRef<any>(null);
+
+  // Create school icon
+  const schoolIcon = useMemo(() => {
+    if (!LeafletComponents) return null;
+    return LeafletComponents.L.icon({
+      iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+      iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+      shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+      iconSize: [25, 41],
+      iconAnchor: [12, 41],
+      popupAnchor: [1, -34],
+      tooltipAnchor: [16, -28],
+      shadowSize: [41, 41],
+    });
+  }, [LeafletComponents]);
 
   /**
    * Handle marker drag - updates position when pin is dragged
    */
   const handleMarkerDragEnd = useCallback(
-    (e: L.LeafletEvent) => {
-      const marker = e.target as L.Marker;
-      const { lat, lng } = marker.getLatLng();
-      setPosition([lat, lng]);
+    (e: any) => {
+      if (!LeafletComponents) return;
+      const marker = e.target;
+      const latlng = marker.getLatLng();
+      setPosition([latlng.lat, latlng.lng]);
       if (onLocationChange) {
-        onLocationChange(lat, lng, radius);
+        onLocationChange(latlng.lat, latlng.lng, radius);
       }
     },
-    [radius, onLocationChange]
+    [LeafletComponents, radius, onLocationChange]
   );
 
   /**
@@ -144,6 +198,19 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
 
   const isInsideGeofence = liveDistance !== null && liveDistance <= radius;
 
+  // Don't render map on server
+  if (!isClient) {
+    return (
+      <div className="space-y-6">
+        <div
+          className="w-full rounded-2xl border-2 border-slate-200 bg-slate-100 animate-pulse"
+          style={{ height: '400px' }}
+        />
+        <div className="h-32 bg-slate-100 rounded-2xl animate-pulse" />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       {/* Map */}
@@ -152,70 +219,76 @@ const AdminLocationPicker: React.FC<AdminLocationPickerProps> = ({
         style={{ height: '400px' }}
         data-testid="admin-location-map"
       >
-        <MapContainer
-          center={position}
-          zoom={17}
-          style={{ width: '100%', height: '100%' }}
-          ref={(m) => {
-            if (m) {
-              mapRef.current = m;
-            }
-          }}
-        >
-          {/* OpenStreetMap tile layer — free, no API key required */}
-          <TileLayer
-            attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-            maxZoom={19}
-          />
+        {isLoaded && LeafletComponents ? (
+          <>
+            <LeafletComponents.MapContainer
+              center={position}
+              zoom={17}
+              style={{ width: '100%', height: '100%' }}
+              whenCreated={(map: any) => {
+                mapRef.current = map;
+              }}
+            >
+              <LeafletComponents.TileLayer
+                attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                maxZoom={19}
+              />
 
-          {/* School pin (draggable) */}
-          <Marker
-            position={position}
-            icon={SchoolIcon}
-            draggable={true}
-            eventHandlers={{
-              dragend: handleMarkerDragEnd,
-            }}
-            ref={(m) => {
-              if (m) {
-                markerRef.current = m;
-              }
-            }}
-          />
+              {schoolIcon && (
+                <LeafletComponents.Marker
+                  position={position}
+                  icon={schoolIcon}
+                  draggable={true}
+                  eventHandlers={{
+                    dragend: handleMarkerDragEnd,
+                  }}
+                  ref={(m: any) => {
+                    if (m) markerRef.current = m;
+                  }}
+                />
+              )}
 
-          {/* Geofence radius circle */}
-          <Circle
-            center={position}
-            radius={radius}
-            pathOptions={{
-              color: '#4f46e5',
-              fillColor: '#4f46e5',
-              fillOpacity: 0.15,
-              weight: 2,
-            }}
-          />
-        </MapContainer>
+              <LeafletComponents.Circle
+                center={position}
+                radius={radius}
+                pathOptions={{
+                  color: '#4f46e5',
+                  fillColor: '#4f46e5',
+                  fillOpacity: 0.15,
+                  weight: 2,
+                }}
+              />
+            </LeafletComponents.MapContainer>
 
-        {/* Centre on me button */}
-        {currentGeoLoc && (
-          <Button
-            size="icon"
-            className="absolute top-4 right-4 z-[1000] rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 border border-slate-200"
-            onClick={handleCenterOnMe}
-            title="Centre map on my current location"
-          >
-            <Crosshair size={20} />
-          </Button>
+            {/* Centre on me button */}
+            {currentGeoLoc && (
+              <Button
+                size="icon"
+                className="absolute top-4 right-4 z-[1000] rounded-2xl w-12 h-12 bg-white shadow-xl text-indigo-600 hover:bg-indigo-50 border border-slate-200"
+                onClick={handleCenterOnMe}
+                title="Centre map on my current location"
+              >
+                <Crosshair size={20} />
+              </Button>
+            )}
+
+            {/* Open-source badge */}
+            <div className="absolute bottom-2 left-2 z-[1000]">
+              <Badge className="bg-white/90 text-slate-600 border-slate-200 font-bold text-[10px] px-2 py-0.5 backdrop-blur-sm">
+                <MapPin size={10} className="mr-1 inline" />
+                OpenStreetMap
+              </Badge>
+            </div>
+          </>
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-slate-50">
+            <div className="text-center">
+              <div className="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4" />
+              <p className="text-sm font-bold text-slate-500">Loading map...</p>
+            </div>
+          </div>
         )}
-
-        {/* Open-source badge */}
-        <div className="absolute bottom-2 left-2 z-[1000]">
-          <Badge className="bg-white/90 text-slate-600 border-slate-200 font-bold text-[10px] px-2 py-0.5 backdrop-blur-sm">
-            <MapPin size={10} className="mr-1 inline" />
-            OpenStreetMap
-          </Badge>
-        </div>
       </div>
 
       {/* Coordinate + Radius Controls */}
