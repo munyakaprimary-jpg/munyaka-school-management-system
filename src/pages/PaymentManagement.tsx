@@ -1056,7 +1056,7 @@ const PaymentManagement = () => {
                         )}
                       </div>
   
-                      {/* Record License Payment / Generate Activation Key */}
+                      {/* Record Payment & Generate License Key (single primary action) */}
                       <Button
                         variant="default"
                         size="sm"
@@ -1064,9 +1064,9 @@ const PaymentManagement = () => {
                           setActiveSubscriptionForLicense(sub);
                           setIsLicenseModalOpen(true);
                         }}
-                        className="rounded-xl h-9 text-xs font-bold w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
+                        className="rounded-xl h-10 text-xs font-black w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
                       >
-                        <Key size={14} /> Record License Payment & Generate Key
+                        <Key size={14} /> Record Payment & Generate License Key
                       </Button>
 
                     <div className="flex gap-2">
@@ -1114,28 +1114,22 @@ const PaymentManagement = () => {
                   All issued activation keys, their payment records, and status.
                 </p>
               </div>
-              <Button
-                onClick={() => { setActiveSubscriptionForLicense(null); setIsLicenseModalOpen(true); }}
-                className="rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg"
-              >
-                <Key size={16} /> Issue New License
-              </Button>
+              <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold text-xs gap-1.5 px-3 py-1.5">
+                <Key size={12} />
+                {licenses.length} key{licenses.length !== 1 ? 's' : ''} issued
+              </Badge>
             </div>
 
             {licenses.length === 0 ? (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-12 text-center">
+              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-14 text-center">
                 <div className="flex flex-col items-center gap-3">
                   <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
                     <Key size={28} />
                   </div>
                   <p className="text-base font-black text-slate-700">No Licenses Issued Yet</p>
-                  <p className="text-sm text-slate-400 font-medium">Issue a license payment to generate an activation key.</p>
-                  <Button
-                    onClick={() => setIsLicenseModalOpen(true)}
-                    className="mt-2 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg"
-                  >
-                    <Key size={14} /> Issue First License
-                  </Button>
+                  <p className="text-sm text-slate-400 font-medium max-w-xs">
+                    Click <span className="font-bold text-indigo-600">"Record Payment & Generate License Key"</span> above to record a payment and generate your first activation code.
+                  </p>
                 </div>
               </Card>
             ) : (
