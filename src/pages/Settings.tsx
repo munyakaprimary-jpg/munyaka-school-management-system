@@ -196,15 +196,8 @@ const clearSession = () => {
 };
 
 const getCredential = (role: AdminRole): string => {
-  const credKey = role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
-  const defaultPass = role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN;
-  
-  // Always check localStorage directly first
-  const stored = localStorage.getItem(credKey);
-  if (stored && stored.trim() !== '') {
-    return stored;
-  }
-  return defaultPass;
+  return localStorage.getItem(role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN) 
+    || (role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN);
 };
 
 const Settings = () => {
@@ -367,24 +360,12 @@ const Settings = () => {
   // Password update handler
   const handleUpdateCredential = async () => {
     const currentRole = session?.role;
-    if (!currentRole) {
-      showError("No active session. Please log in again.");
-      return;
-    }
+    if (!currentRole) return;
 
-    // Determine the correct localStorage key for the current role
-    const credKey = currentRole === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
-    const defaultPassword = currentRole === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN;
-
-    // Check the stored password, falling back to the default if not yet set
-    const storedPassword = localStorage.getItem(credKey) || defaultPassword;
+    const storedPassword = getCredential(currentRole);
 
     if (passwordForm.currentPassword !== storedPassword) {
-      showError(
-        currentRole === 'system_admin'
-          ? "Current System Administrator password is incorrect. Use the default 'sysadmin2026' if you haven't changed it yet."
-          : "Current Super Admin (Owner) password is incorrect. Use the default 'ownerpass2026' if you haven't changed it yet."
-      );
+      showError("Current password is incorrect.");
       return;
     }
 
@@ -394,19 +375,14 @@ const Settings = () => {
     }
 
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      showError("New passwords do not match.");
-      return;
-    }
-
-    if (passwordForm.newPassword === passwordForm.currentPassword) {
-      showError("New password must be different from the current password.");
+      showError("Passwords do not match.");
       return;
     }
 
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    // Save the new password to the correct localStorage key
+    const credKey = currentRole === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
     localStorage.setItem(credKey, passwordForm.newPassword);
 
     const newLog = {
@@ -577,7 +553,7 @@ const Settings = () => {
     const storedAdminPass = localStorage.getItem(CRED_KEYS.SYSTEM_ADMIN) || DEFAULT_PASSWORDS.SYSTEM_ADMIN;
     
     if (pinForm.currentPin !== storedAdminPass) {
-      showError("Current System Administrator PIN/Password is incorrect. Use the default 'sysadmin2026' if you haven't changed it yet.");
+      showError("Current Admin PIN/Password is incorrect.");
       return;
     }
 
@@ -588,11 +564,6 @@ const Settings = () => {
 
     if (pinForm.newPin !== pinForm.confirmPin) {
       showError("New PINs do not match.");
-      return;
-    }
-
-    if (pinForm.newPin === pinForm.currentPin) {
-      showError("New PIN must be different from the current PIN.");
       return;
     }
 
