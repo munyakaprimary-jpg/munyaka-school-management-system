@@ -25,6 +25,7 @@ import {
   getActiveLicense,
   getLicenseStats,
   validityLabel,
+  devBypass,
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 import { cn } from '@/lib/utils';
@@ -248,6 +249,19 @@ const AppUnlock = ({ children, forceShow = false }: AppUnlockProps) => {
               Munyaka School Management • License Activation
             </p>
           </div>
+
+          {/* Developer bypass — only visible in development */}
+          {process.env.NODE_ENV === 'development' && (
+            <div className="mt-4 text-center">
+              <button
+                type="button"
+                onClick={devBypass}
+                className="text-[10px] font-mono text-indigo-500/60 hover:text-indigo-400 underline underline-offset-2 transition-colors"
+              >
+                Dev Bypass — activate with master key
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );

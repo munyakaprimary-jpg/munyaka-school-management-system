@@ -12,6 +12,15 @@ import {
 export const LICENSE_STORAGE_KEY = 'munyaka_licenses';
 export const ACTIVE_LICENSE_KEY = 'munyaka_active_license';
 export const APP_LOCKED_KEY = 'munyaka_app_locked';
+export const IS_ACTIVATED_KEY = 'is_activated';
+
+// ─────────────────────────────────────────────
+// Master / wildcard keys (bypass the issued-license lookup)
+// ─────────────────────────────────────────────
+/** A single, well-known master test key that always validates. */
+export const MASTER_TEST_KEY = 'MUNYAKA-2026-A3B7-X9K2-M8N4-R7T1';
+/** Pattern: any key beginning with MUNYAKA-2026- will be accepted. */
+export const MASTER_KEY_PATTERN = /^MUNYAKA-2026-[A-Z0-9-]+$/i;
 
 // Characters excluded from codes to avoid ambiguity: 0/O, 1/I/L
 const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -109,6 +118,7 @@ export function issueLicense(params: {
 /** Mark a license as the active (currently installed) license */
 export function setActiveLicense(activationKey: string): void {
   localStorage.setItem(ACTIVE_LICENSE_KEY, activationKey);
+  localStorage.setItem(IS_ACTIVATED_KEY, 'true');
   localStorage.removeItem(APP_LOCKED_KEY);
 }
 
@@ -129,10 +139,40 @@ export function revokeLicense(activationKey: string, reason?: string): void {
 /** Validate an activation key:
  *  Returns the License if valid & active, null otherwise.
  *  Also checks expiry date.
+ *
+ *  Master-key shortcuts:
+ *  • MASTER_TEST_KEY  — always valid
+ *  • any key matching MASTER_KEY_PATTERN (MUNYAKA-2026-*) — always valid
+ *
+ *  For master keys we construct a synthetic License so the rest of the
+ *  system continues to work without any special casing.
  */
 export function validateActivationKey(key: string): License | null {
+  const k = key.trim().toUpperCase();
+
+  // ── Master / wildcard shortcuts ──────────────────────────────────
+  if (k === MASTER_TEST_KEY || MASTER_KEY_PATTERN.test(k)) {
+    // Store the activation flag so the app stays unlocked across refreshes
+    const expiresAt = computeExpiry(365);
+    localStorage.setItem(IS_ACTIVATED_KEY, 'true');
+    localStorage.setItem('activation_expires_at', expiresAt);
+    return {
+      id: 'MASTER-KEY',
+      activationKey: k,
+      issuedTo: 'MASTER',
+      deviceId: 'MASTER',
+      status: 'active',
+      validityDays: 365,
+      issuedAt: new Date().toISOString().slice(0, 10),
+      expiresAt,
+      payment: { method: 'cash', refNumber: 'MASTER', amount: '0' },
+      autoRenew: false,
+    };
+  }
+
+  // ── Normal issued-key lookup ──────────────────────────────────────
   const licenses = readLicenses();
-  const license = licenses.find(l => l.activationKey === key.trim().toUpperCase());
+  const license = licenses.find(l => l.activationKey === k);
   if (!license) return null;
   if (license.status === 'revoked') return null;
   const today = new Date().toISOString().slice(0, 10);
@@ -184,4 +224,16 @@ export function getLicenseStats() {
     expired: all.filter(l => l.status === 'expired' || l.expiresAt < today).length,
     revoked: all.filter(l => l.status === 'revoked').length,
   };
+}
+
+// ─────────────────────────────────────────────
+// Developer bypass
+// ─────────────────────────────────────────────
+
+/** Instantly activate the app using the master test key without any UI.
+ *  Useful for local development / testing so you never get stuck on the
+ *  lock screen.
+ */
+export function devBypass(): void {
+  activateLicense(MASTER_TEST_KEY);
 }
