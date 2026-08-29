@@ -355,12 +355,27 @@ const PaymentManagement = () => {
 
   // Local payment log (simple manual entries — no API keys needed)
   const [localPayments, setLocalPayments] = useState<LocalPaymentEntry[]>([]);
-  const [lpForm, setLpForm] = useState({
-    mode: 'mpesa' as 'mpesa' | 'cash' | 'bank',
-    amount: '',
-    currency: 'KES',
-    reference: '',
-    note: '',
+  const [lpForm, setLpForm] = useState(() => {
+    try {
+      const raw = localStorage.getItem('lp_form_snapshot');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          mode: (parsed.mode ?? 'mpesa') as 'mpesa' | 'cash' | 'bank',
+          amount: parsed.amount ?? '',
+          currency: parsed.currency ?? 'KES',
+          reference: '',
+          note: parsed.note ?? '',
+        };
+      }
+    } catch { /* ignore */ }
+    return {
+      mode: 'mpesa' as 'mpesa' | 'cash' | 'bank',
+      amount: '',
+      currency: 'KES',
+      reference: '',
+      note: '',
+    };
   });
 
   const [subscriptions, setSubscriptions] = useState<Subscription[]>(DEFAULT_SUBSCRIPTIONS);
@@ -378,14 +393,35 @@ const PaymentManagement = () => {
 
   // ── Monthly payment & activation code state ──
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
-  const [mpForm, setMpForm] = useState({
-    subscriptionId: '',
-    paymentMode: 'mpesa' as MonthlyPayment['paymentMode'],
-    amount: '299.00',
-    currency: 'USD',
-    transactionRef: '',
-    issuedTo: user?.name ?? 'Munyaka Primary & Junior School',
-    deviceId: '',
+  /** Persisted form snapshot so the user's last-entered values survive
+   *  page refreshes and modal close/reopen cycles. */
+  const MP_FORM_SNAPSHOT_KEY = 'mp_form_snapshot';
+  const [mpForm, setMpForm] = useState(() => {
+    // Try to restore the previous form state from localStorage
+    try {
+      const raw = localStorage.getItem('mp_form_snapshot');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return {
+          subscriptionId: '',
+          paymentMode: (parsed.paymentMode ?? 'mpesa') as MonthlyPayment['paymentMode'],
+          amount: parsed.amount ?? '299.00',
+          currency: parsed.currency ?? 'USD',
+          transactionRef: '',
+          issuedTo: parsed.issuedTo ?? user?.name ?? 'Munyaka Primary & Junior School',
+          deviceId: parsed.deviceId ?? '',
+        };
+      }
+    } catch { /* ignore */ }
+    return {
+      subscriptionId: '',
+      paymentMode: 'mpesa' as MonthlyPayment['paymentMode'],
+      amount: '299.00',
+      currency: 'USD',
+      transactionRef: '',
+      issuedTo: user?.name ?? 'Munyaka Primary & Junior School',
+      deviceId: '',
+    };
   });
   const [lastGeneratedCode, setLastGeneratedCode] = useState<string | null>(null);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
@@ -503,23 +539,24 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
   }, [activeTab]);
 
-  // When subscriptions load, prefill the form once with the first one.
-  // Uses a ref to ensure this only runs a single time — otherwise React
-  // would re-fire on every subscriptions array identity change, which can
-  // happen when other state updates trigger a parent re-render.
-  const didPrefillRef = React.useRef(false);
+  // Re-prefill the form whenever subscriptionId is empty and we have
+  // subscriptions loaded. This runs:
+  //  - On mount (subscriptionId starts empty)
+  //  - After a successful payment clears subscriptionId (modal reopens clean)
+  //  - Never overwrites user-selected paymentMode / amount / currency since
+  //    those fields are never touched here — only subscriptionId, amount,
+  //    currency are synced to match the selected plan.
   useEffect(() => {
-    if (didPrefillRef.current) return;
-    if (subscriptions.length === 0) return;
+    if (mpForm.subscriptionId) return;            // already set — skip
+    if (subscriptions.length === 0) return;         // nothing to prefill from
     const first = subscriptions[0];
-    didPrefillRef.current = true;
     setMpForm(f => ({
       ...f,
       subscriptionId: first.id,
       amount: first.amount,
       currency: first.currency,
     }));
-  }, [subscriptions]);
+  }, [mpForm.subscriptionId, subscriptions]);
 
   const markChanged = () => setHasUnsavedChanges(true);
 
@@ -567,7 +604,17 @@ const PaymentManagement = () => {
     const next = [entry, ...localPayments];
     setLocalPayments(next);
     localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
-    setLpForm(f => ({ ...f, amount: '', reference: '', note: '' }));
+    // Persist mode / currency before clearing only the per-payment fields
+    setLpForm(f => {
+      const cleared = { ...f, amount: '', reference: '', note: '' };
+      localStorage.setItem('lp_form_snapshot', JSON.stringify({
+        mode: cleared.mode,
+        amount: cleared.amount,
+        currency: cleared.currency,
+        note: cleared.note,
+      }));
+      return cleared;
+    });
     // Notify the rest of the page (and any other tabs) to re-read state.
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
@@ -624,12 +671,24 @@ const PaymentManagement = () => {
   // ── Monthly payment & activation code generator ──
   const handleSubscriptionChange = (id: string) => {
     const sub = subscriptions.find(s => s.id === id);
-    setMpForm(f => ({
-      ...f,
-      subscriptionId: id,
-      amount: sub?.amount ?? f.amount,
-      currency: sub?.currency ?? f.currency,
-    }));
+    setMpForm(f => {
+      // Only adopt the new plan's amount / currency if the user hasn't
+      // already manually changed those fields. We detect "untouched" by
+      // checking whether the current value matches any other plan's default.
+      const stillMatchesAPlan = subscriptions.some(
+        s => s.id !== id && s.amount === f.amount && s.currency === f.currency
+      );
+      const shouldAdoptPlanDefaults = !stillMatchesAPlan && (
+        f.amount === '299.00' || f.amount === '' ||
+        f.currency === 'USD' || f.currency === ''
+      );
+      return {
+        ...f,
+        subscriptionId: id,
+        amount: shouldAdoptPlanDefaults ? (sub?.amount ?? f.amount) : f.amount,
+        currency: shouldAdoptPlanDefaults ? (sub?.currency ?? f.currency) : f.currency,
+      };
+    });
   };
 
   const handleRecordPayment = async () => {
@@ -709,8 +768,26 @@ const PaymentManagement = () => {
     // 4) Refresh license list & reveal the generated code.
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
-    setMpForm(f => ({ ...f, transactionRef: '' }));
+
+    // 5) Persist form state to localStorage so it survives page refresh
+    //    before resetting and closing the modal.
+    const formSnapshot: typeof mpForm = {
+      subscriptionId: '',
+      paymentMode: mpForm.paymentMode,
+      amount: mpForm.amount,
+      currency: mpForm.currency,
+      transactionRef: '',
+      issuedTo: mpForm.issuedTo,
+      deviceId: mpForm.deviceId,
+    };
+    localStorage.setItem('mp_form_snapshot', JSON.stringify(formSnapshot));
+
+    // 6) Reset form and close the modal so it reopens in a clean default state.
+    setMpForm(f => ({ ...f, transactionRef: '', subscriptionId: '' }));
     setIsRecordingPayment(false);
+    setIsLicenseModalOpen(false);
+    setActiveSubscriptionForLicense(null);
+
     // Notify the rest of the page (and any other tabs) to re-read state.
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
