@@ -196,8 +196,15 @@ const clearSession = () => {
 };
 
 const getCredential = (role: AdminRole): string => {
-  return localStorage.getItem(role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN) 
-    || (role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN);
+  const credKey = role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
+  const defaultPass = role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN;
+  
+  // Always check localStorage directly first
+  const stored = localStorage.getItem(credKey);
+  if (stored && stored.trim() !== '') {
+    return stored;
+  }
+  return defaultPass;
 };
 
 const Settings = () => {
