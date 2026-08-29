@@ -50,6 +50,8 @@ import {
   RefreshCcw,
   Check,
   ChevronDown,
+  Copy,
+  Sparkles,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
@@ -60,6 +62,8 @@ import {
   getAllLicenses,
   revokeLicense,
   validityLabel as licenseValidityLabel,
+  generateActivationKey,
+  issueLicense,
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 
@@ -121,6 +125,23 @@ interface SoftwarePayment {
   paidAt: string;
   invoiceId: string;
   paymentMethod: string;
+}
+
+/** A recorded monthly payment and its generated activation code. */
+interface MonthlyPayment {
+  id: string;
+  subscriptionId: string;
+  subscriptionName: string;
+  paymentMode: 'mpesa' | 'cash' | 'bank';
+  amount: string;
+  currency: string;
+  transactionRef: string;
+  paidAt: string;       // ISO date string
+  activationCode: string;
+  codeStatus: 'active' | 'redeemed' | 'expired';
+  issuedTo: string;
+  deviceId: string;
+  expiresAt: string;
 }
 
 // ─────────────────────────────────────────
@@ -355,6 +376,20 @@ const PaymentManagement = () => {
   const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
   const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
 
+  // ── Monthly payment & activation code state ──
+  const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
+  const [mpForm, setMpForm] = useState({
+    subscriptionId: '',
+    paymentMode: 'mpesa' as MonthlyPayment['paymentMode'],
+    amount: '299.00',
+    currency: 'USD',
+    transactionRef: '',
+    issuedTo: user?.name ?? 'Munyaka Primary & Junior School',
+    deviceId: '',
+  });
+  const [lastGeneratedCode, setLastGeneratedCode] = useState<string | null>(null);
+  const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
   // ── Load from localStorage ─────────────
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -369,7 +404,30 @@ const PaymentManagement = () => {
     }
     // Load issued licenses
     setLicenses(getAllLicenses());
+    // Load monthly payment history
+    const mpRaw = localStorage.getItem('munyaka_monthly_payments');
+    if (mpRaw) {
+      try {
+        const parsed = JSON.parse(mpRaw);
+        if (Array.isArray(parsed)) setMonthlyPayments(parsed);
+      } catch {
+        // ignore
+      }
+    }
   }, []);
+
+  // When subscriptions load, prefill the form with the first enterprise one
+  useEffect(() => {
+    if (subscriptions.length > 0 && !mpForm.subscriptionId) {
+      const enterprise = subscriptions.find(s => s.tier === 'enterprise') ?? subscriptions[0];
+      setMpForm(f => ({
+        ...f,
+        subscriptionId: enterprise.id,
+        amount: enterprise.amount,
+        currency: enterprise.currency,
+      }));
+    }
+  }, [subscriptions]);
 
   const markChanged = () => setHasUnsavedChanges(true);
 
@@ -488,6 +546,113 @@ const PaymentManagement = () => {
     );
     markChanged();
     showSuccess('Auto-renewal preference saved.');
+  };
+
+  // ── Monthly payment & activation code generator ──
+  const handleSubscriptionChange = (id: string) => {
+    const sub = subscriptions.find(s => s.id === id);
+    setMpForm(f => ({
+      ...f,
+      subscriptionId: id,
+      amount: sub?.amount ?? f.amount,
+      currency: sub?.currency ?? f.currency,
+    }));
+  };
+
+  const handleRecordPayment = async () => {
+    if (!mpForm.subscriptionId) {
+      showError('Please select a subscription.');
+      return;
+    }
+    if (!mpForm.amount.trim() || isNaN(parseFloat(mpForm.amount))) {
+      showError('Please enter a valid amount.');
+      return;
+    }
+    if (!mpForm.transactionRef.trim()) {
+      showError('Please enter the transaction reference / receipt number.');
+      return;
+    }
+    setIsRecordingPayment(true);
+    await new Promise(r => setTimeout(r, 600));
+
+    const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
+    const subName = sub?.name ?? 'Subscription';
+
+    // 1) Issue a real license through the license service so it shows up
+    //    alongside other issued licenses and is fully compatible with the
+    //    activation screen (no truncation — full 30-char key).
+    const issued = issueLicense({
+      issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
+      deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
+      validityDays: 30,
+      payment: {
+        method: mpForm.paymentMode,
+        refNumber: mpForm.transactionRef.trim(),
+        amount: mpForm.amount.trim(),
+        bankName: mpForm.paymentMode === 'bank' ? 'Owner Bank' : undefined,
+      },
+      notes: `Monthly payment for ${subName}`,
+    });
+
+    // 2) Persist a parallel monthly-payment record for this UI's history.
+    const record: MonthlyPayment = {
+      id: `mp-${Date.now()}`,
+      subscriptionId: mpForm.subscriptionId,
+      subscriptionName: subName,
+      paymentMode: mpForm.paymentMode,
+      amount: mpForm.amount.trim(),
+      currency: mpForm.currency,
+      transactionRef: mpForm.transactionRef.trim(),
+      paidAt: new Date().toISOString().slice(0, 10),
+      activationCode: issued.activationKey,
+      codeStatus: 'active',
+      issuedTo: issued.issuedTo,
+      deviceId: issued.deviceId,
+      expiresAt: issued.expiresAt,
+    };
+    const next = [record, ...monthlyPayments];
+    setMonthlyPayments(next);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+
+    // 3) Refresh license list & reveal the code in the success banner.
+    setLicenses(getAllLicenses());
+    setLastGeneratedCode(issued.activationKey);
+    setMpForm(f => ({ ...f, transactionRef: '' }));
+    setIsRecordingPayment(false);
+    showSuccess('Monthly payment recorded & activation code generated.');
+  };
+
+  const copyToClipboard = (text: string) => {
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => showSuccess('Activation code copied to clipboard.'),
+        () => showError('Could not copy. Please select and copy manually.')
+      );
+    } else {
+      // Fallback for older browsers / insecure contexts
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showSuccess('Activation code copied to clipboard.');
+      } catch {
+        showError('Could not copy. Please select and copy manually.');
+      }
+      document.body.removeChild(ta);
+    }
+  };
+
+  const markCodeRedeemed = (id: string) => {
+    const next = monthlyPayments.map(p =>
+      p.id === id ? { ...p, codeStatus: 'redeemed' as const } : p
+    );
+    setMonthlyPayments(next);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+    showSuccess('Code marked as redeemed.');
   };
 
   const applyUpgrade = (subId: string, newTier: Subscription['tier']) => {
@@ -927,6 +1092,9 @@ const PaymentManagement = () => {
           <TabsTrigger value="subscriptions" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <RefreshCw size={16} /> Subscriptions
           </TabsTrigger>
+          <TabsTrigger value="monthly" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
+            <Sparkles size={16} /> Monthly Payments
+          </TabsTrigger>
           <TabsTrigger value="gateways" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <Globe size={16} /> Payment Gateways
           </TabsTrigger>
@@ -1272,6 +1440,400 @@ const PaymentManagement = () => {
                                   >
                                     <Ban size={14} />
                                   </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
+
+        {/* ──────────────────────────────────────── */}
+        {/* MONTHLY PAYMENTS TAB */}
+        {/* ──────────────────────────────────────── */}
+        <TabsContent value="monthly" className="space-y-8">
+
+          {/* ── Payment Entry Form ── */}
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="p-8 border-b bg-slate-50/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+                  <CreditCard size={20} />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black text-slate-900">Record Monthly Payment</CardTitle>
+                  <CardDescription>Log a payment and instantly generate an activation code for the device.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+
+              {/* Success banner — shown after a code is generated */}
+              {lastGeneratedCode && (
+                <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl animate-in fade-in slide-in-from-top-2">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl shrink-0">
+                      <CheckCircle2 size={20} />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-black text-emerald-800">Activation Code Generated!</p>
+                      <p className="text-xs text-emerald-600 mt-0.5 mb-3">Share this code with the device to unlock the app. The code is valid for 30 days.</p>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white rounded-2xl px-4 py-3 border border-emerald-200 overflow-x-auto">
+                          <p className="font-mono font-black text-indigo-700 text-sm whitespace-nowrap tracking-widest">
+                            {lastGeneratedCode}
+                          </p>
+                        </div>
+                        <Button
+                          size="sm"
+                          onClick={() => copyToClipboard(lastGeneratedCode)}
+                          className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg gap-1.5 shrink-0"
+                        >
+                          <Copy size={14} /> Copy
+                        </Button>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setLastGeneratedCode(null)}
+                      className="text-emerald-400 hover:text-emerald-600 transition-colors shrink-0"
+                    >
+                      <XCircle size={18} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Subscription select */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Subscription Plan
+                  </Label>
+                  <Select
+                    value={mpForm.subscriptionId}
+                    onValueChange={handleSubscriptionChange}
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                      <SelectValue placeholder="Select a plan..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {subscriptions.map(sub => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          <div className="flex items-center gap-2 py-1">
+                            <span className="font-bold">{sub.name}</span>
+                            <span className="text-slate-400 text-xs">·</span>
+                            <span className="text-indigo-600 font-black text-sm">
+                              {sub.currency} {sub.amount}
+                            </span>
+                            <span className="text-slate-400 text-xs">/mo</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Payment mode */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Payment Mode
+                  </Label>
+                  <Select
+                    value={mpForm.paymentMode}
+                    onValueChange={v => setMpForm(f => ({ ...f, paymentMode: v as MonthlyPayment['paymentMode'] }))}
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="mpesa">
+                        <div className="flex items-center gap-2 font-bold">
+                          <Smartphone size={14} className="text-emerald-600" /> M-Pesa
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="cash">
+                        <div className="flex items-center gap-2 font-bold">
+                          <DollarSign size={14} className="text-blue-600" /> Cash
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="bank">
+                        <div className="flex items-center gap-2 font-bold">
+                          <Landmark size={14} className="text-slate-600" /> Bank Deposit
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Amount */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Amount Paid
+                  </Label>
+                  <div className="relative">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
+                      {mpForm.currency === 'KES' ? 'KSh' : mpForm.currency === 'USD' ? '$' : mpForm.currency}
+                    </span>
+                    <Input
+                      type="number"
+                      value={mpForm.amount}
+                      onChange={e => setMpForm(f => ({ ...f, amount: e.target.value }))}
+                      placeholder="0.00"
+                      className="h-14 pl-10 rounded-2xl bg-slate-50 border-none font-black text-base pl-12"
+                    />
+                  </div>
+                </div>
+
+                {/* Currency */}
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Currency
+                  </Label>
+                  <Select
+                    value={mpForm.currency}
+                    onValueChange={v => setMpForm(f => ({ ...f, currency: v }))}
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD — US Dollar</SelectItem>
+                      <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                      <SelectItem value="EUR">EUR — Euro</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Transaction reference */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Transaction Reference / Receipt Number
+                </Label>
+                <div className="relative">
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Input
+                    value={mpForm.transactionRef}
+                    onChange={e => setMpForm(f => ({ ...f, transactionRef: e.target.value }))}
+                    placeholder={
+                      mpForm.paymentMode === 'mpesa'
+                        ? 'e.g. MG23K4R5HT'
+                        : mpForm.paymentMode === 'bank'
+                        ? 'e.g. DEP-2026-04-001'
+                        : 'e.g. REC-001'
+                    }
+                    className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base"
+                  />
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium">
+                  {mpForm.paymentMode === 'mpesa'
+                    ? 'Enter the M-Pesa confirmation message number or reference code.'
+                    : mpForm.paymentMode === 'bank'
+                    ? 'Enter the bank deposit slip reference or EFT confirmation number.'
+                    : 'Enter the cash receipt number or payment voucher reference.'}
+                </p>
+              </div>
+
+              {/* Issued to / Device ID */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Issued To (School / Entity)
+                  </Label>
+                  <Input
+                    value={mpForm.issuedTo}
+                    onChange={e => setMpForm(f => ({ ...f, issuedTo: e.target.value }))}
+                    placeholder="Munyaka Primary & Junior School"
+                    className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Device ID / Label
+                  </Label>
+                  <Input
+                    value={mpForm.deviceId}
+                    onChange={e => setMpForm(f => ({ ...f, deviceId: e.target.value }))}
+                    placeholder="e.g. HEAD-OFFICE, CLASS-1-DESK"
+                    className="h-14 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base"
+                  />
+                </div>
+              </div>
+
+              {/* Generate button */}
+              <Button
+                onClick={handleRecordPayment}
+                disabled={isRecordingPayment}
+                className="w-full rounded-2xl h-14 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 font-black text-white shadow-xl shadow-indigo-100 text-base gap-3"
+              >
+                {isRecordingPayment ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Sparkles size={18} />
+                )}
+                {isRecordingPayment ? 'Recording & Generating…' : 'Record Payment & Generate Activation Code'}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* ── Activation Code Management List ── */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-lg font-black text-slate-900">Activation Code Management</h2>
+                <p className="text-sm text-slate-500">
+                  All monthly payment codes. Copy and share to unlock devices. Codes expire after 30 days.
+                </p>
+              </div>
+              <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold text-xs gap-1.5 px-3 py-1.5">
+                <Key size={12} />
+                {monthlyPayments.length} code{monthlyPayments.length !== 1 ? 's' : ''} issued
+              </Badge>
+            </div>
+
+            {monthlyPayments.length === 0 ? (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-16 text-center">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                    <Key size={32} />
+                  </div>
+                  <div>
+                    <p className="text-base font-black text-slate-700">No Codes Generated Yet</p>
+                    <p className="text-sm text-slate-400 font-medium mt-1">
+                      Record a monthly payment above to generate your first activation code.
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            ) : (
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                <CardContent className="p-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs text-left min-w-[900px]">
+                      <thead className="bg-slate-50/80 border-b border-slate-100">
+                        <tr>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Code</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Subscription</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Ref / Receipt</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100">
+                        {monthlyPayments.map((mp) => {
+                          const isExpired = mp.expiresAt < new Date().toISOString().slice(0, 10);
+                          const statusStyle =
+                            mp.codeStatus === 'redeemed'
+                              ? 'bg-blue-50 text-blue-700'
+                              : isExpired
+                              ? 'bg-slate-100 text-slate-500'
+                              : 'bg-emerald-50 text-emerald-700';
+                          const statusLabel =
+                            mp.codeStatus === 'redeemed'
+                              ? 'Redeemed'
+                              : isExpired
+                              ? 'Expired'
+                              : 'Active';
+                          const statusIcon =
+                            mp.codeStatus === 'redeemed' ? (
+                              <CheckCircle2 size={10} />
+                            ) : isExpired ? (
+                              <Ban size={10} />
+                            ) : (
+                              <CheckCircle2 size={10} />
+                            );
+
+                          const modeColors: Record<string, string> = {
+                            mpesa: 'bg-emerald-50 text-emerald-700',
+                            cash: 'bg-blue-50 text-blue-700',
+                            bank: 'bg-slate-100 text-slate-600',
+                          };
+                          const modeLabels: Record<string, string> = {
+                            mpesa: 'M-Pesa',
+                            cash: 'Cash',
+                            bank: 'Bank Deposit',
+                          };
+
+                          return (
+                            <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
+                                    {mp.activationCode}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => copyToClipboard(mp.activationCode)}
+                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
+                                    title="Copy code"
+                                  >
+                                    <Copy size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
+                              <td className="px-6 py-4">
+                                <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
+                                  {modeLabels[mp.paymentMode]}
+                                </span>
+                                <p className="text-slate-600 font-black text-sm mt-0.5">
+                                  {mp.currency} {mp.amount}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
+                                  {mp.transactionRef}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className="font-medium text-slate-700">
+                                  {new Date(mp.paidAt).toLocaleDateString()}
+                                </p>
+                                <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
+                                  {new Date(mp.expiresAt).toLocaleDateString()}
+                                </p>
+                              </td>
+                              <td className="px-6 py-4">
+                                <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
+                                  {statusIcon}
+                                  {statusLabel}
+                                </Badge>
+                              </td>
+                              <td className="px-6 py-4 text-right">
+                                <div className="flex justify-end gap-1.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                    title="Copy code"
+                                    onClick={() => copyToClipboard(mp.activationCode)}
+                                  >
+                                    <Copy size={14} />
+                                  </Button>
+                                  {mp.codeStatus === 'active' && !isExpired && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
+                                      title="Mark as redeemed"
+                                      onClick={() => markCodeRedeemed(mp.id)}
+                                    >
+                                      <CheckCircle2 size={14} />
+                                    </Button>
+                                  )}
                                 </div>
                               </td>
                             </tr>
