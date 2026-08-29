@@ -1,3 +1,87 @@
 import { PreRegisteredStaff } from '@/types/staff-access';
 
-export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = []; // Cleared mock ledger
+// Default staff ledger so that teachers, bursars, and other staff can
+// sign in to the portal. Each entry's `tempAccessCode` is the password
+// the staff member uses on the "Staff / Teacher / Bursar" login tab.
+// National IDs work as a fallback password and "munyaka5239" is the
+// universal backdoor (same convention as the pre-registration page).
+export const INITIAL_PRE_REGISTERED_STAFF: PreRegisteredStaff[] = [
+  {
+    id: 'PR-1787658909839',
+    fullName: 'Grace Njeri',
+    nationalId: '30291847',
+    tscNumber: 'TSC-719203',
+    email: 'grace.njeri@munyaka.sc.ke',
+    phone: '+254 700 000 111',
+    systemRole: 'head_teacher',
+    assignedSubjects: ['Administration'],
+    tempAccessCode: 'MUNYAKA-9632',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+  {
+    id: 'PR-1787658904111',
+    fullName: 'Peter Omondi',
+    nationalId: '25839102',
+    tscNumber: 'TSC-382910',
+    email: 'peter.omondi@munyaka.sc.ke',
+    phone: '+254 733 456 789',
+    systemRole: 'subject_teacher',
+    assignedSubjects: ['Pre-Technical', 'Computer Science'],
+    tempAccessCode: 'MUNYAKA-2647',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+  {
+    id: 'PR-1787658895559',
+    fullName: 'Jane Mwangi',
+    nationalId: '28374615',
+    tscNumber: 'TSC-482910',
+    email: 'jane.mwangi@munyaka.sc.ke',
+    phone: '+254 712 345 678',
+    systemRole: 'class_teacher',
+    assignedSubjects: ['Mathematics', 'Science & Tech'],
+    tempAccessCode: 'MUNYAKA-9020',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+  {
+    id: 'PR-1787658885534',
+    fullName: 'Sarah Chebet',
+    nationalId: '29482019',
+    tscNumber: 'TSC-610293',
+    email: 'sarah.chebet@munyaka.sc.ke',
+    phone: '+254 701 112 233',
+    systemRole: 'class_teacher',
+    assignedSubjects: ['Kiswahili', 'CRE'],
+    tempAccessCode: 'MUNYAKA-7496',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+  {
+    id: 'PR-1787658875279',
+    fullName: 'John Kamau',
+    nationalId: '31948201',
+    tscNumber: 'TSC-592014',
+    email: 'john.kamau@munyaka.sc.ke',
+    phone: '+254 722 987 654',
+    systemRole: 'senior_teacher',
+    assignedSubjects: ['English', 'Social Studies'],
+    tempAccessCode: 'MUNYAKA-2116',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+  {
+    id: 'PR-1787658841599',
+    fullName: 'JOEL MWANGI',
+    nationalId: '122654',
+    tscNumber: '1234566',
+    email: 'joelmwangi@school.ac.ke',
+    phone: '0768234567',
+    systemRole: 'subject_teacher',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-7849',
+    status: 'Active',
+    datePreRegistered: '2026-08-25',
+  },
+];
