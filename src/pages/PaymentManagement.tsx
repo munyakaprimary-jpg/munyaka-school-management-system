@@ -147,12 +147,16 @@ interface MonthlyPayment {
 // ─────────────────────────────────────────
 // DEFAULT DATA
 // ─────────────────────────────────────────
+/** IDs of external / third-party services that should never appear in the
+ *  Subscriptions list. Only the core institutional School License remains. */
+const EXTERNAL_SUBSCRIPTION_IDS = new Set(['sub-002', 'sub-003']);
+
 const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
   {
     id: 'sub-001',
-    name: 'Dyad Platform',
-    provider: 'Dyad',
-    plan: 'Enterprise Starter',
+    name: 'Munyaka School License',
+    provider: 'Munyaka',
+    plan: 'Enterprise Plan',
     tier: 'enterprise',
     status: 'active',
     nextBilling: '2026-05-01',
@@ -162,39 +166,7 @@ const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
     autoRenew: true,
     billingCycleAnchor: 1,
     seats: 500,
-    features: ['Unlimited Students', 'Advanced Analytics', 'Priority Support', 'API Access'],
-  },
-  {
-    id: 'sub-002',
-    name: 'Supabase Backend',
-    provider: 'Supabase',
-    plan: 'Pro Tier',
-    tier: 'professional',
-    status: 'active',
-    nextBilling: '2026-04-15',
-    amount: '75.00',
-    currency: 'USD',
-    interval: 'monthly',
-    autoRenew: true,
-    billingCycleAnchor: 15,
-    seats: 200,
-    features: ['5 GB Storage', 'Database Backups', 'Real-time Subscriptions'],
-  },
-  {
-    id: 'sub-003',
-    name: 'Google Maps API',
-    provider: 'Google Cloud',
-    plan: 'Pay-as-you-go',
-    tier: 'starter',
-    status: 'trial',
-    nextBilling: '2026-04-20',
-    amount: '0.00',
-    currency: 'USD',
-    interval: 'monthly',
-    autoRenew: false,
-    billingCycleAnchor: 20,
-    seats: 50,
-    features: ['Geolocation', 'Map Tiles', 'Places API'],
+    features: ['Unlimited Students', 'Advanced Analytics', 'Priority Support', 'Offline Activation Codes'],
   },
 ];
 
@@ -242,33 +214,23 @@ const DEFAULT_GATEWAYS: PaymentGateway[] = [
 const DEFAULT_PAYMENTS: SoftwarePayment[] = [
   {
     id: 'pmt-001',
-    description: 'Dyad Platform - March 2026',
+    description: 'Munyaka School License - March 2026',
     amount: '299.00',
     currency: 'USD',
     status: 'paid',
     paidAt: '2026-03-01',
     invoiceId: 'INV-2026-003',
-    paymentMethod: 'PayPal',
-  },
-  {
-    id: 'pmt-002',
-    description: 'Supabase Pro - March 2026',
-    amount: '75.00',
-    currency: 'USD',
-    status: 'paid',
-    paidAt: '2026-03-15',
-    invoiceId: 'INV-2026-004',
-    paymentMethod: 'Credit Card',
+    paymentMethod: 'M-Pesa',
   },
   {
     id: 'pmt-003',
-    description: 'Dyad Platform - April 2026',
+    description: 'Munyaka School License - April 2026',
     amount: '299.00',
     currency: 'USD',
     status: 'pending',
     paidAt: '',
     invoiceId: 'INV-2026-005',
-    paymentMethod: 'PayPal',
+    paymentMethod: 'M-Pesa',
   },
 ];
 
@@ -397,7 +359,14 @@ const PaymentManagement = () => {
       try {
         const parsed = JSON.parse(raw);
         if (parsed.gateways?.length) setGateways(parsed.gateways);
-        if (parsed.subscriptions?.length) setSubscriptions(parsed.subscriptions);
+        if (parsed.subscriptions?.length) {
+          // Filter out any external / third-party subscription cards from
+          // previous sessions so only the local institutional license remains.
+          const localOnly = parsed.subscriptions.filter(
+            (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+          );
+          setSubscriptions(localOnly.length > 0 ? localOnly : DEFAULT_SUBSCRIPTIONS);
+        }
       } catch {
         // Use defaults
       }
