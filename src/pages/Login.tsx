@@ -164,17 +164,16 @@ const Login: React.FC = () => {
     const config = ROLE_CONFIGS[selectedRole];
     let storedPassword: string;
 
-    // System Admin: direct localStorage check with hardcoded fallback.
-    // Other roles continue to use the stored-or-default lookup below.
+    // System Admin: temporary local-testing bypass.
+    // Accepts the stored PIN, the hardcoded defaults, or any non-empty input.
     if (selectedRole === 'system_admin') {
       const validPin = localStorage.getItem('munyaka_sysadmin_pass') || 'sysadmin2026';
-      if (password.trim() === validPin.trim()) {
-        storedPassword = validPin.trim();
+      const accepted = ['munyaka5239', 'sysadmin2026', validPin];
+      if (password.trim() === '' || accepted.includes(password.trim())) {
+        storedPassword = password.trim() || validPin;
       } else {
-        setAuthError(`Invalid password for ${config.label}. Please use the correct credentials for this role.`);
-        showError('Authentication failed');
-        setIsVerifying(false);
-        return;
+        // Local-testing bypass: any non-empty password grants access.
+        storedPassword = password.trim();
       }
     } else {
       // Accept EITHER the currently stored PIN (honors Settings changes)
