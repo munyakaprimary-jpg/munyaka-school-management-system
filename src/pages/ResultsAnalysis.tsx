@@ -747,7 +747,7 @@ const ResultsAnalysis = () => {
         </CardContent>
       </Card>
 
-      {/* Complete Class Breakdown Table */}
+      {/* Complete Class Breakdown Table - UNIFIED SCROLLING, NO STICKY COLUMNS */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden print:shadow-none print:rounded-none">
         <CardHeader className="p-8 border-b bg-slate-50/40 print:p-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
@@ -766,10 +766,10 @@ const ResultsAnalysis = () => {
             <table className="w-full text-sm text-left border-collapse">
               <thead className="bg-slate-50/80 border-b">
                 <tr>
-                  <th className="sticky left-0 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
+                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
                     Rank
                   </th>
-                  <th className="sticky left-16 bg-slate-50 z-10 px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
+                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
                     Student Name & Admin No
                   </th>
                   {selectedStreamId === "all" && (
@@ -797,10 +797,10 @@ const ResultsAnalysis = () => {
                 {studentResults.length > 0 ? (
                   studentResults.map((student) => (
                     <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
-                      <td className="sticky left-0 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 font-black text-center border-r text-slate-900">
+                      <td className="px-6 py-4 font-black text-center border-r text-slate-900">
                         #{student.rank}
                       </td>
-                      <td className="sticky left-16 bg-white group-hover:bg-slate-50 z-10 px-6 py-4 border-r">
+                      <td className="px-6 py-4 border-r">
                         <p className="font-bold text-slate-900">{student.name}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
                       </td>
@@ -833,7 +833,9 @@ const ResultsAnalysis = () => {
                   <tr>
                     <td colSpan={learningAreas.length + 6} className="px-8 py-16 text-center">
                       <div className="flex flex-col items-center gap-3">
-                        <Search size={36} className="text-slate-200" />
+                        <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                          <Search size={36} />
+                        </div>
                         <p className="text-slate-500 font-bold">No student result records found for the selected Grade and Stream.</p>
                       </div>
                     </td>
