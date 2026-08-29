@@ -938,9 +938,9 @@ const Settings = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 md:gap-3">
+        <div className="flex items-center gap-2 md:gap-3 overflow-x-auto scrollbar-hide -mx-4 px-4 md:mx-0 md:overflow-visible">
           {hasUnsavedChanges && (
-            <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
+            <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs shrink-0">
               <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
             </Badge>
           )}
@@ -949,52 +949,43 @@ const Settings = () => {
           <Button
             variant="outline"
             onClick={handleSwitchRole}
-            className="rounded-xl md:rounded-2xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
+            className="rounded-xl border-slate-200 text-slate-600 hover:bg-slate-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
           >
-            <Users size={14} className="md:hidden" />
-            <Users size={16} className="hidden md:inline" />
+            <Users size={16} />
             <span className="hidden sm:inline">Switch Role</span>
-            <span className="sm:hidden">Switch</span>
           </Button>
 
           {/* Update Password Button */}
           <Button
             variant="outline"
             onClick={() => setIsPasswordModalOpen(true)}
-            className="rounded-xl md:rounded-2xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
+            className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
           >
-            <Key size={14} className="md:hidden" />
-            <Key size={16} className="hidden md:inline" />
-            <span className="hidden lg:inline">Update Password</span>
-            <span className="lg:hidden">Password</span>
+            <Key size={16} />
+            <span className="hidden sm:inline">Password</span>
           </Button>
           
           {/* Logout Button */}
           <Button
             variant="outline"
             onClick={handleLogout}
-            className="rounded-xl md:rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
+            className="rounded-xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
           >
-            <LogOut size={14} className="md:hidden" />
-            <LogOut size={16} className="hidden md:inline" />
+            <LogOut size={16} />
             <span className="hidden sm:inline">Logout</span>
           </Button>
 
           <Button
             onClick={handleSaveAllSettings}
             disabled={isSaving}
-            className="rounded-xl md:rounded-2xl px-4 md:px-8 h-10 md:h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 md:gap-2 text-sm md:text-base w-full sm:w-auto"
+            className="rounded-xl px-4 h-10 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 text-sm shrink-0"
           >
             {isSaving ? (
               <Loader2 className="animate-spin" size={16} />
             ) : (
-              <>
-                <Save size={14} className="md:hidden" />
-                <Save size={16} className="hidden md:inline" />
-              </>
+              <Save size={16} />
             )}
-            <span className="hidden sm:inline">Save All Settings</span>
-            <span className="sm:hidden">Save</span>
+            <span className="hidden sm:inline">Save</span>
           </Button>
         </div>
       </div>
