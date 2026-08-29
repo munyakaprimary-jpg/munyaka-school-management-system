@@ -397,9 +397,12 @@ const PaymentManagement = () => {
    *  page refreshes and modal close/reopen cycles. */
   const MP_FORM_SNAPSHOT_KEY = 'mp_form_snapshot';
   const [mpForm, setMpForm] = useState(() => {
-    // Try to restore the previous form state from localStorage
+    // Try to restore the previous form state from localStorage.
+    // We default all fields to the most-recent user input so the
+    // user's intent (e.g. switched to Cash, typed 500, picked KES)
+    // is never lost across re-renders, refreshes, or modal re-opens.
     try {
-      const raw = localStorage.getItem('mp_form_snapshot');
+      const raw = localStorage.getItem(MP_FORM_SNAPSHOT_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         return {
@@ -539,24 +542,25 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
   }, [activeTab]);
 
-  // Re-prefill the form whenever subscriptionId is empty and we have
-  // subscriptions loaded. This runs:
-  //  - On mount (subscriptionId starts empty)
-  //  - After a successful payment clears subscriptionId (modal reopens clean)
-  //  - Never overwrites user-selected paymentMode / amount / currency since
-  //    those fields are never touched here — only subscriptionId, amount,
-  //    currency are synced to match the selected plan.
+// Single, module-level guard so the prefill useEffect fires **at most
+  // once per session** regardless of how many times subscriptions re-fetches
+  // or how often subscriptionId is reset. This is the key fix for the
+  // "form resets back to USD 299.00 / M-Pesa after the user types their
+  // own values" bug — without this guard, any parent re-render that
+  // produces a new subscriptions array identity would re-fire the prefill
+  // and stomp the user's entered amount/currency.
+  const didPrefillRef = React.useRef(false);
   useEffect(() => {
-    if (mpForm.subscriptionId) return;            // already set — skip
+    if (didPrefillRef.current) return;            // already ran this session
     if (subscriptions.length === 0) return;         // nothing to prefill from
-    const first = subscriptions[0];
+    didPrefillRef.current = true;                  // mark as done
     setMpForm(f => ({
       ...f,
-      subscriptionId: first.id,
-      amount: first.amount,
-      currency: first.currency,
+      subscriptionId: subscriptions[0].id,
+      amount: f.amount || subscriptions[0].amount,
+      currency: f.currency || subscriptions[0].currency,
     }));
-  }, [mpForm.subscriptionId, subscriptions]);
+  }, [subscriptions]);
 
   const markChanged = () => setHasUnsavedChanges(true);
 
@@ -682,12 +686,15 @@ const PaymentManagement = () => {
         f.amount === '299.00' || f.amount === '' ||
         f.currency === 'USD' || f.currency === ''
       );
-      return {
+      const next = {
         ...f,
         subscriptionId: id,
         amount: shouldAdoptPlanDefaults ? (sub?.amount ?? f.amount) : f.amount,
         currency: shouldAdoptPlanDefaults ? (sub?.currency ?? f.currency) : f.currency,
       };
+      // Persist immediately so a refresh mid-selection keeps the user's pick.
+      persistMpForm(next);
+      return next;
     });
   };
 
@@ -769,9 +776,12 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
 
-    // 5) Persist form state to localStorage so it survives page refresh
-    //    before resetting and closing the modal.
-    const formSnapshot: typeof mpForm = {
+    // 5) Persist form state to localStorage so the user's exact selected
+    //    Payment Mode / Amount / Currency survive page refreshes, modal
+    //    re-opens, and parent re-renders. We snapshot the *surviving* values
+    //    (mode, amount, currency, issuedTo, deviceId) but explicitly clear
+    //    the transactionRef so the next payment starts with an empty field.
+    const finalSnapshot = {
       subscriptionId: '',
       paymentMode: mpForm.paymentMode,
       amount: mpForm.amount,
@@ -780,7 +790,9 @@ const PaymentManagement = () => {
       issuedTo: mpForm.issuedTo,
       deviceId: mpForm.deviceId,
     };
-    localStorage.setItem('mp_form_snapshot', JSON.stringify(formSnapshot));
+    try {
+      localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(finalSnapshot));
+    } catch { /* storage may be unavailable in private mode */ }
 
     // 6) Reset form and close the modal so it reopens in a clean default state.
     setMpForm(f => ({ ...f, transactionRef: '', subscriptionId: '' }));
@@ -1403,7 +1415,7 @@ const PaymentManagement = () => {
                   </Label>
                   <Select
                     value={mpForm.paymentMode}
-                    onValueChange={v => setMpForm(f => ({ ...f, paymentMode: v as MonthlyPayment['paymentMode'] }))}
+                    onValueChange={v => setMpForm(f => { persistMpForm({ ...f, paymentMode: v as MonthlyPayment['paymentMode'] }); return { ...f, paymentMode: v as MonthlyPayment['paymentMode'] }; })}
                   >
                     <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
                       <SelectValue />
@@ -1440,7 +1452,7 @@ const PaymentManagement = () => {
                     <Input
                       type="number"
                       value={mpForm.amount}
-                      onChange={e => setMpForm(f => ({ ...f, amount: e.target.value }))}
+                      onChange={e => setMpForm(f => { persistMpForm({ ...f, amount: e.target.value }); return { ...f, amount: e.target.value }; })}
                       placeholder="0.00"
                       className="h-14 pl-10 rounded-2xl bg-slate-50 border-none font-black text-base pl-12"
                     />
@@ -1454,7 +1466,7 @@ const PaymentManagement = () => {
                   </Label>
                   <Select
                     value={mpForm.currency}
-                    onValueChange={v => setMpForm(f => ({ ...f, currency: v }))}
+                    onValueChange={v => setMpForm(f => { persistMpForm({ ...f, currency: v }); return { ...f, currency: v }; })}
                   >
                     <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
                       <SelectValue />
