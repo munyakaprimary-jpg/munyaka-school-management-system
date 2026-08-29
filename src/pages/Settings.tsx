@@ -625,49 +625,60 @@ const Settings = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">System Configuration</h1>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 flex-wrap">
+              <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
               <Badge className="bg-emerald-50 text-emerald-700 border-none font-bold text-[10px] px-2.5 py-0.5">
                 <ShieldCheck size={12} className="mr-1 inline" /> Unlocked
               </Badge>
             </div>
-            <p className="text-muted-foreground">Master console for institutional policy, RBAC roles, and security parameters.</p>
+            <p className="text-muted-foreground text-sm md:text-base">Master console for institutional policy, RBAC roles, and security parameters.</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 md:gap-3">
           {hasUnsavedChanges && (
             <>
               <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
                 <AlertTriangle size={14} className="mr-1.5" /> Uncommitted Changes
               </Badge>
-              <Button 
+              <Button
                 variant="outline"
                 onClick={handleDiscardChanges}
                 disabled={isSaving}
-                className="rounded-2xl border-slate-200 text-slate-600 font-bold h-14 px-6 hover:bg-slate-50"
+                className="rounded-xl md:rounded-2xl border-slate-200 text-slate-600 font-bold h-10 md:h-14 px-3 md:px-6 hover:bg-slate-50 text-sm md:text-base"
               >
-                <RotateCcw size={16} className="mr-2" /> Discard
+                <RotateCcw size={14} className="mr-1.5 md:mr-2" /> <span className="hidden sm:inline">Discard</span>
               </Button>
             </>
           )}
           
-          <Button 
+          <Button
             variant="outline"
             onClick={handleLockSettings}
-            className="rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-14 px-6 gap-2"
+            className="rounded-xl md:rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50 font-bold h-10 md:h-14 px-3 md:px-6 gap-1.5 md:gap-2 text-sm md:text-base"
           >
-            <Lock size={16} /> Lock Console
+            <Lock size={14} className="md:hidden" />
+            <Lock size={16} className="hidden md:inline" />
+            <span className="hidden sm:inline">Lock Console</span>
+            <span className="sm:hidden">Lock</span>
           </Button>
 
-          <Button 
-            onClick={handleSaveAllSettings} 
-            disabled={isSaving} 
-            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          <Button
+            onClick={handleSaveAllSettings}
+            disabled={isSaving}
+            className="rounded-xl md:rounded-2xl px-4 md:px-8 h-10 md:h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-1.5 md:gap-2 text-sm md:text-base w-full sm:w-auto"
           >
-            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Save All Settings
+            {isSaving ? (
+              <Loader2 className="animate-spin" size={16} />
+            ) : (
+              <>
+                <Save size={14} className="md:hidden" />
+                <Save size={16} className="hidden md:inline" />
+              </>
+            )}
+            <span className="hidden sm:inline">Save All Settings</span>
+            <span className="sm:hidden">Save</span>
           </Button>
         </div>
       </div>
@@ -678,61 +689,61 @@ const Settings = () => {
         url.searchParams.set('tab', tab);
         window.history.replaceState({}, '', url.toString());
       }} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex overflow-x-auto">
-          <TabsTrigger value="general" className="rounded-xl px-8 h-full font-bold text-xs">General</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-xl px-8 h-full font-bold text-xs">Academic Setup</TabsTrigger>
-          <TabsTrigger value="roles" className="rounded-xl px-8 h-full font-bold text-xs">Users & Roles</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-xl px-8 h-full font-bold text-xs">Security</TabsTrigger>
+        <TabsList className="bg-white p-1 rounded-xl md:rounded-2xl shadow-sm border h-12 md:h-14 mb-6 md:mb-8 flex overflow-x-auto scrollbar-hide gap-1">
+          <TabsTrigger value="general" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">General</TabsTrigger>
+          <TabsTrigger value="academic" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Academic Setup</TabsTrigger>
+          <TabsTrigger value="roles" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Users & Roles</TabsTrigger>
+          <TabsTrigger value="security" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Security</TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b">
-              <CardTitle className="text-2xl font-black text-slate-900">Institutional Identity</CardTitle>
-              <CardDescription>Primary school details displayed on transcripts, receipts, and public communications.</CardDescription>
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b">
+              <CardTitle className="text-xl md:text-2xl font-black text-slate-900">Institutional Identity</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Primary school details displayed on transcripts, receipts, and public communications.</CardDescription>
             </CardHeader>
-            <CardContent className="px-0 pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
+            <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">School Name</Label>
-                  <Input 
-                    value={generalConfig.schoolName} 
+                  <Input
+                    value={generalConfig.schoolName}
                     onChange={e => { setGeneralConfig({...generalConfig, schoolName: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Motto</Label>
-                  <Input 
-                    value={generalConfig.motto} 
+                  <Input
+                    value={generalConfig.motto}
                     onChange={e => { setGeneralConfig({...generalConfig, motto: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Official Email</Label>
-                  <Input 
-                    value={generalConfig.email} 
+                  <Input
+                    value={generalConfig.email}
                     onChange={e => { setGeneralConfig({...generalConfig, email: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
                   />
                 </div>
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Contact Phone</Label>
                   <Input
                     value={generalConfig.phone}
                     onChange={e => { setGeneralConfig({...generalConfig, phone: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full min-w-0"
                   />
                 </div>
               </div>
 
-              <div className="pt-6 border-t flex items-center justify-between">
-                <div>
+              <div className="pt-4 md:pt-6 border-t flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="min-w-0">
                   <p className="font-bold text-slate-900">System Maintenance Mode</p>
                   <p className="text-xs text-slate-500">Temporarily restrict portal access for parents and students during term rollover.</p>
                 </div>
-                <Switch 
+                <Switch
                   checked={generalConfig.maintenanceMode}
                   onCheckedChange={checked => { setGeneralConfig({...generalConfig, maintenanceMode: checked}); setHasUnsavedChanges(true); }}
                 />
@@ -742,20 +753,20 @@ const Settings = () => {
         </TabsContent>
 
         <TabsContent value="academic" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b">
-              <CardTitle className="text-2xl font-black text-slate-900">Active Academic Calendar</CardTitle>
-              <CardDescription>Configure term dates and national CBC grading thresholds.</CardDescription>
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b">
+              <CardTitle className="text-xl md:text-2xl font-black text-slate-900">Active Academic Calendar</CardTitle>
+              <CardDescription className="text-xs md:text-sm">Configure term dates and national CBC grading thresholds.</CardDescription>
             </CardHeader>
-            <CardContent className="px-0 pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
+            <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Active Academic Year</Label>
-                  <Select 
-                    value={academicConfig.activeYear} 
+                  <Select
+                    value={academicConfig.activeYear}
                     onValueChange={val => { setAcademicConfig({...academicConfig, activeYear: val}); setHasUnsavedChanges(true); }}
                   >
-                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="2025">2025</SelectItem>
                       <SelectItem value="2026">2026</SelectItem>
@@ -764,13 +775,13 @@ const Settings = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Active Term</Label>
-                  <Select 
-                    value={academicConfig.activeTerm} 
+                  <Select
+                    value={academicConfig.activeTerm}
                     onValueChange={val => { setAcademicConfig({...academicConfig, activeTerm: val}); setHasUnsavedChanges(true); }}
                   >
-                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
+                    <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="term1">Term 1</SelectItem>
                       <SelectItem value="term2">Term 2</SelectItem>
@@ -779,13 +790,13 @@ const Settings = () => {
                   </Select>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0 sm:col-span-2 lg:col-span-1">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Term Start Date</Label>
-                  <Input 
+                  <Input
                     type="date"
                     value={academicConfig.termStartDate}
                     onChange={e => { setAcademicConfig({...academicConfig, termStartDate: e.target.value}); setHasUnsavedChanges(true); }}
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    className="rounded-xl h-12 bg-slate-50 border-none font-bold w-full"
                   />
                 </div>
               </div>
@@ -795,12 +806,13 @@ const Settings = () => {
 
         <TabsContent value="roles" className="space-y-6">
           <div className="flex items-center gap-3 mb-2">
-            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
-              <UserCog size={24} />
+            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl shrink-0">
+              <UserCog size={20} className="md:hidden" />
+              <UserCog size={24} className="hidden md:inline" />
             </div>
-            <div>
-              <h2 className="text-xl font-black text-slate-900">RBAC Permission Matrix</h2>
-              <p className="text-sm text-slate-500">Configure module-level access rights for each system role.</p>
+            <div className="min-w-0">
+              <h2 className="text-lg md:text-xl font-black text-slate-900">RBAC Permission Matrix</h2>
+              <p className="text-xs md:text-sm text-slate-500">Configure module-level access rights for each system role.</p>
             </div>
           </div>
 
@@ -812,74 +824,79 @@ const Settings = () => {
               const allChecked = MODULES.every(m => rolePerms[m.id]?.read && rolePerms[m.id]?.create && rolePerms[m.id]?.edit && rolePerms[m.id]?.delete);
 
               return (
-                <div key={role.id} className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden transition-all duration-300">
+                <div key={role.id} className="border-none shadow-sm rounded-2xl md:rounded-[2rem] bg-white overflow-hidden transition-all duration-300">
                   <button
                     onClick={() => setExpandedRole(isOpen ? null : role.id)}
                     className={cn(
-                      "w-full px-8 py-6 flex items-center justify-between transition-colors",
+                      "w-full px-4 md:px-8 py-4 md:py-6 flex items-center justify-between transition-colors gap-2",
                       isOpen ? "bg-indigo-600 text-white" : "bg-white hover:bg-slate-50 text-slate-900"
                     )}
                   >
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-3 md:gap-4 min-w-0 flex-1">
                       <div className={cn(
-                        "p-2 rounded-xl transition-colors",
+                        "p-2 rounded-xl transition-colors shrink-0",
                         isOpen ? "bg-white/20" : "bg-indigo-50 text-indigo-600"
                       )}>
-                        <Shield size={20} />
+                        <Shield size={18} className="md:hidden" />
+                        <Shield size={20} className="hidden md:inline" />
                       </div>
-                      <span className="text-lg font-bold tracking-tight">{role.label}</span>
+                      <span className="text-base md:text-lg font-bold tracking-tight truncate">{role.label}</span>
                     </div>
-                    {isOpen ? <ChevronDown size={20} /> : <ChevronRight size={20} className="text-slate-400" />}
+                    {isOpen ? <ChevronDown size={18} className="shrink-0" /> : <ChevronRight size={18} className="text-slate-400 shrink-0" />}
                   </button>
 
                   {isOpen && (
-                    <div className="p-8 space-y-8 animate-in slide-in-from-top-2 duration-300">
-                      <div className="flex items-center justify-between bg-slate-50 p-5 rounded-2xl border border-slate-100">
-                        <div className="flex items-center gap-3">
-                          <CheckCircle2 className="text-indigo-600" size={20} />
-                          <div>
-                            <p className="font-bold text-slate-900">Full Administrative Access</p>
+                    <div className="p-4 md:p-8 space-y-6 md:space-y-8 animate-in slide-in-from-top-2 duration-300">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between bg-slate-50 p-4 md:p-5 rounded-2xl border border-slate-100 gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CheckCircle2 className="text-indigo-600 shrink-0" size={18} />
+                          <div className="min-w-0">
+                            <p className="font-bold text-slate-900 text-sm md:text-base">Full Administrative Access</p>
                             <p className="text-xs text-slate-500">Grant all CRUD permissions for this role across every module.</p>
                           </div>
                         </div>
-                        <Switch 
-                          checked={allChecked} 
+                        <Switch
+                          checked={allChecked}
                           onCheckedChange={(checked) => toggleAllForRole(role.id, checked)}
-                          className="data-[state=checked]:bg-indigo-600"
+                          className="data-[state=checked]:bg-indigo-600 shrink-0"
                         />
                       </div>
 
-                      <div className="overflow-hidden border border-slate-100 rounded-3xl">
-                        <table className="w-full text-sm text-left border-collapse">
-                          <thead className="bg-slate-50/80 border-b border-slate-100">
-                            <tr>
-                              <th className="px-6 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Module & Description</th>
-                              <th className="px-4 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Read</th>
-                              <th className="px-4 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Create</th>
-                              <th className="px-4 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Edit</th>
-                              <th className="px-4 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Delete</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-slate-100">
-                            {MODULES.map((mod) => (
-                              <tr key={mod.id} className="hover:bg-slate-50/30 transition-colors">
-                                <td className="px-6 py-5">
-                                  <p className="font-bold text-slate-900">{mod.title}</p>
-                                  <p className="text-xs text-slate-400 mt-0.5">{mod.desc}</p>
-                                </td>
-                                {(['read', 'create', 'edit', 'delete'] as Action[]).map((action) => (
-                                  <td key={action} className="px-4 py-5 text-center">
-                                    <Checkbox
-                                      checked={rolePerms[mod.id]?.[action] || false}
-                                      onCheckedChange={() => togglePermission(role.id, mod.id, action)}
-                                      className="rounded-md border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                                    />
-                                  </td>
+                      <div className="overflow-x-auto -mx-4 md:mx-0 px-4 md:px-0">
+                        <div className="inline-block min-w-full align-middle">
+                          <div className="overflow-hidden md:border md:border-slate-100 md:rounded-3xl">
+                            <table className="w-full text-sm text-left border-collapse min-w-[640px]">
+                              <thead className="bg-slate-50/80 border-b border-slate-100">
+                                <tr>
+                                  <th className="px-4 md:px-6 py-3 md:py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Module & Description</th>
+                                  <th className="px-2 md:px-4 py-3 md:py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Read</th>
+                                  <th className="px-2 md:px-4 py-3 md:py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Create</th>
+                                  <th className="px-2 md:px-4 py-3 md:py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Edit</th>
+                                  <th className="px-2 md:px-4 py-3 md:py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Delete</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100">
+                                {MODULES.map((mod) => (
+                                  <tr key={mod.id} className="hover:bg-slate-50/30 transition-colors">
+                                    <td className="px-4 md:px-6 py-4 md:py-5 min-w-[200px]">
+                                      <p className="font-bold text-slate-900 text-sm">{mod.title}</p>
+                                      <p className="text-[11px] md:text-xs text-slate-400 mt-0.5">{mod.desc}</p>
+                                    </td>
+                                    {(['read', 'create', 'edit', 'delete'] as Action[]).map((action) => (
+                                      <td key={action} className="px-2 md:px-4 py-4 md:py-5 text-center">
+                                        <Checkbox
+                                          checked={rolePerms[mod.id]?.[action] || false}
+                                          onCheckedChange={() => togglePermission(role.id, mod.id, action)}
+                                          className="rounded-md border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
+                                        />
+                                      </td>
+                                    ))}
+                                  </tr>
                                 ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -889,39 +906,40 @@ const Settings = () => {
           </div>
         </TabsContent>
 
-        <TabsContent value="security" className="space-y-8 animate-in fade-in zoom-in-95 duration-300">
+        <TabsContent value="security" className="space-y-6 md:space-y-8 animate-in fade-in zoom-in-95 duration-300">
           
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl">
-                  <Key size={24} />
+                <div className="p-2 md:p-3 bg-rose-50 text-rose-600 rounded-xl md:rounded-2xl shrink-0">
+                  <Key size={18} className="md:hidden" />
+                  <Key size={24} className="hidden md:inline" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-black text-slate-900">Master Administrative Credentials</CardTitle>
-                  <CardDescription>Protects sensitive operations like geofence overrides, grade deletions, and fee structure updates.</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Master Administrative Credentials</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Protects sensitive operations like geofence overrides, grade deletions, and fee structure updates.</CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 font-bold px-3 py-1">
+              <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700 font-bold px-3 py-1 shrink-0">
                 High Privilege Level
               </Badge>
             </CardHeader>
 
-            <CardContent className="px-0 pt-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6">
                 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Current Admin PIN / Password</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showCurrentPin ? "text" : "password"}
                       value={pinForm.currentPin}
                       onChange={e => setPinForm({...pinForm, currentPin: e.target.value})}
                       placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowCurrentPin(!showCurrentPin)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
@@ -930,18 +948,18 @@ const Settings = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">New Admin PIN / Password</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showNewPin ? "text" : "password"}
                       value={pinForm.newPin}
                       onChange={e => setPinForm({...pinForm, newPin: e.target.value})}
                       placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowNewPin(!showNewPin)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
@@ -962,18 +980,18 @@ const Settings = () => {
                   )}
                 </div>
 
-                <div className="space-y-2">
+                <div className="space-y-2 min-w-0">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Confirm New PIN / Password</Label>
                   <div className="relative">
-                    <Input 
+                    <Input
                       type={showConfirmPin ? "text" : "password"}
                       value={pinForm.confirmPin}
                       onChange={e => setPinForm({...pinForm, confirmPin: e.target.value})}
                       placeholder="••••••••"
-                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10"
+                      className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-10 w-full"
                     />
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={() => setShowConfirmPin(!showConfirmPin)}
                       className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                     >
@@ -991,35 +1009,37 @@ const Settings = () => {
               </div>
 
               <div className="flex justify-end pt-4">
-                <Button 
+                <Button
                   onClick={handleUpdateMasterPin}
                   disabled={isSaving || !pinForm.currentPin || !isPinMatching}
-                  className="rounded-xl px-8 h-12 font-bold bg-slate-900 text-white hover:bg-slate-800 gap-2 shadow-lg"
+                  className="rounded-xl px-6 md:px-8 h-10 md:h-12 font-bold bg-slate-900 text-white hover:bg-slate-800 gap-2 shadow-lg text-sm md:text-base w-full sm:w-auto"
                 >
-                  {isSaving ? <Loader2 className="animate-spin" size={16} /> : <ShieldCheck size={16} />}
+                  {isSaving ? <Loader2 className="animate-spin" size={14} /> : <ShieldCheck size={14} className="md:hidden" />}
+                  {isSaving ? <Loader2 className="animate-spin hidden md:inline" size={16} /> : <ShieldCheck size={16} className="hidden md:inline" />}
                   Update Master PIN
                 </Button>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white p-8">
-            <CardHeader className="px-0 pt-0 pb-6 border-b flex flex-row items-center justify-between">
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row gap-4">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl">
-                  <MapPin size={24} />
+                <div className="p-2 md:p-3 bg-indigo-50 text-indigo-600 rounded-xl md:rounded-2xl shrink-0">
+                  <MapPin size={18} className="md:hidden" />
+                  <MapPin size={24} className="hidden md:inline" />
                 </div>
-                <div>
-                  <CardTitle className="text-2xl font-black text-slate-900">Geofence & Location Security Rules</CardTitle>
-                  <CardDescription>Control global GPS parameters for staff daily attendance check-ins.</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Geofence & Location Security Rules</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Control global GPS parameters for staff daily attendance check-ins.</CardDescription>
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 bg-indigo-50/60 p-3 px-5 rounded-2xl border border-indigo-100">
-                <Label htmlFor="geofence-master-toggle" className="text-xs font-black uppercase tracking-widest text-indigo-900 cursor-pointer">
-                  Geofence Enforcement
+              <div className="flex items-center gap-3 bg-indigo-50/60 p-2 md:p-3 px-3 md:px-5 rounded-xl md:rounded-2xl border border-indigo-100 shrink-0">
+                <Label htmlFor="geofence-master-toggle" className="text-[10px] md:text-xs font-black uppercase tracking-widest text-indigo-900 cursor-pointer">
+                  Geofence
                 </Label>
-                <Switch 
+                <Switch
                   id="geofence-master-toggle"
                   checked={geofenceEnabled}
                   onCheckedChange={checked => { setGeofenceEnabled(checked); setHasUnsavedChanges(true); }}
@@ -1027,18 +1047,19 @@ const Settings = () => {
               </div>
             </CardHeader>
 
-            <CardContent className="px-0 pt-6 space-y-6">
+            <CardContent className="px-0 pt-4 md:pt-6 space-y-6">
               {/* Admin Location Picker - Leaflet/OpenStreetMap */}
               <div className="space-y-6">
-                <div className="flex items-center justify-between flex-wrap gap-3">
-                  <div>
-                    <h3 className="text-lg font-black text-slate-900">Admin Location Picker</h3>
-                    <p className="text-sm text-slate-500">
-                      Click anywhere on the map to drop the school pin, drag the pin to fine-tune, or use your current GPS location. The blue circle shows the active geofence radius.
+                <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="text-base md:text-lg font-black text-slate-900">Admin Location Picker</h3>
+                    <p className="text-xs md:text-sm text-slate-500">
+                      Click anywhere on the map to drop the school pin, drag the pin to fine-tune, or use your current GPS location.
                     </p>
                   </div>
-                  <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold px-3 py-1">
-                    <MapPin size={12} className="mr-1 inline" /> OpenStreetMap — No API Key Required
+                  <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700 font-bold px-2 md:px-3 py-1 shrink-0 text-[10px] md:text-xs">
+                    <MapPin size={10} className="md:hidden mr-1" />
+                    <MapPin size={12} className="hidden md:inline mr-1" /> OpenStreetMap
                   </Badge>
                 </div>
 
@@ -1058,68 +1079,71 @@ const Settings = () => {
                   <Button
                     onClick={handleSaveAllSettings}
                     disabled={isSaving}
-                    className="rounded-xl px-8 h-12 font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg shadow-emerald-100"
+                    className="rounded-xl px-4 md:px-6 h-10 md:h-12 font-bold bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-lg text-sm md:text-base w-full sm:w-auto"
                   >
-                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                    Save & Update Target Location
+                    {isSaving ? <Loader2 className="animate-spin" size={14} /> : <Save size={14} className="md:hidden" />}
+                    {isSaving ? <Loader2 className="animate-spin hidden md:inline" size={16} /> : <Save size={16} className="hidden md:inline" />}
+                    <span className="hidden sm:inline">Save & Update Location</span>
                   </Button>
                 </div>
               </div>
 
-              <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-2xl flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <AlertTriangle className="text-amber-600 shrink-0" size={20} />
-                  <div>
+              <div className="p-4 bg-amber-50/50 border border-amber-200/60 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-3">
+                  <AlertTriangle className="text-amber-600 shrink-0" size={18} />
+                  <div className="min-w-0">
                     <p className="font-bold text-slate-900 text-sm">Development / Localhost Bypass</p>
-                    <p className="text-xs text-amber-800">Skip GPS distance enforcement for local software testing and offline demonstrations.</p>
+                    <p className="text-xs text-amber-800">Skip GPS distance enforcement for testing.</p>
                   </div>
                 </div>
-                <Switch 
+                <Switch
                   checked={devBypass}
                   onCheckedChange={checked => { setDevBypass(checked); setHasUnsavedChanges(true); }}
+                  className="shrink-0"
                 />
               </div>
             </CardContent>
           </Card>
 
-          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-            <CardHeader className="p-8 border-b bg-slate-50/30 flex flex-row items-center justify-between">
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white overflow-hidden">
+            <CardHeader className="p-4 md:p-8 border-b bg-slate-50/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <div className="p-3 bg-slate-100 text-slate-600 rounded-2xl">
-                  <History size={24} />
+                <div className="p-2 md:p-3 bg-slate-100 text-slate-600 rounded-xl md:rounded-2xl shrink-0">
+                  <History size={18} className="md:hidden" />
+                  <History size={24} className="hidden md:inline" />
                 </div>
-                <div>
-                  <CardTitle className="text-xl font-black text-slate-900">System Security Audit Trail</CardTitle>
-                  <CardDescription>Read-only log of high-privilege configuration and authentication events.</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-base md:text-xl font-black text-slate-900">System Security Audit Trail</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Read-only log of high-privilege configuration and authentication events.</CardDescription>
                 </div>
               </div>
-              <Badge variant="outline" className="border-slate-200 text-slate-600 font-bold">
+              <Badge variant="outline" className="border-slate-200 text-slate-600 font-bold shrink-0">
                 Immutable Ledger
               </Badge>
             </CardHeader>
 
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+                <table className="w-full text-xs text-left min-w-[600px]">
                   <thead className="bg-slate-50/80 border-b border-slate-100">
                     <tr>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Timestamp</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Admin User</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Action Taken</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400 text-right">IP / Device Origin</th>
+                      <th className="px-4 md:px-8 py-3 md:py-4 font-black uppercase tracking-widest text-slate-400">Timestamp</th>
+                      <th className="px-4 md:px-8 py-3 md:py-4 font-black uppercase tracking-widest text-slate-400">Admin User</th>
+                      <th className="px-4 md:px-8 py-3 md:py-4 font-black uppercase tracking-widest text-slate-400">Action Taken</th>
+                      <th className="px-4 md:px-8 py-3 md:py-4 font-black uppercase tracking-widest text-slate-400 text-right">IP / Device</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
                     {auditLogs.map((log, index) => (
                       <tr key={index} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="px-8 py-4 font-mono text-slate-500">{log.timestamp}</td>
-                        <td className="px-8 py-4 font-bold text-slate-900">{log.admin}</td>
-                        <td className="px-8 py-4">
-                          <Badge variant="outline" className="rounded-lg border-indigo-100 bg-indigo-50/50 text-indigo-700 font-bold">
+                        <td className="px-4 md:px-8 py-3 md:py-4 font-mono text-slate-500 text-[10px] md:text-xs">{log.timestamp}</td>
+                        <td className="px-4 md:px-8 py-3 md:py-4 font-bold text-slate-900 text-sm">{log.admin}</td>
+                        <td className="px-4 md:px-8 py-3 md:py-4">
+                          <Badge variant="outline" className="rounded-lg border-indigo-100 bg-indigo-50/50 text-indigo-700 font-bold text-[10px] md:text-xs whitespace-nowrap">
                             {log.action}
                           </Badge>
                         </td>
-                        <td className="px-8 py-4 text-right font-mono text-slate-400">{log.ip}</td>
+                        <td className="px-4 md:px-8 py-3 md:py-4 text-right font-mono text-slate-400 text-[10px] md:text-xs">{log.ip}</td>
                       </tr>
                     ))}
                   </tbody>

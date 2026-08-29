@@ -224,6 +224,15 @@ button, input, select, textarea, a {
   transition: transform 0.1s ease;
 }
 
+/* Hide scrollbar utility for horizontal scrolling tabs */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /* ============================================
    COMPACT MOBILE TYPOGRAPHY
    ============================================ */
