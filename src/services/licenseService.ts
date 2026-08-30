@@ -27,6 +27,18 @@ const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const SEGMENT_LEN = 4;
 const NUM_SEGMENTS = 4; // MUNYAKA-2026-[AAAA]-[BBBB]-[CCCC]-[DDDD]
 
+// Roles that bypass license expiration locks. The School Owner / Super Admin
+// must always be able to reach the Payment & Subscriptions / activation page
+// so they can renew the license. Without this carve-out they would be
+// locked out of the very screen they need to fix the lock.
+export const LICENSE_EXEMPT_ROLES = new Set(['owner', 'super_admin']);
+
+// Storage key for the *currently authenticated role* (string). The lock
+// screen consults this key to decide whether to render the lock gate or
+// let the user through to the dashboard. The AuthContext writes this
+// whenever the user logs in, logs out, or switches roles.
+export const CURRENT_AUTH_ROLE_KEY = 'munyaka_current_auth_role';
+
 // ─────────────────────────────────────────────
 // Key generation
 // ─────────────────────────────────────────────
@@ -69,6 +81,72 @@ export function validityLabel(days: ValidityDuration): string {
 }
 
 // ─────────────────────────────────────────────
+// Date helpers
+// ─────────────────────────────────────────────
+
+/** Today in YYYY-MM-DD (local time). */
+export function todayIso(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/** Parse YYYY-MM-DD into a Date at 23:59:59.999 (local time) on that day.
+ *  Returns NaN for invalid input.
+ */
+function endOfDay(dateStr: string): number {
+  if (!dateStr) return NaN;
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3) return NaN;
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d, 23, 59, 59, 999);
+  return dt.getTime();
+}
+
+/** Parse YYYY-MM-DD into a Date at 00:00:00 (local time) on that day. */
+function startOfDay(dateStr: string): number {
+  if (!dateStr) return NaN;
+  const parts = dateStr.split('-').map(Number);
+  if (parts.length !== 3) return NaN;
+  const [y, m, d] = parts;
+  const dt = new Date(y, m - 1, d, 0, 0, 0, 0);
+  return dt.getTime();
+}
+
+/**
+ * Decide whether `expiresAt` should be considered *expired* at the current
+ * wall-clock time.
+ *
+ * Rules:
+ *   - An empty / invalid `expiresAt` is treated as expired.
+ *   - The license is FULLY ACTIVE throughout the entire `expiresAt` day
+ *     (00:00:00 through 23:59:59.999). It only flips to "expired" once
+ *     the system clock reaches 11:59 PM on that day.
+ *   - Once the clock crosses 11:59 PM, the next calendar day is treated
+ *     as fully expired.
+ *
+ * This guarantees that a license with `expiresAt = 2026-05-01` is
+ * usable from midnight through 23:59:59.999 on May 1st, and only
+ * becomes expired at the stroke of midnight on May 2nd.
+ */
+export function isLicenseExpiredAt(expiresAt: string, now: Date = new Date()): boolean {
+  const end = endOfDay(expiresAt);
+  if (isNaN(end)) return true; // Invalid dates are treated as expired
+  return now.getTime() > end;
+}
+
+/** Days remaining until expiration. Returns 0 once expired. */
+export function daysRemainingUntil(expiresAt: string, now: Date = new Date()): number {
+  if (isLicenseExpiredAt(expiresAt, now)) return 0;
+  const start = startOfDay(expiresAt);
+  if (isNaN(start)) return 0;
+  const diff = start - now.getTime();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+}
+
+// ─────────────────────────────────────────────
 // Storage helpers
 // ─────────────────────────────────────────────
 
@@ -93,7 +171,7 @@ export function issueLicense(params: {
   notes?: string;
 }): License {
   const licenses = readLicenses();
-  const issuedAt = new Date().toISOString().slice(0, 10);
+  const issuedAt = todayIso();
   const expiresAt = computeExpiry(params.validityDays);
   const license: License = {
     id: `LIC-${Date.now()}`,
@@ -141,16 +219,17 @@ export function revokeLicense(activationKey: string, reason?: string): void {
   }
 }
 
-/** Validate an activation key:
- *  Returns the License if valid & active, null otherwise.
- *  Also checks expiry date.
+/**
+ * Validate an activation key:
+ * Returns the License if valid & active, null otherwise.
+ * Also checks expiry date.
  *
- *  Master-key shortcuts:
- *  • MASTER_TEST_KEY  — always valid
- *  • any key matching MASTER_KEY_PATTERN (MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX) — always valid
+ * Master-key shortcuts:
+ *  - MASTER_TEST_KEY  — always valid
+ *  - any key matching MASTER_KEY_PATTERN (MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX) — always valid
  *
- *  For master keys we construct a synthetic License so the rest of the
- *  system continues to work without any special casing.
+ * For master keys we construct a synthetic License so the rest of the
+ * system continues to work without any special casing.
  */
 export function validateActivationKey(key: string): License | null {
   const k = key.trim().toUpperCase();
@@ -168,7 +247,7 @@ export function validateActivationKey(key: string): License | null {
       deviceId: 'MASTER',
       status: 'active',
       validityDays: 365,
-      issuedAt: new Date().toISOString().slice(0, 10),
+      issuedAt: todayIso(),
       expiresAt,
       payment: { method: 'cash', refNumber: 'MASTER', amount: '0' },
       autoRenew: false,
@@ -187,9 +266,10 @@ export function validateActivationKey(key: string): License | null {
   const license = licenses.find(l => l.activationKey === k);
   if (!license) return null;
   if (license.status === 'revoked') return null;
-  const today = new Date().toISOString().slice(0, 10);
-  if (license.expiresAt < today) {
-    // Mark as expired
+  // Expiry check uses the same logic as isLicenseExpiredAt so the lock
+  // and the validate path can never disagree.
+  if (isLicenseExpiredAt(license.expiresAt)) {
+    // Mark as expired on disk for bookkeeping.
     const idx = licenses.findIndex(l => l.id === license.id);
     licenses[idx] = { ...licenses[idx], status: 'expired' };
     writeLicenses(licenses);
@@ -216,9 +296,45 @@ export function getActiveLicense(): License | null {
   return validateActivationKey(key);
 }
 
-/** True if the app is currently locked (no valid active license) */
-export function isAppLocked(): boolean {
-  return !getActiveLicense();
+/** True if the app is currently locked (no valid active license).
+ *  The School Owner / Super Admin is exempt from the lock so they can
+ *  always reach the Payment & Subscriptions screen to renew the
+ *  license. Read the current authenticated role from
+ *  `munyaka_current_auth_role` (written by AuthContext).
+ */
+export function isAppLocked(opts: { currentRole?: string | null } = {}): boolean {
+  // If there's no active license, the app is locked for everyone
+  // EXCEPT the Owner / Super Admin — they can still log in to renew.
+  if (!getActiveLicense()) {
+    return !isExemptRole(opts.currentRole ?? currentAuthRole());
+  }
+  return false;
+}
+
+/** Read the role of the user currently signed in. */
+function currentAuthRole(): string | null {
+  try {
+    return localStorage.getItem(CURRENT_AUTH_ROLE_KEY);
+  } catch {
+    return null;
+  }
+}
+
+/** True if the supplied role is allowed to bypass the license lock. */
+export function isExemptRole(role: string | null | undefined): boolean {
+  if (!role) return false;
+  return LICENSE_EXEMPT_ROLES.has(role);
+}
+
+/** True if the app should show the license gate to the current user. */
+export function shouldShowLicenseGate(opts: { currentRole?: string | null } = {}): boolean {
+  if (isExemptRole(opts.currentRole ?? currentAuthRole())) {
+    // Exempt role: only show the gate if there is no active license at
+    // all (so a fresh install with no key still shows the lock screen
+    // so an Owner can enter their first key).
+    return !getActiveLicense();
+  }
+  return isAppLocked(opts);
 }
 
 /** Get all licenses (full history) */
@@ -229,11 +345,11 @@ export function getAllLicenses(): License[] {
 /** Get a summary for display */
 export function getLicenseStats() {
   const all = readLicenses();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayIso();
   return {
     total: all.length,
-    active: all.filter(l => l.status === 'active' && l.expiresAt >= today).length,
-    expired: all.filter(l => l.status === 'expired' || l.expiresAt < today).length,
+    active: all.filter(l => l.status === 'active' && !isLicenseExpiredAt(l.expiresAt)).length,
+    expired: all.filter(l => l.status === 'expired' || isLicenseExpiredAt(l.expiresAt)).length,
     revoked: all.filter(l => l.status === 'revoked').length,
   };
 }

@@ -5,6 +5,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
+import { CURRENT_AUTH_ROLE_KEY } from '@/services/licenseService';
 
 export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -177,6 +178,24 @@ const initializeUsersStorage = () => {
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
 };
 
+/**
+ * Persist the role of the *currently signed-in* user to localStorage
+ * so the AppUnlock license-gate (which lives outside AuthProvider
+ * and decides whether to lock the app on expiry) can read it
+ * synchronously on first render. Without this, the Owner would see
+ * the lock screen for a frame even after signing in, because the
+ * storage write happens after the first paint.
+ */
+const persistCurrentAuthRole = (role: string | null) => {
+  try {
+    if (role) {
+      localStorage.setItem(CURRENT_AUTH_ROLE_KEY, role);
+    } else {
+      localStorage.removeItem(CURRENT_AUTH_ROLE_KEY);
+    }
+  } catch { /* localStorage may be unavailable in some browser modes */ }
+};
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -188,7 +207,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     const savedUser = localStorage.getItem('munyaka_session');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsed = JSON.parse(savedUser) as User;
+        setUser(parsed);
+        // Re-sync the role key on app boot so the lock gate always
+        // agrees with the active session.
+        persistCurrentAuthRole(parsed.role);
+      } catch {
+        persistCurrentAuthRole(null);
+      }
+    } else {
+      persistCurrentAuthRole(null);
     }
     setIsLoading(false);
   }, []);
@@ -234,6 +263,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         };
         
         localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        // Persist the role synchronously so the AppUnlock gate (which
+        // reads the role from localStorage on first render) agrees
+        // that the new user is exempt from the license lock BEFORE
+        // we re-render. This is what makes the Owner able to log
+        // in even when the subscription has expired.
+        persistCurrentAuthRole(userData.role);
         setUser(userData);
         return true;
       }
@@ -339,6 +374,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const logout = () => {
     localStorage.removeItem('munyaka_session');
+    // Clear the current-auth-role key so the license gate switches
+    // back into full-lockout mode for the next sign-in.
+    persistCurrentAuthRole(null);
     setUser(null);
   };
 
@@ -349,6 +387,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const updatedUser = { ...user, role };
     setUser(updatedUser);
     localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
+    // Keep the role-key in lockstep so the lock gate can decide
+    // whether the (now-synthetic) new role is exempt without
+    // waiting for the next login.
+    persistCurrentAuthRole(role);
     showSuccess(`Switched to ${role.replace('_', ' ')} role`);
   };
 
