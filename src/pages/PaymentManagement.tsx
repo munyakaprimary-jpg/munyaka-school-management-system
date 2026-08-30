@@ -55,6 +55,7 @@ import {
   FileText,
   Download,
   FileSpreadsheet,
+  X,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
@@ -413,6 +414,7 @@ const PaymentManagement = () => {
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
 
   // ── Receipt Modal State ──
+  // FIX: Now using clear, working state setters for close handlers
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<{
     receiptNumber: string;
@@ -432,6 +434,12 @@ const PaymentManagement = () => {
     receivedBy?: string;
   } | null>(null);
 
+  // FIX: Clear receipt data setter that nulls out state on close
+  const handleCloseReceiptModal = () => {
+    setIsReceiptModalOpen(false);
+    setReceiptData(null);
+  };
+
   // ── Receipt View State ──
   const [isReceiptViewOpen, setIsReceiptViewOpen] = useState(false);
   const [selectedTransactionForReceipt, setSelectedTransactionForReceipt] = useState<Transaction | null>(null);
@@ -441,6 +449,13 @@ const PaymentManagement = () => {
     grade: string;
     stream: string;
   } | null>(null);
+
+  // FIX: Clear receipt view state on close
+  const handleCloseReceiptView = () => {
+    setIsReceiptViewOpen(false);
+    setSelectedTransactionForReceipt(null);
+    setSelectedStudentForReceipt(null);
+  };
 
   // ── Load from localStorage ─────────────
   useEffect(() => {
@@ -1013,6 +1028,7 @@ const PaymentManagement = () => {
   }, 0);
 
   // ── Receipt Handlers ──
+  // FIX: Single handler that clears all receipt-related state on close
   const handleOpenReceipt = (transaction: Transaction) => {
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
@@ -1022,17 +1038,6 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
-  };
-
-  const handleCloseReceiptView = () => {
-    setIsReceiptViewOpen(false);
-    setSelectedTransactionForReceipt(null);
-    setSelectedStudentForReceipt(null);
-  };
-
-  const handleCloseReceiptModal = () => {
-    setIsReceiptModalOpen(false);
-    setReceiptData(null);
   };
 
   const handleViewReceiptFromHistory = (transaction: Transaction) => {
@@ -1210,9 +1215,6 @@ const PaymentManagement = () => {
         {/* LICENSE DETAILS TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-6 w-full">
-          {/* FIX #1: Subscription cards now use a single-column layout
-              that fills the full page width instead of 3 narrow
-              columns. Each subscription card spans the entire row. */}
           <div className="grid grid-cols-1 gap-6 w-full">
             {subscriptions.map(sub => (
               <Card
@@ -1245,10 +1247,6 @@ const PaymentManagement = () => {
                   </div>
                 </CardHeader>
 
-                {/* FIX #2: Inner layout switched to a 4-column grid so
-                    the plan / interval / amount / cycle / seats fields
-                    breathe across the full row instead of feeling
-                    cramped in a 2-column half-width row. */}
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="bg-slate-50 rounded-2xl p-3">
@@ -1269,10 +1267,6 @@ const PaymentManagement = () => {
                     </div>
                   </div>
 
-                  {/* FIX #3: Billing cycle / seats / features / actions
-                      arranged in a 2-column responsive grid so the
-                      entire row from cycle → buttons spans the full
-                      width. */}
                   <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
                     <div className="bg-slate-50 rounded-2xl p-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Billing Cycle</p>
@@ -1428,7 +1422,7 @@ const PaymentManagement = () => {
             ))}
           </div>
 
-          {/* ── License History / Activation Key Log ── */}
+          {/* License History / Activation Key Log */}
           <div className="space-y-4 mt-8">
             <div className="flex items-center justify-between">
               <div>
@@ -1556,9 +1550,7 @@ const PaymentManagement = () => {
           </div>
         </TabsContent>
 
-        {/* ──────────────────────────────────────── */}
-        {/* CONFIGURATION TAB (NEW) */}
-        {/* ──────────────────────────────────────── */}
+        {/* CONFIGURATION TAB */}
         <TabsContent value="configuration" className="space-y-6">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -1570,7 +1562,6 @@ const PaymentManagement = () => {
                   <CardTitle className="text-lg font-black text-slate-900">Subscription Configuration</CardTitle>
                   <CardDescription>
                     Configure the institutional plan details, billing, and seat limits.
-                    Changes save to <code className="bg-slate-200/60 px-1.5 py-0.5 rounded text-[11px] font-mono">localStorage</code> and update the status card above.
                   </CardDescription>
                 </div>
               </div>
@@ -1620,7 +1611,7 @@ const PaymentManagement = () => {
                     Amount
                   </Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <Input
                       type="number"
                       step="0.01"
@@ -1659,7 +1650,7 @@ const PaymentManagement = () => {
                     Next Billing Date
                   </Label>
                   <div className="relative">
-                    <CalendarDays className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
+                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <Input
                       type="date"
                       value={configForm.nextBilling}
@@ -1678,7 +1669,7 @@ const PaymentManagement = () => {
                     Institutional Seats
                   </Label>
                   <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                     <Input
                       type="number"
                       min="0"
@@ -1765,9 +1756,7 @@ const PaymentManagement = () => {
           </Card>
         </TabsContent>
 
-        {/* ──────────────────────────────────────── */}
         {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
-        {/* ──────────────────────────────────────── */}
         <TabsContent value="record" className="space-y-8">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -1883,7 +1872,7 @@ const PaymentManagement = () => {
                     Amount Paid
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate_y-1/2 font-black text-slate-400 text-base">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
                       {mpForm.currency === 'KES' ? 'KSh' : mpForm.currency === 'USD' ? '$' : mpForm.currency}
                     </span>
                     <Input
@@ -1921,7 +1910,7 @@ const PaymentManagement = () => {
                   Transaction Reference / Receipt Number
                 </Label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <Input
                     value={mpForm.transactionRef}
                     onChange={e => setMpForm(f => ({ ...f, transactionRef: e.target.value }))}
@@ -2148,9 +2137,7 @@ const PaymentManagement = () => {
           </div>
         </TabsContent>
 
-        {/* ──────────────────────────────────────── */}
         {/* PAYMENT GATEWAYS TAB */}
-        {/* ──────────────────────────────────────── */}
         <TabsContent value="gateways" className="space-y-8">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -2194,7 +2181,7 @@ const PaymentManagement = () => {
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Amount</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate_y-1/2 font-black text-slate-400 text-base">
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
                       {lpForm.currency === 'KES' ? 'KSh' : '$'}
                     </span>
                     <Input
@@ -2229,7 +2216,7 @@ const PaymentManagement = () => {
                   Transaction Reference / Receipt Number
                 </Label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
+                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                   <Input
                     value={lpForm.reference}
                     onChange={e => setLpForm(f => ({ ...f, reference: e.target.value }))}
@@ -2361,9 +2348,7 @@ const PaymentManagement = () => {
           </div>
         </TabsContent>
 
-        {/* ──────────────────────────────────────── */}
-        {/* INVOICE HISTORY TAB - NOW WITH RECEIPT ACTIONS */}
-        {/* ──────────────────────────────────────── */}
+        {/* INVOICE HISTORY TAB */}
         <TabsContent value="history" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -2598,14 +2583,14 @@ const PaymentManagement = () => {
         defaultSubscriptionName={activeSubscriptionForLicense?.name}
       />
 
-      {/* Receipt Modal (Post-Payment Trigger) */}
+      {/* FIX: Receipt Modal with working onClose handler that clears state */}
       <ReceiptModal
         isOpen={isReceiptModalOpen}
         onClose={handleCloseReceiptModal}
         receiptData={receiptData}
       />
 
-      {/* Receipt View Modal (for Invoice History) */}
+      {/* FIX: Receipt View Modal with working onClose handler that clears state */}
       <ReceiptView
         transaction={selectedTransactionForReceipt || {
           id: '',

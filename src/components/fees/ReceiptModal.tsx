@@ -55,6 +55,28 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
 }) => {
   const receiptRef = useRef<HTMLDivElement>(null);
 
+  // Handle Escape key to close the modal
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isOpen, onClose]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    if (!isOpen) return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [isOpen]);
+
   const handlePrint = () => {
     if (!receiptRef.current) return;
     
@@ -149,7 +171,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </style>
       </head>
       <body>
-        ${receiptContent.outerHTML}
+        ${receiptRef.current?.outerHTML}
       </body>
       </html>
     `;
@@ -169,20 +191,41 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   if (!isOpen || !receiptData) return null;
 
+  // Handle backdrop click to close (only if click is directly on backdrop)
+  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
-        <div className="p-6 border-b flex justify-between items-center">
-          <h3 className="text-lg font-bold text-slate-900">Payment Receipt</h3>
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      onClick={handleBackdropClick}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="receipt-modal-title"
+    >
+      <div 
+        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-2xl">
+          <h3 id="receipt-modal-title" className="text-lg font-bold text-slate-900">Payment Receipt</h3>
           <button 
-            onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-600 rounded-lg transition-colors"
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
+            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            aria-label="Close receipt modal"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div ref={receiptRef} className="p-6 receipt-container" data-no-print="true">
+        <div ref={receiptRef} className="p-6 receipt-container">
           {/* Header */}
           <div className="header">
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -202,7 +245,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
           {/* Status Badge */}
           <div className="flex justify-center mb-6">
-            <Badge className={cn("px-4 py-2 text-sm font-bold", receiptData.status === 'Cleared' || receiptData.status === 'Paid' ? "bg-emerald-100 text-emerald-700" : "bg-amber-100 text-amber-700")}>
+            <Badge className="px-4 py-2 text-sm font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
               <CheckCircle2 size={16} className="mr-2" />
               {receiptData.status === 'Cleared' || receiptData.status === 'Paid' ? 'PAID' : receiptData.status}
             </Badge>
@@ -244,11 +287,11 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </thead>
             <tbody>
               <tr>
-                <td>Student Name</td>
+                <td>Student / Payer Name</td>
                 <td>{receiptData.studentName}</td>
               </tr>
               <tr>
-                <td>Admission Number</td>
+                <td>Reference / ID</td>
                 <td>{receiptData.admNo}</td>
               </tr>
               <tr>
@@ -289,23 +332,35 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
         </div>
 
         {/* Action Buttons */}
-        <div className="p-6 border-t flex justify-center gap-4 no-print" data-no-print="true">
+        <div className="sticky bottom-0 z-10 bg-white border-t px-6 py-4 flex justify-center gap-3 rounded-b-2xl" data-no-print="true">
           <Button
+            type="button"
             variant="outline"
-            onClick={handlePrint}
+            onClick={(e) => {
+              e.stopPropagation();
+              handlePrint();
+            }}
             className="rounded-xl h-11 px-6 gap-2"
           >
             <Printer size={18} /> Print Receipt
           </Button>
           <Button
-            onClick={handleDownload}
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleDownload();
+            }}
             className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-100"
           >
             <Download size={18} /> Download Receipt (HTML)
           </Button>
           <Button
+            type="button"
             variant="ghost"
-            onClick={onClose}
+            onClick={(e) => {
+              e.stopPropagation();
+              onClose();
+            }}
             className="rounded-xl h-11 px-6"
           >
             Close
