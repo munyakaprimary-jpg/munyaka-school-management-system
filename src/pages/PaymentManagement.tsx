@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -342,6 +344,11 @@ const PaymentManagement = () => {
   const [subscriptionForm, setSubscriptionForm] = useState<Partial<Subscription>>({});
 
   // ── Configuration form state (NEW) ──
+  // FIX: Always store seats as a string in the form so .trim() and
+  // parseInt() work correctly. Previous code allowed seats to be
+  // either a string or a number (whichever the Select or Input last
+  // produced), which is what triggered the runtime error
+  // "configForm.seats.trim is not a function".
   const [configForm, setConfigForm] = useState(() => {
     try {
       const saved = localStorage.getItem(SUBSCRIPTION_CONFIG_KEY);
@@ -354,7 +361,7 @@ const PaymentManagement = () => {
             amount: parsed.amount ?? '',
             currency: parsed.currency ?? 'USD',
             nextBilling: parsed.nextBilling ?? '',
-            seats: parsed.seats ?? '',
+            seats: String(parsed.seats ?? ''),
             tier: parsed.tier ?? 'enterprise',
           };
         }
@@ -523,6 +530,10 @@ const PaymentManagement = () => {
     if (subscriptions.length === 0) return;
     const primary = subscriptions[0];
     setConfigForm(prev => ({
+      // FIX: Always store seats as a string. Even when prefilling
+      // from a numeric source (the `seats` field on the Subscription
+      // object is a number), we coerce to a string here so the form
+      // value is always a string.
       name: prev.name || primary.name,
       plan: prev.plan || primary.plan,
       amount: prev.amount || primary.amount,
@@ -588,8 +599,14 @@ const PaymentManagement = () => {
   const markChanged = () => setHasUnsavedChanges(true);
 
   // ── Configuration tab handlers (NEW) ──
+  // FIX: updateConfigField always writes a string for `seats` to keep
+  // the form value type consistent. The previous version forwarded
+  // `e.target.value` directly, which was already a string from the
+  // underlying <input> element, but a number from the <Select>
+  // branch would have leaked a number into the form. We now coerce
+  // to string regardless of source.
   const updateConfigField = (field: keyof typeof configForm, value: string) => {
-    setConfigForm(prev => ({ ...prev, [field]: value }));
+    setConfigForm(prev => ({ ...prev, [field]: String(value) }));
     setConfigError('');
   };
 
@@ -606,7 +623,12 @@ const PaymentManagement = () => {
       setConfigError('Please enter a valid amount.');
       return;
     }
-    if (configForm.seats.trim() && (isNaN(parseInt(configForm.seats)) || parseInt(configForm.seats) < 0)) {
+    // FIX: Defensive string coercion before .trim() so the type is
+    // always string regardless of how the form value was set. If the
+    // caller forgot to wrap a non-string value (e.g. a number from a
+    // Select component), the trim error is caught here.
+    const seatsRaw = typeof configForm.seats === 'string' ? configForm.seats : String(configForm.seats ?? '');
+    if (seatsRaw.trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
       setConfigError('Institutional seats must be a non-negative number.');
       return;
     }
@@ -615,7 +637,8 @@ const PaymentManagement = () => {
     await new Promise(r => setTimeout(r, 700));
 
     const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const seats = configForm.seats.trim() ? parseInt(configForm.seats) : 0;
+    // FIX: parseInt with the safely-coerced string value above
+    const seats = seatsRaw.trim() ? parseInt(seatsRaw) : 0;
 
     const configToSave = {
       name: configForm.name.trim(),
