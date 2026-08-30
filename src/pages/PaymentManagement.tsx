@@ -456,7 +456,7 @@ const PaymentManagement = () => {
       currency: prev.currency || primary.currency,
       nextBilling: prev.nextBilling || primary.nextBilling,
       seats: prev.seats || String(primary.seats),
-    }));
+    });
   }, [subscriptions]);
 
   useEffect(() => {
@@ -917,8 +917,14 @@ const PaymentManagement = () => {
   }, 0);
 
   // ── Render ─────────────────────────────
+  // Use full width for License Details tab, otherwise max-w-7xl
+  const isLicenseDetailsTab = activeTab === 'subscriptions';
+  const containerClass = isLicenseDetailsTab 
+    ? 'w-full max-w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20'
+    : 'max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20';
+
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className={containerClass}>
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
         <div>
@@ -1081,7 +1087,8 @@ const PaymentManagement = () => {
         {/* LICENSE DETAILS TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Full-width responsive grid for License Details */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {subscriptions.map(sub => (
               <Card
                 key={sub.id}
