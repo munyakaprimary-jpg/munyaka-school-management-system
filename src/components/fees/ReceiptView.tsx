@@ -30,6 +30,10 @@ export interface ReceiptViewProps {
     grade: string;
     stream: string;
   };
+  /** Trigger to automatically invoke the print action (increment to trigger) */
+  printTrigger?: number;
+  /** Trigger to automatically invoke the download action (increment to trigger) */
+  downloadTrigger?: number;
   onDownload?: () => void;
   onPrint?: () => void;
 }
@@ -60,6 +64,8 @@ const ReceiptView: React.FC<ReceiptViewProps> = ({
   onClose,
   transaction,
   student,
+  printTrigger,
+  downloadTrigger,
   onDownload,
   onPrint,
 }) => {
@@ -213,6 +219,26 @@ body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20
     URL.revokeObjectURL(url);
     onDownload?.();
   }, [onDownload, transaction?.id]);
+
+  // ── Auto-trigger print when printTrigger prop changes ──
+  React.useEffect(() => {
+    if (printTrigger && printTrigger > 0 && isOpen && receiptRef.current) {
+      const timer = setTimeout(() => {
+        handlePrint();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [printTrigger, isOpen]);
+
+  // ── Auto-trigger download when downloadTrigger prop changes ──
+  React.useEffect(() => {
+    if (downloadTrigger && downloadTrigger > 0 && isOpen && receiptRef.current) {
+      const timer = setTimeout(() => {
+        handleDownload();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [downloadTrigger, isOpen]);
 
   const formatDate = (dateStr: string) => {
     try {

@@ -432,6 +432,8 @@ const PaymentManagement = () => {
     grade: string;
     stream: string;
   } | null>(null);
+  const [receiptPrintTrigger, setReceiptPrintTrigger] = useState(0);
+  const [receiptDownloadTrigger, setReceiptDownloadTrigger] = useState(0);
 
   const handleCloseReceiptView = () => {
     setIsReceiptViewOpen(false);
@@ -1117,7 +1119,7 @@ const PaymentManagement = () => {
   };
 
   const handleDownloadReceipt = (transaction: Transaction) => {
-    // Open the receipt view so the user can use the built-in print/download
+    // Open the receipt view and trigger download
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1126,11 +1128,15 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
-    showSuccess('Opening receipt for download...');
+    // Trigger download after modal opens
+    setTimeout(() => {
+      setReceiptDownloadTrigger(prev => prev + 1);
+    }, 100);
+    showSuccess('Downloading receipt...');
   };
 
   const handlePrintReceipt = (transaction: Transaction) => {
-    // Open the receipt view and trigger print after a short delay
+    // Open the receipt view and trigger print
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1139,9 +1145,10 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
+    // Trigger print after modal opens
     setTimeout(() => {
-      window.print();
-    }, 300);
+      setReceiptPrintTrigger(prev => prev + 1);
+    }, 100);
   };
 
   // ── Render ─────────────────────────────
@@ -2474,26 +2481,27 @@ const PaymentManagement = () => {
       />
 
       {/* Receipt View Modal */}
-      <ReceiptView
-        transaction={selectedTransactionForReceipt || {
-          id: '',
-          date: '',
-          amount: '0',
-          currency: 'KES',
-          ref: '',
-          category: '',
-          status: 'paid' as const,
-          method: 'cash',
-          paymentMethod: 'cash' as const,
-          paymentDetails: { receivedBy: '' },
-        }}
-        student={selectedStudentForReceipt || undefined}
-        onClose={handleCloseReceiptView}
-        onPrint={() => window.print()}
-        onDownload={() => window.print()}
-      />
-    </div>
-  );
-};
-
-export default PaymentManagement;
+            <ReceiptView
+              isOpen={isReceiptViewOpen}
+              transaction={selectedTransactionForReceipt || {
+                id: '',
+                date: '',
+                amount: '0',
+                currency: 'KES',
+                ref: '',
+                category: '',
+                status: 'paid' as const,
+                method: 'cash',
+                paymentMethod: 'cash' as const,
+                paymentDetails: { receivedBy: '' },
+              }}
+              student={selectedStudentForReceipt || undefined}
+              printTrigger={receiptPrintTrigger}
+              downloadTrigger={receiptDownloadTrigger}
+              onClose={handleCloseReceiptView}
+            />
+          </div>
+        );
+      };
+      
+      export default PaymentManagement;

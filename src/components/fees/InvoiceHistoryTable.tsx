@@ -101,61 +101,61 @@ const InvoiceHistoryTable: React.FC<InvoiceHistoryTableProps> = ({
                   <td className="px-8 py-4 font-mono text-slate-500">{tx.paidAt || '—'}</td>
                   <td className="px-8 py-4 text-right">{getStatusBadge(tx.status)}</td>
                   <td className="px-8 py-4 text-right">
-                    <div className="flex justify-end gap-1.5">
-                      {/*
-                        View icon — opens the receipt view for ALL
-                        statuses (paid, pending, failed). This way the
-                        user can always review an invoice/receipt.
-                      */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        onClick={() => handleView(tx)}
-                        title="View receipt"
-                        aria-label="View receipt"
-                        data-testid={`invoice-action-view-${tx.id}`}
-                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 cursor-pointer hover:opacity-75 transition-opacity"
-                      >
-                        <Eye size={16} />
-                      </Button>
-                      {/*
-                        Download icon — falls back to opening the
-                        receipt view if no onDownload handler is
-                        provided. Always clickable.
-                      */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        onClick={() => handleDownload(tx)}
-                        title="Download receipt"
-                        aria-label="Download receipt"
-                        data-testid={`invoice-action-download-${tx.id}`}
-                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 cursor-pointer hover:opacity-75 transition-opacity"
-                      >
-                        <FileDown size={16} />
-                      </Button>
-                      {/*
-                        Print icon — falls back to opening the receipt
-                        view if no onPrint handler is provided. The
-                        view has its own print button inside it.
-                        Always clickable.
-                      */}
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        type="button"
-                        onClick={() => handlePrint(tx)}
-                        title="Print receipt"
-                        aria-label="Print receipt"
-                        data-testid={`invoice-action-print-${tx.id}`}
-                        className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 cursor-pointer hover:opacity-75 transition-opacity"
-                      >
-                        <Printer size={16} />
-                      </Button>
-                    </div>
-                  </td>
+                                      <div className="flex justify-end gap-1.5">
+                                        {/*
+                                          View icon — opens the receipt view for ALL
+                                          statuses (paid, pending, failed). This way the
+                                          user can always review an invoice/receipt.
+                                        */}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          type="button"
+                                          onClick={() => handleView(tx)}
+                                          title="View receipt"
+                                          aria-label="View receipt"
+                                          data-testid={`invoice-action-view-${tx.id}`}
+                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                        >
+                                          <Eye size={16} />
+                                        </Button>
+                                        {/*
+                                          Download icon — falls back to opening the
+                                          receipt view if no onDownload handler is
+                                          provided. Always clickable.
+                                        */}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          type="button"
+                                          onClick={() => handleDownload(tx)}
+                                          title="Download receipt"
+                                          aria-label="Download receipt"
+                                          data-testid={`invoice-action-download-${tx.id}`}
+                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                        >
+                                          <FileDown size={16} />
+                                        </Button>
+                                        {/*
+                                          Print icon — falls back to opening the receipt
+                                          view if no onPrint handler is provided. The
+                                          view has its own print button inside it.
+                                          Always clickable.
+                                        */}
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          type="button"
+                                          onClick={() => handlePrint(tx)}
+                                          title="Print receipt"
+                                          aria-label="Print receipt"
+                                          data-testid={`invoice-action-print-${tx.id}`}
+                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                        >
+                                          <Printer size={16} />
+                                        </Button>
+                                      </div>
+                                    </td>
                 </tr>
               ))}
             </tbody>
