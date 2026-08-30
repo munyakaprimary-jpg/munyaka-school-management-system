@@ -1280,18 +1280,18 @@ const PaymentManagement = () => {
       )}
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-auto mb-8 flex flex-wrap gap-1 w-full">
-          <TabsTrigger value="subscriptions" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <RefreshCw size={15} /> License Details
+        <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-auto mb-8 flex flex-nowrap overflow-x-auto gap-1 w-full scrollbar-hide">
+          <TabsTrigger value="subscriptions" className="rounded-xl px-3 md:px-5 py-2 font-bold text-[10px] md:text-xs gap-1.5 md:gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <RefreshCw size={13} className="shrink-0" /> <span className="hidden sm:inline">License Details</span><span className="sm:hidden">Licenses</span>
           </TabsTrigger>
-          <TabsTrigger value="configuration" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <SettingsIcon size={15} /> Configuration
+          <TabsTrigger value="configuration" className="rounded-xl px-3 md:px-5 py-2 font-bold text-[10px] md:text-xs gap-1.5 md:gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <SettingsIcon size={13} className="shrink-0" /> <span className="hidden md:inline">Configuration</span><span className="md:hidden">Config</span>
           </TabsTrigger>
-          <TabsTrigger value="gateways" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <Globe size={15} /> Payment Gateways
+          <TabsTrigger value="gateways" className="rounded-xl px-3 md:px-5 py-2 font-bold text-[10px] md:text-xs gap-1.5 md:gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <Globe size={13} className="shrink-0" /> <span className="hidden sm:inline">Payment Gateways</span><span className="sm:hidden">Gateways</span>
           </TabsTrigger>
-          <TabsTrigger value="history" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <DollarSign size={15} /> Invoice History
+          <TabsTrigger value="history" className="rounded-xl px-3 md:px-5 py-2 font-bold text-[10px] md:text-xs gap-1.5 md:gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <DollarSign size={13} className="shrink-0" /> <span className="hidden sm:inline">Invoice History</span><span className="sm:hidden">History</span>
           </TabsTrigger>
         </TabsList>
 
