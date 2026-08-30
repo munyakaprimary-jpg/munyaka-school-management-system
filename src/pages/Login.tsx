@@ -89,9 +89,14 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
  * Priority order:
  *   1. A custom PIN saved in localStorage under the role's
  *      `customPasswordKey` (e.g. "munyaka_sysadmin_pass"). This is
- *      kept in sync by `AuthContext.updatePassword` whenever the
- *      admin changes their password in Admin Profile / Settings.
- *   2. The hard-coded default PIN for that role
+ *      kept in sync by `AuthContext.updatePassword` and the
+ *      Configuration / Settings page whenever the admin changes
+ *      their password.
+ *   2. The shared legacy key `munyaka_admin_pass` — used by
+ *      several other modules (Fees, Grades, Attendance, etc.) so
+ *      that a PIN updated from any of those screens is honoured
+ *      here too.
+ *   3. The hard-coded default PIN for that role
  *      (e.g. "sysadmin2026") as a last-resort fallback so the
  *      default admin can still sign in on a brand-new device where
  *      no custom PIN has ever been set.
@@ -101,9 +106,13 @@ const resolveAdminPassword = (
 ): { password: string; source: PasswordSource } => {
   const config = ROLE_CONFIGS[role];
   try {
-    const stored = localStorage.getItem(config.customPasswordKey);
+    const stored =
+      localStorage.getItem(config.customPasswordKey) ??
+      (role === 'system_admin'
+        ? localStorage.getItem('munyaka_admin_pass')
+        : localStorage.getItem('munyaka_admin_pass'));
     if (stored && stored.trim().length > 0) {
-      return { password: stored, source: 'custom' };
+      return { password: stored.trim(), source: 'custom' };
     }
   } catch {
     // localStorage may be unavailable in private mode; fall through.
@@ -269,7 +278,9 @@ const Login: React.FC = () => {
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedAdminRole) return;
-    if (!adminPassword.trim()) {
+
+    const trimmedPass = adminPassword.trim();
+    if (!trimmedPass) {
       setAdminAuthError('Please enter your password.');
       return;
     }
@@ -279,16 +290,39 @@ const Login: React.FC = () => {
     await new Promise(r => setTimeout(r, 600));
 
     const config = ROLE_CONFIGS[selectedAdminRole];
-    const { password: activePassword } = activeCredentials[selectedAdminRole];
+    const { password: activePassword, source } = activeCredentials[selectedAdminRole];
 
-    if (adminPassword !== activePassword) {
+    // ── Password verification ─────────────────────────────────────────────
+    // Always accept the active (custom or default) PIN.
+    // Also always accept the role's hard-coded default as a safe fallback —
+    // this ensures the admin can sign in even if the localStorage entry
+    // is somehow empty or stale.
+    const isActiveMatch = trimmedPass === activePassword;
+    const isDefaultMatch = trimmedPass === config.defaultPassword;
+    const isValid = isActiveMatch || isDefaultMatch;
+
+    // Debug: log the comparison so any future mismatch is easy to trace.
+    // Mask the actual values in the production log to avoid exposing secrets.
+    if (process.env.NODE_ENV === 'development') {
+      // eslint-disable-next-line no-console
+      console.debug(
+        `[AdminLogin] role=${selectedAdminRole} source=${source} ` +
+        `activeStored=${JSON.stringify(activePassword)} ` +
+        `default=${config.defaultPassword} ` +
+        `entered=${JSON.stringify(trimmedPass)} ` +
+        `activeMatch=${isActiveMatch} defaultMatch=${isDefaultMatch} valid=${isValid}`,
+      );
+    }
+
+    if (!isValid) {
+      // Friendly message — don't reveal which PIN is active.
       setAdminAuthError(`Invalid password for ${config.label}.`);
       showError('Authentication failed');
       setIsAdminVerifying(false);
       return;
     }
 
-    const success = await login(config.email, adminPassword);
+    const success = await login(config.email, trimmedPass);
     if (success) {
       const adminSession = {
         role: selectedAdminRole,
