@@ -222,29 +222,6 @@ const DEFAULT_GATEWAYS: PaymentGateway[] = [
   },
 ];
 
-const DEFAULT_PAYMENTS: SoftwarePayment[] = [
-  {
-    id: 'pmt-001',
-    description: 'Munyaka School License - March 2026',
-    amount: '299.00',
-    currency: 'USD',
-    status: 'paid',
-    paidAt: '2026-03-01',
-    invoiceId: 'INV-2026-003',
-    paymentMethod: 'M-Pesa',
-  },
-  {
-    id: 'pmt-003',
-    description: 'Munyaka School License - April 2026',
-    amount: '299.00',
-    currency: 'USD',
-    status: 'pending',
-    paidAt: '',
-    invoiceId: 'INV-2026-005',
-    paymentMethod: 'M-Pesa',
-  },
-];
-
 // ─────────────────────────────────────────
 // SHARED SYNC EVENTS
 // ─────────────────────────────────────────
@@ -384,7 +361,6 @@ const PaymentManagement = () => {
 
   const [upgradeModalSub, setUpgradeModalSub] = useState<Subscription | null>(null);
   const [renewModalSub, setRenewModalSub] = useState<Subscription | null>(null);
-  const [payments] = useState<SoftwarePayment[]>(DEFAULT_PAYMENTS);
 
   // ── License / activation key state ──
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -910,6 +886,53 @@ const PaymentManagement = () => {
       </Badge>
     );
   };
+
+  // ─────────────────────────────────────────────────────────────────────
+  // DYNAMIC PAYMENT HISTORY: Combine monthly payments + local payments
+  // ─────────────────────────────────────────────────────────────────────
+  const allPaymentHistory = useMemo(() => {
+    const history: Array<{
+      id: string;
+      invoiceId: string;
+      description: string;
+      amount: string;
+      currency: string;
+      method: string;
+      date: string;
+      status: string;
+    }> = [];
+
+    // Add monthly payments (with activation codes)
+    monthlyPayments.forEach(mp => {
+      history.push({
+        id: mp.id,
+        invoiceId: `INV-${mp.paidAt.replace(/-/g, '')}-${mp.id.slice(-4)}`,
+        description: `${mp.subscriptionName} — ${mp.paymentMode.toUpperCase()} Payment`,
+        amount: mp.amount,
+        currency: mp.currency,
+        method: mp.paymentMode === 'mpesa' ? 'M-Pesa' : mp.paymentMode === 'cash' ? 'Cash' : 'Bank Transfer',
+        date: mp.paidAt,
+        status: mp.codeStatus === 'redeemed' ? 'paid' : mp.codeStatus === 'expired' ? 'expired' : 'active',
+      });
+    });
+
+    // Add local payments (cash, bank, mpesa logged manually)
+    localPayments.forEach(lp => {
+      history.push({
+        id: lp.id,
+        invoiceId: `LOC-${lp.loggedAt.replace(/-/g, '')}-${lp.id.slice(-4)}`,
+        description: `Local ${lp.mode.charAt(0).toUpperCase() + lp.mode.slice(1)} Payment${lp.note ? ` — ${lp.note}` : ''}`,
+        amount: lp.amount,
+        currency: lp.currency,
+        method: lp.mode === 'mpesa' ? 'M-Pesa' : lp.mode === 'cash' ? 'Cash' : 'Bank Deposit',
+        date: lp.loggedAt,
+        status: 'paid',
+      });
+    });
+
+    // Sort by date descending (newest first)
+    return history.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [monthlyPayments, localPayments]);
 
   // ── Render ─────────────────────────────
   return (
@@ -1621,92 +1644,92 @@ const PaymentManagement = () => {
                               <CheckCircle2 size={10} />
                             );
 
-                          const modeColors: Record<string, string> = {
-                            mpesa: 'bg-emerald-50 text-emerald-700',
-                            cash: 'bg-blue-50 text-blue-700',
-                            bank: 'bg-slate-100 text-slate-600',
-                          };
-                          const modeLabels: Record<string, string> = {
-                            mpesa: 'M-Pesa',
-                            cash: 'Cash',
-                            bank: 'Bank Deposit',
-                          };
+                            const modeColors: Record<string, string> = {
+                              mpesa: 'bg-emerald-50 text-emerald-700',
+                              cash: 'bg-blue-50 text-blue-700',
+                              bank: 'bg-slate-100 text-slate-700',
+                            };
+                            const modeLabels: Record<string, string> = {
+                              mpesa: 'M-Pesa',
+                              cash: 'Cash',
+                              bank: 'Bank Deposit',
+                            };
 
-                          return (
-                            <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
-                                    {mp.activationCode}
+                            return (
+                              <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
+                                      {mp.activationCode}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(mp.activationCode)}
+                                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
+                                      title="Copy code"
+                                    >
+                                      <Copy size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
+                                <td className="px-6 py-4">
+                                  <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
+                                    {modeLabels[mp.paymentMode]}
+                                  </span>
+                                  <p className="text-slate-600 font-black text-sm mt-0.5">
+                                    {mp.currency} {mp.amount}
                                   </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => copyToClipboard(mp.activationCode)}
-                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
-                                    title="Copy code"
-                                  >
-                                    <Copy size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
-                              <td className="px-6 py-4">
-                                <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
-                                  {modeLabels[mp.paymentMode]}
-                                </span>
-                                <p className="text-slate-600 font-black text-sm mt-0.5">
-                                  {mp.currency} {mp.amount}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
-                                  {mp.transactionRef}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <p className="font-medium text-slate-700">
-                                  {new Date(mp.paidAt).toLocaleDateString()}
-                                </p>
-                                <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
-                                  {new Date(mp.expiresAt).toLocaleDateString()}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
-                                  {statusIcon}
-                                  {statusLabel}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-1.5">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
-                                    title="Copy code"
-                                    onClick={() => copyToClipboard(mp.activationCode)}
-                                  >
-                                    <Copy size={14} />
-                                  </Button>
-                                  {mp.codeStatus === 'active' && !isExpired && (
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
+                                    {mp.transactionRef}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="font-medium text-slate-700">
+                                    {new Date(mp.paidAt).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
+                                    {new Date(mp.expiresAt).toLocaleDateString()}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
+                                    {statusIcon}
+                                    {statusLabel}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-1.5">
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
-                                      title="Mark as redeemed"
-                                      onClick={() => markCodeRedeemed(mp.id)}
+                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                      title="Copy code"
+                                      onClick={() => copyToClipboard(mp.activationCode)}
                                     >
-                                      <CheckCircle2 size={14} />
+                                      <Copy size={14} />
                                     </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                                    {mp.codeStatus === 'active' && !isExpired && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
+                                        title="Mark as redeemed"
+                                        onClick={() => markCodeRedeemed(mp.id)}
+                                      >
+                                        <CheckCircle2 size={14} />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
@@ -1938,7 +1961,7 @@ const PaymentManagement = () => {
         </TabsContent>
 
         {/* ──────────────────────────────────────── */}
-        {/* PAYMENT HISTORY TAB */}
+        {/* PAYMENT HISTORY TAB — NOW FULLY DYNAMIC */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="payments" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
@@ -1949,37 +1972,49 @@ const PaymentManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-lg font-black text-slate-900">Software Payment History</CardTitle>
-                  <CardDescription>Invoice history for platform subscriptions and software services.</CardDescription>
+                  <CardDescription>Complete history of all payments: monthly subscriptions, local cash/bank/M-Pesa logs, and activation codes.</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
-                  <thead className="bg-slate-50/80 border-b border-slate-100">
-                    <tr>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Invoice</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Description</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Amount</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Method</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {payments.map(pmt => (
-                      <tr key={pmt.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="px-8 py-4 font-mono font-bold text-slate-700">{pmt.invoiceId}</td>
-                        <td className="px-8 py-4 font-medium text-slate-900">{pmt.description}</td>
-                        <td className="px-8 py-4 font-black text-slate-900">{pmt.currency} {pmt.amount}</td>
-                        <td className="px-8 py-4 text-slate-600">{pmt.paymentMethod}</td>
-                        <td className="px-8 py-4 font-mono text-slate-500">{pmt.paidAt || '—'}</td>
-                        <td className="px-8 py-4 text-right">{getStatusBadge(pmt.status)}</td>
+              {allPaymentHistory.length === 0 ? (
+                <div className="p-12 text-center">
+                  <div className="w-16 h-16 bg-slate-100 rounded-3xl flex items-center justify-center mx-auto mb-4 text-slate-300">
+                    <History size={32} />
+                  </div>
+                  <h3 className="text-lg font-bold text-slate-900 mb-2">No Payment History Yet</h3>
+                  <p className="text-sm text-slate-500 max-w-md mx-auto">
+                    No payments have been recorded yet. Use the <strong>Monthly Payments</strong> tab to record subscription payments, or the <strong>Payment Gateways</strong> tab to log local cash, bank, or M-Pesa payments.
+                  </p>
+                </div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead className="bg-slate-50/80 border-b border-slate-100">
+                      <tr>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Invoice ID</th>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Description</th>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Amount</th>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Method</th>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
+                        <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {allPaymentHistory.map((payment) => (
+                        <tr key={payment.id} className="hover:bg-slate-50/40 transition-colors">
+                          <td className="px-8 py-4 font-mono font-bold text-slate-700">{payment.invoiceId}</td>
+                          <td className="px-8 py-4 font-medium text-slate-900">{payment.description}</td>
+                          <td className="px-8 py-4 font-black text-slate-900">{payment.currency} {payment.amount}</td>
+                          <td className="px-8 py-4 text-slate-600">{payment.method}</td>
+                          <td className="px-8 py-4 font-mono text-slate-500">{payment.date}</td>
+                          <td className="px-8 py-4 text-right">{getStatusBadge(payment.status)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
