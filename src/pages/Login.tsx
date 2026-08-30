@@ -25,6 +25,7 @@ import {
   GraduationCap,
   Send,
   User,
+  KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
@@ -34,20 +35,21 @@ import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 // ─── Admin role configs ─────────────────────────────────────────────────────
 
 type AdminRole = 'system_admin' | 'super_admin';
+type PasswordSource = 'default' | 'custom';
 
 interface RoleConfig {
   id: AdminRole;
   label: string;
   description: string;
   fullDescription: string;
-  password: string;
+  defaultPassword: string;
+  customPasswordKey: string; // localStorage key holding the custom PIN
   email: string;
   userName: string;
   userRole: 'owner' | 'super_admin';
   redirectPath: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   primaryColor: 'indigo' | 'amber';
-  badgeText: string;
 }
 
 const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
@@ -56,29 +58,57 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'System Administrator',
     description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
-    password: 'sysadmin2026',
+    defaultPassword: 'sysadmin2026',
+    customPasswordKey: 'munyaka_sysadmin_pass',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'System Administrator',
     userRole: 'super_admin',
     redirectPath: '/system-management',
     icon: Settings2,
     primaryColor: 'indigo',
-    badgeText: 'PIN: sysadmin2026',
   },
   super_admin: {
     id: 'super_admin',
     label: 'Super Admin (Owner)',
     description: 'Exclusive access to Payment & Subscriptions module',
     fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
-    password: 'ownerpass2026',
+    defaultPassword: 'ownerpass2026',
+    customPasswordKey: 'munyaka_owner_pass',
     email: 'munyakaprimary@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
     redirectPath: '/payment-management',
     icon: Crown,
     primaryColor: 'amber',
-    badgeText: 'PIN: ownerpass2026',
   },
+};
+
+/**
+ * Resolve the active password for a given admin role.
+ *
+ * Priority order:
+ *   1. A custom PIN saved in localStorage under the role's
+ *      `customPasswordKey` (e.g. "munyaka_sysadmin_pass"). This is
+ *      kept in sync by `AuthContext.updatePassword` whenever the
+ *      admin changes their password in Admin Profile / Settings.
+ *   2. The hard-coded default PIN for that role
+ *      (e.g. "sysadmin2026") as a last-resort fallback so the
+ *      default admin can still sign in on a brand-new device where
+ *      no custom PIN has ever been set.
+ */
+const resolveAdminPassword = (
+  role: AdminRole,
+): { password: string; source: PasswordSource } => {
+  const config = ROLE_CONFIGS[role];
+  try {
+    const stored = localStorage.getItem(config.customPasswordKey);
+    if (stored && stored.trim().length > 0) {
+      return { password: stored, source: 'custom' };
+    }
+  } catch {
+    // localStorage may be unavailable in private mode; fall through.
+  }
+  return { password: config.defaultPassword, source: 'default' };
 };
 
 // ─── Staff role → redirect map ───────────────────────────────────────────────
@@ -103,10 +133,12 @@ interface RoleCardProps {
   textColor: string;
   borderColor: string;
   featureIcons: { Icon: React.ComponentType<{ size?: number }>; label: string }[];
+  /** Whether a custom PIN has been set for this role. */
+  hasCustomPassword: boolean;
 }
 
 const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, featureIcons,
+  role, onClick, bgColor, textColor, borderColor, featureIcons, hasCustomPassword,
 }) => {
   const Icon = role.icon;
   return (
@@ -138,7 +170,13 @@ const RoleCard: React.FC<RoleCardProps> = ({
             ))}
           </div>
           <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
-            {role.badgeText}
+            {hasCustomPassword ? (
+              <span className="flex items-center gap-1">
+                <KeyRound size={9} /> Custom PIN set
+              </span>
+            ) : (
+              `Default PIN: ${role.defaultPassword}`
+            )}
           </Badge>
         </div>
       </div>
@@ -158,6 +196,41 @@ const Login: React.FC = () => {
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
+
+  // Track the currently active password (and its source) for each admin
+  // role. Re-read on mount and on focus so a PIN update made elsewhere
+  // (e.g. via the profile settings page, or in another tab) is picked
+  // up without requiring a full reload.
+  const [activeCredentials, setActiveCredentials] = useState<
+    Record<AdminRole, { password: string; source: PasswordSource }>
+  >(() => ({
+    system_admin: resolveAdminPassword('system_admin'),
+    super_admin: resolveAdminPassword('super_admin'),
+  }));
+
+  useEffect(() => {
+    const refresh = () => {
+      setActiveCredentials({
+        system_admin: resolveAdminPassword('system_admin'),
+        super_admin: resolveAdminPassword('super_admin'),
+      });
+    };
+    refresh();
+    window.addEventListener('focus', refresh);
+    window.addEventListener('storage', (e) => {
+      if (
+        e.key === 'munyaka_sysadmin_pass' ||
+        e.key === 'munyaka_owner_pass' ||
+        e.key === 'munyaka_users' ||
+        e.key === null
+      ) {
+        refresh();
+      }
+    });
+    return () => {
+      window.removeEventListener('focus', refresh);
+    };
+  }, []);
 
   // ── Staff state ──────────────────────────────────────────────────────────
   const [staffId, setStaffId] = useState('');
@@ -206,7 +279,9 @@ const Login: React.FC = () => {
     await new Promise(r => setTimeout(r, 600));
 
     const config = ROLE_CONFIGS[selectedAdminRole];
-    if (adminPassword !== config.password) {
+    const { password: activePassword } = activeCredentials[selectedAdminRole];
+
+    if (adminPassword !== activePassword) {
       setAdminAuthError(`Invalid password for ${config.label}.`);
       showError('Authentication failed');
       setIsAdminVerifying(false);
@@ -222,11 +297,14 @@ const Login: React.FC = () => {
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-      localStorage.setItem('munyaka_admin_pass', config.password);
+      // Persist the PIN that was actually used so the profile/settings
+      // pages (which also sync to these keys via AuthContext) stay in
+      // sync even when the user signs in with the custom PIN.
+      localStorage.setItem('munyaka_admin_pass', activePassword);
       if (selectedAdminRole === 'super_admin') {
-        localStorage.setItem('munyaka_owner_pass', config.password);
+        localStorage.setItem('munyaka_owner_pass', activePassword);
       } else {
-        localStorage.setItem('munyaka_sysadmin_pass', config.password);
+        localStorage.setItem('munyaka_sysadmin_pass', activePassword);
       }
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
@@ -356,6 +434,7 @@ const Login: React.FC = () => {
                       { Icon: Settings2, label: 'Settings' },
                       { Icon: Shield, label: 'RBAC' },
                     ]}
+                    hasCustomPassword={activeCredentials.system_admin.source === 'custom'}
                   />
                 </>
               ) : (
@@ -406,7 +485,17 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          Default: <span className="font-bold">{adminConfig!.password}</span>
+                          {activeCredentials[selectedAdminRole!].source === 'custom' ? (
+                            <span className="flex items-center gap-1">
+                              <KeyRound size={9} />
+                              Custom PIN — set via Profile &rarr; Security
+                            </span>
+                          ) : (
+                            <>
+                              Default PIN:{' '}
+                              <span className="font-bold">{activeCredentials[selectedAdminRole!].password}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <Button
@@ -450,6 +539,7 @@ const Login: React.FC = () => {
                       { Icon: Crown, label: 'Owner' },
                       { Icon: Shield, label: 'Billing' },
                     ]}
+                    hasCustomPassword={activeCredentials.super_admin.source === 'custom'}
                   />
                 </>
               ) : (
@@ -500,7 +590,17 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          Default: <span className="font-bold">{adminConfig!.password}</span>
+                          {activeCredentials[selectedAdminRole!].source === 'custom' ? (
+                            <span className="flex items-center gap-1">
+                              <KeyRound size={9} />
+                              Custom PIN — set via Profile &rarr; Security
+                            </span>
+                          ) : (
+                            <>
+                              Default PIN:{' '}
+                              <span className="font-bold">{activeCredentials[selectedAdminRole!].password}</span>
+                            </>
+                          )}
                         </p>
                       </div>
                       <Button
