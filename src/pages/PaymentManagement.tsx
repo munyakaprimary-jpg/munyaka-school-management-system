@@ -780,19 +780,6 @@ const PaymentManagement = () => {
     showSuccess(`Payment logged! Subscription extended to ${nextBillingStr}.`);
   };
 
-  // ── Save ───────────────────────────────
-  const handleSave = async () => {
-    setIsSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-    localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({ gateways, subscriptions })
-    );
-    setHasUnsavedChanges(false);
-    setIsSaving(false);
-    showSuccess('Payment configuration saved successfully!');
-  };
-
   // ── Subscription handlers ───────────────
   const openUpgrade = (sub: Subscription) => setUpgradeModalSub(sub);
   const openRenew = (sub: Subscription) => setRenewModalSub(sub);
@@ -1161,28 +1148,11 @@ const PaymentManagement = () => {
   return (
     <div className="w-full max-w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payment & Subscriptions</h1>
-          <p className="text-sm text-slate-500 mt-1">
-            Gateway configuration, license management, and billing controls.
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          {hasUnsavedChanges && (
-            <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
-              <AlertTriangle size={12} className="mr-1.5" /> Unsaved Changes
-            </Badge>
-          )}
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-          >
-            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Save Configuration
-          </Button>
-        </div>
+      <div className="action-bar">
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payment & Subscriptions</h1>
+        <p className="text-sm text-slate-500 mt-1">
+          Gateway configuration, license management, and billing controls.
+        </p>
       </div>
 
       {/* Owner Banner */}
