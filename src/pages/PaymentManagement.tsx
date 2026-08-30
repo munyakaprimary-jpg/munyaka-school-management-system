@@ -346,50 +346,19 @@ const PaymentManagement = () => {
   const [renewModalSub, setRenewModalSub] = useState<Subscription | null>(null);
 
   // ── Dynamic Invoice History State ──
-  // Loads from localStorage; falls back to sample data so the table is never empty.
+  // Loads from localStorage; returns empty array when no stored data exists.
   const [paymentsHistory, setPaymentsHistory] = useState<Transaction[]>(() => {
     try {
       const saved = localStorage.getItem(PAYMENTS_HISTORY_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch { /* ignore */ }
-    // Seed with 2 realistic sample rows so the table isn't empty on first load
-    return [
-      {
-        id: 'pmt-001',
-        date: '2026-03-01',
-        amount: 299.00,
-        method: 'M-Pesa',
-        ref: 'MG23K4R5HT',
-        category: 'Subscription',
-        invoiceId: 'INV-2026-003',
-        description: 'Munyaka School License - March 2026',
-        currency: 'USD',
-        status: 'paid',
-        paymentMethod: 'mpesa',
-        paymentDetails: { receiptNumber: 'MG23K4R5HT' },
-        paidAt: '2026-03-01',
-      },
-      {
-        id: 'pmt-002',
-        date: '2026-04-01',
-        amount: 299.00,
-        method: 'Bank Transfer',
-        ref: 'DEP-2026-04-001',
-        category: 'Subscription',
-        invoiceId: 'INV-2026-004',
-        description: 'Munyaka School License - April 2026',
-        currency: 'USD',
-        status: 'paid',
-        paymentMethod: 'bank',
-        paymentDetails: { bankName: 'Equity Bank', branch: 'Main Branch', transactionRef: 'DEP-2026-04-001' },
-        paidAt: '2026-04-01',
-      },
-    ] as Transaction[];
+    // No mock items — return empty array when nothing is stored
+    return [];
   });
 
   // ── License / activation key state ──
@@ -471,30 +440,55 @@ const PaymentManagement = () => {
   };
 
   // ── Load from localStorage ─────────────
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      try {
-        const parsed = JSON.parse(raw);
-        if (parsed.gateways?.length) setGateways(parsed.gateways);
-        if (parsed.subscriptions?.length) {
-          const localOnly = parsed.subscriptions.filter(
-            (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
-          );
-          setSubscriptions(localOnly.length > 0 ? localOnly : DEFAULT_SUBSCRIPTIONS);
+    useEffect(() => {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        try {
+          const parsed = JSON.parse(raw);
+          if (parsed.gateways?.length) setGateways(parsed.gateways);
+          if (parsed.subscriptions?.length) {
+            const localOnly = parsed.subscriptions.filter(
+              (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+            );
+            setSubscriptions(localOnly.length > 0 ? localOnly : DEFAULT_SUBSCRIPTIONS);
+          }
+        } catch {
+          // Use defaults
         }
-      } catch {
-        // Use defaults
       }
-    }
-    setLicenses(getAllLicenses());
-    const mpRaw = localStorage.getItem('munyaka_monthly_payments');
-    if (mpRaw) {
-      try {
-        const parsed = JSON.parse(mpRaw);
-        if (Array.isArray(parsed)) setMonthlyPayments(parsed);
-      } catch { /* ignore */ }
-    }
+      setLicenses(getAllLicenses());
+      const mpRaw = localStorage.getItem('munyaka_monthly_payments');
+      if (mpRaw) {
+        try {
+          const parsed = JSON.parse(mpRaw);
+          if (Array.isArray(parsed)) setMonthlyPayments(parsed);
+        } catch { /* ignore */ }
+      }
+  }, []);
+
+  // ── One-time mount: purge legacy seed entries from localStorage ──
+  // Removes any hardcoded seed payments written by a previous build so the
+  // Invoice History table starts completely empty when no real payments exist.
+  useEffect(() => {
+    try {
+      const phRaw = localStorage.getItem(PAYMENTS_HISTORY_KEY);
+      if (phRaw) {
+        try {
+          const parsed = JSON.parse(phRaw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            // Strip out the hardcoded seed IDs used by previous builds.
+            const LEGACY_IDS = new Set(['pmt-001', 'pmt-002', 'pmt-003']);
+            const realOnly = parsed.filter((tx: Transaction) =>
+              Boolean(tx) && !LEGACY_IDS.has(tx.id)
+            );
+            if (realOnly.length !== parsed.length) {
+              localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(realOnly));
+              setPaymentsHistory(realOnly);
+            }
+          }
+        } catch { /* ignore malformed JSON */ }
+      }
+    } catch { /* ignore */ }
   }, []);
 
   // ── Persist payments history to localStorage whenever it changes ──
@@ -2479,7 +2473,7 @@ const PaymentManagement = () => {
                     </div>
                     <p className="text-base font-black text-slate-700">No Invoices Yet</p>
                     <p className="text-sm text-slate-400 font-medium max-w-xs">
-                      Record a payment using "Record &amp; Generate" or "Payment Gateways" tab to populate this table.
+                      Record a payment via the "Record &amp; Generate" or "Payment Gateways" tab above — new invoices will appear here automatically.
                     </p>
                   </div>
                 </div>
