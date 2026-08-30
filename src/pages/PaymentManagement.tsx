@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,8 +8,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import BackButton from '@/components/ui/BackButton';
-import Modal from '@/components/ui/Modal';
+import BackButton from "@/components/ui/BackButton";
+import Modal from "@/components/ui/Modal";
 import {
   CreditCard,
   ShieldCheck,
@@ -922,22 +920,13 @@ const PaymentManagement = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div className="flex items-center gap-2">
-            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
-              <CreditCard size={24} />
-            </div>
-            <div>
-              <h1 className="text-3xl font-black tracking-tight text-slate-900">Payment & Subscriptions</h1>
-              <p className="text-xs text-slate-500 font-medium">
-                Gateway configuration, license management, and billing controls.
-              </p>
-            </div>
-          </div>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payment & Subscriptions</h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Gateway configuration, license management, and billing controls.
+          </p>
         </div>
-
         <div className="flex items-center gap-3">
           {hasUnsavedChanges && (
             <Badge className="bg-amber-50 text-amber-700 border-amber-200 animate-pulse font-bold px-3 py-1 text-xs">
@@ -1560,7 +1549,7 @@ const PaymentManagement = () => {
                       value={configForm.seats}
                       onChange={e => updateConfigField('seats', e.target.value)}
                       placeholder="e.g. 500"
-                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-black text-base"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-base"
                     />
                   </div>
                   <p className="text-[10px] text-slate-400 font-medium">
