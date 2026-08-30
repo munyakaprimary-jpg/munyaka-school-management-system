@@ -362,9 +362,17 @@ const PaymentManagement = () => {
   });
 
   // ── License / activation key state ──
-  const [licenses, setLicenses] = useState<License[]>([]);
-  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
-  const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
+    const [licenses, setLicenses] = useState<License[]>([]);
+    const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+    const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
+  
+    // ── Delete License Modal State ──
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [licenseToDelete, setLicenseToDelete] = useState<License | null>(null);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deletePasswordError, setDeletePasswordError] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   // ── Monthly payment & activation code state ──
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
@@ -783,8 +791,64 @@ const PaymentManagement = () => {
   };
 
   // ── Subscription handlers ───────────────
-  const openUpgrade = (sub: Subscription) => setUpgradeModalSub(sub);
-  const openRenew = (sub: Subscription) => setRenewModalSub(sub);
+    const openUpgrade = (sub: Subscription) => setUpgradeModalSub(sub);
+    const openRenew = (sub: Subscription) => setRenewModalSub(sub);
+  
+    // ── Delete License handlers ─────────────
+    const openDeleteLicenseModal = (lic: License) => {
+      setLicenseToDelete(lic);
+      setDeletePassword('');
+      setDeletePasswordError('');
+      setIsDeleteModalOpen(true);
+    };
+  
+    const confirmDeleteLicense = async () => {
+      if (!licenseToDelete) return;
+      setIsDeleting(true);
+      setDeletePasswordError('');
+  
+      // Verify owner password against stored credentials
+      const OWNER_EMAIL = 'munyakaprimary@gmail.com';
+      const usersJson = localStorage.getItem('munyaka_users');
+      if (!usersJson) {
+        setDeletePasswordError('User store not found. Contact administrator.');
+        setIsDeleting(false);
+        return;
+      }
+  
+      const users = JSON.parse(usersJson);
+      const owner = users[OWNER_EMAIL];
+  
+      if (!owner || !owner.password) {
+        setDeletePasswordError('Owner credentials not found. Contact administrator.');
+        setIsDeleting(false);
+        return;
+      }
+  
+      if (deletePassword !== owner.password) {
+        setDeletePasswordError('Incorrect password. Please try again.');
+        setIsDeleting(false);
+        return;
+      }
+  
+      // Password verified — remove the license from state and localStorage
+      const updatedLicenses = licenses.filter(l => l.id !== licenseToDelete.id);
+      setLicenses(updatedLicenses);
+  
+      // Persist updated licenses
+      const LICENSE_STORAGE_KEY = 'munyaka_licenses';
+      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+  
+      // Also remove any tied monthly payment records for this activation key
+      const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationKey);
+      setMonthlyPayments(updatedPayments);
+      localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+  
+      showSuccess(`License ${licenseToDelete.activationKey.slice(0, 12)}... deleted successfully.`);
+      setIsDeleteModalOpen(false);
+      setLicenseToDelete(null);
+      setIsDeleting(false);
+    };
 
   const startEditSubscription = (sub: Subscription) => {
     setEditingSubscriptionId(sub.id);
@@ -1599,24 +1663,33 @@ const PaymentManagement = () => {
                                 </Badge>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-1.5">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                                    title="Revoke license"
-                                    onClick={() => {
-                                      if (confirm(`Revoke license ${lic.activationKey.slice(0, 12)}...? This will lock the app.`)) {
-                                        revokeLicense(lic.activationKey, 'Manually revoked by owner');
-                                        setLicenses(getAllLicenses());
-                                        showSuccess('License revoked. App will require reactivation.');
-                                      }
-                                    }}
-                                  >
-                                    <Ban size={14} />
-                                                                      </Button>
-                                                                    </div>
-                                                                  </td>
+                                                              <div className="flex justify-end gap-1.5">
+                                                                <Button
+                                                                  variant="ghost"
+                                                                  size="icon"
+                                                                  className="h-8 w-8 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50"
+                                                                  title="Revoke license"
+                                                                  onClick={() => {
+                                                                    if (confirm(`Revoke license ${lic.activationKey.slice(0, 12)}...? This will lock the app.`)) {
+                                                                      revokeLicense(lic.activationKey, 'Manually revoked by owner');
+                                                                      setLicenses(getAllLicenses());
+                                                                      showSuccess('License revoked. App will require reactivation.');
+                                                                    }
+                                                                  }}
+                                                                >
+                                                                  <Ban size={14} />
+                                                                </Button>
+                                                                <Button
+                                                                  variant="ghost"
+                                                                  size="icon"
+                                                                  className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50"
+                                                                  title="Delete license permanently"
+                                                                  onClick={() => openDeleteLicenseModal(lic)}
+                                                                >
+                                                                  <Trash2 size={14} />
+                                                                </Button>
+                                                              </div>
+                                                            </td>
                                                                 </tr>
                                                               );
                                                             })}
@@ -2306,8 +2379,101 @@ const PaymentManagement = () => {
               downloadTrigger={receiptDownloadTrigger}
               onClose={handleCloseReceiptView}
             />
-          </div>
-        );
-      };
-      
-      export default PaymentManagement;
+
+          {/* Delete License Confirmation Modal — owner-password protected */}
+          <Modal
+            isOpen={isDeleteModalOpen}
+            onClose={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
+            title="Delete License Permanently"
+            description={
+              licenseToDelete
+                ? `This will permanently remove license "${licenseToDelete.activationKey.slice(0, 12)}..." and its tied payment record from history. This action cannot be undone.`
+                : 'Confirm license deletion.'
+            }
+            footer={
+              <div className="flex gap-2 justify-end w-full">
+                <Button
+                  variant="ghost"
+                  onClick={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
+                  className="rounded-xl font-bold h-12 px-6"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={confirmDeleteLicense}
+                  disabled={isDeleting || !deletePassword.trim()}
+                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
+                >
+                  {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                  {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+                </Button>
+              </div>
+            }
+          >
+            {/* Owner identity header */}
+            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+              <ShieldCheck size={20} className="text-amber-600 shrink-0" />
+              <p className="text-xs font-bold text-amber-800">
+                Owner authentication required to delete license records.
+              </p>
+            </div>
+
+            {/* License info */}
+            {licenseToDelete && (
+              <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-500">Activation Key:</span>
+                  <span className="font-mono font-bold text-indigo-600">{licenseToDelete.activationKey}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-500">Issued To:</span>
+                  <span className="font-bold text-slate-700">{licenseToDelete.issuedTo}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="font-medium text-slate-500">Device ID:</span>
+                  <span className="font-mono text-slate-600">{licenseToDelete.deviceId}</span>
+                </div>
+              </div>
+            )}
+
+            {/* Password field */}
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Owner Password
+              </Label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  type={showDeletePassword ? 'text' : 'password'}
+                  value={deletePassword}
+                  onChange={e => {
+                    setDeletePassword(e.target.value);
+                    if (deletePasswordError) setDeletePasswordError('');
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && deletePassword.trim()) confirmDeleteLicense();
+                  }}
+                  placeholder="Enter your owner password"
+                  className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
+                  autoFocus
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowDeletePassword(p => !p)}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                >
+                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {deletePasswordError && (
+                <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
+                  <AlertCircle size={12} /> {deletePasswordError}
+                </p>
+              )}
+            </div>
+          </Modal>
+        </div>
+      );
+    };
+    
+    export default PaymentManagement;
