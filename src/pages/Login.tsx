@@ -91,17 +91,12 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   },
 };
 
-// ─── Staff role → redirect map ───────────────────────────────────────────────
+// ─── Post-login redirect ────────────────────────────────────────────────────
+// All authenticated users (regardless of role) land on the main dashboard.
+// This intentionally bypasses any secondary landing / role-selection screens.
 
-function getStaffRedirectPath(systemRole: string): string {
-  switch (systemRole) {
-    case 'head_teacher':    return '/index';
-    case 'bursar':         return '/fees';
-    case 'senior_teacher': return '/dashboard';
-    case 'class_teacher':
-    case 'subject_teacher':
-    default:               return '/dashboard';
-  }
+function getStaffRedirectPath(_systemRole: string): string {
+  return '/dashboard';
 }
 
 // ─── Role card for admin tab ─────────────────────────────────────────────────
@@ -184,19 +179,14 @@ const Login: React.FC = () => {
   const [staffAuthError, setStaffAuthError] = useState('');
   const [isStaffVerifying, setIsStaffVerifying] = useState(false);
 
-  // ── Redirect already-authenticated users ───────────────────────────────────
-  useEffect(() => {
-    if (isAuthenticated && user) {
-      const role = user.role;
-      if (role === 'owner') {
-        navigate(ROLE_CONFIGS.super_admin.redirectPath, { replace: true });
-      } else if (role === 'super_admin') {
-        navigate(ROLE_CONFIGS.system_admin.redirectPath, { replace: true });
-      } else {
-        navigate('/', { replace: true });
+  // ── Redirect already-authenticated users straight to the dashboard ─────────
+    useEffect(() => {
+      if (isAuthenticated && user) {
+        // Bypass any secondary landing / role-selection screens: every
+        // authenticated user goes straight to the main dashboard.
+        navigate('/dashboard', { replace: true });
       }
-    }
-  }, [isAuthenticated, user, navigate]);
+    }, [isAuthenticated, user, navigate]);
 
   // ── Admin handlers ────────────────────────────────────────────────────────
   const handleRoleSelect = (role: AdminRole) => {
@@ -260,22 +250,24 @@ const Login: React.FC = () => {
     }
 
     const success = await login(config.email, entered);
-    if (success) {
-      const adminSession = {
-        role: selectedAdminRole,
-        roleLabel: config.label,
-        roleIcon: selectedAdminRole === 'super_admin' ? 'crown' : 'settings',
-        timestamp: Date.now(),
+        if (success) {
+          const adminSession = {
+            role: selectedAdminRole,
+            roleLabel: config.label,
+            roleIcon: selectedAdminRole === 'super_admin' ? 'crown' : 'settings',
+            timestamp: Date.now(),
+          };
+          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+          showSuccess(`Welcome, ${config.userName}!`);
+          // Send every authenticated user straight to the main dashboard,
+          // bypassing any role-specific landing screens.
+          navigate('/dashboard', { replace: true });
+        } else {
+          setAdminAuthError('Login failed. Please try again.');
+          showError('Authentication failed');
+        }
+        setIsAdminVerifying(false);
       };
-      localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-      showSuccess(`Welcome, ${config.userName}!`);
-      navigate(config.redirectPath, { replace: true });
-    } else {
-      setAdminAuthError('Login failed. Please try again.');
-      showError('Authentication failed');
-    }
-    setIsAdminVerifying(false);
-  };
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
