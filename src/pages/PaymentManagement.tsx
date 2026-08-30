@@ -2056,8 +2056,7 @@ const PaymentManagement = () => {
                             const modeColors: Record<string, string> = {
                               mpesa: 'bg-emerald-50 text-emerald-700',
                               cash: 'bg-blue-50 text-blue-700',
-                              bank: 'bg-slate-100 text-slate<dyad-write path="src/pages/PaymentManagement.tsx" description="Update PaymentManagement.tsx">
-                                -700',
+                              bank: 'bg-slate-100 text-slate-700',
                             };
                             const modeLabels: Record<string, string> = {
                               mpesa: 'M-Pesa',
