@@ -808,6 +808,7 @@ const PaymentManagement = () => {
       notes: `Monthly payment for ${subName}`,
     });
 
+    // ── FIX: Use a single `today` variable for all post-payment logic ──
     const today = new Date();
     const newNextBilling = new Date(today);
     newNextBilling.setDate(newNextBilling.getDate() + 30);
@@ -833,7 +834,7 @@ const PaymentManagement = () => {
       amount: mpForm.amount.trim(),
       currency: mpForm.currency,
       transactionRef: mpForm.transactionRef.trim(),
-      paidAt: new Date().toISOString().slice(0, 10),
+      paidAt: today.toISOString().slice(0, 10),
       activationCode: issued.activationKey,
       codeStatus: 'active',
       issuedTo: issued.issuedTo,
@@ -868,7 +869,6 @@ const PaymentManagement = () => {
     // Show receipt modal after successful payment
     const receiptNumber = `RCP-${Date.now().toString().slice(-8)}`;
     const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
-    const today = new Date();
     const term = today.getMonth() < 3 ? 'Term 1' : today.getMonth() < 7 ? 'Term 2' : 'Term 3';
     const year = today.getFullYear().toString();
 
@@ -883,9 +883,9 @@ const PaymentManagement = () => {
       currency: mpForm.currency,
       paymentMethod: mpForm.paymentMode === 'mpesa' ? 'M-Pesa' : mpForm.paymentMode === 'bank' ? 'Bank Transfer' : 'Cash',
       transactionRef: mpForm.transactionRef,
-      date: new Date().toLocaleString(),
+      date: today.toLocaleString(),
       term,
-      year: year.toString(),
+      year,
       status: 'Paid',
       receivedBy: user?.name,
     });
