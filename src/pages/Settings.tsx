@@ -48,11 +48,7 @@ import { cn } from '@/lib/utils';
 import AdminLocationPicker from '@/components/AdminLocationPicker';
 import {
   MUNYAKA_ADMIN_PASSWORD,
-  MUNYAKA_SYSADMIN_PASS,
-  MUNYAKA_OWNER_PASS,
-  MUNYAKA_SYSTEM_PASS,
-  MUNYAKA_ADMIN_PASS,
-  DEFAULT_ADMIN_PASSWORDS,
+  DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
   saveAdminPassword,
 } from '@/services/adminCredentials';
@@ -197,8 +193,8 @@ const clearSession = () => {
 };
 
 /** Thin wrapper: delegates to the centralized helper so existing callers get a plain string. */
-const getCredential = (role: AdminRole): string => {
-  return getActiveAdminPassword(role).password;
+const getCredential = (): string => {
+  return getActiveAdminPassword();
 };
 
 const Settings = () => {
@@ -306,9 +302,10 @@ const Settings = () => {
 
     await new Promise(r => setTimeout(r, 600));
 
-    const storedPassword = getCredential(role);
+    const storedPassword = getCredential();
+    const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
 
-    if (password === storedPassword) {
+    if (isValid) {
       const roleInfo = {
         system_admin: { label: 'System Administrator', icon: 'settings' },
         super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
@@ -333,8 +330,7 @@ const Settings = () => {
         showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
       }
     } else {
-      const otherRole = role === 'system_admin' ? 'Super Admin' : 'System Administrator';
-      setAuthError(`Invalid password. This is the ${role === 'system_admin' ? 'System Administrator' : 'Super Admin (Owner)'} login. Please use the correct credentials for this role.`);
+      setAuthError(`Invalid password for the selected role.`);
       showError("Authentication failed");
     }
     setIsVerifyingAuth(false);
@@ -375,8 +371,8 @@ const Settings = () => {
     // one is accepted as a valid "current password" — this mirrors the
     // login page's own dual-mode check so a saved-or-default flow works
     // the same way in both directions.
-    const storedPassword = getCredential(currentRole);
-    const defaultPassword = DEFAULT_ADMIN_PASSWORDS[currentRole];
+    const storedPassword = getCredential();
+    const defaultPassword = DEFAULT_ADMIN_PASSWORD;
 
     const isCurrentValid =
       enteredCurrent === storedPassword || enteredCurrent === defaultPassword;
@@ -399,14 +395,10 @@ const Settings = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    const newPin = passwordForm.newPassword.trim();
-
-    // ── Write the new PIN to every key the rest of the app reads from,
-    //    so the Login page (which checks Configuration, legacy and
-    //    shared keys) and the AuthContext stay perfectly in sync.
-    try {
-      saveAdminPassword(currentRole, newPin);
-    } catch {
+    // Persist the new PIN to the single canonical key. The Login page
+    // reads the exact same key, so the change takes effect immediately.
+    const saved = saveAdminPassword(passwordForm.newPassword);
+    if (!saved) {
       showError("Could not save the new password to local storage.");
       setIsSaving(false);
       return;
@@ -582,8 +574,8 @@ const Settings = () => {
   };
 
   const handleUpdateMasterPin = async () => {
-    const storedAdminPass = getCredential('system_admin');
-    const defaultAdminPass = DEFAULT_ADMIN_PASSWORDS.system_admin;
+    const storedAdminPass = getCredential();
+    const defaultAdminPass = DEFAULT_ADMIN_PASSWORD;
 
     if (pinForm.currentPin !== storedAdminPass && pinForm.currentPin !== defaultAdminPass) {
       showError("Current Admin PIN/Password is incorrect.");
@@ -603,7 +595,12 @@ const Settings = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    saveAdminPassword('system_admin', pinForm.newPin);
+    const saved = saveAdminPassword(pinForm.newPin);
+    if (!saved) {
+      showError("Could not save the new password to local storage.");
+      setIsSaving(false);
+      return;
+    }
 
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),

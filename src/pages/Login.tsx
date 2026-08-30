@@ -33,20 +33,23 @@ import { cn } from '@/lib/utils';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import {
   MUNYAKA_ADMIN_PASSWORD,
-  DEFAULT_ADMIN_PASSWORDS,
+  DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
-  saveAdminPassword,
 } from '@/services/adminCredentials';
+
+/** True when a custom admin password has been saved to localStorage. */
+const hasCustomAdminPassword = (): boolean => {
+  try {
+    const stored = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
+    return stored != null && stored.trim().length > 0;
+  } catch {
+    return false;
+  }
+};
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
 
 type AdminRole = 'system_admin' | 'super_admin';
-/** Source tags returned by getActiveAdminPassword (re-exported for local use). */
-type PasswordSource = 'unified' | 'role' | 'legacy' | 'shared' | 'default';
-/** True when the active password was loaded from any of the storage keys
- *  (rather than the hard-coded default). */
-const isCustomSource = (source: PasswordSource): boolean =>
-  source === 'unified' || source === 'role' || source === 'legacy' || source === 'shared';
 
 interface RoleConfig {
   id: AdminRole;
@@ -174,42 +177,6 @@ const Login: React.FC = () => {
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
-  // Track the currently active password (and its source) for each admin
-  // role. Re-read on mount and on focus so a PIN update made elsewhere
-  // (e.g. via the profile settings page, or in another tab) is picked
-  // up without requiring a full reload.
-  const [activeCredentials, setActiveCredentials] = useState<
-    Record<AdminRole, { password: string; source: PasswordSource }>
-  >(() => ({
-    system_admin: getActiveAdminPassword('system_admin'),
-    super_admin: getActiveAdminPassword('super_admin'),
-  }));
-
-  useEffect(() => {
-    const refresh = () => {
-      setActiveCredentials({
-        system_admin: getActiveAdminPassword('system_admin'),
-        super_admin: getActiveAdminPassword('super_admin'),
-      });
-    };
-    refresh();
-    window.addEventListener('focus', refresh);
-    window.addEventListener('storage', (e) => {
-      if (
-        e.key === MUNYAKA_ADMIN_PASSWORD ||
-        e.key === 'munyaka_sysadmin_pass' ||
-        e.key === 'munyaka_owner_pass' ||
-        e.key === 'munyaka_users' ||
-        e.key === null
-      ) {
-        refresh();
-      }
-    });
-    return () => {
-      window.removeEventListener('focus', refresh);
-    };
-  }, []);
-
   // ── Staff state ──────────────────────────────────────────────────────────
   const [staffId, setStaffId] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
@@ -262,63 +229,30 @@ const Login: React.FC = () => {
 
     const config = ROLE_CONFIGS[selectedAdminRole];
 
-    // ── Fresh password resolution on every attempt ─────────────────────────
-    // This is NOT read from React state (which may be stale after a
-    // Settings/Config page navigation).  We go straight to the centralized
-    // `getActiveAdminPassword` helper so the same key the Configuration /
-    // Security update screen writes to is the one we read from here.
-    const { password: activeStored, source } = getActiveAdminPassword(selectedAdminRole);
-    const defaultPin = DEFAULT_ADMIN_PASSWORDS[selectedAdminRole].trim();
+    // ── Direct localStorage read on every attempt ───────────────────────────
+    // We never trust React state for the active PIN — always read fresh so
+    // a PIN updated from the Configuration tab is picked up immediately.
+    const activeStored = getActiveAdminPassword();
 
-    // ── Debug logging (development only — never in production) ─────────────
-    // This block exists so any future mismatch is easy to diagnose. It
-    // prints the exact stored password, the exact entered password, and
-    // the comparison results for both the active and default PINs.
+    // ── Debug logging (development only) ────────────────────────────────────
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
-      console.groupCollapsed(
-        `[AdminLogin] ${selectedAdminRole} @ ${new Date().toISOString()}`,
-      );
-      // eslint-disable-next-line no-console
-      console.log('  unified key  :', MUNYAKA_ADMIN_PASSWORD);
-      // eslint-disable-next-line no-console
-      console.log(
-        '  activeStored (from storage)  :',
-        JSON.stringify(activeStored),
-        '| source:',
-        source,
-      );
-      // eslint-disable-next-line no-console
-      console.log(
-        '  defaultPin (hard-coded)      :',
-        JSON.stringify(defaultPin),
-      );
-      // eslint-disable-next-line no-console
-      console.log(
-        '  entered (normalised)         :',
-        JSON.stringify(entered),
-      );
-      // eslint-disable-next-line no-console
-      console.log(
-        '  activeMatch:',
-        entered === activeStored,
-        '| defaultMatch:',
-        entered === defaultPin,
-      );
-      // eslint-disable-next-line no-console
-      console.groupEnd();
+      console.log('[AdminLogin]', {
+        key: MUNYAKA_ADMIN_PASSWORD,
+        stored: activeStored,
+        entered,
+        match: entered === activeStored,
+        default: DEFAULT_ADMIN_PASSWORD,
+        defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
+      });
     }
 
     // ── Password verification ─────────────────────────────────────────────
-    // Accept the custom PIN (if set) AND the default as valid — so the
-    // admin can sign in regardless of which PIN was set and whether they
-    // remember which one they used last.
-    const isActiveMatch = entered === activeStored;
-    const isDefaultMatch = entered === defaultPin;
-    const isValid = isActiveMatch || isDefaultMatch;
+    // Accept the stored PIN and also fall back to the hard-coded default,
+    // so the admin can sign in regardless of which PIN they last set.
+    const isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
 
     if (!isValid) {
-      // Friendly error — do not reveal which PIN is active.
       setAdminAuthError(`Invalid password for ${config.label}.`);
       showError('Authentication failed');
       setIsAdminVerifying(false);
@@ -334,12 +268,6 @@ const Login: React.FC = () => {
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-      // Persist the PIN that was actually used to every key the rest of
-      // the app reads from — the centralized `saveAdminPassword` helper
-      // already handles the unified, role-specific, legacy and shared
-      // keys in one call, so the Configuration page and AuthContext
-      // stay in sync with whatever the admin just used to sign in.
-      saveAdminPassword(selectedAdminRole, activeStored);
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
     } else {
@@ -468,7 +396,7 @@ const Login: React.FC = () => {
                       { Icon: Settings2, label: 'Settings' },
                       { Icon: Shield, label: 'RBAC' },
                     ]}
-                    hasCustomPassword={isCustomSource(activeCredentials.system_admin.source)}
+                    hasCustomPassword={hasCustomAdminPassword()}
                   />
                 </>
               ) : (
@@ -519,7 +447,7 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {isCustomSource(activeCredentials[selectedAdminRole!].source) ? (
+                          {hasCustomAdminPassword() ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
                               Custom PIN — set via Configuration &rarr; Owner Security
@@ -527,7 +455,7 @@ const Login: React.FC = () => {
                           ) : (
                             <>
                               Default PIN:{' '}
-                              <span className="font-bold">{activeCredentials[selectedAdminRole!].password}</span>
+                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
                             </>
                           )}
                         </p>
@@ -573,7 +501,7 @@ const Login: React.FC = () => {
                       { Icon: Crown, label: 'Owner' },
                       { Icon: Shield, label: 'Billing' },
                     ]}
-                    hasCustomPassword={isCustomSource(activeCredentials.super_admin.source)}
+                    hasCustomPassword={hasCustomAdminPassword()}
                   />
                 </>
               ) : (
@@ -624,7 +552,7 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {isCustomSource(activeCredentials[selectedAdminRole!].source) ? (
+                          {hasCustomAdminPassword() ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
                               Custom PIN — set via Configuration &rarr; Owner Security
@@ -632,7 +560,7 @@ const Login: React.FC = () => {
                           ) : (
                             <>
                               Default PIN:{' '}
-                              <span className="font-bold">{activeCredentials[selectedAdminRole!].password}</span>
+                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
                             </>
                           )}
                         </p>
