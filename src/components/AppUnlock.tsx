@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -31,6 +29,7 @@ import {
   daysRemainingUntil,
   CURRENT_AUTH_ROLE_KEY,
   LICENSE_EXEMPT_ROLES,
+  getAllLicenses,  // ADD THIS IMPORT
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 import { cn } from '@/lib/utils';
@@ -145,7 +144,7 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
           </button>
         </div>
         <p className="text-[10px] text-slate-400 font-medium text-center">
-          Format: MUNYAKA-YYYY-XXXX-XXXX-XXXX-XXXX
+          Format: MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX
         </p>
 
         {/* Emergency dev bypass — always visible, no key required */}
@@ -203,7 +202,7 @@ interface AppUnlockProps {
 
 const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps) => {
   const [activeLicense, setActiveLicense] = useState<License | null>(() => getActiveLicense());
-  const [stats, setStats] = useState(() => getAllLicenses().length);
+  const [stats, setStats] = useState(() => getAllLicenses().length);  // FIXED: now imported
   const [now, setNow] = useState<Date>(() => new Date());
 
   // Resolved current role — prefer the prop if supplied, otherwise read
