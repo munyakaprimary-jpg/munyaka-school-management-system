@@ -6,6 +6,11 @@ import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
 import { CURRENT_AUTH_ROLE_KEY } from '@/services/licenseService';
+import {
+  MUNYAKA_ADMIN_PASSWORD,
+  DEFAULT_ADMIN_PASSWORD,
+  getActiveAdminPassword,
+} from '@/services/adminCredentials';
 
 export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -238,8 +243,65 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const foundUser = users[normalizedEmail] || users[normalizedStaffId];
     
     if (foundUser) {
-      const isPasswordValid = 
-        foundUser.password === pass || 
+      // ── Admin pre-check: owner + system_admin can authenticate with
+      // whatever the Configuration tab has just saved into the unified
+      // MUNYAKA_ADMIN_PASSWORD key. This is the precedence path: the
+      // custom PIN wins over both the default and whatever the user
+      // record was initialised with.
+      //
+      // We check the active PIN (custom or default) FIRST and return
+      // success when the entered value matches it — exactly mirroring
+      // the Login page's own dual-mode check so a saved-or-default
+      // flow works the same way in both directions.
+      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'super_admin';
+      if (isAdminUser) {
+        const activeAdminPin = getActiveAdminPassword();
+        const entered = pass.trim();
+
+        // Debug logging (development only) so any future mismatch is
+        // easy to diagnose from the browser console.
+        if (process.env.NODE_ENV === 'development') {
+          // eslint-disable-next-line no-console
+          console.log('[AuthContext.login] admin pre-check', {
+            unifiedKey: MUNYAKA_ADMIN_PASSWORD,
+            storedPin: activeAdminPin,
+            defaultPin: DEFAULT_ADMIN_PASSWORD,
+            enteredPin: entered,
+            customMatch: entered === activeAdminPin,
+            defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
+          });
+        }
+
+        if (entered === activeAdminPin || entered === DEFAULT_ADMIN_PASSWORD) {
+          if (!foundUser.isActive) {
+            showError("Your account is inactive. Please contact the administrator.");
+            return false;
+          }
+          if (!foundUser.emailConfirmed) {
+            showError("Please confirm your email address.");
+            return false;
+          }
+
+          const userData = {
+            id: foundUser.id,
+            name: foundUser.name,
+            email: foundUser.email,
+            phone: foundUser.phone,
+            role: foundUser.role,
+            avatar: foundUser.avatar
+          };
+
+          localStorage.setItem('munyaka_session', JSON.stringify(userData));
+          persistCurrentAuthRole(userData.role);
+          setUser(userData);
+          return true;
+        }
+        // Admin PIN did not match — fall through to the per-user check
+        // so the per-account password still works for that role.
+      }
+
+      const isPasswordValid =
+        foundUser.password === pass ||
         (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(pass));
 
       if (isPasswordValid) {
