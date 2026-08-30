@@ -24,38 +24,43 @@ const InvoiceHistoryTable: React.FC<InvoiceHistoryTableProps> = ({
   onPrint,
 }) => {
   /**
-   * The View action always opens the receipt view. Works for all
-   * statuses (paid, pending, etc.) so a user can review an
-   * invoice or receipt at any time.
+   * View action — exclusively calls onViewReceipt for that specific row's
+   * transaction. This opens the receipt modal/drawer populated with
+   * the row's transaction data.
    */
-  const handleView = (tx: Transaction) => {
+  const handleViewReceipt = (tx: Transaction) => {
     onViewReceipt(tx);
   };
 
   /**
-   * The Download action delegates to onDownload if provided, otherwise
-   * falls back to opening the receipt view so the button is always
-   * responsive. A common fallback is to just open the view and let
-   * the user print from there.
+   * Download action — exclusively calls onDownload for that specific row's
+   * transaction. Triggers file download / export logic for that row.
+   * Does NOT fall back to opening the receipt view.
    */
-  const handleDownload = (tx: Transaction) => {
+  const handleDownloadReceipt = (tx: Transaction) => {
     if (onDownload) {
       onDownload(tx);
     } else {
-      onViewReceipt(tx);
+      // Fallback: trigger the browser print dialog for that receipt
+      if (typeof window !== 'undefined') {
+        window.print();
+      }
     }
   };
 
   /**
-   * The Print action delegates to onPrint if provided, otherwise
-   * falls back to opening the receipt view so the button is always
-   * responsive. The view has its own print button inside it.
+   * Print action — exclusively calls onPrint for that specific row's
+   * transaction. Opens the browser print dialog specifically for that
+   * receipt. Does NOT fall back to opening the receipt view.
    */
-  const handlePrint = (tx: Transaction) => {
+  const handlePrintReceipt = (tx: Transaction) => {
     if (onPrint) {
       onPrint(tx);
     } else {
-      onViewReceipt(tx);
+      // Fallback: trigger the browser print dialog for that receipt
+      if (typeof window !== 'undefined') {
+        window.print();
+      }
     }
   };
 
@@ -101,61 +106,50 @@ const InvoiceHistoryTable: React.FC<InvoiceHistoryTableProps> = ({
                   <td className="px-8 py-4 font-mono text-slate-500">{tx.paidAt || '—'}</td>
                   <td className="px-8 py-4 text-right">{getStatusBadge(tx.status)}</td>
                   <td className="px-8 py-4 text-right">
-                                      <div className="flex justify-end gap-1.5">
-                                        {/*
-                                          View icon — opens the receipt view for ALL
-                                          statuses (paid, pending, failed). This way the
-                                          user can always review an invoice/receipt.
-                                        */}
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          type="button"
-                                          onClick={() => handleView(tx)}
-                                          title="View receipt"
-                                          aria-label="View receipt"
-                                          data-testid={`invoice-action-view-${tx.id}`}
-                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
-                                        >
-                                          <Eye size={16} />
-                                        </Button>
-                                        {/*
-                                          Download icon — falls back to opening the
-                                          receipt view if no onDownload handler is
-                                          provided. Always clickable.
-                                        */}
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          type="button"
-                                          onClick={() => handleDownload(tx)}
-                                          title="Download receipt"
-                                          aria-label="Download receipt"
-                                          data-testid={`invoice-action-download-${tx.id}`}
-                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
-                                        >
-                                          <FileDown size={16} />
-                                        </Button>
-                                        {/*
-                                          Print icon — falls back to opening the receipt
-                                          view if no onPrint handler is provided. The
-                                          view has its own print button inside it.
-                                          Always clickable.
-                                        */}
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          type="button"
-                                          onClick={() => handlePrint(tx)}
-                                          title="Print receipt"
-                                          aria-label="Print receipt"
-                                          data-testid={`invoice-action-print-${tx.id}`}
-                                          className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
-                                        >
-                                          <Printer size={16} />
-                                        </Button>
-                                      </div>
-                                    </td>
+                                                        <div className="flex justify-end gap-1.5">
+                                                          {/* Eye icon — opens receipt modal/drawer for that specific row */}
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            type="button"
+                                                            onClick={() => handleViewReceipt(tx)}
+                                                            title="View receipt"
+                                                            aria-label="View receipt"
+                                                            data-testid={`invoice-action-view-${tx.id}`}
+                                                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                                          >
+                                                            <Eye size={16} />
+                                                          </Button>
+                  
+                                                          {/* Download icon — triggers file download/export for that specific row */}
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            type="button"
+                                                            onClick={() => handleDownloadReceipt(tx)}
+                                                            title="Download receipt"
+                                                            aria-label="Download receipt"
+                                                            data-testid={`invoice-action-download-${tx.id}`}
+                                                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                                          >
+                                                            <FileDown size={16} />
+                                                          </Button>
+                  
+                                                          {/* Printer icon — opens print dialog specifically for that receipt */}
+                                                          <Button
+                                                            variant="ghost"
+                                                            size="icon"
+                                                            type="button"
+                                                            onClick={() => handlePrintReceipt(tx)}
+                                                            title="Print receipt"
+                                                            aria-label="Print receipt"
+                                                            data-testid={`invoice-action-print-${tx.id}`}
+                                                            className="h-9 w-9 rounded-xl text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-950/50 cursor-pointer transition-all duration-200 hover:scale-105"
+                                                          >
+                                                            <Printer size={16} />
+                                                          </Button>
+                                                        </div>
+                                                      </td>
                 </tr>
               ))}
             </tbody>
