@@ -50,12 +50,20 @@ import {
   Settings as SettingsIcon,
   CalendarDays,
   TrendingUp as TrendingUpIcon,
+  Printer,
+  FileDown,
+  FileText,
+  Download,
+  FileSpreadsheet,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
 import RecordLicensePaymentModal from '@/components/RecordLicensePaymentModal';
+import ReceiptModal from '@/components/fees/ReceiptModal';
+import InvoiceHistoryTable from '@/components/fees/InvoiceHistoryTable';
+import ReceiptView from '@/components/fees/ReceiptView';
 import {
   getAllLicenses,
   revokeLicense,
@@ -403,6 +411,36 @@ const PaymentManagement = () => {
   });
   const [lastGeneratedCode, setLastGeneratedCode] = useState<string | null>(null);
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
+
+  // ── Receipt Modal State ──
+  const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
+  const [receiptData, setReceiptData] = useState<{
+    receiptNumber: string;
+    invoiceNumber: string;
+    studentName: string;
+    admNo: string;
+    grade: string;
+    stream: string;
+    amount: number;
+    currency: string;
+    paymentMethod: string;
+    transactionRef: string;
+    date: string;
+    term: string;
+    year: string;
+    status: string;
+    receivedBy?: string;
+  } | null>(null);
+
+  // ── Receipt View State ──
+  const [isReceiptViewOpen, setIsReceiptViewOpen] = useState(false);
+  const [selectedTransactionForReceipt, setSelectedTransactionForReceipt] = useState<Transaction | null>(null);
+  const [selectedStudentForReceipt, setSelectedStudentForReceipt] = useState<{
+    name: string;
+    admNo: string;
+    grade: string;
+    stream: string;
+  } | null>(null);
 
   // ── Load from localStorage ─────────────
   useEffect(() => {
@@ -827,6 +865,32 @@ const PaymentManagement = () => {
     setIsLicenseModalOpen(false);
     setActiveSubscriptionForLicense(null);
 
+    // Show receipt modal after successful payment
+    const receiptNumber = `RCP-${Date.now().toString().slice(-8)}`;
+    const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
+    const today = new Date();
+    const term = today.getMonth() < 3 ? 'Term 1' : today.getMonth() < 7 ? 'Term 2' : 'Term 3';
+    const year = today.getFullYear().toString();
+
+    setReceiptData({
+      receiptNumber,
+      invoiceNumber,
+      studentName: mpForm.issuedTo,
+      admNo: mpForm.deviceId,
+      grade: 'N/A',
+      stream: 'N/A',
+      amount: parseFloat(mpForm.amount),
+      currency: mpForm.currency,
+      paymentMethod: mpForm.paymentMode === 'mpesa' ? 'M-Pesa' : mpForm.paymentMode === 'bank' ? 'Bank Transfer' : 'Cash',
+      transactionRef: mpForm.transactionRef,
+      date: new Date().toLocaleString(),
+      term,
+      year: year.toString(),
+      status: 'Paid',
+      receivedBy: user?.name,
+    });
+    setIsReceiptModalOpen(true);
+
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
     showSuccess(
@@ -948,6 +1012,40 @@ const PaymentManagement = () => {
     return acc + numeric * rate;
   }, 0);
 
+  // ── Receipt Handlers ──
+  const handleOpenReceipt = (transaction: Transaction) => {
+    setSelectedTransactionForReceipt(transaction);
+    setSelectedStudentForReceipt({
+      name: 'Munyaka Primary & Junior School',
+      admNo: 'SCH-001',
+      grade: 'N/A',
+      stream: 'N/A',
+    });
+    setIsReceiptViewOpen(true);
+  };
+
+  const handleCloseReceiptView = () => {
+    setIsReceiptViewOpen(false);
+    setSelectedTransactionForReceipt(null);
+    setSelectedStudentForReceipt(null);
+  };
+
+  const handleCloseReceiptModal = () => {
+    setIsReceiptModalOpen(false);
+    setReceiptData(null);
+  };
+
+  const handleViewReceiptFromHistory = (transaction: Transaction) => {
+    setSelectedTransactionForReceipt(transaction);
+    setSelectedStudentForReceipt({
+      name: 'Munyaka Primary & Junior School',
+      admNo: 'SCH-001',
+      grade: 'N/A',
+      stream: 'N/A',
+    });
+    setIsReceiptViewOpen(true);
+  };
+
   // ── Render ─────────────────────────────
   return (
     <div className="w-full max-w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -965,6 +1063,14 @@ const PaymentManagement = () => {
               <AlertTriangle size={12} className="mr-1.5" /> Unsaved Changes
             </Badge>
           )}
+          <Button
+            onClick={handleSave}
+            disabled={isSaving || !hasUnsavedChanges}
+            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+            Save Configuration
+          </Button>
         </div>
       </div>
 
@@ -1950,7 +2056,8 @@ const PaymentManagement = () => {
                             const modeColors: Record<string, string> = {
                               mpesa: 'bg-emerald-50 text-emerald-700',
                               cash: 'bg-blue-50 text-blue-700',
-                              bank: 'bg-slate-100 text-slate-700',
+                              bank: 'bg-slate-100 text-slate<dyad-write path="src/pages/PaymentManagement.tsx" description="Update PaymentManagement.tsx">
+                                -700',
                             };
                             const modeLabels: Record<string, string> = {
                               mpesa: 'M-Pesa',
@@ -2256,7 +2363,7 @@ const PaymentManagement = () => {
         </TabsContent>
 
         {/* ──────────────────────────────────────── */}
-        {/* INVOICE HISTORY TAB */}
+        {/* INVOICE HISTORY TAB - NOW WITH RECEIPT ACTIONS */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="history" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
@@ -2267,21 +2374,22 @@ const PaymentManagement = () => {
                 </div>
                 <div>
                   <CardTitle className="text-lg font-black text-slate-900">Invoice History</CardTitle>
-                  <CardDescription>Invoice history for platform subscriptions and software services.</CardDescription>
+                  <CardDescription>Invoice history for platform subscriptions and software services. Click any row action to view, download, or print the receipt.</CardDescription>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs text-left">
+                <table className="w-full text-sm text-left min-w-[1000px]">
                   <thead className="bg-slate-50/80 border-b border-slate-100">
                     <tr>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Invoice</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Description</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Amount</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Method</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
-                      <th className="px-8 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Status</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Invoice</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Description</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Amount</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Method</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Date</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Status</th>
+                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Receipt Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -2293,6 +2401,37 @@ const PaymentManagement = () => {
                         <td className="px-8 py-4 text-slate-600">{pmt.paymentMethod}</td>
                         <td className="px-8 py-4 font-mono text-slate-500">{pmt.paidAt || '—'}</td>
                         <td className="px-8 py-4 text-right">{getStatusBadge(pmt.status)}</td>
+                        <td className="px-8 py-4 text-right">
+                          <div className="flex justify-end gap-1.5">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
+                              title="View Receipt"
+                              onClick={() => handleViewReceiptFromHistory(pmt)}
+                            >
+                              <Eye size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
+                              title="Download Receipt"
+                              onClick={() => handleViewReceiptFromHistory(pmt)}
+                            >
+                              <FileDown size={16} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
+                              title="Print Invoice"
+                              onClick={() => handleViewReceiptFromHistory(pmt)}
+                            >
+                              <Printer size={16} />
+                            </Button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -2458,6 +2597,33 @@ const PaymentManagement = () => {
         }}
         defaultIssuedTo={user?.name ?? 'Munyaka Primary & Junior School'}
         defaultSubscriptionName={activeSubscriptionForLicense?.name}
+      />
+
+      {/* Receipt Modal (Post-Payment Trigger) */}
+      <ReceiptModal
+        isOpen={isReceiptModalOpen}
+        onClose={handleCloseReceiptModal}
+        receiptData={receiptData}
+      />
+
+      {/* Receipt View Modal (for Invoice History) */}
+      <ReceiptView
+        transaction={selectedTransactionForReceipt || {
+          id: '',
+          date: '',
+          amount: '0',
+          currency: 'KES',
+          ref: '',
+          category: '',
+          status: 'paid' as const,
+          method: 'cash',
+          paymentMethod: 'cash' as const,
+          paymentDetails: { receivedBy: '' },
+        }}
+        student={selectedStudentForReceipt || undefined}
+        onClose={handleCloseReceiptView}
+        onPrint={() => {}}
+        onDownload={() => {}}
       />
     </div>
   );
