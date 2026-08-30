@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,6 +52,10 @@ import {
   ChevronDown,
   Copy,
   Sparkles,
+  TrendingUp,
+  Calendar,
+  Users,
+  Zap,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
@@ -292,48 +296,13 @@ function getStatusBadge(status: string) {
   );
 }
 
-// Secure masked input field
-function SecureField({
-  label,
-  value,
-  show,
-  onToggle,
-  placeholder,
-  icon: Icon,
-}: {
-  label: string;
-  value: string;
-  show: boolean;
-  onToggle: () => void;
-  placeholder?: string;
-  icon: React.ElementType;
-}) {
-  return (
-    <div className="space-y-1.5">
-      <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">{label}</Label>
-      <div className="relative">
-        {Icon && <Icon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={14} />}
-        <Input
-          type={show ? 'text' : 'password'}
-          value={value}
-          placeholder={placeholder}
-          readOnly
-          className={cn(
-            "h-11 pl-9 pr-10 rounded-xl bg-slate-50 border-none font-mono text-sm text-slate-700",
-            !value && "italic text-slate-400"
-          )}
-        />
-        <button
-          type="button"
-          onClick={onToggle}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-indigo-600 transition-colors"
-          title={show ? 'Hide' : 'Reveal'}
-        >
-          {show ? <EyeOff size={14} /> : <Eye size={14} />}
-        </button>
-      </div>
-    </div>
-  );
+// Compute days remaining until the subscription's next billing date.
+function daysUntilNextBilling(nextBilling: string): number {
+  if (!nextBilling) return 0;
+  const today = new Date();
+  const target = new Date(nextBilling);
+  const diff = target.getTime() - today.getTime();
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
 // ─────────────────────────────────────────
@@ -397,10 +366,6 @@ const PaymentManagement = () => {
    *  page refreshes and modal close/reopen cycles. */
   const MP_FORM_SNAPSHOT_KEY = 'mp_form_snapshot';
   const [mpForm, setMpForm] = useState(() => {
-    // Try to restore the previous form state from localStorage.
-    // We default all fields to the most-recent user input so the
-    // user's intent (e.g. switched to Cash, typed 500, picked KES)
-    // is never lost across re-renders, refreshes, or modal re-opens.
     try {
       const raw = localStorage.getItem(MP_FORM_SNAPSHOT_KEY);
       if (raw) {
@@ -542,14 +507,10 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
   }, [activeTab]);
 
-// Single, module-level guard so the prefill useEffect fires **at most
+  // Single, module-level guard so the prefill useEffect fires **at most
   // once per session** regardless of how many times subscriptions re-fetches
-  // or how often subscriptionId is reset. This is the key fix for the
-  // "form resets back to USD 299.00 / M-Pesa after the user types their
-  // own values" bug — without this guard, any parent re-render that
-  // produces a new subscriptions array identity would re-fire the prefill
-  // and stomp the user's entered amount/currency.
-  const didPrefillRef = React.useRef(false);
+  // or how often subscriptionId is reset.
+  const didPrefillRef = useRef(false);
   useEffect(() => {
     if (didPrefillRef.current) return;            // already ran this session
     if (subscriptions.length === 0) return;         // nothing to prefill from
@@ -608,7 +569,6 @@ const PaymentManagement = () => {
     const next = [entry, ...localPayments];
     setLocalPayments(next);
     localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
-    // Persist mode / currency before clearing only the per-payment fields
     setLpForm(f => {
       const cleared = { ...f, amount: '', reference: '', note: '' };
       localStorage.setItem('lp_form_snapshot', JSON.stringify({
@@ -619,7 +579,6 @@ const PaymentManagement = () => {
       }));
       return cleared;
     });
-    // Notify the rest of the page (and any other tabs) to re-read state.
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
     showSuccess(`Payment logged! Subscription extended to ${nextBillingStr}.`);
@@ -677,8 +636,7 @@ const PaymentManagement = () => {
     const sub = subscriptions.find(s => s.id === id);
     setMpForm(f => {
       // Only adopt the new plan's amount / currency if the user hasn't
-      // already manually changed those fields. We detect "untouched" by
-      // checking whether the current value matches any other plan's default.
+      // already manually changed those fields.
       const stillMatchesAPlan = subscriptions.some(
         s => s.id !== id && s.amount === f.amount && s.currency === f.currency
       );
@@ -692,10 +650,17 @@ const PaymentManagement = () => {
         amount: shouldAdoptPlanDefaults ? (sub?.amount ?? f.amount) : f.amount,
         currency: shouldAdoptPlanDefaults ? (sub?.currency ?? f.currency) : f.currency,
       };
-      // Persist immediately so a refresh mid-selection keeps the user's pick.
       persistMpForm(next);
       return next;
     });
+  };
+
+  /** Persist MP form snapshot to localStorage so the user's exact
+   *  selected values survive a page refresh / modal reopen. */
+  const persistMpForm = (snapshot: any) => {
+    try {
+      localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(snapshot));
+    } catch { /* storage may be unavailable in private mode */ }
   };
 
   const handleRecordPayment = async () => {
@@ -717,8 +682,7 @@ const PaymentManagement = () => {
     const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
     const subName = sub?.name ?? 'Subscription';
 
-    // 1) Issue a real license — this also syncs is_activated and
-    //    activation_expires_at to localStorage so the lock screen stays open.
+    // 1) Issue a real license
     const issued = issueLicense({
       issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
       deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
@@ -733,7 +697,6 @@ const PaymentManagement = () => {
     });
 
     // 2) Advance the subscription billing date by 30 days and mark active.
-    //    This updates both the in-memory state and localStorage immediately.
     const today = new Date();
     const newNextBilling = new Date(today);
     newNextBilling.setDate(newNextBilling.getDate() + 30);
@@ -749,7 +712,6 @@ const PaymentManagement = () => {
       STORAGE_KEY,
       JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
     );
-    // Mark the unsaved-changes banner as clear (state is already saved).
     setHasUnsavedChanges(false);
 
     // 3) Persist a parallel monthly-payment record for the history table.
@@ -776,11 +738,7 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
 
-    // 5) Persist form state to localStorage so the user's exact selected
-    //    Payment Mode / Amount / Currency survive page refreshes, modal
-    //    re-opens, and parent re-renders. We snapshot the *surviving* values
-    //    (mode, amount, currency, issuedTo, deviceId) but explicitly clear
-    //    the transactionRef so the next payment starts with an empty field.
+    // 5) Persist form state to localStorage
     const finalSnapshot = {
       subscriptionId: '',
       paymentMode: mpForm.paymentMode,
@@ -800,7 +758,6 @@ const PaymentManagement = () => {
     setIsLicenseModalOpen(false);
     setActiveSubscriptionForLicense(null);
 
-    // Notify the rest of the page (and any other tabs) to re-read state.
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
     showSuccess(
@@ -816,7 +773,6 @@ const PaymentManagement = () => {
         () => showError('Could not copy. Please select and copy manually.')
       );
     } else {
-      // Fallback for older browsers / insecure contexts
       const ta = document.createElement('textarea');
       ta.value = text;
       ta.style.position = 'fixed';
@@ -911,6 +867,20 @@ const PaymentManagement = () => {
     );
   };
 
+  // ── Subscriptions tab top summary derived values ────────────────────
+  const primarySub = subscriptions[0];
+  const daysToRenewal = primarySub ? daysUntilNextBilling(primarySub.nextBilling) : 0;
+  const activeLicenses = licenses.filter(l => l.status === 'active' && l.expiresAt >= new Date().toISOString().slice(0, 10));
+  const totalMonthlyPaid = monthlyPayments.reduce((acc, p) => {
+    // Only count payments for the current year to keep the "monthly" label honest.
+    if (new Date(p.paidAt).getFullYear() !== new Date().getFullYear()) return acc;
+    const numeric = parseFloat(p.amount);
+    if (isNaN(numeric)) return acc;
+    // Normalize to USD (very rough; we only need a comparable number for the summary)
+    const rate = p.currency === 'USD' ? 1 : p.currency === 'EUR' ? 1.08 : 0.0077;
+    return acc + numeric * rate;
+  }, 0);
+
   // ── Render ─────────────────────────────
   return (
     <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
@@ -961,24 +931,125 @@ const PaymentManagement = () => {
         </div>
       </div>
 
+      {/* ──────────────────────────────────────── */}
+      {/* SUBSCRIPTION OVERVIEW SUMMARY (always visible at top) */}
+      {/* ──────────────────────────────────────── */}
+      {primarySub && (
+        <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden">
+          <CardContent className="p-7 md:p-8">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+              {/* Plan & status */}
+              <div className="md:col-span-1 space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 bg-white/15 rounded-xl">
+                    <Building2 size={18} className="text-indigo-200" />
+                  </div>
+                  <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                    Active Plan
+                  </span>
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight">{primarySub.name}</h2>
+                  <p className="text-sm text-indigo-200 mt-0.5">{primarySub.plan}</p>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  {getStatusBadge(primarySub.status)}
+                  {tierBadge(primarySub.tier)}
+                  <Badge className="bg-white/10 text-indigo-100 border-white/20 font-bold text-[10px] gap-1">
+                    <RefreshCw size={10} /> {primarySub.interval}
+                  </Badge>
+                </div>
+              </div>
+
+              {/* Financials */}
+              <div className="md:col-span-1 space-y-2 bg-white/5 rounded-2xl p-4 border border-white/10">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 flex items-center gap-1.5">
+                  <TrendingUp size={10} /> Current Bill
+                </p>
+                <p className="text-3xl font-black">
+                  {primarySub.currency} {primarySub.amount}
+                  <span className="text-sm font-bold text-indigo-200/80 ml-1">/{primarySub.interval === 'monthly' ? 'mo' : primarySub.interval === 'annual' ? 'yr' : '2yr'}</span>
+                </p>
+                <div className="flex items-center gap-2 pt-1 text-xs">
+                  <Calendar size={12} className="text-indigo-300" />
+                  <span className="text-indigo-100 font-medium">
+                    Next: <strong className="text-white">{primarySub.nextBilling}</strong>
+                    {daysToRenewal > 0 && (
+                      <span className="ml-1 text-indigo-200/80">({daysToRenewal}d)</span>
+                    )}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  <Users size={12} className="text-indigo-300" />
+                  <span className="text-indigo-100 font-medium">
+                    {primarySub.seats.toLocaleString()} institutional seats
+                  </span>
+                </div>
+              </div>
+
+              {/* Quick actions */}
+              <div className="md:col-span-1 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                  Quick Actions
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => setActiveTab('monthly')}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <CreditCard size={14} /> Record Payment
+                    </span>
+                    <Zap size={14} className="text-amber-300" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('monthly')}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <Key size={14} /> Generate License Key
+                    </span>
+                    <Sparkles size={14} className="text-emerald-300" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('monthly')}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <History size={14} /> View Payment History
+                    </span>
+                    <RefreshCw size={14} className="text-indigo-300" />
+                  </button>
+                </div>
+                <p className="text-[10px] text-indigo-200/70 font-medium pt-1 text-center">
+                  {monthlyPayments.length} payment{monthlyPayments.length !== 1 ? 's' : ''} logged · {activeLicenses.length} active license{activeLicenses.length !== 1 ? 's' : ''}
+                  {totalMonthlyPaid > 0 && ` · $${totalMonthlyPaid.toFixed(2)} paid (this year)`}
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1.5 rounded-2xl shadow-sm border h-auto mb-8 flex flex-wrap gap-1 w-full">
           <TabsTrigger value="subscriptions" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <RefreshCw size={15} /> Subscriptions
+            <RefreshCw size={15} /> License Details
           </TabsTrigger>
           <TabsTrigger value="monthly" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <Sparkles size={15} /> Monthly Payments
+            <Sparkles size={15} /> Record & Generate
           </TabsTrigger>
           <TabsTrigger value="gateways" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <Globe size={15} /> Payment Gateways
           </TabsTrigger>
           <TabsTrigger value="payments" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <DollarSign size={15} /> Payment History
+            <DollarSign size={15} /> Invoice History
           </TabsTrigger>
         </TabsList>
 
         {/* ──────────────────────────────────────── */}
-        {/* SUBSCRIPTIONS TAB */}
+        {/* LICENSE DETAILS TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -1131,32 +1202,36 @@ const PaymentManagement = () => {
                             className="rounded-xl h-9 text-xs font-bold border-slate-200 gap-1.5 flex-1"
                           >
                             <RefreshCcw size={14} /> Renew
-                            </Button>
-                          </>
-                        ) : (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => openRenew(sub)}
-                            className="rounded-xl h-9 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 gap-1.5 w-full"
-                          >
-                            <RefreshCcw size={14} /> Reactivate
                           </Button>
-                        )}
-                      </div>
-  
-                      {/* Record Payment & Generate License Key (single primary action) */}
-                      <Button
-                        variant="default"
-                        size="sm"
-                        onClick={() => {
-                          setActiveSubscriptionForLicense(sub);
+                        </>
+                      ) : (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openRenew(sub)}
+                          className="rounded-xl h-9 text-xs font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-50 gap-1.5 w-full"
+                        >
+                          <RefreshCcw size={14} /> Reactivate
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Record Payment & Generate License Key (single primary action) */}
+                    <Button
+                      variant="default"
+                      size="sm"
+                      onClick={() => {
+                        setActiveSubscriptionForLicense(sub);
+                        setActiveTab('monthly');
+                        // Slight delay so the tab switch + form prefill completes
+                        setTimeout(() => {
                           setIsLicenseModalOpen(true);
-                        }}
-                        className="rounded-xl h-10 text-xs font-black w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
-                      >
-                        <Key size={14} /> Record Payment & Generate License Key
-                      </Button>
+                        }, 50);
+                      }}
+                      className="rounded-xl h-10 text-xs font-black w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
+                    >
+                      <Key size={14} /> Record Payment & Generate License Key
+                    </Button>
 
                     <div className="flex gap-2">
                       {editingSubscriptionId === sub.id ? (
@@ -1323,7 +1398,7 @@ const PaymentManagement = () => {
         </TabsContent>
 
         {/* ──────────────────────────────────────── */}
-        {/* MONTHLY PAYMENTS TAB */}
+        {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="monthly" className="space-y-8">
 
@@ -1938,7 +2013,7 @@ const PaymentManagement = () => {
         </TabsContent>
 
         {/* ──────────────────────────────────────── */}
-        {/* PAYMENT HISTORY TAB */}
+        {/* INVOICE HISTORY TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="payments" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
@@ -1948,7 +2023,7 @@ const PaymentManagement = () => {
                   <History size={20} />
                 </div>
                 <div>
-                  <CardTitle className="text-lg font-black text-slate-900">Software Payment History</CardTitle>
+                  <CardTitle className="text-lg font-black text-slate-900">Invoice History</CardTitle>
                   <CardDescription>Invoice history for platform subscriptions and software services.</CardDescription>
                 </div>
               </div>
@@ -2073,9 +2148,7 @@ const PaymentManagement = () => {
         <div className="space-y-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Billing Interval</Label>
-            <Select defaultValue={renewModalSub?.interval ?? 'monthly'} onValueChange={v => {
-              // handled inline
-            }}>
+            <Select defaultValue={renewModalSub?.interval ?? 'monthly'}>
               <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                 <SelectValue />
               </SelectTrigger>
@@ -2134,33 +2207,21 @@ const PaymentManagement = () => {
           </div>
         </div>
       </Modal>
+
+      {/* ── Record License Payment Modal ── */}
+      <RecordLicensePaymentModal
+        isOpen={isLicenseModalOpen}
+        onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
+        onIssued={(license) => {
+          setIsLicenseModalOpen(false);
+          setActiveSubscriptionForLicense(null);
+          setLicenses(getAllLicenses());
+        }}
+        defaultIssuedTo={user?.name ?? 'Munyaka Primary & Junior School'}
+        defaultSubscriptionName={activeSubscriptionForLicense?.name}
+      />
     </div>
   );
-
-  {/* ── Record License Payment Modal ── */}
-  <RecordLicensePaymentModal
-    isOpen={isLicenseModalOpen}
-    onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
-    onIssued={(license) => {
-      setIsLicenseModalOpen(false);
-      setActiveSubscriptionForLicense(null);
-      setLicenses(getAllLicenses());
-    }}
-    defaultIssuedTo={user?.name ?? 'Munyaka Primary & Junior School'}
-    defaultSubscriptionName={activeSubscriptionForLicense?.name}
-  />;
 };
-
-// Small Users icon helper
-function Users({ size = 16 }: { size?: number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-      <circle cx="9" cy="7" r="4" />
-      <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
-      <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-    </svg>
-  );
-}
 
 export default PaymentManagement;
