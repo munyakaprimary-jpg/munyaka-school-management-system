@@ -87,15 +87,19 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
  * Resolve the active password for a given admin role — called fresh on
  * every login attempt so it always reflects the latest localStorage state.
  *
- * Priority order:
- *   1. Custom PIN under the role's `customPasswordKey`
- *      (`munyaka_sysadmin_pass` / `munyaka_owner_pass`).  This is what
- *      the Configuration / Security / Settings tab writes when the admin
- *      changes their PIN.
- *   2. Shared legacy key `munyaka_admin_pass` — used by Fees, Grades,
- *      Attendance, ICT, etc. so a PIN updated from any of those screens
- *      is honoured here too.
- *   3. Hard-coded default (`sysadmin2026` / `ownerpass2026`) as a
+ * Priority order — checked in this exact order:
+ *   1. Role-specific key used by the Configuration → Owner Security tab:
+ *        • system_admin → "munyaka_sysadmin_pass"
+ *        • super_admin  → "munyaka_owner_pass"
+ *      This is the canonical key the Settings/Config page writes to when
+ *      the admin rotates their PIN.
+ *   2. Role-specific Configuration → System Security key
+ *      ("munyaka_system_pass") — older key used in earlier versions of the
+ *      Configuration tab, still honoured for backwards compatibility.
+ *   3. Shared legacy key "munyaka_admin_pass" — written by several other
+ *      modules (Fees, Grades, Attendance, ICT, etc.) and also used as the
+ *      fallback for the "munyaka5239" credential.
+ *   4. Hard-coded default ("sysadmin2026" / "ownerpass2026") as a
  *      last-resort fallback for brand-new devices.
  *
  * All returned values are .trim()'d to guard against accidental whitespace
@@ -123,9 +127,13 @@ const resolveAdminPassword = (
     return null;
   };
 
-  // Try role-specific custom key first, then the shared admin-pass key
+  // 1. Exact Configuration → Owner Security key
+  // 2. Older Configuration → System Security key
+  // 3. Shared legacy key (also where the "munyaka5239" fallback lives)
   const stored =
-    tryRead(config.customPasswordKey) ?? tryRead('munyaka_admin_pass');
+    tryRead(config.customPasswordKey) ??
+    tryRead('munyaka_system_pass') ??
+    tryRead('munyaka_admin_pass');
 
   if (stored !== null) {
     return { password: stored, source: 'custom' };
@@ -570,7 +578,7 @@ const Login: React.FC = () => {
                           {activeCredentials[selectedAdminRole!].source === 'custom' ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
-                              Custom PIN — set via Profile &rarr; Security
+                              Custom PIN — set via Configuration &rarr; Owner Security
                             </span>
                           ) : (
                             <>
@@ -675,7 +683,7 @@ const Login: React.FC = () => {
                           {activeCredentials[selectedAdminRole!].source === 'custom' ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
-                              Custom PIN — set via Profile &rarr; Security
+                              Custom PIN — set via Configuration &rarr; Owner Security
                             </span>
                           ) : (
                             <>
