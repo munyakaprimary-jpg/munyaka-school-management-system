@@ -230,27 +230,32 @@ const Login: React.FC = () => {
     const config = ROLE_CONFIGS[selectedAdminRole];
 
     // ── Direct localStorage read on every attempt ───────────────────────────
-    // We never trust React state for the active PIN — always read fresh so
-    // a PIN updated from the Configuration tab is picked up immediately.
-    const activeStored = getActiveAdminPassword();
+    // Read the saved custom password from the SAME key the Configuration tab
+    // writes to. If no custom password is stored, fall back to the default.
+    // The `|| 'sysadmin2026'` fallback mirrors the savedCustomPassword form
+    // requested in the spec: the stored PIN takes precedence when present.
+    const savedCustomPassword = (localStorage.getItem(MUNYAKA_ADMIN_PASSWORD) ?? '').trim();
+    const effectivePassword = savedCustomPassword || DEFAULT_ADMIN_PASSWORD;
 
     // ── Debug logging (development only) ────────────────────────────────────
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       console.log('[AdminLogin]', {
-        key: MUNYAKA_ADMIN_PASSWORD,
-        stored: activeStored,
+        storageKey: MUNYAKA_ADMIN_PASSWORD,
+        rawValue: localStorage.getItem(MUNYAKA_ADMIN_PASSWORD),
+        savedCustomPassword,
+        effectivePassword,
         entered,
-        match: entered === activeStored,
-        default: DEFAULT_ADMIN_PASSWORD,
-        defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
+        match: entered === effectivePassword,
+        fallbackToDefault: !savedCustomPassword,
       });
     }
 
     // ── Password verification ─────────────────────────────────────────────
-    // Accept the stored PIN and also fall back to the hard-coded default,
-    // so the admin can sign in regardless of which PIN they last set.
-    const isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
+    // Strict equality. If a custom password was saved, that exact string is
+    // the one that authenticates. Otherwise the default 'sysadmin2026' works.
+    // No other hard-coded conditions, no role-based bypass, no extra checks.
+    const isValid = entered === effectivePassword;
 
     if (!isValid) {
       setAdminAuthError(`Invalid password for ${config.label}.`);
