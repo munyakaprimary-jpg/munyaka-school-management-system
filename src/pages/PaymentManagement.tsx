@@ -1111,8 +1111,11 @@ const PaymentManagement = () => {
         {/* ──────────────────────────────────────── */}
         {/* LICENSE DETAILS TAB */}
         {/* ──────────────────────────────────────── */}
-        <TabsContent value="subscriptions" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
+        <TabsContent value="subscriptions" className="space-y-6 w-full">
+          {/* FIX #1: Subscription cards now use a single-column layout
+              that fills the full page width instead of 3 narrow
+              columns. Each subscription card spans the entire row. */}
+          <div className="grid grid-cols-1 gap-6 w-full">
             {subscriptions.map(sub => (
               <Card
                 key={sub.id}
@@ -1144,8 +1147,12 @@ const PaymentManagement = () => {
                   </div>
                 </CardHeader>
 
+                {/* FIX #2: Inner layout switched to a 4-column grid so
+                    the plan / interval / amount / cycle / seats fields
+                    breathe across the full row instead of feeling
+                    cramped in a 2-column half-width row. */}
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
                     <div className="bg-slate-50 rounded-2xl p-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Plan</p>
                       <p className="text-sm font-bold text-slate-900">{sub.plan}</p>
@@ -1154,64 +1161,67 @@ const PaymentManagement = () => {
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Interval</p>
                       <p className="text-sm font-bold text-slate-900 capitalize">{sub.interval}</p>
                     </div>
-                  </div>
-
-                  <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
-                    <div>
+                    <div className="bg-slate-50 rounded-2xl p-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Amount</p>
-                      <p className="text-xl font-black text-slate-900">{sub.currency} {sub.amount}</p>
+                      <p className="text-sm font-bold text-slate-900">{sub.currency} {sub.amount}</p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Next Billing</p>
+                    <div className="bg-slate-50 rounded-2xl p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Next Billing</p>
                       <p className="text-sm font-bold text-slate-900">{sub.nextBilling}</p>
                     </div>
                   </div>
 
-                  <div className="bg-slate-50 rounded-2xl p-3">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Billing Cycle</p>
-                    {editingSubscriptionId === sub.id ? (
-                      <Select
-                        value={String(subscriptionForm.billingCycleAnchor ?? sub.billingCycleAnchor)}
-                        onValueChange={v => {
-                          setSubscriptionForm(p => ({ ...p, billingCycleAnchor: parseInt(v) }));
-                          markChanged();
-                        }}
-                      >
-                        <SelectTrigger className="h-9 rounded-xl bg-white border-none font-bold text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
-                            <SelectItem key={d} value={String(d)}>Day {d} of each month</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <p className="text-sm font-bold text-slate-700">
-                        Day {sub.billingCycleAnchor} of each month
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Institutional Seats</p>
+                  {/* FIX #3: Billing cycle / seats / features / actions
+                      arranged in a 2-column responsive grid so the
+                      entire row from cycle → buttons spans the full
+                      width. */}
+                  <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+                    <div className="bg-slate-50 rounded-2xl p-3">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Billing Cycle</p>
                       {editingSubscriptionId === sub.id ? (
-                        <Input
-                          type="number"
-                          value={subscriptionForm.seats ?? sub.seats}
-                          onChange={e => {
-                            setSubscriptionForm(p => ({ ...p, seats: parseInt(e.target.value) || 0 }));
+                        <Select
+                          value={String(subscriptionForm.billingCycleAnchor ?? sub.billingCycleAnchor)}
+                          onValueChange={v => {
+                            setSubscriptionForm(p => ({ ...p, billingCycleAnchor: parseInt(v) }));
                             markChanged();
                           }}
-                          className="h-8 rounded-xl bg-white border-none font-bold text-sm w-28"
-                        />
+                        >
+                          <SelectTrigger className="h-9 rounded-xl bg-white border-none font-bold text-sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {Array.from({ length: 28 }, (_, i) => i + 1).map(d => (
+                              <SelectItem key={d} value={String(d)}>Day {d} of each month</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
                       ) : (
-                        <p className="text-sm font-bold text-slate-900">{sub.seats.toLocaleString()} seats</p>
+                        <p className="text-sm font-bold text-slate-700">
+                          Day {sub.billingCycleAnchor} of each month
+                        </p>
                       )}
                     </div>
-                    <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl">
-                      <Users size={16} />
+
+                    <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Institutional Seats</p>
+                        {editingSubscriptionId === sub.id ? (
+                          <Input
+                            type="number"
+                            value={subscriptionForm.seats ?? sub.seats}
+                            onChange={e => {
+                              setSubscriptionForm(p => ({ ...p, seats: parseInt(e.target.value) || 0 }));
+                              markChanged();
+                            }}
+                            className="h-8 rounded-xl bg-white border-none font-bold text-sm w-28"
+                          />
+                        ) : (
+                          <p className="text-sm font-bold text-slate-900">{sub.seats.toLocaleString()} seats</p>
+                        )}
+                      </div>
+                      <div className="p-2 bg-indigo-50 text-indigo-500 rounded-xl">
+                        <Users size={16} />
+                      </div>
                     </div>
                   </div>
 
