@@ -28,7 +28,7 @@ import {
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
-import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
+import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
 import { showSuccess } from '@/utils/toast';
 import { marks as mockMarks } from '@/data/mockMarks';
 import { attendance as mockAttendance } from '@/data/mockAttendance';
@@ -49,8 +49,8 @@ const StudentProfile = () => {
     coCurricularActivities: 'Football team captain (2023), Science fair 1st place (2022), School choir member',
   };
 
-  const handleRecordPayment = (amount: number) => {
-    showSuccess(`Recorded payment of KES ${amount.toLocaleString()} for ${student.name}`);
+  const handleRecordPayment = (result: { transaction: any }) => {
+    showSuccess(`Recorded payment of KES ${result.transaction.amount.toLocaleString()} for ${student.name}`);
   };
 
   // ==================== Subject performance chart ====================
@@ -466,7 +466,7 @@ const StudentProfile = () => {
         }}
       />
 
-      <RecordPaymentModal
+      <UnifiedRecordPaymentModal
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
         onSubmitPayment={handleRecordPayment}
@@ -480,6 +480,7 @@ const StudentProfile = () => {
             stream: student.stream,
           },
         ]}
+        hideActivationKey={true}
       />
     </div>
   );

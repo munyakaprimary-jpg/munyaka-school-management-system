@@ -19,7 +19,7 @@ import { useFileDownload } from '@/utils/fileDownloader';
 import FeeStats from '@/components/fees/FeeStats';
 import FeeFilters from '@/components/fees/FeeFilters';
 import FeeStatement from '@/components/fees/FeeStatement';
-import RecordPaymentModal from '@/components/fees/RecordPaymentModal';
+import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
 import EditFeeModal from '@/components/fees/EditFeeModal';
 import FeeReceipt from '@/components/fees/FeeReceipt';
 import { Transaction, PaymentMethod, PaymentDetails } from '@/types/fees';
@@ -1117,13 +1117,14 @@ const Fees = () => {
         </div>
       </Modal>
 
-      {/* Record Payment Modal with Cascading Dropdowns - Now using real learners */}
-      <RecordPaymentModal
+      {/* Record Payment Modal with Cascading Dropdowns - Now using UnifiedRecordPaymentModal */}
+      <UnifiedRecordPaymentModal
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
         onSubmitPayment={handleRecordPayment}
         gradesData={GRADES_DATA}
         studentsData={normalizedLearners}
+        hideActivationKey={true}
       />
 
       {/* ── Receipt Modal (shown after each successful payment) ── */}

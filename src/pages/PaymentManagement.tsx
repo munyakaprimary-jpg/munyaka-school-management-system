@@ -63,7 +63,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
-import RecordLicensePaymentModal from '@/components/RecordLicensePaymentModal';
+import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
 import ReceiptModal from '@/components/fees/ReceiptModal';
 import InvoiceHistoryTable from '@/components/fees/InvoiceHistoryTable';
 import ReceiptView from '@/components/fees/ReceiptView';
@@ -75,7 +75,7 @@ import {
   issueLicense,
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
-import { Transaction } from '@/types/fees';
+import { Transaction, PaymentMethod } from '@/types/fees';
 
 // ─────────────────────────────────────────
 // STORAGE
@@ -1478,10 +1478,7 @@ const PaymentManagement = () => {
                       size="sm"
                       onClick={() => {
                         setActiveSubscriptionForLicense(sub);
-                        setActiveTab('record');
-                        setTimeout(() => {
-                          setIsLicenseModalOpen(true);
-                        }, 50);
+                        setIsLicenseModalOpen(true);
                       }}
                       className="rounded-xl h-10 text-xs font-black w-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white shadow-lg shadow-indigo-100 gap-1.5"
                     >
@@ -1860,218 +1857,34 @@ const PaymentManagement = () => {
 
         {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
         <TabsContent value="record" className="space-y-8">
-          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
-            <CardHeader className="p-8 border-b bg-slate-50/30">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
-                  <CreditCard size={20} />
-                </div>
-                <div>
-                  <CardTitle className="text-lg font-black text-slate-900">Record Monthly Payment</CardTitle>
-                  <CardDescription>Log a payment and instantly generate an activation code for the device.</CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="p-8 space-y-6">
-
-              {lastGeneratedCode && (
-                <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl animate-in fade-in slide-in-from-top-2">
-                  <div className="flex items-start gap-3">
-                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl shrink-0">
-                      <CheckCircle2 size={20} />
+          {/* Unified payment entry card — opens the unified RecordPayment modal */}
+          <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden w-full">
+            <CardContent className="p-8 md:p-10">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 bg-white/20 rounded-xl">
+                      <CreditCard size={20} className="text-white" />
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-black text-emerald-800">Activation Code Generated!</p>
-                      <p className="text-xs text-emerald-600 mt-0.5 mb-3">Share this code with the device to unlock the app. The code is valid for 30 days.</p>
-                      <div className="flex items-center gap-2">
-                        <div className="flex-1 bg-white rounded-2xl px-4 py-3 border border-emerald-200 overflow-x-auto">
-                          <p className="font-mono font-black text-indigo-700 text-sm whitespace-nowrap tracking-widest">
-                            {lastGeneratedCode}
-                          </p>
-                        </div>
-                        <Button
-                          size="sm"
-                          onClick={() => copyToClipboard(lastGeneratedCode)}
-                          className="rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold shadow-lg gap-1.5 shrink-0"
-                        >
-                          <Copy size={14} /> Copy
-                        </Button>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setLastGeneratedCode(null)}
-                      className="text-emerald-400 hover:text-emerald-600 transition-colors shrink-0"
-                    >
-                      <XCircle size={18} />
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Subscription Plan
-                  </Label>
-                  <Select
-                    value={mpForm.subscriptionId}
-                    onValueChange={handleSubscriptionChange}
-                  >
-                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
-                      <SelectValue placeholder="Select a plan..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {subscriptions.map(sub => (
-                        <SelectItem key={sub.id} value={sub.id}>
-                          <div className="flex items-center gap-2 py-1">
-                            <span className="font-bold">{sub.name}</span>
-                            <span className="text-slate-400 text-xs">·</span>
-                            <span className="text-indigo-600 font-black text-sm">
-                              {sub.currency} {sub.amount}
-                            </span>
-                            <span className="text-slate-400 text-xs">/mo</span>
-                          </div>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Payment Mode
-                  </Label>
-                  <Select
-                    value={mpForm.paymentMode}
-                    onValueChange={v => setMpForm(f => { persistMpForm({ ...f, paymentMode: v as MonthlyPayment['paymentMode'] }); return { ...f, paymentMode: v as MonthlyPayment['paymentMode'] }; })}
-                  >
-                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="mpesa">
-                        <div className="flex items-center gap-2 font-bold">
-                          <Smartphone size={14} className="text-emerald-600" /> M-Pesa
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="cash">
-                        <div className="flex items-center gap-2 font-bold">
-                          <DollarSign size={14} className="text-blue-600" /> Cash
-                        </div>
-                      </SelectItem>
-                      <SelectItem value="bank">
-                        <div className="flex items-center gap-2 font-bold">
-                          <Landmark size={14} className="text-slate-600" /> Bank Deposit
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Amount Paid
-                  </Label>
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
-                      {mpForm.currency === 'KES' ? 'KSh' : mpForm.currency === 'USD' ? '$' : mpForm.currency}
+                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                      Single Unified Workflow
                     </span>
-                    <Input
-                      type="number"
-                      value={mpForm.amount}
-                      onChange={e => setMpForm(f => { persistMpForm({ ...f, amount: e.target.value }); return { ...f, amount: e.target.value }; })}
-                      placeholder="0.00"
-                      className="h-14 pl-10 rounded-2xl bg-slate-50 border-none font-black text-base pl-12"
-                    />
                   </div>
+                  <h2 className="text-2xl font-black">Record License Payment</h2>
+                  <p className="text-indigo-200 text-sm max-w-lg">
+                    Select a payment method, enter transaction details, and instantly generate an activation key — all in one place. The payment is automatically logged to the Invoice History.
+                  </p>
                 </div>
-
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Currency
-                  </Label>
-                  <Select
-                    value={mpForm.currency}
-                    onValueChange={v => setMpForm(f => { persistMpForm({ ...f, currency: v }); return { ...f, currency: v }; })}
-                  >
-                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USD">USD — US Dollar</SelectItem>
-                      <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
-                      <SelectItem value="EUR">EUR — Euro</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
+                <Button
+                  onClick={() => {
+                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                    setIsLicenseModalOpen(true);
+                  }}
+                  className="rounded-2xl h-14 px-10 bg-white text-indigo-700 hover:bg-indigo-50 font-black text-base shadow-2xl shadow-black/20 gap-2 shrink-0"
+                >
+                  <Sparkles size={18} /> Open Payment Form
+                </Button>
               </div>
-
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Transaction Reference / Receipt Number
-                </Label>
-                <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                  <Input
-                    value={mpForm.transactionRef}
-                    onChange={e => setMpForm(f => ({ ...f, transactionRef: e.target.value }))}
-                    placeholder={
-                      mpForm.paymentMode === 'mpesa'
-                        ? 'e.g. MG23K4R5HT'
-                        : mpForm.paymentMode === 'bank'
-                        ? 'e.g. DEP-2026-04-001'
-                        : 'e.g. REC-001'
-                    }
-                    className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base"
-                  />
-                </div>
-                <p className="text-[10px] text-slate-400 font-medium">
-                  {mpForm.paymentMode === 'mpesa'
-                    ? 'Enter the M-Pesa confirmation message number or reference code.'
-                    : mpForm.paymentMode === 'bank'
-                    ? 'Enter the bank deposit slip reference or EFT confirmation number.'
-                    : 'Enter the cash receipt number or payment voucher reference.'}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Issued To (School / Entity)
-                  </Label>
-                  <Input
-                    value={mpForm.issuedTo}
-                    onChange={e => setMpForm(f => ({ ...f, issuedTo: e.target.value }))}
-                    placeholder="Munyaka Primary & Junior School"
-                    className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                    Device ID / Label
-                  </Label>
-                  <Input
-                    value={mpForm.deviceId}
-                    onChange={e => setMpForm(f => ({ ...f, deviceId: e.target.value }))}
-                    placeholder="e.g. HEAD-OFFICE, CLASS-1-DESK"
-                    className="h-14 rounded-2xl bg-slate-50 border-none font-mono font-bold text-base"
-                  />
-                </div>
-              </div>
-
-              <Button
-                onClick={handleRecordPayment}
-                disabled={isRecordingPayment}
-                className="w-full rounded-2xl h-14 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 font-black text-white shadow-xl shadow-indigo-100 text-base gap-3"
-              >
-                {isRecordingPayment ? (
-                  <Loader2 size={18} className="animate-spin" />
-                ) : (
-                  <Sparkles size={18} />
-                )}
-                {isRecordingPayment ? 'Recording & Generating…' : 'Record Payment & Generate Activation Code'}
-              </Button>
             </CardContent>
           </Card>
 
@@ -2634,17 +2447,53 @@ const PaymentManagement = () => {
         </div>
       </Modal>
 
-      {/* Record License Payment Modal */}
-      <RecordLicensePaymentModal
+      {/* Unified Payment Modal — used from both License Details tab and Record & Generate tab */}
+      <UnifiedRecordPaymentModal
         isOpen={isLicenseModalOpen}
         onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
-        onIssued={(license) => {
+        onSubmitPayment={({ transaction, activationKey, issuedTo, deviceId, expiresAt }) => {
+          // Push the transaction to the Invoice History table so it appears immediately
+          pushPaymentToHistory(transaction);
+
+          // Update license list if a key was generated
+          if (activationKey) {
+            setLicenses(getAllLicenses());
+            setLastGeneratedCode(activationKey);
+
+            // Also record it as a monthly payment entry for the activation code history
+            const today = new Date();
+            const todayStr = today.toISOString().slice(0, 10);
+            const record: MonthlyPayment = {
+              id: `mp-${Date.now()}`,
+              subscriptionId: activeSubscriptionForLicense?.id ?? subscriptions[0]?.id ?? '',
+              subscriptionName: transaction.description,
+              paymentMode: (transaction.paymentMethod ?? 'mpesa') as MonthlyPayment['paymentMode'],
+              amount: transaction.amount.toString(),
+              currency: transaction.currency ?? 'USD',
+              transactionRef: transaction.ref,
+              paidAt: todayStr,
+              activationCode: activationKey,
+              codeStatus: 'active',
+              issuedTo: issuedTo ?? transaction.description,
+              deviceId: deviceId ?? 'OFFICE-001',
+              expiresAt: expiresAt ?? todayStr,
+            };
+            const next = [record, ...monthlyPayments];
+            setMonthlyPayments(next);
+            localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+          }
+
+          // Dispatch sync events so other components can update
+          window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
+          window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
+
           setIsLicenseModalOpen(false);
           setActiveSubscriptionForLicense(null);
-          setLicenses(getAllLicenses());
         }}
         defaultIssuedTo={user?.name ?? 'Munyaka Primary & Junior School'}
-        defaultSubscriptionName={activeSubscriptionForLicense?.name}
+        defaultSubscriptionName={activeSubscriptionForLicense?.name ?? ''}
+        hideLearnerSelection={true}
+        hideActivationKey={false}
       />
 
       {/* Receipt Modal */}
