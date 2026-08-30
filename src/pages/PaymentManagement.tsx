@@ -1627,40 +1627,9 @@ const PaymentManagement = () => {
                                                   </Card>
                                                 )}
                                               </div>
-                                    
-                                              {/* Quick Record Payment Banner — consolidated from the removed "Record & Generate" tab */}
-                                              <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden w-full">
-                                                <CardContent className="p-8 md:p-10">
-                                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                                    <div className="space-y-2">
-                                                      <div className="flex items-center gap-2">
-                                                        <div className="p-2 bg-white/20 rounded-xl">
-                                                          <CreditCard size={20} className="text-white" />
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
-                                                          Single Unified Workflow
-                                                        </span>
-                                                      </div>
-                                                      <h2 className="text-2xl font-black">Record License Payment</h2>
-                                                      <p className="text-indigo-200 text-sm max-w-lg">
-                                                        Select a payment method, enter transaction details, and instantly generate an activation key — all in one place. The payment is automatically logged to the Invoice History.
-                                                      </p>
-                                                    </div>
-                                                    <Button
-                                                      onClick={() => {
-                                                        setActiveSubscriptionForLicense(subscriptions[0] ?? null);
-                                                        setIsLicenseModalOpen(true);
-                                                      }}
-                                                      className="rounded-2xl h-14 px-10 bg-white text-indigo-700 hover:bg-indigo-50 font-black text-base shadow-2xl shadow-black/20 gap-2 shrink-0"
-                                                    >
-                                                      <Sparkles size={18} /> Open Payment Form
-                                                    </Button>
-                                                  </div>
-                                                </CardContent>
-                                              </Card>
-                                    
+
                                               {/* Activation Code Management — consolidated from the removed "Record & Generate" tab */}
-                                              <div className="space-y-4 mt-4">
+                                              <div className="space-y-4 mt-8">
                                                 <div className="flex items-center justify-between">
                                                   <div>
                                                     <h2 className="text-lg font-black text-slate-900">Activation Code Management</h2>
@@ -1675,19 +1644,19 @@ const PaymentManagement = () => {
                                                 </div>
                                     
                                                 {monthlyPayments.length === 0 ? (
-                                                  <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-16 text-center">
-                                                    <div className="flex flex-col items-center gap-4">
-                                                      <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
-                                                        <Key size={32} />
-                                                      </div>
-                                                      <div>
-                                                        <p className="text-base font-black text-slate-700">No Codes Generated Yet</p>
-                                                        <p className="text-sm text-slate-400 font-medium mt-1">
-                                                          Record a monthly payment above to generate your first activation code.
-                                                        </p>
-                                                      </div>
-                                                    </div>
-                                                  </Card>
+                                                                                                  <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-16 text-center">
+                                                                                                    <div className="flex flex-col items-center gap-4">
+                                                                                                      <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                                                                                                        <Key size={32} />
+                                                                                                      </div>
+                                                                                                      <div>
+                                                                                                        <p className="text-base font-black text-slate-700">No Codes Generated Yet</p>
+                                                                                                        <p className="text-sm text-slate-400 font-medium mt-1">
+                                                                                                          Record a payment to generate your first activation code.
+                                                                                                        </p>
+                                                                                                      </div>
+                                                                                                    </div>
+                                                                                                  </Card>
                                                 ) : (
                                                   <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
                                                     <CardContent className="p-0">
