@@ -84,40 +84,54 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
 };
 
 /**
- * Resolve the active password for a given admin role.
+ * Resolve the active password for a given admin role — called fresh on
+ * every login attempt so it always reflects the latest localStorage state.
  *
  * Priority order:
- *   1. A custom PIN saved in localStorage under the role's
- *      `customPasswordKey` (e.g. "munyaka_sysadmin_pass"). This is
- *      kept in sync by `AuthContext.updatePassword` and the
- *      Configuration / Settings page whenever the admin changes
- *      their password.
- *   2. The shared legacy key `munyaka_admin_pass` — used by
- *      several other modules (Fees, Grades, Attendance, etc.) so
- *      that a PIN updated from any of those screens is honoured
- *      here too.
- *   3. The hard-coded default PIN for that role
- *      (e.g. "sysadmin2026") as a last-resort fallback so the
- *      default admin can still sign in on a brand-new device where
- *      no custom PIN has ever been set.
+ *   1. Custom PIN under the role's `customPasswordKey`
+ *      (`munyaka_sysadmin_pass` / `munyaka_owner_pass`).  This is what
+ *      the Configuration / Security / Settings tab writes when the admin
+ *      changes their PIN.
+ *   2. Shared legacy key `munyaka_admin_pass` — used by Fees, Grades,
+ *      Attendance, ICT, etc. so a PIN updated from any of those screens
+ *      is honoured here too.
+ *   3. Hard-coded default (`sysadmin2026` / `ownerpass2026`) as a
+ *      last-resort fallback for brand-new devices.
+ *
+ * All returned values are .trim()'d to guard against accidental whitespace
+ * or newline characters that could cause a comparison to silently fail.
  */
 const resolveAdminPassword = (
   role: AdminRole,
 ): { password: string; source: PasswordSource } => {
   const config = ROLE_CONFIGS[role];
-  try {
-    const stored =
-      localStorage.getItem(config.customPasswordKey) ??
-      (role === 'system_admin'
-        ? localStorage.getItem('munyaka_admin_pass')
-        : localStorage.getItem('munyaka_admin_pass'));
-    if (stored && stored.trim().length > 0) {
-      return { password: stored.trim(), source: 'custom' };
+
+  const tryRead = (key: string | null): string | null => {
+    if (!key) return null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw != null) {
+        // Normalise: trim whitespace and strip any trailing newlines
+        const normalised = raw.trim();
+        if (normalised.length > 0) {
+          return normalised;
+        }
+      }
+    } catch {
+      // localStorage unavailable (private mode, quota exceeded, etc.)
     }
-  } catch {
-    // localStorage may be unavailable in private mode; fall through.
+    return null;
+  };
+
+  // Try role-specific custom key first, then the shared admin-pass key
+  const stored =
+    tryRead(config.customPasswordKey) ?? tryRead('munyaka_admin_pass');
+
+  if (stored !== null) {
+    return { password: stored, source: 'custom' };
   }
-  return { password: config.defaultPassword, source: 'default' };
+
+  return { password: config.defaultPassword.trim(), source: 'default' };
 };
 
 // ─── Staff role → redirect map ───────────────────────────────────────────────
@@ -279,8 +293,10 @@ const Login: React.FC = () => {
     e.preventDefault();
     if (!selectedAdminRole) return;
 
-    const trimmedPass = adminPassword.trim();
-    if (!trimmedPass) {
+    // Normalise the entered PIN: trim whitespace and strip newlines
+    const entered = adminPassword.trim().replace(/\n$/, '');
+
+    if (!entered) {
       setAdminAuthError('Please enter your password.');
       return;
     }
@@ -290,39 +306,71 @@ const Login: React.FC = () => {
     await new Promise(r => setTimeout(r, 600));
 
     const config = ROLE_CONFIGS[selectedAdminRole];
-    const { password: activePassword, source } = activeCredentials[selectedAdminRole];
 
-    // ── Password verification ─────────────────────────────────────────────
-    // Always accept the active (custom or default) PIN.
-    // Also always accept the role's hard-coded default as a safe fallback —
-    // this ensures the admin can sign in even if the localStorage entry
-    // is somehow empty or stale.
-    const isActiveMatch = trimmedPass === activePassword;
-    const isDefaultMatch = trimmedPass === config.defaultPassword;
-    const isValid = isActiveMatch || isDefaultMatch;
+    // ── Fresh password resolution on every attempt ─────────────────────────
+    // This is NOT read from React state (which may be stale after a
+    // Settings/Config page navigation).  We go straight to localStorage
+    // so the latest custom PIN is always used.
+    const { password: activeStored, source } = resolveAdminPassword(selectedAdminRole);
+    const defaultPin = config.defaultPassword.trim();
 
-    // Debug: log the comparison so any future mismatch is easy to trace.
-    // Mask the actual values in the production log to avoid exposing secrets.
+    // ── Debug logging (development only — never in production) ─────────────
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
-      console.debug(
-        `[AdminLogin] role=${selectedAdminRole} source=${source} ` +
-        `activeStored=${JSON.stringify(activePassword)} ` +
-        `default=${config.defaultPassword} ` +
-        `entered=${JSON.stringify(trimmedPass)} ` +
-        `activeMatch=${isActiveMatch} defaultMatch=${isDefaultMatch} valid=${isValid}`,
+      console.groupCollapsed(
+        `[AdminLogin] ${selectedAdminRole} @ ${new Date().toISOString()}`,
       );
+      // eslint-disable-next-line no-console
+      console.log(
+        '  localStorage keys read:',
+        config.customPasswordKey,
+        '| munyaka_admin_pass',
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        '  activeStored (from storage)  :',
+        JSON.stringify(activeStored),
+        '| source:',
+        source,
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        '  defaultPin (hard-coded)      :',
+        JSON.stringify(defaultPin),
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        '  entered (normalised)         :',
+        JSON.stringify(entered),
+      );
+      // eslint-disable-next-line no-console
+      console.log(
+        '  activeMatch:',
+        entered === activeStored,
+        '| defaultMatch:',
+        entered === defaultPin,
+      );
+      // eslint-disable-next-line no-console
+      console.groupEnd();
     }
 
+    // ── Password verification ─────────────────────────────────────────────
+    // Accept the custom PIN (if set) AND the default as valid — so the
+    // admin can sign in regardless of which PIN was set and whether they
+    // remember which one they used last.
+    const isActiveMatch = entered === activeStored;
+    const isDefaultMatch = entered === defaultPin;
+    const isValid = isActiveMatch || isDefaultMatch;
+
     if (!isValid) {
-      // Friendly message — don't reveal which PIN is active.
+      // Friendly error — do not reveal which PIN is active.
       setAdminAuthError(`Invalid password for ${config.label}.`);
       showError('Authentication failed');
       setIsAdminVerifying(false);
       return;
     }
 
-    const success = await login(config.email, trimmedPass);
+    const success = await login(config.email, entered);
     if (success) {
       const adminSession = {
         role: selectedAdminRole,
@@ -334,11 +382,11 @@ const Login: React.FC = () => {
       // Persist the PIN that was actually used so the profile/settings
       // pages (which also sync to these keys via AuthContext) stay in
       // sync even when the user signs in with the custom PIN.
-      localStorage.setItem('munyaka_admin_pass', activePassword);
+      localStorage.setItem('munyaka_admin_pass', activeStored);
       if (selectedAdminRole === 'super_admin') {
-        localStorage.setItem('munyaka_owner_pass', activePassword);
+        localStorage.setItem('munyaka_owner_pass', activeStored);
       } else {
-        localStorage.setItem('munyaka_sysadmin_pass', activePassword);
+        localStorage.setItem('munyaka_sysadmin_pass', activeStored);
       }
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
