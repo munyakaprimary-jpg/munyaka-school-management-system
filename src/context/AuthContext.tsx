@@ -26,6 +26,8 @@ interface AuthContextType {
   updateProfile: (data: Partial<User>) => void;
   updatePassword: (oldPass: string, newPass: string) => Promise<boolean>;
   isLoading: boolean;
+  // Role switching for testing/admin purposes
+  switchRole: (role: UserRole) => void;
 }
 
 interface RegisterData {
@@ -340,8 +342,28 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setUser(null);
   };
 
+  // Role switching for testing/admin purposes
+  const switchRole = (role: UserRole) => {
+    if (!user) return;
+    
+    const updatedUser = { ...user, role };
+    setUser(updatedUser);
+    localStorage.setItem('munyaka_session', JSON.stringify(updatedUser));
+    showSuccess(`Switched to ${role.replace('_', ' ')} role`);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated: !!user, login, register, logout, updateProfile, updatePassword, isLoading }}>
+    <AuthContext.Provider value={{ 
+      user, 
+      isAuthenticated: !!user, 
+      login, 
+      register, 
+      logout, 
+      updateProfile, 
+      updatePassword, 
+      isLoading,
+      switchRole
+    }}>
       {children}
     </AuthContext.Provider>
   );
