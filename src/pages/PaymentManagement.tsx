@@ -9,13 +9,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BackButton from '@/components/ui/BackButton';
 import Modal from '@/components/ui/Modal';
 import {
@@ -49,13 +43,15 @@ import {
   Link,
   RefreshCcw,
   Check,
-  ChevronDown,
   Copy,
   Sparkles,
   TrendingUp,
   Calendar,
   Users,
   Zap,
+  Settings as SettingsIcon,
+  CalendarDays,
+  TrendingUp as TrendingUpIcon,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
@@ -84,20 +80,16 @@ interface PaymentGateway {
   name: string;
   provider: 'mpesa' | 'paypal' | 'stripe' | 'card' | 'bank';
   enabled: boolean;
-  // M-Pesa fields
   consumerKey: string;
   consumerSecret: string;
   passkey: string;
-  shortcode: string;         // Paybill / Till number
-  // PayPal fields
+  shortcode: string;
   clientId: string;
   clientSecret: string;
   environment: 'sandbox' | 'live';
-  // Stripe fields
   stripePublishableKey: string;
   stripeSecretKey: string;
   stripeWebhookSecret: string;
-  // General
   webhookUrl: string;
   status: 'active' | 'suspended' | 'pending' | 'error';
   lastSync: string;
@@ -115,8 +107,8 @@ interface Subscription {
   currency: string;
   interval: 'monthly' | 'annual' | 'biennial';
   autoRenew: boolean;
-  billingCycleAnchor: number; // day of month 1–28
-  seats: number; // institutional license seats
+  billingCycleAnchor: number;
+  seats: number;
   features: string[];
 }
 
@@ -131,7 +123,6 @@ interface SoftwarePayment {
   paymentMethod: string;
 }
 
-/** A simple, offline payment log entry — no API integration required. */
 interface LocalPaymentEntry {
   id: string;
   mode: 'mpesa' | 'cash' | 'bank';
@@ -142,7 +133,6 @@ interface LocalPaymentEntry {
   loggedAt: string;
 }
 
-/** A recorded monthly payment and its generated activation code. */
 interface MonthlyPayment {
   id: string;
   subscriptionId: string;
@@ -151,7 +141,7 @@ interface MonthlyPayment {
   amount: string;
   currency: string;
   transactionRef: string;
-  paidAt: string;       // ISO date string
+  paidAt: string;
   activationCode: string;
   codeStatus: 'active' | 'redeemed' | 'expired';
   issuedTo: string;
@@ -162,8 +152,6 @@ interface MonthlyPayment {
 // ─────────────────────────────────────────
 // DEFAULT DATA
 // ─────────────────────────────────────────
-/** IDs of external / third-party services that should never appear in the
- *  Subscriptions list. Only the core institutional School License remains. */
 const EXTERNAL_SUBSCRIPTION_IDS = new Set(['sub-002', 'sub-003']);
 
 const DEFAULT_SUBSCRIPTIONS: Subscription[] = [
@@ -252,15 +240,10 @@ const DEFAULT_PAYMENTS: SoftwarePayment[] = [
 // ─────────────────────────────────────────
 // SHARED SYNC EVENTS
 // ─────────────────────────────────────────
-/** Fired (via window.dispatchEvent) after any payment is recorded.
- *  Listeners re-read their data from localStorage so the UI stays in sync
- *  across tabs, components, and page refreshes. */
 export const SUBSCRIPTION_UPDATED_EVENT = 'subscription-updated';
-
 export const PAYMENT_LOGGED_EVENT = 'payment-logged';
+export const CONFIG_UPDATED_EVENT = 'config-updated';
 
-/** Hook: dispatches a shared event and re-reads state from localStorage
- *  whenever the named event fires on window (cross-tab / cross-component sync). */
 function useSyncEvent(eventName: string, callback: () => void) {
   useEffect(() => {
     const handler = () => callback();
@@ -279,10 +262,10 @@ function mask(value: string): string {
 
 function getStatusBadge(status: string) {
   const styles: Record<string, { bg: string; text: string; icon: React.ReactNode }> = {
-    active:   { bg: 'bg-emerald-50 text-emerald-700 border-emerald-200', text: 'Active', icon: <CheckCircle2 size={10} /> },
+    active:   { bg: 'bg-emerald-50 text-emerald-700 border-emerald-100', text: 'Active', icon: <CheckCircle2 size={10} /> },
     cancelled:{ bg: 'bg-rose-50 text-rose-700 border-rose-200', text: 'Cancelled', icon: <XCircle size={10} /> },
     failed:   { bg: 'bg-rose-50 text-rose-700 border-rose-200', text: 'Failed', icon: <XCircle size={10} /> },
-    pending:  { bg: 'bg-amber-50 text-amber-700 border-amber-200', text: 'Pending', icon: <AlertCircle size={10} /> },
+    pending:  { bg: 'bg-amber-50 text-amber-700 border-amber-100', text: 'Pending', icon: <AlertCircle size={10} /> },
     trial:    { bg: 'bg-blue-50 text-blue-700 border-blue-200', text: 'Trial', icon: <CheckCircle2 size={10} /> },
     expired:  { bg: 'bg-slate-100 text-slate-600 border-slate-200', text: 'Expired', icon: <Ban size={10} /> },
     error:    { bg: 'bg-rose-50 text-rose-700 border-rose-200', text: 'Error', icon: <AlertTriangle size={10} /> },
@@ -296,7 +279,6 @@ function getStatusBadge(status: string) {
   );
 }
 
-// Compute days remaining until the subscription's next billing date.
 function daysUntilNextBilling(nextBilling: string): number {
   if (!nextBilling) return 0;
   const today = new Date();
@@ -322,7 +304,7 @@ const PaymentManagement = () => {
   // ── State ──────────────────────────────
   const [gateways, setGateways] = useState<PaymentGateway[]>(DEFAULT_GATEWAYS);
 
-  // Local payment log (simple manual entries — no API keys needed)
+  // Local payment log
   const [localPayments, setLocalPayments] = useState<LocalPaymentEntry[]>([]);
   const [lpForm, setLpForm] = useState(() => {
     try {
@@ -351,6 +333,17 @@ const PaymentManagement = () => {
   const [editingSubscriptionId, setEditingSubscriptionId] = useState<string | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<Partial<Subscription>>({});
 
+  // ── Configuration form state (NEW) ──
+  const [configForm, setConfigForm] = useState({
+    name: '',
+    plan: '',
+    amount: '',
+    currency: 'USD',
+    nextBilling: '',
+    seats: '',
+  });
+  const [configError, setConfigError] = useState('');
+
   const [upgradeModalSub, setUpgradeModalSub] = useState<Subscription | null>(null);
   const [renewModalSub, setRenewModalSub] = useState<Subscription | null>(null);
   const [payments] = useState<SoftwarePayment[]>(DEFAULT_PAYMENTS);
@@ -362,8 +355,6 @@ const PaymentManagement = () => {
 
   // ── Monthly payment & activation code state ──
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
-  /** Persisted form snapshot so the user's last-entered values survive
-   *  page refreshes and modal close/reopen cycles. */
   const MP_FORM_SNAPSHOT_KEY = 'mp_form_snapshot';
   const [mpForm, setMpForm] = useState(() => {
     try {
@@ -402,8 +393,6 @@ const PaymentManagement = () => {
         const parsed = JSON.parse(raw);
         if (parsed.gateways?.length) setGateways(parsed.gateways);
         if (parsed.subscriptions?.length) {
-          // Filter out any external / third-party subscription cards from
-          // previous sessions so only the local institutional license remains.
           const localOnly = parsed.subscriptions.filter(
             (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
           );
@@ -413,23 +402,17 @@ const PaymentManagement = () => {
         // Use defaults
       }
     }
-    // Load issued licenses
     setLicenses(getAllLicenses());
-    // Load monthly payment history
     const mpRaw = localStorage.getItem('munyaka_monthly_payments');
     if (mpRaw) {
       try {
         const parsed = JSON.parse(mpRaw);
         if (Array.isArray(parsed)) setMonthlyPayments(parsed);
-      } catch {
-        // ignore
-      }
+      } catch { /* ignore */ }
     }
   }, []);
 
-  // ── Sync hooks ──────────────────────────────────────────────────────
-  // Re-read subscriptions and licenses from localStorage whenever another
-  // handler fires a payment event — covers cross-tab and cross-component sync.
+  // ── Sync hooks ───────────────────────────────────────────────
   useSyncEvent(SUBSCRIPTION_UPDATED_EVENT, () => {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) {
@@ -463,8 +446,21 @@ const PaymentManagement = () => {
     }
   });
 
-  // Listen for cross-tab localStorage changes so a payment recorded in
-  // another tab (or window) instantly reflects here as well.
+  // ── Configuration form: prefill when subscription data is available ──
+  useEffect(() => {
+    if (subscriptions.length === 0) return;
+    const primary = subscriptions[0];
+    setConfigForm(prev => ({
+      // Only fill fields that the user hasn't already touched in this session
+      name: prev.name || primary.name,
+      plan: prev.plan || primary.plan,
+      amount: prev.amount || primary.amount,
+      currency: prev.currency || primary.currency,
+      nextBilling: prev.nextBilling || primary.nextBilling,
+      seats: prev.seats || String(primary.seats),
+    }));
+  }, [subscriptions]);
+
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key === STORAGE_KEY || e.key === null) {
@@ -487,9 +483,6 @@ const PaymentManagement = () => {
     return () => window.removeEventListener('storage', onStorage);
   }, []);
 
-  // When the user switches back to the Subscriptions tab, re-read all
-  // subscription data from localStorage so the card reflects the most
-  // recent payment without requiring a page refresh.
   useEffect(() => {
     if (activeTab !== 'subscriptions') return;
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -507,14 +500,11 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
   }, [activeTab]);
 
-  // Single, module-level guard so the prefill useEffect fires **at most
-  // once per session** regardless of how many times subscriptions re-fetches
-  // or how often subscriptionId is reset.
   const didPrefillRef = useRef(false);
   useEffect(() => {
-    if (didPrefillRef.current) return;            // already ran this session
-    if (subscriptions.length === 0) return;         // nothing to prefill from
-    didPrefillRef.current = true;                  // mark as done
+    if (didPrefillRef.current) return;
+    if (subscriptions.length === 0) return;
+    didPrefillRef.current = true;
     setMpForm(f => ({
       ...f,
       subscriptionId: subscriptions[0].id,
@@ -525,7 +515,67 @@ const PaymentManagement = () => {
 
   const markChanged = () => setHasUnsavedChanges(true);
 
-  // ── Local payment log ──────────────────────────────────────────────
+  // ── Configuration tab handlers (NEW) ──
+  const updateConfigField = (field: keyof typeof configForm, value: string) => {
+    setConfigForm(prev => ({ ...prev, [field]: value }));
+    setConfigError('');
+  };
+
+  const handleSaveConfig = async () => {
+    // Validate required fields
+    if (!configForm.name.trim()) {
+      setConfigError('Please enter a subscription plan name.');
+      return;
+    }
+    if (!configForm.plan.trim()) {
+      setConfigError('Please enter the plan name (e.g., Enterprise Plan).');
+      return;
+    }
+    if (!configForm.amount.trim() || isNaN(parseFloat(configForm.amount))) {
+      setConfigError('Please enter a valid amount.');
+      return;
+    }
+    if (configForm.seats.trim() && (isNaN(parseInt(configForm.seats)) || parseInt(configForm.seats) < 0)) {
+      setConfigError('Institutional seats must be a non-negative number.');
+      return;
+    }
+
+    setIsSaving(true);
+    await new Promise(r => setTimeout(r, 700));
+
+    // Persist the new config into the first subscription record.
+    const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const seats = configForm.seats.trim() ? parseInt(configForm.seats) : 0;
+
+    const updatedSubscriptions = subscriptions.map((s, idx) =>
+      idx === 0
+        ? {
+            ...s,
+            name: configForm.name.trim(),
+            plan: configForm.plan.trim(),
+            amount: configForm.amount.trim(),
+            currency: configForm.currency,
+            nextBilling: nextBillingDate,
+            seats,
+          }
+        : s
+    );
+
+    setSubscriptions(updatedSubscriptions);
+    localStorage.setItem(
+      STORAGE_KEY,
+      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+    );
+    setHasUnsavedChanges(false);
+    setIsSaving(false);
+
+    // Notify other listeners (including the subscription status card on this page)
+    window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
+    window.dispatchEvent(new Event(CONFIG_UPDATED_EVENT));
+    showSuccess('Configuration saved successfully!');
+  };
+
+  // ── Local payment log ─────────────────────────────────────────────
   useEffect(() => {
     const raw = localStorage.getItem('munyaka_local_payments');
     if (raw) {
@@ -540,7 +590,6 @@ const PaymentManagement = () => {
     if (!lpForm.amount.trim()) { showError('Enter an amount.'); return; }
     if (!lpForm.reference.trim()) { showError('Enter a reference / receipt number.'); return; }
 
-    // Advance the subscription billing date and mark active.
     const today = new Date();
     const newNextBilling = new Date(today);
     newNextBilling.setDate(newNextBilling.getDate() + 30);
@@ -635,8 +684,6 @@ const PaymentManagement = () => {
   const handleSubscriptionChange = (id: string) => {
     const sub = subscriptions.find(s => s.id === id);
     setMpForm(f => {
-      // Only adopt the new plan's amount / currency if the user hasn't
-      // already manually changed those fields.
       const stillMatchesAPlan = subscriptions.some(
         s => s.id !== id && s.amount === f.amount && s.currency === f.currency
       );
@@ -655,8 +702,6 @@ const PaymentManagement = () => {
     });
   };
 
-  /** Persist MP form snapshot to localStorage so the user's exact
-   *  selected values survive a page refresh / modal reopen. */
   const persistMpForm = (snapshot: any) => {
     try {
       localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(snapshot));
@@ -682,7 +727,6 @@ const PaymentManagement = () => {
     const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
     const subName = sub?.name ?? 'Subscription';
 
-    // 1) Issue a real license
     const issued = issueLicense({
       issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
       deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
@@ -696,7 +740,6 @@ const PaymentManagement = () => {
       notes: `Monthly payment for ${subName}`,
     });
 
-    // 2) Advance the subscription billing date by 30 days and mark active.
     const today = new Date();
     const newNextBilling = new Date(today);
     newNextBilling.setDate(newNextBilling.getDate() + 30);
@@ -714,7 +757,6 @@ const PaymentManagement = () => {
     );
     setHasUnsavedChanges(false);
 
-    // 3) Persist a parallel monthly-payment record for the history table.
     const record: MonthlyPayment = {
       id: `mp-${Date.now()}`,
       subscriptionId: mpForm.subscriptionId,
@@ -734,11 +776,9 @@ const PaymentManagement = () => {
     setMonthlyPayments(nextPayments);
     localStorage.setItem('munyaka_monthly_payments', JSON.stringify(nextPayments));
 
-    // 4) Refresh license list & reveal the generated code.
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
 
-    // 5) Persist form state to localStorage
     const finalSnapshot = {
       subscriptionId: '',
       paymentMode: mpForm.paymentMode,
@@ -752,7 +792,6 @@ const PaymentManagement = () => {
       localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(finalSnapshot));
     } catch { /* storage may be unavailable in private mode */ }
 
-    // 6) Reset form and close the modal so it reopens in a clean default state.
     setMpForm(f => ({ ...f, transactionRef: '', subscriptionId: '' }));
     setIsRecordingPayment(false);
     setIsLicenseModalOpen(false);
@@ -867,16 +906,14 @@ const PaymentManagement = () => {
     );
   };
 
-  // ── Subscriptions tab top summary derived values ────────────────────
+  // ── Subscriptions tab top summary derived values ────────────────
   const primarySub = subscriptions[0];
   const daysToRenewal = primarySub ? daysUntilNextBilling(primarySub.nextBilling) : 0;
   const activeLicenses = licenses.filter(l => l.status === 'active' && l.expiresAt >= new Date().toISOString().slice(0, 10));
   const totalMonthlyPaid = monthlyPayments.reduce((acc, p) => {
-    // Only count payments for the current year to keep the "monthly" label honest.
     if (new Date(p.paidAt).getFullYear() !== new Date().getFullYear()) return acc;
     const numeric = parseFloat(p.amount);
     if (isNaN(numeric)) return acc;
-    // Normalize to USD (very rough; we only need a comparable number for the summary)
     const rate = p.currency === 'USD' ? 1 : p.currency === 'EUR' ? 1.08 : 0.0077;
     return acc + numeric * rate;
   }, 0);
@@ -932,7 +969,7 @@ const PaymentManagement = () => {
       </div>
 
       {/* ──────────────────────────────────────── */}
-      {/* SUBSCRIPTION OVERVIEW SUMMARY (always visible at top) */}
+      {/* SUBSCRIPTION OVERVIEW SUMMARY */}
       {/* ──────────────────────────────────────── */}
       {primarySub && (
         <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden">
@@ -965,7 +1002,7 @@ const PaymentManagement = () => {
               {/* Financials */}
               <div className="md:col-span-1 space-y-2 bg-white/5 rounded-2xl p-4 border border-white/10">
                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 flex items-center gap-1.5">
-                  <TrendingUp size={10} /> Current Bill
+                  <TrendingUpIcon size={10} /> Current Bill
                 </p>
                 <p className="text-3xl font-black">
                   {primarySub.currency} {primarySub.amount}
@@ -995,7 +1032,7 @@ const PaymentManagement = () => {
                 </p>
                 <div className="grid grid-cols-1 gap-2">
                   <button
-                    onClick={() => setActiveTab('monthly')}
+                    onClick={() => setActiveTab('record')}
                     className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
                   >
                     <span className="flex items-center gap-2 font-bold text-sm">
@@ -1004,7 +1041,7 @@ const PaymentManagement = () => {
                     <Zap size={14} className="text-amber-300" />
                   </button>
                   <button
-                    onClick={() => setActiveTab('monthly')}
+                    onClick={() => setActiveTab('record')}
                     className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
                   >
                     <span className="flex items-center gap-2 font-bold text-sm">
@@ -1013,7 +1050,7 @@ const PaymentManagement = () => {
                     <Sparkles size={14} className="text-emerald-300" />
                   </button>
                   <button
-                    onClick={() => setActiveTab('monthly')}
+                    onClick={() => setActiveTab('history')}
                     className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
                   >
                     <span className="flex items-center gap-2 font-bold text-sm">
@@ -1037,13 +1074,16 @@ const PaymentManagement = () => {
           <TabsTrigger value="subscriptions" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <RefreshCw size={15} /> License Details
           </TabsTrigger>
-          <TabsTrigger value="monthly" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+          <TabsTrigger value="configuration" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+            <SettingsIcon size={15} /> Configuration
+          </TabsTrigger>
+          <TabsTrigger value="record" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <Sparkles size={15} /> Record & Generate
           </TabsTrigger>
           <TabsTrigger value="gateways" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <Globe size={15} /> Payment Gateways
           </TabsTrigger>
-          <TabsTrigger value="payments" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
+          <TabsTrigger value="history" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <DollarSign size={15} /> Invoice History
           </TabsTrigger>
         </TabsList>
@@ -1085,7 +1125,6 @@ const PaymentManagement = () => {
                 </CardHeader>
 
                 <CardContent className="space-y-4">
-                  {/* Plan & interval */}
                   <div className="grid grid-cols-2 gap-3">
                     <div className="bg-slate-50 rounded-2xl p-3">
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Plan</p>
@@ -1097,7 +1136,6 @@ const PaymentManagement = () => {
                     </div>
                   </div>
 
-                  {/* Amount & billing */}
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
@@ -1109,7 +1147,6 @@ const PaymentManagement = () => {
                     </div>
                   </div>
 
-                  {/* Billing cycle anchor */}
                   <div className="bg-slate-50 rounded-2xl p-3">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Billing Cycle</p>
                     {editingSubscriptionId === sub.id ? (
@@ -1136,7 +1173,6 @@ const PaymentManagement = () => {
                     )}
                   </div>
 
-                  {/* Seats */}
                   <div className="bg-slate-50 rounded-2xl p-3 flex items-center justify-between">
                     <div>
                       <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Institutional Seats</p>
@@ -1159,7 +1195,6 @@ const PaymentManagement = () => {
                     </div>
                   </div>
 
-                  {/* Features */}
                   <div className="flex flex-wrap gap-1.5">
                     {sub.features.map(f => (
                       <Badge key={f} className="bg-slate-100 text-slate-600 border-none font-bold text-[10px]">
@@ -1170,7 +1205,6 @@ const PaymentManagement = () => {
 
                   <Separator className="my-2" />
 
-                  {/* Controls */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
@@ -1183,7 +1217,6 @@ const PaymentManagement = () => {
                       </div>
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex gap-2 flex-wrap">
                       {sub.status === 'active' || sub.status === 'trial' ? (
                         <>
@@ -1216,14 +1249,12 @@ const PaymentManagement = () => {
                       )}
                     </div>
 
-                    {/* Record Payment & Generate License Key (single primary action) */}
                     <Button
                       variant="default"
                       size="sm"
                       onClick={() => {
                         setActiveSubscriptionForLicense(sub);
-                        setActiveTab('monthly');
-                        // Slight delay so the tab switch + form prefill completes
+                        setActiveTab('record');
                         setTimeout(() => {
                           setIsLicenseModalOpen(true);
                         }, 50);
@@ -1398,9 +1429,197 @@ const PaymentManagement = () => {
         </TabsContent>
 
         {/* ──────────────────────────────────────── */}
+        {/* CONFIGURATION TAB (NEW) */}
+        {/* ──────────────────────────────────────── */}
+        <TabsContent value="configuration" className="space-y-6">
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="p-8 border-b bg-slate-50/30">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
+                  <SettingsIcon size={20} />
+                </div>
+                <div>
+                  <CardTitle className="text-lg font-black text-slate-900">Subscription Configuration</CardTitle>
+                  <CardDescription>
+                    Configure the institutional plan details, billing, and seat limits.
+                    Changes save to <code className="bg-slate-200/60 px-1.5 py-0.5 rounded text-[11px] font-mono">localStorage</code> and update the status card above.
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-8 space-y-6">
+              {configError && (
+                <div className="p-3 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-2.5 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                  <AlertCircle size={16} /> {configError}
+                </div>
+              )}
+
+              {/* Plan Name + Plan Label (2-col) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Subscription Plan Name
+                  </Label>
+                  <div className="relative">
+                    <Building2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      value={configForm.name}
+                      onChange={e => updateConfigField('name', e.target.value)}
+                      placeholder="e.g. Munyaka School License"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-base"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Plan Label (Tier)
+                  </Label>
+                  <div className="relative">
+                    <Sparkles className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      value={configForm.plan}
+                      onChange={e => updateConfigField('plan', e.target.value)}
+                      placeholder="e.g. Enterprise Plan"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-base"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Amount + Currency (2-col) */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="md:col-span-2 space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Amount
+                  </Label>
+                  <div className="relative">
+                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={configForm.amount}
+                      onChange={e => updateConfigField('amount', e.target.value)}
+                      placeholder="e.g. 299.00"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-black text-base"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Currency
+                  </Label>
+                  <Select
+                    value={configForm.currency}
+                    onValueChange={v => updateConfigField('currency', v)}
+                  >
+                    <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                      <SelectValue placeholder="Select currency..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USD">USD — US Dollar</SelectItem>
+                      <SelectItem value="KES">KES — Kenyan Shilling</SelectItem>
+                      <SelectItem value="EUR">EUR — Euro</SelectItem>
+                      <SelectItem value="GBP">GBP — British Pound</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              {/* Next Billing + Seats (2-col) */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Next Billing Date
+                  </Label>
+                  <div className="relative">
+                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      type="date"
+                      value={configForm.nextBilling}
+                      onChange={e => updateConfigField('nextBilling', e.target.value)}
+                      placeholder="YYYY-MM-DD"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-bold text-base"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    When the next payment will be debited. Leave blank to use +30 days from today.
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                    Institutional Seats
+                  </Label>
+                  <div className="relative">
+                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      type="number"
+                      min="0"
+                      value={configForm.seats}
+                      onChange={e => updateConfigField('seats', e.target.value)}
+                      placeholder="e.g. 500"
+                      className="h-14 pl-12 rounded-2xl bg-slate-50 border-none font-black text-base"
+                    />
+                  </div>
+                  <p className="text-[10px] text-slate-400 font-medium">
+                    Maximum number of users (staff + learners) allowed under this license.
+                  </p>
+                </div>
+              </div>
+
+              {/* Live preview summary */}
+              <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3 flex items-center gap-1.5">
+                  <CheckCircle2 size={11} /> Live Preview
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Plan</p>
+                    <p className="font-black text-slate-900 truncate">
+                      {configForm.plan || '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Amount</p>
+                    <p className="font-black text-slate-900">
+                      {configForm.amount ? `${configForm.currency} ${configForm.amount}` : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Next Billing</p>
+                    <p className="font-black text-slate-900">
+                      {configForm.nextBilling
+                        ? new Date(configForm.nextBilling).toLocaleDateString()
+                        : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Seats</p>
+                    <p className="font-black text-slate-900">
+                      {configForm.seats ? `${parseInt(configForm.seats).toLocaleString()} seats` : '—'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <Button
+                onClick={handleSaveConfig}
+                disabled={isSaving}
+                className="w-full rounded-2xl h-14 bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 font-black text-white shadow-xl shadow-indigo-100 text-base gap-3"
+              >
+                {isSaving ? <Loader2 size={18} className="animate-spin" /> : <Save size={18} />}
+                {isSaving ? 'Saving Configuration…' : 'Save Configuration'}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* ──────────────────────────────────────── */}
         {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
         {/* ──────────────────────────────────────── */}
-        <TabsContent value="monthly" className="space-y-8">
+        <TabsContent value="record" className="space-y-8">
 
           {/* ── Payment Entry Form ── */}
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
@@ -1417,7 +1636,6 @@ const PaymentManagement = () => {
             </CardHeader>
             <CardContent className="p-8 space-y-6">
 
-              {/* Success banner — shown after a code is generated */}
               {lastGeneratedCode && (
                 <div className="p-5 bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-3xl animate-in fade-in slide-in-from-top-2">
                   <div className="flex items-start gap-3">
@@ -1454,7 +1672,6 @@ const PaymentManagement = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Subscription select */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                     Subscription Plan
@@ -1483,7 +1700,6 @@ const PaymentManagement = () => {
                   </Select>
                 </div>
 
-                {/* Payment mode */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                     Payment Mode
@@ -1515,7 +1731,6 @@ const PaymentManagement = () => {
                   </Select>
                 </div>
 
-                {/* Amount */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                     Amount Paid
@@ -1534,7 +1749,6 @@ const PaymentManagement = () => {
                   </div>
                 </div>
 
-                {/* Currency */}
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                     Currency
@@ -1555,7 +1769,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Transaction reference */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Transaction Reference / Receipt Number
@@ -1584,7 +1797,6 @@ const PaymentManagement = () => {
                 </p>
               </div>
 
-              {/* Issued to / Device ID */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -1610,7 +1822,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Generate button */}
               <Button
                 onClick={handleRecordPayment}
                 disabled={isRecordingPayment}
@@ -1796,7 +2007,6 @@ const PaymentManagement = () => {
         {/* ──────────────────────────────────────── */}
         <TabsContent value="gateways" className="space-y-8">
 
-          {/* ── Local payment entry form ── */}
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
@@ -1811,7 +2021,6 @@ const PaymentManagement = () => {
             </CardHeader>
             <CardContent className="p-8 space-y-5">
 
-              {/* Mode selector */}
               <div className="grid grid-cols-3 gap-3">
                 {([
                   { value: 'mpesa', label: 'M-Pesa', icon: <Smartphone size={18} />, color: 'emerald' },
@@ -1837,7 +2046,6 @@ const PaymentManagement = () => {
                 ))}
               </div>
 
-              {/* Amount + Currency */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Amount</Label>
@@ -1872,7 +2080,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Reference */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Transaction Reference / Receipt Number
@@ -1892,7 +2099,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Note */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Note (optional)
@@ -1914,7 +2120,6 @@ const PaymentManagement = () => {
             </CardContent>
           </Card>
 
-          {/* ── Local payment log table ── */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -2015,7 +2220,7 @@ const PaymentManagement = () => {
         {/* ──────────────────────────────────────── */}
         {/* INVOICE HISTORY TAB */}
         {/* ──────────────────────────────────────── */}
-        <TabsContent value="payments" className="space-y-6">
+        <TabsContent value="history" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
@@ -2060,9 +2265,7 @@ const PaymentManagement = () => {
         </TabsContent>
       </Tabs>
 
-      {/* ──────────────────────────────────────── */}
       {/* UPGRADE MODAL */}
-      {/* ──────────────────────────────────────── */}
       <Modal
         isOpen={!!upgradeModalSub}
         onClose={() => setUpgradeModalSub(null)}
@@ -2129,9 +2332,7 @@ const PaymentManagement = () => {
         </div>
       </Modal>
 
-      {/* ──────────────────────────────────────── */}
       {/* RENEW MODAL */}
-      {/* ──────────────────────────────────────── */}
       <Modal
         isOpen={!!renewModalSub}
         onClose={() => setRenewModalSub(null)}
@@ -2208,7 +2409,7 @@ const PaymentManagement = () => {
         </div>
       </Modal>
 
-      {/* ── Record License Payment Modal ── */}
+      {/* Record License Payment Modal */}
       <RecordLicensePaymentModal
         isOpen={isLicenseModalOpen}
         onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
