@@ -195,9 +195,44 @@ const clearSession = () => {
   localStorage.removeItem(SESSION_KEY);
 };
 
+/**
+ * Read the active credential for the given admin role, trying every
+ * key the rest of the app might have written to, in priority order.
+ *
+ *  1. Role-specific Configuration → Owner Security key
+ *     (`munyaka_sysadmin_pass` / `munyaka_owner_pass`)
+ *  2. Older Configuration → System Security key (`munyaka_system_pass`)
+ *  3. Shared legacy key (`munyaka_admin_pass`) — used by Fees, Grades,
+ *     Attendance, ICT, and the "munyaka5239" fallback.
+ *  4. Hard-coded default (`sysadmin2026` / `ownerpass2026`).
+ *
+ * Each read is .trim()'d so accidental whitespace on stored values
+ * never causes a comparison to silently fail.
+ */
 const getCredential = (role: AdminRole): string => {
-  return localStorage.getItem(role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN) 
-    || (role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN);
+  const primaryKey = role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
+  const defaultPass = role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN;
+
+  const tryRead = (key: string | null): string | null => {
+    if (!key) return null;
+    try {
+      const raw = localStorage.getItem(key);
+      if (raw != null) {
+        const normalised = raw.trim();
+        if (normalised.length > 0) return normalised;
+      }
+    } catch {
+      /* localStorage unavailable */
+    }
+    return null;
+  };
+
+  return (
+    tryRead(primaryKey) ??
+    tryRead('munyaka_system_pass') ??
+    tryRead('munyaka_admin_pass') ??
+    defaultPass.trim()
+  );
 };
 
 const Settings = () => {
@@ -362,9 +397,28 @@ const Settings = () => {
     const currentRole = session?.role;
     if (!currentRole) return;
 
-    const storedPassword = getCredential(currentRole);
+    // Normalise the entered "current" password and the stored value so
+    // a stray whitespace / newline never blocks a legitimate update.
+    const enteredCurrent = passwordForm.currentPassword.trim();
+    if (!enteredCurrent) {
+      showError("Please enter your current password.");
+      return;
+    }
 
-    if (passwordForm.currentPassword !== storedPassword) {
+    // Look up the active stored value AND the hard-coded default. Either
+    // one is accepted as a valid "current password" — this mirrors the
+    // login page's own dual-mode check so a saved-or-default flow works
+    // the same way in both directions.
+    const storedPassword = getCredential(currentRole);
+    const defaultPassword =
+      currentRole === 'system_admin'
+        ? DEFAULT_PASSWORDS.SYSTEM_ADMIN
+        : DEFAULT_PASSWORDS.SUPER_ADMIN;
+
+    const isCurrentValid =
+      enteredCurrent === storedPassword || enteredCurrent === defaultPassword;
+
+    if (!isCurrentValid) {
       showError("Current password is incorrect.");
       return;
     }
@@ -382,8 +436,28 @@ const Settings = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    const credKey = currentRole === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
-    localStorage.setItem(credKey, passwordForm.newPassword);
+    const newPin = passwordForm.newPassword.trim();
+
+    // ── Write the new PIN to every key the rest of the app reads from,
+    //    so the Login page (which checks Configuration, legacy and
+    //    shared keys) and the AuthContext stay perfectly in sync.
+    const credKey = currentRole === 'system_admin'
+      ? CRED_KEYS.SYSTEM_ADMIN
+      : CRED_KEYS.SUPER_ADMIN;
+
+    try {
+      localStorage.setItem(credKey, newPin);
+      // Legacy Configuration → System Security key (older builds)
+      localStorage.setItem('munyaka_system_pass', newPin);
+      // Shared legacy key — used by Fees, Grades, Attendance, ICT, and
+      // the "munyaka5239" fallback. Writing here means subsequent
+      // updates in any module that reads this key see the same value.
+      localStorage.setItem('munyaka_admin_pass', newPin);
+    } catch {
+      showError("Could not save the new password to local storage.");
+      setIsSaving(false);
+      return;
+    }
 
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
@@ -394,11 +468,16 @@ const Settings = () => {
     const updatedLogs = [newLog, ...auditLogs];
     setAuditLogs(updatedLogs);
 
+    // ── Smooth close: clear all fields, close the modal, then show a
+    //    confirmation that explicitly states the new PIN is now active
+    //    for the login page.
     setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     setIsSaving(false);
     setIsPasswordModalOpen(false);
     setHasUnsavedChanges(true);
-    showSuccess(`${session.roleLabel} credential updated successfully!`);
+    showSuccess(
+      `${session.roleLabel} password updated — your new PIN is now active on the login page.`,
+    );
   };
 
   const strength = useMemo(() => getPasswordStrength(passwordForm.newPassword), [passwordForm.newPassword]);
