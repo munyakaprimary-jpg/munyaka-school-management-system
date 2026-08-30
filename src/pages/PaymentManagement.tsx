@@ -334,7 +334,6 @@ const PaymentManagement = () => {
 
   // ── Configuration form state (NEW) ──
   const [configForm, setConfigForm] = useState(() => {
-    // Initialize from localStorage first (munyaka_subscription_config)
     try {
       const saved = localStorage.getItem(SUBSCRIPTION_CONFIG_KEY);
       if (saved) {
@@ -352,7 +351,6 @@ const PaymentManagement = () => {
         }
       }
     } catch { /* ignore */ }
-    // Fallback to defaults
     return {
       name: '',
       plan: '',
@@ -472,7 +470,6 @@ const PaymentManagement = () => {
     if (subscriptions.length === 0) return;
     const primary = subscriptions[0];
     setConfigForm(prev => ({
-      // Only fill fields that the user hasn't already touched in this session
       name: prev.name || primary.name,
       plan: prev.plan || primary.plan,
       amount: prev.amount || primary.amount,
@@ -544,7 +541,6 @@ const PaymentManagement = () => {
   };
 
   const handleSaveConfig = async () => {
-    // Validate required fields
     if (!configForm.name.trim()) {
       setConfigError('Please enter a subscription plan name.');
       return;
@@ -565,7 +561,6 @@ const PaymentManagement = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 700));
 
-    // Build the complete config object with all fields
     const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const seats = configForm.seats.trim() ? parseInt(configForm.seats) : 0;
 
@@ -579,10 +574,8 @@ const PaymentManagement = () => {
       tier: configForm.tier,
     };
 
-    // 1. Persist to dedicated subscription config key
     localStorage.setItem(SUBSCRIPTION_CONFIG_KEY, JSON.stringify(configToSave));
 
-    // 2. Also update the first subscription record for backward compatibility
     const updatedSubscriptions = subscriptions.map((s, idx) =>
       idx === 0
         ? {
@@ -606,7 +599,6 @@ const PaymentManagement = () => {
     setHasUnsavedChanges(false);
     setIsSaving(false);
 
-    // Notify other listeners (including the subscription status card on this page)
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(CONFIG_UPDATED_EVENT));
     window.dispatchEvent(new CustomEvent('subscription-config-updated', { detail: configToSave }));
@@ -958,7 +950,7 @@ const PaymentManagement = () => {
 
   // ── Render ─────────────────────────────
   return (
-    <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
         <div>
@@ -1001,12 +993,11 @@ const PaymentManagement = () => {
       {/* SUBSCRIPTION OVERVIEW SUMMARY */}
       {/* ──────────────────────────────────────── */}
       {primarySub && (
-        <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden">
+        <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden w-full">
           <CardContent className="p-7 md:p-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
               {/* Plan & status */}
-              <div className="md:col-span-1 space-y-3">
+              <div className="md:col-span-1 lg:col-span-1 space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="p-2 bg-white/15 rounded-xl">
                     <Building2 size={18} className="text-indigo-200" />
@@ -1029,7 +1020,7 @@ const PaymentManagement = () => {
               </div>
 
               {/* Financials */}
-              <div className="md:col-span-1 space-y-2 bg-white/5 rounded-2xl p-4 border border-white/10">
+              <div className="md:col-span-1 lg:col-span-1 space-y-2 bg-white/5 rounded-2xl p-4 border border-white/10">
                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 flex items-center gap-1.5">
                   <TrendingUpIcon size={10} /> Current Bill
                 </p>
@@ -1055,7 +1046,7 @@ const PaymentManagement = () => {
               </div>
 
               {/* Quick actions */}
-              <div className="md:col-span-1 space-y-2">
+              <div className="md:col-span-1 lg:col-span-1 space-y-2">
                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
                   Quick Actions
                 </p>
@@ -1121,12 +1112,12 @@ const PaymentManagement = () => {
         {/* LICENSE DETAILS TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 w-full">
             {subscriptions.map(sub => (
               <Card
                 key={sub.id}
                 className={cn(
-                  "border-none shadow-sm rounded-[2rem] overflow-hidden transition-all",
+                  "border-none shadow-sm rounded-[2rem] overflow-hidden transition-all w-full",
                   editingSubscriptionId === sub.id ? "ring-2 ring-indigo-400 shadow-xl" : ""
                 )}
               >
@@ -1357,7 +1348,7 @@ const PaymentManagement = () => {
                 </div>
               </Card>
             ) : (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left min-w-[900px]">
@@ -1461,7 +1452,7 @@ const PaymentManagement = () => {
         {/* CONFIGURATION TAB (NEW) */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="configuration" className="space-y-6">
-          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
@@ -1483,7 +1474,6 @@ const PaymentManagement = () => {
                 </div>
               )}
 
-              {/* Plan Name + Plan Label (2-col) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -1516,7 +1506,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Amount + Currency (2-col) */}
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="md:col-span-2 space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -1556,7 +1545,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Next Billing + Seats (2-col) */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -1598,7 +1586,6 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
-              {/* Tier selector */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Subscription Tier
@@ -1618,7 +1605,6 @@ const PaymentManagement = () => {
                 </Select>
               </div>
 
-              {/* Live preview summary */}
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3 flex items-center gap-1.5">
                   <CheckCircle2 size={11} /> Live Preview
@@ -1675,9 +1661,7 @@ const PaymentManagement = () => {
         {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="record" className="space-y-8">
-
-          {/* ── Payment Entry Form ── */}
-          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
@@ -1892,7 +1876,6 @@ const PaymentManagement = () => {
             </CardContent>
           </Card>
 
-          {/* ── Activation Code Management List ── */}
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -1922,7 +1905,7 @@ const PaymentManagement = () => {
                 </div>
               </Card>
             ) : (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left min-w-[900px]">
@@ -2061,8 +2044,7 @@ const PaymentManagement = () => {
         {/* PAYMENT GATEWAYS TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="gateways" className="space-y-8">
-
-          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-emerald-100 text-emerald-600 rounded-xl">
@@ -2075,7 +2057,6 @@ const PaymentManagement = () => {
               </div>
             </CardHeader>
             <CardContent className="p-8 space-y-5">
-
               <div className="grid grid-cols-3 gap-3">
                 {([
                   { value: 'mpesa', label: 'M-Pesa', icon: <Smartphone size={18} />, color: 'emerald' },
@@ -2198,7 +2179,7 @@ const PaymentManagement = () => {
                 </div>
               </Card>
             ) : (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left min-w-[700px]">
@@ -2276,7 +2257,7 @@ const PaymentManagement = () => {
         {/* INVOICE HISTORY TAB */}
         {/* ──────────────────────────────────────── */}
         <TabsContent value="history" className="space-y-6">
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-xl">
