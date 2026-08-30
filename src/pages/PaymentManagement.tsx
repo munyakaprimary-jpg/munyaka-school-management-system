@@ -10,7 +10,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
 import BackButton from "@/components/ui/BackButton";
 import Modal from "@/components/ui/Modal";
 import {
@@ -368,28 +367,12 @@ const PaymentManagement = () => {
     const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
   
     // ── Delete License Modal State ──
-      const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-      const [licenseToDelete, setLicenseToDelete] = useState<License | null>(null);
-      const [deletePassword, setDeletePassword] = useState('');
-      const [deletePasswordError, setDeletePasswordError] = useState('');
-      const [isDeleting, setIsDeleting] = useState(false);
-      const [showDeletePassword, setShowDeletePassword] = useState(false);
-    
-      // ── Bulk Delete State ──
-      const [selectedLicenseIds, setSelectedLicenseIds] = useState<Set<string>>(new Set());
-      const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-      const [bulkDeletePassword, setBulkDeletePassword] = useState('');
-      const [bulkDeletePasswordError, setBulkDeletePasswordError] = useState('');
-      const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-      const [showBulkDeletePassword, setShowBulkDeletePassword] = useState(false);
-    
-      // ── Bulk Select / Bulk Delete State ──
-      const [selectedLicenseIds, setSelectedLicenseIds] = useState<Set<string>>(new Set());
-      const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
-      const [bulkDeletePassword, setBulkDeletePassword] = useState('');
-      const [bulkDeleteError, setBulkDeleteError] = useState('');
-      const [isBulkDeleting, setIsBulkDeleting] = useState(false);
-      const [showBulkDeletePassword, setShowBulkDeletePassword] = useState(false);
+    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+    const [licenseToDelete, setLicenseToDelete] = useState<License | null>(null);
+    const [deletePassword, setDeletePassword] = useState('');
+    const [deletePasswordError, setDeletePasswordError] = useState('');
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   // ── Monthly payment & activation code state ──
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
@@ -862,162 +845,10 @@ const PaymentManagement = () => {
       localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
   
       showSuccess(`License ${licenseToDelete.activationKey.slice(0, 12)}... deleted successfully.`);
-            setIsDeleteModalOpen(false);
-            setLicenseToDelete(null);
-            setIsDeleting(false);
-          };
-      
-        // ── Bulk Select / Bulk Delete Handlers ──
-        const toggleSelectLicense = (id: string) => {
-          setSelectedLicenseIds(prev => {
-            const next = new Set(prev);
-            if (next.has(id)) {
-              next.delete(id);
-            } else {
-              next.add(id);
-            }
-            return next;
-          });
-        };
-      
-        const toggleSelectAllLicenses = () => {
-          if (selectedLicenseIds.size === licenses.length && licenses.length > 0) {
-            setSelectedLicenseIds(new Set());
-          } else {
-            setSelectedLicenseIds(new Set(licenses.map(l => l.id)));
-          }
-        };
-      
-        const openBulkDeleteModal = () => {
-          if (selectedLicenseIds.size === 0) return;
-          setBulkDeletePassword('');
-          setBulkDeletePasswordError('');
-          setIsBulkDeleteModalOpen(true);
-        };
-      
-        const confirmBulkDelete = async () => {
-          if (selectedLicenseIds.size === 0) return;
-          setIsBulkDeleting(true);
-          setBulkDeletePasswordError('');
-      
-          // Verify owner password
-          const OWNER_EMAIL = 'munyakaprimary@gmail.com';
-          const usersJson = localStorage.getItem('munyaka_users');
-          if (!usersJson) {
-            setBulkDeletePasswordError('User store not found. Contact administrator.');
-            setIsBulkDeleting(false);
-            return;
-          }
-      
-          let owner;
-          try {
-            const users = JSON.parse(usersJson);
-            owner = users[OWNER_EMAIL];
-          } catch {
-            setBulkDeletePasswordError('User store corrupted. Contact administrator.');
-            setIsBulkDeleting(false);
-            return;
-          }
-      
-          if (!owner || !owner.password || bulkDeletePassword !== owner.password) {
-            setBulkDeletePasswordError('Incorrect password. Please try again.');
-            setIsBulkDeleting(false);
-            return;
-          }
-      
-          // Password verified — delete all selected licenses
-          const idsToDelete = new Set(selectedLicenseIds);
-          const deletedKeys = licenses
-            .filter(l => idsToDelete.has(l.id))
-            .map(l => l.activationKey);
-      
-          const updatedLicenses = licenses.filter(l => !idsToDelete.has(l.id));
-          setLicenses(updatedLicenses);
-          localStorage.setItem('munyaka_licenses', JSON.stringify(updatedLicenses));
-      
-          // Cascade: also remove any tied monthly payments
-          const deletedKeysSet = new Set(deletedKeys);
-          const updatedPayments = monthlyPayments.filter(p => !deletedKeysSet.has(p.activationCode));
-          setMonthlyPayments(updatedPayments);
-          localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
-      
-          showSuccess(`${idsToDelete.size} license${idsToDelete.size > 1 ? 's' : ''} deleted permanently.`);
-          setSelectedLicenseIds(new Set());
-          setIsBulkDeleteModalOpen(false);
-          setIsBulkDeleting(false);
-        };
-
-  // ── Bulk Select handlers ───────────────
-  const toggleSelectLicense = (id: string) => {
-    setSelectedLicenseIds(prev => {
-      const next = new Set(prev);
-      if (next.has(id)) {
-        next.delete(id);
-      } else {
-        next.add(id);
-      }
-      return next;
-    });
-  };
-
-  const toggleSelectAllLicenses = () => {
-    if (selectedLicenseIds.size === licenses.length) {
-      setSelectedLicenseIds(new Set());
-    } else {
-      setSelectedLicenseIds(new Set(licenses.map(l => l.id)));
-    }
-  };
-
-  const openBulkDeleteModal = () => {
-    if (selectedLicenseIds.size === 0) return;
-    setBulkDeletePassword('');
-    setBulkDeleteError('');
-    setIsBulkDeleteModalOpen(true);
-  };
-
-  const confirmBulkDelete = async () => {
-    if (selectedLicenseIds.size === 0) return;
-    setIsBulkDeleting(true);
-    setBulkDeleteError('');
-
-    // Verify owner password
-    const OWNER_EMAIL = 'munyakaprimary@gmail.com';
-    const usersJson = localStorage.getItem('munyaka_users');
-    if (!usersJson) {
-      setBulkDeleteError('User store not found. Contact administrator.');
-      setIsBulkDeleting(false);
-      return;
-    }
-
-    const users = JSON.parse(usersJson);
-    const owner = users[OWNER_EMAIL];
-    if (!owner || !owner.password || bulkDeletePassword !== owner.password) {
-      setBulkDeleteError('Incorrect password. Please try again.');
-      setIsBulkDeleting(false);
-      return;
-    }
-
-    // Password verified — delete all selected licenses
-    const idsToDelete = selectedLicenseIds;
-    const deletedKeys = licenses
-      .filter(l => idsToDelete.has(l.id))
-      .map(l => l.activationKey);
-
-    const updatedLicenses = licenses.filter(l => !idsToDelete.has(l.id));
-    setLicenses(updatedLicenses);
-    localStorage.setItem('munyaka_licenses', JSON.stringify(updatedLicenses));
-
-    // Cascade: also remove any tied monthly payments
-    const deletedKeysSet = new Set(deletedKeys);
-    const updatedPayments = monthlyPayments.filter(p => !deletedKeysSet.has(p.activationCode));
-    setMonthlyPayments(updatedPayments);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
-
-    showSuccess(`${idsToDelete.size} license${idsToDelete.size > 1 ? 's' : ''} deleted permanently.`);
-    setSelectedLicenseIds(new Set());
-    setIsBulkDeleteModalOpen(false);
-    setIsBulkDeleting(false);
-  };
+      setIsDeleteModalOpen(false);
+      setLicenseToDelete(null);
+      setIsDeleting(false);
+    };
 
   const startEditSubscription = (sub: Subscription) => {
     setEditingSubscriptionId(sub.id);
@@ -1750,74 +1581,34 @@ const PaymentManagement = () => {
             </div>
 
             {licenses.length === 0 ? (
-                          <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-14 text-center">
-                            <div className="flex flex-col items-center gap-3">
-                              <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
-                                <Key size={28} />
-                              </div>
-                              <p className="text-base font-black text-slate-700">No Licenses Issued Yet</p>
-                              <p className="text-sm text-slate-400 font-medium max-w-xs">
-                                Click <span className="font-bold text-indigo-600">"Record Payment & Generate License Key"</span> above to record a payment and generate your first activation code.
-                              </p>
-                            </div>
-                          </Card>
-                        ) : (
-                          <>
-                          {/* Bulk Action Toolbar — appears when at least one row is selected */}
-                          {selectedLicenseIds.size > 0 && (
-                            <div className="sticky top-2 z-20 flex flex-wrap items-center justify-between gap-3 p-3 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-200 animate-in fade-in slide-in-from-top-2 duration-200">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 bg-white/20 rounded-lg flex items-center justify-center font-black text-xs">
-                                  {selectedLicenseIds.size}
-                                </div>
-                                <span className="font-bold text-sm">
-                                  {selectedLicenseIds.size} license{selectedLicenseIds.size > 1 ? 's' : ''} selected
-                                </span>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() => setSelectedLicenseIds(new Set())}
-                                  className="rounded-xl h-9 text-xs font-bold text-white hover:bg-white/10 hover:text-white"
-                                >
-                                  Clear
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  onClick={openBulkDeleteModal}
-                                  className="rounded-xl h-9 text-xs font-black bg-red-600 hover:bg-red-700 text-white shadow-lg gap-1.5"
-                                >
-                                  <Trash2 size={14} />
-                                  Delete Selected
-                                </Button>
-                              </div>
-                            </div>
-                          )}
+              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-14 text-center">
+                <div className="flex flex-col items-center gap-3">
+                  <div className="w-14 h-14 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                    <Key size={28} />
+                  </div>
+                  <p className="text-base font-black text-slate-700">No Licenses Issued Yet</p>
+                  <p className="text-sm text-slate-400 font-medium max-w-xs">
+                    Click <span className="font-bold text-indigo-600">"Record Payment & Generate License Key"</span> above to record a payment and generate your first activation code.
+                  </p>
+                </div>
+              </Card>
+            ) : (
               <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
                 <CardContent className="p-0">
                   <div className="overflow-x-auto">
                     <table className="w-full text-xs text-left min-w-[900px]">
                       <thead className="bg-slate-50/80 border-b border-slate-100">
-                                              <tr>
-                                                <th className="px-4 py-4 w-12">
-                                                  <Checkbox
-                                                    checked={licenses.length > 0 && selectedLicenseIds.size === licenses.length}
-                                                    onCheckedChange={toggleSelectAllLicenses}
-                                                    aria-label="Select all licenses"
-                                                    className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                                                  />
-                                                </th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Key</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Issued To</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Device ID</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Valid For</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
-                                                <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                                              </tr>
-                                            </thead>
+                        <tr>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Key</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Issued To</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Device ID</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Valid For</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                        </tr>
+                      </thead>
                       <tbody className="divide-y divide-slate-100">
                         {licenses.map((lic) => {
                           const isExpired = lic.expiresAt < new Date().toISOString().slice(0, 10);
@@ -1832,20 +1623,12 @@ const PaymentManagement = () => {
                             ? <Ban size={10} />
                             : <CheckCircle2 size={10} />;
                           return (
-                                                      <tr key={lic.id} className="hover:bg-slate-50/40 transition-colors group">
-                                                        <td className="px-4 py-4">
-                                                          <Checkbox
-                                                            checked={selectedLicenseIds.has(lic.id)}
-                                                            onCheckedChange={() => toggleSelectLicense(lic.id)}
-                                                            aria-label={`Select license ${lic.activationKey}`}
-                                                            className="border-slate-300 data-[state=checked]:bg-indigo-600 data-[state=checked]:border-indigo-600"
-                                                          />
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                          <p className="font-mono font-black text-indigo-600 text-[11px] leading-tight">
-                                                            {lic.activationKey}
-                                                          </p>
-                                                        </td>
+                            <tr key={lic.id} className="hover:bg-slate-50/40 transition-colors group">
+                              <td className="px-6 py-4">
+                                <p className="font-mono font-black text-indigo-600 text-[11px] leading-tight">
+                                  {lic.activationKey}
+                                </p>
+                              </td>
                               <td className="px-6 py-4 font-bold text-slate-900">{lic.issuedTo}</td>
                               <td className="px-6 py-4">
                                 <span className="font-mono text-[10px] text-slate-500 bg-slate-50 px-2 py-0.5 rounded-lg">
@@ -1911,16 +1694,15 @@ const PaymentManagement = () => {
                                                               );
                                                             })}
                                                           </tbody>
-                                                                                                      </table>
-                                                                                                    </div>
-                                                                                                  </CardContent>
-                                                                                                </Card>
-                                                                                              </>
-                                                                                            )}
-                                                                                          </div>
-                                                                                        </TabsContent>
-                                                          
-                                                                                        {/* CONFIGURATION TAB */}
+                                                        </table>
+                                                      </div>
+                                                    </CardContent>
+                                                  </Card>
+                                                )}
+                                              </div>
+                                            </TabsContent>
+
+                                            {/* CONFIGURATION TAB */}
         <TabsContent value="configuration" className="space-y-6">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -2628,6 +2410,7 @@ const PaymentManagement = () => {
               </div>
             }
           >
+            {/* Owner identity header */}
             <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
               <ShieldCheck size={20} className="text-amber-600 shrink-0" />
               <p className="text-xs font-bold text-amber-800">
@@ -2635,6 +2418,7 @@ const PaymentManagement = () => {
               </p>
             </div>
 
+            {/* License info */}
             {licenseToDelete && (
               <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-1">
                 <div className="flex justify-between text-xs">
@@ -2652,6 +2436,7 @@ const PaymentManagement = () => {
               </div>
             )}
 
+            {/* Password field */}
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                 Owner Password
@@ -2683,75 +2468,6 @@ const PaymentManagement = () => {
               {deletePasswordError && (
                 <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
                   <AlertCircle size={12} /> {deletePasswordError}
-                </p>
-              )}
-            </div>
-          </Modal>
-
-          {/* Bulk Delete Confirmation Modal — owner-password protected */}
-          <Modal
-            isOpen={isBulkDeleteModalOpen}
-            onClose={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
-            title={`Delete ${selectedLicenseIds.size} Selected License${selectedLicenseIds.size > 1 ? 's' : ''}`}
-            description="This will permanently remove all selected licenses and their tied payment records from history. This action cannot be undone."
-            footer={
-              <div className="flex gap-2 justify-end w-full">
-                <Button
-                  variant="ghost"
-                  onClick={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
-                  className="rounded-xl font-bold h-12 px-6"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={confirmBulkDelete}
-                  disabled={isBulkDeleting || !bulkDeletePassword.trim()}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
-                >
-                  {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                  {isBulkDeleting ? 'Deleting...' : `Delete ${selectedLicenseIds.size} Selected`}
-                </Button>
-              </div>
-            }
-          >
-            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
-              <ShieldCheck size={20} className="text-amber-600 shrink-0" />
-              <p className="text-xs font-bold text-amber-800">
-                Owner authentication required for bulk deletion of {selectedLicenseIds.size} license records.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Owner Password
-              </Label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  type={showBulkDeletePassword ? 'text' : 'password'}
-                  value={bulkDeletePassword}
-                  onChange={e => {
-                    setBulkDeletePassword(e.target.value);
-                    if (bulkDeletePasswordError) setBulkDeletePasswordError('');
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
-                  }}
-                  placeholder="Enter your owner password"
-                  className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowBulkDeletePassword(p => !p)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showBulkDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {bulkDeletePasswordError && (
-                <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
-                  <AlertCircle size={12} /> {bulkDeletePasswordError}
                 </p>
               )}
             </div>
