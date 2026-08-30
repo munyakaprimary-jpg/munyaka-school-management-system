@@ -19,8 +19,8 @@ export const IS_ACTIVATED_KEY = 'is_activated';
 // ─────────────────────────────────────────────
 /** A single, well-known master test key that always validates. */
 export const MASTER_TEST_KEY = 'MUNYAKA-2026-A3B7-X9K2-M8N4-R7T1';
-/** Pattern: any key beginning with MUNYAKA-2026- will be accepted. */
-export const MASTER_KEY_PATTERN = /^MUNYAKA-2026-[A-Z0-9-]+$/i;
+/** Pattern: any key beginning with MUNYAKA-2026- followed by exactly 4-char segments. */
+export const MASTER_KEY_PATTERN = /^MUNYAKA-2026-(?:[A-Z0-9]{4}-){3}[A-Z0-9]{4}$/i;
 
 // Characters excluded from codes to avoid ambiguity: 0/O, 1/I/L
 const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -147,7 +147,7 @@ export function revokeLicense(activationKey: string, reason?: string): void {
  *
  *  Master-key shortcuts:
  *  • MASTER_TEST_KEY  — always valid
- *  • any key matching MASTER_KEY_PATTERN (MUNYAKA-2026-*) — always valid
+ *  • any key matching MASTER_KEY_PATTERN (MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX) — always valid
  *
  *  For master keys we construct a synthetic License so the rest of the
  *  system continues to work without any special casing.
@@ -175,6 +175,13 @@ export function validateActivationKey(key: string): License | null {
     };
   }
 
+  // ── Strict 4-character segment validation for issued keys ────────
+  // Enforce exact format: MUNYAKA-YYYY-XXXX-XXXX-XXXX-XXXX (4 segments of 4 chars)
+  const issuedKeyPattern = /^MUNYAKA-\d{4}-(?:[A-Z0-9]{4}-){3}[A-Z0-9]{4}$/i;
+  if (!issuedKeyPattern.test(k)) {
+    return null; // Reject keys that don't match strict 4-char segment format
+  }
+
   // ── Normal issued-key lookup ──────────────────────────────────────
   const licenses = readLicenses();
   const license = licenses.find(l => l.activationKey === k);
@@ -197,7 +204,7 @@ export function validateActivationKey(key: string): License | null {
  */
 export function activateLicense(key: string): License {
   const license = validateActivationKey(key);
-  if (!license) throw new Error('Invalid or expired activation key.');
+  if (!license) throw new Error('Invalid or expired activation key. Keys must follow the format: MUNYAKA-YYYY-XXXX-XXXX-XXXX-XXXX');
   setActiveLicense(license.activationKey);
   return license;
 }
