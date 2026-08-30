@@ -38,25 +38,6 @@ export interface ReceiptModalProps {
   onPrint?: () => void;
 }
 
-/**
- * ReceiptModal — a fully self-contained modal that displays a
- * payment receipt. The close button (both the "X" icon in the
- * header and the "Close" button in the footer) is wired to call
- * the parent's `onClose` callback via a local handler that calls
- * `e.stopPropagation()` to prevent the click from bubbling up to
- * the backdrop overlay.
- *
- * Critical layering rules (all enforced below):
- *   1. Backdrop overlay uses `z-50` with `pointer-events-auto`.
- *   2. Modal content box uses `relative z-[60]` so it stacks on top
- *      of the backdrop and every child receives clicks.
- *   3. Modal header (containing the X button) uses `z-[70]` and
- *      `pointer-events-auto` so the X is never covered.
- *   4. The X button itself uses `z-[80]` and `pointer-events-auto`
- *      so it is the topmost interactive element in the entire
- *      stacking context.
- *   5. All buttons have `cursor-pointer` for visual feedback.
- */
 const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
   onClose,
@@ -64,13 +45,13 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onDownload,
   onPrint
 }) => {
-  // Guard ref to prevent the backdrop click handler from firing
-  // when the user clicks a button inside the modal. Even though
-  // we call e.stopPropagation() on every button click, having a
-  // microtask-level guard here prevents any double-fire race.
+  // Guard ref to prevent double-firing (e.g. button click + backdrop click
+  // both calling handleClose in the same frame). Once a close is
+  // initiated, the ref is set to true; the next time a button or
+  // backdrop handler fires, it short-circuits.
   const closingRef = useRef(false);
 
-  // Escape key handler — closes the modal when the user presses Esc
+  // Escape key handler — closes the modal when the user presses Esc.
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
@@ -83,7 +64,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Body-scroll lock while modal is open
+  // Body-scroll lock while modal is open.
   useEffect(() => {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -95,10 +76,19 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
 
   /**
    * The single, canonical close handler used by EVERY close path in
-   * this modal: the X button, the "Close" button, the Escape key,
-   * and the backdrop click. We wrap onClose in a useCallback so
-   * the reference is stable across renders and we never pass a
-   * stale closure to a child component.
+   * this modal: the X button, the "Close" button in the footer, the
+   * Escape key, and the backdrop click.
+   *
+   * Implementation details that prevent the "stuck" bug:
+   *  1. Calls e.stopPropagation() and e.preventDefault() to ensure
+   *     the click event does not bubble to the backdrop overlay.
+   *  2. Uses a closingRef guard so a double-fire (button + backdrop
+   *     click in the same frame) only calls onClose() once.
+   *  3. Calls onClose() directly — there is NO setTimeout, no async
+   *     wait, no condition. The parent's onClose is invoked
+   *     synchronously so the state update is immediate.
+   *  4. Resets the guard ref on the next microtask so subsequent
+   *     open→close cycles still work.
    */
   const handleClose = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => {
     if (e) {
@@ -109,15 +99,18 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     closingRef.current = true;
     onClose();
     // Reset the guard on the next tick so a future open→close→open
-    // sequence still works correctly.
+    // sequence still works correctly. setTimeout 0 is safe and does
+    // NOT delay the state update — the state update happens
+    // synchronously above, this just resets the ref flag.
     setTimeout(() => { closingRef.current = false; }, 0);
   }, [onClose]);
 
   /**
-   * Backdrop click handler — only closes if the click target IS the
-   * backdrop itself (not any of its child elements). This is the
-   * canonical way to implement a "click outside to dismiss" pattern
-   * without breaking clicks on the modal content.
+   * Backdrop click handler — only closes the modal if the click
+   * target IS the backdrop itself (not any of its child elements
+   * like the close button or receipt content). This is the canonical
+   * way to implement a "click outside to dismiss" pattern without
+   * breaking clicks on the modal content.
    */
   const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
     if (e.target === e.currentTarget) {
@@ -210,7 +203,11 @@ body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; 
     onDownload?.();
   }, [onDownload, receiptData?.receiptNumber]);
 
-  // Guard: never render anything if not open or no data
+  // Guard: never render anything if not open or no data.
+  // This is the PRIMARY close mechanism — when isOpen flips to false
+  // the component returns null and the entire modal tree is removed
+  // from the DOM. The early return is below ALL hooks so the Rules
+  // of Hooks are not violated.
   if (!isOpen || !receiptData) return null;
 
   return (
