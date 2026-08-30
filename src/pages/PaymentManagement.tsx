@@ -69,6 +69,7 @@ import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 // STORAGE
 // ─────────────────────────────────────────
 const STORAGE_KEY = 'munyaka_payment_config';
+const SUBSCRIPTION_CONFIG_KEY = 'munyaka_subscription_config';
 
 // ─────────────────────────────────────────
 // TYPES
@@ -332,13 +333,35 @@ const PaymentManagement = () => {
   const [subscriptionForm, setSubscriptionForm] = useState<Partial<Subscription>>({});
 
   // ── Configuration form state (NEW) ──
-  const [configForm, setConfigForm] = useState({
-    name: '',
-    plan: '',
-    amount: '',
-    currency: 'USD',
-    nextBilling: '',
-    seats: '',
+  const [configForm, setConfigForm] = useState(() => {
+    // Initialize from localStorage first (munyaka_subscription_config)
+    try {
+      const saved = localStorage.getItem(SUBSCRIPTION_CONFIG_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          return {
+            name: parsed.name ?? '',
+            plan: parsed.plan ?? '',
+            amount: parsed.amount ?? '',
+            currency: parsed.currency ?? 'USD',
+            nextBilling: parsed.nextBilling ?? '',
+            seats: parsed.seats ?? '',
+            tier: parsed.tier ?? 'enterprise',
+          };
+        }
+      }
+    } catch { /* ignore */ }
+    // Fallback to defaults
+    return {
+      name: '',
+      plan: '',
+      amount: '',
+      currency: 'USD',
+      nextBilling: '',
+      seats: '',
+      tier: 'enterprise',
+    };
   });
   const [configError, setConfigError] = useState('');
 
@@ -442,7 +465,7 @@ const PaymentManagement = () => {
         if (Array.isArray(parsed)) setLocalPayments(parsed);
       } catch { /* ignore */ }
     }
-  });
+  );
 
   // ── Configuration form: prefill when subscription data is available ──
   useEffect(() => {
@@ -456,6 +479,7 @@ const PaymentManagement = () => {
       currency: prev.currency || primary.currency,
       nextBilling: prev.nextBilling || primary.nextBilling,
       seats: prev.seats || String(primary.seats),
+      tier: prev.tier || primary.tier,
     }));
   }, [subscriptions]);
 
@@ -541,10 +565,24 @@ const PaymentManagement = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 700));
 
-    // Persist the new config into the first subscription record.
+    // Build the complete config object with all fields
     const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const seats = configForm.seats.trim() ? parseInt(configForm.seats) : 0;
 
+    const configToSave = {
+      name: configForm.name.trim(),
+      plan: configForm.plan.trim(),
+      amount: configForm.amount.trim(),
+      currency: configForm.currency,
+      nextBilling: nextBillingDate,
+      seats,
+      tier: configForm.tier,
+    };
+
+    // 1. Persist to dedicated subscription config key
+    localStorage.setItem(SUBSCRIPTION_CONFIG_KEY, JSON.stringify(configToSave));
+
+    // 2. Also update the first subscription record for backward compatibility
     const updatedSubscriptions = subscriptions.map((s, idx) =>
       idx === 0
         ? {
@@ -555,6 +593,7 @@ const PaymentManagement = () => {
             currency: configForm.currency,
             nextBilling: nextBillingDate,
             seats,
+            tier: configForm.tier,
           }
         : s
     );
@@ -570,6 +609,7 @@ const PaymentManagement = () => {
     // Notify other listeners (including the subscription status card on this page)
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(CONFIG_UPDATED_EVENT));
+    window.dispatchEvent(new CustomEvent('subscription-config-updated', { detail: configToSave }));
     showSuccess('Configuration saved successfully!');
   };
 
@@ -1127,7 +1167,7 @@ const PaymentManagement = () => {
 
                   <div className="flex items-center justify-between p-3 bg-slate-50 rounded-2xl">
                     <div>
-                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Amount</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">Amount</p>
                       <p className="text-xl font-black text-slate-900">{sub.currency} {sub.amount}</p>
                     </div>
                     <div className="text-right">
@@ -1558,6 +1598,26 @@ const PaymentManagement = () => {
                 </div>
               </div>
 
+              {/* Tier selector */}
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Subscription Tier
+                </Label>
+                <Select
+                  value={configForm.tier}
+                  onValueChange={v => updateConfigField('tier', v)}
+                >
+                  <SelectTrigger className="h-14 rounded-2xl bg-slate-50 border-none font-bold text-base pl-4">
+                    <SelectValue placeholder="Select tier..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="starter">Starter</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="enterprise">Enterprise</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
               {/* Live preview summary */}
               <div className="rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5">
                 <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-3 flex items-center gap-1.5">
@@ -1588,6 +1648,12 @@ const PaymentManagement = () => {
                     <p className="text-[10px] text-slate-400 font-bold uppercase">Seats</p>
                     <p className="font-black text-slate-900">
                       {configForm.seats ? `${parseInt(configForm.seats).toLocaleString()} seats` : '—'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase">Tier</p>
+                    <p className="font-black text-slate-900 capitalize">
+                      {configForm.tier || '—'}
                     </p>
                   </div>
                 </div>
@@ -1896,92 +1962,92 @@ const PaymentManagement = () => {
                               <CheckCircle2 size={10} />
                             );
 
-                          const modeColors: Record<string, string> = {
-                            mpesa: 'bg-emerald-50 text-emerald-700',
-                            cash: 'bg-blue-50 text-blue-700',
-                            bank: 'bg-slate-100 text-slate-600',
-                          };
-                          const modeLabels: Record<string, string> = {
-                            mpesa: 'M-Pesa',
-                            cash: 'Cash',
-                            bank: 'Bank Deposit',
-                          };
+                            const modeColors: Record<string, string> = {
+                              mpesa: 'bg-emerald-50 text-emerald-700',
+                              cash: 'bg-blue-50 text-blue-700',
+                              bank: 'bg-slate-100 text-slate-700',
+                            };
+                            const modeLabels: Record<string, string> = {
+                              mpesa: 'M-Pesa',
+                              cash: 'Cash',
+                              bank: 'Bank Deposit',
+                            };
 
-                          return (
-                            <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
-                              <td className="px-6 py-4">
-                                <div className="flex items-center gap-2">
-                                  <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
-                                    {mp.activationCode}
+                            return (
+                              <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
+                                <td className="px-6 py-4">
+                                  <div className="flex items-center gap-2">
+                                    <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
+                                      {mp.activationCode}
+                                    </p>
+                                    <button
+                                      type="button"
+                                      onClick={() => copyToClipboard(mp.activationCode)}
+                                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
+                                      title="Copy code"
+                                    >
+                                      <Copy size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
+                                <td className="px-6 py-4">
+                                  <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
+                                    {modeLabels[mp.paymentMode]}
+                                  </span>
+                                  <p className="text-slate-600 font-black text-sm mt-0.5">
+                                    {mp.currency} {mp.amount}
                                   </p>
-                                  <button
-                                    type="button"
-                                    onClick={() => copyToClipboard(mp.activationCode)}
-                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
-                                    title="Copy code"
-                                  >
-                                    <Copy size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                              <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
-                              <td className="px-6 py-4">
-                                <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
-                                  {modeLabels[mp.paymentMode]}
-                                </span>
-                                <p className="text-slate-600 font-black text-sm mt-0.5">
-                                  {mp.currency} {mp.amount}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
-                                  {mp.transactionRef}
-                                </span>
-                              </td>
-                              <td className="px-6 py-4">
-                                <p className="font-medium text-slate-700">
-                                  {new Date(mp.paidAt).toLocaleDateString()}
-                                </p>
-                                <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
-                                  {new Date(mp.expiresAt).toLocaleDateString()}
-                                </p>
-                              </td>
-                              <td className="px-6 py-4">
-                                <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
-                                  {statusIcon}
-                                  {statusLabel}
-                                </Badge>
-                              </td>
-                              <td className="px-6 py-4 text-right">
-                                <div className="flex justify-end gap-1.5">
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
-                                    title="Copy code"
-                                    onClick={() => copyToClipboard(mp.activationCode)}
-                                  >
-                                    <Copy size={14} />
-                                  </Button>
-                                  {mp.codeStatus === 'active' && !isExpired && (
+                                </td>
+                                <td className="px-6 py-4">
+                                  <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
+                                    {mp.transactionRef}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className="font-medium text-slate-700">
+                                    {new Date(mp.paidAt).toLocaleDateString()}
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
+                                    {new Date(mp.expiresAt).toLocaleDateString()}
+                                  </p>
+                                </td>
+                                <td className="px-6 py-4">
+                                  <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
+                                    {statusIcon}
+                                    {statusLabel}
+                                  </Badge>
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                  <div className="flex justify-end gap-1.5">
                                     <Button
                                       variant="ghost"
                                       size="icon"
-                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
-                                      title="Mark as redeemed"
-                                      onClick={() => markCodeRedeemed(mp.id)}
+                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                      title="Copy code"
+                                      onClick={() => copyToClipboard(mp.activationCode)}
                                     >
-                                      <CheckCircle2 size={14} />
+                                      <Copy size={14} />
                                     </Button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
+                                    {mp.codeStatus === 'active' && !isExpired && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
+                                        title="Mark as redeemed"
+                                        onClick={() => markCodeRedeemed(mp.id)}
+                                      >
+                                        <CheckCircle2 size={14} />
+                                      </Button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
                       </tbody>
                     </table>
                   </div>
