@@ -55,6 +55,11 @@ export interface Transaction {
   method: string;
   ref: string;
   category: string;
+  invoiceId?: string;
+  description?: string;
+  currency?: string;
+  status?: string;
+  paidAt?: string;
   // Enrichment fields
   studentId?: string;
   grade?: string;

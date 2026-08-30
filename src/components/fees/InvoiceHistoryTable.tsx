@@ -93,11 +93,11 @@ const InvoiceHistoryTable: React.FC<InvoiceHistoryTableProps> = ({
             </thead>
             <tbody className="divide-y divide-slate-100">
               {transactions.map((tx) => (
-                <tr key={tx.id} className="hover:bg-slate-50/40 transition-colors group">
-                  <td className="px-8 py-4 font-mono font-bold text-slate-700">{tx.invoiceId}</td>
-                  <td className="px-8 py-4 font-medium text-slate-900">{tx.description}</td>
-                  <td className="px-8 py-4 font-black text-slate-900">{tx.currency} {tx.amount}</td>
-                  <td className="px-8 py-4 text-slate-600">{tx.paymentMethod}</td>
+                              <tr key={tx.id} className="hover:bg-slate-50/40 transition-colors group">
+                                <td className="px-8 py-4 font-mono font-bold text-slate-700">{tx.invoiceId ?? tx.id}</td>
+                                <td className="px-8 py-4 font-medium text-slate-900">{tx.description ?? tx.category}</td>
+                                <td className="px-8 py-4 font-black text-slate-900">{tx.currency ?? 'USD'} {tx.amount}</td>
+                                <td className="px-8 py-4 text-slate-600">{tx.method ?? tx.paymentMethod}</td>
                   <td className="px-8 py-4 font-mono text-slate-500">{tx.paidAt || '—'}</td>
                   <td className="px-8 py-4 text-right">{getStatusBadge(tx.status)}</td>
                   <td className="px-8 py-4 text-right">

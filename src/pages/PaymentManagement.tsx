@@ -75,12 +75,14 @@ import {
   issueLicense,
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
+import { Transaction } from '@/types/fees';
 
 // ─────────────────────────────────────────
 // STORAGE
 // ─────────────────────────────────────────
 const STORAGE_KEY = 'munyaka_payment_config';
 const SUBSCRIPTION_CONFIG_KEY = 'munyaka_subscription_config';
+const PAYMENTS_HISTORY_KEY = 'munyaka_payments_history';
 
 // ─────────────────────────────────────────
 // TYPES
@@ -120,17 +122,6 @@ interface Subscription {
   billingCycleAnchor: number;
   seats: number;
   features: string[];
-}
-
-interface SoftwarePayment {
-  id: string;
-  description: string;
-  amount: string;
-  currency: string;
-  status: 'paid' | 'pending' | 'failed' | 'refunded';
-  paidAt: string;
-  invoiceId: string;
-  paymentMethod: string;
 }
 
 interface LocalPaymentEntry {
@@ -221,29 +212,6 @@ const DEFAULT_GATEWAYS: PaymentGateway[] = [
     webhookUrl: '',
     status: 'active',
     lastSync: '2026-03-31 08:00:00',
-  },
-];
-
-const DEFAULT_PAYMENTS: SoftwarePayment[] = [
-  {
-    id: 'pmt-001',
-    description: 'Munyaka School License - March 2026',
-    amount: '299.00',
-    currency: 'USD',
-    status: 'paid',
-    paidAt: '2026-03-01',
-    invoiceId: 'INV-2026-003',
-    paymentMethod: 'M-Pesa',
-  },
-  {
-    id: 'pmt-003',
-    description: 'Munyaka School License - April 2026',
-    amount: '299.00',
-    currency: 'USD',
-    status: 'pending',
-    paidAt: '',
-    invoiceId: 'INV-2026-005',
-    paymentMethod: 'M-Pesa',
   },
 ];
 
@@ -343,12 +311,7 @@ const PaymentManagement = () => {
   const [editingSubscriptionId, setEditingSubscriptionId] = useState<string | null>(null);
   const [subscriptionForm, setSubscriptionForm] = useState<Partial<Subscription>>({});
 
-  // ── Configuration form state (NEW) ──
-  // FIX: Always store seats as a string in the form so .trim() and
-  // parseInt() work correctly. Previous code allowed seats to be
-  // either a string or a number (whichever the Select or Input last
-  // produced), which is what triggered the runtime error
-  // "configForm.seats.trim is not a function".
+  // ── Configuration form state ──
   const [configForm, setConfigForm] = useState(() => {
     try {
       const saved = localStorage.getItem(SUBSCRIPTION_CONFIG_KEY);
@@ -381,7 +344,53 @@ const PaymentManagement = () => {
 
   const [upgradeModalSub, setUpgradeModalSub] = useState<Subscription | null>(null);
   const [renewModalSub, setRenewModalSub] = useState<Subscription | null>(null);
-  const [payments] = useState<SoftwarePayment[]>(DEFAULT_PAYMENTS);
+
+  // ── Dynamic Invoice History State ──
+  // Loads from localStorage; falls back to sample data so the table is never empty.
+  const [paymentsHistory, setPaymentsHistory] = useState<Transaction[]>(() => {
+    try {
+      const saved = localStorage.getItem(PAYMENTS_HISTORY_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      }
+    } catch { /* ignore */ }
+    // Seed with 2 realistic sample rows so the table isn't empty on first load
+    return [
+      {
+        id: 'pmt-001',
+        date: '2026-03-01',
+        amount: 299.00,
+        method: 'M-Pesa',
+        ref: 'MG23K4R5HT',
+        category: 'Subscription',
+        invoiceId: 'INV-2026-003',
+        description: 'Munyaka School License - March 2026',
+        currency: 'USD',
+        status: 'paid',
+        paymentMethod: 'mpesa',
+        paymentDetails: { receiptNumber: 'MG23K4R5HT' },
+        paidAt: '2026-03-01',
+      },
+      {
+        id: 'pmt-002',
+        date: '2026-04-01',
+        amount: 299.00,
+        method: 'Bank Transfer',
+        ref: 'DEP-2026-04-001',
+        category: 'Subscription',
+        invoiceId: 'INV-2026-004',
+        description: 'Munyaka School License - April 2026',
+        currency: 'USD',
+        status: 'paid',
+        paymentMethod: 'bank',
+        paymentDetails: { bankName: 'Equity Bank', branch: 'Main Branch', transactionRef: 'DEP-2026-04-001' },
+        paidAt: '2026-04-01',
+      },
+    ] as Transaction[];
+  });
 
   // ── License / activation key state ──
   const [licenses, setLicenses] = useState<License[]>([]);
@@ -421,7 +430,6 @@ const PaymentManagement = () => {
   const [isRecordingPayment, setIsRecordingPayment] = useState(false);
 
   // ── Receipt Modal State ──
-  // FIX: Now using clear, working state setters for close handlers
   const [isReceiptModalOpen, setIsReceiptModalOpen] = useState(false);
   const [receiptData, setReceiptData] = useState<{
     receiptNumber: string;
@@ -441,7 +449,6 @@ const PaymentManagement = () => {
     receivedBy?: string;
   } | null>(null);
 
-  // FIX: Clear receipt data setter that nulls out state on close
   const handleCloseReceiptModal = () => {
     setIsReceiptModalOpen(false);
     setReceiptData(null);
@@ -457,7 +464,6 @@ const PaymentManagement = () => {
     stream: string;
   } | null>(null);
 
-  // FIX: Clear receipt view state on close
   const handleCloseReceiptView = () => {
     setIsReceiptViewOpen(false);
     setSelectedTransactionForReceipt(null);
@@ -491,6 +497,13 @@ const PaymentManagement = () => {
     }
   }, []);
 
+  // ── Persist payments history to localStorage whenever it changes ──
+  useEffect(() => {
+    try {
+      localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(paymentsHistory));
+    } catch { /* ignore */ }
+  }, [paymentsHistory]);
+
   // ── Sync hooks ───────────────────────────────────────────────
   useSyncEvent(SUBSCRIPTION_UPDATED_EVENT, () => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -523,6 +536,14 @@ const PaymentManagement = () => {
         if (Array.isArray(parsed)) setLocalPayments(parsed);
       } catch { /* ignore */ }
     }
+    // Also refresh payments history from storage
+    const phRaw = localStorage.getItem(PAYMENTS_HISTORY_KEY);
+    if (phRaw) {
+      try {
+        const parsed = JSON.parse(phRaw);
+        if (Array.isArray(parsed)) setPaymentsHistory(parsed);
+      } catch { /* ignore */ }
+    }
   });
 
   // ── Configuration form: prefill when subscription data is available ──
@@ -530,10 +551,6 @@ const PaymentManagement = () => {
     if (subscriptions.length === 0) return;
     const primary = subscriptions[0];
     setConfigForm(prev => ({
-      // FIX: Always store seats as a string. Even when prefilling
-      // from a numeric source (the `seats` field on the Subscription
-      // object is a number), we coerce to a string here so the form
-      // value is always a string.
       name: prev.name || primary.name,
       plan: prev.plan || primary.plan,
       amount: prev.amount || primary.amount,
@@ -598,13 +615,18 @@ const PaymentManagement = () => {
 
   const markChanged = () => setHasUnsavedChanges(true);
 
-  // ── Configuration tab handlers (NEW) ──
-  // FIX: updateConfigField always writes a string for `seats` to keep
-  // the form value type consistent. The previous version forwarded
-  // `e.target.value` directly, which was already a string from the
-  // underlying <input> element, but a number from the <Select>
-  // branch would have leaked a number into the form. We now coerce
-  // to string regardless of source.
+  // ── Helper: push a new payment to the dynamic invoice history ──
+  const pushPaymentToHistory = (payment: Transaction) => {
+    setPaymentsHistory(prev => {
+      const next = [payment, ...prev];
+      try {
+        localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(next));
+      } catch { /* ignore */ }
+      return next;
+    });
+  };
+
+  // ── Configuration tab handlers ──
   const updateConfigField = (field: keyof typeof configForm, value: string) => {
     setConfigForm(prev => ({ ...prev, [field]: String(value) }));
     setConfigError('');
@@ -623,10 +645,6 @@ const PaymentManagement = () => {
       setConfigError('Please enter a valid amount.');
       return;
     }
-    // FIX: Defensive string coercion before .trim() so the type is
-    // always string regardless of how the form value was set. If the
-    // caller forgot to wrap a non-string value (e.g. a number from a
-    // Select component), the trim error is caught here.
     const seatsRaw = typeof configForm.seats === 'string' ? configForm.seats : String(configForm.seats ?? '');
     if (seatsRaw.trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
       setConfigError('Institutional seats must be a non-negative number.');
@@ -637,7 +655,6 @@ const PaymentManagement = () => {
     await new Promise(r => setTimeout(r, 700));
 
     const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    // FIX: parseInt with the safely-coerced string value above
     const seats = seatsRaw.trim() ? parseInt(seatsRaw) : 0;
 
     const configToSave = {
@@ -724,6 +741,36 @@ const PaymentManagement = () => {
     const next = [entry, ...localPayments];
     setLocalPayments(next);
     localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
+
+    // Push to dynamic invoice history so it appears immediately in the table
+    const modeLabel = lpForm.mode === 'mpesa' ? 'M-Pesa'
+      : lpForm.mode === 'cash' ? 'Cash'
+      : 'Bank Deposit';
+    const today_iso = today.toISOString().slice(0, 10);
+    const invoiceNumber = `INV-${today.getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const newPayment: Transaction = {
+      id: `pmt-${Date.now()}`,
+      date: today_iso,
+      amount: parseFloat(lpForm.amount),
+      method: modeLabel,
+      ref: lpForm.reference.trim(),
+      category: 'Subscription',
+      invoiceId: invoiceNumber,
+      description: lpForm.note?.trim()
+        ? `${subscriptions[0]?.name ?? 'Subscription'} - ${lpForm.note.trim()}`
+        : `${subscriptions[0]?.name ?? 'Subscription'} Payment`,
+      currency: lpForm.currency,
+      status: 'paid',
+      paymentMethod: lpForm.mode,
+      paymentDetails: lpForm.mode === 'mpesa'
+        ? { receiptNumber: lpForm.reference.trim() }
+        : lpForm.mode === 'bank'
+        ? { bankName: 'Bank', branch: '', transactionRef: lpForm.reference.trim() }
+        : { receivedBy: user?.name ?? 'Cashier' },
+      paidAt: today_iso,
+    };
+    pushPaymentToHistory(newPayment);
+
     setLpForm(f => {
       const cleared = { ...f, amount: '', reference: '', note: '' };
       localStorage.setItem('lp_form_snapshot', JSON.stringify({
@@ -846,7 +893,6 @@ const PaymentManagement = () => {
       notes: `Monthly payment for ${subName}`,
     });
 
-    // ── FIX: Use a single `today` variable for all post-payment logic ──
     const today = new Date();
     const newNextBilling = new Date(today);
     newNextBilling.setDate(newNextBilling.getDate() + 30);
@@ -886,6 +932,58 @@ const PaymentManagement = () => {
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
 
+    // Push the new payment to the dynamic invoice history so it appears
+    // immediately in the Invoice History table.
+    const receiptNumber = `RCP-${Date.now().toString().slice(-8)}`;
+    const invoiceNumber = `INV-${today.getFullYear()}-${Date.now().toString().slice(-6)}`;
+    const term = today.getMonth() < 3 ? 'Term 1' : today.getMonth() < 7 ? 'Term 2' : 'Term 3';
+    const year = today.getFullYear().toString();
+    const paymentMethodLabel = mpForm.paymentMode === 'mpesa'
+      ? 'M-Pesa'
+      : mpForm.paymentMode === 'bank'
+      ? 'Bank Transfer'
+      : 'Cash';
+
+    const newPayment: Transaction = {
+      id: `pmt-${Date.now()}`,
+      date: today.toISOString().slice(0, 10),
+      amount: parseFloat(mpForm.amount),
+      method: paymentMethodLabel,
+      ref: mpForm.transactionRef.trim(),
+      category: 'Subscription',
+      invoiceId: invoiceNumber,
+      description: `${subName} - ${term} ${year}`,
+      currency: mpForm.currency,
+      status: 'paid',
+      paymentMethod: mpForm.paymentMode,
+      paymentDetails: mpForm.paymentMode === 'mpesa'
+        ? { receiptNumber: mpForm.transactionRef.trim() }
+        : mpForm.paymentMode === 'bank'
+        ? { bankName: 'Owner Bank', branch: '', transactionRef: mpForm.transactionRef.trim() }
+        : { receivedBy: user?.name ?? 'Cashier' },
+      paidAt: today.toISOString().slice(0, 10),
+    };
+    pushPaymentToHistory(newPayment);
+
+    setReceiptData({
+      receiptNumber,
+      invoiceNumber,
+      studentName: mpForm.issuedTo,
+      admNo: mpForm.deviceId,
+      grade: 'N/A',
+      stream: 'N/A',
+      amount: parseFloat(mpForm.amount),
+      currency: mpForm.currency,
+      paymentMethod: paymentMethodLabel,
+      transactionRef: mpForm.transactionRef,
+      date: today.toLocaleString(),
+      term,
+      year,
+      status: 'Paid',
+      receivedBy: user?.name,
+    });
+    setIsReceiptModalOpen(true);
+
     const finalSnapshot = {
       subscriptionId: '',
       paymentMode: mpForm.paymentMode,
@@ -903,31 +1001,6 @@ const PaymentManagement = () => {
     setIsRecordingPayment(false);
     setIsLicenseModalOpen(false);
     setActiveSubscriptionForLicense(null);
-
-    // Show receipt modal after successful payment
-    const receiptNumber = `RCP-${Date.now().toString().slice(-8)}`;
-    const invoiceNumber = `INV-${Date.now().toString().slice(-8)}`;
-    const term = today.getMonth() < 3 ? 'Term 1' : today.getMonth() < 7 ? 'Term 2' : 'Term 3';
-    const year = today.getFullYear().toString();
-
-    setReceiptData({
-      receiptNumber,
-      invoiceNumber,
-      studentName: mpForm.issuedTo,
-      admNo: mpForm.deviceId,
-      grade: 'N/A',
-      stream: 'N/A',
-      amount: parseFloat(mpForm.amount),
-      currency: mpForm.currency,
-      paymentMethod: mpForm.paymentMode === 'mpesa' ? 'M-Pesa' : mpForm.paymentMode === 'bank' ? 'Bank Transfer' : 'Cash',
-      transactionRef: mpForm.transactionRef,
-      date: today.toLocaleString(),
-      term,
-      year,
-      status: 'Paid',
-      receivedBy: user?.name,
-    });
-    setIsReceiptModalOpen(true);
 
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
     window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
@@ -1050,9 +1123,8 @@ const PaymentManagement = () => {
     return acc + numeric * rate;
   }, 0);
 
-  // ── Receipt Handlers ──
-  // FIX: Single handler that clears all receipt-related state on close
-  const handleOpenReceipt = (transaction: Transaction) => {
+  // ── Invoice History Action Handlers ──
+  const handleViewReceiptFromHistory = (transaction: Transaction) => {
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1063,7 +1135,8 @@ const PaymentManagement = () => {
     setIsReceiptViewOpen(true);
   };
 
-  const handleViewReceiptFromHistory = (transaction: Transaction) => {
+  const handleDownloadReceipt = (transaction: Transaction) => {
+    // Open the receipt view so the user can use the built-in print/download
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1072,6 +1145,22 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
+    showSuccess('Opening receipt for download...');
+  };
+
+  const handlePrintReceipt = (transaction: Transaction) => {
+    // Open the receipt view and trigger print after a short delay
+    setSelectedTransactionForReceipt(transaction);
+    setSelectedStudentForReceipt({
+      name: 'Munyaka Primary & Junior School',
+      admNo: 'SCH-001',
+      grade: 'N/A',
+      stream: 'N/A',
+    });
+    setIsReceiptViewOpen(true);
+    setTimeout(() => {
+      window.print();
+    }, 300);
   };
 
   // ── Render ─────────────────────────────
@@ -1115,9 +1204,7 @@ const PaymentManagement = () => {
         </div>
       </div>
 
-      {/* ──────────────────────────────────────── */}
       {/* SUBSCRIPTION OVERVIEW SUMMARY */}
-      {/* ──────────────────────────────────────── */}
       {primarySub && (
         <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden w-full">
           <CardContent className="p-7 md:p-8">
@@ -1234,9 +1321,7 @@ const PaymentManagement = () => {
           </TabsTrigger>
         </TabsList>
 
-        {/* ──────────────────────────────────────── */}
         {/* LICENSE DETAILS TAB */}
-        {/* ──────────────────────────────────────── */}
         <TabsContent value="subscriptions" className="space-y-6 w-full">
           <div className="grid grid-cols-1 gap-6 w-full">
             {subscriptions.map(sub => (
@@ -2371,7 +2456,7 @@ const PaymentManagement = () => {
           </div>
         </TabsContent>
 
-        {/* INVOICE HISTORY TAB */}
+        {/* INVOICE HISTORY TAB — fully dynamic */}
         <TabsContent value="history" className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -2386,64 +2471,26 @@ const PaymentManagement = () => {
               </div>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-[1000px]">
-                  <thead className="bg-slate-50/80 border-b border-slate-100">
-                    <tr>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Invoice</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Description</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Amount</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Method</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400">Date</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Status</th>
-                      <th className="px-8 py-4 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Receipt Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {payments.map(pmt => (
-                      <tr key={pmt.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="px-8 py-4 font-mono font-bold text-slate-700">{pmt.invoiceId}</td>
-                        <td className="px-8 py-4 font-medium text-slate-900">{pmt.description}</td>
-                        <td className="px-8 py-4 font-black text-slate-900">{pmt.currency} {pmt.amount}</td>
-                        <td className="px-8 py-4 text-slate-600">{pmt.paymentMethod}</td>
-                        <td className="px-8 py-4 font-mono text-slate-500">{pmt.paidAt || '—'}</td>
-                        <td className="px-8 py-4 text-right">{getStatusBadge(pmt.status)}</td>
-                        <td className="px-8 py-4 text-right">
-                          <div className="flex justify-end gap-1.5">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50"
-                              title="View Receipt"
-                              onClick={() => handleViewReceiptFromHistory(pmt)}
-                            >
-                              <Eye size={16} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-emerald-600 hover:bg-emerald-50"
-                              title="Download Receipt"
-                              onClick={() => handleViewReceiptFromHistory(pmt)}
-                            >
-                              <FileDown size={16} />
-                            </Button>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100"
-                              title="Print Invoice"
-                              onClick={() => handleViewReceiptFromHistory(pmt)}
-                            >
-                              <Printer size={16} />
-                            </Button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              {paymentsHistory.length === 0 ? (
+                <div className="py-16 text-center">
+                  <div className="flex flex-col items-center gap-3">
+                    <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                      <History size={32} />
+                    </div>
+                    <p className="text-base font-black text-slate-700">No Invoices Yet</p>
+                    <p className="text-sm text-slate-400 font-medium max-w-xs">
+                      Record a payment using "Record &amp; Generate" or "Payment Gateways" tab to populate this table.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <InvoiceHistoryTable
+                  transactions={paymentsHistory}
+                  onViewReceipt={handleViewReceiptFromHistory}
+                  onDownload={handleDownloadReceipt}
+                  onPrint={handlePrintReceipt}
+                />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -2606,14 +2653,14 @@ const PaymentManagement = () => {
         defaultSubscriptionName={activeSubscriptionForLicense?.name}
       />
 
-      {/* FIX: Receipt Modal with working onClose handler that clears state */}
+      {/* Receipt Modal */}
       <ReceiptModal
         isOpen={isReceiptModalOpen}
         onClose={handleCloseReceiptModal}
         receiptData={receiptData}
       />
 
-      {/* FIX: Receipt View Modal with working onClose handler that clears state */}
+      {/* Receipt View Modal */}
       <ReceiptView
         transaction={selectedTransactionForReceipt || {
           id: '',
@@ -2629,8 +2676,8 @@ const PaymentManagement = () => {
         }}
         student={selectedStudentForReceipt || undefined}
         onClose={handleCloseReceiptView}
-        onPrint={() => {}}
-        onDownload={() => {}}
+        onPrint={() => window.print()}
+        onDownload={() => window.print()}
       />
     </div>
   );
