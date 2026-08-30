@@ -965,14 +965,6 @@ const PaymentManagement = () => {
               <AlertTriangle size={12} className="mr-1.5" /> Unsaved Changes
             </Badge>
           )}
-          <Button
-            onClick={handleSave}
-            disabled={isSaving || !hasUnsavedChanges}
-            className="rounded-2xl px-8 h-14 font-black shadow-xl shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-          >
-            {isSaving ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-            Save Configuration
-          </Button>
         </div>
       </div>
 
@@ -1522,7 +1514,7 @@ const PaymentManagement = () => {
                     Amount
                   </Label>
                   <div className="relative">
-                    <DollarSign className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <DollarSign className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
                     <Input
                       type="number"
                       step="0.01"
@@ -1561,7 +1553,7 @@ const PaymentManagement = () => {
                     Next Billing Date
                   </Label>
                   <div className="relative">
-                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <CalendarDays className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
                     <Input
                       type="date"
                       value={configForm.nextBilling}
@@ -1580,7 +1572,7 @@ const PaymentManagement = () => {
                     Institutional Seats
                   </Label>
                   <div className="relative">
-                    <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Users className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
                     <Input
                       type="number"
                       min="0"
@@ -1785,7 +1777,7 @@ const PaymentManagement = () => {
                     Amount Paid
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
+                    <span className="absolute left-4 top-1/2 -translate_y-1/2 font-black text-slate-400 text-base">
                       {mpForm.currency === 'KES' ? 'KSh' : mpForm.currency === 'USD' ? '$' : mpForm.currency}
                     </span>
                     <Input
@@ -1823,7 +1815,7 @@ const PaymentManagement = () => {
                   Transaction Reference / Receipt Number
                 </Label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Hash className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
                   <Input
                     value={mpForm.transactionRef}
                     onChange={e => setMpForm(f => ({ ...f, transactionRef: e.target.value }))}
@@ -2096,7 +2088,7 @@ const PaymentManagement = () => {
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Amount</Label>
                   <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 font-black text-slate-400 text-base">
+                    <span className="absolute left-4 top-1/2 -translate_y-1/2 font-black text-slate-400 text-base">
                       {lpForm.currency === 'KES' ? 'KSh' : '$'}
                     </span>
                     <Input
@@ -2131,7 +2123,7 @@ const PaymentManagement = () => {
                   Transaction Reference / Receipt Number
                 </Label>
                 <div className="relative">
-                  <Hash className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <Hash className="absolute left-4 top-1/2 -translate_y-1/2 text-slate-400" size={16} />
                   <Input
                     value={lpForm.reference}
                     onChange={e => setLpForm(f => ({ ...f, reference: e.target.value }))}
