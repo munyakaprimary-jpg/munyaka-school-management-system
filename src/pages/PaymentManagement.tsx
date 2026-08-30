@@ -1230,39 +1230,45 @@ const PaymentManagement = () => {
               </div>
 
               {/* Quick actions */}
-              <div className="md:col-span-1 lg:col-span-1 space-y-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
-                  Quick Actions
-                </p>
-                <div className="grid grid-cols-1 gap-2">
-                  <button
-                    onClick={() => setActiveTab('record')}
-                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                  >
-                    <span className="flex items-center gap-2 font-bold text-sm">
-                      <CreditCard size={14} /> Record Payment
-                    </span>
-                    <Zap size={14} className="text-amber-300" />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('record')}
-                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                  >
-                    <span className="flex items-center gap-2 font-bold text-sm">
-                      <Key size={14} /> Generate License Key
-                    </span>
-                    <Sparkles size={14} className="text-emerald-300" />
-                  </button>
-                  <button
-                    onClick={() => setActiveTab('history')}
-                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                  >
-                    <span className="flex items-center gap-2 font-bold text-sm">
-                      <History size={14} /> View Payment History
-                    </span>
-                    <RefreshCw size={14} className="text-indigo-300" />
-                  </button>
-                </div>
+                            <div className="md:col-span-1 lg:col-span-1 space-y-2">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                                Quick Actions
+                              </p>
+                              <div className="grid grid-cols-1 gap-2">
+                                <button
+                                  onClick={() => {
+                                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                                    setIsLicenseModalOpen(true);
+                                  }}
+                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                                >
+                                  <span className="flex items-center gap-2 font-bold text-sm">
+                                    <CreditCard size={14} /> Record Payment
+                                  </span>
+                                  <Zap size={14} className="text-amber-300" />
+                                </button>
+                                <button
+                                  onClick={() => {
+                                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                                    setIsLicenseModalOpen(true);
+                                  }}
+                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                                >
+                                  <span className="flex items-center gap-2 font-bold text-sm">
+                                    <Key size={14} /> Generate License Key
+                                  </span>
+                                  <Sparkles size={14} className="text-emerald-300" />
+                                </button>
+                                <button
+                                  onClick={() => setActiveTab('history')}
+                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                                >
+                                  <span className="flex items-center gap-2 font-bold text-sm">
+                                    <History size={14} /> View Payment History
+                                  </span>
+                                  <RefreshCw size={14} className="text-indigo-300" />
+                                </button>
+                              </div>
                 <p className="text-[10px] text-indigo-200/70 font-medium pt-1 text-center">
                   {monthlyPayments.length} payment{monthlyPayments.length !== 1 ? 's' : ''} logged · {activeLicenses.length} active license{activeLicenses.length !== 1 ? 's' : ''}
                   {totalMonthlyPaid > 0 && ` · $${totalMonthlyPaid.toFixed(2)} paid (this year)`}
@@ -1280,9 +1286,6 @@ const PaymentManagement = () => {
           </TabsTrigger>
           <TabsTrigger value="configuration" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <SettingsIcon size={15} /> Configuration
-          </TabsTrigger>
-          <TabsTrigger value="record" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
-            <Sparkles size={15} /> Record & Generate
           </TabsTrigger>
           <TabsTrigger value="gateways" className="rounded-xl px-5 py-2.5 font-bold text-xs gap-2 flex-shrink-0 whitespace-nowrap data-[state=active]:bg-indigo-600 data-[state=active]:text-white">
             <Globe size={15} /> Payment Gateways
@@ -1611,22 +1614,217 @@ const PaymentManagement = () => {
                                     }}
                                   >
                                     <Ban size={14} />
-                                  </Button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* CONFIGURATION TAB */}
+                                                                      </Button>
+                                                                    </div>
+                                                                  </td>
+                                                                </tr>
+                                                              );
+                                                            })}
+                                                          </tbody>
+                                                        </table>
+                                                      </div>
+                                                    </CardContent>
+                                                  </Card>
+                                                )}
+                                              </div>
+                                    
+                                              {/* Quick Record Payment Banner — consolidated from the removed "Record & Generate" tab */}
+                                              <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden w-full">
+                                                <CardContent className="p-8 md:p-10">
+                                                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                    <div className="space-y-2">
+                                                      <div className="flex items-center gap-2">
+                                                        <div className="p-2 bg-white/20 rounded-xl">
+                                                          <CreditCard size={20} className="text-white" />
+                                                        </div>
+                                                        <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                                                          Single Unified Workflow
+                                                        </span>
+                                                      </div>
+                                                      <h2 className="text-2xl font-black">Record License Payment</h2>
+                                                      <p className="text-indigo-200 text-sm max-w-lg">
+                                                        Select a payment method, enter transaction details, and instantly generate an activation key — all in one place. The payment is automatically logged to the Invoice History.
+                                                      </p>
+                                                    </div>
+                                                    <Button
+                                                      onClick={() => {
+                                                        setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                                                        setIsLicenseModalOpen(true);
+                                                      }}
+                                                      className="rounded-2xl h-14 px-10 bg-white text-indigo-700 hover:bg-indigo-50 font-black text-base shadow-2xl shadow-black/20 gap-2 shrink-0"
+                                                    >
+                                                      <Sparkles size={18} /> Open Payment Form
+                                                    </Button>
+                                                  </div>
+                                                </CardContent>
+                                              </Card>
+                                    
+                                              {/* Activation Code Management — consolidated from the removed "Record & Generate" tab */}
+                                              <div className="space-y-4 mt-4">
+                                                <div className="flex items-center justify-between">
+                                                  <div>
+                                                    <h2 className="text-lg font-black text-slate-900">Activation Code Management</h2>
+                                                    <p className="text-sm text-slate-500">
+                                                      All monthly payment codes. Copy and share to unlock devices. Codes expire after 30 days.
+                                                    </p>
+                                                  </div>
+                                                  <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold text-xs gap-1.5 px-3 py-1.5">
+                                                    <Key size={12} />
+                                                    {monthlyPayments.length} code{monthlyPayments.length !== 1 ? 's' : ''} issued
+                                                  </Badge>
+                                                </div>
+                                    
+                                                {monthlyPayments.length === 0 ? (
+                                                  <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-16 text-center">
+                                                    <div className="flex flex-col items-center gap-4">
+                                                      <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
+                                                        <Key size={32} />
+                                                      </div>
+                                                      <div>
+                                                        <p className="text-base font-black text-slate-700">No Codes Generated Yet</p>
+                                                        <p className="text-sm text-slate-400 font-medium mt-1">
+                                                          Record a monthly payment above to generate your first activation code.
+                                                        </p>
+                                                      </div>
+                                                    </div>
+                                                  </Card>
+                                                ) : (
+                                                  <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
+                                                    <CardContent className="p-0">
+                                                      <div className="overflow-x-auto">
+                                                        <table className="w-full text-xs text-left min-w-[900px]">
+                                                          <thead className="bg-slate-50/80 border-b border-slate-100">
+                                                            <tr>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Code</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Subscription</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Ref / Receipt</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
+                                                              <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                                                            </tr>
+                                                          </thead>
+                                                          <tbody className="divide-y divide-slate-100">
+                                                            {monthlyPayments.map((mp) => {
+                                                              const isExpired = mp.expiresAt < new Date().toISOString().slice(0, 10);
+                                                              const statusStyle =
+                                                                mp.codeStatus === 'redeemed'
+                                                                  ? 'bg-blue-50 text-blue-700'
+                                                                  : isExpired
+                                                                  ? 'bg-slate-100 text-slate-500'
+                                                                  : 'bg-emerald-50 text-emerald-700';
+                                                              const statusLabel =
+                                                                mp.codeStatus === 'redeemed'
+                                                                  ? 'Redeemed'
+                                                                  : isExpired
+                                                                  ? 'Expired'
+                                                                  : 'Active';
+                                                              const statusIcon =
+                                                                mp.codeStatus === 'redeemed' ? (
+                                                                  <CheckCircle2 size={10} />
+                                                                ) : isExpired ? (
+                                                                  <Ban size={10} />
+                                                                ) : (
+                                                                  <CheckCircle2 size={10} />
+                                                                );
+                                    
+                                                              const modeColors: Record<string, string> = {
+                                                                mpesa: 'bg-emerald-50 text-emerald-700',
+                                                                cash: 'bg-blue-50 text-blue-700',
+                                                                bank: 'bg-slate-100 text-slate-700',
+                                                              };
+                                                              const modeLabels: Record<string, string> = {
+                                                                mpesa: 'M-Pesa',
+                                                                cash: 'Cash',
+                                                                bank: 'Bank Deposit',
+                                                              };
+                                    
+                                                              return (
+                                                                <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
+                                                                  <td className="px-6 py-4">
+                                                                    <div className="flex items-center gap-2">
+                                                                      <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
+                                                                        {mp.activationCode}
+                                                                      </p>
+                                                                      <button
+                                                                        type="button"
+                                                                        onClick={() => copyToClipboard(mp.activationCode)}
+                                                                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
+                                                                        title="Copy code"
+                                                                      >
+                                                                        <Copy size={13} />
+                                                                      </button>
+                                                                    </div>
+                                                                  </td>
+                                                                  <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
+                                                                  <td className="px-6 py-4">
+                                                                    <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
+                                                                      {modeLabels[mp.paymentMode]}
+                                                                    </span>
+                                                                    <p className="text-slate-600 font-black text-sm mt-0.5">
+                                                                      {mp.currency} {mp.amount}
+                                                                    </p>
+                                                                  </td>
+                                                                  <td className="px-6 py-4">
+                                                                    <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
+                                                                      {mp.transactionRef}
+                                                                    </span>
+                                                                  </td>
+                                                                  <td className="px-6 py-4">
+                                                                    <p className="font-medium text-slate-700">
+                                                                      {new Date(mp.paidAt).toLocaleDateString()}
+                                                                    </p>
+                                                                    <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
+                                                                  </td>
+                                                                  <td className="px-6 py-4">
+                                                                    <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
+                                                                      {new Date(mp.expiresAt).toLocaleDateString()}
+                                                                    </p>
+                                                                  </td>
+                                                                  <td className="px-6 py-4">
+                                                                    <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
+                                                                      {statusIcon}
+                                                                      {statusLabel}
+                                                                    </Badge>
+                                                                  </td>
+                                                                  <td className="px-6 py-4 text-right">
+                                                                    <div className="flex justify-end gap-1.5">
+                                                                      <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
+                                                                        title="Copy code"
+                                                                        onClick={() => copyToClipboard(mp.activationCode)}
+                                                                      >
+                                                                        <Copy size={14} />
+                                                                      </Button>
+                                                                      {mp.codeStatus === 'active' && !isExpired && (
+                                                                        <Button
+                                                                          variant="ghost"
+                                                                          size="icon"
+                                                                          className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
+                                                                          title="Mark as redeemed"
+                                                                          onClick={() => markCodeRedeemed(mp.id)}
+                                                                        >
+                                                                          <CheckCircle2 size={14} />
+                                                                        </Button>
+                                                                      )}
+                                                                    </div>
+                                                                  </td>
+                                                                </tr>
+                                                              );
+                                                            })}
+                                                          </tbody>
+                                                        </table>
+                                                      </div>
+                                                    </CardContent>
+                                                  </Card>
+                                                )}
+                                              </div>
+                                            </TabsContent>
+                                    
+                                            {/* CONFIGURATION TAB */}
         <TabsContent value="configuration" className="space-y-6">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -1830,203 +2028,6 @@ const PaymentManagement = () => {
               </Button>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        {/* MONTHLY PAYMENTS / RECORD & GENERATE TAB */}
-        <TabsContent value="record" className="space-y-8">
-          {/* Unified payment entry card — opens the unified RecordPayment modal */}
-          <Card className="border-none shadow-lg rounded-[2rem] bg-gradient-to-br from-indigo-600 to-violet-700 text-white overflow-hidden w-full">
-            <CardContent className="p-8 md:p-10">
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="p-2 bg-white/20 rounded-xl">
-                      <CreditCard size={20} className="text-white" />
-                    </div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
-                      Single Unified Workflow
-                    </span>
-                  </div>
-                  <h2 className="text-2xl font-black">Record License Payment</h2>
-                  <p className="text-indigo-200 text-sm max-w-lg">
-                    Select a payment method, enter transaction details, and instantly generate an activation key — all in one place. The payment is automatically logged to the Invoice History.
-                  </p>
-                </div>
-                <Button
-                  onClick={() => {
-                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
-                    setIsLicenseModalOpen(true);
-                  }}
-                  className="rounded-2xl h-14 px-10 bg-white text-indigo-700 hover:bg-indigo-50 font-black text-base shadow-2xl shadow-black/20 gap-2 shrink-0"
-                >
-                  <Sparkles size={18} /> Open Payment Form
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-black text-slate-900">Activation Code Management</h2>
-                <p className="text-sm text-slate-500">
-                  All monthly payment codes. Copy and share to unlock devices. Codes expire after 30 days.
-                </p>
-              </div>
-              <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold text-xs gap-1.5 px-3 py-1.5">
-                <Key size={12} />
-                {monthlyPayments.length} code{monthlyPayments.length !== 1 ? 's' : ''} issued
-              </Badge>
-            </div>
-
-            {monthlyPayments.length === 0 ? (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-slate-50 py-16 text-center">
-                <div className="flex flex-col items-center gap-4">
-                  <div className="w-16 h-16 bg-slate-100 text-slate-400 rounded-3xl flex items-center justify-center">
-                    <Key size={32} />
-                  </div>
-                  <div>
-                    <p className="text-base font-black text-slate-700">No Codes Generated Yet</p>
-                    <p className="text-sm text-slate-400 font-medium mt-1">
-                      Record a monthly payment above to generate your first activation code.
-                    </p>
-                  </div>
-                </div>
-              </Card>
-            ) : (
-              <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden w-full">
-                <CardContent className="p-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs text-left min-w-[900px]">
-                      <thead className="bg-slate-50/80 border-b border-slate-100">
-                        <tr>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Code</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Subscription</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Payment</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Ref / Receipt</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Date</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Expiry</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Status</th>
-                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 text-right">Actions</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {monthlyPayments.map((mp) => {
-                          const isExpired = mp.expiresAt < new Date().toISOString().slice(0, 10);
-                          const statusStyle =
-                            mp.codeStatus === 'redeemed'
-                              ? 'bg-blue-50 text-blue-700'
-                              : isExpired
-                              ? 'bg-slate-100 text-slate-500'
-                              : 'bg-emerald-50 text-emerald-700';
-                          const statusLabel =
-                            mp.codeStatus === 'redeemed'
-                              ? 'Redeemed'
-                              : isExpired
-                              ? 'Expired'
-                              : 'Active';
-                          const statusIcon =
-                            mp.codeStatus === 'redeemed' ? (
-                              <CheckCircle2 size={10} />
-                            ) : isExpired ? (
-                              <Ban size={10} />
-                            ) : (
-                              <CheckCircle2 size={10} />
-                            );
-
-                            const modeColors: Record<string, string> = {
-                              mpesa: 'bg-emerald-50 text-emerald-700',
-                              cash: 'bg-blue-50 text-blue-700',
-                              bank: 'bg-slate-100 text-slate-700',
-                            };
-                            const modeLabels: Record<string, string> = {
-                              mpesa: 'M-Pesa',
-                              cash: 'Cash',
-                              bank: 'Bank Deposit',
-                            };
-
-                            return (
-                              <tr key={mp.id} className="hover:bg-slate-50/40 transition-colors group">
-                                <td className="px-6 py-4">
-                                  <div className="flex items-center gap-2">
-                                    <p className="font-mono font-black text-indigo-600 text-[11px] tracking-widest whitespace-nowrap">
-                                      {mp.activationCode}
-                                    </p>
-                                    <button
-                                      type="button"
-                                      onClick={() => copyToClipboard(mp.activationCode)}
-                                      className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-600 transition-all shrink-0"
-                                      title="Copy code"
-                                    >
-                                      <Copy size={13} />
-                                    </button>
-                                  </div>
-                                </td>
-                                <td className="px-6 py-4 font-medium text-slate-700">{mp.subscriptionName}</td>
-                                <td className="px-6 py-4">
-                                  <span className={cn('px-2.5 py-1 rounded-xl text-[10px] font-black uppercase', modeColors[mp.paymentMode] ?? modeColors.cash)}>
-                                    {modeLabels[mp.paymentMode]}
-                                  </span>
-                                  <p className="text-slate-600 font-black text-sm mt-0.5">
-                                    {mp.currency} {mp.amount}
-                                  </p>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <span className="font-mono text-slate-600 font-medium bg-slate-50 px-2 py-0.5 rounded-lg">
-                                    {mp.transactionRef}
-                                  </span>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <p className="font-medium text-slate-700">
-                                    {new Date(mp.paidAt).toLocaleDateString()}
-                                  </p>
-                                  <p className="text-[10px] text-slate-400 font-medium">{mp.issuedTo}</p>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <p className={cn('font-bold', isExpired ? 'text-slate-400' : 'text-slate-700')}>
-                                    {new Date(mp.expiresAt).toLocaleDateString()}
-                                  </p>
-                                </td>
-                                <td className="px-6 py-4">
-                                  <Badge className={cn('border font-bold text-[10px] gap-1', statusStyle)}>
-                                    {statusIcon}
-                                    {statusLabel}
-                                  </Badge>
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                  <div className="flex justify-end gap-1.5">
-                                    <Button
-                                      variant="ghost"
-                                      size="icon"
-                                      className="h-8 w-8 rounded-xl text-slate-300 hover:text-indigo-600 hover:bg-indigo-50"
-                                      title="Copy code"
-                                      onClick={() => copyToClipboard(mp.activationCode)}
-                                    >
-                                      <Copy size={14} />
-                                    </Button>
-                                    {mp.codeStatus === 'active' && !isExpired && (
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8 rounded-xl text-slate-300 hover:text-blue-600 hover:bg-blue-50"
-                                        title="Mark as redeemed"
-                                        onClick={() => markCodeRedeemed(mp.id)}
-                                      >
-                                        <CheckCircle2 size={14} />
-                                      </Button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-          </div>
         </TabsContent>
 
         {/* PAYMENT GATEWAYS TAB */}
