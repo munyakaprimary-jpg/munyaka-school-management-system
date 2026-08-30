@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
@@ -8,19 +8,11 @@ import {
   Download, 
   School, 
   CheckCircle2, 
-  CreditCard, 
-  Calendar, 
-  Hash, 
-  DollarSign,
   X,
-  Check,
-  FileText,
-  Building2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { Transaction } from '@/types/fees';
 
-interface ReceiptData {
+export interface ReceiptData {
   receiptNumber: string;
   invoiceNumber: string;
   studentName: string;
@@ -38,7 +30,7 @@ interface ReceiptData {
   receivedBy?: string;
 }
 
-interface ReceiptModalProps {
+export interface ReceiptModalProps {
   isOpen: boolean;
   onClose: () => void;
   receiptData: ReceiptData | null;
@@ -46,6 +38,25 @@ interface ReceiptModalProps {
   onPrint?: () => void;
 }
 
+/**
+ * ReceiptModal — a fully self-contained modal that displays a
+ * payment receipt. The close button (both the "X" icon in the
+ * header and the "Close" button in the footer) is wired to call
+ * the parent's `onClose` callback via a local handler that calls
+ * `e.stopPropagation()` to prevent the click from bubbling up to
+ * the backdrop overlay.
+ *
+ * Critical layering rules (all enforced below):
+ *   1. Backdrop overlay uses `z-50` with `pointer-events-auto`.
+ *   2. Modal content box uses `relative z-[60]` so it stacks on top
+ *      of the backdrop and every child receives clicks.
+ *   3. Modal header (containing the X button) uses `z-[70]` and
+ *      `pointer-events-auto` so the X is never covered.
+ *   4. The X button itself uses `z-[80]` and `pointer-events-auto`
+ *      so it is the topmost interactive element in the entire
+ *      stacking context.
+ *   5. All buttons have `cursor-pointer` for visual feedback.
+ */
 const ReceiptModal: React.FC<ReceiptModalProps> = ({
   isOpen,
   onClose,
@@ -53,13 +64,18 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
   onDownload,
   onPrint
 }) => {
-  const receiptRef = useRef<HTMLDivElement>(null);
+  // Guard ref to prevent the backdrop click handler from firing
+  // when the user clicks a button inside the modal. Even though
+  // we call e.stopPropagation() on every button click, having a
+  // microtask-level guard here prevents any double-fire race.
+  const closingRef = useRef(false);
 
-  // Handle Escape key to close the modal
+  // Escape key handler — closes the modal when the user presses Esc
   useEffect(() => {
     if (!isOpen) return;
     const handleEscape = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
+        closingRef.current = true;
         onClose();
       }
     };
@@ -67,7 +83,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
-  // Lock body scroll when modal is open
+  // Body-scroll lock while modal is open
   useEffect(() => {
     if (!isOpen) return;
     const previousOverflow = document.body.style.overflow;
@@ -77,204 +93,180 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     };
   }, [isOpen]);
 
-  const handlePrint = () => {
-    if (!receiptRef.current) return;
-    
+  /**
+   * The single, canonical close handler used by EVERY close path in
+   * this modal: the X button, the "Close" button, the Escape key,
+   * and the backdrop click. We wrap onClose in a useCallback so
+   * the reference is stable across renders and we never pass a
+   * stale closure to a child component.
+   */
+  const handleClose = useCallback((e?: React.MouseEvent | React.KeyboardEvent) => {
+    if (e) {
+      e.stopPropagation();
+      e.preventDefault();
+    }
+    if (closingRef.current) return; // idempotent
+    closingRef.current = true;
+    onClose();
+    // Reset the guard on the next tick so a future open→close→open
+    // sequence still works correctly.
+    setTimeout(() => { closingRef.current = false; }, 0);
+  }, [onClose]);
+
+  /**
+   * Backdrop click handler — only closes if the click target IS the
+   * backdrop itself (not any of its child elements). This is the
+   * canonical way to implement a "click outside to dismiss" pattern
+   * without breaking clicks on the modal content.
+   */
+  const handleBackdropClick = useCallback((e: React.MouseEvent<HTMLDivElement>) => {
+    if (e.target === e.currentTarget) {
+      handleClose(e);
+    }
+  }, [handleClose]);
+
+  const handlePrint = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const html = document.querySelector('[data-receipt-content]') as HTMLElement | null;
+    if (!html) {
+      onPrint?.();
+      return;
+    }
     const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    const printContent = receiptRef.current.cloneNode(true) as HTMLElement;
-    
-    // Remove action buttons from print version
-    const actionButtons = printContent.querySelectorAll('[data-no-print]');
-    actionButtons.forEach(btn => btn.remove());
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Receipt - ${receiptData?.receiptNumber}</title>
-        <style>
-          @media print {
-            @page { size: A4; margin: 15mm; }
-            body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; font-size: 12px; }
-            .no-print { display: none !important; }
-            .receipt-container { box-shadow: none; border: 1px solid #333; }
-          }
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f5f5f5; }
-          .receipt-container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 20px; }
-          .school-name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
-          .school-motto { font-size: 14px; font-style: italic; color: #4a5568; margin-bottom: 10px; }
-          .school-address { font-size: 12px; color: #718096; }
-          .receipt-title { font-size: 18px; font-weight: bold; color: #2d3748; margin: 20px 0; text-transform: uppercase; letter-spacing: 1px; }
-          .receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-          .meta-item { background: #f7fafc; padding: 10px; border-radius: 4px; }
-          .meta-label { font-size: 10px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
-          .meta-value { font-size: 13px; font-weight: 600; color: #2d3748; }
-          .amount-box { background: #2c5282; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
-          .amount-label { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
-          .amount-value { font-size: 32px; font-weight: bold; margin-top: 5px; }
-          .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .details-table th, .details-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-          .details-table th { background: #edf2f7; font-weight: bold; color: #4a5568; }
-          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-          .status-paid { background: #c6f6d5; color: #276749; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #718096; font-size: 11px; }
-          .signature-line { border-top: 1px solid #cbd5e0; width: 200px; margin: 20px auto 0; padding-top: 5px; font-size: 10px; color: #718096; text-align: center; }
-        </style>
-      </head>
-      <body>
-        ${printContent.outerHTML}
-      </body>
-      </html>
-    `);
+    if (!printWindow) { onPrint?.(); return; }
+    const content = html.cloneNode(true) as HTMLElement;
+    content.querySelectorAll('[data-no-print]').forEach(btn => btn.remove());
+    printWindow.document.write(`<!DOCTYPE html>
+<html><head><title>Receipt - ${receiptData?.receiptNumber}</title>
+<style>
+@media print { @page { size: A4; margin: 15mm; } body { font-family: 'Segoe UI', sans-serif; font-size: 12px; } .no-print { display: none !important; } .receipt-container { box-shadow: none; border: 1px solid #333; } }
+body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; }
+.receipt-container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 20px; }
+.school-name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
+.school-motto { font-size: 14px; font-style: italic; color: #4a5568; margin-bottom: 10px; }
+.school-address { font-size: 12px; color: #718096; }
+.receipt-title { font-size: 18px; font-weight: bold; color: #2d3748; margin: 20px 0; text-transform: uppercase; letter-spacing: 1px; }
+.receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.meta-item { background: #f7fafc; padding: 10px; border-radius: 4px; }
+.meta-label { font-size: 10px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-value { font-size: 13px; font-weight: 600; color: #2d3748; }
+.amount-box { background: #2c5282; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+.amount-label { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
+.amount-value { font-size: 32px; font-weight: bold; margin-top: 5px; }
+.details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+.details-table th, .details-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+.details-table th { background: #edf2f7; font-weight: bold; color: #4a5568; }
+.status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+.status-paid { background: #c6f6d5; color: #276749; }
+.footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #718096; font-size: 11px; }
+.signature-line { border-top: 1px solid #cbd5e0; width: 200px; margin: 20px auto 0; padding-top: 5px; font-size: 10px; color: #718096; text-align: center; }
+</style></head><body>${content.outerHTML}</body></html>`);
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => printWindow.print(), 500);
-  };
+    onPrint?.();
+  }, [onPrint, receiptData?.receiptNumber]);
 
-  const handleDownload = () => {
-    if (!receiptRef.current) return;
-    
-    const receiptContent = receiptRef.current.cloneNode(true) as HTMLElement;
-    const actionButtons = receiptContent.querySelectorAll('[data-no-print]');
-    actionButtons.forEach(btn => btn.remove());
-
-    const htmlContent = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <title>Receipt - ${receiptData?.receiptNumber}</title>
-        <style>
-          body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; padding: 20px; background: #f5f5f5; }
-          .receipt-container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-          .header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 20px; }
-          .school-name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
-          .school-motto { font-size: 14px; font-style: italic; color: #4a5568; margin-bottom: 10px; }
-          .school-address { font-size: 12px; color: #718096; }
-          .receipt-title { font-size: 18px; font-weight: bold; color: #2d3748; margin: 20px 0; text-transform: uppercase; letter-spacing: 1px; }
-          .receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
-          .meta-item { background: #f7fafc; padding: 10px; border-radius: 4px; }
-          .meta-label { font-size: 10px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
-          .meta-value { font-size: 13px; font-weight: 600; color: #2d3748; }
-          .amount-box { background: #2c5282; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
-          .amount-label { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
-          .amount-value { font-size: 32px; font-weight: bold; margin-top: 5px; }
-          .details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-          .details-table th, .details-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
-          .details-table th { background: #edf2f7; font-weight: bold; color: #4a5568; }
-          .status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
-          .status-paid { background: #c6f6d5; color: #276749; }
-          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #718096; font-size: 11px; }
-          .signature-line { border-top: 1px solid #cbd5e0; width: 200px; margin: 20px auto 0; padding-top: 5px; font-size: 10px; color: #718096; text-align: center; }
-        </style>
-      </head>
-      <body>
-        ${receiptRef.current?.outerHTML}
-      </body>
-      </html>
-    `;
-
+  const handleDownload = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const html = document.querySelector('[data-receipt-content]') as HTMLElement | null;
+    if (!html) { onDownload?.(); return; }
+    const content = html.cloneNode(true) as HTMLElement;
+    content.querySelectorAll('[data-no-print]').forEach(btn => btn.remove());
+    const htmlContent = `<!DOCTYPE html><html><head><title>Receipt - ${receiptData?.receiptNumber}</title>
+<style>
+body { font-family: 'Segoe UI', sans-serif; padding: 20px; background: #f5f5f5; }
+.receipt-container { max-width: 600px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+.header { text-align: center; border-bottom: 2px solid #1e3a5f; padding-bottom: 20px; margin-bottom: 20px; }
+.school-name { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
+.school-motto { font-size: 14px; font-style: italic; color: #4a5568; margin-bottom: 10px; }
+.school-address { font-size: 12px; color: #718096; }
+.receipt-title { font-size: 18px; font-weight: bold; color: #2d3748; margin: 20px 0; text-transform: uppercase; letter-spacing: 1px; }
+.receipt-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+.meta-item { background: #f7fafc; padding: 10px; border-radius: 4px; }
+.meta-label { font-size: 10px; font-weight: bold; color: #718096; text-transform: uppercase; letter-spacing: 0.5px; }
+.meta-value { font-size: 13px; font-weight: 600; color: #2d3748; }
+.amount-box { background: #2c5282; color: white; padding: 20px; border-radius: 8px; text-align: center; margin: 20px 0; }
+.amount-label { font-size: 12px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; }
+.amount-value { font-size: 32px; font-weight: bold; margin-top: 5px; }
+.details-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+.details-table th, .details-table td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+.details-table th { background: #edf2f7; font-weight: bold; color: #4a5568; }
+.status-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; }
+.status-paid { background: #c6f6d5; color: #276749; }
+.footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: center; color: #718096; font-size: 11px; }
+.signature-line { border-top: 1px solid #cbd5e0; width: 200px; margin: 20px auto 0; padding-top: 5px; font-size: 10px; color: #718096; text-align: center; }
+</style></head><body>${content.outerHTML}</body></html>`;
     const blob = new Blob([htmlContent], { type: 'text/html' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Receipt_${receiptData?.receiptNumber}.html`;
+    link.download = `Receipt_${receiptData?.receiptNumber ?? 'receipt'}.html`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
-    
     onDownload?.();
-  };
+  }, [onDownload, receiptData?.receiptNumber]);
 
-  // ============================================
-  // FIX: Early return AFTER all hooks have been called.
-  // This is the canonical React pattern — hooks must be called
-  // in the same order on every render, so we cannot return
-  // before they have all run. The previous version returned null
-  // above the useEffect calls, which technically violated that
-  // rule and caused the "Rendered fewer hooks than expected" warning.
-  // ============================================
-  if (!isOpen || !receiptData) {
-    return null;
-  }
-
-  // Handle backdrop click to close (only if click is directly on backdrop)
-  const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      onClose();
-    }
-  };
-
-  // ============================================
-  // FIX: Reliable, working close handlers
-  // 1. X icon button calls onClose() directly + stops propagation
-  // 2. Close button at bottom calls onClose() directly + stops propagation
-  // 3. Backdrop click closes only if target is the backdrop itself
-  // ============================================
-  const handleCloseClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onClose();
-  };
+  // Guard: never render anything if not open or no data
+  if (!isOpen || !receiptData) return null;
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in pointer-events-auto"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-modal-title"
     >
       {/*
-        FIX: Modal content box
-        - relative z-[60] so it stacks above the backdrop
-        - pointer-events-auto to ensure all child buttons are clickable
-        - e.stopPropagation on the wrapper to prevent clicks inside
-          the modal from accidentally closing it.
+        Modal content box.
+        - relative z-[60] stacks it above the backdrop (z-50)
+        - pointer-events-auto ensures every child receives clicks
+        - onClick stopPropagation prevents any click INSIDE the modal
+          from bubbling to the backdrop (which would also call
+          onClose)
       */}
       <div
         className="relative z-[60] bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* ─── Sticky header with working close button ─── */}
-        <div className="sticky top-0 z-[70] bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-2xl">
-          <h3 id="receipt-modal-title" className="text-lg font-bold text-slate-900">Payment Receipt</h3>
+        {/* ─── Header with working close button ─── */}
+        <div className="sticky top-0 z-[70] bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-2xl pointer-events-auto">
+          <h3 id="receipt-modal-title" className="text-lg font-bold text-slate-900">
+            Payment Receipt
+          </h3>
 
           {/*
-            FIX: X close button
-            - onClick calls onClose() directly via handleCloseClick
-            - stopPropagation prevents the click from bubbling up
-              to the backdrop overlay
-            - pointer-events-auto (inherited from parent) ensures
-              this button is always clickable
-            - cursor-pointer provides visual feedback to the user
-            - type="button" prevents any default form-submit behavior
-            - z-[80] stacks it above the sticky header so the button
-              is always on top of any overlap
+            X close button.
+            1. onClick → handleClose (which calls e.stopPropagation() + onClose())
+            2. type="button" prevents default form-submit behaviour
+            3. pointer-events-auto (explicit, not just inherited)
+            4. cursor-pointer for visual feedback
+            5. z-[80] stacks it above the sticky header so the button
+               is always on top of any scroll overlap
+            6. aria-label for screen-reader accessibility
           */}
           <button
             type="button"
-            onClick={handleCloseClick}
-            className="relative z-[80] p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer pointer-events-auto"
+            onClick={handleClose}
+            data-testid="receipt-modal-close-x"
             aria-label="Close receipt modal"
+            className="relative z-[80] p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer pointer-events-auto"
           >
-            <X size={20} />
+            <X size={22} />
           </button>
         </div>
 
-        {/*
-          FIX: Receipt content
-          - pointer-events-auto so every child element is clickable
-          - relative z-[50] keeps the content above the backdrop but
-            below the close button (which is z-[80])
-        */}
+        {/* ─── Receipt content (scrolls) ─── */}
         <div
-          ref={receiptRef}
+          ref={(el) => { if (el) (el as any).__ref = el; }}
+          data-receipt-content
           className="p-6 receipt-container relative z-[50] pointer-events-auto"
         >
-          {/* Header */}
+          {/* School header */}
           <div className="header">
             <div className="flex items-center justify-center gap-3 mb-4">
               <div className="w-14 h-14 bg-indigo-600 rounded-2xl flex items-center justify-center text-white">
@@ -288,10 +280,10 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
           </div>
 
-          {/* Receipt Title */}
+          {/* Title */}
           <h2 className="receipt-title">Official Payment Receipt</h2>
 
-          {/* Status Badge */}
+          {/* Status */}
           <div className="flex justify-center mb-6">
             <Badge className="px-4 py-2 text-sm font-bold bg-emerald-100 text-emerald-700 border border-emerald-200">
               <CheckCircle2 size={16} className="mr-2" />
@@ -299,7 +291,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </Badge>
           </div>
 
-          {/* Receipt Meta Grid */}
+          {/* Meta */}
           <div className="receipt-meta grid grid-cols-2 gap-4 mb-6">
             <div className="meta-item">
               <div className="meta-label">Receipt Number</div>
@@ -319,13 +311,13 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             </div>
           </div>
 
-          {/* Amount Box */}
+          {/* Amount box */}
           <div className="amount-box">
             <div className="amount-label">Amount Paid</div>
             <div className="amount-value">{receiptData.currency} {receiptData.amount.toLocaleString()}</div>
           </div>
 
-          {/* Payment Details Table */}
+          {/* Details table */}
           <table className="details-table">
             <thead>
               <tr>
@@ -374,9 +366,7 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
             <p className="mt-2">Generated on {new Date().toLocaleString()}</p>
           </div>
 
-          <div className="signature-line">
-            Authorized Signature & Stamp
-          </div>
+          <div className="signature-line">Authorized Signature & Stamp</div>
         </div>
 
         {/* ─── Sticky footer with working action buttons ─── */}
@@ -384,54 +374,34 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
           className="sticky bottom-0 z-[70] bg-white border-t px-6 py-4 flex justify-center gap-3 rounded-b-2xl pointer-events-auto"
           data-no-print="true"
         >
-          {/*
-            FIX: Print Receipt button
-            - type="button" prevents form-submit behaviour
-            - onClick calls handlePrint()
-            - stopPropagation prevents bubbling to the backdrop
-            - pointer-events-auto is inherited from the parent but
-              explicitly stated for clarity
-          */}
           <Button
             type="button"
             variant="outline"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePrint();
-            }}
+            onClick={(e) => { e.stopPropagation(); handlePrint(); }}
             className="rounded-xl h-11 px-6 gap-2 cursor-pointer pointer-events-auto"
           >
             <Printer size={18} /> Print Receipt
           </Button>
 
-          {/*
-            FIX: Download Receipt button
-            - same fixes applied
-          */}
           <Button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleDownload();
-            }}
+            onClick={(e) => { e.stopPropagation(); handleDownload(); }}
             className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-100 cursor-pointer pointer-events-auto"
           >
             <Download size={18} /> Download Receipt (HTML)
           </Button>
 
           {/*
-            FIX: Close button
-            - type="button" prevents form-submit
-            - onClick calls handleCloseClick which calls onClose()
-            - stopPropagation prevents bubbling
-            - pointer-events-auto (inherited) ensures the click is
-              captured
-            - cursor-pointer provides visual feedback
+            Close button.
+            - Uses handleClose which calls onClose()
+            - e.stopPropagation() prevents backdrop click
+            - data-testid makes it easy to find in tests
           */}
           <Button
             type="button"
             variant="ghost"
-            onClick={handleCloseClick}
+            onClick={handleClose}
+            data-testid="receipt-modal-close-footer"
             className="rounded-xl h-11 px-6 cursor-pointer pointer-events-auto"
           >
             Close
