@@ -104,8 +104,9 @@ export const getActiveAdminPassword = (
   if (fromShared) return fromShared;
 
   // 5. Hard-coded default
+  const fallback = DEFAULT_ADMIN_PASSWORDS[role] ?? '';
   return {
-    password: DEFAULT_ADMIN_PASSWORDS[role].trim(),
+    password: fallback.trim(),
     source: 'default',
   };
 };
@@ -114,8 +115,16 @@ export const getActiveAdminPassword = (
  * Persist the new admin PIN to every key the rest of the app reads
  * from, so the Login page (which checks Configuration, legacy and
  * shared keys) and the AuthContext all see the same value.
+ *
+ * @param role      - The admin role whose PIN is being saved.
+ * @param newPin    - The new PIN string. Guards against null/undefined
+ *                    gracefully so callers don't need non-null guarantees.
  */
-export const saveAdminPassword = (role: AdminRoleId, newPin: string): void => {
+export const saveAdminPassword = (
+  role: AdminRoleId,
+  newPin: string | null | undefined,
+): void => {
+  if (newPin == null) return; // null or undefined — nothing to save
   const trimmed = newPin.trim();
   if (!trimmed) return;
 
