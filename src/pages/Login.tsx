@@ -31,19 +31,28 @@ import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import {
+  MUNYAKA_ADMIN_PASSWORD,
+  DEFAULT_ADMIN_PASSWORDS,
+  getActiveAdminPassword,
+  saveAdminPassword,
+} from '@/services/adminCredentials';
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
 
 type AdminRole = 'system_admin' | 'super_admin';
-type PasswordSource = 'default' | 'custom';
+/** Source tags returned by getActiveAdminPassword (re-exported for local use). */
+type PasswordSource = 'unified' | 'role' | 'legacy' | 'shared' | 'default';
+/** True when the active password was loaded from any of the storage keys
+ *  (rather than the hard-coded default). */
+const isCustomSource = (source: PasswordSource): boolean =>
+  source === 'unified' || source === 'role' || source === 'legacy' || source === 'shared';
 
 interface RoleConfig {
   id: AdminRole;
   label: string;
   description: string;
   fullDescription: string;
-  defaultPassword: string;
-  customPasswordKey: string; // localStorage key holding the custom PIN
   email: string;
   userName: string;
   userRole: 'owner' | 'super_admin';
@@ -58,8 +67,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'System Administrator',
     description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
-    defaultPassword: 'sysadmin2026',
-    customPasswordKey: 'munyaka_sysadmin_pass',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'System Administrator',
     userRole: 'super_admin',
@@ -72,8 +79,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     label: 'Super Admin (Owner)',
     description: 'Exclusive access to Payment & Subscriptions module',
     fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
-    defaultPassword: 'ownerpass2026',
-    customPasswordKey: 'munyaka_owner_pass',
     email: 'munyakaprimary@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
@@ -81,65 +86,6 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     icon: Crown,
     primaryColor: 'amber',
   },
-};
-
-/**
- * Resolve the active password for a given admin role — called fresh on
- * every login attempt so it always reflects the latest localStorage state.
- *
- * Priority order — checked in this exact order:
- *   1. Role-specific key used by the Configuration → Owner Security tab:
- *        • system_admin → "munyaka_sysadmin_pass"
- *        • super_admin  → "munyaka_owner_pass"
- *      This is the canonical key the Settings/Config page writes to when
- *      the admin rotates their PIN.
- *   2. Role-specific Configuration → System Security key
- *      ("munyaka_system_pass") — older key used in earlier versions of the
- *      Configuration tab, still honoured for backwards compatibility.
- *   3. Shared legacy key "munyaka_admin_pass" — written by several other
- *      modules (Fees, Grades, Attendance, ICT, etc.) and also used as the
- *      fallback for the "munyaka5239" credential.
- *   4. Hard-coded default ("sysadmin2026" / "ownerpass2026") as a
- *      last-resort fallback for brand-new devices.
- *
- * All returned values are .trim()'d to guard against accidental whitespace
- * or newline characters that could cause a comparison to silently fail.
- */
-const resolveAdminPassword = (
-  role: AdminRole,
-): { password: string; source: PasswordSource } => {
-  const config = ROLE_CONFIGS[role];
-
-  const tryRead = (key: string | null): string | null => {
-    if (!key) return null;
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw != null) {
-        // Normalise: trim whitespace and strip any trailing newlines
-        const normalised = raw.trim();
-        if (normalised.length > 0) {
-          return normalised;
-        }
-      }
-    } catch {
-      // localStorage unavailable (private mode, quota exceeded, etc.)
-    }
-    return null;
-  };
-
-  // 1. Exact Configuration → Owner Security key
-  // 2. Older Configuration → System Security key
-  // 3. Shared legacy key (also where the "munyaka5239" fallback lives)
-  const stored =
-    tryRead(config.customPasswordKey) ??
-    tryRead('munyaka_system_pass') ??
-    tryRead('munyaka_admin_pass');
-
-  if (stored !== null) {
-    return { password: stored, source: 'custom' };
-  }
-
-  return { password: config.defaultPassword.trim(), source: 'default' };
 };
 
 // ─── Staff role → redirect map ───────────────────────────────────────────────
@@ -235,21 +181,22 @@ const Login: React.FC = () => {
   const [activeCredentials, setActiveCredentials] = useState<
     Record<AdminRole, { password: string; source: PasswordSource }>
   >(() => ({
-    system_admin: resolveAdminPassword('system_admin'),
-    super_admin: resolveAdminPassword('super_admin'),
+    system_admin: getActiveAdminPassword('system_admin'),
+    super_admin: getActiveAdminPassword('super_admin'),
   }));
 
   useEffect(() => {
     const refresh = () => {
       setActiveCredentials({
-        system_admin: resolveAdminPassword('system_admin'),
-        super_admin: resolveAdminPassword('super_admin'),
+        system_admin: getActiveAdminPassword('system_admin'),
+        super_admin: getActiveAdminPassword('super_admin'),
       });
     };
     refresh();
     window.addEventListener('focus', refresh);
     window.addEventListener('storage', (e) => {
       if (
+        e.key === MUNYAKA_ADMIN_PASSWORD ||
         e.key === 'munyaka_sysadmin_pass' ||
         e.key === 'munyaka_owner_pass' ||
         e.key === 'munyaka_users' ||
@@ -317,23 +264,23 @@ const Login: React.FC = () => {
 
     // ── Fresh password resolution on every attempt ─────────────────────────
     // This is NOT read from React state (which may be stale after a
-    // Settings/Config page navigation).  We go straight to localStorage
-    // so the latest custom PIN is always used.
-    const { password: activeStored, source } = resolveAdminPassword(selectedAdminRole);
-    const defaultPin = config.defaultPassword.trim();
+    // Settings/Config page navigation).  We go straight to the centralized
+    // `getActiveAdminPassword` helper so the same key the Configuration /
+    // Security update screen writes to is the one we read from here.
+    const { password: activeStored, source } = getActiveAdminPassword(selectedAdminRole);
+    const defaultPin = DEFAULT_ADMIN_PASSWORDS[selectedAdminRole].trim();
 
     // ── Debug logging (development only — never in production) ─────────────
+    // This block exists so any future mismatch is easy to diagnose. It
+    // prints the exact stored password, the exact entered password, and
+    // the comparison results for both the active and default PINs.
     if (process.env.NODE_ENV === 'development') {
       // eslint-disable-next-line no-console
       console.groupCollapsed(
         `[AdminLogin] ${selectedAdminRole} @ ${new Date().toISOString()}`,
       );
       // eslint-disable-next-line no-console
-      console.log(
-        '  localStorage keys read:',
-        config.customPasswordKey,
-        '| munyaka_admin_pass',
-      );
+      console.log('  unified key  :', MUNYAKA_ADMIN_PASSWORD);
       // eslint-disable-next-line no-console
       console.log(
         '  activeStored (from storage)  :',
@@ -387,15 +334,12 @@ const Login: React.FC = () => {
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-      // Persist the PIN that was actually used so the profile/settings
-      // pages (which also sync to these keys via AuthContext) stay in
-      // sync even when the user signs in with the custom PIN.
-      localStorage.setItem('munyaka_admin_pass', activeStored);
-      if (selectedAdminRole === 'super_admin') {
-        localStorage.setItem('munyaka_owner_pass', activeStored);
-      } else {
-        localStorage.setItem('munyaka_sysadmin_pass', activeStored);
-      }
+      // Persist the PIN that was actually used to every key the rest of
+      // the app reads from — the centralized `saveAdminPassword` helper
+      // already handles the unified, role-specific, legacy and shared
+      // keys in one call, so the Configuration page and AuthContext
+      // stay in sync with whatever the admin just used to sign in.
+      saveAdminPassword(selectedAdminRole, activeStored);
       showSuccess(`Welcome, ${config.userName}!`);
       navigate(config.redirectPath, { replace: true });
     } else {
@@ -524,7 +468,7 @@ const Login: React.FC = () => {
                       { Icon: Settings2, label: 'Settings' },
                       { Icon: Shield, label: 'RBAC' },
                     ]}
-                    hasCustomPassword={activeCredentials.system_admin.source === 'custom'}
+                    hasCustomPassword={isCustomSource(activeCredentials.system_admin.source)}
                   />
                 </>
               ) : (
@@ -575,7 +519,7 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {activeCredentials[selectedAdminRole!].source === 'custom' ? (
+                          {isCustomSource(activeCredentials[selectedAdminRole!].source) ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
                               Custom PIN — set via Configuration &rarr; Owner Security
@@ -629,7 +573,7 @@ const Login: React.FC = () => {
                       { Icon: Crown, label: 'Owner' },
                       { Icon: Shield, label: 'Billing' },
                     ]}
-                    hasCustomPassword={activeCredentials.super_admin.source === 'custom'}
+                    hasCustomPassword={isCustomSource(activeCredentials.super_admin.source)}
                   />
                 </>
               ) : (
@@ -680,7 +624,7 @@ const Login: React.FC = () => {
                           </button>
                         </div>
                         <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {activeCredentials[selectedAdminRole!].source === 'custom' ? (
+                          {isCustomSource(activeCredentials[selectedAdminRole!].source) ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
                               Custom PIN — set via Configuration &rarr; Owner Security

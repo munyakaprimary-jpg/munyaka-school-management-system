@@ -46,21 +46,22 @@ import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, Geofence
 import { supabase } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 import AdminLocationPicker from '@/components/AdminLocationPicker';
+import {
+  MUNYAKA_ADMIN_PASSWORD,
+  MUNYAKA_SYSADMIN_PASS,
+  MUNYAKA_OWNER_PASS,
+  MUNYAKA_SYSTEM_PASS,
+  MUNYAKA_ADMIN_PASS,
+  DEFAULT_ADMIN_PASSWORDS,
+  getActiveAdminPassword,
+  saveAdminPassword,
+} from '@/services/adminCredentials';
 
 const SETTINGS_MASTER_KEY = 'munyaka_system_settings_v3';
 const SETTINGS_ROW_ID = 'default';
 
 // Session persistence keys
 const SESSION_KEY = 'munyaka_admin_session';
-const CRED_KEYS = {
-  SYSTEM_ADMIN: 'munyaka_sysadmin_pass',
-  SUPER_ADMIN: 'munyaka_owner_pass'
-};
-// Distinct default passwords - NEVER the same for both roles
-const DEFAULT_PASSWORDS = {
-  SYSTEM_ADMIN: 'sysadmin2026',
-  SUPER_ADMIN: 'ownerpass2026'
-};
 
 type AdminRole = 'system_admin' | 'super_admin';
 
@@ -195,44 +196,9 @@ const clearSession = () => {
   localStorage.removeItem(SESSION_KEY);
 };
 
-/**
- * Read the active credential for the given admin role, trying every
- * key the rest of the app might have written to, in priority order.
- *
- *  1. Role-specific Configuration → Owner Security key
- *     (`munyaka_sysadmin_pass` / `munyaka_owner_pass`)
- *  2. Older Configuration → System Security key (`munyaka_system_pass`)
- *  3. Shared legacy key (`munyaka_admin_pass`) — used by Fees, Grades,
- *     Attendance, ICT, and the "munyaka5239" fallback.
- *  4. Hard-coded default (`sysadmin2026` / `ownerpass2026`).
- *
- * Each read is .trim()'d so accidental whitespace on stored values
- * never causes a comparison to silently fail.
- */
+/** Thin wrapper: delegates to the centralized helper so existing callers get a plain string. */
 const getCredential = (role: AdminRole): string => {
-  const primaryKey = role === 'system_admin' ? CRED_KEYS.SYSTEM_ADMIN : CRED_KEYS.SUPER_ADMIN;
-  const defaultPass = role === 'system_admin' ? DEFAULT_PASSWORDS.SYSTEM_ADMIN : DEFAULT_PASSWORDS.SUPER_ADMIN;
-
-  const tryRead = (key: string | null): string | null => {
-    if (!key) return null;
-    try {
-      const raw = localStorage.getItem(key);
-      if (raw != null) {
-        const normalised = raw.trim();
-        if (normalised.length > 0) return normalised;
-      }
-    } catch {
-      /* localStorage unavailable */
-    }
-    return null;
-  };
-
-  return (
-    tryRead(primaryKey) ??
-    tryRead('munyaka_system_pass') ??
-    tryRead('munyaka_admin_pass') ??
-    defaultPass.trim()
-  );
+  return getActiveAdminPassword(role).password;
 };
 
 const Settings = () => {
@@ -410,10 +376,7 @@ const Settings = () => {
     // login page's own dual-mode check so a saved-or-default flow works
     // the same way in both directions.
     const storedPassword = getCredential(currentRole);
-    const defaultPassword =
-      currentRole === 'system_admin'
-        ? DEFAULT_PASSWORDS.SYSTEM_ADMIN
-        : DEFAULT_PASSWORDS.SUPER_ADMIN;
+    const defaultPassword = DEFAULT_ADMIN_PASSWORDS[currentRole];
 
     const isCurrentValid =
       enteredCurrent === storedPassword || enteredCurrent === defaultPassword;
@@ -441,18 +404,8 @@ const Settings = () => {
     // ── Write the new PIN to every key the rest of the app reads from,
     //    so the Login page (which checks Configuration, legacy and
     //    shared keys) and the AuthContext stay perfectly in sync.
-    const credKey = currentRole === 'system_admin'
-      ? CRED_KEYS.SYSTEM_ADMIN
-      : CRED_KEYS.SUPER_ADMIN;
-
     try {
-      localStorage.setItem(credKey, newPin);
-      // Legacy Configuration → System Security key (older builds)
-      localStorage.setItem('munyaka_system_pass', newPin);
-      // Shared legacy key — used by Fees, Grades, Attendance, ICT, and
-      // the "munyaka5239" fallback. Writing here means subsequent
-      // updates in any module that reads this key see the same value.
-      localStorage.setItem('munyaka_admin_pass', newPin);
+      saveAdminPassword(currentRole, newPin);
     } catch {
       showError("Could not save the new password to local storage.");
       setIsSaving(false);
@@ -629,9 +582,10 @@ const Settings = () => {
   };
 
   const handleUpdateMasterPin = async () => {
-    const storedAdminPass = localStorage.getItem(CRED_KEYS.SYSTEM_ADMIN) || DEFAULT_PASSWORDS.SYSTEM_ADMIN;
-    
-    if (pinForm.currentPin !== storedAdminPass) {
+    const storedAdminPass = getCredential('system_admin');
+    const defaultAdminPass = DEFAULT_ADMIN_PASSWORDS.system_admin;
+
+    if (pinForm.currentPin !== storedAdminPass && pinForm.currentPin !== defaultAdminPass) {
       showError("Current Admin PIN/Password is incorrect.");
       return;
     }
@@ -649,7 +603,7 @@ const Settings = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 600));
 
-    localStorage.setItem(CRED_KEYS.SYSTEM_ADMIN, pinForm.newPin);
+    saveAdminPassword('system_admin', pinForm.newPin);
 
     const newLog = {
       timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
