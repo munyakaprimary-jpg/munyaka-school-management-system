@@ -465,7 +465,7 @@ const PaymentManagement = () => {
         if (Array.isArray(parsed)) setLocalPayments(parsed);
       } catch { /* ignore */ }
     }
-  );
+  });
 
   // ── Configuration form: prefill when subscription data is available ──
   useEffect(() => {
