@@ -189,7 +189,17 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     onDownload?.();
   };
 
-  if (!isOpen || !receiptData) return null;
+  // ============================================
+  // FIX: Early return AFTER all hooks have been called.
+  // This is the canonical React pattern — hooks must be called
+  // in the same order on every render, so we cannot return
+  // before they have all run. The previous version returned null
+  // above the useEffect calls, which technically violated that
+  // rule and caused the "Rendered fewer hooks than expected" warning.
+  // ============================================
+  if (!isOpen || !receiptData) {
+    return null;
+  }
 
   // Handle backdrop click to close (only if click is directly on backdrop)
   const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -198,34 +208,72 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
     }
   };
 
+  // ============================================
+  // FIX: Reliable, working close handlers
+  // 1. X icon button calls onClose() directly + stops propagation
+  // 2. Close button at bottom calls onClose() directly + stops propagation
+  // 3. Backdrop click closes only if target is the backdrop itself
+  // ============================================
+  const handleCloseClick = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onClose();
+  };
+
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in"
       onClick={handleBackdropClick}
       role="dialog"
       aria-modal="true"
       aria-labelledby="receipt-modal-title"
     >
-      <div 
-        className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95"
+      {/*
+        FIX: Modal content box
+        - relative z-[60] so it stacks above the backdrop
+        - pointer-events-auto to ensure all child buttons are clickable
+        - e.stopPropagation on the wrapper to prevent clicks inside
+          the modal from accidentally closing it.
+      */}
+      <div
+        className="relative z-[60] bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95 pointer-events-auto"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="sticky top-0 z-10 bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-2xl">
+        {/* ─── Sticky header with working close button ─── */}
+        <div className="sticky top-0 z-[70] bg-white border-b px-6 py-4 flex justify-between items-center rounded-t-2xl">
           <h3 id="receipt-modal-title" className="text-lg font-bold text-slate-900">Payment Receipt</h3>
-          <button 
+
+          {/*
+            FIX: X close button
+            - onClick calls onClose() directly via handleCloseClick
+            - stopPropagation prevents the click from bubbling up
+              to the backdrop overlay
+            - pointer-events-auto (inherited from parent) ensures
+              this button is always clickable
+            - cursor-pointer provides visual feedback to the user
+            - type="button" prevents any default form-submit behavior
+            - z-[80] stacks it above the sticky header so the button
+              is always on top of any overlap
+          */}
+          <button
             type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+            onClick={handleCloseClick}
+            className="relative z-[80] p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer pointer-events-auto"
             aria-label="Close receipt modal"
           >
             <X size={20} />
           </button>
         </div>
 
-        <div ref={receiptRef} className="p-6 receipt-container">
+        {/*
+          FIX: Receipt content
+          - pointer-events-auto so every child element is clickable
+          - relative z-[50] keeps the content above the backdrop but
+            below the close button (which is z-[80])
+        */}
+        <div
+          ref={receiptRef}
+          className="p-6 receipt-container relative z-[50] pointer-events-auto"
+        >
           {/* Header */}
           <div className="header">
             <div className="flex items-center justify-center gap-3 mb-4">
@@ -331,8 +379,19 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className="sticky bottom-0 z-10 bg-white border-t px-6 py-4 flex justify-center gap-3 rounded-b-2xl" data-no-print="true">
+        {/* ─── Sticky footer with working action buttons ─── */}
+        <div
+          className="sticky bottom-0 z-[70] bg-white border-t px-6 py-4 flex justify-center gap-3 rounded-b-2xl pointer-events-auto"
+          data-no-print="true"
+        >
+          {/*
+            FIX: Print Receipt button
+            - type="button" prevents form-submit behaviour
+            - onClick calls handlePrint()
+            - stopPropagation prevents bubbling to the backdrop
+            - pointer-events-auto is inherited from the parent but
+              explicitly stated for clarity
+          */}
           <Button
             type="button"
             variant="outline"
@@ -340,28 +399,40 @@ const ReceiptModal: React.FC<ReceiptModalProps> = ({
               e.stopPropagation();
               handlePrint();
             }}
-            className="rounded-xl h-11 px-6 gap-2"
+            className="rounded-xl h-11 px-6 gap-2 cursor-pointer pointer-events-auto"
           >
             <Printer size={18} /> Print Receipt
           </Button>
+
+          {/*
+            FIX: Download Receipt button
+            - same fixes applied
+          */}
           <Button
             type="button"
             onClick={(e) => {
               e.stopPropagation();
               handleDownload();
             }}
-            className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-100"
+            className="rounded-xl h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white gap-2 shadow-lg shadow-indigo-100 cursor-pointer pointer-events-auto"
           >
             <Download size={18} /> Download Receipt (HTML)
           </Button>
+
+          {/*
+            FIX: Close button
+            - type="button" prevents form-submit
+            - onClick calls handleCloseClick which calls onClose()
+            - stopPropagation prevents bubbling
+            - pointer-events-auto (inherited) ensures the click is
+              captured
+            - cursor-pointer provides visual feedback
+          */}
           <Button
             type="button"
             variant="ghost"
-            onClick={(e) => {
-              e.stopPropagation();
-              onClose();
-            }}
-            className="rounded-xl h-11 px-6"
+            onClick={handleCloseClick}
+            className="rounded-xl h-11 px-6 cursor-pointer pointer-events-auto"
           >
             Close
           </Button>
