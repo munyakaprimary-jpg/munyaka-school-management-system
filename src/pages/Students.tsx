@@ -7,7 +7,7 @@ import {
   AlertCircle, Loader2, ExternalLink, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
@@ -450,6 +450,12 @@ export default function Students() {
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [transferLearner, setTransferLearner] = useState<StudentTransferInfo | null>(null);
 
+  // ─── Navigation Hook ─────────────────────────────────────────────────
+  // Fix: `navigate` was undefined in handleViewProfile because the hook
+  // was never invoked. We now call useNavigate() so handleViewProfile can
+  // programmatically route to /students/:id with the full learner object.
+  const navigate = useNavigate();
+
   // Ensure default grade is in the list
   useEffect(() => {
     if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
@@ -492,7 +498,7 @@ export default function Students() {
   };
 
   // View Profile Handler — navigates to the full student profile page,
-  // passing the full student object through the Link route param.
+  // passing the full student object through the route param.
   const handleViewProfile = (learner: Learner) => {
     navigate(`/students/${learner.id}`);
   };
