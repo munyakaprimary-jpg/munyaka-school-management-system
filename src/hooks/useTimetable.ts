@@ -121,13 +121,26 @@ export function useTimetable() {
       endTime,
       isBreak,
     };
+    const newEntry: TimetableEntry = Object.fromEntries(
+      DAYS.map(day => [
+        day,
+        isBreak
+          ? { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }
+          : null,
+      ])
+    );
 
     setTimetables(prev => {
       const current = prev[selectedGrade] || { timeSlots: getDefaultTimeSlots(), entries: getDefaultEntries(getDefaultTimeSlots()) };
+
+      // Pair slots with their entries so sorting keeps them aligned
+      const paired = current.timeSlots.map((s, i) => ({ slot: s, entry: current.entries[i] }));
+      paired.push({ slot: newSlot, entry: newEntry });
+      paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+
       const updatedTimetable = {
-        ...current,
-        timeSlots: [...current.timeSlots, newSlot].sort((a, b) => a.startTime.localeCompare(b.startTime)),
-        entries: [...current.entries, Object.fromEntries(DAYS.map(day => [day, isBreak ? { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' } : null]))],
+        timeSlots: paired.map(p => p.slot),
+        entries: paired.map(p => p.entry),
       };
       const updated = { ...prev, [selectedGrade]: updatedTimetable };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -143,24 +156,24 @@ export function useTimetable() {
       const slotIndex = current.timeSlots.findIndex(s => s.id === slotId);
       if (slotIndex === -1) return prev;
 
-      const updatedTimeSlots = [...current.timeSlots];
-      updatedTimeSlots[slotIndex] = { ...updatedTimeSlots[slotIndex], startTime, endTime, isBreak };
+      // Update the slot at its current index
+      const updatedTimeSlots = current.timeSlots.map((s, i) =>
+        i === slotIndex ? { ...s, startTime, endTime, isBreak } : s
+      );
 
-      // Sort by start time
-      updatedTimeSlots.sort((a, b) => a.startTime.localeCompare(b.startTime));
+      // Rebuild entries paired with their slots, applying the new isBreak flag
+      // and sorting both together by start time
+      const paired = current.timeSlots.map((s, i) => ({ slot: updatedTimeSlots[i], entry: current.entries[i] }));
+      paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+      const finalTimeSlots = paired.map(p => p.slot);
+      const finalEntries = paired.map(p => {
+        if (p.slot.isBreak) {
+          return Object.fromEntries(DAYS.map(day => [day, { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }]));
+        }
+        return p.entry ?? Object.fromEntries(DAYS.map(day => [day, null]));
+      });
 
-      // Update entries for this slot
-      const updatedEntries = [...current.entries];
-      const entryIndex = current.timeSlots.findIndex(s => s.id === slotId);
-      if (entryIndex !== -1 && updatedEntries[entryIndex]) {
-        DAYS.forEach(day => {
-          updatedEntries[entryIndex][day] = isBreak
-            ? { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }
-            : null;
-        });
-      }
-
-      const updated = { ...prev, [selectedGrade]: { timeSlots: updatedTimeSlots, entries: updatedEntries } };
+      const updated = { ...prev, [selectedGrade]: { timeSlots: finalTimeSlots, entries: finalEntries } };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
