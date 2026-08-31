@@ -4,18 +4,49 @@ import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
   Users,
-  ClipboardCheck,
-  Wallet,
-  Settings,
-  Shield,
+  Layers,
+  BookOpen,
+  Award,
+  Contact2,
   Key,
-  Database,
+  MessageSquare,
+  Megaphone,
+  Calendar,
+  ClipboardCheck,
+  Clock,
+  FileSpreadsheet,
+  BarChart3,
+  FolderHeart,
+  Library,
+  Box,
+  Wallet,
+  FileText,
+  Settings,
+  School,
+  Menu,
+  Search,
+  Bell,
+  LogOut,
+  Activity,
+  ChevronLeft,
+  ChevronRight,
+  Sun,
+  Moon,
+  X,
   GraduationCap,
+  LogIn,
+  MoreHorizontal,
+  Laptop,
+  Monitor,
+  UserCog,
+  Keyboard,
+  Target,
+  Database,
   CreditCard
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { NotificationBell } from '@/components/ui/NotificationBell';
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -25,89 +56,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const [showBottomNav, setShowBottomNav] = useState(true);
   const lastScrollY = useRef(0);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-
+  
   const { user, logout } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
 
   // Attach Hardware Back Button Handling for Capacitor/Android
   useMobileBackButton(isOpen, () => setIsOpen(false));
-
-  // ============================================
-  // ROLE-BASED ACCESS GUARD
-  // ============================================
-  // When the URL pathname changes, verify the current user's role is
-  // allowed to access the target route. If not, redirect to a
-  // role-appropriate destination (e.g. /dashboard) instead of letting
-  // the protected view render and flash an error.
-  //
-  // IMPORTANT: this guard runs as a *side-effect* of the route change
-  // — it does NOT touch local state, so the bottom-nav "active" state
-  // is still derived from `location.pathname` and will reflect the
-  // post-redirect route after the navigate() call below.
-  const ROLE_RESTRICTED_PREFIXES: { prefix: string; allowed: string[] }[] = [
-    { prefix: '/payment-management', allowed: ['owner'] },
-    { prefix: '/system-management', allowed: ['owner', 'super_admin'] },
-    { prefix: '/fees',              allowed: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
-    { prefix: '/staff/pre-registration', allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/settings',          allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/central-data',      allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { prefix: '/grades',            allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/learning-areas',    allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/exam-types',        allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/staff/attendance',  allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { prefix: '/staff/attendance-monitor', allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/promote',           allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/ict-lab',           allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/communication',     allowed: ['owner', 'super_admin'] },
-    { prefix: '/science-lab',       allowed: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { prefix: '/practical-competencies', allowed: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { prefix: '/digital-skills',    allowed: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { prefix: '/students',          allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { prefix: '/library',           allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { prefix: '/analysis',          allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { prefix: '/portfolio',         allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { prefix: '/inventory',         allowed: ['owner', 'super_admin', 'head_teacher'] },
-    { prefix: '/assessments',       allowed: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { prefix: '/attendance',        allowed: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { prefix: '/reports',           allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { prefix: '/notices',           allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { prefix: '/staff-checkin',     allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { prefix: '/staff/check-in',    allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { prefix: '/timetable',         allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { prefix: '/digital-hub',       allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { prefix: '/dashboard',         allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { prefix: '/',                  allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { prefix: '/profile',           allowed: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-  ];
-
-  useEffect(() => {
-    if (!user) return; // Layout isn't rendered without auth, but guard anyway
-    const role = user.role;
-    const pathname = location.pathname;
-
-    // Find the most specific matching prefix (longest match wins so e.g.
-    // "/staff/pre-registration" isn't matched by "/staff/attendance").
-    let best: { prefix: string; allowed: string[] } | null = null;
-    for (const rule of ROLE_RESTRICTED_PREFIXES) {
-      if (
-        pathname === rule.prefix ||
-        (rule.prefix !== '/' && pathname.startsWith(rule.prefix + '/')) ||
-        rule.prefix === '/'
-      ) {
-        if (pathname === '/' && rule.prefix !== '/') continue;
-        if (!best || rule.prefix.length > best.prefix.length) {
-          best = rule;
-        }
-      }
-    }
-    if (best && !best.allowed.includes(role)) {
-      // Redirect role-incompatible route to the dashboard. The
-      // bottom-nav "active" indicator will update reactively to the
-      // new pathname after this navigate() call.
-      navigate('/dashboard', { replace: true });
-    }
-  }, [user, location.pathname, navigate]);
 
   // Remove any stray hash-like tokens that might be leaking into the DOM
   useEffect(() => {
@@ -129,9 +84,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => {
     const handleScroll = () => {
       if (!scrollContainerRef.current) return;
-
+      
       const currentScrollY = scrollContainerRef.current.scrollTop;
-
+      
       if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
 
       if (currentScrollY > lastScrollY.current && currentScrollY > 60) {
@@ -139,7 +94,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       } else {
         setShowBottomNav(true);
       }
-
+      
       lastScrollY.current = currentScrollY;
     };
 
@@ -147,7 +102,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     if (container) {
       container.addEventListener('scroll', handleScroll, { passive: true });
     }
-
+    
     return () => {
       if (container) {
         container.removeEventListener('scroll', handleScroll);
@@ -169,10 +124,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['super_admin'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
-    { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
         { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
     
@@ -194,7 +149,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
@@ -202,7 +157,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
 
-    // Bottom Navigation Bar Quick Links - Filtered by user role
+  // Bottom Navigation Bar Quick Links - Filtered by user role
     // Includes core items (Home, Learners, Roll Call) plus role-specific tabs (Fees, Settings, Licensing)
     const bottomQuickNav = [
       { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -299,7 +254,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
               <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
-                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shrink-0 shadow-md shadow-indigo-100">
+                <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">
                   {user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}
                 </div>
               </Link>
@@ -396,8 +351,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           {bottomQuickNav.length > 0 ? (
             <div className="flex items-stretch justify-between gap-1 px-1">
               {bottomQuickNav.map((item) => {
-                const isActive = location.pathname === item.path ||
-                  (item.path !== '/' && location.pathname.startsWith(item.path + '/'));
+                const isActive = location.pathname === item.path;
                 return (
                   <Link
                     key={item.path}
