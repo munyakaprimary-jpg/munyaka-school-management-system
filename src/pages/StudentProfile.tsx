@@ -1,14 +1,34 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import { Card, CardContent } from "@/components/ui/card";
+"use client";
+
+import React, { useState, useMemo } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, ExternalLink } from 'lucide-react';
-import { Link, useParams } from 'react-router-dom';
+import BackButton from '@/components/ui/BackButton';
+import {
+  UserCircle,
+  Mail,
+  Phone,
+  Calendar,
+  FileText,
+  CreditCard,
+  ArrowLeft,
+  History,
+  UserX,
+  TrendingUp,
+  TrendingDown,
+  Minus,
+  CheckCircle2,
+  AlertCircle,
+  Award,
+  Receipt,
+  Activity,
+  ShieldCheck,
+} from 'lucide-react';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
-import FeeReceipt from '@/components/fees/FeeReceipt';
 import { showSuccess } from '@/utils/toast';
 import { marks as mockMarks } from '@/data/mockMarks';
 import { attendance as mockAttendance } from '@/data/mockAttendance';
@@ -16,75 +36,18 @@ import { transactions as mockTransactions } from '@/data/mockTransactions';
 import { cn } from '@/lib/utils';
 
 const StudentProfile = () => {
-  const { id } = useParams<{ id: string }>();
-  
-  // Search for student across all known sources:
-  // 1. The live Learners Management data (school_learners_data) which is updated
-  //    by the registration form
-  // 2. The seed data (INITIAL_SEED_DATA.students) for the demo fallbacks
-  // 3. STUDENTS from mock-data.ts for any other legacy records
-  const student = useMemo(() => {
-    // First try the live learners directory
-    try {
-      const liveLearnersRaw = localStorage.getItem('school_learners_data');
-      if (liveLearnersRaw) {
-        const liveLearners = JSON.parse(liveLearnersRaw);
-        if (Array.isArray(liveLearners)) {
-          const found = liveLearners.find((s: any) => String(s.id) === String(id));
-          if (found) {
-            return {
-              ...found,
-              birthCertificateNo: found.birthCertificateNo ?? undefined,
-              feeBalance: typeof found.feeBalance === 'number'
-                ? found.feeBalance
-                : (typeof found.balance === 'number' ? found.balance : 0),
-            };
-          }
-        }
-      }
-    } catch (e) {
-      console.warn('Failed to read live learners from localStorage', e);
-    }
-
-    // Then try the seed data
-    const foundSeed = INITIAL_SEED_DATA.students.find(s => String(s.id) === String(id));
-    if (foundSeed) {
-      return {
-        ...foundSeed,
-        birthCertificateNo: (foundSeed as any).birthCertificateNo ?? undefined,
-        feeBalance: 0,
-      };
-    }
-
-    // Final fallback: still return the first student so the page never crashes,
-    // but log a warning so the developer can see what happened.
-    console.warn(`Student with id "${id}" not found in any directory, falling back to default.`);
-    return {
-      ...INITIAL_SEED_DATA.students[0],
-      id: id ?? INITIAL_SEED_DATA.students[0].id,
-      birthCertificateNo: (INITIAL_SEED_DATA.students[0] as any).birthCertificateNo ?? undefined,
-      feeBalance: 0,
-    };
-  }, [id]);
-
-  // The rest of the component state (modals, history, etc.) stays the same.
-  // For brevity the existing useState / useEffect / handler code is omitted here
-  // and only the parts that previously hard-coded MUTWIKA KILONZO are updated.
+  const student = INITIAL_SEED_DATA.students[0];
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [activeStudent, setActiveStudent] = useState<any>(null);
 
-  // Transfer workflow expects a StudentTransferInfo shape, so we project
-  // the resolved student record into that shape with the dynamic fee balance.
-  const transferStudentData = useMemo(() => ({
+  const transferStudentData = {
     ...student,
-    feeBalance: (student as any).feeBalance ?? 0,
+    feeBalance: 3000,
     status: 'Active' as const,
-    dateOfAdmission: (student as any).dateOfAdmission ?? '2022-01-10',
-    coCurricularActivities: (student as any).coCurricularActivities ??
-      'Football team captain (2023), Science fair 1st place (2022), School choir member',
-  }), [student]);
+    dateOfAdmission: '2022-01-10',
+    coCurricularActivities: 'Football team captain (2023), Science fair 1st place (2022), School choir member',
+  };
 
   const handleRecordPayment = (result: { transaction: any }) => {
     showSuccess(`Recorded payment of KES ${result.transaction.amount.toLocaleString()} for ${student.name}`);
@@ -120,21 +83,19 @@ const StudentProfile = () => {
   const performanceRows = useMemo(() => computeSubjectPerformance(), [student.id]);
 
   const getDeltaMeta = (diff: number) => {
-    if (diff >= 5) return { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: ArrowLeft, label: `+${diff.toFixed(1)} above` };
-    if (diff <= -5) return { color: 'bg-rose-50 text-rose-700 border-rose-200', icon: ArrowLeft, label: `${diff.toFixed(1)} below` };
-    return { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: ArrowLeft, label: 'On par' };
+    if (diff >= 5) return { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: TrendingUp, label: `+${diff.toFixed(1)} above` };
+    if (diff <= -5) return { color: 'bg-rose-50 text-rose-700 border-rose-200', icon: TrendingDown, label: `${diff.toFixed(1)} below` };
+    return { color: 'bg-slate-50 text-slate-600 border-slate-200', icon: Minus, label: 'On par' };
   };
 
   const getBarWidth = (score: number) => `${Math.min(100, Math.max(0, score))}%`;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header with back button */}
+      {/* Header */}
       <div className="flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4">
         <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
-          <Link to="/students" className="rounded-2xl h-10 w-10 text-slate-500 hover:text-slate-900 hover:bg-slate-100 active:scale-95 transition-all shrink-0 flex items-center justify-center">
-            <ArrowLeft size={20} />
-          </Link>
+          <BackButton to="/students" />
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student.name}</h1>
             <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">Detailed learner profile and history</p>
@@ -157,6 +118,219 @@ const StudentProfile = () => {
           </Button>
         </div>
       </div>
+
+      {/* Consolidated Summary */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white p-6">
+        <CardHeader className="px-0 pt-0 pb-4 border-b">
+          <CardTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+            <Activity size={20} className="text-indigo-600" />
+            Consolidated Summary
+          </CardTitle>
+          <p className="text-sm text-slate-500">A consolidated view of this learner's academic, attendance, and financial status.</p>
+        </CardHeader>
+
+        <CardContent className="px-0 pt-6 space-y-6">
+          {(() => {
+            // 1.1 — Marks summary
+            const record = mockMarks.studentRecords[student.id];
+            const currentTermMarks = record?.terms?.[record.currentTerm];
+            const scores = currentTermMarks?.scores ?? {};
+            const subjectCount = Object.keys(scores).length;
+            const overallAverage = subjectCount
+              ? (Object.values(scores).reduce((acc, n) => acc + n, 0) / subjectCount).toFixed(1)
+              : '—';
+            const level = (() => {
+              const v = parseFloat(overallAverage);
+              if (v >= 80) return { label: 'Exceeding Expectations', code: 'EE', color: 'bg-emerald-50 text-emerald-700' };
+              if (v >= 65) return { label: 'Meeting Expectations', code: 'ME', color: 'bg-blue-50 text-blue-700' };
+              if (v >= 50) return { label: 'Approaching Expectations', code: 'AE', color: 'bg-amber-50 text-amber-700' };
+              return { label: 'Below Expectations', code: 'BE', color: 'bg-rose-50 text-rose-700' };
+            })();
+
+            // 1.2 — Attendance summary
+            const att = mockAttendance.byStudent[student.id];
+            const present = att?.present ?? 0;
+            const absent = att?.absent ?? 0;
+            const late = att?.late ?? 0;
+            const totalDays = present + absent + late;
+            const attendanceRate = totalDays
+              ? Math.round(((present + late * 0.5) / totalDays) * 100)
+              : 0;
+
+            // 1.3 — Fee summary
+            const studentTx = mockTransactions.filter(
+              (tx) => tx.studentId === student.id
+            );
+            const totalPaid = studentTx.reduce((acc, tx) => acc + tx.amount, 0);
+            const termFee = 15000;
+            const balance = Math.max(0, termFee - totalPaid);
+            const lastTx = studentTx
+              .slice()
+              .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+            return (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                {/* Marks summary card */}
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                      <Award size={18} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Current Marks
+                    </p>
+                  </div>
+                  <p className="text-3xl font-black text-slate-900">{overallAverage}%</p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">
+                    {subjectCount} subjects • {currentTermMarks?.examType ?? '—'}
+                  </p>
+                  <Badge className={cn("mt-3 rounded-lg border-none font-black text-[10px] px-2 py-0.5", level.color)}>
+                    {level.code} • {level.label}
+                  </Badge>
+                </div>
+
+                {/* Attendance summary card */}
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                      <CheckCircle2 size={18} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Attendance (Term)
+                    </p>
+                  </div>
+                  <p className="text-3xl font-black text-slate-900">{attendanceRate}%</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-2 text-[11px] font-bold text-slate-500">
+                    <span className="px-2 py-0.5 rounded-md bg-emerald-50 text-emerald-700">
+                      {present} Present
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-rose-50 text-rose-700">
+                      {absent} Absent
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700">
+                      {late} Late
+                    </span>
+                  </div>
+                </div>
+
+                {/* Fee summary card */}
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <div className="flex items-center gap-2 mb-3">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                      <Receipt size={18} />
+                    </div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Fee Balance
+                    </p>
+                  </div>
+                  <p
+                    className={cn(
+                      "text-3xl font-black",
+                      balance > 0 ? "text-rose-600" : "text-emerald-600"
+                    )}
+                  >
+                    KES {balance.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1 font-medium">
+                    {lastTx
+                      ? `Last payment: KES ${lastTx.amount.toLocaleString()} (${lastTx.date})`
+                      : "No payments recorded this term"}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="mt-3 h-8 text-xs rounded-lg font-bold border-slate-200 hover:bg-slate-100"
+                    onClick={() => setIsPaymentModalOpen(true)}
+                  >
+                    Record Payment
+                  </Button>
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Subject performance chart vs class average */}
+          {performanceRows.length > 0 ? (
+            <div className="pt-2">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-black uppercase tracking-widest text-slate-700 flex items-center gap-2">
+                  <TrendingUp size={16} className="text-indigo-600" />
+                  Subject Performance — vs Class Average
+                </h4>
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                  Current Term
+                </span>
+              </div>
+
+              <div className="space-y-3">
+                {performanceRows.map((row) => {
+                  const delta = getDeltaMeta(row.diff);
+                  const DeltaIcon = delta.icon;
+                  return (
+                    <div
+                      key={row.subject}
+                      className="p-4 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-colors"
+                    >
+                      <div className="flex items-center justify-between mb-3">
+                        <p className="font-bold text-slate-900 text-sm">{row.subject}</p>
+                        <Badge
+                          variant="outline"
+                          className={cn("font-black text-[10px] gap-1 px-2 py-0.5", delta.color)}
+                        >
+                          <DeltaIcon size={10} />
+                          {delta.label}
+                        </Badge>
+                      </div>
+
+                      <div className="space-y-2.5">
+                        {/* Student bar */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                            <span className="uppercase tracking-widest text-[9px] text-indigo-600">
+                              {student.name.split(' ')[0]}
+                            </span>
+                            <span className="text-slate-900 font-black">
+                              {row.studentScore.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-indigo-600 rounded-full transition-all"
+                              style={{ width: getBarWidth(row.studentScore) }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Class average bar */}
+                        <div>
+                          <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 mb-1">
+                            <span className="uppercase tracking-widest text-[9px] text-slate-500">
+                              Class Average
+                            </span>
+                            <span className="text-slate-700 font-bold">
+                              {row.classAverage.toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-slate-400 rounded-full transition-all"
+                              style={{ width: getBarWidth(row.classAverage) }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ) : (
+            <div className="p-4 rounded-2xl border border-dashed border-slate-200 text-center">
+              <p className="text-sm font-bold text-slate-500">No subject marks recorded for this term yet.</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Profile details */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -243,7 +417,7 @@ const StudentProfile = () => {
                 </div>
                 <CardTitle className="text-lg">Fee Balance</CardTitle>
               </div>
-              <p className="text-3xl font-black text-slate-900 mb-2">KES {((student as any).feeBalance ?? 0).toLocaleString()}</p>
+              <p className="text-3xl font-black text-slate-900 mb-2">KES 3,000</p>
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-6">Total Term Fee: KES 15,000</p>
               <Button
                 className="w-full rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
@@ -275,7 +449,7 @@ const StudentProfile = () => {
         </div>
       </div>
 
-      {/* Modals — all bound to the dynamic student, not to MUTWIKA KILONZO */}
+      {/* Modals */}
       <AcademicHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
