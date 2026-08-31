@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React from 'react';
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertCircle } from 'lucide-react';
 import { GRADES_DATA } from '@/lib/mock-data';
 import { STUDENTS } from '@/lib/mock-data';
+
+interface RegisterModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  fullName: string;
+  setFullName: (value: string) => void;
+  assessmentNo: string;
+  setAssessmentNo: (value: string) => void;
+  birthCertificateNo: string;
+  setBirthCertificateNo: (value: string) => void;
+  regGrade: string;
+  setRegGrade: (value: string) => void;
+  regStream: string;
+  setRegStream: (value: string) => void;
+  guardianName: string;
+  setGuardianName: (value: string) => void;
+  phone: string;
+  setPhone: (value: string) => void;
+  formError?: string;
+  onRegister: () => void;
+}
 
 export default function RegisterModal({
   isOpen,
@@ -27,42 +48,23 @@ export default function RegisterModal({
   setPhone,
   formError = '',
   onRegister
-}: {
-  isOpen: boolean;
-  onClose: () => void;
-  fullName: string;
-  setFullName: (value: string) => void;
-  assessmentNo: string;
-  setAssessmentNo: (value: string) => void;
-  birthCertificateNo: string;
-  setBirthCertificateNo: (value: string) => void;
-  regGrade: string;
-  setRegGrade: (value: string) => void;
-  regStream: string;
-  setRegStream: (value: string) => void;
-  guardianName: string;
-  setGuardianName: (value: string) => void;
-  phone: string;
-  setPhone: (value: string) => void;
-  formError?: string;
-  onRegister: () => void;
-}) => {
+}: RegisterModalProps) {
   // Dynamically get streams for the selected grade from GRADES_DATA
-  const availableStreams = useMemo(() => {
+  const availableStreams = React.useMemo(() => {
     if (!regGrade) return [];
     const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
     return grade ? grade.streams.map(s => s.name) : [];
   }, [regGrade]);
 
   // Reset stream when grade changes and no longer matches available streams
-  useEffect(() => {
+  React.useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
       setRegStream(availableStreams[0]);
     }
   }, [regGrade, availableStreams, regStream]);
 
   // Get unique streams for the filter dropdown
-  const uniqueStreams = useMemo(() => {
+  const uniqueStreams = React.useMemo(() => {
     const streams = new Set<string>();
     GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
     STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
@@ -176,7 +178,7 @@ export default function RegisterModal({
                   <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
                     {g.name} ({g.category})
                   </SelectItem>
-                ))
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -195,7 +197,7 @@ export default function RegisterModal({
               <SelectContent className="rounded-xl">
                 {availableStreams.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -229,4 +231,4 @@ export default function RegisterModal({
       </div>
     </Modal>
   );
-};
+}
