@@ -1,11 +1,3 @@
-` to write the file. But the user is saying the task is not complete. Let me re-examine...
-
-Actually, looking more carefully at the code I provided, I notice that in the License History table section, I added the checkbox column but I need to verify the table structure is correct. Let me check if there are any syntax errors or missing imports.
-
-Also, I should verify that the `selectedLicenseIds` state is properly initialized and the handlers are correctly implemented.
-
-Let me provide a more focused update to ensure the feature is complete and working.</think>I see the task isn't complete. Let me verify the implementation and ensure the multi-select feature is properly applied to the License History table.
-<dyad-write path="src/pages/PaymentManagement.tsx" description="Ensuring multi-select batch deletion is properly implemented in License History table">
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -368,17 +360,17 @@ const PaymentManagement = () => {
   });
 
   // ── License / activation key state ──
-    const [licenses, setLicenses] = useState<License[]>([]);
-    const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
-    const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
-  
-    // ── Delete License Modal State ──
-    const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [licenseToDelete, setLicenseToDelete] = useState<License | null>(null);
-    const [deletePassword, setDeletePassword] = useState('');
-    const [deletePasswordError, setDeletePasswordError] = useState('');
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [showDeletePassword, setShowDeletePassword] = useState(false);
+  const [licenses, setLicenses] = useState<License[]>([]);
+  const [isLicenseModalOpen, setIsLicenseModalOpen] = useState(false);
+  const [activeSubscriptionForLicense, setActiveSubscriptionForLicense] = useState<Subscription | null>(null);
+
+  // ── Delete License Modal State ──
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [licenseToDelete, setLicenseToDelete] = useState<License | null>(null);
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deletePasswordError, setDeletePasswordError] = useState('');
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeletePassword, setShowDeletePassword] = useState(false);
 
   // ── Monthly payment & activation code state ──
   const [monthlyPayments, setMonthlyPayments] = useState<MonthlyPayment[]>([]);
@@ -456,30 +448,30 @@ const PaymentManagement = () => {
   };
 
   // ── Load from localStorage ─────────────
-    useEffect(() => {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        try {
-          const parsed = JSON.parse(raw);
-          if (parsed.gateways?.length) setGateways(parsed.gateways);
-          if (parsed.subscriptions?.length) {
-            const localOnly = parsed.subscriptions.filter(
-              (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
-            );
-            setSubscriptions(localOnly.length > 0 ? localOnly : DEFAULT_SUBSCRIPTIONS);
-          }
-        } catch {
-          // Use defaults
+  useEffect(() => {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed.gateways?.length) setGateways(parsed.gateways);
+        if (parsed.subscriptions?.length) {
+          const localOnly = parsed.subscriptions.filter(
+            (s: Subscription) => !EXTERNAL_SUBSCRIPTION_IDS.has(s.id)
+          );
+          setSubscriptions(localOnly.length > 0 ? localOnly : DEFAULT_SUBSCRIPTIONS);
         }
+      } catch {
+        // Use defaults
       }
-      setLicenses(getAllLicenses());
-      const mpRaw = localStorage.getItem('munyaka_monthly_payments');
-      if (mpRaw) {
-        try {
-          const parsed = JSON.parse(mpRaw);
-          if (Array.isArray(parsed)) setMonthlyPayments(parsed);
-        } catch { /* ignore */ }
-      }
+    }
+    setLicenses(getAllLicenses());
+    const mpRaw = localStorage.getItem('munyaka_monthly_payments');
+    if (mpRaw) {
+      try {
+        const parsed = JSON.parse(mpRaw);
+        if (Array.isArray(parsed)) setMonthlyPayments(parsed);
+      } catch { /* ignore */ }
+    }
   }, []);
 
   // ── One-time mount: purge legacy seed entries from localStorage ──
@@ -797,64 +789,64 @@ const PaymentManagement = () => {
   };
 
   // ── Subscription handlers ───────────────
-    const openUpgrade = (sub: Subscription) => setUpgradeModalSub(sub);
-    const openRenew = (sub: Subscription) => setRenewModalSub(sub);
-  
-    // ── Delete License handlers ─────────────
-    const openDeleteLicenseModal = (lic: License) => {
-      setLicenseToDelete(lic);
-      setDeletePassword('');
-      setDeletePasswordError('');
-      setIsDeleteModalOpen(true);
-    };
-  
-    const confirmDeleteLicense = async () => {
-      if (!licenseToDelete) return;
-      setIsDeleting(true);
-      setDeletePasswordError('');
-  
-      // Verify owner password against stored credentials
-      const OWNER_EMAIL = 'munyakaprimary@gmail.com';
-      const usersJson = localStorage.getItem('munyaka_users');
-      if (!usersJson) {
-        setDeletePasswordError('User store not found. Contact administrator.');
-        setIsDeleting(false);
-        return;
-      }
-  
-      const users = JSON.parse(usersJson);
-      const owner = users[OWNER_EMAIL];
-  
-      if (!owner || !owner.password) {
-        setDeletePasswordError('Owner credentials not found. Contact administrator.');
-        setIsDeleting(false);
-        return;
-      }
-  
-      if (deletePassword !== owner.password) {
-        setDeletePasswordError('Incorrect password. Please try again.');
-        setIsDeleting(false);
-        return;
-      }
-  
-      // Password verified — remove the license from state and localStorage
-      const updatedLicenses = licenses.filter(l => l.id !== licenseToDelete.id);
-      setLicenses(updatedLicenses);
-  
-      // Persist updated licenses
-      const LICENSE_STORAGE_KEY = 'munyaka_licenses';
-      localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
-  
-      // Also remove any tied monthly payment records for this activation key
-      const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationCode);
-      setMonthlyPayments(updatedPayments);
-      localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
-  
-      showSuccess(`License ${licenseToDelete.activationKey.slice(0, 12)}... deleted successfully.`);
-      setIsDeleteModalOpen(false);
-      setLicenseToDelete(null);
+  const openUpgrade = (sub: Subscription) => setUpgradeModalSub(sub);
+  const openRenew = (sub: Subscription) => setRenewModalSub(sub);
+
+  // ── Delete License handlers ─────────────
+  const openDeleteLicenseModal = (lic: License) => {
+    setLicenseToDelete(lic);
+    setDeletePassword('');
+    setDeletePasswordError('');
+    setIsDeleteModalOpen(true);
+  };
+
+  const confirmDeleteLicense = async () => {
+    if (!licenseToDelete) return;
+    setIsDeleting(true);
+    setDeletePasswordError('');
+
+    // Verify owner password against stored credentials
+    const OWNER_EMAIL = 'munyakaprimary@gmail.com';
+    const usersJson = localStorage.getItem('munyaka_users');
+    if (!usersJson) {
+      setDeletePasswordError('User store not found. Contact administrator.');
       setIsDeleting(false);
-    };
+      return;
+    }
+
+    const users = JSON.parse(usersJson);
+    const owner = users[OWNER_EMAIL];
+
+    if (!owner || !owner.password) {
+      setDeletePasswordError('Owner credentials not found. Contact administrator.');
+      setIsDeleting(false);
+      return;
+    }
+
+    if (deletePassword !== owner.password) {
+      setDeletePasswordError('Incorrect password. Please try again.');
+      setIsDeleting(false);
+      return;
+    }
+
+    // Password verified — remove the license from state and localStorage
+    const updatedLicenses = licenses.filter(l => l.id !== licenseToDelete.id);
+    setLicenses(updatedLicenses);
+
+    // Persist updated licenses
+    const LICENSE_STORAGE_KEY = 'munyaka_licenses';
+    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+
+    // Also remove any tied monthly payment records for this activation key
+    const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationKey);
+    setMonthlyPayments(updatedPayments);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+
+    showSuccess(`License ${licenseToDelete.activationKey.slice(0, 12)}... deleted successfully.`);
+    setIsDeleteModalOpen(false);
+    setLicenseToDelete(null);
+    setIsDeleting(false);
+  };
 
   const startEditSubscription = (sub: Subscription) => {
     setEditingSubscriptionId(sub.id);
@@ -1191,7 +1183,6 @@ const PaymentManagement = () => {
   };
 
   const handleDownloadReceipt = (transaction: Transaction) => {
-    // Open the receipt view and trigger download
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1200,7 +1191,6 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
-    // Trigger download after modal opens
     setTimeout(() => {
       setReceiptDownloadTrigger(prev => prev + 1);
     }, 100);
@@ -1208,7 +1198,6 @@ const PaymentManagement = () => {
   };
 
   const handlePrintReceipt = (transaction: Transaction) => {
-    // Open the receipt view and trigger print
     setSelectedTransactionForReceipt(transaction);
     setSelectedStudentForReceipt({
       name: 'Munyaka Primary & Junior School',
@@ -1217,7 +1206,6 @@ const PaymentManagement = () => {
       stream: 'N/A',
     });
     setIsReceiptViewOpen(true);
-    // Trigger print after modal opens
     setTimeout(() => {
       setReceiptPrintTrigger(prev => prev + 1);
     }, 100);
@@ -1379,45 +1367,45 @@ const PaymentManagement = () => {
               </div>
 
               {/* Quick actions */}
-                            <div className="md:col-span-1 lg:col-span-1 space-y-2">
-                              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
-                                Quick Actions
-                              </p>
-                              <div className="grid grid-cols-1 gap-2">
-                                <button
-                                  onClick={() => {
-                                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
-                                    setIsLicenseModalOpen(true);
-                                  }}
-                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                                >
-                                  <span className="flex items-center gap-2 font-bold text-sm">
-                                    <CreditCard size={14} /> Record Payment
-                                  </span>
-                                  <Zap size={14} className="text-amber-300" />
-                                </button>
-                                <button
-                                  onClick={() => {
-                                    setActiveSubscriptionForLicense(subscriptions[0] ?? null);
-                                    setIsLicenseModalOpen(true);
-                                  }}
-                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                                >
-                                  <span className="flex items-center gap-2 font-bold text-sm">
-                                    <Key size={14} /> Generate License Key
-                                  </span>
-                                  <Sparkles size={14} className="text-emerald-300" />
-                                </button>
-                                <button
-                                  onClick={() => setActiveTab('history')}
-                                  className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
-                                >
-                                  <span className="flex items-center gap-2 font-bold text-sm">
-                                    <History size={14} /> View Payment History
-                                  </span>
-                                  <RefreshCw size={14} className="text-indigo-300" />
-                                </button>
-                              </div>
+              <div className="md:col-span-1 lg:col-span-1 space-y-2">
+                <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200">
+                  Quick Actions
+                </p>
+                <div className="grid grid-cols-1 gap-2">
+                  <button
+                    onClick={() => {
+                      setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                      setIsLicenseModalOpen(true);
+                    }}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <CreditCard size={14} /> Record Payment
+                    </span>
+                    <Zap size={14} className="text-amber-300" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      setActiveSubscriptionForLicense(subscriptions[0] ?? null);
+                      setIsLicenseModalOpen(true);
+                    }}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <Key size={14} /> Generate License Key
+                    </span>
+                    <Sparkles size={14} className="text-emerald-300" />
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('history')}
+                    className="flex items-center justify-between p-3 bg-white/10 hover:bg-white/15 rounded-2xl border border-white/10 transition-colors text-left"
+                  >
+                    <span className="flex items-center gap-2 font-bold text-sm">
+                      <History size={14} /> View Payment History
+                    </span>
+                    <RefreshCw size={14} className="text-indigo-300" />
+                  </button>
+                </div>
                 <p className="text-[10px] text-indigo-200/70 font-medium pt-1 text-center">
                   {monthlyPayments.length} payment{monthlyPayments.length !== 1 ? 's' : ''} logged · {activeLicenses.length} active license{activeLicenses.length !== 1 ? 's' : ''}
                   {totalMonthlyPaid > 0 && ` · $${totalMonthlyPaid.toFixed(2)} paid (this year)`}
@@ -1767,46 +1755,46 @@ const PaymentManagement = () => {
                                 </Badge>
                               </td>
                               <td className="px-6 py-4 text-right">
-                                                              <div className="flex justify-end gap-1.5">
-                                                                <Button
-                                                                  variant="ghost"
-                                                                  size="icon"
-                                                                  className="h-8 w-8 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50"
-                                                                  title="Revoke license"
-                                                                  onClick={() => {
-                                                                    if (confirm(`Revoke license ${lic.activationKey.slice(0, 12)}...? This will lock the app.`)) {
-                                                                      revokeLicense(lic.activationKey, 'Manually revoked by owner');
-                                                                      setLicenses(getAllLicenses());
-                                                                      showSuccess('License revoked. App will require reactivation.');
-                                                                    }
-                                                                  }}
-                                                                >
-                                                                  <Ban size={14} />
-                                                                </Button>
-                                                                <Button
-                                                                  variant="ghost"
-                                                                  size="icon"
-                                                                  className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50"
-                                                                  title="Delete license permanently"
-                                                                  onClick={() => openDeleteLicenseModal(lic)}
-                                                                >
-                                                                  <Trash2 size={14} />
-                                                                </Button>
-                                                              </div>
-                                                            </td>
-                                                                </tr>
-                                                              );
-                                                            })}
-                                                          </tbody>
-                                                        </table>
-                                                      </div>
-                                                    </CardContent>
-                                                  </Card>
-                                                )}
-                                              </div>
-                                            </TabsContent>
+                                <div className="flex justify-end gap-1.5">
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-rose-600 hover:bg-rose-50"
+                                    title="Revoke license"
+                                    onClick={() => {
+                                      if (confirm(`Revoke license ${lic.activationKey.slice(0, 12)}...? This will lock the app.`)) {
+                                        revokeLicense(lic.activationKey, 'Manually revoked by owner');
+                                        setLicenses(getAllLicenses());
+                                        showSuccess('License revoked. App will require reactivation.');
+                                      }
+                                    }}
+                                  >
+                                    <Ban size={14} />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-8 w-8 rounded-xl text-slate-300 hover:text-red-600 hover:bg-red-50"
+                                    title="Delete license permanently"
+                                    onClick={() => openDeleteLicenseModal(lic)}
+                                  >
+                                    <Trash2 size={14} />
+                                  </Button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </TabsContent>
 
-                                            {/* CONFIGURATION TAB */}
+        {/* CONFIGURATION TAB */}
         <TabsContent value="configuration" className="space-y-6">
           <Card className="border-none shadow-lg rounded-[2rem] bg-white overflow-hidden w-full">
             <CardHeader className="p-8 border-b bg-slate-50/30">
@@ -2407,20 +2395,17 @@ const PaymentManagement = () => {
         </div>
       </Modal>
 
-      {/* Unified Payment Modal — used from both License Details tab and Record & Generate tab */}
+      {/* Unified Payment Modal */}
       <UnifiedRecordPaymentModal
         isOpen={isLicenseModalOpen}
         onClose={() => { setIsLicenseModalOpen(false); setActiveSubscriptionForLicense(null); }}
         onSubmitPayment={({ transaction, activationKey, issuedTo, deviceId, expiresAt }) => {
-          // Push the transaction to the Invoice History table so it appears immediately
           pushPaymentToHistory(transaction);
 
-          // Update license list if a key was generated
           if (activationKey) {
             setLicenses(getAllLicenses());
             setLastGeneratedCode(activationKey);
 
-            // Also record it as a monthly payment entry for the activation code history
             const today = new Date();
             const todayStr = today.toISOString().slice(0, 10);
             const record: MonthlyPayment = {
@@ -2443,7 +2428,6 @@ const PaymentManagement = () => {
             localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
           }
 
-          // Dispatch sync events so other components can update
           window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
           window.dispatchEvent(new Event(PAYMENT_LOGGED_EVENT));
 
@@ -2464,151 +2448,148 @@ const PaymentManagement = () => {
       />
 
       {/* Receipt View Modal */}
-            <ReceiptView
-              isOpen={isReceiptViewOpen}
-              transaction={selectedTransactionForReceipt || {
-                id: '',
-                date: '',
-                amount: '0',
-                currency: 'KES',
-                ref: '',
-                category: '',
-                status: 'paid' as const,
-                method: 'cash',
-                paymentMethod: 'cash' as const,
-                paymentDetails: { receivedBy: '' },
+      <ReceiptView
+        isOpen={isReceiptViewOpen}
+        transaction={selectedTransactionForReceipt || {
+          id: '',
+          date: '',
+          amount: '0',
+          currency: 'KES',
+          ref: '',
+          category: '',
+          status: 'paid' as const,
+          method: 'cash',
+          paymentMethod: 'cash' as const,
+          paymentDetails: { receivedBy: '' },
+        }}
+        student={selectedStudentForReceipt || undefined}
+        printTrigger={receiptPrintTrigger}
+        downloadTrigger={receiptDownloadTrigger}
+        onClose={handleCloseReceiptView}
+      />
+
+      {/* Delete License Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
+        title="Delete License Permanently"
+        description={
+          licenseToDelete
+            ? `This will permanently remove license "${licenseToDelete.activationKey.slice(0, 12)}..." and its tied payment record from history. This action cannot be undone.`
+            : 'Confirm license deletion.'
+        }
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button
+              variant="ghost"
+              onClick={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
+              className="rounded-xl font-bold h-12 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmDeleteLicense}
+              disabled={isDeleting || !deletePassword.trim()}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
+            >
+              {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              {isDeleting ? 'Deleting...' : 'Delete Permanently'}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+          <ShieldCheck size={20} className="text-amber-600 shrink-0" />
+          <p className="text-xs font-bold text-amber-800">
+            Owner authentication required to delete license records.
+          </p>
+        </div>
+
+        {licenseToDelete && (
+          <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-1">
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-slate-500">Activation Key:</span>
+              <span className="font-mono font-bold text-indigo-600">{licenseToDelete.activationKey}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-slate-500">Issued To:</span>
+              <span className="font-bold text-slate-700">{licenseToDelete.issuedTo}</span>
+            </div>
+            <div className="flex justify-between text-xs">
+              <span className="font-medium text-slate-500">Device ID:</span>
+              <span className="font-mono text-slate-600">{licenseToDelete.deviceId}</span>
+            </div>
+          </div>
+        )}
+
+        <div className="space-y-2">
+          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Owner Password
+          </Label>
+          <div className="relative">
+            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type={showDeletePassword ? 'text' : 'password'}
+              value={deletePassword}
+              onChange={e => {
+                setDeletePassword(e.target.value);
+                if (deletePasswordError) setDeletePasswordError('');
               }}
-              student={selectedStudentForReceipt || undefined}
-              printTrigger={receiptPrintTrigger}
-              downloadTrigger={receiptDownloadTrigger}
-              onClose={handleCloseReceiptView}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && deletePassword.trim()) confirmDeleteLicense();
+              }}
+              placeholder="Enter your owner password"
+              className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
+              autoFocus
             />
-
-          {/* Delete License Confirmation Modal — owner-password protected */}
-          <Modal
-            isOpen={isDeleteModalOpen}
-            onClose={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
-            title="Delete License Permanently"
-            description={
-              licenseToDelete
-                ? `This will permanently remove license "${licenseToDelete.activationKey.slice(0, 12)}..." and its tied payment record from history. This action cannot be undone.`
-                : 'Confirm license deletion.'
-            }
-            footer={
-              <div className="flex gap-2 justify-end w-full">
-                <Button
-                  variant="ghost"
-                  onClick={() => { setIsDeleteModalOpen(false); setLicenseToDelete(null); setDeletePassword(''); setDeletePasswordError(''); }}
-                  className="rounded-xl font-bold h-12 px-6"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={confirmDeleteLicense}
-                  disabled={isDeleting || !deletePassword.trim()}
-                  className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
-                >
-                  {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                  {isDeleting ? 'Deleting...' : 'Delete Permanently'}
-                </Button>
-              </div>
-            }
-          >
-            {/* Owner identity header */}
-            <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
-              <ShieldCheck size={20} className="text-amber-600 shrink-0" />
-              <p className="text-xs font-bold text-amber-800">
-                Owner authentication required to delete license records.
-              </p>
-            </div>
-
-            {/* License info */}
-            {licenseToDelete && (
-              <div className="bg-slate-50 rounded-xl p-3 mb-4 space-y-1">
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-slate-500">Activation Key:</span>
-                  <span className="font-mono font-bold text-indigo-600">{licenseToDelete.activationKey}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-slate-500">Issued To:</span>
-                  <span className="font-bold text-slate-700">{licenseToDelete.issuedTo}</span>
-                </div>
-                <div className="flex justify-between text-xs">
-                  <span className="font-medium text-slate-500">Device ID:</span>
-                  <span className="font-mono text-slate-600">{licenseToDelete.deviceId}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Password field */}
-            <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Owner Password
-              </Label>
-              <div className="relative">
-                <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <Input
-                  type={showDeletePassword ? 'text' : 'password'}
-                  value={deletePassword}
-                  onChange={e => {
-                    setDeletePassword(e.target.value);
-                    if (deletePasswordError) setDeletePasswordError('');
-                  }}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter' && deletePassword.trim()) confirmDeleteLicense();
-                  }}
-                  placeholder="Enter your owner password"
-                  className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowDeletePassword(p => !p)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                >
-                  {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                </button>
-              </div>
-              {deletePasswordError && (
-                <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
-                  <AlertCircle size={12} /> {deletePasswordError}
-                </p>
-              )}
-            </div>
-          </Modal>
-
-          {/* ── Bulk Delete Floating Action Bar (License History) ── */}
-          {selectedLicenseIds.size > 0 && (
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-300">
-              <div className="bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/30 px-4 py-3 flex items-center gap-3 border border-slate-700">
-                <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
-                  <div className="bg-indigo-500 text-white text-xs font-black rounded-lg px-2 py-0.5 min-w-[28px] text-center">
-                    {selectedLicenseIds.size}
-                  </div>
-                  <span className="text-xs font-bold text-slate-300 hidden sm:inline">
-                    License{selectedLicenseIds.size !== 1 ? 's' : ''} selected
-                  </span>
-                </div>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => setSelectedLicenseIds(new Set())}
-                  className="rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-xs font-bold gap-1.5 h-9"
-                >
-                  <X size={14} /> Clear
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleBulkDeleteLicenses}
-                  className="rounded-lg bg-red-600 hover:bg-red-700 text-white font-black text-xs px-4 h-9 gap-1.5 shadow-lg shadow-red-600/30"
-                >
-                  <Trash2 size={14} /> Delete {selectedLicenseIds.size} Selected
-                </Button>
-              </div>
-            </div>
+            <button
+              type="button"
+              onClick={() => setShowDeletePassword(p => !p)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {deletePasswordError && (
+            <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
+              <AlertCircle size={12} /> {deletePasswordError}
+            </p>
           )}
         </div>
-      );
-    };
-    
-    export default PaymentManagement;
+      </Modal>
+
+      {/* Bulk Delete Floating Action Bar */}
+      {selectedLicenseIds.size > 0 && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-300">
+          <div className="bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/30 px-4 py-3 flex items-center gap-3 border border-slate-700">
+            <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+              <div className="bg-indigo-500 text-white text-xs font-black rounded-lg px-2 py-0.5 min-w-[28px] text-center">
+                {selectedLicenseIds.size}
+              </div>
+              <span className="text-xs font-bold text-slate-300 hidden sm:inline">
+                License{selectedLicenseIds.size !== 1 ? 's' : ''} selected
+              </span>
+            </div>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setSelectedLicenseIds(new Set())}
+              className="rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-xs font-bold gap-1.5 h-9"
+            >
+              <X size={14} /> Clear
+            </Button>
+            <Button
+              size="sm"
+              onClick={handleBulkDeleteLicenses}
+              className="rounded-lg bg-red-600 hover:bg-red-700 text-white font-black text-xs px-4 h-9 gap-1.5 shadow-lg shadow-red-600/30"
+            >
+              <Trash2 size={14} /> Delete {selectedLicenseIds.size} Selected
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default PaymentManagement;
