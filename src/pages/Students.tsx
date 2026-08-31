@@ -372,12 +372,20 @@ export default function Students() {
   // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
+  // School letterhead rows prepended to every exported CSV file.
+  const SCHOOL_LETTERHEAD = [
+    'MUNYAKA PRIMARY AND JUNIOR',
+    'P.O. BOX 5239-30100, ELDORET',
+    'MOTTO: KNOWLEDGE IS POWER',
+    '',
+  ];
+
   const buildCsvForDataset = (datasetToExport: Learner[]): string => {
-    const headers = [
+    const dataHeaders = [
       'Assessment No', 'Full Name', 'Birth Certificate No',
       'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
     ];
-    const rows = datasetToExport.map((l) => [
+    const dataRows = datasetToExport.map((l) => [
       l.admNo,
       `"${l.name}"`,
       l.birthCertificateNo || '',
@@ -387,7 +395,14 @@ export default function Students() {
       `"${l.guardian}"`,
       `"${l.phone}"`,
     ]);
-    return [headers.join(','), ...rows.map((r) => r.join(','))].join('\n');
+
+    // Interleave letterhead rows between the school header and column headers
+    // so the CSV structure is: letterhead → blank → column-headers → data.
+    return [
+      ...SCHOOL_LETTERHEAD,
+      ...dataHeaders,
+      ...dataRows.map((r) => r.join(',')),
+    ].join('\n');
   };
 
   const handleExportAll = async () => {
