@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  AlertCircle, Loader2, ExternalLink, Eye
+  Loader2, ExternalLink, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -12,9 +12,11 @@ import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
+import AdminPinModal from '@/components/students/AdminPinModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { StudentTransferInfo } from '@/types/transfer';
 import { showSuccess } from '@/utils/toast';
+import { logDeletionAudit } from '@/services/deletionAuditLog';
 
 interface Learner {
   id: string;
@@ -441,7 +443,9 @@ export default function Students() {
     phone: '',
   });
   const [formError, setFormError] = useState('');
-  const [deleteId, setDeleteId] = useState<string | null>(null);
+    // Holds the full learner object so we can render its name in the PIN modal
+    // and include it in the deletion audit log.
+    const [learnerToDelete, setLearnerToDelete] = useState<Learner | null>(null);
 
   // ─── Transfer Workflow State ────────────────────────────────────────────
   // We now pass the full active learner object to the Transfer modal, NOT
@@ -620,11 +624,20 @@ export default function Students() {
     setTransferLearner(null);
   };
 
-  // Handle Delete Confirmation
-  const confirmDelete = (id: string) => {
-    setLearners((prev) => prev.filter((item) => item.id !== id));
-    setDeleteId(null);
-  };
+  // Handle Delete Confirmation — invoked by AdminPinModal when the entered
+    // admin password is verified.
+    const confirmDelete = (learner: Learner) => {
+      setLearners((prev) => prev.filter((item) => item.id !== learner.id));
+      // Write a secure audit-log entry so the deletion is traceable.
+      logDeletionAudit({
+        action: "DELETE_LEARNER",
+        targetId: learner.id,
+        targetAdmNo: learner.admNo,
+        targetName: learner.name,
+      });
+      showSuccess(`${learner.name} has been permanently removed from the directory.`);
+      setLearnerToDelete(null);
+    };
 
   const isAnyExportInProgress =
     allLearnersExport.isDownloading || currentViewExport.isDownloading;
@@ -855,14 +868,14 @@ export default function Students() {
                             <UserPlus className="w-4 h-4" />
                           </button>
                           <button
-                            type="button"
-                            onClick={() => setDeleteId(learner.id)}
-                            title="Delete learner"
-                            data-html2canvas-ignore="true"
-                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                                                      type="button"
+                                                      onClick={() => setLearnerToDelete(learner)}
+                                                      title="Delete learner"
+                                                      data-html2canvas-ignore="true"
+                                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                                                    >
+                                                      <Trash2 className="w-4 h-4" />
+                                                    </button>
                         </div>
                       </td>
                     </tr>
@@ -930,36 +943,20 @@ export default function Students() {
         />
       )}
 
-      {/* Delete Confirmation Prompt Modal */}
-      {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-sm p-6 text-center animate-in zoom-in-95 duration-200">
-            <div className="w-12 h-12 bg-red-50 text-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <Trash2 className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-1">Remove Learner?</h3>
-            <p className="text-sm text-slate-500 mb-6">
-              Are you sure you want to remove this learner from LocalStorage? This action cannot be undone.
-            </p>
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => setDeleteId(null)}
-                className="flex-1 px-4 py-2.5 border border-slate-200 hover:bg-slate-50 rounded-xl text-sm font-medium text-slate-700 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => confirmDelete(deleteId)}
-                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm font-semibold shadow-md transition-all"
-              >
-                Yes, Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Delete Confirmation Prompt Modal — requires admin password/PIN */}
+            <AdminPinModal
+              isOpen={learnerToDelete !== null}
+              onClose={() => setLearnerToDelete(null)}
+              actionLabel="Confirm Permanent Deletion"
+              targetName={learnerToDelete?.name}
+              description="You are about to permanently remove this learner from the school directory. Enter your admin password to authorise this action."
+              prompt="Admin Password"
+              onConfirm={(isValid) => {
+                if (isValid && learnerToDelete) {
+                  confirmDelete(learnerToDelete);
+                }
+              }}
+            />
 
     </div>
   );
