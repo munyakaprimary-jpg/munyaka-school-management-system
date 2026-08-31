@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
@@ -11,6 +11,7 @@ import { Link } from 'react-router-dom';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
+import RegisterModal from '@/components/students/RegisterModal';
 
 interface Learner {
   id: string;
@@ -21,6 +22,7 @@ interface Learner {
   gender: 'Male' | 'Female' | 'Other';
   guardian: string;
   phone: string;
+  birthCertificateNo?: string;
 }
 
 const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
@@ -223,7 +225,7 @@ export default function Students() {
     normalizedLearners.forEach((l) => {
       if (l.stream) set.add(l.stream);
     });
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
+    return Array.from(set).sort();
   }, [normalizedLearners]);
 
   // 6. Filters state — initialized from localStorage if available
@@ -310,8 +312,7 @@ export default function Students() {
   }, [gradeFilter, gradesConfig, normalizedLearners, allLearnerStreams]);
 
   // When the grade filter changes, automatically reset the stream filter to "All".
-  // Also defensively reset if the currently selected stream isn't in the
-  // newly-derived availableStreams list (e.g. if Grades & Streams was edited).
+  // Also defensively reset if the currently selected stream doesn't exist for new class
   useEffect(() => {
     if (streamFilter !== 'All' && !availableStreams.includes(streamFilter)) {
       setStreamFilter('All');
@@ -324,140 +325,38 @@ export default function Students() {
     setStreamFilter('All');
   };
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
-
-  // Form State
-  const [formData, setFormData] = useState({
-    admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
-    name: '',
-    grade: GRADES_LIST[0] || 'Grade 4',
-    stream: '',
-    gender: 'Female' as 'Male' | 'Female' | 'Other',
-    guardian: '',
-    phone: '',
-  });
-
-  const [formError, setFormError] = useState('');
-
-  // When the grades config loads, ensure the form starts on a valid grade
-  useEffect(() => {
-    if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
-      setFormData(prev => ({ ...prev, grade: GRADES_LIST[0] }));
-    }
-  }, [GRADES_LIST, formData.grade]);
-
-  // Delete Confirmation State
-  const [deleteId, setDeleteId] = useState<string | null>(null);
-
   // Filtered learners
   const filteredLearners = useMemo(() => {
-    return normalizedLearners.filter((learner) => {
-      const matchesSearch =
-        learner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        learner.admNo.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        learner.guardian.toLowerCase().includes(searchTerm.toLowerCase());
+    const selectedGradeNormalized = (gradeFilter || '').trim().toLowerCase();
 
-      const matchesGrade = gradeFilter === 'All' || getGradeMatchKey(learner.grade) === getGradeMatchKey(gradeFilter);
-      const matchesStream = streamFilter === 'All' || learner.stream === streamFilter;
+    return normalizedLearners.filter(s => {
+      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
+      const rawStudentGrade = s.grade || '';
+      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
 
-      return matchesSearch && matchesGrade && matchesStream;
+      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
+      const matchesGrade = !studentGradeNormalized ||
+        studentGradeNormalized === selectedGradeNormalized ||
+        studentGradeNormalized.replace(/[^0-9]/g, '') === selectedGradeNormalized.replace(/[^0-9]/g, '') && selectedGradeNormalized.replace(/[^0-9]/g, '') !== '';
+
+      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
+      const rawStudentStream = s.stream || '';
+      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
+      const selectedStreamNormalized = (streamFilter || '').trim().toLowerCase();
+
+      const isAllStreams = !streamFilter || selectedStreamNormalized === 'all' || selectedStreamNormalized === '';
+      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
+
+      // 3. Search Filter (also matches Birth Certificate No when looking up by name/ID)
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admNo && s.admNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.birthCertificateNo && s.birthCertificateNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+
+      return matchesGrade && matchesStream && matchesSearch;
     });
   }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
-
-  // Open Add Modal
-  const handleOpenAdd = () => {
-    setEditingLearnerId(null);
-    setFormData({
-      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
-      name: '',
-      grade: GRADES_LIST[0] || 'Grade 4',
-      stream: '',
-      gender: 'Female',
-      guardian: '',
-      phone: '',
-    });
-    setFormError('');
-    setIsModalOpen(true);
-  };
-
-  // Open Edit Modal
-  const handleOpenEdit = (learner: Learner) => {
-    setEditingLearnerId(learner.id);
-    setFormData({
-      admNo: learner.admNo,
-      name: learner.name,
-      grade: normalizeGradeName(learner.grade),
-      stream: normalizeStreamName(learner.stream),
-      gender: learner.gender,
-      guardian: learner.guardian,
-      phone: learner.phone,
-    });
-    setFormError('');
-    setIsModalOpen(true);
-  };
-
-  // Handle Form Submit
-  const handleSaveLearner = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.admNo.trim() || !formData.name.trim() || !formData.guardian.trim()) {
-      setFormError('Please fill in all required fields (Assessment No, Full Name, Parent/Guardian).');
-      return;
-    }
-
-    const assessmentRegex = /^[A-Za-z].*/;
-    if (!assessmentRegex.test(formData.admNo)) {
-      setFormError('Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).');
-      return;
-    }
-
-    const normalizedEntry = {
-      ...formData,
-      grade: normalizeGradeName(formData.grade),
-      stream: normalizeStreamName(formData.stream),
-    };
-
-    if (editingLearnerId) {
-      setLearners((prev) =>
-        prev.map((item) =>
-          item.id === editingLearnerId
-            ? { ...item, ...normalizedEntry }
-            : item
-        )
-      );
-    } else {
-      const newLearner: Learner = {
-        id: Date.now().toString(),
-        ...normalizedEntry,
-      };
-      setLearners((prev) => [newLearner, ...prev]);
-    }
-
-    setIsModalOpen(false);
-  };
-
-  // Close & Reset Modal Handler
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setFormError('');
-    setEditingLearnerId(null);
-    setFormData({
-      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
-      name: '',
-      grade: GRADES_LIST[0] || 'Grade 4',
-      stream: '',
-      gender: 'Female',
-      guardian: '',
-      phone: '',
-    });
-  };
-
-  // Handle Delete Confirmation
-  const confirmDelete = (id: string) => {
-    setLearners((prev) => prev.filter((item) => item.id !== id));
-    setDeleteId(null);
-  };
 
   // === Unified file-download state ===
   // We track a single download state for the export menu's "all / current view"
@@ -469,10 +368,14 @@ export default function Students() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   const buildCsvForDataset = (datasetToExport: Learner[]): string => {
-    const headers = ['Assessment No', 'Name', 'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'];
+    const headers = [
+      'Assessment No', 'Full Name', 'Birth Certificate No',
+      'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
+    ];
     const rows = datasetToExport.map((l) => [
       l.admNo,
       `"${l.name}"`,
+      l.birthCertificateNo || '',
       l.grade,
       l.stream,
       l.gender,
@@ -486,9 +389,12 @@ export default function Students() {
     setIsExportMenuOpen(false);
     let targetDataset = learners;
     try {
-      const fullDataset = JSON.parse(localStorage.getItem('school_learners_data') || '[]');
-      if (Array.isArray(fullDataset) && fullDataset.length > 0) {
-        targetDataset = fullDataset;
+      const fullDataset = localStorage.getItem('school_learners_data');
+      if (fullDataset) {
+        const parsed = JSON.parse(fullDataset);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          targetDataset = parsed;
+        }
       }
     } catch {
       targetDataset = learners;
@@ -518,12 +424,157 @@ export default function Students() {
     window.print();
   };
 
+  // ─── Modal & form state for RegisterModal ────────────────────────────────
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+    name: '',
+    birthCertificateNo: '',
+    grade: 'Grade 4',
+    stream: '',
+    gender: 'Female' as 'Male' | 'Female' | 'Other',
+    guardian: '',
+    phone: '',
+  });
+  const [formError, setFormError] = useState('');
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+
+  // Ensure default grade is in the list
+  useEffect(() => {
+    if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
+      setFormData(prev => ({ ...prev, grade: GRADES_LIST[0] }));
+    }
+  }, [GRADES_LIST, formData.grade]);
+
+  // Open Add Modal — randomizes Assessment No and clears Birth Certificate No
+  const handleOpenAdd = () => {
+    setEditingLearnerId(null);
+    setFormData({
+      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+      name: '',
+      birthCertificateNo: '',
+      grade: GRADES_LIST[0] || 'Grade 4',
+      stream: '',
+      gender: 'Female',
+      guardian: '',
+      phone: '',
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  // Open Edit Modal — populates ALL fields including Birth Certificate No
+  const handleOpenEdit = (learner: Learner) => {
+    setEditingLearnerId(learner.id);
+    setFormData({
+      admNo: learner.admNo,
+      name: learner.name,
+      birthCertificateNo: learner.birthCertificateNo || '',
+      grade: normalizeGradeName(learner.grade),
+      stream: normalizeStreamName(learner.stream),
+      gender: learner.gender,
+      guardian: learner.guardian,
+      phone: learner.phone,
+    });
+    setFormError('');
+    setIsModalOpen(true);
+  };
+
+  // ─── Validation & submit ───────────────────────────────────────────────
+  // The Assessment Number and Birth Certificate Number are now
+  // CONDITIONALLY OPTIONAL: at least one of the two must be provided.
+  // Previously Assessment Number was strictly required; now the user
+  // can supply either, or both.
+  const validateAndSave = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    // Always-required fields (name + guardian) — these identify the learner
+    if (!formData.name.trim() || !formData.guardian.trim()) {
+      setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
+      return;
+    }
+
+    // Identifier validation: at least one of Assessment No or Birth Cert No
+    // must be provided. Empty-string and whitespace-only values are treated
+    // as absent.
+    const admNo = formData.admNo.trim();
+    const bcNo = formData.birthCertificateNo.trim();
+
+    if (!admNo && !bcNo) {
+      setFormError('Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.');
+      return;
+    }
+
+    // When the Assessment Number is supplied, it must still start with a
+    // letter (the existing convention for the school ID). We skip this check
+    // if the user only provided a Birth Certificate Number.
+    if (admNo) {
+      const assessmentRegex = /^[A-Za-z].*/;
+      if (!assessmentRegex.test(admNo)) {
+        setFormError('Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).');
+        return;
+      }
+    }
+
+    const normalizedEntry = {
+      ...formData,
+      grade: normalizeGradeName(formData.grade),
+      stream: normalizeStreamName(formData.stream),
+      // Persist the Birth Certificate Number to the learner data structure.
+      // Empty string is normalized to undefined so the field is omitted from
+      // the stored JSON when not supplied.
+      birthCertificateNo: bcNo || undefined,
+    };
+
+    if (editingLearnerId) {
+      setLearners((prev) =>
+        prev.map((item) =>
+          item.id === editingLearnerId
+            ? { ...item, ...normalizedEntry }
+            : item
+        )
+      );
+    } else {
+      const newLearner: Learner = {
+        id: Date.now().toString(),
+        ...normalizedEntry,
+      };
+      setLearners((prev) => [newLearner, ...prev]);
+    }
+
+    setIsModalOpen(false);
+  };
+
+  // Close & Reset Modal Handler
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setFormError('');
+    setEditingLearnerId(null);
+    setFormData({
+      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+      name: '',
+      birthCertificateNo: '',
+      grade: GRADES_LIST[0] || 'Grade 4',
+      stream: '',
+      gender: 'Female',
+      guardian: '',
+      phone: '',
+    });
+  };
+
+  // Handle Delete Confirmation
+  const confirmDelete = (id: string) => {
+    setLearners((prev) => prev.filter((item) => item.id !== id));
+    setDeleteId(null);
+  };
+
   const isAnyExportInProgress =
     allLearnersExport.isDownloading || currentViewExport.isDownloading;
 
   return (
     <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
-      
+
       {/* 2. Top Header & Action Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
         <div>
@@ -570,7 +621,7 @@ export default function Students() {
                   type="button"
                   onClick={handleExportCurrentView}
                   disabled={isAnyExportInProgress}
-                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2 border-t border-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
+                  className="w-full text-left px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors border-t border-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   <FileText className="w-3.5 h-3.5 text-slate-500" />
                   Current View ({filteredLearners.length})
@@ -605,7 +656,7 @@ export default function Students() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by learner Name or Assessment No..."
+            placeholder="Search by learner Name, Assessment No, or Birth Certificate No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -655,6 +706,7 @@ export default function Students() {
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-4 px-6">ASSESSMENT NO.</th>
                 <th className="py-4 px-6">NAME</th>
+                <th className="py-4 px-6">BIRTH CERT NO.</th>
                 <th className="py-4 px-6">GRADE</th>
                 <th className="py-4 px-6">STREAM</th>
                 <th className="py-4 px-6">GENDER</th>
@@ -678,6 +730,9 @@ export default function Students() {
                         {learner.name}
                         <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                       </Link>
+                    </td>
+                    <td className="py-4 px-6 font-mono text-xs text-slate-600">
+                      {learner.birthCertificateNo || <span className="text-slate-300">—</span>}
                     </td>
                     <td className="py-4 px-6">
                       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
@@ -735,11 +790,15 @@ export default function Students() {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-16 text-center text-slate-400">
-                    <div className="flex flex-col items-center justify-center gap-2">
-                      <AlertCircle className="w-8 h-8 text-slate-300" />
-                      <p className="font-medium text-slate-600">No learners found matching your filter criteria.</p>
-                      <p className="text-xs text-slate-400">Try adjusting your search query or filters.</p>
+                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                        <Search size={32} />
+                      </div>
+                      <p className="text-slate-800 font-bold">No learners found matching your filter criteria.</p>
+                      <p className="text-xs text-slate-400 max-w-sm">
+                        Try a different name or admission number above.
+                      </p>
                     </div>
                   </td>
                 </tr>
@@ -749,186 +808,27 @@ export default function Students() {
         </div>
       </div>
 
-      {/* 5. Modal Dialog for Add / Edit Learner (Dynamic Grades & Streams) */}
-      {isModalOpen && (
-        <div
-          onClick={handleCloseModal}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-in fade-in duration-200"
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-lg max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-200"
-          >
-            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 shrink-0 bg-white">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 bg-indigo-50 text-indigo-600 rounded-xl">
-                  <UserPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="font-bold text-lg text-slate-900">
-                    {editingLearnerId ? 'Edit Learner Details' : 'Register New Learner'}
-                  </h3>
-                  <p className="text-xs text-slate-500">Fill in student bio and guardian details below</p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={handleCloseModal}
-                className="p-1 text-gray-400 hover:text-gray-600 rounded-lg text-xl transition-all"
-                title="Close modal"
-              >
-                ✕
-              </button>
-            </div>
-
-            <form onSubmit={handleSaveLearner} className="flex flex-col flex-1 overflow-hidden">
-              <div className="p-6 overflow-y-auto space-y-4 flex-1">
-                {formError && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl text-xs text-red-700 flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
-                    <span>{formError}</span>
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Assessment Number *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.admNo}
-                      onChange={(e) => setFormData({ ...formData, admNo: e.target.value })}
-                      placeholder="e.g. A827361"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Full Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                      placeholder="e.g. Brian Kiprop"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Grade *
-                    </label>
-                    <select
-                      value={formData.grade}
-                      onChange={(e) => setFormData({ ...formData, grade: e.target.value, stream: '' })}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    >
-                      {GRADES_LIST.map((g) => (
-                        <option key={g} value={g}>{g}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Stream *
-                    </label>
-                    <select
-                      value={formData.stream}
-                      onChange={(e) => setFormData({ ...formData, stream: e.target.value })}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    >
-                      <option value="">Select stream...</option>
-                      {(() => {
-                        const matchKey = getGradeMatchKey(formData.grade);
-                        const configured = gradesConfig.gradeStreamMap[matchKey] || [];
-                        // Build a deduped list: configured streams first, then
-                        // any learner-recorded streams for the same grade.
-                        const streamsForGrade = new Set<string>(configured);
-                        normalizedLearners.forEach((l) => {
-                          if (getGradeMatchKey(l.grade) === matchKey && l.stream) {
-                            streamsForGrade.add(l.stream);
-                          }
-                        });
-                        return Array.from(streamsForGrade).sort((a, b) => a.localeCompare(b));
-                      })().map((s) => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Gender *
-                    </label>
-                    <select
-                      value={formData.gender}
-                      onChange={(e) => setFormData({ ...formData, gender: e.target.value as any })}
-                      className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    >
-                      <option value="Female">Female</option>
-                      <option value="Male">Male</option>
-                      <option value="Other">Other</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Parent / Guardian Name *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.guardian}
-                      onChange={(e) => setFormData({ ...formData, guardian: e.target.value })}
-                      placeholder="e.g. Mary Kiprop"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">
-                      Phone Number
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                      placeholder="e.g. +254 711 223 344"
-                      className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-mono focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-3 px-6 py-4 border-t shrink-0 bg-gray-50">
-                <button
-                  type="button"
-                  onClick={handleCloseModal}
-                  className="px-4 py-2 border rounded-lg hover:bg-gray-100 text-sm font-medium text-slate-700 transition-all"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-semibold shadow-md transition-all active:scale-95"
-                >
-                  {editingLearnerId ? 'Update Learner' : 'Save Learner'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      {/* 5. RegisterModal — Add / Edit Learner (Dynamic Grades & Streams) */}
+      <RegisterModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        fullName={formData.name}
+        setFullName={(v) => setFormData({ ...formData, name: v })}
+        assessmentNo={formData.admNo}
+        setAssessmentNo={(v) => setFormData({ ...formData, admNo: v })}
+        birthCertificateNo={formData.birthCertificateNo}
+        setBirthCertificateNo={(v) => setFormData({ ...formData, birthCertificateNo: v })}
+        regGrade={formData.grade}
+        setRegGrade={(v) => setFormData({ ...formData, grade: v })}
+        regStream={formData.stream}
+        setRegStream={(v) => setFormData({ ...formData, stream: v })}
+        guardianName={formData.guardian}
+        setGuardianName={(v) => setFormData({ ...formData, guardian: v })}
+        phone={formData.phone}
+        setPhone={(v) => setFormData({ ...formData, phone: v })}
+        formError={formError}
+        onRegister={validateAndSave}
+      />
 
       {/* Delete Confirmation Prompt Modal */}
       {deleteId && (
