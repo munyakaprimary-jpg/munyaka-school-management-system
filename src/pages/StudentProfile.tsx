@@ -555,17 +555,6 @@ const StudentProfile = () => {
               </div>
             </div>
           </Card>
-
-          <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 overflow-hidden relative">
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-              <ShieldCheck size={140} />
-            </div>
-            <CardTitle className="text-lg mb-4">Account Security</CardTitle>
-            <p className="text-sm text-indigo-200 mb-6">User has administrative access to assessment records.</p>
-            <Button className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl">
-              Reset Credentials
-            </Button>
-          </Card>
         </div>
 
         <div className="lg:col-span-2 space-y-8">
