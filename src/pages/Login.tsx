@@ -36,6 +36,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
+import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 
 /** True when a custom admin password has been saved to localStorage. */
 const hasCustomAdminPassword = (): boolean => {
@@ -178,6 +179,9 @@ const Login: React.FC = () => {
   const [showStaffPassword, setShowStaffPassword] = useState(false);
   const [staffAuthError, setStaffAuthError] = useState('');
   const [isStaffVerifying, setIsStaffVerifying] = useState(false);
+
+  // ── Forgot password modal ───────────────────────────────────────────────
+  const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // ── Redirect already-authenticated users straight to the dashboard ─────────
     useEffect(() => {
@@ -686,13 +690,25 @@ const Login: React.FC = () => {
           </Tabs>
 
           {/* Footer */}
-          <div className="text-center pt-2">
+          <div className="text-center pt-2 space-y-1">
             <p className="text-xs text-slate-400 font-medium">
-              Having trouble accessing your account? Contact the school administrator.
+              Having trouble accessing your account?
             </p>
+            <button
+              type="button"
+              onClick={() => setForgotModalOpen(true)}
+              className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline underline-offset-2 transition-colors"
+            >
+              Forgot Password / Locked Out?
+            </button>
           </div>
         </div>
       </div>
+
+      <ForgotPasswordModal
+        open={forgotModalOpen}
+        onClose={() => setForgotModalOpen(false)}
+      />
     </div>
   );
 };
