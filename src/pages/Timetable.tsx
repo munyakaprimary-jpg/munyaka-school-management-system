@@ -8,6 +8,7 @@ import { Printer, Clock, Settings2, Plus } from 'lucide-react';
 import { useTimetable } from '@/hooks/useTimetable';
 import TimeSlotModal from '@/components/timetable/TimeSlotModal';
 import LessonDrawer from '@/components/timetable/LessonDrawer';
+import InlineTimeCell from '@/components/timetable/InlineTimeCell';
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const DAY_LABELS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
@@ -21,6 +22,7 @@ const Timetable = () => {
     entries,
     addTimeSlot,
     updateTimeSlot,
+    updateSlotTimes,
     deleteTimeSlot,
     setLesson,
     deleteLesson,
@@ -144,16 +146,12 @@ const Timetable = () => {
                 ) : (
                   timeSlots.map((slot, slotIndex) => (
                     <tr key={slot.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="px-4 py-4 bg-slate-50/30">
-                        <div className="flex items-center justify-center gap-2">
-                          <div className="w-6 h-6 rounded-lg bg-indigo-100 flex items-center justify-center">
-                            <span className="text-[10px] font-black text-indigo-600">{slotIndex + 1}</span>
-                          </div>
-                          <span className="font-bold text-slate-600 text-xs">
-                            {slot.startTime} - {slot.endTime}
-                          </span>
-                        </div>
-                      </td>
+                      <InlineTimeCell
+                        slot={slot}
+                        periodNumber={slotIndex + 1}
+                        onSave={(startTime, endTime) => updateSlotTimes(slot.id, startTime, endTime)}
+                        onDelete={() => deleteTimeSlot(slot.id)}
+                      />
                       {DAYS.map((day) => {
                         const entry = entries[slotIndex]?.[day];
                         return (
@@ -187,7 +185,7 @@ const Timetable = () => {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 px-2">
         <span className="font-semibold">Tip:</span>
-        <span>Click any cell to assign a lesson. Use "Manage Slots" to add, edit, or remove time periods.</span>
+        <span>Click any cell to assign a lesson. Hover the time column to inline-edit a period, or use "Manage Slots" to add/remove periods.</span>
       </div>
 
       {/* Modals */}

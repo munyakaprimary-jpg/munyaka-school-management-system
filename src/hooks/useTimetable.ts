@@ -179,6 +179,22 @@ export function useTimetable() {
     });
   }, [selectedGrade]);
 
+  // Update only the times of a slot (used by inline editor — no re-sort)
+  const updateSlotTimes = useCallback((slotId: string, startTime: string, endTime: string) => {
+    setTimetables(prev => {
+      const current = prev[selectedGrade];
+      if (!current) return prev;
+      const slotIndex = current.timeSlots.findIndex(s => s.id === slotId);
+      if (slotIndex === -1) return prev;
+      const updatedTimeSlots = current.timeSlots.map((s, i) =>
+        i === slotIndex ? { ...s, startTime, endTime } : s
+      );
+      const updated = { ...prev, [selectedGrade]: { ...current, timeSlots: updatedTimeSlots } };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      return updated;
+    });
+  }, [selectedGrade]);
+
   const deleteTimeSlot = useCallback((slotId: string) => {
     setTimetables(prev => {
       const current = prev[selectedGrade];
@@ -261,6 +277,7 @@ export function useTimetable() {
     entries: currentTimetable.entries,
     addTimeSlot,
     updateTimeSlot,
+    updateSlotTimes,
     deleteTimeSlot,
     setLesson,
     deleteLesson,
