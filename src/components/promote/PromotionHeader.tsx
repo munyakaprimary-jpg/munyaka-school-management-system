@@ -44,8 +44,8 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
       onPromoteClick();
     } else {
       setAuthError('Invalid Admin Password');
-      setPassword('');
       showError('Authentication failed');
+      setPassword('');
     }
     
     setIsVerifying(false);
@@ -77,14 +77,14 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
 
       {isAuthModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-2xl shadow-2xl p-6 animate-in zoom-in-95">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 animate-in zoom-in-95">
             <div className="flex items-center gap-3 mb-6">
               <div className="w-12 h-12 bg-rose-50 text-rose-600 rounded-xl flex items-center justify-center">
                 <Lock size={24} />
               </div>
               <div>
                 <h3 className="text-lg font-bold text-slate-900">Admin Verification Required</h3>
-                <p className="text-sm text-slate-500">Enter your current password to authorize this action.</p>
+                <p className="text-sm text-slate-500">Enter your admin password to authorize this action.</p>
               </div>
             </div>
 
@@ -134,20 +134,15 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isVerifying || !password.trim()}
+                  disabled={isVerifying}
                   className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
                 >
                   {isVerifying ? (
-                    <>
-                      <Loader2 className="animate-spin" size={18} />
-                      Verifying...
-                    </>
+                    <Loader2 className="animate-spin" size={18} />
                   ) : (
-                    <>
-                      <CheckCircle size={18} />
-                      Authorize
-                    </>
+                    <CheckCircle size={18} />
                   )}
+                  Authorize
                 </Button>
               </div>
             </form>

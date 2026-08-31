@@ -6,10 +6,12 @@ import { AlertTriangle, CheckCircle } from 'lucide-react';
 
 const WarningBanner: React.FC = () => {
   return (
-    <Card className="border-none shadow-sm rounded-[2rem] bg-amber-50/50 border border-amber-200 overflow-hidden">
+    <Card className="border-none shadow-sm rounded-[2rem] bg-amber-50/50 border-amber-200/80 overflow-hidden">
       <CardContent className="p-6">
         <div className="flex items-start gap-4">
-          <AlertTriangle className="text-amber-600 mt-1 shrink-0" size={24} />
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-600 flex items-center justify-center shrink-0">
+            <AlertTriangle size={24} />
+          </div>
           <div>
             <h3 className="font-bold text-amber-800 mb-2">⚠️ Critical Action Required</h3>
             <p className="text-sm text-amber-700 mb-3">
