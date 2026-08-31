@@ -373,15 +373,14 @@ export default function Students() {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   // ─── Official school letterhead ──────────────────────────────────────────
-    // Each row holds the school detail in the FIRST cell (column A) so when the
-    // CSV is opened in Excel/Sheets the information appears as a single header
-    // banner above the table rather than spilling into extra columns.
-    const SCHOOL_LETTERHEAD_ROWS: string[][] = [
-      ['MUNYAKA PRIMARY AND JUNIOR'],       // Row 1 — column A only
-      ['P.O. BOX 5239-30100, ELDORET'],      // Row 2 — column A only
-      ['MOTTO: KNOWLEDGE IS POWER'],         // Row 3 — column A only
-      [],                                   // Row 4 — blank separator
-    ];
+    // The exported CSV has 8 data columns (A through H). To make the school
+    // header text appear visually centered above the table, each letterhead
+    // row is padded with empty cells (rendered as leading commas) so that
+    // the actual text lands around column D — the midpoint of an 8-column
+    // table. Every letterhead row is forced to exactly 8 cells so the column
+    // alignment carries over cleanly to the data rows below.
+    const DATA_COLUMN_COUNT = 8;
+    const LEADING_PADDING = 3; // 3 empty cells → text appears in column D (centered)
   
     const buildCsvForDataset = (datasetToExport: Learner[]): string => {
       const dataHeaders = [
@@ -399,12 +398,25 @@ export default function Students() {
         `"${l.phone}"`,
       ]);
   
+      // Helper — produce a centred letterhead row of exactly DATA_COLUMN_COUNT
+      // cells, with `LEADING_PADDING` empty cells before the school text.
+      const centeredRow = (text: string): string[] => {
+        const row: string[] = Array(LEADING_PADDING).fill('');
+        row.push(text);
+        // Pad out to the full data-column width so the row spans A–H.
+        while (row.length < DATA_COLUMN_COUNT) row.push('');
+        return row;
+      };
+  
       // Combine every CSV line as a properly delimited row so column layout
       // is preserved when opened in a spreadsheet application.
       const allRows: string[][] = [
-        ...SCHOOL_LETTERHEAD_ROWS,
-        dataHeaders,
-        ...dataRows,
+        centeredRow('MUNYAKA PRIMARY AND JUNIOR'),       // Row 1 — centred
+        centeredRow('P.O. BOX 5239-30100, ELDORET'),      // Row 2 — centred
+        centeredRow('MOTTO: KNOWLEDGE IS POWER'),         // Row 3 — centred
+        Array(DATA_COLUMN_COUNT).fill(''),               // Row 4 — blank separator
+        dataHeaders,                                     // Row 5 — column headers
+        ...dataRows,                                     // Row 6+ — student data
       ];
       return allRows.map((row) => row.join(',')).join('\n');
     };
