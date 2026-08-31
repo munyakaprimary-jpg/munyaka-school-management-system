@@ -447,6 +447,11 @@ const PaymentManagement = () => {
     setSelectedStudentForReceipt(null);
   };
 
+  // ── License Selection (Multi-Select) State ──
+  // Tracks the IDs of currently checked licenses. Drives the floating
+  // bulk action bar that appears whenever at least one row is selected.
+  const [selectedLicenseIds, setSelectedLicenseIds] = useState<Set<string>>(new Set());
+
   // ── Load from localStorage ─────────────
   useEffect(() => {
     const raw = localStorage.getItem(STORAGE_KEY);
@@ -842,6 +847,14 @@ const PaymentManagement = () => {
     setMonthlyPayments(updatedPayments);
     localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
 
+    // Clear the deleted key from the selection so the floating bar disappears
+    // immediately if it was the only selected row.
+    setSelectedLicenseIds(prev => {
+      const next = new Set(prev);
+      next.delete(licenseToDelete.id);
+      return next;
+    });
+
     showSuccess(`License ${licenseToDelete.activationKey.slice(0, 12)}... deleted successfully.`);
     setIsDeleteModalOpen(false);
     setLicenseToDelete(null);
@@ -1157,6 +1170,101 @@ const PaymentManagement = () => {
   };
 
   // ─────────────────────────────────────────
+  // Multi-Select Handlers
+  // ─────────────────────────────────────────
+
+  /** Toggle a single row's selection state. */
+  const handleLicenseRowSelect = (licenseId: string, checked: boolean) => {
+    setSelectedLicenseIds(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(licenseId);
+      } else {
+        next.delete(licenseId);
+      }
+      return next;
+    });
+  };
+
+  /**
+   * Select-all toggle. The header checkbox uses tri-state semantics:
+   *   - All rows selected  → checked
+   *   - Some rows selected  → indeterminate
+   *   - No rows selected   → unchecked
+   * Clicking it when all rows are selected clears the selection. Clicking
+   * it when no rows (or only some) are selected selects every row.
+   */
+  const handleSelectAllLicenses = (selectAll: boolean) => {
+    if (selectAll) {
+      setSelectedLicenseIds(new Set(licenses.map(l => l.id)));
+    } else {
+      setSelectedLicenseIds(new Set());
+    }
+  };
+
+  const allLicensesSelected =
+    licenses.length > 0 && selectedLicenseIds.size === licenses.length;
+  const someLicensesSelected =
+    selectedLicenseIds.size > 0 && selectedLicenseIds.size < licenses.length;
+
+  /**
+   * Bulk-delete handler — verifies the owner password, then removes
+   * every selected license in one operation, including any tied
+   * monthly payment records. Clears the selection on success.
+   */
+  const handleBulkDeleteLicenses = async () => {
+    if (selectedLicenseIds.size === 0) return;
+
+    const OWNER_EMAIL = 'munyakaprimary@gmail.com';
+    const usersJson = localStorage.getItem('munyaka_users');
+    if (!usersJson) {
+      showError('User store not found. Contact administrator.');
+      return;
+    }
+
+    const users = JSON.parse(usersJson);
+    const owner = users[OWNER_EMAIL];
+
+    if (!owner || !owner.password) {
+      showError('Owner credentials not found. Contact administrator.');
+      return;
+    }
+
+    const password = window.prompt(
+      `Enter your owner password to confirm deletion of ${selectedLicenseIds.size} license(s):`
+    );
+    if (!password) {
+      showError('Bulk deletion cancelled.');
+      return;
+    }
+    if (password !== owner.password) {
+      showError('Incorrect password. Bulk deletion cancelled.');
+      return;
+    }
+
+    // Remove all selected licenses from state
+    const updatedLicenses = licenses.filter(l => !selectedLicenseIds.has(l.id));
+    setLicenses(updatedLicenses);
+
+    // Persist updated licenses
+    const LICENSE_STORAGE_KEY = 'munyaka_licenses';
+    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+
+    // Also remove any tied monthly payment records for deleted activation keys
+    const deletedKeys = new Set(
+      licenses.filter(l => selectedLicenseIds.has(l.id)).map(l => l.activationKey)
+    );
+    const updatedPayments = monthlyPayments.filter(p => !deletedKeys.has(p.activationCode));
+    setMonthlyPayments(updatedPayments);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+
+    // Clear selection
+    setSelectedLicenseIds(new Set());
+
+    showSuccess(`${selectedLicenseIds.size} license(s) deleted successfully.`);
+  };
+
+  // ─────────────────────────────────────────
   // Subscriptions tab top summary derived values
   // ─────────────────────────────────────────
   const primarySub = subscriptions[0];
@@ -1209,81 +1317,6 @@ const PaymentManagement = () => {
     setTimeout(() => {
       setReceiptPrintTrigger(prev => prev + 1);
     }, 100);
-  };
-
-  // ── License History Multi-Select State ──
-  const [selectedLicenseIds, setSelectedLicenseIds] = useState<Set<string>>(new Set());
-
-  const handleSelectAllLicenses = (checked: boolean) => {
-    if (checked) {
-      setSelectedLicenseIds(new Set(licenses.map(l => l.id)));
-    } else {
-      setSelectedLicenseIds(new Set());
-    }
-  };
-
-  const handleLicenseSelectionChange = (licenseId: string, checked: boolean) => {
-    setSelectedLicenseIds(prev => {
-      const next = new Set(prev);
-      if (checked) {
-        next.add(licenseId);
-      } else {
-        next.delete(licenseId);
-      }
-      return next;
-    });
-  };
-
-  const handleBulkDeleteLicenses = async () => {
-    if (selectedLicenseIds.size === 0) return;
-
-    const confirmed = window.confirm(
-      `Are you sure you want to permanently delete ${selectedLicenseIds.size} license(s)? This action cannot be undone.`
-    );
-    if (!confirmed) return;
-
-    // Verify owner password
-    const OWNER_EMAIL = 'munyakaprimary@gmail.com';
-    const usersJson = localStorage.getItem('munyaka_users');
-    if (!usersJson) {
-      showError('User store not found. Contact administrator.');
-      return;
-    }
-
-    const users = JSON.parse(usersJson);
-    const owner = users[OWNER_EMAIL];
-
-    if (!owner || !owner.password) {
-      showError('Owner credentials not found. Contact administrator.');
-      return;
-    }
-
-    const password = prompt('Enter your owner password to confirm bulk deletion:');
-    if (!password || password !== owner.password) {
-      showError('Incorrect password. Bulk deletion cancelled.');
-      return;
-    }
-
-    // Delete selected licenses
-    const updatedLicenses = licenses.filter(l => !selectedLicenseIds.has(l.id));
-    setLicenses(updatedLicenses);
-
-    // Persist updated licenses
-    const LICENSE_STORAGE_KEY = 'munyaka_licenses';
-    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
-
-    // Also remove any tied monthly payment records for deleted activation keys
-    const deletedKeys = new Set(
-      licenses.filter(l => selectedLicenseIds.has(l.id)).map(l => l.activationKey)
-    );
-    const updatedPayments = monthlyPayments.filter(p => !deletedKeys.has(p.activationCode));
-    setMonthlyPayments(updatedPayments);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
-
-    // Clear selection
-    setSelectedLicenseIds(new Set());
-
-    showSuccess(`${selectedLicenseIds.size} license(s) deleted successfully.`);
   };
 
   // ─────────────────────────────────────────
@@ -1638,13 +1671,13 @@ const PaymentManagement = () => {
             ))}
           </div>
 
-          {/* License History / Activation Key Log */}
+          {/* License History & Activation Keys (Multi-Select Table) */}
           <div className="space-y-4 mt-8">
             <div className="flex items-center justify-between">
               <div>
                 <h2 className="text-lg font-black text-slate-900">License History & Activation Keys</h2>
                 <p className="text-sm text-slate-500">
-                  All issued activation keys, their payment records, and status.
+                  Select one or more rows to enable batch deletion. All issued activation keys, their payment records, and status.
                 </p>
               </div>
               <Badge className="bg-indigo-50 text-indigo-700 border-indigo-200 font-bold text-xs gap-1.5 px-3 py-1.5">
@@ -1672,12 +1705,16 @@ const PaymentManagement = () => {
                     <table className="w-full text-xs text-left min-w-[900px]">
                       <thead className="bg-slate-50/80 border-b border-slate-100">
                         <tr>
+                          {/* Select-all checkbox column */}
                           <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 w-12 text-center">
                             <input
                               type="checkbox"
-                              checked={selectedLicenseIds.size === licenses.length && licenses.length > 0}
+                              checked={allLicensesSelected}
+                              ref={(el) => {
+                                if (el) el.indeterminate = someLicensesSelected;
+                              }}
                               onChange={(e) => handleSelectAllLicenses(e.target.checked)}
-                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
                               aria-label="Select all licenses"
                             />
                           </th>
@@ -1706,13 +1743,22 @@ const PaymentManagement = () => {
                             : <CheckCircle2 size={10} />;
                           const isSelected = selectedLicenseIds.has(lic.id);
                           return (
-                            <tr key={lic.id} className={cn("hover:bg-slate-50/40 transition-colors group", isSelected && "bg-indigo-50/30")}>
+                            <tr
+                              key={lic.id}
+                              className={cn(
+                                "transition-colors group",
+                                isSelected
+                                  ? "bg-indigo-50/50 hover:bg-indigo-50/70"
+                                  : "hover:bg-slate-50/40"
+                              )}
+                            >
+                              {/* Row-level selection checkbox */}
                               <td className="px-6 py-4 text-center">
                                 <input
                                   type="checkbox"
                                   checked={isSelected}
-                                  onChange={(e) => handleLicenseSelectionChange(lic.id, e.target.checked)}
-                                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  onChange={(e) => handleLicenseRowSelect(lic.id, e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer accent-indigo-600"
                                   aria-label={`Select license ${lic.activationKey.slice(0, 12)}...`}
                                 />
                               </td>
@@ -2558,10 +2604,17 @@ const PaymentManagement = () => {
         </div>
       </Modal>
 
-      {/* Bulk Delete Floating Action Bar */}
+      {/* ───────────────────────────────────────────────
+          FLOATING BULK-ACTION BAR
+          Only visible when one or more license rows are checked.
+          Shows the count of selected rows and exposes the bulk delete
+          / clear actions. Sits above the page footer / nav and matches
+          the visual pattern used elsewhere in the app.
+          ─────────────────────────────────────────────── */}
       {selectedLicenseIds.size > 0 && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-300">
           <div className="bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/30 px-4 py-3 flex items-center gap-3 border border-slate-700">
+            {/* Selection-count chip */}
             <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
               <div className="bg-indigo-500 text-white text-xs font-black rounded-lg px-2 py-0.5 min-w-[28px] text-center">
                 {selectedLicenseIds.size}
@@ -2570,14 +2623,19 @@ const PaymentManagement = () => {
                 License{selectedLicenseIds.size !== 1 ? 's' : ''} selected
               </span>
             </div>
+
+            {/* Clear selection — just empties the Set */}
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setSelectedLicenseIds(new Set())}
               className="rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-xs font-bold gap-1.5 h-9"
+              aria-label="Clear license selection"
             >
               <X size={14} /> Clear
             </Button>
+
+            {/* Bulk delete — opens the password prompt via window.prompt */}
             <Button
               size="sm"
               onClick={handleBulkDeleteLicenses}
