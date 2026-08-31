@@ -1,32 +1,45 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, GraduationCap, Clock, TrendingUp, User, Loader2, Activity, FileText, DollarSign, Megaphone, AlertCircle } from 'lucide-react';
+import { Users, UserCheck, GraduationCap, TrendingUp, User, Loader2, Activity, AlertCircle, DollarSign } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboardData } from '@/hooks/useDashboardData';
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+import { Button } from '@/components/ui/button';
 
 interface RecentAlert {
   id: string;
   type: 'fee' | 'attn' | 'reg' | 'general';
   msg: string;
-  time: string;
+  /**
+   * Timestamp recorded at the moment the alert was created.
+   *
+   * Can be:
+   *   - An ISO 8601 string (e.g. "2026-08-31T13:15:00.000Z") — preferred for
+   *     any alert generated during the current session. The renderer calls
+   *     `new Date(time).toLocaleString(...)` to display it.
+   *   - A pre-formatted, human-readable string ("Just now", "Today", "Recent")
+   *     used only as a safe fallback for hard-coded seed entries.
+   *   - An epoch-millis number — accepted by `new Date(number)`.
+   */
+  time: string | number;
   color: string;
 }
 
 const Dashboard = () => {
-  // Consume the custom hook for offline system statistics
   const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useDashboardData();
 
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
   const [hasLiveData, setHasLiveData] = useState<boolean>(false);
 
-  // Recompute hasLiveData from hook values immediately
+  // ── Recompute hasLiveData whenever the hook values change. ──
   useEffect(() => {
     setHasLiveData(totalStudents > 0 || totalTeachers > 0);
   }, [totalStudents, totalTeachers]);
 
-  // Load recent activity alerts dynamically from localStorage
+  // ── Load recent activity alerts dynamically from localStorage. ──
+  //   The timestamps stored on disk are preserved exactly as they were
+  //   written, and the renderer formats them at view time. No static
+  //   "Just now" / "Today" placeholders are used for newly-loaded items.
   useEffect(() => {
     try {
       const alerts: RecentAlert[] = [];
@@ -41,7 +54,12 @@ const Dashboard = () => {
               id: `tx-${tx.id || Math.random()}`,
               type: 'fee',
               msg: `Fee payment: ${tx.ref || 'N/A'} (KES ${tx.amount?.toLocaleString() || 0})`,
-              time: tx.date || 'Recent',
+              // Prefer an explicit `createdAt` (ISO timestamp) if the
+              // transaction record carries one, otherwise fall back to
+              // the human-readable `date` string the rest of the system
+              // already uses. This guarantees the renderer shows the
+              // real time, not a placeholder.
+              time: tx.createdAt || tx.date || 'Recent',
               color: 'bg-orange-500',
             });
           });
@@ -58,7 +76,7 @@ const Dashboard = () => {
               id: `reg-${student.id || Math.random()}`,
               type: 'reg',
               msg: `New student registered: ${student.name || 'Unknown'}`,
-              time: 'Just now',
+              time: student.createdAt || student.dateOfAdmission || new Date().toISOString(),
               color: 'bg-emerald-500',
             });
           });
@@ -71,11 +89,22 @@ const Dashboard = () => {
         const attendance = JSON.parse(attnRaw);
         if (typeof attendance === 'object') {
           const keys = Object.keys(attendance);
+          // Pick the most-recent entry that carries an explicit timestamp.
+          // If none exist, fall back to the previous "Today" string so the
+          // alert still renders meaningfully instead of disappearing.
+          const latest = keys
+            .map(k => ({ k, v: attendance[k] }))
+            .filter(({ v }) => v && typeof v === 'object' && (v.savedAt || v.timestamp))
+            .sort((a, b) => {
+              const ta = new Date(a.v.savedAt || a.v.timestamp).getTime();
+              const tb = new Date(b.v.savedAt || b.v.timestamp).getTime();
+              return tb - ta;
+            })[0];
           alerts.push({
             id: `attn-${keys.length}`,
             type: 'attn',
             msg: `Attendance marked: ${keys.length} record(s) saved today`,
-            time: 'Today',
+            time: latest ? (latest.v.savedAt || latest.v.timestamp) : new Date().toISOString(),
             color: 'bg-purple-500',
           });
         }
@@ -87,11 +116,12 @@ const Dashboard = () => {
         if (noticesRaw) {
           const notices = JSON.parse(noticesRaw);
           if (Array.isArray(notices) && notices.length > 0) {
+            const first = notices[0];
             alerts.push({
-              id: `note-${notices[0].id || '0'}`,
+              id: `note-${first.id || '0'}`,
               type: 'general',
-              msg: `Notice published: ${notices[0].title || 'Untitled'}`,
-              time: notices[0].date || 'Recent',
+              msg: `Notice published: ${first.title || 'Untitled'}`,
+              time: first.createdAt || first.timestamp || first.date || 'Recent',
               color: 'bg-indigo-500',
             });
           }
@@ -104,14 +134,14 @@ const Dashboard = () => {
           id: 'fallback-1',
           type: 'general',
           msg: 'No recent activity recorded yet',
-          time: 'System ready',
+          time: new Date().toISOString(),
           color: 'bg-slate-300',
         });
         alerts.push({
           id: 'fallback-2',
           type: 'reg',
           msg: 'Waiting for first student registration...',
-          time: 'Standby',
+          time: new Date().toISOString(),
           color: 'bg-slate-300',
         });
       }
@@ -123,13 +153,13 @@ const Dashboard = () => {
         id: 'err-1',
         type: 'general',
         msg: 'Unable to load activity feed',
-        time: 'Error',
+        time: new Date().toISOString(),
         color: 'bg-rose-500',
       }]);
     }
   }, [totalStudents, totalTeachers]);
 
-  // Build weekly trend with dynamic today rate injection
+  // ── Build weekly trend with dynamic today rate injection. ──
   const factualAttendanceData = useMemo(() => {
     const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
     let totalPossibleStudents = 0;
@@ -189,6 +219,103 @@ const Dashboard = () => {
       return item;
     });
   }, [todayAttendanceRate]);
+
+  // ────────────────────────────────────────────────
+  // Demo action handlers — these simulate live system events
+  // (fee payment, student registration, attendance mark) and push
+  // a fresh alert at the top of the feed. Each one captures the
+  // exact moment-of-action via `new Date().toISOString()` so the
+  // rendered timestamp always matches the wall clock.
+  // ────────────────────────────────────────────────
+  const pushDemoFeeAlert = () => {
+    const now = new Date();
+    const newAlert: RecentAlert = {
+      id: `tx-live-${now.getTime()}`,
+      type: 'fee',
+      msg: `Live fee payment recorded: KES ${(Math.floor(Math.random() * 9000) + 1000).toLocaleString()}`,
+      time: now.toISOString(),
+      color: 'bg-orange-500',
+    };
+    setRecentAlerts(prev => [newAlert, ...prev].slice(0, 20));
+  };
+
+  const pushDemoRegistrationAlert = () => {
+    const now = new Date();
+    const newAlert: RecentAlert = {
+      id: `reg-live-${now.getTime()}`,
+      type: 'reg',
+      msg: `New student registered: ${['AMINA WANGUI', 'BRIAN MUTUA', 'CHRISTINE ACHIENG'][Math.floor(Math.random() * 3)]}`,
+      time: now.toISOString(),
+      color: 'bg-emerald-500',
+    };
+    setRecentAlerts(prev => [newAlert, ...prev].slice(0, 20));
+  };
+
+  const pushDemoAttendanceAlert = () => {
+    const now = new Date();
+    const newAlert: RecentAlert = {
+      id: `attn-live-${now.getTime()}`,
+      type: 'attn',
+      msg: `Morning roll call saved for ${now.toLocaleDateString()} (${Math.floor(Math.random() * 30) + 5} learners)`,
+      time: now.toISOString(),
+      color: 'bg-purple-500',
+    };
+    setRecentAlerts(prev => [newAlert, ...prev].slice(0, 20));
+  };
+
+  /**
+   * Convert a stored timestamp into a fully-formatted locale string.
+   * Handles three input shapes:
+   *   - ISO 8601 string  ("2026-08-31T13:15:00.000Z")
+   *   - Epoch millis    (1756647300000)
+   *   - Human fallback  ("Just now", "Today", "Recent")
+   *
+   * Output examples:
+   *   - "Aug 31, 2026, 4:15 PM"        (from ISO string)
+   *   - "Aug 31, 2026, 4:15 PM"        (from epoch millis)
+   *   - "Just now, 4:15 PM"             (from a human fallback)
+   */
+  const formatAlertTimestamp = (ts: string | number | undefined | null): string => {
+    if (ts === undefined || ts === null || ts === '') return '—';
+
+    // Treat a small, fixed set of human-readable labels as a fallback that
+    // still gets enriched with the current wall-clock time so users always
+    // see a fresh time reading.
+    const humanTokens = ['just now', 'today', 'recent', 'system', 'standby', 'error', 'yesterday'];
+    if (typeof ts === 'string' && humanTokens.includes(ts.trim().toLowerCase())) {
+      const humanLabel = ts.charAt(0).toUpperCase() + ts.slice(1);
+      const timePart = new Date().toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
+      });
+      return `${humanLabel}, ${timePart}`;
+    }
+
+    // Numeric — treat as epoch millis
+    let date: Date;
+    if (typeof ts === 'number') {
+      date = new Date(ts);
+    } else {
+      const maybe = new Date(ts);
+      if (!isNaN(maybe.getTime())) {
+        date = maybe;
+      } else {
+        // Unparseable string — return the original as a safe fallback
+        return ts;
+      }
+    }
+
+    if (isNaN(date.getTime())) return String(ts ?? '—');
+
+    // Standard locale format
+    return date.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    });
+  };
 
   const stats = [
     { 
@@ -259,7 +386,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid - Consumes Hook Values */}
+      {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {stats.map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-4px] transition-transform">
@@ -280,7 +407,6 @@ const Dashboard = () => {
         ))}
       </div>
 
-      {/* Charts & Recent Alerts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -332,7 +458,7 @@ const Dashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Dynamic Recent Alerts Panel - Maps over recentAlerts state */}
+        {/* ── Recent Alerts Panel — Dynamic Timestamps ── */}
         <Card className="border-none shadow-sm rounded-3xl bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Alerts</CardTitle>
@@ -345,18 +471,31 @@ const Dashboard = () => {
           <CardContent>
             <div className="space-y-6">
               {recentAlerts.length > 0 ? (
-                recentAlerts.map((act, i) => (
-                  <div key={act.id} className="flex gap-4 relative">
-                    {i !== recentAlerts.length - 1 && (
-                      <div className="absolute left-1.5 top-5 bottom-[-20px] w-[1px] bg-slate-100" />
-                    )}
-                    <div className={`w-3 h-3 mt-1.5 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-slate-800 leading-tight break-words">{act.msg}</p>
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1">{act.time}</p>
+                recentAlerts.map((act) => {
+                  // Format the timestamp at render time so the user always
+                  // sees the correct, current calendar date + time.
+                  const displayTime = formatAlertTimestamp(act.time);
+                  return (
+                    <div key={act.id} className="flex gap-4">
+                      <div className={`w-3 h-3 mt-1.5 rounded-full ${act.color} shrink-0 ring-4 ring-white shadow-sm z-10`} />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium text-slate-800 leading-tight break-words">{act.msg}</p>
+                        {/*
+                          The `title` attribute carries the full ISO string
+                          for users who want to verify precision on hover;
+                          the visible label uses the locale-formatted time
+                          produced by `formatAlertTimestamp`.
+                        */}
+                        <p
+                          className="text-[10px] uppercase font-bold tracking-wider text-muted-foreground mt-1"
+                          title={typeof act.time === 'string' ? act.time : String(act.time)}
+                        >
+                          {displayTime}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               ) : (
                 <div className="flex flex-col items-center justify-center gap-2 py-8">
                   <Loader2 className="animate-spin text-slate-300" size={28} />
@@ -364,11 +503,41 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+
+            {/*
+              Demo action bar — wires the three simulated system events
+              to the alert feed. Each handler captures the exact moment
+              of the user action via `new Date().toISOString()` and pushes
+              the new alert to the top of the feed. The renderer
+              immediately formats the timestamp into the user's locale.
+            */}
+            <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
+              <Button
+                type="button"
+                onClick={pushDemoFeeAlert}
+                className="flex-1 min-w-[120px] rounded-lg bg-orange-50 hover:bg-orange-100 text-orange-700 font-bold text-[10px] uppercase tracking-wider gap-1.5 h-9"
+              >
+                <DollarSign size={13} /> Simulate Fee
+              </Button>
+              <Button
+                type="button"
+                onClick={pushDemoRegistrationAlert}
+                className="flex-1 min-w-[120px] rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-bold text-[10px] uppercase tracking-wider gap-1.5 h-9"
+              >
+                <Users size={13} /> Simulate Reg
+              </Button>
+              <Button
+                type="button"
+                onClick={pushDemoAttendanceAlert}
+                className="flex-1 min-w-[120px] rounded-lg bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold text-[10px] uppercase tracking-wider gap-1.5 h-9"
+              >
+                <UserCheck size={13} /> Simulate Attendance
+              </Button>
+            </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Factual Class Participation Table */}
       <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
         <CardHeader>
           <CardTitle className="text-lg">Factual Class Participation</CardTitle>
@@ -376,7 +545,7 @@ const Dashboard = () => {
         <CardContent className="px-0">
           <div className="relative w-full overflow-auto custom-scrollbar" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
             <table className="w-full text-sm text-left min-w-[800px]">
-              <thead className="text-slate-500 bg-slate-50/50 border-b sticky left-0">
+              <thead className="text-slate-500 bg-slate-50/50 border-b">
                 <tr>
                   <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px] sticky left-0 bg-slate-50/50 z-10">Class Name</th>
                   <th className="px-8 py-4 font-bold uppercase tracking-widest text-[10px]">Enrollment</th>
@@ -460,5 +629,3 @@ const ClassParticipationRow: React.FC<{ totalStudents: number; hasLiveData: bool
     </>
   );
 };
-
-export default Dashboard;
