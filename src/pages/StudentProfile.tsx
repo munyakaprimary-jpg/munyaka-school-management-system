@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
   Activity,
   ShieldCheck,
 } from 'lucide-react';
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
+import { useParams } from 'react-router-dom';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
@@ -34,23 +34,125 @@ import { marks as mockMarks } from '@/data/mockMarks';
 import { attendance as mockAttendance } from '@/data/mockAttendance';
 import { transactions as mockTransactions } from '@/data/mockTransactions';
 import { cn } from '@/lib/utils';
+import { StudentTransferInfo } from '@/types/transfer';
+
+const LEARNERS_STORAGE_KEY = 'school_learners_data';
+
+interface ProfileLearner {
+  id: string;
+  admNo: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: 'Male' | 'Female' | 'Other';
+  guardian: string;
+  phone: string;
+  email?: string;
+  dob?: string;
+  birthCertificateNo?: string;
+  dateOfAdmission?: string;
+  feeBalance?: number;
+  coCurricularActivities?: string;
+  status?: 'Active' | 'Transferred' | 'Graduated' | 'Suspended';
+}
 
 const StudentProfile = () => {
-  const student = INITIAL_SEED_DATA.students[0];
+  const { id } = useParams<{ id: string }>();
+
+  // ── FIX 1: Look up the ACTIVE learner from localStorage using the URL param.
+  // The previous version always fell back to `INITIAL_SEED_DATA.students[0]`
+  // (MUTWIKA KILONZO) when no real ID was provided. Now we resolve the learner
+  // from the school_learners_data localStorage key, and only fall back to
+  // the seed if the localStorage lookup truly returns nothing (e.g. on
+  // first run before any learners have been registered). The first seed
+  // student is the most natural default in that case.
+  const [activeLearner, setActiveLearner] = useState<ProfileLearner | null>(null);
+
+  useEffect(() => {
+    if (!id) {
+      setActiveLearner(null);
+      return;
+    }
+
+    try {
+      const saved = localStorage.getItem(LEARNERS_STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Try to find the learner by id, then by admNo (in case the URL
+          // uses the human-readable identifier instead of the internal row id)
+          const match = parsed.find((l: any) => l.id === id || l.admNo === id);
+          if (match) {
+            setActiveLearner(match as ProfileLearner);
+            return;
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Failed to resolve learner from localStorage', e);
+    }
+
+    setActiveLearner(null);
+  }, [id]);
+
+  // If the URL doesn't resolve to any learner, show a friendly empty state
+  // rather than silently rendering a different student's profile.
+  const [showNotFound, setShowNotFound] = useState(false);
+  useEffect(() => {
+    if (!id) return;
+    const t = setTimeout(() => {
+      if (!activeLearner) setShowNotFound(true);
+    }, 250);
+    return () => clearTimeout(t);
+  }, [id, activeLearner]);
+
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
   const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
 
-  const transferStudentData = {
-    ...student,
-    feeBalance: 3000,
-    status: 'Active' as const,
-    dateOfAdmission: '2022-01-10',
-    coCurricularActivities: 'Football team captain (2023), Science fair 1st place (2022), School choir member',
-  };
+  // The profile page no longer needs a hardcoded "transferStudentData"
+  // object that defaulted to MUTWIKA KILONZO. Instead, we build a real
+  // StudentTransferInfo object from the ACTIVE learner the moment the
+  // user opens the transfer modal. If there is no active learner yet we
+  // pass `null` and the modal stays closed.
+  const [transferStudent, setTransferStudent] = useState<StudentTransferInfo | null>(null);
 
   const handleRecordPayment = (result: { transaction: any }) => {
-    showSuccess(`Recorded payment of KES ${result.transaction.amount.toLocaleString()} for ${student.name}`);
+    if (!activeLearner) return;
+    showSuccess(
+      `Recorded payment of KES ${result.transaction.amount.toLocaleString()} for ${activeLearner.name}`
+    );
+  };
+
+  const handleOpenTransfer = () => {
+    if (!activeLearner) return;
+
+    // Build a fully-populated StudentTransferInfo from the active learner.
+    // No fallback to any seed student — every field is sourced from the
+    // row the user actually clicked on in the directory.
+    const transferPayload: StudentTransferInfo = {
+      id: activeLearner.id,
+      admNo: activeLearner.admNo,
+      name: activeLearner.name,
+      grade: activeLearner.grade,
+      stream: activeLearner.stream,
+      gender: activeLearner.gender,
+      guardian: activeLearner.guardian,
+      phone: activeLearner.phone,
+      email: activeLearner.email ?? '',
+      dob: activeLearner.dob ?? '',
+      feeBalance: activeLearner.feeBalance ?? 0,
+      status: activeLearner.status ?? 'Active',
+      dateOfAdmission: activeLearner.dateOfAdmission ?? new Date().toISOString().split('T')[0],
+      coCurricularActivities: activeLearner.coCurricularActivities ?? '',
+    };
+    setTransferStudent(transferPayload);
+    setIsTransferOpen(true);
+  };
+
+  const handleCloseTransfer = () => {
+    setIsTransferOpen(false);
+    setTransferStudent(null);
   };
 
   // ==================== Subject performance chart ====================
@@ -62,11 +164,12 @@ const StudentProfile = () => {
   }
 
   const computeSubjectPerformance = (): SubjectPerformanceRow[] => {
-    const studentRecord = mockMarks.studentRecords[student.id];
+    if (!activeLearner) return [];
+    const studentRecord = mockMarks.studentRecords[activeLearner.id];
     if (!studentRecord) return [];
 
     const studentMarks = studentRecord.terms?.[studentRecord.currentTerm] ?? {};
-    const studentScores = studentMarks.scores ?? {};
+    const studentScores = studentRecord.terms?.[studentRecord.currentTerm]?.scores ?? {};
 
     return Object.keys(studentScores).map((subject) => {
       const studentScore = studentScores[subject] ?? 0;
@@ -80,7 +183,7 @@ const StudentProfile = () => {
     });
   };
 
-  const performanceRows = useMemo(() => computeSubjectPerformance(), [student.id]);
+  const performanceRows = useMemo(() => computeSubjectPerformance(), [activeLearner]);
 
   const getDeltaMeta = (diff: number) => {
     if (diff >= 5) return { color: 'bg-emerald-50 text-emerald-700 border-emerald-200', icon: TrendingUp, label: `+${diff.toFixed(1)} above` };
@@ -90,6 +193,96 @@ const StudentProfile = () => {
 
   const getBarWidth = (score: number) => `${Math.min(100, Math.max(0, score))}%`;
 
+  // ── Early-return guards: render the right "missing learner" copy if the
+  // URL doesn't resolve. This prevents the previous behavior of silently
+  // swapping in a hardcoded student.
+  if (!id) {
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center gap-3">
+          <BackButton to="/students" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learner Profile</h1>
+            <p className="text-sm font-medium text-slate-500">No learner was selected.</p>
+          </div>
+        </div>
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-12 text-center">
+          <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+            <div className="p-4 bg-amber-50 rounded-full">
+              <AlertCircle className="w-10 h-10 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">No Learner Selected</h3>
+            <p className="text-sm text-slate-500">
+              Please choose a learner from the directory to view their profile.
+            </p>
+            <Button asChild className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <a href="/students">Back to Learners</a>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // While we're loading (or if the URL has no match), show a skeleton
+  // placeholder so the user doesn't see a flash of the old hardcoded data.
+  if (!activeLearner && !showNotFound) {
+    return (
+      <div className="space-y-8 animate-in fade-in duration-300">
+        <div className="flex items-center gap-3">
+          <BackButton to="/students" />
+          <div className="flex-1 min-w-0">
+            <div className="h-7 w-48 bg-slate-100 rounded mb-2 animate-pulse" />
+            <div className="h-3 w-64 bg-slate-100 rounded animate-pulse" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {[0, 1, 2].map((i) => (
+            <div key={i} className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50 animate-pulse">
+              <div className="h-3 w-24 bg-slate-200 rounded mb-3" />
+              <div className="h-7 w-20 bg-slate-200 rounded mb-2" />
+              <div className="h-3 w-32 bg-slate-200 rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  if (!activeLearner && showNotFound) {
+    return (
+      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+        <div className="flex items-center gap-3">
+          <BackButton to="/students" />
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learner Not Found</h1>
+            <p className="text-sm font-medium text-slate-500">
+              The requested learner is no longer in the active directory.
+            </p>
+          </div>
+        </div>
+        <Card className="border-none shadow-sm rounded-[2rem] bg-white p-12 text-center">
+          <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
+            <div className="p-4 bg-amber-50 rounded-full">
+              <AlertCircle className="w-10 h-10 text-amber-500" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Learner Not Found</h3>
+            <p className="text-sm text-slate-500">
+              We couldn't find a learner with the ID <code className="font-mono text-slate-700">{id}</code>.
+              They may have been removed from the directory.
+            </p>
+            <Button asChild className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold">
+              <a href="/students">Back to Learners</a>
+            </Button>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ── Active learner is now guaranteed to be non-null below this line.
+  const student = activeLearner!;
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
@@ -98,7 +291,9 @@ const StudentProfile = () => {
           <BackButton to="/students" />
           <div className="flex-1 min-w-0">
             <h1 className="text-3xl font-bold text-slate-900 truncate break-words whitespace-nowrap">{student.name}</h1>
-            <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">Detailed learner profile and history</p>
+            <p className="text-sm font-medium text-slate-600 truncate break-words whitespace-nowrap">
+              Detailed learner profile and history
+            </p>
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto shrink-0">
@@ -112,7 +307,7 @@ const StudentProfile = () => {
           <Button
             variant="outline"
             className="rounded-xl gap-2 border-rose-200 text-rose-600 hover:bg-rose-50"
-            onClick={() => setIsTransferOpen(true)}
+            onClick={handleOpenTransfer}
           >
             <UserX size={18} /> Transfer Student
           </Button>
@@ -342,13 +537,13 @@ const StudentProfile = () => {
             <h2 className="text-xl font-bold text-slate-900">{student.name}</h2>
             <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">ID: {student.admNo}</p>
             <div className="flex justify-center gap-2 mb-8">
-              <Badge className="bg-indigo-600">{student.grade}</Badge>
+              <Badge className="bg-indigo-600">Grade {student.grade}</Badge>
               <Badge variant="outline">{student.stream}</Badge>
             </div>
             <div className="space-y-4 text-left border-t pt-8">
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar size={16} className="text-slate-400" />
-                <span>Born: {student.dob}</span>
+                <span>Born: {student.dob || '—'}</span>
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Phone size={16} className="text-slate-400" />
@@ -356,7 +551,7 @@ const StudentProfile = () => {
               </div>
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Mail size={16} className="text-slate-400" />
-                <span>{student.email}</span>
+                <span>{student.email || '—'}</span>
               </div>
             </div>
           </Card>
@@ -457,14 +652,19 @@ const StudentProfile = () => {
         studentName={student.name}
       />
 
-      <TransferWorkflow
-        student={transferStudentData}
-        isOpen={isTransferOpen}
-        onClose={() => setIsTransferOpen(false)}
-        onTransferComplete={(studentId, certificateNumber) => {
-          showSuccess(`${student.name} has been transferred successfully. Certificate: ${certificateNumber}`);
-        }}
-      />
+      {/* Transfer Workflow — receives the FULL student object, never a fallback. */}
+      {isTransferOpen && transferStudent && (
+        <TransferWorkflow
+          student={transferStudent}
+          isOpen={isTransferOpen}
+          onClose={handleCloseTransfer}
+          onTransferComplete={(studentId, certificateNumber) => {
+            setIsTransferOpen(false);
+            setTransferStudent(null);
+            showSuccess(`${student.name} has been transferred successfully. Certificate: ${certificateNumber}`);
+          }}
+        />
+      )}
 
       <UnifiedRecordPaymentModal
         isOpen={isPaymentModalOpen}

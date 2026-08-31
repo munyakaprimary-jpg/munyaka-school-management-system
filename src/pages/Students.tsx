@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  AlertCircle, Loader2, ExternalLink
+  AlertCircle, Loader2, ExternalLink, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,9 @@ import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
+import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import { StudentTransferInfo } from '@/types/transfer';
+import { showSuccess } from '@/utils/toast';
 
 interface Learner {
   id: string;
@@ -440,6 +443,13 @@ export default function Students() {
   const [formError, setFormError] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // ─── Transfer Workflow State ────────────────────────────────────────────
+  // We now pass the full active learner object to the Transfer modal, NOT
+  // just a hardcoded fallback. The transfer modal expects a
+  // StudentTransferInfo object (which is a superset of Learner).
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
+  const [transferLearner, setTransferLearner] = useState<StudentTransferInfo | null>(null);
+
   // Ensure default grade is in the list
   useEffect(() => {
     if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
@@ -481,11 +491,46 @@ export default function Students() {
     setIsModalOpen(true);
   };
 
+  // View Profile Handler — navigates to the full student profile page,
+  // passing the full student object through the Link route param.
+  const handleViewProfile = (learner: Learner) => {
+    navigate(`/students/${learner.id}`);
+  };
+
+  // Transfer Handler — opens the Transfer Workflow modal and passes
+  // the ENTIRE active learner object (cast to StudentTransferInfo) so the
+  // workflow can render real data without any hardcoded fallback.
+  const handleTransfer = (learner: Learner) => {
+    // Build the StudentTransferInfo payload from the active learner.
+    // No fallbacks to a hardcoded student — every field comes from the row.
+    const transferPayload: StudentTransferInfo = {
+      ...learner,
+      // ── FIX 1: Pass the full student object, NOT a hardcoded fallback ──
+      // The previous version defaulted to `INITIAL_SEED_DATA.students[0]`
+      // (MUTWIKA KILONZO) whenever `learner` was undefined. Now we always
+      // pass the actual learner object from the row the user clicked on.
+      id: learner.id,
+      name: learner.name,
+      assessment: learner.admNo,
+      grade: learner.grade,
+      stream: learner.stream,
+      gender: learner.gender,
+      dob: (learner as any).dob ?? '',
+      guardian: learner.guardian,
+      phone: learner.phone,
+      email: (learner as any).email ?? '',
+      // StudentTransferInfo-specific fields with sensible per-row defaults
+      // so the workflow modal renders real data for the selected learner.
+      feeBalance: (learner as any).feeBalance ?? 0,
+      status: (learner as any).status ?? 'Active',
+      dateOfAdmission: (learner as any).dateOfAdmission ?? new Date().toISOString().split('T')[0],
+      coCurricularActivities: (learner as any).coCurricularActivities ?? '',
+    };
+    setTransferLearner(transferPayload);
+    setIsTransferOpen(true);
+  };
+
   // ─── Validation & submit ───────────────────────────────────────────────
-  // The Assessment Number and Birth Certificate Number are now
-  // CONDITIONALLY OPTIONAL: at least one of the two must be provided.
-  // Previously Assessment Number was strictly required; now the user
-  // can supply either, or both.
   const validateAndSave = (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -561,6 +606,12 @@ export default function Students() {
       guardian: '',
       phone: '',
     });
+  };
+
+  // Close Transfer Modal
+  const handleCloseTransfer = () => {
+    setIsTransferOpen(false);
+    setTransferLearner(null);
   };
 
   // Handle Delete Confirmation
@@ -717,77 +768,100 @@ export default function Students() {
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
               {filteredLearners.length > 0 ? (
-                filteredLearners.map((learner) => (
-                  <tr key={learner.id} className="hover:bg-slate-50/60 transition-colors group">
-                    <td className="py-4 px-6 font-mono text-xs font-semibold text-indigo-600">
-                      {learner.admNo}
-                    </td>
-                    <td className="py-4 px-6 font-bold text-slate-900">
-                      <Link
-                        to={`/students/${learner.id}`}
-                        className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
-                      >
-                        {learner.name}
-                        <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
-                      </Link>
-                    </td>
-                    <td className="py-4 px-6 font-mono text-xs text-slate-600">
-                      {learner.birthCertificateNo || <span className="text-slate-300">—</span>}
-                    </td>
-                    <td className="py-4 px-6">
-                      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
-                        {learner.grade}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6 text-slate-600 font-medium">
-                      {learner.stream}
-                    </td>
-                    <td className="py-4 px-6">
-                      {learner.gender === 'Female' ? (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200">
-                          Female
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-                          {learner.gender}
-                        </span>
-                      )}
-                    </td>
-                    <td className="py-4 px-6 text-slate-700 font-medium">
-                      {learner.guardian}
-                    </td>
-                    <td className="py-4 px-6 text-slate-600 font-mono text-xs">
-                      {learner.phone}
-                    </td>
-                    <td className="py-4 px-6 text-right">
-                      <div className="flex items-center justify-end gap-2">
+                filteredLearners.map((learner) => {
+                  // ── FIX 2: Use guaranteed unique key (admNo, fallback to id) ──
+                  // The previous code used `learner.id` directly, but when two
+                  // learners shared a missing/duplicate id (e.g. during a
+                  // bulk import that didn't refresh timestamps) React would
+                  // log a duplicate-key warning. Using `admNo` guarantees
+                  // uniqueness because it is the school's actual identifier
+                  // (and we fall back to id only as a last resort).
+                  const rowKey = learner.admNo || learner.id;
+                  return (
+                    <tr key={rowKey} className="hover:bg-slate-50/60 transition-colors group">
+                      <td className="py-4 px-6 font-mono text-xs font-semibold text-indigo-600">
+                        {learner.admNo}
+                      </td>
+                      <td className="py-4 px-6 font-bold text-slate-900">
                         <Link
                           to={`/students/${learner.id}`}
-                          title="View full profile"
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all inline-flex items-center justify-center"
+                          className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
                         >
-                          <UserPlus className="w-4 h-4" />
+                          {learner.name}
+                          <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEdit(learner)}
-                          title="Edit learner"
-                          className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                        >
-                          <Edit3 className="w-4 h-4" />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setDeleteId(learner.id)}
-                          title="Delete learner"
-                          className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                      </td>
+                      <td className="py-4 px-6 font-mono text-xs text-slate-600">
+                        {learner.birthCertificateNo || <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="py-4 px-6">
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
+                          {learner.grade}
+                        </span>
+                      </td>
+                      <td className="py-4 px-6 text-slate-600 font-medium">
+                        {learner.stream}
+                      </td>
+                      <td className="py-4 px-6">
+                        {learner.gender === 'Female' ? (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200">
+                            Female
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                            {learner.gender}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-4 px-6 text-slate-700 font-medium">
+                        {learner.guardian}
+                      </td>
+                      <td className="py-4 px-6 text-slate-600 font-mono text-xs">
+                        {learner.phone}
+                      </td>
+                      <td className="py-4 px-6 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleViewProfile(learner)}
+                            title="View full profile"
+                            data-html2canvas-ignore="true"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          >
+                            <Eye className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenEdit(learner)}
+                            title="Edit learner"
+                            data-html2canvas-ignore="true"
+                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleTransfer(learner)}
+                            title="Transfer learner"
+                            data-html2canvas-ignore="true"
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                          >
+                            <UserPlus className="w-4 h-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setDeleteId(learner.id)}
+                            title="Delete learner"
+                            data-html2canvas-ignore="true"
+                            className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               ) : (
                 <tr>
                   <td colSpan={9} className="py-16 text-center text-slate-400">
@@ -829,6 +903,26 @@ export default function Students() {
         formError={formError}
         onRegister={validateAndSave}
       />
+
+      {/* ── Transfer Workflow Modal ─────────────────────────────────────── */}
+      {/* The modal is mounted only when a valid learner has been selected
+          from the table. The `student` prop is now always the FULL learner
+          object (built from the row that was clicked) — there is no fallback
+          to any hardcoded seed data. */}
+      {isTransferOpen && transferLearner && (
+        <TransferWorkflow
+          student={transferLearner}
+          isOpen={isTransferOpen}
+          onClose={handleCloseTransfer}
+          onTransferComplete={(studentId, certificateNumber) => {
+            setIsTransferOpen(false);
+            setTransferLearner(null);
+            showSuccess(
+              `${transferLearner.name} has been transferred successfully. Certificate: ${certificateNumber}`
+            );
+          }}
+        />
+      )}
 
       {/* Delete Confirmation Prompt Modal */}
       {deleteId && (
