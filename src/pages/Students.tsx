@@ -17,6 +17,11 @@ import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { StudentTransferInfo } from '@/types/transfer';
 import { showSuccess } from '@/utils/toast';
 import { logDeletionAudit } from '@/services/deletionAuditLog';
+import {
+  readGradesAndStreams,
+  getStreamsForGrade,
+  GradesStreamsConfig,
+} from '@/services/gradesStreamsConfig';
 
 interface Learner {
   id: string;
@@ -32,10 +37,17 @@ interface Learner {
 
 const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
 
-// Keys for persisting filter state in localStorage
+// Key for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';
-// Keys for reading the Grades & Streams configuration
-const GRADES_KEYS = ['munyaka_grades', 'munyaka_grades_streams', 'munyaka_grades_streams_data', 'gradeStreamSettings', 'school_grades_streams_data'];
+
+// LocalStorage keys the Grades & Streams setter module writes to.
+const GRADES_KEYS = [
+  'munyaka_grades',
+  'munyaka_grades_streams',
+  'munyaka_grades_streams_data',
+  'gradeStreamSettings',
+  'school_grades_streams_data',
+];
 
 /**
  * Normalize a stream name to "Title Case" so we can reliably deduplicate
@@ -50,7 +62,6 @@ const normalizeStreamName = (name: string): string => {
 
 /**
  * Normalize a grade name to a canonical title-case form (e.g. "grade 4" -> "Grade 4").
- * Returns the trimmed name with the first character uppercased.
  */
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
@@ -61,95 +72,15 @@ const normalizeGradeName = (name: string): string => {
 
 /**
  * Convert a grade name to a normalized comparison key (lowercase, digits-only suffix).
- * E.g. "Grade 4" -> "4", "PP1" -> "pp1", "Grade 4 (Primary)" -> "4".
  */
 const getGradeMatchKey = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = name.trim().toLowerCase();
   if (!trimmed) return '';
-  const lower = trimmed.toLowerCase();
-  if (lower === 'pp1' || lower === 'pp2') return lower;
-  // Extract digit-only suffix for Grade X names
-  const digitMatch = lower.match(/(\d+)/);
-  if (digitMatch) return `grade${digitMatch[1]}`;
-  return lower.replace(/\s+/g, '');
-};
-
-/**
- * Read the Grades & Streams configuration from any of the supported localStorage
- * keys. Returns a normalized map of { gradeKey: Set<normalizedStream> }.
- */
-const readGradesAndStreams = (): { grades: string[]; streams: string[]; gradeStreamMap: Record<string, string[]> } => {
-  try {
-    let raw: any = null;
-    for (const key of GRADES_KEYS) {
-      const val = localStorage.getItem(key);
-      if (val) {
-        const parsed = JSON.parse(val);
-        if (parsed) {
-          raw = parsed;
-          break;
-        }
-      }
-    }
-
-    const gradesSet = new Set<string>();
-    const streamsSet = new Set<string>();
-    const gradeStreamMap: Record<string, string[]> = {};
-    // Track normalized names back to canonical display names to dedupe
-    const streamNormalizedToDisplay = new Map<string, string>();
-
-    if (Array.isArray(raw)) {
-      raw.forEach((item: any) => {
-        if (item && typeof item === 'object') {
-          const rawName = item.name || item.grade || item.label;
-          if (rawName) {
-            const normalizedGrade = normalizeGradeName(String(rawName));
-            const matchKey = getGradeMatchKey(normalizedGrade);
-            gradesSet.add(normalizedGrade);
-            const streams = item.streams || item.classes;
-            if (Array.isArray(streams)) {
-              const perGradeList: string[] = [];
-              streams.forEach((s: any) => {
-                const sName = typeof s === 'string' ? s : (s?.name || s?.label);
-                if (sName) {
-                  const normalized = normalizeStreamName(String(sName));
-                  if (normalized) {
-                    streamsSet.add(normalized);
-                    perGradeList.push(normalized);
-                  }
-                }
-              });
-              if (perGradeList.length > 0) {
-                gradeStreamMap[matchKey] = perGradeList;
-              }
-            }
-          }
-        }
-      });
-    }
-
-    // Fallback defaults if no localStorage configuration exists
-    if (gradesSet.size === 0) {
-      ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9']
-        .forEach(g => {
-          const normalized = normalizeGradeName(g);
-          gradesSet.add(normalized);
-        });
-    }
-
-    return {
-      grades: Array.from(gradesSet).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })),
-      streams: Array.from(streamsSet).sort((a, b) => a.localeCompare(b)),
-      gradeStreamMap,
-    };
-  } catch (e) {
-    return {
-      grades: ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'],
-      streams: [],
-      gradeStreamMap: {},
-    };
-  }
+  if (trimmed === 'pp1' || trimmed === 'pp2') return trimmed;
+  const m = trimmed.match(/(\d+)/);
+  if (m) return `grade${m[1]}`;
+  return trimmed.replace(/\s+/g, '');
 };
 
 export default function Students() {
@@ -222,17 +153,6 @@ export default function Students() {
     [learners]
   );
 
-  // 5. Build a global normalized set of every stream that exists across the
-  // learner table (so we always have a fallback if the Grades & Streams
-  // configuration is empty for some reason).
-  const allLearnerStreams = useMemo(() => {
-    const set = new Set<string>();
-    normalizedLearners.forEach((l) => {
-      if (l.stream) set.add(l.stream);
-    });
-    return Array.from(set).sort();
-  }, [normalizedLearners]);
-
   // 6. Filters state — initialized from localStorage if available
   const [searchTerm, setSearchTerm] = useState(() => {
     try {
@@ -287,34 +207,16 @@ export default function Students() {
   }, [searchTerm, gradeFilter, streamFilter]);
 
   // 7. Compute the list of streams available for the currently selected grade.
-  // Priority: configuration map -> normalized streams from the learner table -> all streams.
-  const availableStreams = useMemo(() => {
-    if (gradeFilter === 'All' || !gradeFilter) {
-      // When "All Grades" is selected, show every unique normalized stream we
-      // know about (deduplicated union of config + learner table).
-      const set = new Set<string>([...gradesConfig.streams, ...allLearnerStreams]);
-      return Array.from(set).sort((a, b) => a.localeCompare(b));
-    }
-
-    // Match the selected grade by its normalized match key.
-    const matchKey = getGradeMatchKey(gradeFilter);
-
-    // First, try the configuration map
-    const configured = gradesConfig.gradeStreamMap[matchKey];
-    if (configured && configured.length > 0) {
-      return Array.from(new Set(configured)).sort((a, b) => a.localeCompare(b));
-    }
-
-    // Fallback: derive streams from learners that belong to the selected grade
-    const streamsForGrade = new Set<string>();
-    normalizedLearners.forEach((l) => {
-      const learnerKey = getGradeMatchKey(l.grade);
-      if (learnerKey === matchKey && l.stream) {
-        streamsForGrade.add(l.stream);
+    // All streams are sourced exclusively from the live Grades & Streams configuration
+    // written by the GradesStreams.tsx setter module. No learner-table fallback.
+    const availableStreams = useMemo((): string[] => {
+      if (gradeFilter === 'All' || !gradeFilter) {
+        // "All Grades" → show every unique stream across all grades.
+        return gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b));
       }
-    });
-    return Array.from(streamsForGrade).sort((a, b) => a.localeCompare(b));
-  }, [gradeFilter, gradesConfig, normalizedLearners, allLearnerStreams]);
+      // A specific grade is selected → use the grade-specific stream map.
+      return getStreamsForGrade(gradeFilter, gradesConfig);
+    }, [gradeFilter, gradesConfig]);
 
   // When the grade filter changes, automatically reset the stream filter to "All".
   // Also defensively reset if the currently selected stream doesn't exist for new class

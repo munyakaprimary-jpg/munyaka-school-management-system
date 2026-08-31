@@ -1,12 +1,15 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import Modal from "@/components/ui/Modal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertCircle } from 'lucide-react';
-import { GRADES_DATA } from '@/lib/mock-data';
-import { STUDENTS } from '@/lib/mock-data';
+import {
+  readGradesAndStreams,
+  getStreamsForGrade,
+  GradesStreamsConfig,
+} from '@/services/gradesStreamsConfig';
 
 interface RegisterModalProps {
   isOpen: boolean;
@@ -29,6 +32,33 @@ interface RegisterModalProps {
   onRegister: () => void;
 }
 
+// ─── Normalisation helpers ──────────────────────────────────────────────
+const normalizeGradeName = (name: string): string => {
+  if (!name) return '';
+  const t = name.trim();
+  return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
+};
+
+/**
+ * Map a "regGrade" value (e.g. "4") coming from the existing select trigger
+ * to its full match key for lookup against the live gradeStreamMap.
+ *
+ * We try a few variants so we work with whatever shape the caller's grade
+ * string takes.
+ */
+const toGradeMatchValue = (regGrade: string): string => {
+  if (!regGrade) return '';
+  const trimmed = regGrade.trim();
+  const asTitle = normalizeGradeName(trimmed);
+  // If it already looks like a full name (contains letters), return as-is
+  // so getStreamsForGrade can match by title. Otherwise, if it's purely a
+  // digit like "4", normalise to "Grade 4".
+  if (/^\d+$/.test(trimmed)) {
+    return `Grade ${trimmed}`;
+  }
+  return asTitle;
+};
+
 export default function RegisterModal({
   isOpen,
   onClose,
@@ -49,27 +79,68 @@ export default function RegisterModal({
   formError = '',
   onRegister
 }: RegisterModalProps) {
-  // Dynamically get streams for the selected grade from GRADES_DATA
-  const availableStreams = React.useMemo(() => {
-    if (!regGrade) return [];
-    const grade = GRADES_DATA.find(g => g.name === `Grade ${regGrade}` || g.name === regGrade);
-    return grade ? grade.streams.map(s => s.name) : [];
-  }, [regGrade]);
+  // Live Grades & Streams configuration pulled directly from the
+  // shared gradesStreamsConfig service (the same source used by the
+  // Learners Management filter). Re-reads on a tick + the
+  // `munyaka_grades_updated` custom event so any change made in the
+  // GradesStreams setter module is reflected here automatically.
+  const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
+    readGradesAndStreams()
+  );
 
-  // Reset stream when grade changes and no longer matches available streams
-  React.useEffect(() => {
+  useEffect(() => {
+    const refresh = () => setGradesConfig(readGradesAndStreams());
+    const handleCustom = () => refresh();
+    const handleStorage = (e: StorageEvent) => {
+      if (
+        !e.key ||
+        [
+          'munyaka_grades',
+          'munyaka_grades_streams',
+          'munyaka_grades_streams_data',
+          'gradeStreamSettings',
+          'school_grades_streams_data',
+        ].includes(e.key)
+      ) {
+        refresh();
+      }
+    };
+    const handleFocus = () => refresh();
+    window.addEventListener('munyaka_grades_updated', handleCustom);
+    window.addEventListener('storage', handleStorage);
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('munyaka_grades_updated', handleCustom);
+      window.removeEventListener('storage', handleStorage);
+      window.removeEventListener('focus', handleFocus);
+    };
+  }, []);
+
+  // Streams for the currently selected grade from the live configuration.
+  const availableStreams = useMemo((): string[] => {
+    if (!regGrade) return [];
+    return getStreamsForGrade(toGradeMatchValue(regGrade), gradesConfig);
+  }, [regGrade, gradesConfig]);
+
+  // Aggregate stream list across every configured grade.
+  const uniqueStreams = useMemo(
+    () => gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b)),
+    [gradesConfig]
+  );
+
+  // Reset stream when grade changes and the selected stream no longer exists
+  useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
       setRegStream(availableStreams[0]);
     }
-  }, [regGrade, availableStreams, regStream]);
+  }, [regGrade, availableStreams, regStream, setRegStream]);
 
-  // Get unique streams for the filter dropdown
-  const uniqueStreams = React.useMemo(() => {
-    const streams = new Set<string>();
-    GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
-    return Array.from(streams).sort();
-  }, []);
+  // Fall back to the first configured grade if none is currently set
+  useEffect(() => {
+    if (!regGrade && gradesConfig.grades.length > 0) {
+      setRegGrade(gradesConfig.grades[0]);
+    }
+  }, [regGrade, gradesConfig.grades, setRegGrade]);
 
   return (
     <Modal
@@ -105,7 +176,7 @@ export default function RegisterModal({
           </div>
         )}
 
-        {/* Full Name — always required (this is the primary human-readable identifier) */}
+        {/* Full Name — always required */}
         <div className="space-y-2">
           <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
             Full Name <span className="text-rose-500">*</span>
@@ -118,8 +189,7 @@ export default function RegisterModal({
           />
         </div>
 
-        {/* Identifier row: Assessment No. + Birth Certificate No.
-            Either one (or both) is sufficient to save the learner. */}
+        {/* Identifier row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
@@ -151,13 +221,12 @@ export default function RegisterModal({
           </div>
         </div>
 
-        {/* Help text below the identifier row explaining the conditional requirement */}
         <p className="text-[10px] text-slate-400 font-medium -mt-3 leading-relaxed">
           Provide <strong className="text-slate-500">at least one</strong> of the two identifiers above.
           Both are accepted if available.
         </p>
 
-        {/* Grade + Stream row */}
+        {/* Grade + Stream row — both options come from the live configuration */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -171,14 +240,20 @@ export default function RegisterModal({
               }}
             >
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                <SelectValue placeholder="Select grade" />
+                <SelectValue placeholder={gradesConfig.grades.length === 0 ? "No grades configured" : "Select grade"} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {GRADES_DATA.map((g) => (
-                  <SelectItem key={g.id} value={g.name.replace(/[^0-9]/g, '') || g.name}>
-                    {g.name} ({g.category})
+                {gradesConfig.grades.length === 0 ? (
+                  <SelectItem value="__none__" disabled>
+                    No grades configured — set them in Grades &amp; Streams
                   </SelectItem>
-                ))}
+                ) : (
+                  gradesConfig.grades.map((gradeName) => (
+                    <SelectItem key={gradeName} value={gradeName}>
+                      {gradeName}
+                    </SelectItem>
+                  ))
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -192,12 +267,25 @@ export default function RegisterModal({
               disabled={!regGrade || availableStreams.length === 0}
             >
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold disabled:opacity-50 disabled:cursor-not-allowed">
-                <SelectValue placeholder={!regGrade ? "Select grade first..." : availableStreams.length === 0 ? "No streams available" : "Choose stream..."} />
+                <SelectValue
+                  placeholder={
+                    !regGrade
+                      ? "Select grade first..."
+                      : availableStreams.length === 0
+                      ? "No streams configured for this grade"
+                      : "Choose stream..."
+                  }
+                />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {availableStreams.map((s) => (
                   <SelectItem key={s} value={s}>{s}</SelectItem>
                 ))}
+                {availableStreams.length === 0 && uniqueStreams.length > 0 && (
+                  <SelectItem value="__hint__" disabled>
+                    Configure streams for this grade in Grades &amp; Streams
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
