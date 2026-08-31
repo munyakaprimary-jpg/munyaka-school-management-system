@@ -29,7 +29,7 @@ import {
   daysRemainingUntil,
   CURRENT_AUTH_ROLE_KEY,
   LICENSE_EXEMPT_ROLES,
-  getAllLicenses,  // ADD THIS IMPORT
+  getAllLicenses,
 } from '@/services/licenseService';
 import { License, LICENSE_METHOD_LABELS } from '@/types/license';
 import { cn } from '@/lib/utils';
@@ -101,11 +101,57 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
     setIsActivating(false);
   };
 
-  // Auto-format: strip non-alphanumeric, uppercase, then insert dashes every 4 chars.
-  // No maxLength — full keys like MUNYAKA-2026-A3B7-X9K2-M8N4-R7T1 (30 chars) paste cleanly.
+  // ─────────────────────────────────────────────
+  // FIXED: Activation Key Input Formatting Logic
+  // ─────────────────────────────────────────────
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
-    const formatted = raw.match(/.{1,4}/g)?.join('-') ?? raw;
+    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
+    
+    // If the input already contains hyphens and matches the expected pattern,
+    // preserve it exactly as entered (don't re-chunk).
+    const standardPattern = /^MUNYAKA-2026-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+    if (standardPattern.test(raw)) {
+      setKey(raw);
+      setError('');
+      return;
+    }
+
+    // If it looks like a partial standard format (has hyphens but not complete),
+    // don't aggressively re-chunk - just sanitize and let user continue typing.
+    if (raw.includes('-') && raw.startsWith('MUNYAKA-2026')) {
+      // Only remove any non-alphanumeric/hyphen chars, keep existing hyphens
+      const sanitized = raw.replace(/[^A-Z0-9-]/g, '');
+      setKey(sanitized);
+      setError('');
+      return;
+    }
+
+    // For raw alphanumeric input (no hyphens or incomplete), format into the
+    // strict structure: MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX
+    const alphanumeric = raw.replace(/[^A-Z0-9]/g, '');
+    
+    // If user is typing the prefix, allow it to build naturally
+    if (alphanumeric.startsWith('MUNYAKA2026')) {
+      const afterPrefix = alphanumeric.slice(12); // Remove 'MUNYAKA2026'
+      const chunks = afterPrefix.match(/.{1,4}/g) || [];
+      let formatted = 'MUNYAKA-2026';
+      if (chunks.length > 0) {
+        formatted += '-' + chunks.join('-');
+      }
+      setKey(formatted);
+      setError('');
+      return;
+    }
+
+    // If they're typing MUNYAKA but not yet 2026, allow natural typing
+    if ('MUNYAKA2026'.startsWith(alphanumeric) || alphanumeric.startsWith('MUNYAKA')) {
+      setKey(alphanumeric);
+      setError('');
+      return;
+    }
+
+    // Fallback: generic 4-char chunking for any other input
+    const formatted = alphanumeric.match(/.{1,4}/g)?.join('-') ?? alphanumeric;
     setKey(formatted);
     setError('');
   };
@@ -202,7 +248,7 @@ interface AppUnlockProps {
 
 const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps) => {
   const [activeLicense, setActiveLicense] = useState<License | null>(() => getActiveLicense());
-  const [stats, setStats] = useState(() => getAllLicenses().length);  // FIXED: now imported
+  const [stats, setStats] = useState(() => getAllLicenses().length);
   const [now, setNow] = useState<Date>(() => new Date());
 
   // Resolved current role — prefer the prop if supplied, otherwise read
