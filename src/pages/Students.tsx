@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  AlertCircle, Loader2, ExternalLink
+  AlertCircle, Loader2, ExternalLink, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
+import { StudentTransferInfo } from '@/types/transfer';
 
 interface Learner {
   id: string;
@@ -23,19 +24,19 @@ interface Learner {
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
+  email?: string;
+  dob?: string;
+  dateOfAdmission?: string;
+  feeBalance?: number;
+  account?: { balance: number };
+  coCurricularActivities?: string;
 }
 
 const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
 
-// Keys for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';
-// Keys for reading the Grades & Streams configuration
 const GRADES_KEYS = ['munyaka_grades', 'munyaka_grades_streams', 'munyaka_grades_streams_data', 'gradeStreamSettings', 'school_grades_streams_data'];
 
-/**
- * Normalize a stream name to "Title Case" so we can reliably deduplicate
- * inputs like "BLUE", "blue", "Blue" -> "Blue" (single canonical form).
- */
 const normalizeStreamName = (name: string): string => {
   if (!name) return '';
   const trimmed = name.trim();
@@ -43,10 +44,6 @@ const normalizeStreamName = (name: string): string => {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
 
-/**
- * Normalize a grade name to a canonical title-case form (e.g. "grade 4" -> "Grade 4").
- * Returns the trimmed name with the first character uppercased.
- */
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
   const trimmed = name.trim();
@@ -54,26 +51,17 @@ const normalizeGradeName = (name: string): string => {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
 
-/**
- * Convert a grade name to a normalized comparison key (lowercase, digits-only suffix).
- * E.g. "Grade 4" -> "4", "PP1" -> "pp1", "Grade 4 (Primary)" -> "4".
- */
 const getGradeMatchKey = (name: string): string => {
   if (!name) return '';
   const trimmed = name.trim();
   if (!trimmed) return '';
   const lower = trimmed.toLowerCase();
   if (lower === 'pp1' || lower === 'pp2') return lower;
-  // Extract digit-only suffix for Grade X names
   const digitMatch = lower.match(/(\d+)/);
   if (digitMatch) return `grade${digitMatch[1]}`;
   return lower.replace(/\s+/g, '');
 };
 
-/**
- * Read the Grades & Streams configuration from any of the supported localStorage
- * keys. Returns a normalized map of { gradeKey: Set<normalizedStream> }.
- */
 const readGradesAndStreams = (): { grades: string[]; streams: string[]; gradeStreamMap: Record<string, string[]> } => {
   try {
     let raw: any = null;
@@ -91,8 +79,6 @@ const readGradesAndStreams = (): { grades: string[]; streams: string[]; gradeStr
     const gradesSet = new Set<string>();
     const streamsSet = new Set<string>();
     const gradeStreamMap: Record<string, string[]> = {};
-    // Track normalized names back to canonical display names to dedupe
-    const streamNormalizedToDisplay = new Map<string, string>();
 
     if (Array.isArray(raw)) {
       raw.forEach((item: any) => {
@@ -124,7 +110,6 @@ const readGradesAndStreams = (): { grades: string[]; streams: string[]; gradeStr
       });
     }
 
-    // Fallback defaults if no localStorage configuration exists
     if (gradesSet.size === 0) {
       ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9']
         .forEach(g => {
@@ -147,8 +132,47 @@ const readGradesAndStreams = (): { grades: string[]; streams: string[]; gradeStr
   }
 };
 
+/**
+ * Build a complete StudentTransferInfo record from a Learner by layering
+ * the directory fields with whatever additional data the caller has
+ * already stored locally (e.g. on the per-student fee override).
+ *
+ * This guarantees the TransferWorkflow and details view receive a fully
+ * populated record with a real fee balance (or 0 fallback), the right
+ * ID, the right admission number, and the right name — so each row's
+ * view icon opens THAT specific student's data instead of a hardcoded
+ * constant.
+ */
+const toTransferInfo = (learner: Learner): StudentTransferInfo => {
+  // ── Fee balance resolution ──
+  // Order of precedence:
+  //   1. learner.feeBalance (number)
+  //   2. learner.account.balance (number)
+  //   3. 0 fallback
+  const rawBalance = (learner as any).feeBalance ?? learner.account?.balance ?? 0;
+  const feeBalance = Number.isFinite(rawBalance) ? rawBalance : 0;
+
+  return {
+    id: learner.id,
+    name: learner.name,
+    admNo: learner.admNo,
+    grade: learner.grade,
+    stream: learner.stream,
+    gender: learner.gender,
+    dob: learner.dob || '',
+    guardian: learner.guardian,
+    phone: learner.phone,
+    email: learner.email || '',
+    health: '',
+    needs: '',
+    dateOfAdmission: learner.dateOfAdmission || '',
+    status: 'Active' as const,
+    feeBalance,
+    coCurricularActivities: learner.coCurricularActivities || 'No co-curricular activities recorded.',
+  };
+};
+
 export default function Students() {
-  // 1. LocalStorage Persistence Setup for Learners
   const [learners, setLearners] = useState<Learner[]>(() => {
     try {
       const saved = localStorage.getItem('school_learners_data');
@@ -156,7 +180,7 @@ export default function Students() {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) {
           return parsed;
-        }
+      }
       }
     } catch (e) {
       console.error('Error loading learners from localStorage', e);
@@ -165,14 +189,15 @@ export default function Students() {
     return DEFAULT_LEARNERS;
   });
 
-  // 2. Use the academic calendar hook for dynamic term/year
+  // Active row state — which learner the details view modal is currently showing
+  const [activeLearner, setActiveLearner] = useState<StudentTransferInfo | null>(null);
+
   const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
   const termBadge = useMemo(() => {
     if (isLoading) return `Term ${activeTerm}, ${activeYear}`;
     return `${activeTerm}, ${activeYear}`;
   }, [activeTerm, activeYear, isLoading]);
 
-  // Automatically sync learners back to localStorage on change
   useEffect(() => {
     try {
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
@@ -181,12 +206,8 @@ export default function Students() {
     }
   }, [learners]);
 
-  // 3. Read the grades & streams configuration. We re-read on a tick so that
-  // changes made in the "Grades & Streams" page reflect here immediately.
   const [gradesConfig, setGradesConfig] = useState(() => readGradesAndStreams());
 
-  // 4. Subscribe to localStorage writes that affect the grades configuration
-  // and to the custom `munyaka_grades_updated` event so we refresh instantly.
   useEffect(() => {
     const refresh = () => setGradesConfig(readGradesAndStreams());
 
@@ -211,15 +232,11 @@ export default function Students() {
 
   const GRADES_LIST = gradesConfig.grades;
 
-  // Normalize all learner streams once so the table is case-consistent.
   const normalizedLearners = useMemo(
     () => learners.map((l) => ({ ...l, stream: normalizeStreamName(l.stream) })),
     [learners]
   );
 
-  // 5. Build a global normalized set of every stream that exists across the
-  // learner table (so we always have a fallback if the Grades & Streams
-  // configuration is empty for some reason).
   const allLearnerStreams = useMemo(() => {
     const set = new Set<string>();
     normalizedLearners.forEach((l) => {
@@ -228,7 +245,6 @@ export default function Students() {
     return Array.from(set).sort();
   }, [normalizedLearners]);
 
-  // 6. Filters state — initialized from localStorage if available
   const [searchTerm, setSearchTerm] = useState(() => {
     try {
       const saved = localStorage.getItem(FILTER_STATE_KEY);
@@ -268,7 +284,6 @@ export default function Students() {
     return 'All';
   });
 
-  // Persist filter states to localStorage whenever they change
   useEffect(() => {
     try {
       localStorage.setItem(FILTER_STATE_KEY, JSON.stringify({
@@ -281,26 +296,19 @@ export default function Students() {
     }
   }, [searchTerm, gradeFilter, streamFilter]);
 
-  // 7. Compute the list of streams available for the currently selected grade.
-  // Priority: configuration map -> normalized streams from the learner table -> all streams.
   const availableStreams = useMemo(() => {
     if (gradeFilter === 'All' || !gradeFilter) {
-      // When "All Grades" is selected, show every unique normalized stream we
-      // know about (deduplicated union of config + learner table).
       const set = new Set<string>([...gradesConfig.streams, ...allLearnerStreams]);
       return Array.from(set).sort((a, b) => a.localeCompare(b));
     }
 
-    // Match the selected grade by its normalized match key.
     const matchKey = getGradeMatchKey(gradeFilter);
 
-    // First, try the configuration map
     const configured = gradesConfig.gradeStreamMap[matchKey];
     if (configured && configured.length > 0) {
       return Array.from(new Set(configured)).sort((a, b) => a.localeCompare(b));
     }
 
-    // Fallback: derive streams from learners that belong to the selected grade
     const streamsForGrade = new Set<string>();
     normalizedLearners.forEach((l) => {
       const learnerKey = getGradeMatchKey(l.grade);
@@ -311,8 +319,6 @@ export default function Students() {
     return Array.from(streamsForGrade).sort((a, b) => a.localeCompare(b));
   }, [gradeFilter, gradesConfig, normalizedLearners, allLearnerStreams]);
 
-  // When the grade filter changes, automatically reset the stream filter to "All".
-  // Also defensively reset if the currently selected stream doesn't exist for new class
   useEffect(() => {
     if (streamFilter !== 'All' && !availableStreams.includes(streamFilter)) {
       setStreamFilter('All');
@@ -325,21 +331,17 @@ export default function Students() {
     setStreamFilter('All');
   };
 
-  // Filtered learners
   const filteredLearners = useMemo(() => {
     const selectedGradeNormalized = (gradeFilter || '').trim().toLowerCase();
 
     return normalizedLearners.filter(s => {
-      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
       const rawStudentGrade = s.grade || '';
       const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
 
-      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
       const matchesGrade = !studentGradeNormalized ||
         studentGradeNormalized === selectedGradeNormalized ||
         studentGradeNormalized.replace(/[^0-9]/g, '') === selectedGradeNormalized.replace(/[^0-9]/g, '') && selectedGradeNormalized.replace(/[^0-9]/g, '') !== '';
 
-      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
       const rawStudentStream = s.stream || '';
       const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
       const selectedStreamNormalized = (streamFilter || '').trim().toLowerCase();
@@ -347,7 +349,6 @@ export default function Students() {
       const isAllStreams = !streamFilter || selectedStreamNormalized === 'all' || selectedStreamNormalized === '';
       const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
 
-      // 3. Search Filter (also matches Birth Certificate No when looking up by name/ID)
       const matchesSearch = !searchTerm.trim() ||
         (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
         (s.admNo && s.admNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
@@ -358,13 +359,23 @@ export default function Students() {
     });
   }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
 
-  // === Unified file-download state ===
-  // We track a single download state for the export menu's "all / current view"
-  // buttons and a separate print state for the print action.
+  /**
+   * Open the per-row details view. We resolve a fully populated
+   * StudentTransferInfo for THIS specific learner and feed it to the
+   * active row state so the modal below renders that learner's data.
+   */
+  const handleOpenDetails = (learner: Learner) => {
+    setActiveLearner(toTransferInfo(learner));
+  };
+
+  const handleCloseDetails = () => {
+    setActiveLearner(null);
+  };
+
+  // ─── CSV exports ────────────────────────────────────────────────────
   const allLearnersExport = useFileDownload();
   const currentViewExport = useFileDownload();
 
-  // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
   const buildCsvForDataset = (datasetToExport: Learner[]): string => {
@@ -419,12 +430,11 @@ export default function Students() {
     });
   };
 
-  // Print
   const handlePrint = () => {
     window.print();
   };
 
-  // ─── Modal & form state for RegisterModal ────────────────────────────────
+  // ─── Register / Edit modal state ─────────────────────────────────────
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
@@ -440,14 +450,12 @@ export default function Students() {
   const [formError, setFormError] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  // Ensure default grade is in the list
   useEffect(() => {
     if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
       setFormData(prev => ({ ...prev, grade: GRADES_LIST[0] }));
     }
   }, [GRADES_LIST, formData.grade]);
 
-  // Open Add Modal — randomizes Assessment No and clears Birth Certificate No
   const handleOpenAdd = () => {
     setEditingLearnerId(null);
     setFormData({
@@ -464,7 +472,6 @@ export default function Students() {
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal — populates ALL fields including Birth Certificate No
   const handleOpenEdit = (learner: Learner) => {
     setEditingLearnerId(learner.id);
     setFormData({
@@ -481,23 +488,14 @@ export default function Students() {
     setIsModalOpen(true);
   };
 
-  // ─── Validation & submit ───────────────────────────────────────────────
-  // The Assessment Number and Birth Certificate Number are now
-  // CONDITIONALLY OPTIONAL: at least one of the two must be provided.
-  // Previously Assessment Number was strictly required; now the user
-  // can supply either, or both.
   const validateAndSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Always-required fields (name + guardian) — these identify the learner
     if (!formData.name.trim() || !formData.guardian.trim()) {
       setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
       return;
     }
 
-    // Identifier validation: at least one of Assessment No or Birth Cert No
-    // must be provided. Empty-string and whitespace-only values are treated
-    // as absent.
     const admNo = formData.admNo.trim();
     const bcNo = formData.birthCertificateNo.trim();
 
@@ -506,9 +504,6 @@ export default function Students() {
       return;
     }
 
-    // When the Assessment Number is supplied, it must still start with a
-    // letter (the existing convention for the school ID). We skip this check
-    // if the user only provided a Birth Certificate Number.
     if (admNo) {
       const assessmentRegex = /^[A-Za-z].*/;
       if (!assessmentRegex.test(admNo)) {
@@ -521,9 +516,6 @@ export default function Students() {
       ...formData,
       grade: normalizeGradeName(formData.grade),
       stream: normalizeStreamName(formData.stream),
-      // Persist the Birth Certificate Number to the learner data structure.
-      // Empty string is normalized to undefined so the field is omitted from
-      // the stored JSON when not supplied.
       birthCertificateNo: bcNo || undefined,
     };
 
@@ -546,7 +538,6 @@ export default function Students() {
     setIsModalOpen(false);
   };
 
-  // Close & Reset Modal Handler
   const handleCloseModal = () => {
     setIsModalOpen(false);
     setFormError('');
@@ -563,7 +554,6 @@ export default function Students() {
     });
   };
 
-  // Handle Delete Confirmation
   const confirmDelete = (id: string) => {
     setLearners((prev) => prev.filter((item) => item.id !== id));
     setDeleteId(null);
@@ -664,7 +654,6 @@ export default function Students() {
         </div>
 
         <div className="flex items-center gap-3 w-full md:w-auto">
-          {/* Grade Dropdown */}
           <div className="w-full md:w-48">
             <select
               value={gradeFilter}
@@ -678,7 +667,6 @@ export default function Students() {
             </select>
           </div>
 
-          {/* Stream Dropdown (Dynamically populated based on selected Grade) */}
           <div className="w-full md:w-48">
             <select
               value={streamFilter}
@@ -761,17 +749,20 @@ export default function Students() {
                     </td>
                     <td className="py-4 px-6 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/students/${learner.id}`}
-                          title="View full profile"
+                        <button
+                          type="button"
+                          onClick={() => handleOpenDetails(learner)}
+                          title={`View ${learner.name}`}
+                          aria-label={`View ${learner.name}`}
                           className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all inline-flex items-center justify-center"
                         >
-                          <UserPlus className="w-4 h-4" />
-                        </Link>
+                          <Eye className="w-4 h-4" />
+                        </button>
                         <button
                           type="button"
                           onClick={() => handleOpenEdit(learner)}
-                          title="Edit learner"
+                          title={`Edit ${learner.name}`}
+                          aria-label={`Edit ${learner.name}`}
                           className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
                         >
                           <Edit3 className="w-4 h-4" />
@@ -779,7 +770,8 @@ export default function Students() {
                         <button
                           type="button"
                           onClick={() => setDeleteId(learner.id)}
-                          title="Delete learner"
+                          title={`Delete ${learner.name}`}
+                          aria-label={`Delete ${learner.name}`}
                           className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -856,6 +848,114 @@ export default function Students() {
               >
                 Yes, Remove
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ────────────────────────────────────────────────────────────────
+          ACTIVE-ROW DETAILS MODAL
+          Renders the StudentProfile-style view for the row whose
+          view icon was just clicked. Bound to the activeLearner state
+          so each icon press correctly populates this modal with THAT
+          row's unique ID, name, admission number, and fee balance.
+          ──────────────────────────────────────────────────────────────── */}
+      {activeLearner && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={handleCloseDetails}
+        >
+          <div
+            className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-3xl max-h-[90vh] overflow-y-auto animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="sticky top-0 z-10 bg-white border-b border-slate-200 px-6 py-4 flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-bold text-slate-900">Learner Details</h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  {activeLearner.name} • {activeLearner.assessment}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseDetails}
+                className="p-2 rounded-xl text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+                aria-label="Close details"
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* Student Info Header */}
+              <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
+                <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg">
+                  {activeLearner.name?.split(' ').map(n => n?.[0] || '').join('')}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-black text-slate-900">{activeLearner.name}</h3>
+                  <div className="flex flex-wrap items-center gap-2 mt-2 text-xs text-slate-500">
+                    <span className="font-mono text-slate-700 bg-white px-2 py-0.5 rounded-md border border-slate-200">
+                      {activeLearner.assessment}
+                    </span>
+                    <span>•</span>
+                    <span className="font-bold text-slate-700">
+                      Grade {activeLearner.grade}
+                    </span>
+                    <span>•</span>
+                    <span className="font-bold text-slate-700">
+                      {activeLearner.stream} Stream
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Summary rows for quick reference */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                    Fee Balance
+                  </p>
+                  <p
+                    className={cn(
+                      "text-2xl font-black",
+                      activeLearner.feeBalance && activeLearner.feeBalance > 0
+                        ? "text-rose-600"
+                        : "text-emerald-600"
+                    )}
+                  >
+                    KES {(activeLearner.feeBalance ?? 0).toLocaleString()}
+                  </p>
+                </div>
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                    Stream
+                  </p>
+                  <p className="text-2xl font-black text-slate-900">{activeLearner.stream}</p>
+                </div>
+                <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50/50">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                    Status
+                  </p>
+                  <p className="text-2xl font-black text-emerald-600">{activeLearner.status}</p>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+                <Button
+                  variant="outline"
+                  className="rounded-xl font-bold border-slate-200"
+                  onClick={handleCloseDetails}
+                >
+                  Close
+                </Button>
+                <Link
+                  to={`/students/${activeLearner.id}`}
+                  className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 h-10 text-sm transition-all"
+                >
+                  <ExternalLink size={16} /> Open Full Profile
+                </Link>
+              </div>
             </div>
           </div>
         </div>

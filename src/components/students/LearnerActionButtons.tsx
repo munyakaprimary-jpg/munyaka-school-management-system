@@ -1,22 +1,34 @@
+"use client";
+
 import { useState } from 'react';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { showSuccess } from '@/utils/toast';
 import { StudentTransferInfo } from '@/types/transfer';
 
-const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => {
+interface LearnerActionButtonsProps {
+  student: StudentTransferInfo;
+  onViewDetails?: (student: StudentTransferInfo) => void;
+}
+
+const LearnerActionButtons = ({ student, onViewDetails }: LearnerActionButtonsProps) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
   const [isTransferOpen, setIsTransferOpen] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(student);
 
-  const handleViewHistory = (student) => {
-    setSelectedStudent(student);
+  const handleViewHistory = () => {
     setIsHistoryModalOpen(true);
   };
 
-  const handleTransferStudent = (student) => {
-    setSelectedStudent(student);
+  const handleTransferStudent = () => {
     setIsTransferOpen(true);
+  };
+
+  const handleViewDetails = () => {
+    if (onViewDetails) {
+      onViewDetails(student);
+    } else {
+      showSuccess(`Viewing details for ${student.name} (${student.assessment})`);
+    }
   };
 
   return (
@@ -24,18 +36,17 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
       <AcademicHistoryModal
         isOpen={isHistoryModalOpen}
         onClose={() => setIsHistoryModalOpen(false)}
-        studentId={selectedStudent?.id || ''}
-        studentName={selectedStudent?.name || ''}
+        studentId={student?.id || ''}
+        studentName={student?.name || ''}
       />
 
       <TransferWorkflow
-        student={selectedStudent}
+        student={student}
         isOpen={isTransferOpen}
         onClose={() => setIsTransferOpen(false)}
         onTransferComplete={(studentId, certificateNumber) => {
           setIsTransferOpen(false);
-          setSelectedStudent(null);
-          showSuccess(`Transfer completed! Certificate ${certificateNumber} generated.`);
+          showSuccess(`Transfer completed for ${student.name}! Certificate ${certificateNumber} generated.`);
         }}
       />
     </>
