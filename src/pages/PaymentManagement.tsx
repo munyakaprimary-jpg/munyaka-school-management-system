@@ -1207,18 +1207,38 @@ const PaymentManagement = () => {
   const someLicensesSelected =
     selectedLicenseIds.size > 0 && selectedLicenseIds.size < licenses.length;
 
-  /**
-   * Bulk-delete handler — verifies the owner password, then removes
-   * every selected license in one operation, including any tied
-   * monthly payment records. Clears the selection on success.
-   */
-  const handleBulkDeleteLicenses = async () => {
-    if (selectedLicenseIds.size === 0) return;
+  // ── Bulk Delete Confirmation Modal State ──
+  const [isBulkDeleteModalOpen, setIsBulkDeleteModalOpen] = useState(false);
+  const [bulkDeletePassword, setBulkDeletePassword] = useState('');
+  const [bulkDeletePasswordError, setBulkDeletePasswordError] = useState('');
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false);
+  const [showBulkDeletePassword, setShowBulkDeletePassword] = useState(false);
 
+  /**
+   * Opens the bulk delete confirmation modal.
+   */
+  const openBulkDeleteModal = () => {
+    if (selectedLicenseIds.size === 0) return;
+    setBulkDeletePassword('');
+    setBulkDeletePasswordError('');
+    setIsBulkDeleteModalOpen(true);
+  };
+
+  /**
+   * Handles the bulk delete confirmation with proper password verification.
+   */
+  const confirmBulkDelete = async () => {
+    if (selectedLicenseIds.size === 0) return;
+    
+    setIsBulkDeleting(true);
+    setBulkDeletePasswordError('');
+
+    // Verify owner password against stored credentials
     const OWNER_EMAIL = 'munyakaprimary@gmail.com';
     const usersJson = localStorage.getItem('munyaka_users');
     if (!usersJson) {
-      showError('User store not found. Contact administrator.');
+      setBulkDeletePasswordError('User store not found. Contact administrator.');
+      setIsBulkDeleting(false);
       return;
     }
 
@@ -1226,23 +1246,19 @@ const PaymentManagement = () => {
     const owner = users[OWNER_EMAIL];
 
     if (!owner || !owner.password) {
-      showError('Owner credentials not found. Contact administrator.');
+      setBulkDeletePasswordError('Owner credentials not found. Contact administrator.');
+      setIsBulkDeleting(false);
       return;
     }
 
-    const password = window.prompt(
-      `Enter your owner password to confirm deletion of ${selectedLicenseIds.size} license(s):`
-    );
-    if (!password) {
-      showError('Bulk deletion cancelled.');
-      return;
-    }
-    if (password !== owner.password) {
-      showError('Incorrect password. Bulk deletion cancelled.');
+    if (bulkDeletePassword !== owner.password) {
+      setBulkDeletePasswordError('Incorrect password. Please try again.');
+      setIsBulkDeleting(false);
       return;
     }
 
-    // Remove all selected licenses from state
+    // Password verified — remove all selected licenses from state
+    const deletedCount = selectedLicenseIds.size;
     const updatedLicenses = licenses.filter(l => !selectedLicenseIds.has(l.id));
     setLicenses(updatedLicenses);
 
@@ -1261,7 +1277,13 @@ const PaymentManagement = () => {
     // Clear selection
     setSelectedLicenseIds(new Set());
 
-    showSuccess(`${selectedLicenseIds.size} license(s) deleted successfully.`);
+    // Close modal
+    setIsBulkDeleteModalOpen(false);
+    setBulkDeletePassword('');
+    setIsBulkDeleting(false);
+
+    // Show success message with count
+    showSuccess(`Successfully deleted ${deletedCount} license${deletedCount !== 1 ? 's' : ''}.`);
   };
 
   // ─────────────────────────────────────────
@@ -2605,6 +2627,77 @@ const PaymentManagement = () => {
       </Modal>
 
       {/* ───────────────────────────────────────────────
+          BULK DELETE CONFIRMATION MODAL
+          ─────────────────────────────────────────────── */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+        title="Confirm Bulk Deletion"
+        description={`This will permanently delete ${selectedLicenseIds.size} selected license${selectedLicenseIds.size !== 1 ? 's' : ''} and their tied payment records. This action cannot be undone.`}
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button
+              variant="ghost"
+              onClick={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+              className="rounded-xl font-bold h-12 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkDelete}
+              disabled={isBulkDeleting || !bulkDeletePassword.trim()}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
+            >
+              {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              {isBulkDeleting ? 'Deleting...' : `Delete ${selectedLicenseIds.size} Selected`}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+          <ShieldCheck size={20} className="text-amber-600 shrink-0" />
+          <p className="text-xs font-bold text-amber-800">
+            Owner authentication required to delete license records.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Owner Password
+          </Label>
+          <div className="relative">
+            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type={showBulkDeletePassword ? 'text' : 'password'}
+              value={bulkDeletePassword}
+              onChange={e => {
+                setBulkDeletePassword(e.target.value);
+                if (bulkDeletePasswordError) setBulkDeletePasswordError('');
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
+              }}
+              placeholder="Enter your owner password"
+              className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowBulkDeletePassword(p => !p)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showBulkDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {bulkDeletePasswordError && (
+            <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
+              <AlertCircle size={12} /> {bulkDeletePasswordError}
+            </p>
+          )}
+        </div>
+      </Modal>
+
+      {/* ───────────────────────────────────────────────
           FLOATING BULK-ACTION BAR
           Only visible when one or more license rows are checked.
           Shows the count of selected rows and exposes the bulk delete
@@ -2635,10 +2728,10 @@ const PaymentManagement = () => {
               <X size={14} /> Clear
             </Button>
 
-            {/* Bulk delete — opens the password prompt via window.prompt */}
+            {/* Bulk delete — opens the proper confirmation modal */}
             <Button
               size="sm"
-              onClick={handleBulkDeleteLicenses}
+              onClick={openBulkDeleteModal}
               className="rounded-lg bg-red-600 hover:bg-red-700 text-white font-black text-xs px-4 h-9 gap-1.5 shadow-lg shadow-red-600/30"
             >
               <Trash2 size={14} /> Delete {selectedLicenseIds.size} Selected
@@ -2646,6 +2739,75 @@ const PaymentManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+        title="Confirm Bulk Deletion"
+        description={`This will permanently delete ${selectedLicenseIds.size} selected license${selectedLicenseIds.size !== 1 ? 's' : ''} and their tied payment records. This action cannot be undone.`}
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button
+              variant="ghost"
+              onClick={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+              className="rounded-xl font-bold h-12 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkDelete}
+              disabled={isBulkDeleting || !bulkDeletePassword.trim()}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
+            >
+              {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              {isBulkDeleting ? 'Deleting...' : `Delete ${selectedLicenseIds.size} Selected`}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+          <ShieldCheck size={20} className="text-amber-600 shrink-0" />
+          <p className="text-xs font-bold text-amber-800">
+            Owner authentication required to delete license records.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Owner Password
+          </Label>
+          <div className="relative">
+            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type={showBulkDeletePassword ? 'text' : 'password'}
+              value={bulkDeletePassword}
+              onChange={e => {
+                setBulkDeletePassword(e.target.value);
+                if (bulkDeletePasswordError) setBulkDeletePasswordError('');
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
+              }}
+              placeholder="Enter your owner password"
+              className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowBulkDeletePassword(p => !p)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showBulkDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {bulkDeletePasswordError && (
+            <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
+              <AlertCircle size={12} /> {bulkDeletePasswordError}
+            </p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };
