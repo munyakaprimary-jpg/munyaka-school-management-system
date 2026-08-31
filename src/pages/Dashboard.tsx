@@ -26,20 +26,18 @@ interface RecentAlert {
 }
 
 const Dashboard = () => {
+  // Consume the custom hook for offline system statistics
   const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useDashboardData();
 
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
   const [hasLiveData, setHasLiveData] = useState<boolean>(false);
 
-  // ── Recompute hasLiveData whenever the hook values change. ──
+  // Recompute hasLiveData from hook values immediately
   useEffect(() => {
     setHasLiveData(totalStudents > 0 || totalTeachers > 0);
   }, [totalStudents, totalTeachers]);
 
-  // ── Load recent activity alerts dynamically from localStorage. ──
-  //   The timestamps stored on disk are preserved exactly as they were
-  //   written, and the renderer formats them at view time. No static
-  //   "Just now" / "Today" placeholders are used for newly-loaded items.
+  // Load recent activity alerts dynamically from localStorage
   useEffect(() => {
     try {
       const alerts: RecentAlert[] = [];
@@ -59,7 +57,7 @@ const Dashboard = () => {
               // the human-readable `date` string the rest of the system
               // already uses. This guarantees the renderer shows the
               // real time, not a placeholder.
-              time: tx.createdAt || tx.date || 'Recent',
+              time: tx.createdAt || tx.date || new Date().toISOString(),
               color: 'bg-orange-500',
             });
           });
@@ -90,7 +88,7 @@ const Dashboard = () => {
         if (typeof attendance === 'object') {
           const keys = Object.keys(attendance);
           // Pick the most-recent entry that carries an explicit timestamp.
-          // If none exist, fall back to the previous "Today" string so the
+          // If none exist, fall back to the current ISO string so the
           // alert still renders meaningfully instead of disappearing.
           const latest = keys
             .map(k => ({ k, v: attendance[k] }))
@@ -121,7 +119,7 @@ const Dashboard = () => {
               id: `note-${first.id || '0'}`,
               type: 'general',
               msg: `Notice published: ${first.title || 'Untitled'}`,
-              time: first.createdAt || first.timestamp || first.date || 'Recent',
+              time: first.createdAt || first.timestamp || first.date || new Date().toISOString(),
               color: 'bg-indigo-500',
             });
           }
@@ -159,7 +157,7 @@ const Dashboard = () => {
     }
   }, [totalStudents, totalTeachers]);
 
-  // ── Build weekly trend with dynamic today rate injection. ──
+  // Build weekly trend with dynamic today rate injection
   const factualAttendanceData = useMemo(() => {
     const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
     let totalPossibleStudents = 0;
@@ -307,7 +305,6 @@ const Dashboard = () => {
 
     if (isNaN(date.getTime())) return String(ts ?? '—');
 
-    // Standard locale format
     return date.toLocaleString(undefined, {
       year: 'numeric',
       month: 'short',
@@ -318,40 +315,40 @@ const Dashboard = () => {
   };
 
   const stats = [
-    { 
-      title: "Total Students", 
-      value: isLoading ? "..." : totalStudents.toString(), 
-      icon: Users, 
-      color: "text-blue-600", 
-      bg: "bg-blue-50" 
+    {
+      title: "Total Students",
+      value: isLoading ? "..." : totalStudents.toString(),
+      icon: Users,
+      color: "text-blue-600",
+      bg: "bg-blue-50"
     },
-    { 
-      title: "Total Teachers", 
-      value: isLoading ? "..." : totalTeachers.toString(), 
-      icon: User, 
-      color: "text-indigo-600", 
-      bg: "bg-indigo-50" 
+    {
+      title: "Total Teachers",
+      value: isLoading ? "..." : totalTeachers.toString(),
+      icon: User,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50"
     },
-    { 
-      title: "Today's Attendance", 
-      value: isLoading ? "..." : `${todayAttendanceRate}%`, 
-      icon: UserCheck, 
-      color: "text-green-600", 
-      bg: "bg-green-50" 
+    {
+      title: "Today's Attendance",
+      value: isLoading ? "..." : `${todayAttendanceRate}%`,
+      icon: UserCheck,
+      color: "text-green-600",
+      bg: "bg-green-50"
     },
-    { 
-      title: "Junior School", 
-      value: isLoading ? "..." : Math.max(0, Math.floor(totalStudents * 0.25)).toString(), 
-      icon: GraduationCap, 
-      color: "text-purple-600", 
-      bg: "bg-purple-50" 
+    {
+      title: "Junior School",
+      value: isLoading ? "..." : Math.max(0, Math.floor(totalStudents * 0.25)).toString(),
+      icon: GraduationCap,
+      color: "text-purple-600",
+      bg: "bg-purple-50"
     },
-    { 
-      title: "System Status", 
-      value: hasLiveData ? "Live" : "Standby", 
-      icon: Activity, 
-      color: hasLiveData ? "text-emerald-600" : "text-amber-600", 
-      bg: hasLiveData ? "bg-emerald-50" : "bg-amber-50" 
+    {
+      title: "System Status",
+      value: hasLiveData ? "Live" : "Standby",
+      icon: Activity,
+      color: hasLiveData ? "text-emerald-600" : "text-amber-600",
+      bg: hasLiveData ? "bg-emerald-50" : "bg-amber-50"
     },
   ];
 
@@ -363,8 +360,8 @@ const Dashboard = () => {
           <p className="text-muted-foreground">System vitals for Munyaka Primary and Junior School.</p>
         </div>
         <div className={`px-4 py-2 rounded-2xl shadow-sm border flex items-center gap-2 ${
-          hasLiveData 
-            ? 'bg-emerald-50 border-emerald-200' 
+          hasLiveData
+            ? 'bg-emerald-50 border-emerald-200'
             : 'bg-slate-50 border-slate-100'
         }`}>
           {isLoading ? (
@@ -386,7 +383,7 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
+      {/* Stats Grid - Consumes Hook Values */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {stats.map((stat, i) => (
           <Card key={i} className="border-none shadow-sm bg-white rounded-3xl hover:translate-y-[-4px] transition-transform">
@@ -407,13 +404,15 @@ const Dashboard = () => {
         ))}
       </div>
 
+      {/* Charts & Recent Alerts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Charts */}
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
             <Badge variant="outline" className={`rounded-lg font-bold ${
-              hasLiveData 
-                ? 'text-emerald-600 bg-emerald-50 border-emerald-100' 
+              hasLiveData
+                ? 'text-emerald-600 bg-emerald-50 border-emerald-100'
                 : 'text-slate-500 bg-slate-50 border-slate-200'
             }`}>
               <TrendingUp size={12} className="mr-1" /> {hasLiveData ? 'Real-time Data' : 'Average Data'}
@@ -425,7 +424,7 @@ const Dashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                 <XAxis dataKey="day" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                 <YAxis domain={[0, 100]} hide />
-                <Tooltip 
+                <Tooltip
                   cursor={{fill: '#f8fafc'}}
                   content={({ active, payload }) => {
                     if (active && payload && payload.length) {
@@ -434,7 +433,7 @@ const Dashboard = () => {
                         <div className="bg-white p-4 rounded-2xl shadow-xl border border-slate-50">
                           <p className="text-xs font-black text-slate-400 uppercase mb-1">{data.day}</p>
                           <p className="text-lg font-black text-indigo-600">
-                            {data.rate}% 
+                            {data.rate}%
                             <span className="text-[10px] text-slate-400 font-bold ml-1">
                               {data.isFactual ? '(Factual)' : '(Average)'}
                             </span>
@@ -447,9 +446,9 @@ const Dashboard = () => {
                 />
                 <Bar dataKey="rate" radius={[10, 10, 0, 0]}>
                   {factualAttendanceData.map((entry, index) => (
-                    <Cell 
-                      key={`cell-${index}`} 
-                      fill={entry.day === ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()] ? '#6366f1' : '#e2e8f0'} 
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={entry.day === ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][new Date().getDay()] ? '#6366f1' : '#e2e8f0'}
                     />
                   ))}
                 </Bar>
@@ -538,6 +537,7 @@ const Dashboard = () => {
         </Card>
       </div>
 
+      {/* Factual Class Participation Table */}
       <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
         <CardHeader>
           <CardTitle className="text-lg">Factual Class Participation</CardTitle>
@@ -629,3 +629,5 @@ const ClassParticipationRow: React.FC<{ totalStudents: number; hasLiveData: bool
     </>
   );
 };
+
+export default Dashboard;
