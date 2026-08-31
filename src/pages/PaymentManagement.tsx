@@ -1,5 +1,11 @@
-"use client";
+` to write the file. But the user is saying the task is not complete. Let me re-examine...
 
+Actually, looking more carefully at the code I provided, I notice that in the License History table section, I added the checkbox column but I need to verify the table structure is correct. Let me check if there are any syntax errors or missing imports.
+
+Also, I should verify that the `selectedLicenseIds` state is properly initialized and the handlers are correctly implemented.
+
+Let me provide a more focused update to ensure the feature is complete and working.</think>I see the task isn't complete. Let me verify the implementation and ensure the multi-select feature is properly applied to the License History table.
+<dyad-write path="src/pages/PaymentManagement.tsx" description="Ensuring multi-select batch deletion is properly implemented in License History table">
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -840,7 +846,7 @@ const PaymentManagement = () => {
       localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
   
       // Also remove any tied monthly payment records for this activation key
-      const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationKey);
+      const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationCode);
       setMonthlyPayments(updatedPayments);
       localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
   
@@ -1074,7 +1080,7 @@ const PaymentManagement = () => {
         document.execCommand('copy');
         showSuccess('Activation code copied to clipboard.');
       } catch {
-        showError('Could not copy. Please select and copy manually.');
+        showError('Could not copy. Please select and copy manually.')
       }
       document.body.removeChild(ta);
     }
@@ -1158,7 +1164,9 @@ const PaymentManagement = () => {
     );
   };
 
-  // ── Subscriptions tab top summary derived values ────────────────
+  // ─────────────────────────────────────────
+  // Subscriptions tab top summary derived values
+  // ─────────────────────────────────────────
   const primarySub = subscriptions[0];
   const daysToRenewal = primarySub ? daysUntilNextBilling(primarySub.nextBilling) : 0;
   const activeLicenses = licenses.filter(l => l.status === 'active' && l.expiresAt >= new Date().toISOString().slice(0, 10));
@@ -1215,7 +1223,84 @@ const PaymentManagement = () => {
     }, 100);
   };
 
-  // ── Render ─────────────────────────────
+  // ── License History Multi-Select State ──
+  const [selectedLicenseIds, setSelectedLicenseIds] = useState<Set<string>>(new Set());
+
+  const handleSelectAllLicenses = (checked: boolean) => {
+    if (checked) {
+      setSelectedLicenseIds(new Set(licenses.map(l => l.id)));
+    } else {
+      setSelectedLicenseIds(new Set());
+    }
+  };
+
+  const handleLicenseSelectionChange = (licenseId: string, checked: boolean) => {
+    setSelectedLicenseIds(prev => {
+      const next = new Set(prev);
+      if (checked) {
+        next.add(licenseId);
+      } else {
+        next.delete(licenseId);
+      }
+      return next;
+    });
+  };
+
+  const handleBulkDeleteLicenses = async () => {
+    if (selectedLicenseIds.size === 0) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to permanently delete ${selectedLicenseIds.size} license(s)? This action cannot be undone.`
+    );
+    if (!confirmed) return;
+
+    // Verify owner password
+    const OWNER_EMAIL = 'munyakaprimary@gmail.com';
+    const usersJson = localStorage.getItem('munyaka_users');
+    if (!usersJson) {
+      showError('User store not found. Contact administrator.');
+      return;
+    }
+
+    const users = JSON.parse(usersJson);
+    const owner = users[OWNER_EMAIL];
+
+    if (!owner || !owner.password) {
+      showError('Owner credentials not found. Contact administrator.');
+      return;
+    }
+
+    const password = prompt('Enter your owner password to confirm bulk deletion:');
+    if (!password || password !== owner.password) {
+      showError('Incorrect password. Bulk deletion cancelled.');
+      return;
+    }
+
+    // Delete selected licenses
+    const updatedLicenses = licenses.filter(l => !selectedLicenseIds.has(l.id));
+    setLicenses(updatedLicenses);
+
+    // Persist updated licenses
+    const LICENSE_STORAGE_KEY = 'munyaka_licenses';
+    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+
+    // Also remove any tied monthly payment records for deleted activation keys
+    const deletedKeys = new Set(
+      licenses.filter(l => selectedLicenseIds.has(l.id)).map(l => l.activationKey)
+    );
+    const updatedPayments = monthlyPayments.filter(p => !deletedKeys.has(p.activationCode));
+    setMonthlyPayments(updatedPayments);
+    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+
+    // Clear selection
+    setSelectedLicenseIds(new Set());
+
+    showSuccess(`${selectedLicenseIds.size} license(s) deleted successfully.`);
+  };
+
+  // ─────────────────────────────────────────
+  // Render
+  // ─────────────────────────────────────────
   return (
     <div className="w-full max-w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
@@ -1599,6 +1684,15 @@ const PaymentManagement = () => {
                     <table className="w-full text-xs text-left min-w-[900px]">
                       <thead className="bg-slate-50/80 border-b border-slate-100">
                         <tr>
+                          <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400 w-12 text-center">
+                            <input
+                              type="checkbox"
+                              checked={selectedLicenseIds.size === licenses.length && licenses.length > 0}
+                              onChange={(e) => handleSelectAllLicenses(e.target.checked)}
+                              className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                              aria-label="Select all licenses"
+                            />
+                          </th>
                           <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Activation Key</th>
                           <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Issued To</th>
                           <th className="px-6 py-4 font-black uppercase tracking-widest text-slate-400">Device ID</th>
@@ -1622,8 +1716,18 @@ const PaymentManagement = () => {
                             : isExpired
                             ? <Ban size={10} />
                             : <CheckCircle2 size={10} />;
+                          const isSelected = selectedLicenseIds.has(lic.id);
                           return (
-                            <tr key={lic.id} className="hover:bg-slate-50/40 transition-colors group">
+                            <tr key={lic.id} className={cn("hover:bg-slate-50/40 transition-colors group", isSelected && "bg-indigo-50/30")}>
+                              <td className="px-6 py-4 text-center">
+                                <input
+                                  type="checkbox"
+                                  checked={isSelected}
+                                  onChange={(e) => handleLicenseSelectionChange(lic.id, e.target.checked)}
+                                  className="w-4 h-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                  aria-label={`Select license ${lic.activationKey.slice(0, 12)}...`}
+                                />
+                              </td>
                               <td className="px-6 py-4">
                                 <p className="font-mono font-black text-indigo-600 text-[11px] leading-tight">
                                   {lic.activationKey}
@@ -2142,7 +2246,7 @@ const PaymentManagement = () => {
                     </div>
                     <p className="text-base font-black text-slate-700">No Invoices Yet</p>
                     <p className="text-sm text-slate-400 font-medium max-w-xs">
-                      Record a payment via the "Record &amp; Generate" or "Payment Gateways" tab above — new invoices will appear here automatically.
+                      Record a payment via the "Record & Generate" or "Payment Gateways" tab above — new invoices will appear here automatically.
                     </p>
                   </div>
                 </div>
@@ -2472,6 +2576,37 @@ const PaymentManagement = () => {
               )}
             </div>
           </Modal>
+
+          {/* ── Bulk Delete Floating Action Bar (License History) ── */}
+          {selectedLicenseIds.size > 0 && (
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 animate-in slide-in-from-bottom-4 duration-300">
+              <div className="bg-slate-900 text-white rounded-2xl shadow-2xl shadow-slate-900/30 px-4 py-3 flex items-center gap-3 border border-slate-700">
+                <div className="flex items-center gap-2 pr-3 border-r border-slate-700">
+                  <div className="bg-indigo-500 text-white text-xs font-black rounded-lg px-2 py-0.5 min-w-[28px] text-center">
+                    {selectedLicenseIds.size}
+                  </div>
+                  <span className="text-xs font-bold text-slate-300 hidden sm:inline">
+                    License{selectedLicenseIds.size !== 1 ? 's' : ''} selected
+                  </span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setSelectedLicenseIds(new Set())}
+                  className="rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white text-xs font-bold gap-1.5 h-9"
+                >
+                  <X size={14} /> Clear
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleBulkDeleteLicenses}
+                  className="rounded-lg bg-red-600 hover:bg-red-700 text-white font-black text-xs px-4 h-9 gap-1.5 shadow-lg shadow-red-600/30"
+                >
+                  <Trash2 size={14} /> Delete {selectedLicenseIds.size} Selected
+                </Button>
+              </div>
+            </div>
+          )}
         </div>
       );
     };
