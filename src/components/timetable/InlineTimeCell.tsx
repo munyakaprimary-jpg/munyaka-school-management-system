@@ -21,7 +21,7 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [startTime, setStartTime] = useState(slot.startTime);
   const [endTime, setEndTime] = useState(slot.endTime);
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState<string>('none');
   const [customCategory, setCustomCategory] = useState('');
   const [error, setError] = useState('');
   const startRef = useRef<HTMLInputElement>(null);
@@ -35,8 +35,11 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
       if (slot.category && !isPreset) {
         setCategory('custom');
         setCustomCategory(slot.category);
+      } else if (slot.category) {
+        setCategory(slot.category);
+        setCustomCategory('');
       } else {
-        setCategory(slot.category ?? '');
+        setCategory('none');
         setCustomCategory('');
       }
       setError('');
@@ -53,7 +56,8 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
 
   const resolveCategory = (): string | null => {
     if (category === 'custom') return customCategory.trim() || null;
-    return category || null;
+    if (category === 'none' || !category) return null;
+    return category;
   };
 
   const handleSave = () => {
@@ -80,8 +84,11 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
     if (slot.category && !isPreset) {
       setCategory('custom');
       setCustomCategory(slot.category);
+    } else if (slot.category) {
+      setCategory(slot.category);
+      setCustomCategory('');
     } else {
-      setCategory(slot.category ?? '');
+      setCategory('none');
       setCustomCategory('');
     }
     setError('');

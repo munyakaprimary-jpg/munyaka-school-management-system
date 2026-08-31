@@ -16,6 +16,8 @@ interface TimeSlotModalProps {
   onDelete: (slotId: string) => void;
 }
 
+const NONE_VALUE = 'none';
+
 const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
   open,
   onClose,
@@ -27,7 +29,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
   const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [category, setCategory] = useState<string>('');
+  const [category, setCategory] = useState<string>(NONE_VALUE);
   const [customCategory, setCustomCategory] = useState('');
   const [error, setError] = useState('');
 
@@ -46,14 +48,17 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
       if (editingSlot.category && !isPreset) {
         setCategory('custom');
         setCustomCategory(editingSlot.category);
+      } else if (editingSlot.category) {
+        setCategory(editingSlot.category);
+        setCustomCategory('');
       } else {
-        setCategory(editingSlot.category ?? '');
+        setCategory(NONE_VALUE);
         setCustomCategory('');
       }
     } else {
       setStartTime('');
       setEndTime('');
-      setCategory('');
+      setCategory(NONE_VALUE);
       setCustomCategory('');
     }
     setError('');
@@ -63,7 +68,8 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
 
   const resolveCategory = (): string | null => {
     if (category === 'custom') return customCategory.trim() || null;
-    return category || null;
+    if (category === NONE_VALUE || !category) return null;
+    return category;
   };
 
   const handleSave = () => {
@@ -102,12 +108,12 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
 
   const getCategoryBadgeClass = (cat: string | null) => {
     switch (cat) {
-      case 'Break':           return 'bg-amber-100 text-amber-700';
-      case 'Lunch Break':    return 'bg-orange-100 text-orange-700';
-      case 'Games / PE':     return 'bg-green-100 text-green-700';
-      case 'Assembly':       return 'bg-purple-100 text-purple-700';
+      case 'Break':            return 'bg-amber-100 text-amber-700';
+      case 'Lunch Break':      return 'bg-orange-100 text-orange-700';
+      case 'Games / PE':       return 'bg-green-100 text-green-700';
+      case 'Assembly':         return 'bg-purple-100 text-purple-700';
       case 'Pastoral / Clubs': return 'bg-violet-100 text-violet-700';
-      default:                return 'bg-cyan-100 text-cyan-700';
+      default:                 return 'bg-cyan-100 text-cyan-700';
     }
   };
 
@@ -206,11 +212,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
                 {editingSlot ? 'Update Slot' : 'Add Slot'}
               </Button>
               {editingSlot && (
-                <Button
-                  onClick={handleCancel}
-                  variant="outline"
-                  className="rounded-xl"
-                >
+                <Button onClick={handleCancel} variant="outline" className="rounded-xl">
                   Cancel
                 </Button>
               )}

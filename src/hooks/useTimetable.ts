@@ -25,7 +25,7 @@ export interface GradeTimetable {
 }
 
 export const SLOT_CATEGORIES = [
-  { value: '', label: 'Regular Period' },
+  { value: 'none', label: 'Regular Period' },
   { value: 'Break', label: 'Break' },
   { value: 'Lunch Break', label: 'Lunch Break' },
   { value: 'Games / PE', label: 'Games / PE' },
