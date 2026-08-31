@@ -6,6 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search } from 'lucide-react';
 
+interface GradeOption {
+  grade: string;
+  count: number;
+}
+
+interface StreamOption {
+  stream: string;
+  count: number;
+}
+
 interface PromotionFiltersProps {
   searchTerm: string;
   onSearchChange: (value: string) => void;
@@ -15,8 +25,8 @@ interface PromotionFiltersProps {
   onStreamChange: (value: string) => void;
   filterStatus: string;
   onStatusChange: (value: string) => void;
-  grades: { grade: string; count: number }[];
-  streams: { stream: string; count: number }[];
+  grades: GradeOption[];
+  streams: StreamOption[];
 }
 
 const PromotionFilters: React.FC<PromotionFiltersProps> = ({
@@ -29,7 +39,7 @@ const PromotionFilters: React.FC<PromotionFiltersProps> = ({
   filterStatus,
   onStatusChange,
   grades,
-  streams,
+  streams
 }) => {
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
@@ -45,7 +55,7 @@ const PromotionFilters: React.FC<PromotionFiltersProps> = ({
         </div>
         
         <Select value={filterGrade} onValueChange={onGradeChange}>
-          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold">
+          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none">
             <SelectValue placeholder="Filter by Grade" />
           </SelectTrigger>
           <SelectContent>
@@ -56,7 +66,7 @@ const PromotionFilters: React.FC<PromotionFiltersProps> = ({
         </Select>
         
         <Select value={filterStream} onValueChange={onStreamChange}>
-          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold">
+          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none">
             <SelectValue placeholder="Filter by Stream" />
           </SelectTrigger>
           <SelectContent>
@@ -67,7 +77,7 @@ const PromotionFilters: React.FC<PromotionFiltersProps> = ({
         </Select>
         
         <Select value={filterStatus} onValueChange={onStatusChange}>
-          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none font-bold">
+          <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-none">
             <SelectValue placeholder="Filter by Status" />
           </SelectTrigger>
           <SelectContent>
