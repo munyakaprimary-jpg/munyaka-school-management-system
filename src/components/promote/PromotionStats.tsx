@@ -11,7 +11,8 @@ import {
   UserCheck, 
   GraduationCap,
   FileText,
-  TrendingUp
+  TrendingUp,
+  Layers
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 
