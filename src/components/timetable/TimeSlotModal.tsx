@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { X, Plus, Trash2, Edit2, Clock, Coffee } from 'lucide-react';
+import { X, Trash2, Edit2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { SLOT_CATEGORIES } from '@/hooks/useTimetable';
 import type { TimeSlot } from '@/hooks/useTimetable';
 
 interface TimeSlotModalProps {
   open: boolean;
   onClose: () => void;
   timeSlots: TimeSlot[];
-  onAdd: (startTime: string, endTime: string, isBreak: boolean) => void;
-  onUpdate: (slotId: string, startTime: string, endTime: string, isBreak: boolean) => void;
+  onAdd: (startTime: string, endTime: string, category: string | null) => void;
+  onUpdate: (slotId: string, startTime: string, endTime: string, category: string | null) => void;
   onDelete: (slotId: string) => void;
 }
 
@@ -26,23 +27,44 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
   const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
-  const [isBreak, setIsBreak] = useState(false);
+  const [category, setCategory] = useState<string>('');
+  const [customCategory, setCustomCategory] = useState('');
   const [error, setError] = useState('');
 
   useEffect(() => {
+    if (open) {
+      resetForm();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingSlot, open]);
+
+  const resetForm = () => {
     if (editingSlot) {
       setStartTime(editingSlot.startTime);
       setEndTime(editingSlot.endTime);
-      setIsBreak(editingSlot.isBreak);
+      const isPreset = SLOT_CATEGORIES.slice(1, -1).some(c => c.value === editingSlot.category);
+      if (editingSlot.category && !isPreset) {
+        setCategory('custom');
+        setCustomCategory(editingSlot.category);
+      } else {
+        setCategory(editingSlot.category ?? '');
+        setCustomCategory('');
+      }
     } else {
       setStartTime('');
       setEndTime('');
-      setIsBreak(false);
+      setCategory('');
+      setCustomCategory('');
     }
     setError('');
-  }, [editingSlot, open]);
+  };
 
   if (!open) return null;
+
+  const resolveCategory = (): string | null => {
+    if (category === 'custom') return customCategory.trim() || null;
+    return category || null;
+  };
 
   const handleSave = () => {
     if (!startTime || !endTime) {
@@ -53,25 +75,40 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
       setError('End time must be after start time');
       return;
     }
-
+    if (category === 'custom' && !customCategory.trim()) {
+      setError('Please enter a custom name');
+      return;
+    }
+    const finalCat = resolveCategory();
     if (editingSlot) {
-      onUpdate(editingSlot.id, startTime, endTime, isBreak);
+      onUpdate(editingSlot.id, startTime, endTime, finalCat);
     } else {
-      onAdd(startTime, endTime, isBreak);
+      onAdd(startTime, endTime, finalCat);
     }
     setEditingSlot(null);
-    setStartTime('');
-    setEndTime('');
-    setIsBreak(false);
-    setError('');
+    resetForm();
   };
 
   const handleCancel = () => {
     setEditingSlot(null);
-    setStartTime('');
-    setEndTime('');
-    setIsBreak(false);
-    setError('');
+    resetForm();
+  };
+
+  const getCategoryLabel = (cat: string | null) => {
+    if (!cat) return 'Regular Period';
+    const preset = SLOT_CATEGORIES.find(c => c.value === cat);
+    return preset ? preset.label : cat;
+  };
+
+  const getCategoryBadgeClass = (cat: string | null) => {
+    switch (cat) {
+      case 'Break':           return 'bg-amber-100 text-amber-700';
+      case 'Lunch Break':    return 'bg-orange-100 text-orange-700';
+      case 'Games / PE':     return 'bg-green-100 text-green-700';
+      case 'Assembly':       return 'bg-purple-100 text-purple-700';
+      case 'Pastoral / Clubs': return 'bg-violet-100 text-violet-700';
+      default:                return 'bg-cyan-100 text-cyan-700';
+    }
   };
 
   return (
@@ -124,22 +161,43 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between p-3 bg-white rounded-xl border">
-              <div className="flex items-center gap-2">
-                <Coffee className="w-4 h-4 text-amber-600" />
-                <Label htmlFor="isBreak" className="text-sm font-medium text-slate-700 cursor-pointer">
-                  Mark as break period
-                </Label>
-              </div>
-              <Switch
-                id="isBreak"
-                checked={isBreak}
-                onCheckedChange={setIsBreak}
-              />
+
+            {/* Category Selector */}
+            <div className="space-y-2">
+              <Label htmlFor="category" className="text-xs font-semibold text-slate-600">Period Type</Label>
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger id="category" className="rounded-xl">
+                  <SelectValue placeholder="Select period type…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SLOT_CATEGORIES.map((cat) => (
+                    <SelectItem key={cat.value} value={cat.value}>
+                      {cat.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+
+            {/* Custom name input */}
+            {category === 'custom' && (
+              <div className="space-y-2">
+                <Label htmlFor="customCategory" className="text-xs font-semibold text-slate-600">Custom Name</Label>
+                <Input
+                  id="customCategory"
+                  value={customCategory}
+                  onChange={(e) => setCustomCategory(e.target.value)}
+                  placeholder="e.g. Music Practice, Detention…"
+                  className="rounded-xl"
+                  autoFocus
+                />
+              </div>
+            )}
+
             {error && (
               <p className="text-sm text-rose-600 font-medium">{error}</p>
             )}
+
             <div className="flex gap-2">
               <Button
                 onClick={handleSave}
@@ -176,22 +234,24 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
                     key={slot.id}
                     className="flex items-center justify-between p-3 bg-white rounded-xl border border-slate-200 hover:border-indigo-300 transition-colors"
                   >
-                    <div className="flex items-center gap-3">
-                      {slot.isBreak ? (
-                        <Coffee className="w-4 h-4 text-amber-600" />
-                      ) : (
-                        <Clock className="w-4 h-4 text-indigo-600" />
-                      )}
-                      <span className="font-semibold text-slate-700">
-                        {slot.startTime} - {slot.endTime}
-                      </span>
-                      {slot.isBreak && (
-                        <span className="px-2 py-0.5 text-xs font-bold rounded-full bg-amber-100 text-amber-700">
-                          BREAK
+                    <div className="flex items-center gap-3 min-w-0">
+                      <Clock className="w-4 h-4 text-indigo-600 flex-shrink-0" />
+                      <div className="flex flex-wrap items-center gap-2 min-w-0">
+                        <span className="font-semibold text-slate-700 whitespace-nowrap">
+                          {slot.startTime} – {slot.endTime}
                         </span>
-                      )}
+                        {slot.category ? (
+                          <span className={`inline-block px-2 py-0.5 text-xs font-bold rounded-full whitespace-nowrap ${getCategoryBadgeClass(slot.category)}`}>
+                            {getCategoryLabel(slot.category)}
+                          </span>
+                        ) : (
+                          <span className="inline-block px-2 py-0.5 text-xs font-semibold rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
+                            Regular
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1 flex-shrink-0">
                       <button
                         onClick={() => setEditingSlot(slot)}
                         className="w-8 h-8 rounded-lg hover:bg-slate-100 flex items-center justify-center transition-colors"
@@ -215,11 +275,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
         </div>
 
         <div className="p-6 border-t bg-slate-50">
-          <Button
-            onClick={onClose}
-            variant="outline"
-            className="w-full rounded-xl"
-          >
+          <Button onClick={onClose} variant="outline" className="w-full rounded-xl">
             Done
           </Button>
         </div>

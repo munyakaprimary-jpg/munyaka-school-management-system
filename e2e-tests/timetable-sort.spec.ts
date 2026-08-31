@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("timetable rows auto-sort chronologically by start time", async ({ page }) => {
+test("timetable rows auto-sort chronologically by start time including category slots", async ({ page }) => {
   const origin = new URL(process.env.DYAD_TEST_BASE_URL || "http://localhost:32100").origin;
   const email = process.env.DYAD_TEST_USER_EMAIL;
   const password = process.env.DYAD_TEST_USER_PASSWORD;
@@ -9,7 +9,6 @@ test("timetable rows auto-sort chronologically by start time", async ({ page }) 
     return;
   }
 
-  // Reset persisted state
   await page.goto("/");
   await page.evaluate(() => {
     localStorage.removeItem("school-timetable-data");
@@ -39,76 +38,82 @@ test("timetable rows auto-sort chronologically by start time", async ({ page }) 
   await page.goto("/timetable");
   await expect(page.getByRole("heading", { name: "School Timetable" })).toBeVisible();
 
-  // Get initial row order
-  const initialTimes = await page.locator("tbody tr").evaluateAll((rows) =>
-    rows.map((r) => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
-  );
-  // Sanity: initial set should already be sorted ascending
-  const initialSorted = [...initialTimes].sort();
-  expect(initialTimes).toEqual(initialSorted);
+  // Helper: extract all time-range texts from the grid (both regular rows and category rows)
+  const getAllTimes = async () =>
+    page.locator("tbody tr").evaluateAll(rows =>
+      rows.map(r => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
+    );
 
-  // ===== Add a period that should land in the MIDDLE =====
+  // Default slots should be sorted
+  const initialTimes = await getAllTimes();
+  expect(initialTimes).toEqual([...initialTimes].sort());
+
+  // --- Add a Lunch Break in the middle of the day ---
   await page.getByRole("button", { name: /Manage Slots/i }).click();
-  await page.getByLabel("Start Time").fill("09:30");
-  await page.getByLabel("End Time").fill("10:00");
+  await page.getByLabel("Start Time").fill("12:00");
+  await page.getByLabel("End Time").fill("13:00");
+  await page.getByLabel("Period Type").click();
+  await page.getByRole("option", { name: "Lunch Break" }).click();
   await page.getByRole("button", { name: /Add Slot/i }).click();
+  await expect(page.getByText("★ Lunch Break")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
 
-  // Verify chronological order in the rendered grid
-  const timesAfterAdd = await page.locator("tbody tr").evaluateAll((rows) =>
-    rows.map((r) => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
-  );
-  const sortedAfterAdd = [...timesAfterAdd].sort();
-  expect(timesAfterAdd).toEqual(sortedAfterAdd);
+  const afterLunchTimes = await getAllTimes();
+  expect(afterLunchTimes).toEqual([...afterLunchTimes].sort());
+  // Lunch Break should appear in its correct chronological position
+  const lunchIndex = afterLunchTimes.indexOf("12:00 - 13:00");
+  expect(lunchIndex).toBeGreaterThan(0);
 
-  // ===== Inline-edit a row's start time to move it to the END =====
-  const lastRow = page.locator("tbody tr").last();
-  await lastRow.hover();
-  await lastRow.getByRole("button", { name: "Edit time slot" }).click();
-  const startInput = lastRow.locator("input[type='time']").first();
-  const endInput = lastRow.locator("input[type='time']").nth(1);
-  // Move it to 15:00-15:30, which should now be the latest period
-  await startInput.fill("15:00");
-  await endInput.fill("15:30");
-  await lastRow.getByTitle("Save (Enter)").click();
+  // --- Inline-edit a period to push it after Lunch Break ---
+  // Find a row with a time cell containing "10:" and move it to 14:00
+  const rows = page.locator("tbody tr");
+  const count = await rows.count();
+  let targetRow = null;
+  for (let i = 0; i < count; i++) {
+    const row = rows.nth(i);
+    const text = await row.textContent() ?? "";
+    if (text.match(/\d{2}:\d{2} - \d{2}:\d{2}/) && text.includes("10:")) {
+      targetRow = row;
+      break;
+    }
+  }
+  expect(targetRow).not.toBeNull();
 
-  // Re-verify chronological order
-  const timesAfterInline = await page.locator("tbody tr").evaluateAll((rows) =>
-    rows.map((r) => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
-  );
-  const sortedAfterInline = [...timesAfterInline].sort();
-  expect(timesAfterInline).toEqual(sortedAfterInline);
+  await targetRow!.hover();
+  await targetRow!.getByRole("button", { name: "Edit time slot" }).click();
+  await targetRow!.locator("input[type='time']").first().fill("14:00");
+  await targetRow!.locator("input[type='time']").nth(1).fill("14:45");
+  await targetRow!.getByTitle("Save (Enter)").click();
+  await expect(targetRow!.getByText("14:00 - 14:45")).toBeVisible();
 
-  // The 15:00-15:30 row should be the LAST row
+  const afterEditTimes = await getAllTimes();
+  expect(afterEditTimes).toEqual([...afterEditTimes].sort());
+
+  // 14:00 row should be the last
   const lastRowText = await page.locator("tbody tr").last().textContent();
-  expect(lastRowText).toContain("15:00 - 15:30");
+  expect(lastRowText).toContain("14:00 - 14:45");
 
-  // ===== Inline-edit a row's start time to move it to the START =====
+  // --- Inline-edit a period to move it to the very beginning ---
   const secondRow = page.locator("tbody tr").nth(1);
-  await secondRow.hover();
-  await secondRow.getByRole("button", { name: "Edit time slot" }).click();
-  const startInput2 = secondRow.locator("input[type='time']").first();
-  const endInput2 = secondRow.locator("input[type='time']").nth(1);
-  await startInput2.fill("07:00");
-  await endInput2.fill("07:30");
-  await secondRow.getByTitle("Save (Enter)").click();
+  const secondRowText = await secondRow.textContent() ?? "";
+  if (secondRowText.match(/\d{2}:\d{2} - \d{2}:\d{2}/)) {
+    await secondRow.hover();
+    await secondRow.getByRole("button", { name: "Edit time slot" }).click();
+    await secondRow.locator("input[type='time']").first().fill("07:00");
+    await secondRow.locator("input[type='time']").nth(1).fill("07:30");
+    await secondRow.getByTitle("Save (Enter)").click();
+    await expect(secondRow.getByText("07:00 - 07:30")).toBeVisible();
+  }
 
-  // Verify order again — first row should now be 07:00-07:30
+  // First row should now be 07:00-07:30
   const firstRowText = await page.locator("tbody tr").first().textContent();
   expect(firstRowText).toContain("07:00 - 07:30");
 
-  // Full chronological verification
-  const finalTimes = await page.locator("tbody tr").evaluateAll((rows) =>
-    rows.map((r) => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
-  );
-  const finalSorted = [...finalTimes].sort();
-  expect(finalTimes).toEqual(finalSorted);
+  const finalTimes = await getAllTimes();
+  expect(finalTimes).toEqual([...finalTimes].sort());
 
-  // Reload and verify sort persists
+  // --- Reload and verify sort persists ---
   await page.reload();
-  const persistedTimes = await page.locator("tbody tr").evaluateAll((rows) =>
-    rows.map((r) => (r.textContent ?? "").match(/\d{2}:\d{2}\s*-\s*\d{2}:\d{2}/)?.[0] ?? "")
-  );
-  const persistedSorted = [...persistedTimes].sort();
-  expect(persistedTimes).toEqual(persistedSorted);
+  const persistedTimes = await getAllTimes();
+  expect(persistedTimes).toEqual([...persistedTimes].sort());
 });

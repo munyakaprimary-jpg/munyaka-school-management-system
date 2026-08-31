@@ -4,7 +4,7 @@ export interface TimeSlot {
   id: string;
   startTime: string;
   endTime: string;
-  isBreak: boolean;
+  category: string | null; // null = regular period; string = special category name
 }
 
 export interface LessonEntry {
@@ -23,6 +23,29 @@ export interface GradeTimetable {
   timeSlots: TimeSlot[];
   entries: TimetableEntry[];
 }
+
+export const SLOT_CATEGORIES = [
+  { value: '', label: 'Regular Period' },
+  { value: 'Break', label: 'Break' },
+  { value: 'Lunch Break', label: 'Lunch Break' },
+  { value: 'Games / PE', label: 'Games / PE' },
+  { value: 'Assembly', label: 'Assembly' },
+  { value: 'Pastoral / Clubs', label: 'Pastoral / Clubs' },
+  { value: 'custom', label: 'Custom…' },
+] as const;
+
+export const CATEGORY_COLORS: Record<string, { bg: string; text: string; border: string }> = {
+  'Break':              { bg: 'bg-amber-50',    text: 'text-amber-700', border: 'border-amber-200' },
+  'Lunch Break':       { bg: 'bg-orange-50',   text: 'text-orange-700', border: 'border-orange-200' },
+  'Games / PE':        { bg: 'bg-green-50',    text: 'text-green-700', border: 'border-green-200' },
+  'Assembly':          { bg: 'bg-purple-50',   text: 'text-purple-700', border: 'border-purple-200' },
+  'Pastoral / Clubs':  { bg: 'bg-violet-50',  text: 'text-violet-700', border: 'border-violet-200' },
+};
+
+const getCategoryColor = (category: string | null): { bg: string; text: string; border: string } => {
+  if (!category) return { bg: 'bg-slate-100', text: 'text-slate-400', border: 'border-slate-200' };
+  return CATEGORY_COLORS[category] ?? { bg: 'bg-cyan-50', text: 'text-cyan-700', border: 'border-cyan-200' };
+};
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const STORAGE_KEY = 'school-timetable-data';
@@ -48,23 +71,29 @@ const DEFAULT_GRADES = [
 ];
 
 const getDefaultTimeSlots = (): TimeSlot[] => [
-  { id: crypto.randomUUID(), startTime: '08:00', endTime: '08:30', isBreak: false },
-  { id: crypto.randomUUID(), startTime: '08:30', endTime: '09:10', isBreak: false },
-  { id: crypto.randomUUID(), startTime: '09:10', endTime: '09:50', isBreak: false },
-  { id: crypto.randomUUID(), startTime: '09:50', endTime: '10:30', isBreak: false },
-  { id: crypto.randomUUID(), startTime: '10:30', endTime: '11:00', isBreak: true },
-  { id: crypto.randomUUID(), startTime: '11:00', endTime: '11:40', isBreak: false },
+  { id: crypto.randomUUID(), startTime: '08:00', endTime: '08:30', category: null },
+  { id: crypto.randomUUID(), startTime: '08:30', endTime: '09:10', category: null },
+  { id: crypto.randomUUID(), startTime: '09:10', endTime: '09:50', category: null },
+  { id: crypto.randomUUID(), startTime: '09:50', endTime: '10:30', category: null },
+  { id: crypto.randomUUID(), startTime: '10:30', endTime: '11:00', category: 'Break' },
+  { id: crypto.randomUUID(), startTime: '11:00', endTime: '11:40', category: null },
+  { id: crypto.randomUUID(), startTime: '12:00', endTime: '13:00', category: 'Lunch Break' },
 ];
 
-const getDefaultEntries = (timeSlots: TimeSlot[]): TimetableEntry[] => {
-  return timeSlots.map(slot => {
-    const entry: TimetableEntry = {};
-    DAYS.forEach(day => {
-      entry[day] = slot.isBreak ? { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' } : null;
-    });
-    return entry;
-  });
+const makeEntryForSlot = (slot: TimeSlot): TimetableEntry => {
+  const color = getCategoryColor(slot.category);
+  return Object.fromEntries(
+    DAYS.map(day => [
+      day,
+      slot.category
+        ? { id: crypto.randomUUID(), subject: slot.category, color: `${color.bg} ${color.text} border ${color.border}` }
+        : null,
+    ])
+  );
 };
+
+const getDefaultEntries = (timeSlots: TimeSlot[]): TimetableEntry[] =>
+  timeSlots.map(makeEntryForSlot);
 
 export function useTimetable() {
   const [grades, setGrades] = useState<{ id: string; name: string }[]>(() => {
@@ -105,15 +134,16 @@ export function useTimetable() {
     }
   }, [timetables]);
 
-  // Initialize on mount
   useEffect(() => {
     initializeGradeTimetable(selectedGrade);
   }, [selectedGrade, initializeGradeTimetable]);
 
   const currentTimetable = (() => {
     const raw = timetables[selectedGrade] || { timeSlots: getDefaultTimeSlots(), entries: getDefaultEntries(getDefaultTimeSlots()) };
-    // Always sort slots + entries together by start time before exposing to consumers
-    const paired = raw.timeSlots.map((s, i) => ({ slot: s, entry: raw.entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null])) }));
+    const paired = raw.timeSlots.map((s, i) => ({
+      slot: s,
+      entry: raw.entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null])),
+    }));
     paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
     return {
       timeSlots: paired.map(p => p.slot),
@@ -122,31 +152,30 @@ export function useTimetable() {
   })();
   const currentGrades = grades;
 
-  // Time Slot Management
-  const addTimeSlot = useCallback((startTime: string, endTime: string, isBreak: boolean = false) => {
-    const newSlot: TimeSlot = {
-      id: crypto.randomUUID(),
-      startTime,
-      endTime,
-      isBreak,
+  // Sort slots + entries together by start time, then apply a mutation to the slots array
+  const sortAndApply = (
+    slots: TimeSlot[],
+    entries: TimetableEntry[],
+    apply: (s: TimeSlot) => TimeSlot
+  ): { timeSlots: TimeSlot[]; entries: TimetableEntry[] } => {
+    const updated = slots.map(s => apply(s));
+    const paired = slots.map((s, i) => ({ slot: updated[i], entry: entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null])) }));
+    paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+    return {
+      timeSlots: paired.map(p => p.slot),
+      entries: paired.map(p => p.entry),
     };
-    const newEntry: TimetableEntry = Object.fromEntries(
-      DAYS.map(day => [
-        day,
-        isBreak
-          ? { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }
-          : null,
-      ])
-    );
+  };
+
+  // Time Slot Management
+  const addTimeSlot = useCallback((startTime: string, endTime: string, category: string | null = null) => {
+    const newSlot: TimeSlot = { id: crypto.randomUUID(), startTime, endTime, category };
 
     setTimetables(prev => {
       const current = prev[selectedGrade] || { timeSlots: getDefaultTimeSlots(), entries: getDefaultEntries(getDefaultTimeSlots()) };
-
-      // Pair slots with their entries so sorting keeps them aligned
       const paired = current.timeSlots.map((s, i) => ({ slot: s, entry: current.entries[i] }));
-      paired.push({ slot: newSlot, entry: newEntry });
+      paired.push({ slot: newSlot, entry: makeEntryForSlot(newSlot) });
       paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
-
       const updatedTimetable = {
         timeSlots: paired.map(p => p.slot),
         entries: paired.map(p => p.entry),
@@ -157,27 +186,22 @@ export function useTimetable() {
     });
   }, [selectedGrade]);
 
-  const updateTimeSlot = useCallback((slotId: string, startTime: string, endTime: string, isBreak: boolean) => {
+  const updateTimeSlot = useCallback((slotId: string, startTime: string, endTime: string, category: string | null) => {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
       const result = sortAndApply(
         current.timeSlots,
         current.entries,
-        s => s.id === slotId ? { ...s, startTime, endTime, isBreak } : s
+        s => s.id === slotId ? { ...s, startTime, endTime, category } : s
       );
-      // When isBreak changes, rebuild entry cells for that slot
+      // Rebuild entries for the slot(s) that changed category
       result.entries = result.timeSlots.map((slot, i) => {
-        const original = current.entries[i];
-        if (original && original.mon && (original.mon as LessonEntry).subject === 'BREAK') {
-          if (!slot.isBreak) {
-            return Object.fromEntries(DAYS.map(day => [day, null]));
-          }
+        const original = current.entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null]));
+        if (slot.category !== current.timeSlots[i]?.category) {
+          return makeEntryForSlot(slot);
         }
-        if (slot.isBreak) {
-          return Object.fromEntries(DAYS.map(day => [day, { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }]));
-        }
-        return original ?? Object.fromEntries(DAYS.map(day => [day, null]));
+        return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
@@ -185,31 +209,25 @@ export function useTimetable() {
     });
   }, [selectedGrade]);
 
-  // Sort slots + entries together by start time, then apply a mutation to the slots array
-  const sortAndApply = (
-    slots: TimeSlot[],
-    entries: TimetableEntry[],
-    apply: (s: TimeSlot) => TimeSlot
-  ): { timeSlots: TimeSlot[]; entries: TimetableEntry[] } => {
-    const updated = slots.map(s => apply(s));
-    const paired = slots.map((s, i) => ({ slot: updated[i], entry: entries[i] }));
-    paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
-    return {
-      timeSlots: paired.map(p => p.slot),
-      entries: paired.map(p => p.entry),
-    };
-  };
-
-  // Update only the times of a slot — auto-sorts after applying
-  const updateSlotTimes = useCallback((slotId: string, startTime: string, endTime: string) => {
+  const updateSlotTimes = useCallback((slotId: string, startTime: string, endTime: string, category?: string | null) => {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
       const result = sortAndApply(
         current.timeSlots,
         current.entries,
-        s => s.id === slotId ? { ...s, startTime, endTime } : s
+        s => s.id === slotId ? { ...s, startTime, endTime, category: category !== undefined ? category : s.category } : s
       );
+      // If the category changed for this slot, rebuild the entry row
+      result.entries = result.timeSlots.map((slot, i) => {
+        const original = current.entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null]));
+        const wasCategory = !!current.timeSlots[i]?.category;
+        const isCategory = !!slot.category;
+        if (wasCategory !== isCategory || current.timeSlots[i]?.category !== slot.category) {
+          return makeEntryForSlot(slot);
+        }
+        return original;
+      });
       const updated = { ...prev, [selectedGrade]: result };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
@@ -220,10 +238,8 @@ export function useTimetable() {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
-
       const slotIndex = current.timeSlots.findIndex(s => s.id === slotId);
       if (slotIndex === -1) return prev;
-
       const updated = {
         ...prev,
         [selectedGrade]: {
@@ -241,17 +257,14 @@ export function useTimetable() {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
-
       const color = colorClass || SUBJECT_COLORS[Math.floor(Math.random() * SUBJECT_COLORS.length)];
       const newEntry: LessonEntry = { id: crypto.randomUUID(), subject, color };
-
       const updatedEntries = current.entries.map((entry, idx) => {
         if (idx === slotIndex) {
           return { ...entry, [day]: subject === '' ? null : newEntry };
         }
         return entry;
       });
-
       const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;

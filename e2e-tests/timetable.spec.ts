@@ -1,7 +1,6 @@
 import { test, expect } from "@playwright/test";
 
-test("timetable supports inline time editing and lesson assignment", async ({ page }) => {
-  // Sign in as admin
+test("timetable: inline slot editing, lesson assignment, and category rendering", async ({ page }) => {
   const origin = new URL(process.env.DYAD_TEST_BASE_URL || "http://localhost:32100").origin;
   const email = process.env.DYAD_TEST_USER_EMAIL;
   const password = process.env.DYAD_TEST_USER_PASSWORD;
@@ -10,14 +9,12 @@ test("timetable supports inline time editing and lesson assignment", async ({ pa
     return;
   }
 
-  // Clear any prior timetable data
   await page.goto("/");
   await page.evaluate(() => {
     localStorage.removeItem("school-timetable-data");
     localStorage.removeItem("school-timetable-grades");
   });
 
-  // Sign in via the test-user endpoint
   const signInResponse = await page.request.post(`${origin}/api/auth/sign-in`, {
     headers: { origin, referer: origin + "/" },
     data: { email, password },
@@ -41,58 +38,55 @@ test("timetable supports inline time editing and lesson assignment", async ({ pa
   await page.goto("/timetable");
   await expect(page.getByRole("heading", { name: "School Timetable" })).toBeVisible();
 
-  // ===== Inline time-slot editing =====
-  // Hover the first period row to reveal the edit pencil
+  // --- Inline edit: change a regular period's time ---
   const firstRow = page.locator("tbody tr").first();
   await firstRow.hover();
-
-  // Click the inline "Edit time slot" button on the first period
   await firstRow.getByRole("button", { name: "Edit time slot" }).click();
-
-  // The two time inputs should appear in the time cell
-  const startTimeInput = firstRow.locator("input[type='time']").first();
-  const endTimeInput = firstRow.locator("input[type='time']").nth(1);
-  await startTimeInput.fill("07:30");
-  await endTimeInput.fill("08:15");
-
-  // Click the green checkmark to save inline
+  await firstRow.locator("input[type='time']").first().fill("07:30");
+  await firstRow.locator("input[type='time']").nth(1).fill("08:15");
   await firstRow.getByTitle("Save (Enter)").click();
-
-  // The new time should appear in the row header
   await expect(firstRow.getByText("07:30 - 08:15")).toBeVisible();
 
-  // ===== Add a new period via the Manage Slots modal =====
+  // --- Add a category slot via Manage Slots ---
   await page.getByRole("button", { name: /Manage Slots/i }).click();
-  await expect(page.getByRole("heading", { name: "Manage Time Slots" })).toBeVisible();
-
-  await page.getByLabel("Start Time").fill("14:00");
-  await page.getByLabel("End Time").fill("14:40");
+  await page.getByLabel("Start Time").fill("12:00");
+  await page.getByLabel("End Time").fill("13:00");
+  // Select "Lunch Break" from the period type dropdown
+  await page.getByLabel("Period Type").click();
+  await page.getByRole("option", { name: "Lunch Break" }).click();
   await page.getByRole("button", { name: /Add Slot/i }).click();
-  await expect(page.getByText("14:00 - 14:40")).toBeVisible();
+  await expect(page.getByText("Lunch Break")).toBeVisible();
   await page.getByRole("button", { name: "Done" }).click();
 
-  // ===== Assign a lesson by clicking a cell =====
-  const firstAddCell = page.getByRole("button", { name: /Add/i }).first();
-  await firstAddCell.click();
-  await expect(page.getByRole("heading", { name: "Assign Lesson" })).toBeVisible();
+  // --- Verify Lunch Break spans the row and appears in the grid ---
+  const lunchRow = page.getByText("★ Lunch Break").locator("..").locator("..");
+  await expect(page.getByText("★ Lunch Break")).toBeVisible();
+  await expect(lunchRow).toContainText("12:00 - 13:00");
 
+  // --- Add a custom category slot ---
+  await page.getByRole("button", { name: /Manage Slots/i }).click();
+  await page.getByLabel("Start Time").fill("15:00");
+  await page.getByLabel("End Time").fill("15:45");
+  await page.getByLabel("Period Type").click();
+  await page.getByRole("option", { name: "Custom…" }).click();
+  await page.getByLabel("Custom Name").fill("Music Practice");
+  await page.getByRole("button", { name: /Add Slot/i }).click();
+  await expect(page.getByText("Music Practice")).toBeVisible();
+  await page.getByRole("button", { name: "Done" }).click();
+
+  // --- Assign a lesson to a regular period cell ---
+  const addCell = page.getByRole("button", { name: /Add/i }).first();
+  await addCell.click();
+  await expect(page.getByRole("heading", { name: "Assign Lesson" })).toBeVisible();
   await page.getByRole("button", { name: "Mathematics" }).click();
   await page.getByRole("button", { name: /Save Lesson/i }).click();
-
   await expect(page.getByRole("button", { name: "Mathematics" }).first()).toBeVisible();
 
-  // ===== Reload and verify everything persisted =====
+  // --- Reload and verify everything persisted ---
   await page.reload();
   await expect(page.getByRole("heading", { name: "School Timetable" })).toBeVisible();
-
-  // Inline-edited time should still be there
-  const firstRowAfterReload = page.locator("tbody tr").first();
-  await expect(firstRowAfterReload.getByText("07:30 - 08:15")).toBeVisible();
-
-  // Lesson should still be there
+  await expect(firstRow.getByText("07:30 - 08:15")).toBeVisible();
+  await expect(page.getByText("★ Lunch Break")).toBeVisible();
+  await expect(page.getByText("★ Music Practice")).toBeVisible();
   await expect(page.getByRole("button", { name: "Mathematics" }).first()).toBeVisible();
-
-  // Newly added period should still be there
-  await page.getByRole("button", { name: /Manage Slots/i }).click();
-  await expect(page.getByText("14:00 - 14:40")).toBeVisible();
 });
