@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Card, CardContent, CardHeader, CardTitle 
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
+import {
+  Card, CardContent, CardHeader, CardTitle
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import Modal from '@/components/ui/Modal';
-import { 
-  UserX, 
-  Printer, 
-  FileText, 
-  CheckCircle, 
+import {
+  UserX,
+  Printer,
+  FileText,
+  CheckCircle,
   AlertTriangle,
   Calendar,
   School,
@@ -32,7 +32,7 @@ import {
   Lock,
   Download,
   FileCheck,
-  Award
+  Award,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
@@ -51,7 +51,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   student,
   isOpen,
   onClose,
-  onTransferComplete
+  onTransferComplete,
 }) => {
   const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
@@ -63,10 +63,40 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     headteacherRemarks: '',
   });
   const [certificateNumber, setCertificateNumber] = useState('');
+  const [generatedCode, setGeneratedCode] = useState<string | null>(null);
   
+  // ─── Dynamic fee balance state ───
+  // Pull real-time balance from the active student's directory/ledger record.
+  // Priority: student.feeBalance (number) → student.account.balance (number) → 0.
+  const feeBalance = useMemo<number>(() => {
+    const raw = (student as any)?.feeBalance ?? (student as any)?.account?.balance;
+    const n = typeof raw === 'string' ? parseFloat(raw) : raw;
+    return Number.isFinite(n) ? (n as number) : 0;
+  }, [student]);
+
+  // Auto-computed cleared status: balance > 0 → PENDING, balance ≤ 0 → CLEARED.
+  const isCleared = feeBalance <= 0;
+  const hasOutstandingBalance = feeBalance > 0;
+
+  // Reset transfer state when the modal opens or the student changes
+  useEffect(() => {
+    if (isOpen) {
+      setCurrentStep('FORM');
+      setTransferData({
+        dateOfExit: new Date().toISOString().split('T')[0],
+        destinationSchool: '',
+        reason: '',
+        coCurricularActivities: student?.coCurricularActivities || '',
+        headteacherRemarks: '',
+      });
+      setCertificateNumber('');
+      setGeneratedCode(null);
+    }
+  }, [isOpen, student]);
+
   // Ref for the certificate container - explicitly targeting the certificate node
   const certificateRef = useRef<HTMLDivElement>(null);
-  
+
   // Track if certificate is mounted and ready for PDF generation
   const [isCertificateMounted, setIsCertificateMounted] = useState(false);
 
@@ -80,36 +110,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
 
-  // Reset when modal opens/closes
-  useEffect(() => {
-    if (isOpen) {
-      setCurrentStep('FORM');
-      setTransferData({
-        dateOfExit: new Date().toISOString().split('T')[0],
-        destinationSchool: '',
-        reason: '',
-        coCurricularActivities: student?.coCurricularActivities || '',
-        headteacherRemarks: '',
-      });
-      setCertificateNumber('');
-      setAdminPassword('');
-      setAuthError('');
-      setShowPassword(false);
-      setPdfError(null);
-      setIsCertificateMounted(false);
-    } else {
-      setIsCertificateMounted(false);
-    }
-  }, [isOpen, student]);
+  // Refs for textareas used in PDF generation
+  const headteacherRef = useRef<HTMLTextAreaElement>(null);
+  const cocurricularRef = useRef<HTMLTextAreaElement>(null);
 
-  // Callback ref to detect when certificate DOM node is mounted
-  const certificateRefCallback = useCallback((node: HTMLDivElement | null) => {
-    certificateRef.current = node;
-    if (node) {
-      setIsCertificateMounted(true);
-    } else {
-      setIsCertificateMounted(false);
-    }
+  // Resync live values from textareas into DOM text
+  const syncTextareasToDom = useCallback(() => {
+    if (headteacherRef.current) headteacherRef.current.innerText = headteacherRef.current.value;
+    if (cocurricularRef.current) cocurricularRef.current.innerText = cocurricularRef.current.value;
   }, []);
 
   // Wait until web fonts and any image assets inside the certificate are fully
@@ -210,6 +218,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     }
   }, [currentStep, certificateNumber, isCertificateMounted]);
 
+  // Handle transfer execution with admin password verification
   const handleExecuteTransfer = async () => {
     if (!transferData.destinationSchool?.trim()) {
       showError("Please enter the destination school or reason for transfer.");
@@ -224,11 +233,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     setIsExecuting(true);
     setAuthError("");
 
-    // Validate admin password against stored credentials
-    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    
     // Simulate API call delay
     await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (adminPassword !== storedAdminPass) {
       setAuthError("Invalid admin password. Authorization required to transfer learner.");
@@ -239,6 +247,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // Generate certificate number
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
+    setGeneratedCode(certNum);
     
     // Notify parent of completion (but DON'T close modal)
     onTransferComplete(student.id, certNum);
@@ -247,17 +256,25 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     // PDF auto-generation will trigger via useEffect once certificate mounts
     setCurrentStep('CERTIFICATE');
     setIsExecuting(false);
+    setAdminPassword('');
     
     showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
+  };
+
+  // Handle transfer with outstanding balance - allow with warning
+  const handleProceedWithBalance = () => {
+    // Optional: add additional validation/acknowledgment for outstanding balance
+    showSuccess('Proceeding with transfer. Outstanding balance acknowledged.');
   };
 
   const handlePrintCertificate = async () => {
     if (isPrinting) return;
     setIsPrinting(true);
+    
+    // Sync textareas to DOM before capturing
+    syncTextareasToDom();
+    
     try {
-      // Render the certificate node to a canvas and use that image as the
-      // print payload — this reliably avoids blank output and never depends on
-      // copying live DOM markup into another document.
       const canvas = await captureCertificateCanvas();
       const dataUrl = canvas.toDataURL('image/png');
 
@@ -324,35 +341,36 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const handleDownloadPdf = async () => {
     const success = await generateCertificatePdf();
     if (success) {
-      showSuccess('Certificate downloaded successfully!');
+      showSuccess('Certificate downloaded successfully.');
     }
   };
 
   const formatDate = (dateStr: string) => {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
   };
 
   const formatDateShort = (dateStr: string) => {
     if (!dateStr) return '—';
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
 
-  const feeStatus = student?.feeBalance <= 0 ? 'CLEARED' : 'PENDING';
-  const feeStatusClass = student?.feeBalance <= 0 ? 'fee-status-cleared' : 'fee-status-pending';
+  const formattedBalance = feeBalance.toLocaleString();
 
   // Dynamic footer based on current step
   const renderFooter = () => {
     if (currentStep === 'FORM') {
       return (
         <>
-          <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
+          <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold px-8">
             Cancel
           </Button>
-          <Button 
-            onClick={handleExecuteTransfer} 
+          <Button
+            onClick={handleExecuteTransfer}
             disabled={isExecuting || !adminPassword.trim()}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
@@ -366,6 +384,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       return (
         <>
           <Button
+            variant="outline"
             onClick={handlePrintCertificate}
             disabled={isPrinting || isGeneratingPdf}
             data-html2canvas-ignore="true"
@@ -415,17 +434,23 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg">
               {(student?.name || '').split(' ').map(n => n?.[0] || '').join('')}
             </div>
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <h3 className="text-xl font-black text-slate-900">{student?.name || 'Unknown'}</h3>
-              <div className="flex flex-wrap gap-3 mt-2 text-sm">
-                <Badge className="bg-indigo-100 text-indigo-700 font-medium px-3 py-1">
+              <div className="flex flex-wrap items-center gap-3 mt-2">
+                <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 font-medium px-3 py-1">
                   <UserCheck size={12} className="mr-1" /> Grade {student?.grade}
                 </Badge>
-                <Badge className="bg-slate-100 text-slate-700 font-medium px-3 py-1">
+                <Badge variant="outline" className="font-medium px-3 py-1">
                   {student?.stream} Stream
                 </Badge>
-                <Badge className="bg-emerald-100 text-emerald-700 font-medium px-3 py-1">
-                  {student?.gender === 'M' ? 'Male' : 'Female'}
+                <Badge className={cn(
+                  "border-none font-medium px-3 py-1",
+                  isCleared
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                )}>
+                  {isCleared ? <CheckCircle2 size={12} className="mr-1" /> : <AlertTriangle size={12} className="mr-1" />}
+                  {isCleared ? 'CLEARED' : 'PENDING'}
                 </Badge>
                 <Badge variant="outline" className="border-slate-200 text-slate-600 font-medium">
                   UPI: {student?.assessment}
@@ -434,15 +459,73 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
           </div>
 
+          {/* Financial Clearance Card — DYNAMIC from student props */}
+          <div className={cn(
+            "border-2 rounded-2xl p-6 space-y-3",
+            isCleared
+              ? "bg-emerald-50/40 border-emerald-200"
+              : "bg-amber-50/60 border-amber-200"
+          )}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className={cn(
+                  "p-3 rounded-2xl shadow-sm",
+                  isCleared ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                )}>
+                  <CreditCard size={24} />
+                </div>
+                <div>
+                  <p className={cn(
+                    "text-[10px] font-black uppercase tracking-widest mb-0.5",
+                    isCleared ? "text-emerald-600" : "text-amber-600"
+                  )}>Financial Clearance Status</p>
+                  <h3 className="text-2xl font-black text-slate-900">
+                    KES {formattedBalance}
+                  </h3>
+                </div>
+              </div>
+              <div className="text-right">
+                <Badge className={cn(
+                  "border-none font-black text-[10px] gap-1 px-3 py-1.5",
+                  isCleared
+                    ? "bg-emerald-50 text-emerald-700"
+                    : "bg-amber-50 text-amber-700"
+                )}>
+                  {isCleared ? (
+                    <>
+                      <CheckCircle2 size={10} />
+                      Cleared
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle size={10} />
+                      Pending
+                    </>
+                  )}
+                </Badge>
+              </div>
+            </div>
+
+            {hasOutstandingBalance && (
+              <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
+                <AlertCircle size={20} className="shrink-0" />
+                <p className="text-sm font-bold text-center max-w-xs">
+                  Attention: This student has an outstanding fee balance of <strong>KES {formattedBalance}</strong>.
+                  Ensure clearance or settlement before issuing final documents.
+                </p>
+              </div>
+            )}
+          </div>
+
           {/* Transfer Details Form */}
           <div className="space-y-5">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+            <h4 className="text-lg font-black text-slate-900 flex items-center gap-2">
               <FileText size={20} className="text-indigo-600" /> Transfer Details
             </h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Date of Exit</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Date of Exit</Label>
                 <Input 
                   type="date"
                   value={transferData.dateOfExit}
@@ -453,7 +536,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               </div>
               
               <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Destination School / Reason</Label>
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Destination School / Reason</Label>
                 <Input 
                   value={transferData.destinationSchool}
                   onChange={(e) => setTransferData({...transferData, destinationSchool: e.target.value})}
@@ -465,7 +548,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Additional Reason / Notes</Label>
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Additional Reason / Notes</Label>
               <Textarea 
                 value={transferData.reason}
                 onChange={(e) => setTransferData({...transferData, reason: e.target.value})}
@@ -476,103 +559,36 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             </div>
           </div>
 
-          {/* Financial Clearance Card */}
-          <div className="space-y-4">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <CreditCard size={20} className="text-amber-600" /> Financial Clearance Status
-            </h4>
-            
-            <Card className={cn(
-              "border-none shadow-sm rounded-2xl p-6",
-              student?.feeBalance > 0 ? "bg-amber-50 border-2 border-amber-200" : "bg-emerald-50 border-2 border-emerald-200"
-            )}>
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                <div className={cn(
-                  "p-4 rounded-2xl",
-                  student?.feeBalance > 0 ? "bg-amber-100 text-amber-600" : "bg-emerald-100 text-emerald-600"
-                )}>
-                  {student?.feeBalance > 0 ? <AlertTriangle size={28} /> : <CheckCircle2 size={28} />}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-slate-500">Outstanding Fee Balance</p>
-                  <p className="text-2xl font-black text-slate-900">
-                    KES {student?.feeBalance?.toLocaleString() ?? '0'}
-                  </p>
-                  <Badge className={cn(
-                    "mt-2 text-xs font-bold",
-                    student?.feeBalance > 0 ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
-                  )}>
-                    {feeStatus}
-                  </Badge>
-                </div>
-              </div>
-              
-              {student?.feeBalance > 0 && (
-                <div className="flex flex-col items-end md:items-center gap-2 text-amber-700">
-                  <AlertCircle size={20} className="shrink-0" />
-                  <p className="text-sm font-bold text-center max-w-xs">
-                    Attention: This student has an outstanding fee balance of <strong>KES {student?.feeBalance?.toLocaleString() ?? '0'}</strong>. 
-                    Ensure clearance or settlement before issuing final documents.
-                  </p>
-                </div>
-              )}
-            </Card>
-          </div>
-
-          {/* Additional Certificate Details */}
-          <div className="space-y-5 pt-4 border-t border-slate-100">
-            <h4 className="text-lg font-bold text-slate-900 flex items-center gap-2">
-              <PenTool size={20} className="text-indigo-600" /> Certificate Details (Optional)
-            </h4>
-            
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Co-curricular Activities & Achievements</Label>
-                <Textarea 
-                  value={transferData.coCurricularActivities}
-                  onChange={(e) => setTransferData({...transferData, coCurricularActivities: e.target.value})}
-                  placeholder="e.g. Football team captain, Science fair winner, Choir member..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Headteacher Remarks</Label>
-                <Textarea 
-                  value={transferData.headteacherRemarks}
-                  onChange={(e) => setTransferData({...transferData, headteacherRemarks: e.target.value})}
-                  placeholder="General conduct, character reference, special notes..."
-                  className="rounded-xl bg-slate-50 border-none min-h-[80px]"
-                  rows={3}
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Admin Password Verification */}
-          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/50 rounded-2xl p-5 border border-amber-100">
+          {/* Admin Password Section */}
+          <div className="space-y-4 pt-4 border-t border-slate-100 bg-amber-50/40 rounded-2xl p-5 border border-amber-200/60">
             <div className="flex items-center gap-3 mb-2">
-              <Lock className="text-amber-600" size={20} />
+              <Lock className="text-amber-600 shrink-0" size={20} />
               <div>
                 <h4 className="font-bold text-amber-800">Admin Authorization Required</h4>
                 <p className="text-sm text-amber-700">Enter admin password to authorize this student transfer.</p>
               </div>
             </div>
             
+            {authError && (
+              <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                <AlertCircle size={14} /> {authError}
+              </div>
+            )}
+
             <div className="space-y-2">
-              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">ADMIN PASSWORD</Label>
+              <Label className="text-xs font-black uppercase tracking-widest text-amber-700">Admin Password</Label>
               <div className="relative">
-                <Input 
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-amber-400" size={16} />
+                <Input
                   type={showPassword ? "text" : "password"}
                   value={adminPassword}
-                  onChange={(e) => { 
+                  onChange={(e) => {
                     const trimmed = e.target.value.trim();
                     setAdminPassword(trimmed);
                     if (authError) setAuthError("");
                   }}
                   placeholder="Enter admin password to confirm..."
-                  className="rounded-xl h-12 bg-white border-amber-200 font-bold pr-12"
+                  className="rounded-xl h-12 bg-white border-amber-200 font-bold pl-10 pr-12"
                   autoFocus
                 />
                 <button
@@ -583,11 +599,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
               </div>
-              {authError && (
-                <div className="flex items-center gap-2 p-3 bg-rose-50 border border-rose-100 rounded-xl text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                  <AlertCircle size={14} /> {authError}
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -596,7 +607,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       {/* Stage 2: Official Clearance Certificate Preview */}
       {currentStep === 'CERTIFICATE' && (
         <div className="animate-in fade-in zoom-in-95">
-          {/* 
+          {/*
             CRITICAL FIXES:
             1. Explicit ID "certificate-node" for DOM lookup fallback
             2. Callback ref (certificateRefCallback) detects mount timing precisely
@@ -606,10 +617,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           */}
           <div
             id="certificate-node"
-            ref={certificateRefCallback}
+            ref={certificateRef}
             className="certificate-container bg-white rounded-xl shadow-2xl border-2 border-slate-800 p-8 md:p-12 max-w-3xl mx-auto no-print"
-            style={{ 
-              // Ensure element is measurable even if parent is hidden
+            style={{
               position: 'relative',
               minHeight: '100px'
             }}
@@ -675,8 +685,15 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               <div className="detail-row full-width">
                 <span className="detail-label">Final Fee Clearance Status:</span>
                 <span className="detail-value">
-                  <span className={cn("font-bold px-3 py-1 rounded", feeStatusClass)}>
-                    {student?.feeBalance > 0 ? `• Balance: KES ${student?.feeBalance?.toLocaleString() ?? '0'}` : '• Balance: 0 KES'}
+                  <span className={cn(
+                    "font-bold px-3 py-1 rounded",
+                    isCleared
+                      ? "fee-status-cleared bg-emerald-50 text-emerald-700"
+                      : "fee-status-pending bg-amber-50 text-amber-700"
+                  )}>
+                    {hasOutstandingBalance
+                      ? `• Balance: KES ${formattedBalance}`
+                      : '• Balance: 0 KES'}
                   </span>
                 </span>
               </div>
@@ -686,7 +703,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             <div className="mt-8">
               <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Co-curricular Activities & Achievements</h4>
               <div className="remarks-box">
-                <p className="text-slate-700 whitespace-pre-wrap">{transferData.coCurricularActivities || 'No co-curricular activities recorded.'}</p>
+                <textarea
+                  ref={cocurricularRef}
+                  defaultValue={student?.coCurricularActivities || 'No co-curricular activities recorded.'}
+                  className="text-slate-700 whitespace-pre-wrap w-full bg-transparent border-0 outline-none resize-none"
+                  rows={2}
+                />
               </div>
             </div>
 
@@ -694,7 +716,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
             <div className="mt-6">
               <h4 className="font-bold text-slate-900 mb-3 border-b border-slate-300 pb-2">Headteacher Remarks</h4>
               <div className="remarks-box">
-                <p className="text-slate-700 whitespace-pre-wrap">{transferData.headteacherRemarks || 'No additional remarks.'}</p>
+                <textarea
+                  ref={headteacherRef}
+                  defaultValue={transferData.headteacherRemarks || 'No additional remarks.'}
+                  className="text-slate-700 whitespace-pre-wrap w-full bg-transparent border-0 outline-none resize-none"
+                  rows={2}
+                />
               </div>
             </div>
 
