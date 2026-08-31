@@ -1,8 +1,6 @@
 {
-  "comment": "EMERGENCY PASSWORD RESET OVERRIDE — DELETE AFTER USE",
-  "instructions": "Replace YOUR_EMERGENCY_SECRET_HERE with the value of VITE_EMERGENCY_SECRET from your .env file, then restart the app.",
   "action": "reset_password",
-  "secretKey": "YOUR_EMERGENCY_SECRET_HERE",
+  "secretKey": "Munyaka-Offline-Master-Key-5239!",
   "role": "admin",
-  "newPassword": "ChangeMe123!"
+  "newPassword": "MySecureNewPassword123"
 }
