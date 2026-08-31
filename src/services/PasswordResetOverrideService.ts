@@ -9,9 +9,16 @@
  * Expected JSON format:
  * {
  *   "action": "reset_password",
+ *   "secretKey": "<EMERGENCY_SECRET from env>",
  *   "role": "admin" | "superadmin",
  *   "newPassword": "YourNewSecurePassword"
  * }
+ *
+ * Security:
+ *   The override file must include a `secretKey` field that matches the
+ *   value of the `EMERGENCY_SECRET` environment variable baked into the
+ *   app at build time. If the keys do not match, the file is REJECTED,
+ *   nothing is modified, and a clear error is logged.
  *
  * Role values:
  *   "admin"       → updates the unified MUNYAKA_ADMIN_PASSWORD PIN
@@ -23,8 +30,22 @@ import { MUNYAKA_ADMIN_PASSWORD, saveAdminPassword } from './adminCredentials';
 
 const OVERRIDE_FILE = '/reset-override.json';
 
+/**
+ * The expected secret value, baked into the build via Vite's env system.
+ * Configure by setting `EMERGENCY_SECRET` in your `.env` file.
+ *
+ * If no secret is configured, the override is always rejected.
+ */
+const EXPECTED_SECRET: string =
+  // @ts-expect-error import.meta.env is provided by Vite at build time
+  (import.meta.env?.VITE_EMERGENCY_SECRET as string | undefined) ||
+  // @ts-expect-error import.meta.env is provided by Vite at build time
+  (import.meta.env?.EMERGENCY_SECRET as string | undefined) ||
+  '';
+
 interface ResetOverride {
   action: string;
+  secretKey: string;
   role: 'admin' | 'superadmin';
   newPassword: string;
 }
@@ -32,7 +53,6 @@ interface ResetOverride {
 /** Normalize email to the key used in USERS_STORAGE_KEY. */
 const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
-const DEFAULT_ADMIN_EMAIL = 'munyakaprimary@gmail.com';
 const DEFAULT_SYSTEM_ADMIN_EMAIL = 'sysadmin@munyaka.sc.ke';
 const USERS_STORAGE_KEY = 'munyaka_users';
 
@@ -43,6 +63,16 @@ const log = (msg: string, ...args: unknown[]) =>
 const logError = (msg: string, ...args: unknown[]) =>
   // eslint-disable-next-line no-console
   console.error(`[PasswordResetOverride] ERROR: ${msg}`, ...args);
+
+/** Constant-time string comparison to reduce timing-attack leakage. */
+function safeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) {
+    diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  }
+  return diff === 0;
+}
 
 /** Apply a password reset for the specified role. */
 function applyReset(role: 'admin' | 'superadmin', newPassword: string): boolean {
@@ -98,6 +128,13 @@ function applyReset(role: 'admin' | 'superadmin', newPassword: string): boolean 
  */
 export async function processPasswordResetOverride(): Promise<boolean> {
   try {
+    // ── Guard: no secret configured ⇒ reject everything ──────────────────
+    if (!EXPECTED_SECRET) {
+      // The app was built without VITE_EMERGENCY_SECRET (or EMERGENCY_SECRET).
+      // To avoid leaking the absence of a secret, we quietly skip the file.
+      return false;
+    }
+
     const response = await fetch(OVERRIDE_FILE, { cache: 'no-store' });
 
     if (!response.ok) {
@@ -126,6 +163,18 @@ export async function processPasswordResetOverride(): Promise<boolean> {
       return false;
     }
 
+    // ── Validate secretKey (constant-time comparison) ──────────────────────
+    const providedSecret = obj['secretKey'];
+    if (typeof providedSecret !== 'string' || providedSecret.length === 0) {
+      logError('secretKey is missing or not a string — REJECTED. No changes made.');
+      return false;
+    }
+    if (!safeEqual(providedSecret, EXPECTED_SECRET)) {
+      logError('secretKey does not match EMERGENCY_SECRET — REJECTED. No changes made.');
+      // Do NOT delete the file in this case so an admin can inspect it
+      return false;
+    }
+
     const role = obj['role'];
     if (role !== 'admin' && role !== 'superadmin') {
       logError(`role must be "admin" or "superadmin", got "${String(role)}" — skipping.`);
@@ -140,7 +189,7 @@ export async function processPasswordResetOverride(): Promise<boolean> {
 
     // ── Apply the reset ───────────────────────────────────────────────────
     const label = role === 'superadmin' ? 'superadmin / owner' : 'admin';
-    log(`✓ Valid override found — resetting password for: ${label}`);
+    log(`✓ Valid override with matching secretKey — resetting password for: ${label}`);
     const success = applyReset(role, newPassword);
 
     // ── Delete the file (best-effort) ────────────────────────────────────
