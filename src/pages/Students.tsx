@@ -372,38 +372,42 @@ export default function Students() {
   // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
-  // School letterhead rows prepended to every exported CSV file.
-  const SCHOOL_LETTERHEAD = [
-    'MUNYAKA PRIMARY AND JUNIOR',
-    'P.O. BOX 5239-30100, ELDORET',
-    'MOTTO: KNOWLEDGE IS POWER',
-    '',
-  ];
-
-  const buildCsvForDataset = (datasetToExport: Learner[]): string => {
-    const dataHeaders = [
-      'Assessment No', 'Full Name', 'Birth Certificate No',
-      'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
+  // ─── Official school letterhead ──────────────────────────────────────────
+    // Each row holds the school detail in the FIRST cell (column A) so when the
+    // CSV is opened in Excel/Sheets the information appears as a single header
+    // banner above the table rather than spilling into extra columns.
+    const SCHOOL_LETTERHEAD_ROWS: string[][] = [
+      ['MUNYAKA PRIMARY AND JUNIOR'],       // Row 1 — column A only
+      ['P.O. BOX 5239-30100, ELDORET'],      // Row 2 — column A only
+      ['MOTTO: KNOWLEDGE IS POWER'],         // Row 3 — column A only
+      [],                                   // Row 4 — blank separator
     ];
-    const dataRows = datasetToExport.map((l) => [
-      l.admNo,
-      `"${l.name}"`,
-      l.birthCertificateNo || '',
-      l.grade,
-      l.stream,
-      l.gender,
-      `"${l.guardian}"`,
-      `"${l.phone}"`,
-    ]);
-
-    // Interleave letterhead rows between the school header and column headers
-    // so the CSV structure is: letterhead → blank → column-headers → data.
-    return [
-      ...SCHOOL_LETTERHEAD,
-      ...dataHeaders,
-      ...dataRows.map((r) => r.join(',')),
-    ].join('\n');
-  };
+  
+    const buildCsvForDataset = (datasetToExport: Learner[]): string => {
+      const dataHeaders = [
+        'Assessment No', 'Full Name', 'Birth Certificate No',
+        'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
+      ];
+      const dataRows = datasetToExport.map((l) => [
+        l.admNo,
+        `"${l.name}"`,
+        l.birthCertificateNo || '',
+        l.grade,
+        l.stream,
+        l.gender,
+        `"${l.guardian}"`,
+        `"${l.phone}"`,
+      ]);
+  
+      // Combine every CSV line as a properly delimited row so column layout
+      // is preserved when opened in a spreadsheet application.
+      const allRows: string[][] = [
+        ...SCHOOL_LETTERHEAD_ROWS,
+        dataHeaders,
+        ...dataRows,
+      ];
+      return allRows.map((row) => row.join(',')).join('\n');
+    };
 
   const handleExportAll = async () => {
     setIsExportMenuOpen(false);
