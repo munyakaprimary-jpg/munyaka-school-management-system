@@ -4,6 +4,7 @@ import React from 'react';
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Layers } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface StudentPreview {
@@ -24,8 +25,13 @@ const PromotionPreviewTable: React.FC<PromotionPreviewTableProps> = ({ students 
   return (
     <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
       <CardHeader className="p-8 border-b">
-        <CardTitle className="text-lg font-black text-slate-900">Promotion Preview</CardTitle>
-        <p className="text-sm text-slate-500 font-medium">Review which students will be promoted before executing</p>
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center">
+            <Layers size={20} />
+          </div>
+          <CardTitle className="text-lg font-black text-slate-900">Promotion Preview</CardTitle>
+        </div>
+        <p className="text-sm text-slate-500 font-medium mt-2">Review which students will be promoted before executing</p>
       </CardHeader>
       <CardContent className="p-0">
         <div className="overflow-x-auto">
