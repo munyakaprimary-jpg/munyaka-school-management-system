@@ -13,6 +13,7 @@ import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
 import { StudentTransferInfo } from '@/types/transfer';
+import { cn } from '@/lib/utils';
 
 interface Learner {
   id: string;
