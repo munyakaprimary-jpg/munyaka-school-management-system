@@ -110,7 +110,16 @@ export function useTimetable() {
     initializeGradeTimetable(selectedGrade);
   }, [selectedGrade, initializeGradeTimetable]);
 
-  const currentTimetable = timetables[selectedGrade] || { timeSlots: getDefaultTimeSlots(), entries: getDefaultEntries(getDefaultTimeSlots()) };
+  const currentTimetable = (() => {
+    const raw = timetables[selectedGrade] || { timeSlots: getDefaultTimeSlots(), entries: getDefaultEntries(getDefaultTimeSlots()) };
+    // Always sort slots + entries together by start time before exposing to consumers
+    const paired = raw.timeSlots.map((s, i) => ({ slot: s, entry: raw.entries[i] ?? Object.fromEntries(DAYS.map(day => [day, null])) }));
+    paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+    return {
+      timeSlots: paired.map(p => p.slot),
+      entries: paired.map(p => p.entry),
+    };
+  })();
   const currentGrades = grades;
 
   // Time Slot Management
@@ -152,44 +161,56 @@ export function useTimetable() {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
-
-      const slotIndex = current.timeSlots.findIndex(s => s.id === slotId);
-      if (slotIndex === -1) return prev;
-
-      // Update the slot at its current index
-      const updatedTimeSlots = current.timeSlots.map((s, i) =>
-        i === slotIndex ? { ...s, startTime, endTime, isBreak } : s
+      const result = sortAndApply(
+        current.timeSlots,
+        current.entries,
+        s => s.id === slotId ? { ...s, startTime, endTime, isBreak } : s
       );
-
-      // Rebuild entries paired with their slots, applying the new isBreak flag
-      // and sorting both together by start time
-      const paired = current.timeSlots.map((s, i) => ({ slot: updatedTimeSlots[i], entry: current.entries[i] }));
-      paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
-      const finalTimeSlots = paired.map(p => p.slot);
-      const finalEntries = paired.map(p => {
-        if (p.slot.isBreak) {
+      // When isBreak changes, rebuild entry cells for that slot
+      result.entries = result.timeSlots.map((slot, i) => {
+        const original = current.entries[i];
+        if (original && original.mon && (original.mon as LessonEntry).subject === 'BREAK') {
+          if (!slot.isBreak) {
+            return Object.fromEntries(DAYS.map(day => [day, null]));
+          }
+        }
+        if (slot.isBreak) {
           return Object.fromEntries(DAYS.map(day => [day, { id: crypto.randomUUID(), subject: 'BREAK', color: 'bg-amber-50 text-amber-700 border border-amber-100' }]));
         }
-        return p.entry ?? Object.fromEntries(DAYS.map(day => [day, null]));
+        return original ?? Object.fromEntries(DAYS.map(day => [day, null]));
       });
-
-      const updated = { ...prev, [selectedGrade]: { timeSlots: finalTimeSlots, entries: finalEntries } };
+      const updated = { ...prev, [selectedGrade]: result };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
   }, [selectedGrade]);
 
-  // Update only the times of a slot (used by inline editor — no re-sort)
+  // Sort slots + entries together by start time, then apply a mutation to the slots array
+  const sortAndApply = (
+    slots: TimeSlot[],
+    entries: TimetableEntry[],
+    apply: (s: TimeSlot) => TimeSlot
+  ): { timeSlots: TimeSlot[]; entries: TimetableEntry[] } => {
+    const updated = slots.map(s => apply(s));
+    const paired = slots.map((s, i) => ({ slot: updated[i], entry: entries[i] }));
+    paired.sort((a, b) => a.slot.startTime.localeCompare(b.slot.startTime));
+    return {
+      timeSlots: paired.map(p => p.slot),
+      entries: paired.map(p => p.entry),
+    };
+  };
+
+  // Update only the times of a slot — auto-sorts after applying
   const updateSlotTimes = useCallback((slotId: string, startTime: string, endTime: string) => {
     setTimetables(prev => {
       const current = prev[selectedGrade];
       if (!current) return prev;
-      const slotIndex = current.timeSlots.findIndex(s => s.id === slotId);
-      if (slotIndex === -1) return prev;
-      const updatedTimeSlots = current.timeSlots.map((s, i) =>
-        i === slotIndex ? { ...s, startTime, endTime } : s
+      const result = sortAndApply(
+        current.timeSlots,
+        current.entries,
+        s => s.id === slotId ? { ...s, startTime, endTime } : s
       );
-      const updated = { ...prev, [selectedGrade]: { ...current, timeSlots: updatedTimeSlots } };
+      const updated = { ...prev, [selectedGrade]: result };
       localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       return updated;
     });
