@@ -331,10 +331,8 @@ const Dashboard = () => {
   ]);
 
   // Load recent activity alerts dynamically from localStorage.
-  // Guard: skip entirely for non-eligible roles so no alert data is ever
-  // computed or stored in state for unauthorized users. Only ADMIN and
-  // HEADTEACHER may populate the feed — SUPERADMIN is intentionally
-  // excluded.
+  // Guard: skip entirely for non-admin roles so no alert data is ever
+  // computed or stored in state for unauthorized users.
   useEffect(() => {
     const ALLOWED_ROLES = ['admin', 'head_teacher'];
     if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
@@ -625,39 +623,26 @@ const Dashboard = () => {
     return map[role.toLowerCase()] || role;
   }, [user?.role]);
 
-  // ────────────────────────────────────────────────
-  // Dashboard RBAC — three independent role gates
-  //
-  //  CAN_VIEW_VITALS  : SUPERADMIN + ADMIN + HEADTEACHER
-  //                     → see school-wide stats (total students,
-  //                       staff counts, today's attendance, etc.)
-  //
-  //  CAN_VIEW_ALERTS  : ADMIN + HEADTEACHER only
-  //                     → see Recent Activity Alerts feed and
-  //                       Simulation Controls (fee/reg/attendance).
-  //                     SUPERADMIN is intentionally excluded.
-  //
-  //  CAN_VIEW_OWNER   : SUPERADMIN (owner / super_admin) only
-  //                     → see business/billing/subscription widgets.
-  // ────────────────────────────────────────────────
-  const CAN_VIEW_VITALS = ['super_admin', 'admin', 'head_teacher', 'owner'];
-  const seesVitals = useMemo(
-    () => CAN_VIEW_VITALS.includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // Recent Alerts (feed + simulation controls) — ADMIN & HEADTEACHER only.
-  // SUPERADMIN / OWNER, TEACHER, BURSAR, and ICT_TEACHER are excluded.
-  const CAN_VIEW_ALERTS = ['admin', 'head_teacher'];
-  const canViewRecentAlerts = useMemo(
-    () => CAN_VIEW_ALERTS.includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // Owner-only executive dashboard (business/billing/subscription metrics).
-  const CAN_VIEW_OWNER = ['owner', 'super_admin'];
+  // True when the current user is the school owner / super-admin who
+  // should see executive-level metrics instead of classroom operations.
   const isOwner = useMemo(
-    () => CAN_VIEW_OWNER.includes((user?.role || '').toLowerCase()),
+    () => ['owner', 'super_admin'].includes((user?.role || '').toLowerCase()),
+    [user?.role]
+  );
+
+  // Roles that should see classroom operational widgets (attendance trends,
+  // class participation). OWNER and ICT_TEACHER are excluded.
+  const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
+  const seesOperationalWidgets = useMemo(
+    () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
+    [user?.role]
+  );
+
+  // Recent Alerts is visible only to ADMIN and HEADTEACHER.
+  // SUPERADMIN / OWNER / TEACHER / BURSAR / ICT_TEACHER are excluded.
+  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher'];
+  const canViewRecentAlerts = useMemo(
+    () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -672,11 +657,9 @@ const Dashboard = () => {
             </span>
           </h1>
           <p className="text-muted-foreground">
-            {user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'head_teacher'
-              ? "Full operational overview — student metrics, attendance, and recent activity."
-              : user?.role?.toLowerCase() === 'teacher'
+            {user?.role?.toLowerCase() === 'teacher'
               ? "Your assigned classes and academic metrics for today."
-              : user?.role?.toLowerCase() === 'owner' || user?.role?.toLowerCase() === 'super_admin'
+              : user?.role?.toLowerCase() === 'owner'
               ? "High-level application, subscription and enrollment metrics."
               : user?.role?.toLowerCase() === 'ict_teacher'
               ? "System infrastructure, network quotas, and lab bookings."
@@ -785,11 +768,11 @@ const Dashboard = () => {
 
       {/* ────────────────────────────────────────────────
           OPERATIONAL WIDGETS (Attendance Trends)
-          Visible to roles with CAN_VIEW_VITALS: SUPERADMIN, ADMIN,
-          HEADTEACHER. The Recent Alerts widget has its own role gate
-          (see below) and is restricted to ADMIN & HEADTEACHER.
+          Hidden for OWNER / SUPER_ADMIN / ICT_TEACHER.
+          Owner sees high-level executive widgets further below instead.
+          The Recent Alerts widget has its own role gate (see below).
           ──────────────────────────────────────────────── */}
-      {seesVitals && (
+      {seesOperationalWidgets && (
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -923,9 +906,9 @@ const Dashboard = () => {
           ──────────────────────────────────────────────── */}
       {isOwner && <OwnerExecutiveWidgets />}
 
-      {/* Factual Class Participation Table — visible to ADMIN, HEADTEACHER,
-          and TEACHER. Owner/SUPERADMIN and ICT_TEACHER are excluded. */}
-      {(seesVitals || user?.role === 'teacher') && (
+      {/* Factual Class Participation Table - hidden for OWNER and ICT_TEACHER since they
+          don't directly manage class-level data. TEACHER role benefits from this view. */}
+      {seesOperationalWidgets && (
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Factual Class Participation</CardTitle>

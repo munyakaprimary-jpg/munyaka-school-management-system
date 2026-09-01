@@ -87,8 +87,8 @@ const App = () => (
                 <Route path="/login" element={<Login />} />
                 
                 {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
-                <Route path="/" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'HEAD_TEACHER', 'TEACHER', 'BURSAR']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/dashboard" element={<ProtectedRoute allowedRoles={['SUPER_ADMIN', 'ADMIN', 'HEAD_TEACHER', 'TEACHER', 'BURSAR']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
