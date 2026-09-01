@@ -41,6 +41,7 @@ interface ClassRow {
   id: string;
   name: string;
   enrolled: number;
+  gradeOrder: number; // numeric sort key: PP1=0, PP2=0, Grade 1=1 … Grade 9=9
 }
 
 // ─── Weekly attendance bar chart colours ──────────────────────────────────────
@@ -365,23 +366,90 @@ const Dashboard = () => {
     });
   }, [totalStudents]);
 
-  // ── Class participation rows ─────────────────────────────────────────────────
+  // ── Class participation rows — live query from school_learners_data ───────────────────
+  // • Reads every active learner from school_learners_data (real-time, no mock data)
+  // • Groups count by the normalised grade string (e.g. "Grade 1", "Grade 8", "PP1")
+  // • Joins against munyaka_grades to get the authoritative class list and IDs
+  // • Sorts by grade order: PP1/PP2 → Grade 1–6 → Grade 7–9
+  // • Re-computes whenever totalStudents changes (which tracks school_learners_data)
   const classRows = useMemo<ClassRow[]>(() => {
     const gradesRaw = localStorage.getItem('munyaka_grades');
     if (!gradesRaw) return [];
+
+    let grades: any[] = [];
     try {
-      const grades: any[] = JSON.parse(gradesRaw);
-      const learners: any[] = safeRead('school_learners_data', []);
-      return grades.map((g: any) => {
-        const num = (g.name || '').replace(/[^0-9]/g, '');
-        const enrolled = learners.filter(
-          (l: any) => (l.grade || '').replace(/[^0-9]/g, '') === num && l.status !== 'TRANSFERRED'
-        ).length;
-        return { id: g.id, name: g.name, enrolled };
-      });
+      grades = JSON.parse(gradesRaw);
+      if (!Array.isArray(grades)) grades = [];
     } catch {
       return [];
     }
+
+    // Live learner data — any new registration/transferred status is reflected immediately
+    const learners: any[] = safeRead('school_learners_data', []);
+
+    // Normalise a grade name to a numeric sort key
+    // "PP1" / "pp1" → 0, "PP2" / "pp2" → 1, "Grade 1" → 1, "Grade 8" → 8, "GRADE 9" → 9
+    const gradeOrderOf = (name: string): number => {
+      const upper = name.trim().toUpperCase();
+      if (/^PP\s*1$/i.test(upper) || upper === 'PP1') return 0;
+      if (/^PP\s*2$/i.test(upper) || upper === 'PP2') return 1;
+      const match = upper.match(/GRADE\s*(\d+)/);
+      if (match) return parseInt(match[1], 10);
+      return 99; // unknown grades go at the bottom
+    };
+
+    // Count enrolled (non-transferred) learners per normalised grade string
+    // Build a map: "Grade 1" → 3, "Grade 8" → 12, etc.
+    const countByGrade: Record<string, number> = {};
+    learners.forEach((l: any) => {
+      if (l.status === 'TRANSFERRED') return;
+      const raw = (l.grade || '').trim();
+      if (!raw) return;
+      countByGrade[raw] = (countByGrade[raw] || 0) + 1;
+    });
+
+    // Map: raw grade name → display name (standardised casing)
+    const displayName = (raw: string): string => {
+      const upper = raw.trim().toUpperCase();
+      if (/^PP\s*1$/i.test(raw)) return 'PP 1';
+      if (/^PP\s*2$/i.test(raw)) return 'PP 2';
+      const match = raw.match(/^([A-Za-z]+\s*)(\d+)$/);
+      if (match) return `${match[1].charAt(0).toUpperCase()}${match[1].slice(1).toLowerCase()} ${match[2]}`;
+      return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+    };
+
+    // Build rows from the grades master list (authoritative), joined with live counts
+    const rows: ClassRow[] = grades.map((g: any) => {
+      const rawName = g.name || '';
+      return {
+        id: g.id,
+        name: displayName(rawName),
+        enrolled: countByGrade[rawName] || 0,
+        gradeOrder: gradeOrderOf(rawName),
+      };
+    });
+
+    // Also include any grade names that appear in school_learners_data but are NOT
+    // in munyaka_grades yet (e.g., a class that was registered before grades were set up)
+    Object.entries(countByGrade).forEach(([rawName, count]) => {
+      const alreadyExists = rows.some((r) => r.name.toUpperCase() === displayName(rawName).toUpperCase());
+      if (!alreadyExists) {
+        rows.push({
+          id: `dynamic-${rawName}`,
+          name: displayName(rawName),
+          enrolled: count,
+          gradeOrder: gradeOrderOf(rawName),
+        });
+      }
+    });
+
+    // Sort: PP1 → PP2 → Grade 1 … Grade 9, then unknown
+    rows.sort((a, b) => {
+      if (a.gradeOrder !== b.gradeOrder) return a.gradeOrder - b.gradeOrder;
+      return a.name.localeCompare(b.name);
+    });
+
+    return rows;
   }, [totalStudents]);
 
   // ── Recent alerts state ──────────────────────────────────────────────────────
