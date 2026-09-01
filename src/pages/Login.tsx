@@ -26,11 +26,15 @@ import {
   Send,
   User,
   KeyRound,
+  Code2,
+  Bug,
+  Globe,
+  Server,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
-import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { PreRegisteredStaff } from '@/types/staff-access';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
@@ -48,117 +52,64 @@ const hasCustomAdminPassword = (): boolean => {
   }
 };
 
-// ─── Admin role configs ─────────────────────────────────────────────────────
+// ─── Developer credentials (hardcoded — platform developer only) ──────────────
+const DEVELOPER_EMAIL = 'developer@munyaka-platform.ke';
+const DEVELOPER_PASSWORD = 'dev_munyaka_2026';
+const DEVELOPER_NAME = 'Platform Developer';
+const DEVELOPER_ROLE = 'super_admin'; // maps to super_admin so routing works
 
-type AdminRole = 'system_admin' | 'super_admin';
+// ─── Role configs ─────────────────────────────────────────────────────────────
 
-interface RoleConfig {
-  id: AdminRole;
-  label: string;
-  description: string;
-  fullDescription: string;
-  email: string;
-  userName: string;
-  userRole: 'owner' | 'super_admin';
-  redirectPath: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  primaryColor: 'indigo' | 'amber';
-}
-
-const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
-  system_admin: {
-    id: 'system_admin',
-    label: 'System Administrator',
-    description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
-    fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
-    email: 'sysadmin@munyaka.sc.ke',
-    userName: 'System Administrator',
-    userRole: 'super_admin',
-    redirectPath: '/system-management',
-    icon: Settings2,
-    primaryColor: 'indigo',
-  },
-  super_admin: {
-    id: 'super_admin',
-    label: 'Super Admin (Owner)',
-    description: 'Exclusive access to Payment & Subscriptions module',
-    fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
-    email: 'munyakaprimary@gmail.com',
-    userName: 'School Owner',
-    userRole: 'owner',
-    redirectPath: '/payment-management',
-    icon: Crown,
-    primaryColor: 'amber',
-  },
-};
-
-// ─── Post-login redirect ────────────────────────────────────────────────────
-// All authenticated users (regardless of role) land on the main dashboard.
-// This intentionally bypasses any secondary landing / role-selection screens.
-
-function getStaffRedirectPath(_systemRole: string): string {
-  return '/dashboard';
-}
-
-// ─── Role card for admin tab ─────────────────────────────────────────────────
+type LoginTab = 'admin' | 'developer' | 'staff';
 
 interface RoleCardProps {
-  role: RoleConfig;
-  onClick: () => void;
+  label: string;
+  description: string;
+  featureIcons: { Icon: React.ComponentType<{ size?: number }>; label: string }[];
+  badgeText: string;
   bgColor: string;
   textColor: string;
   borderColor: string;
-  featureIcons: { Icon: React.ComponentType<{ size?: number }>; label: string }[];
-  /** Whether a custom PIN has been set for this role. */
-  hasCustomPassword: boolean;
+  onClick: () => void;
 }
 
 const RoleCard: React.FC<RoleCardProps> = ({
-  role, onClick, bgColor, textColor, borderColor, featureIcons, hasCustomPassword,
-}) => {
-  const Icon = role.icon;
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "w-full p-5 md:p-6 rounded-3xl border-2 bg-white hover:shadow-xl transition-all duration-300 text-left group active:scale-[0.98]",
-        borderColor,
-      )}
-    >
-      <div className="flex items-start gap-4">
-        <div className={cn("p-3 md:p-4 rounded-2xl shrink-0 transition-transform group-hover:scale-110", bgColor, textColor)}>
-          <Icon size={28} className="md:hidden" />
-          <Icon size={32} className="hidden md:inline" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <h3 className="text-lg md:text-xl font-black text-slate-900">{role.label}</h3>
-            <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
-          </div>
-          <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{role.description}</p>
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {featureIcons.map(({ Icon: FeatureIcon, label }, idx) => (
-              <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
-                <FeatureIcon size={10} />
-                <span>{label}</span>
-              </div>
-            ))}
-          </div>
-          <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
-            {hasCustomPassword ? (
-              <span className="flex items-center gap-1">
-                <KeyRound size={9} /> Custom PIN set
-              </span>
-            ) : (
-              `Default PIN: ${role.defaultPassword}`
-            )}
-          </Badge>
-        </div>
+  label, description, featureIcons, badgeText, bgColor, textColor, borderColor, onClick,
+}) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cn(
+      "w-full p-5 md:p-6 rounded-3xl border-2 bg-white hover:shadow-xl transition-all duration-300 text-left group active:scale-[0.98]",
+      borderColor,
+    )}
+  >
+    <div className="flex items-start gap-4">
+      <div className={cn("p-3 md:p-4 rounded-2xl shrink-0 transition-transform group-hover:scale-110", bgColor, textColor)}>
+        <ArrowRight size={28} className="md:hidden" />
+        <ArrowRight size={32} className="hidden md:inline" />
       </div>
-    </button>
-  );
-};
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center justify-between gap-2 mb-1.5">
+          <h3 className="text-lg md:text-xl font-black text-slate-900">{label}</h3>
+          <ArrowRight size={18} className={cn("shrink-0 transition-transform group-hover:translate-x-1", textColor)} />
+        </div>
+        <p className="text-xs md:text-sm text-slate-500 font-medium mb-3">{description}</p>
+        <div className="flex flex-wrap gap-1.5 mb-3">
+          {featureIcons.map(({ Icon, label: fLabel }, idx) => (
+            <div key={idx} className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold", bgColor, textColor)}>
+              <Icon size={10} />
+              <span>{fLabel}</span>
+            </div>
+          ))}
+        </div>
+        <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
+          {badgeText}
+        </Badge>
+      </div>
+    </div>
+  </button>
+);
 
 // ─── Main Login page ──────────────────────────────────────────────────────────
 
@@ -166,14 +117,22 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
 
-  // ── Admin state ──────────────────────────────────────────────────────────
-  const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
+  // ── Active tab state ──────────────────────────────────────────────────────
+  const [activeTab, setActiveTab] = useState<LoginTab>('staff');
+
+  // ── Admin state ───────────────────────────────────────────────────────────
   const [adminPassword, setAdminPassword] = useState('');
   const [showAdminPassword, setShowAdminPassword] = useState(false);
   const [adminAuthError, setAdminAuthError] = useState('');
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
-  // ── Staff state ──────────────────────────────────────────────────────────
+  // ── Developer state ───────────────────────────────────────────────────────
+  const [devPassword, setDevPassword] = useState('');
+  const [showDevPassword, setShowDevPassword] = useState(false);
+  const [devAuthError, setDevAuthError] = useState('');
+  const [isDevVerifying, setIsDevVerifying] = useState(false);
+
+  // ── Staff state ───────────────────────────────────────────────────────────
   const [staffId, setStaffId] = useState('');
   const [staffPassword, setStaffPassword] = useState('');
   const [showStaffPassword, setShowStaffPassword] = useState(false);
@@ -184,33 +143,27 @@ const Login: React.FC = () => {
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
   // ── Redirect already-authenticated users straight to the dashboard ─────────
-    useEffect(() => {
-      if (isAuthenticated && user) {
-        // Bypass any secondary landing / role-selection screens: every
-        // authenticated user goes straight to the main dashboard.
-        navigate('/dashboard', { replace: true });
-      }
-    }, [isAuthenticated, user, navigate]);
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isAuthenticated, user, navigate]);
 
-  // ── Admin handlers ────────────────────────────────────────────────────────
-  const handleRoleSelect = (role: AdminRole) => {
-    setSelectedAdminRole(role);
+  // ── Reset form state when switching tabs ────────────────────────────────────
+  useEffect(() => {
     setAdminPassword('');
     setAdminAuthError('');
-  };
+    setDevPassword('');
+    setDevAuthError('');
+    setStaffId('');
+    setStaffPassword('');
+    setStaffAuthError('');
+  }, [activeTab]);
 
-  const handleBackToRoleSelect = () => {
-    setSelectedAdminRole(null);
-    setAdminPassword('');
-    setAdminAuthError('');
-  };
-
+  // ── Admin login handler ────────────────────────────────────────────────────
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedAdminRole) return;
-
-    // Normalise the entered PIN: trim whitespace and strip newlines
-    const entered = adminPassword.trim().replace(/\n$/, '');
+    const entered = adminPassword.trim();
 
     if (!entered) {
       setAdminAuthError('Please enter your password.');
@@ -219,61 +172,75 @@ const Login: React.FC = () => {
 
     setIsAdminVerifying(true);
     setAdminAuthError('');
-    await new Promise(r => setTimeout(r, 600));
 
-    const config = ROLE_CONFIGS[selectedAdminRole];
-
-    // ── Direct localStorage read on every attempt ───────────────────────────
-    // We never trust React state for the active PIN — always read fresh so
-    // a PIN updated from the Configuration tab is picked up immediately.
     const activeStored = getActiveAdminPassword();
-
-    // ── Debug logging (development only) ────────────────────────────────────
-    if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log('[AdminLogin]', {
-        key: MUNYAKA_ADMIN_PASSWORD,
-        stored: activeStored,
-        entered,
-        match: entered === activeStored,
-        default: DEFAULT_ADMIN_PASSWORD,
-        defaultMatch: entered === DEFAULT_ADMIN_PASSWORD,
-      });
-    }
-
-    // ── Password verification ─────────────────────────────────────────────
-    // Accept the stored PIN and also fall back to the hard-coded default,
-    // so the admin can sign in regardless of which PIN they last set.
     const isValid = entered === activeStored || entered === DEFAULT_ADMIN_PASSWORD;
 
     if (!isValid) {
-      setAdminAuthError(`Invalid password for ${config.label}.`);
+      setAdminAuthError('Invalid password. Check your PIN and try again.');
       showError('Authentication failed');
       setIsAdminVerifying(false);
       return;
     }
 
-    const success = await login(config.email, entered);
-        if (success) {
-          const adminSession = {
-            role: selectedAdminRole,
-            roleLabel: config.label,
-            roleIcon: selectedAdminRole === 'super_admin' ? 'crown' : 'settings',
-            timestamp: Date.now(),
-          };
-          localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-          showSuccess(`Welcome, ${config.userName}!`);
-          // Send every authenticated user straight to the main dashboard,
-          // bypassing any role-specific landing screens.
-          navigate('/dashboard', { replace: true });
-        } else {
-          setAdminAuthError('Login failed. Please try again.');
-          showError('Authentication failed');
-        }
-        setIsAdminVerifying(false);
+    const adminEmail = 'munyakaprimary@gmail.com';
+    const success = await login(adminEmail, entered);
+    if (success) {
+      const adminSession = {
+        role: 'admin',
+        roleLabel: 'School Admin',
+        timestamp: Date.now(),
       };
+      localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
+      showSuccess('Welcome, School Admin!');
+      navigate('/dashboard', { replace: true });
+    } else {
+      setAdminAuthError('Login failed. Please try again.');
+      showError('Authentication failed');
+    }
+    setIsAdminVerifying(false);
+  };
 
-  // ── Staff handlers ────────────────────────────────────────────────────────
+  // ── Developer login handler ────────────────────────────────────────────────
+  const handleDevLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const entered = devPassword.trim();
+
+    if (!entered) {
+      setDevAuthError('Please enter your developer password.');
+      return;
+    }
+
+    setIsDevVerifying(true);
+    setDevAuthError('');
+
+    const isValid = entered === DEVELOPER_PASSWORD;
+
+    if (!isValid) {
+      setDevAuthError('Invalid developer credentials.');
+      showError('Developer authentication failed');
+      setIsDevVerifying(false);
+      return;
+    }
+
+    const success = await login(DEVELOPER_EMAIL, entered);
+    if (success) {
+      const devSession = {
+        role: 'developer',
+        roleLabel: 'Platform Developer',
+        timestamp: Date.now(),
+      };
+      localStorage.setItem('munyaka_dev_session', JSON.stringify(devSession));
+      showSuccess(`Welcome, ${DEVELOPER_NAME}!`);
+      navigate('/dashboard', { replace: true });
+    } else {
+      setDevAuthError('Developer login failed. Please try again.');
+      showError('Developer authentication failed');
+    }
+    setIsDevVerifying(false);
+  };
+
+  // ── Staff login handler ───────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const trimmedId = staffId.trim();
@@ -290,13 +257,9 @@ const Login: React.FC = () => {
 
     setIsStaffVerifying(true);
     setStaffAuthError('');
-    await new Promise(r => setTimeout(r, 700));
 
-    // AuthContext.login accepts both the staffId (e.g. "teacher1", "T001")
-    // and the email as the username field. Pass the staffId directly.
     const success = await login(trimmedId, trimmedPass);
     if (success) {
-      // Look up the staff ledger (if any) so we can route based on system role
       const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
       const staffLedger: PreRegisteredStaff[] = savedLedgerJson
         ? JSON.parse(savedLedgerJson)
@@ -304,22 +267,14 @@ const Login: React.FC = () => {
       const match = staffLedger.find(
         s => s.staffId && s.staffId.toLowerCase() === trimmedId.toLowerCase()
       );
-      const systemRole = match?.systemRole ?? 'subject_teacher';
       showSuccess(match ? `Welcome, ${match.fullName}!` : 'Welcome!');
-      navigate(getStaffRedirectPath(systemRole), { replace: true });
+      navigate('/dashboard', { replace: true });
     } else {
       setStaffAuthError('Invalid Staff ID or Password. Please try again.');
       showError('Authentication failed');
     }
     setIsStaffVerifying(false);
   };
-
-  // ─────────────────────────────────────────────────────────────────────────
-  //  Render — only shown when user is NOT authenticated
-  // ─────────────────────────────────────────────────────────────────────────
-  const adminConfig = selectedAdminRole ? ROLE_CONFIGS[selectedAdminRole] : null;
-  const AdminIcon = adminConfig?.icon;
-  const isAdminIndigo = adminConfig?.primaryColor === 'indigo';
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col">
@@ -341,23 +296,22 @@ const Login: React.FC = () => {
           </div>
 
           {/* ── Portal Access Tabs ── */}
-          <Tabs defaultValue="staff" className="w-full">
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as LoginTab)} className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
               <TabsTrigger
                 value="admin"
                 className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
               >
                 <Settings2 size={14} className="mr-1.5 shrink-0" />
-                <span className="hidden sm:inline">System Admin</span>
-                <span className="sm:hidden">Admin</span>
+                Admin
               </TabsTrigger>
               <TabsTrigger
-                value="super"
-                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                value="developer"
+                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
               >
-                <Crown size={14} className="mr-1.5 shrink-0" />
-                <span className="hidden sm:inline">Super Admin</span>
-                <span className="sm:hidden">Owner</span>
+                <Code2 size={14} className="mr-1.5 shrink-0" />
+                <span className="hidden sm:inline">Developer</span>
+                <span className="sm:hidden">Dev</span>
               </TabsTrigger>
               <TabsTrigger
                 value="staff"
@@ -368,214 +322,228 @@ const Login: React.FC = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* ── SYSTEM ADMIN TAB ── */}
+            {/* ── ADMIN TAB ── */}
             <TabsContent value="admin" className="mt-4 space-y-4">
-              {!selectedAdminRole ? (
-                <>
+              {adminAuthError && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
+                  <ShieldAlert size={20} className="shrink-0" />
+                  <span>{adminAuthError}</span>
+                </div>
+              )}
+
+              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
+                <CardContent className="p-6 md:p-8 space-y-6">
+                  {/* Role description card */}
+                  <div className="flex items-start gap-4 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
+                    <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 shrink-0">
+                      <Crown size={24} />
+                    </div>
+                    <div>
+                      <h2 className="text-base md:text-lg font-black text-slate-900 mb-1">
+                        School Admin / Owner Access
+                      </h2>
+                      <p className="text-xs md:text-sm text-slate-600 font-medium">
+                        For school directors, school owners, and school-level administrators. Grants full access to settings, user management, academics, fees, RBAC permissions, and security configuration.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Role quick-select */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="p-4 border-2 border-indigo-100 rounded-2xl bg-white hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => {}}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                          <Settings2 size={18} />
+                        </div>
+                        <span className="font-black text-sm text-slate-900">System Administrator</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium pl-11">
+                        Full access: Settings, Users, Fees, Academics, RBAC, Security
+                      </p>
+                    </div>
+                    <div className="p-4 border-2 border-amber-100 rounded-2xl bg-white hover:border-amber-300 hover:shadow-md transition-all cursor-pointer"
+                      onClick={() => {}}
+                    >
+                      <div className="flex items-center gap-3 mb-2">
+                        <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                          <CreditCard size={18} />
+                        </div>
+                        <span className="font-black text-sm text-slate-900">School Owner</span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 font-medium pl-11">
+                        Exclusive access: Payments, Subscriptions, Billing
+                      </p>
+                    </div>
+                  </div>
+
                   {adminAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={20} className="shrink-0" />
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                      <ShieldAlert size={18} className="shrink-0" />
                       <span>{adminAuthError}</span>
                     </div>
                   )}
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                    Choose Your Role
-                  </p>
-                  <RoleCard
-                    role={ROLE_CONFIGS.system_admin}
-                    onClick={() => handleRoleSelect('system_admin')}
-                    bgColor="bg-indigo-50"
-                    textColor="text-indigo-700"
-                    borderColor="border-indigo-200"
-                    featureIcons={[
-                      { Icon: Users, label: 'Users' },
-                      { Icon: Settings2, label: 'Settings' },
-                      { Icon: Shield, label: 'RBAC' },
-                    ]}
-                    hasCustomPassword={hasCustomAdminPassword()}
-                  />
-                </>
-              ) : (
-                <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                  <CardContent className="p-6 md:p-8 space-y-6">
-                    <button
-                      onClick={handleBackToRoleSelect}
-                      className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-colors"
-                    >
-                      <ChevronLeft size={20} /> Back to role selection
-                    </button>
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-indigo-50 text-indigo-600 shadow-indigo-100 mb-4">
-                        {AdminIcon && <AdminIcon size={32} />}
+
+                  <form onSubmit={handleAdminLogin} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password / PIN</Label>
+                      <div className="relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Input
+                          type={showAdminPassword ? 'text' : 'password'}
+                          value={adminPassword}
+                          onChange={e => { setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
+                          placeholder="Enter your admin password"
+                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAdminPassword(!showAdminPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                       </div>
-                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                        {adminConfig!.label}
-                      </h2>
-                      <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                        {adminConfig!.fullDescription}
+                      <p className="text-[10px] text-slate-400 font-medium pt-1">
+                        {hasCustomAdminPassword() ? (
+                          <span className="flex items-center gap-1">
+                            <KeyRound size={9} />
+                            Custom PIN — set via Configuration &rarr; Owner Security
+                          </span>
+                        ) : (
+                          <>
+                            Default PIN:{' '}
+                            <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
+                          </>
+                        )}
                       </p>
                     </div>
-                    {adminAuthError && (
-                      <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                        <ShieldAlert size={18} className="shrink-0" />
-                        <span>{adminAuthError}</span>
-                      </div>
-                    )}
-                    <form onSubmit={handleAdminLogin} className="space-y-5">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                        <div className="relative">
-                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                          <Input
-                            type={showAdminPassword ? 'text' : 'password'}
-                            value={adminPassword}
-                            onChange={e => { setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                            placeholder="Enter your password"
-                            className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowAdminPassword(!showAdminPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {hasCustomAdminPassword() ? (
-                            <span className="flex items-center gap-1">
-                              <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Owner Security
-                            </span>
-                          ) : (
-                            <>
-                              Default PIN:{' '}
-                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                            </>
-                          )}
-                        </p>
-                      </div>
-                      <Button
-                        type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
-                        className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
-                      >
-                        {isAdminVerifying ? (
-                          <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                        ) : (
-                          <><Unlock size={20} /> Sign In</>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    <Button
+                      type="submit"
+                      disabled={isAdminVerifying || !adminPassword.trim()}
+                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
+                    >
+                      {isAdminVerifying ? (
+                        <><Loader2 className="animate-spin" size={20} /> Verifying...</>
+                      ) : (
+                        <><Unlock size={20} /> Sign In as Admin</>
+                      )}
+                    </Button>
+                  </form>
+
+                  {/* Admin test credentials */}
+                  <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-2xl flex items-start gap-3">
+                    <User size={16} className="text-indigo-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-indigo-900 font-medium leading-relaxed">
+                      <p className="font-black text-[10px] uppercase tracking-widest text-indigo-700 mb-1">
+                        Default Test Credentials
+                      </p>
+                      <p>Owner / Super Admin — PIN: <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span></p>
+                      <p className="mt-0.5">Email: <span className="font-bold">munyakaprimary@gmail.com</span></p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
-            {/* ── SUPER ADMIN TAB ── */}
-            <TabsContent value="super" className="mt-4 space-y-4">
-              {!selectedAdminRole ? (
-                <>
-                  {adminAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={20} className="shrink-0" />
-                      <span>{adminAuthError}</span>
+            {/* ── DEVELOPER TAB ── */}
+            <TabsContent value="developer" className="mt-4 space-y-4">
+              {devAuthError && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
+                  <ShieldAlert size={20} className="shrink-0" />
+                  <span>{devAuthError}</span>
+                </div>
+              )}
+
+              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
+                <CardContent className="p-6 md:p-8 space-y-6">
+                  {/* Developer description card */}
+                  <div className="flex items-start gap-4 p-5 bg-violet-50 border border-violet-100 rounded-2xl">
+                    <div className="p-3 bg-violet-100 rounded-xl text-violet-600 shrink-0">
+                      <Code2 size={24} />
                     </div>
-                  )}
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                    Choose Your Role
-                  </p>
-                  <RoleCard
-                    role={ROLE_CONFIGS.super_admin}
-                    onClick={() => handleRoleSelect('super_admin')}
-                    bgColor="bg-amber-50"
-                    textColor="text-amber-700"
-                    borderColor="border-amber-200"
-                    featureIcons={[
-                      { Icon: CreditCard, label: 'Payments' },
-                      { Icon: Crown, label: 'Owner' },
-                      { Icon: Shield, label: 'Billing' },
-                    ]}
-                    hasCustomPassword={hasCustomAdminPassword()}
-                  />
-                </>
-              ) : (
-                <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
-                  <CardContent className="p-6 md:p-8 space-y-6">
-                    <button
-                      onClick={handleBackToRoleSelect}
-                      className="flex items-center gap-2 text-slate-500 hover:text-slate-900 font-bold text-sm transition-colors"
-                    >
-                      <ChevronLeft size={20} /> Back to role selection
-                    </button>
-                    <div className="text-center">
-                      <div className="inline-flex items-center justify-center w-16 h-16 rounded-3xl shadow-xl bg-amber-50 text-amber-600 shadow-amber-100 mb-4">
-                        {AdminIcon && <AdminIcon size={32} />}
-                      </div>
-                      <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight">
-                        {adminConfig!.label}
+                    <div>
+                      <h2 className="text-base md:text-lg font-black text-slate-900 mb-1">
+                        System &amp; App Developer Access
                       </h2>
-                      <p className="text-xs md:text-sm text-slate-500 font-medium mt-1">
-                        {adminConfig!.fullDescription}
+                      <p className="text-xs md:text-sm text-slate-600 font-medium">
+                        Reserved exclusively for the app developer for platform maintenance, global system configuration, and debugging. This access level bypasses standard role permissions.
                       </p>
                     </div>
-                    {adminAuthError && (
-                      <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
-                        <ShieldAlert size={18} className="shrink-0" />
-                        <span>{adminAuthError}</span>
+                  </div>
+
+                  {/* Developer feature badges */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { Icon: Bug, label: 'Debugging' },
+                      { Icon: Server, label: 'Platform Config' },
+                      { Icon: Globe, label: 'Global Settings' },
+                      { Icon: Shield, label: 'RBAC Override' },
+                    ].map(({ Icon, label }) => (
+                      <div key={label} className="flex items-center gap-1.5 px-3 py-2 bg-violet-50 border border-violet-100 rounded-xl text-[10px] font-bold text-violet-700">
+                        <Icon size={11} />
+                        {label}
                       </div>
-                    )}
-                    <form onSubmit={handleAdminLogin} className="space-y-5">
-                      <div className="space-y-2">
-                        <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password</Label>
-                        <div className="relative">
-                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                          <Input
-                            type={showAdminPassword ? 'text' : 'password'}
-                            value={adminPassword}
-                            onChange={e => { setAdminPassword(e.target.value); if (adminAuthError) setAdminAuthError(''); }}
-                            placeholder="Enter your password"
-                            className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowAdminPassword(!showAdminPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            {showAdminPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                          </button>
-                        </div>
-                        <p className="text-[10px] text-slate-400 font-medium pt-1">
-                          {hasCustomAdminPassword() ? (
-                            <span className="flex items-center gap-1">
-                              <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Owner Security
-                            </span>
-                          ) : (
-                            <>
-                              Default PIN:{' '}
-                              <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span>
-                            </>
-                          )}
-                        </p>
+                    ))}
+                  </div>
+
+                  {devAuthError && (
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                      <ShieldAlert size={18} className="shrink-0" />
+                      <span>{devAuthError}</span>
+                    </div>
+                  )}
+
+                  <form onSubmit={handleDevLogin} className="space-y-5">
+                    <div className="space-y-2">
+                      <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Developer Password</Label>
+                      <div className="relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Input
+                          type={showDevPassword ? 'text' : 'password'}
+                          value={devPassword}
+                          onChange={e => { setDevPassword(e.target.value); if (devAuthError) setDevAuthError(''); }}
+                          placeholder="Enter developer password"
+                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2"
+                          autoFocus
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowDevPassword(!showDevPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showDevPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                       </div>
-                      <Button
-                        type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
-                        className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
-                      >
-                        {isAdminVerifying ? (
-                          <><Loader2 className="animate-spin" size={20} /> Verifying...</>
-                        ) : (
-                          <><Unlock size={20} /> Sign In</>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              )}
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={isDevVerifying || !devPassword.trim()}
+                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-violet-600 hover:bg-violet-700 shadow-violet-100"
+                    >
+                      {isDevVerifying ? (
+                        <><Loader2 className="animate-spin" size={20} /> Verifying...</>
+                      ) : (
+                        <><Unlock size={20} /> Sign In as Developer</>
+                      )}
+                    </Button>
+                  </form>
+
+                  {/* Developer test credentials */}
+                  <div className="p-4 bg-violet-50 border border-violet-100 rounded-2xl flex items-start gap-3">
+                    <User size={16} className="text-violet-600 mt-0.5 shrink-0" />
+                    <div className="text-xs text-violet-900 font-medium leading-relaxed">
+                      <p className="font-black text-[10px] uppercase tracking-widest text-violet-700 mb-1">
+                        Developer Test Credentials
+                      </p>
+                      <p>Email: <span className="font-bold">{DEVELOPER_EMAIL}</span></p>
+                      <p className="mt-0.5">Password: <span className="font-bold">{DEVELOPER_PASSWORD}</span></p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             {/* ── STAFF / TEACHER / BURSAR TAB ── */}
@@ -604,7 +572,6 @@ const Login: React.FC = () => {
                   )}
 
                   <form onSubmit={handleStaffLogin} className="space-y-5">
-                    {/* Staff ID / Username */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
                         Staff ID / Username
@@ -624,7 +591,6 @@ const Login: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Password / Access Code */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
                         Access Code / Password
@@ -681,7 +647,7 @@ const Login: React.FC = () => {
                   <div className="p-4 bg-slate-50 rounded-2xl flex items-start gap-3">
                     <Send size={16} className="text-slate-400 mt-0.5 shrink-0" />
                     <p className="text-xs text-slate-500 font-medium">
-                      Don't have credentials? Contact the School Administrator to pre-register your account.
+                      Don&apos;t have credentials? Contact the School Administrator to pre-register your account.
                     </p>
                   </div>
                 </CardContent>
