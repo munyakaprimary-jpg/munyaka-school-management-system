@@ -49,14 +49,15 @@ const TODAY_IDX = new Date().getDay(); // 0=Sun
 const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 const TODAY_NAME = DAY_NAMES[TODAY_IDX];
 
-// ─── Simulated weekly base data (factual day gets injected live) ───────────────
-const BASE_WEEKLY = [
-  { day: 'Mon', rate: 94 },
-  { day: 'Tue', rate: 96 },
-  { day: 'Wed', rate: 92 },
-  { day: 'Thu', rate: 95 },
-  { day: 'Fri', rate: 91 },
-];
+// ─── Weekly attendance data type ──────────────────────────────────────────────
+interface WeeklyAttendancePoint {
+  day: 'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri';
+  rate: number | null;       // null = no data recorded (unrecorded day)
+  present: number;
+  enrolled: number;
+  dateLabel: string;          // "AUG 26" — date of that weekday
+  hasData: boolean;
+}
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -244,15 +245,125 @@ const Dashboard = () => {
     }
   }, [totalStudents]);
 
-  // ── Weekly attendance data (factual today injection) ─────────────────────────
-  const weeklyData = useMemo(() => {
-    return BASE_WEEKLY.map((item) => {
-      if (item.day === TODAY_NAME) {
-        return { ...item, rate: todayAttendanceRate > 0 ? todayAttendanceRate : item.rate };
+  // ── Weekly attendance data — computed live from attendance registers ─────────────
+  // Each day in the current week (Mon–Fri) is resolved from:
+  //   1. The attendance records stored per class/grade in localStorage
+  //   2. The total enrolled students per grade (from school_learners_data)
+  //
+  // Days with NO recorded attendance are shown as null (empty bar), never 0%.
+  // Days with recorded data get a real computed percentage.
+  const weeklyData = useMemo<WeeklyAttendancePoint[]>(() => {
+    const now = new Date();
+
+    // Find Monday of the current week (go back by weekday offset)
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - ((now.getDay() + 6) % 7)); // Mon-based offset
+    monday.setHours(0, 0, 0, 0);
+
+    // Build the Mon–Fri row for this calendar week
+    const DAY_KEYS: Array<'Mon' | 'Tue' | 'Wed' | 'Thu' | 'Fri'> = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+
+    // ── Read enrolled count per grade from school_learners_data ───────────────
+    let gradeEnrollment: Record<string, number> = {};
+    try {
+      const learners: any[] = safeRead('school_learners_data', []);
+      learners.forEach((l: any) => {
+        if (l.status === 'TRANSFERRED') return;
+        const g = (l.grade || '').replace(/grade\s*/i, '').trim();
+        gradeEnrollment[g] = (gradeEnrollment[g] || 0) + 1;
+      });
+    } catch { /* ignore */ }
+
+    // ── Read all attendance records ──────────────────────────────────────────
+    // Storage pattern: munyaka_attendance_v2_<gradeId>  OR  munyaka_attendance_records
+    // Each record is keyed by gradeId and contains per-student attendance objects.
+    const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
+    let allAttnRecords: Record<string, any> = {};
+    try {
+      const attnRaw = localStorage.getItem('munyaka_attendance_records');
+      if (attnRaw) {
+        allAttnRecords = JSON.parse(attnRaw);
       }
-      return item;
+    } catch { /* ignore */ }
+
+    // Also read per-grade v2 records
+    let v2Records: Record<string, any> = {};
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(STORAGE_KEY_PREFIX)) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) {
+            const data = JSON.parse(raw);
+            v2Records = { ...v2Records, ...data };
+          }
+        } catch { /* ignore */ }
+      }
     });
-  }, [todayAttendanceRate]);
+
+    const mergedRecords = { ...allAttnRecords, ...v2Records };
+
+    // ── Compute attendance % per weekday in the current calendar week ──────────
+    return DAY_KEYS.map((dayName, idx) => {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + idx);
+      const dateStr = date.toISOString().slice(0, 10); // "YYYY-MM-DD"
+      const dateLabel = date.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' }).toUpperCase();
+
+      // Total enrolled across all grades for this date
+      const totalEnrolled = Object.values(gradeEnrollment).reduce((s, n) => s + n, 0);
+
+      // Count present students from attendance records for this date
+      let presentCount = 0;
+      let hasData = false;
+
+      Object.entries(mergedRecords).forEach(([, record]: [string, any]) => {
+        if (!record || typeof record !== 'object') return;
+        const recDate = (record.date || record.savedAt || record.timestamp || '');
+        const recDateStr = typeof recDate === 'string' ? recDate.slice(0, 10) : '';
+        if (recDateStr !== dateStr) return;
+
+        // Walk through each student's attendance entry
+        Object.entries(record).forEach(([, studentEntry]: [string, any]) => {
+          if (!studentEntry || typeof studentEntry !== 'object') return;
+          // Support both flat "P"/"A" keys and nested { morning: { status }, afternoon: { status } }
+          const morning = studentEntry.morning?.status || studentEntry.morning;
+          const afternoon = studentEntry.afternoon?.status || studentEntry.afternoon;
+          const present =
+            morning === 'P' ||
+            morning === 'present' ||
+            morning === true ||
+            afternoon === 'P' ||
+            afternoon === 'present' ||
+            afternoon === true;
+          if (present) presentCount += 1;
+          hasData = true;
+        });
+      });
+
+      // Also scan munyaka_attendance_records for savedAt-timestampmed entries
+      // where the key contains the date string (legacy format: "Grade 4_Blue_2026-08-26_morning")
+      Object.entries(allAttnRecords).forEach(([key, record]: [string, any]) => {
+        if (!record || typeof record !== 'object') return;
+        if (!key.includes(dateStr)) return;
+        hasData = true;
+        // Legacy records store a flat structure — count each property that's P/present
+        Object.values(record).forEach((val: any) => {
+          if (val === 'P' || val === 'present' || val === true) presentCount += 1;
+        });
+      });
+
+      const rate = totalEnrolled > 0 && hasData ? Math.round((presentCount / totalEnrolled) * 100) : null;
+
+      return {
+        day: dayName,
+        rate,
+        present: presentCount,
+        enrolled: totalEnrolled,
+        dateLabel,
+        hasData,
+      };
+    });
+  }, [totalStudents]);
 
   // ── Class participation rows ─────────────────────────────────────────────────
   const classRows = useMemo<ClassRow[]>(() => {
@@ -544,47 +655,87 @@ const Dashboard = () => {
           </Badge>
         </CardHeader>
         <CardContent className="pt-0">
-          <div className="h-[220px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyData} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                <XAxis
-                  dataKey="day"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
-                />
-                <YAxis domain={[0, 100]} hide />
-                <Tooltip
-                  cursor={{ fill: '#f8fafc' }}
-                  content={({ active, payload }) => {
-                    if (active && payload && payload.length) {
-                      const d = payload[0].payload;
-                      return (
-                        <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
-                          <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">{d.day}</p>
-                          <p className="text-xl font-black text-slate-900 mt-0.5">
-                            {d.rate}
-                            <span className="text-xs text-slate-400 font-medium ml-1">%</span>
-                          </p>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar dataKey="rate" radius={[8, 8, 0, 0]}>
-                  {weeklyData.map((entry) => (
-                    <Cell
-                      key={entry.day}
-                      fill={entry.day === TODAY_NAME ? '#6366f1' : '#e2e8f0'}
-                    />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </CardContent>
+                  <div className="h-[220px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={weeklyData} barCategoryGap="30%">
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                        <XAxis
+                          dataKey="day"
+                          axisLine={false}
+                          tickLine={false}
+                          tick={{ fill: '#94a3b8', fontSize: 12, fontWeight: 600 }}
+                        />
+                        <YAxis domain={[0, 100]} hide />
+                        <Tooltip
+                          cursor={{ fill: '#f8fafc' }}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const d = payload[0].payload as WeeklyAttendancePoint;
+                              if (!d.hasData || d.rate === null) {
+                                return (
+                                  <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                                      {d.day} · {d.dateLabel}
+                                    </p>
+                                    <p className="text-sm font-semibold text-slate-500 mt-1">
+                                      No records
+                                    </p>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">
+                                      Attendance has not been marked yet for this date.
+                                    </p>
+                                  </div>
+                                );
+                              }
+                              return (
+                                <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
+                                  <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                                    {d.day} · {d.dateLabel}
+                                  </p>
+                                  <p className="text-xl font-black text-slate-900 mt-0.5">
+                                    {d.rate}
+                                    <span className="text-xs text-slate-400 font-medium ml-1">%</span>
+                                  </p>
+                                  <p className="text-[10px] text-slate-400 mt-1">
+                                    {d.present} present / {d.enrolled} enrolled
+                                  </p>
+                                </div>
+                              );
+                            }
+                            return null;
+                          }}
+                        />
+                        <Bar dataKey="rate" radius={[8, 8, 0, 0]}>
+                          {weeklyData.map((entry) => {
+                            // Unrecorded days → no fill (empty bar)
+                            if (!entry.hasData || entry.rate === null) {
+                              return <Cell key={entry.day} fill="transparent" stroke="#e2e8f0" strokeDasharray="3 3" />;
+                            }
+                            // Today's bar is highlighted in indigo; other recorded days in indigo-50/slate
+                            const isToday = entry.day === TODAY_NAME;
+                            return (
+                              <Cell
+                                key={entry.day}
+                                fill={isToday ? '#6366f1' : '#a5b4fc'}
+                              />
+                            );
+                          })}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  {/* Legend explaining empty bars */}
+                  <div className="flex items-center gap-4 mt-3 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-indigo-500" /> Recorded today
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded bg-indigo-300" /> Recorded (past)
+                    </span>
+                    <span className="flex items-center gap-1.5">
+                      <span className="w-3 h-3 rounded border border-dashed border-slate-300 bg-transparent" /> No records
+                    </span>
+                  </div>
+                </CardContent>
       </Card>
 
       {/* ── Recent Alerts ──────────────────────────────────────────────────── */}
