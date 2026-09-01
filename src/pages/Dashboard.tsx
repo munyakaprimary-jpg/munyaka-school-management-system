@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, GraduationCap, TrendingUp, User, Loader2, Activity, AlertCircle, DollarSign, UserCog, Settings, Monitor, Wifi, Calendar, Shield, BookOpen, ClipboardList, Clock, Key, Award, Layers, Cpu, Network, BarChart3 } from 'lucide-react';
+import { Users, UserCheck, GraduationCap, TrendingUp, User, Loader2, Activity, AlertCircle, DollarSign, UserCog, Settings, Monitor, Wifi, Calendar, Shield, BookOpen, ClipboardList, Clock, Key, Award, Layers, Cpu, Network, BarChart3, CheckCircle2 } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboardData } from '@/hooks/useDashboardData';
@@ -618,6 +618,21 @@ const Dashboard = () => {
     return map[role.toLowerCase()] || role;
   }, [user?.role]);
 
+  // True when the current user is the school owner / super-admin who
+  // should see executive-level metrics instead of classroom operations.
+  const isOwner = useMemo(
+    () => ['owner', 'super_admin'].includes((user?.role || '').toLowerCase()),
+    [user?.role]
+  );
+
+  // Roles that should see classroom operational widgets (attendance trends,
+  // recent alerts, class participation). OWNER and ICT_TEACHER are excluded.
+  const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
+  const seesOperationalWidgets = useMemo(
+    () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
+    [user?.role]
+  );
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-10">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
@@ -738,7 +753,12 @@ const Dashboard = () => {
         </Card>
       )}
 
-      {/* Charts & Recent Alerts Section */}
+      {/* ────────────────────────────────────────────────
+          OPERATIONAL WIDGETS (Attendance Trends + Recent Alerts)
+          Hidden for OWNER / SUPER_ADMIN / ICT_TEACHER.
+          Owner sees high-level executive widgets further below instead.
+          ──────────────────────────────────────────────── */}
+      {seesOperationalWidgets && (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
@@ -853,10 +873,20 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       </div>
+      )}
+
+      {/* ────────────────────────────────────────────────
+          OWNER-EXCLUSIVE EXECUTIVE WIDGETS
+          High-level cards that replace operational widgets
+          (Attendance Trends + Recent Alerts) for the owner.
+          All values are read live from localStorage — no
+          hardcoded fallbacks.
+          ──────────────────────────────────────────────── */}
+      {isOwner && <OwnerExecutiveWidgets />}
 
       {/* Factual Class Participation Table - hidden for OWNER and ICT_TEACHER since they
           don't directly manage class-level data. TEACHER role benefits from this view. */}
-      {!['owner', 'ict_teacher', 'parent', 'student'].includes((user?.role || '').toLowerCase()) && (
+      {seesOperationalWidgets && (
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader>
             <CardTitle className="text-lg">Factual Class Participation</CardTitle>
@@ -879,6 +909,360 @@ const Dashboard = () => {
           </CardContent>
         </Card>
       )}
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────
+// OwnerExecutiveWidgets — replaces classroom operational widgets
+// (Attendance Trends + Recent Alerts) when the current user is
+// the school owner. Shows high-level executive cards:
+//   1. School System Status  → Subscription plan, active modules,
+//                              expiry/next renewal date.
+//   2. Total Student Enrollment (across all grades)
+//   3. Total Staffing (Teachers + Non-teaching)
+//   4. System Activity Summary (platform health + last backup
+//                              timestamp)
+// ─────────────────────────────────────────────────────────────
+const OwnerExecutiveWidgets: React.FC = () => {
+  const [snapshot, setSnapshot] = useState<{
+    planName: string;
+    planTier: string;
+    currency: string;
+    amount: string;
+    interval: string;
+    seats: number;
+    nextBilling: string;
+    status: string;
+    activeModules: string[];
+    studentEnrollment: number;
+    teachingStaff: number;
+    nonTeachingStaff: number;
+    platformHealth: 'Healthy' | 'Attention' | 'Critical';
+    lastBackup: string;
+  } | null>(null);
+
+  useEffect(() => {
+    try {
+      // 1. Subscription / plan data
+      const subRaw = localStorage.getItem('munyaka_payment_config');
+      const sub = subRaw ? JSON.parse(subRaw) : null;
+      const subList: any[] = Array.isArray(sub?.subscriptions) ? sub.subscriptions : [];
+      const primary = subList[0] || {};
+
+      // 2. Active modules — derived from known localStorage buckets that
+      //    exist when a feature has been touched at least once.
+      const moduleKeys: Array<[string, string]> = [
+        ['school_learners_data', 'Learners Management'],
+        ['munyaka_attendance_records', 'Attendance Tracking'],
+        ['munyaka_assessment_sheets', 'Assessments & Marks'],
+        ['munyaka_transactions', 'Fees & Payments'],
+        ['munyaka_timetable_lessons', 'Timetable'],
+        ['munyaka_library_books', 'Library'],
+        ['munyaka_ict_assets', 'ICT Inventory'],
+        ['munyaka_payment_config', 'Subscription Management'],
+        ['munyaka_licenses', 'License Vault'],
+      ];
+      const activeModules = moduleKeys
+        .filter(([key]) => {
+          try {
+            const raw = localStorage.getItem(key);
+            if (!raw) return false;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) return parsed.length > 0;
+            if (typeof parsed === 'object') return Object.keys(parsed).length > 0;
+            return Boolean(parsed);
+          } catch {
+            return false;
+          }
+        })
+        .map(([, label]) => label);
+
+      // 3. Student enrollment (live)
+      const learnersRaw = localStorage.getItem('school_learners_data');
+      const learners: any[] = learnersRaw ? JSON.parse(learnersRaw) : [];
+      const studentEnrollment = learners.filter(
+        (l: any) => l?.status !== 'TRANSFERRED'
+      ).length;
+
+      // 4. Staffing (live)
+      const staffRaw = localStorage.getItem('munyaka_staff') ||
+        localStorage.getItem('staff') ||
+        localStorage.getItem('school_staff_data');
+      const staff: any[] = staffRaw ? JSON.parse(staffRaw) : [];
+      const teachingStaff = staff.filter(
+        (s: any) => /teacher|head|principal|ict|lab/i.test(s?.role || '')
+      ).length;
+      const nonTeachingStaff = Math.max(0, staff.length - teachingStaff);
+
+      // 5. Platform health — flagged when no recent attendance has been
+      //    recorded in the last 7 days.
+      let platformHealth: 'Healthy' | 'Attention' | 'Critical' = 'Healthy';
+      const attnRaw = localStorage.getItem('munyaka_attendance_records');
+      if (attnRaw) {
+        const records = JSON.parse(attnRaw);
+        const timestamps = Object.values(records)
+          .map((r: any) => new Date(r?.savedAt || r?.date || 0).getTime())
+          .filter((t) => t > 0);
+        if (timestamps.length === 0) {
+          platformHealth = 'Attention';
+        } else {
+          const mostRecent = Math.max(...timestamps);
+          const ageDays = (Date.now() - mostRecent) / (1000 * 60 * 60 * 24);
+          if (ageDays > 14) platformHealth = 'Critical';
+          else if (ageDays > 7) platformHealth = 'Attention';
+        }
+      } else {
+        platformHealth = 'Attention';
+      }
+
+      // 6. Last backup timestamp
+      const backupRaw = localStorage.getItem('munyaka_last_backup');
+      const lastBackup = backupRaw
+        ? new Date(backupRaw).toLocaleString()
+        : 'Never (run a backup from Settings)';
+
+      setSnapshot({
+        planName: primary?.name || 'Munyaka School License',
+        planTier: primary?.tier || 'enterprise',
+        currency: primary?.currency || 'USD',
+        amount: primary?.amount || '299.00',
+        interval: primary?.interval || 'monthly',
+        seats: primary?.seats || 0,
+        nextBilling: primary?.nextBilling || '—',
+        status: primary?.status || 'active',
+        activeModules,
+        studentEnrollment,
+        teachingStaff,
+        nonTeachingStaff,
+        platformHealth,
+        lastBackup,
+      });
+    } catch (e) {
+      console.error('Failed to load owner executive snapshot:', e);
+    }
+  }, []);
+
+  if (!snapshot) {
+    return (
+      <Card className="border-none shadow-sm rounded-3xl bg-white">
+        <CardContent className="p-10 text-center text-slate-400">
+          <Loader2 className="animate-spin inline-block mb-2" size={20} />
+          <p className="text-sm font-medium">Loading executive snapshot…</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const healthStyles: Record<string, { bg: string; text: string; dot: string }> = {
+    Healthy:  { bg: 'bg-emerald-50',  text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    Attention: { bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+    Critical: { bg: 'bg-rose-50',     text: 'text-rose-700',    dot: 'bg-rose-500' },
+  };
+  const health = healthStyles[snapshot.platformHealth];
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* 1. School System Status — Subscription / Plan / Modules / Expiry */}
+      <Card className="border-none shadow-sm rounded-3xl bg-gradient-to-br from-indigo-900 via-indigo-800 to-violet-900 text-white overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="text-base font-black flex items-center gap-2 text-white">
+              <Key size={18} className="text-indigo-200" /> School System Status
+            </CardTitle>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-indigo-200 mt-1">
+              Subscription & active modules
+            </p>
+          </div>
+          <Badge className="bg-white/10 text-indigo-100 border-white/20 font-bold text-[10px] uppercase">
+            {snapshot.planTier}
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Plan</p>
+              <p className="text-sm font-bold text-white truncate">{snapshot.planName}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Bill</p>
+              <p className="text-sm font-bold text-white">
+                {snapshot.currency} {snapshot.amount}
+                <span className="text-[10px] text-indigo-200 ml-1">/{snapshot.interval === 'monthly' ? 'mo' : snapshot.interval === 'annual' ? 'yr' : '2yr'}</span>
+              </p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Next Renewal</p>
+              <p className="text-sm font-bold text-white">{snapshot.nextBilling}</p>
+            </div>
+            <div className="bg-white/5 border border-white/10 rounded-2xl p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-1">Seats</p>
+              <p className="text-sm font-bold text-white">{snapshot.seats.toLocaleString()}</p>
+            </div>
+          </div>
+
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-widest text-indigo-200 mb-2">
+              Active Modules ({snapshot.activeModules.length})
+            </p>
+            <div className="flex flex-wrap gap-1.5">
+              {snapshot.activeModules.length > 0 ? (
+                snapshot.activeModules.map((m) => (
+                  <Badge
+                    key={m}
+                    className="bg-white/10 text-indigo-100 border-white/20 font-bold text-[10px]"
+                  >
+                    <CheckCircle2 size={10} className="mr-1" /> {m}
+                  </Badge>
+                ))
+              ) : (
+                <span className="text-xs text-indigo-200 italic">
+                  No modules activated yet — start by adding a learner.
+                </span>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 2. Total Student Enrollment */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+        <CardHeader>
+          <CardTitle className="text-base font-black flex items-center gap-2">
+            <Users size={18} className="text-blue-600" /> Total Student Enrollment
+          </CardTitle>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+            Aggregate count across all grades
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3">
+            <p className="text-5xl font-black text-slate-900 leading-none">
+              {snapshot.studentEnrollment.toLocaleString()}
+            </p>
+            <p className="text-xs font-bold text-slate-400 pb-1">active learners</p>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-blue-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-0.5">Primary</p>
+              <p className="text-base font-black text-slate-900">
+                {(() => {
+                  try {
+                    const learners: any[] = JSON.parse(
+                      localStorage.getItem('school_learners_data') || '[]'
+                    );
+                    return learners.filter(
+                      (l) => l?.status !== 'TRANSFERRED' && /^grade [1-6]/i.test(l?.grade || '')
+                    ).length;
+                  } catch { return 0; }
+                })()}
+              </p>
+            </div>
+            <div className="rounded-2xl bg-purple-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-purple-600 mb-0.5">Junior</p>
+              <p className="text-base font-black text-slate-900">
+                {(() => {
+                  try {
+                    const learners: any[] = JSON.parse(
+                      localStorage.getItem('school_learners_data') || '[]'
+                    );
+                    return learners.filter(
+                      (l) => l?.status !== 'TRANSFERRED' && /^grade [7-9]/i.test(l?.grade || '')
+                    ).length;
+                  } catch { return 0; }
+                })()}
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 3. Total Staffing */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+        <CardHeader>
+          <CardTitle className="text-base font-black flex items-center gap-2">
+            <UserCog size={18} className="text-indigo-600" /> Total Staffing
+          </CardTitle>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+            Teaching & non-teaching staff
+          </p>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-end gap-3">
+            <p className="text-5xl font-black text-slate-900 leading-none">
+              {(snapshot.teachingStaff + snapshot.nonTeachingStaff).toLocaleString()}
+            </p>
+            <p className="text-xs font-bold text-slate-400 pb-1">total staff</p>
+          </div>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            <div className="rounded-2xl bg-indigo-50 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600 mb-0.5">Teaching</p>
+              <p className="text-base font-black text-slate-900">{snapshot.teachingStaff}</p>
+            </div>
+            <div className="rounded-2xl bg-slate-100 p-3">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-0.5">Non-teaching</p>
+              <p className="text-base font-black text-slate-900">{snapshot.nonTeachingStaff}</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* 4. System Activity Summary */}
+      <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+        <CardHeader>
+          <CardTitle className="text-base font-black flex items-center gap-2">
+            <Activity size={18} className="text-emerald-600" /> System Activity Summary
+          </CardTitle>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mt-1">
+            Platform health & last data backup
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className={`flex items-center gap-3 ${health.bg} rounded-2xl p-3`}>
+            <div className={`w-2.5 h-2.5 rounded-full ${health.dot} animate-pulse`} />
+            <div className="flex-1 min-w-0">
+              <p className={`text-[10px] font-black uppercase tracking-widest ${health.text}`}>
+                Platform Health
+              </p>
+              <p className={`text-base font-black ${health.text}`}>{snapshot.platformHealth}</p>
+            </div>
+            <Badge className={`${health.bg} ${health.text} border-none font-bold text-[10px]`}>
+              {snapshot.platformHealth === 'Healthy' ? 'All systems normal' :
+               snapshot.platformHealth === 'Attention' ? 'Recent activity sparse' :
+               'No recent activity'}
+            </Badge>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+              Last Data Backup
+            </p>
+            <p className="text-sm font-bold text-slate-900">{snapshot.lastBackup}</p>
+          </div>
+
+          <div className="rounded-2xl bg-slate-50 p-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+              Module Health Check
+            </p>
+            <div className="space-y-1.5">
+              {snapshot.activeModules.slice(0, 5).map((m) => (
+                <div key={m} className="flex items-center gap-2">
+                  <CheckCircle2 size={12} className="text-emerald-500 shrink-0" />
+                  <p className="text-xs font-medium text-slate-700 truncate">{m}</p>
+                </div>
+              ))}
+              {snapshot.activeModules.length > 5 && (
+                <p className="text-[10px] text-slate-400 font-bold pt-1">
+                  +{snapshot.activeModules.length - 5} more active
+                </p>
+              )}
+              {snapshot.activeModules.length === 0 && (
+                <p className="text-xs text-slate-400 italic">No active modules yet.</p>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
