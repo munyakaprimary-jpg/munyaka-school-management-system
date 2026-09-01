@@ -412,83 +412,99 @@ const Dashboard = () => {
   // • Falls back to 0 for grades with no students
   // • Sorts using GRADE_ORDER index: PP1 → PP2 → Grade 1 … Grade 9
   const classRows = useMemo<ClassRow[]>(() => {
+    // Strict ascending grade sequence used for both normalisation and sort
     const GRADE_ORDER = [
       'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4',
       'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9',
     ];
 
-    // Normalise a raw grade name to a GRADE_ORDER key: "grade 5" → "Grade 5", "pp1" → "PP1"
+    // ── normalise(raw) ──────────────────────────────────────────────────────
+    // Maps any variant of a pre-primary or primary grade name to its
+    // canonical GRADE_ORDER key:
+    //
+    //   "Grade PP 1" / "Grade PP1" / "PP 1" / "pp1" / "PP1"  → "PP1"
+    //   "Grade PP 2" / "Grade PP2" / "PP 2" / "pp2" / "PP2"  → "PP2"
+    //   "Grade 3"   / "grade 3" / "GRADE 3"                 → "Grade 3"
+    //
+    // Returns the original string unchanged if it doesn't match any pattern.
     const normalise = (raw: string): string => {
       if (!raw) return '';
-      const trimmed = raw.trim();
-      const upper = trimmed.toUpperCase();
-      if (upper === 'PP1') return 'PP1';
-      if (upper === 'PP2') return 'PP2';
-      const match = trimmed.match(/^([A-Za-z]+)\s*(\d+)$/);
-      if (match) {
-        const word = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
-        return `${word} ${match[2]}`;
-      }
-      return trimmed;
+      const s = raw.trim();
+      const u = s.toUpperCase();
+
+      // Pre-primary variants
+      // Match "Grade PP 1", "Grade PP1", "PP 1", "pp1", "PP1" → PP1
+      // and   "Grade PP 2", "Grade PP2", "PP 2", "pp2", "PP2" → PP2
+      const ppMatch = s.match(/^(?:grade\s+)?pp\s*([12])$/i);
+      if (ppMatch) return `PP${ppMatch[1]}`;
+
+      // Standard "Grade N" — normalise capitalisation
+      const gradeMatch = s.match(/^grade\s+(\d+)$/i);
+      if (gradeMatch) return `Grade ${gradeMatch[1]}`;
+
+      // Already-canonical keys (case-insensitive lookup in GRADE_ORDER)
+      const canonicalIdx = GRADE_ORDER.findIndex(
+        (g) => g.toUpperCase() === u,
+      );
+      if (canonicalIdx >= 0) return GRADE_ORDER[canonicalIdx];
+
+      return s;
     };
 
-    // Numeric rank: index in GRADE_ORDER + 1 so PP1=1, PP2=2 … Grade 9=11
-    const gradeRank = (name: string): number => {
-      const idx = GRADE_ORDER.indexOf(normalise(name));
-      return idx >= 0 ? idx + 1 : 999;
-    };
-
+    // ── Accumulate gender counts per normalised grade key ───────────────────
     const learners: any[] = safeRead('school_learners_data', []);
-
-    // Accumulate { boys, girls } per normalised grade key
     const acc: Record<string, { boys: number; girls: number }> = {};
+
     learners.forEach((l: any) => {
       if (l.status === 'TRANSFERRED') return;
-      const raw = (l.grade || '').trim();
-      if (!raw) return;
-      const key = normalise(raw);
+      const key = normalise(l.grade || '');
+      if (!key) return;
       if (!acc[key]) acc[key] = { boys: 0, girls: 0 };
       const gender = (l.gender || '').toLowerCase().trim();
       if (gender === 'male' || gender === 'boy') {
         acc[key].boys += 1;
       } else if (gender === 'female' || gender === 'girl') {
         acc[key].girls += 1;
-      } else {
-        // Treat unspecified gender as neutral — add to total but not boy/girl columns
-        acc[key].boys += 0;
-        acc[key].girls += 0;
       }
     });
 
-    // Build a unique list of all grade keys (from both grades config AND learner data)
+    // ── Build unified key list (grades config + learner data) ─────────────────
     const gradeNamesFromConfig: string[] = (() => {
       const raw = localStorage.getItem('munyaka_grades');
       if (!raw) return [];
       try {
         const grades = JSON.parse(raw);
-        return Array.isArray(grades) ? grades.map((g: any) => normalise(g.name || '')) : [];
+        return Array.isArray(grades)
+          ? grades.map((g: any) => normalise(g.name || ''))
+          : [];
       } catch { return []; }
     })();
 
-    const allKeys = Array.from(new Set([...gradeNamesFromConfig, ...Object.keys(acc)]));
+    const allKeys = Array.from(
+      new Set([...gradeNamesFromConfig, ...Object.keys(acc)]),
+    ).filter(Boolean);
 
-    const rows: ClassRow[] = allKeys
-      .filter((k) => k) // drop empty strings
-      .map((key) => {
-        const counts = acc[key] || { boys: 0, girls: 0 };
-        return {
-          id: key,
-          name: key,
-          boys: counts.boys,
-          girls: counts.girls,
-          total: counts.boys + counts.girls,
-          gradeOrder: gradeRank(key),
-        };
-      });
+    // ── Map to rows ─────────────────────────────────────────────────────────
+    const rows: ClassRow[] = allKeys.map((key) => {
+      const counts = acc[key] || { boys: 0, girls: 0 };
+      return {
+        id: key,
+        name: key,
+        boys: counts.boys,
+        girls: counts.girls,
+        total: counts.boys + counts.girls,
+        gradeOrder: GRADE_ORDER.indexOf(key), // -1 for unknown grades
+      };
+    });
 
-    // Canonical grades first (PP1–Grade 9), then any unknown grades alphabetically
+    // ── Strict GRADE_ORDER index sort ────────────────────────────────────────
+    // GRADE_ORDER.indexOf returns 0 for PP1, 1 for PP2, … 10 for Grade 9.
+    // Rows whose name is not in GRADE_ORDER get index -1 and are pushed to the end,
+    // then sorted alphabetically among themselves.
     rows.sort((a, b) => {
-      if (a.gradeOrder !== b.gradeOrder) return a.gradeOrder - b.gradeOrder;
+      const idxA = GRADE_ORDER.indexOf(a.name);
+      const idxB = GRADE_ORDER.indexOf(b.name);
+      if (idxA !== idxB) return idxA - idxB;
       return a.name.localeCompare(b.name);
     });
 
