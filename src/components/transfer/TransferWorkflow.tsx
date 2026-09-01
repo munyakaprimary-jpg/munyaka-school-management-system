@@ -37,6 +37,8 @@ import {
 import { showSuccess, showError, showSuccessWithAction } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
+import { archiveLearner } from '@/services/transferArchiveService';
+import { useAuth } from '@/context/AuthContext';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import {
@@ -46,6 +48,10 @@ import {
   saveCertificateRef,
   type DownloadPdfResult,
 } from '@/utils/pdfDownloader';
+import {
+  saveArchivedLearner,
+  type TransferredLearnerArchive,
+} from '@/types/archive';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -60,6 +66,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
@@ -529,6 +536,46 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
     // Notify parent so it can update the students list / DB
     onTransferComplete(student.id, certNum);
+
+    // ── Archive: persist full transfer record to the transferred learners archive.
+    // This is written here (independent of the parent) so the record survives even
+    // if the parent doesn't update its own state. The archive is the authoritative
+    // source of truth for historical transfers.
+    const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
+    const archiveRecord: TransferredLearnerArchive = {
+      id: student.id,
+      admNo: student.assessment || '',
+      name: student.name,
+      grade: student.grade,
+      stream: student.stream,
+      gender: (student.gender === 'M'
+        ? 'Male'
+        : student.gender === 'F'
+        ? 'Female'
+        : 'Other') as 'Male' | 'Female' | 'Other',
+      guardian: student.guardian || '',
+      phone: student.phone || '',
+      email: student.email || '',
+      dob: student.dob || '',
+      dateOfAdmission: student.dateOfAdmission || '',
+      birthCertificateNo: (student as any).birthCertificateNo || '',
+      transferDate,
+      transferYear: new Date(transferDate).getFullYear(),
+      destinationSchool: transferData.destinationSchool || '—',
+      reason: transferData.reason || '—',
+      reasonNotes: transferData.reason || '',
+      headteacherRemarks: transferData.headteacherRemarks || '—',
+      coCurricularActivities: transferData.coCurricularActivities || '',
+      certificateNumber: certNum,
+      feeBalanceAtExit: student.feeBalance ?? 0,
+      isFeeCleared: (student.feeBalance ?? 0) <= 0,
+      audit: {
+        executedBy: user?.name || user?.email || 'Admin',
+        executedAt: new Date().toISOString(),
+        authorizedVia: 'admin_password',
+      },
+    };
+    saveArchivedLearner(archiveRecord);
 
     // ── Step 3: Show certificate & wait for it to mount ─────────────────
     setCurrentStep('CERTIFICATE');

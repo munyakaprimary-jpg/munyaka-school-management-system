@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
+import TransferredLearnersArchive from "./pages/TransferredLearnersArchive";
 import StudentProfile from "./pages/StudentProfile";
 import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/grades" element={<ProtectedRoute><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/learning-areas" element={<ProtectedRoute><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />

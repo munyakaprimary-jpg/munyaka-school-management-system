@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  Loader2, ExternalLink, Eye
+  Loader2, ExternalLink, Eye, Archive
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -33,6 +33,7 @@ interface Learner {
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
+  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
 const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
@@ -262,7 +263,10 @@ export default function Students() {
         (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
-    });
+    })
+    // Exclude transferred learners from the active roster. They live in the
+    // dedicated Transferred Learners Archive (/learners/archive) instead.
+    .filter((s) => s.status !== 'TRANSFERRED');
   }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
 
   // === Unified file-download state ===
@@ -588,7 +592,16 @@ export default function Students() {
             </span>
           </div>
           <p className="text-sm font-medium text-slate-500">
-            {filteredLearners.length} learners found {learners.length !== filteredLearners.length && `(filtered from ${learners.length} total)`}
+            {filteredLearners.length} active learners
+            {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
+            {' · '}
+            <Link
+              to="/learners/archive"
+              className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
+            >
+              <Archive size={13} />
+              View Transferred Archive
+            </Link>
           </p>
         </div>
 
@@ -867,8 +880,29 @@ export default function Students() {
           isOpen={isTransferOpen}
           onClose={handleCloseTransfer}
           onTransferComplete={(studentId, certificateNumber) => {
-            // Toast + download action are handled inside TransferWorkflow once the
-            // PDF has been generated. Parents only need to close the modal here.
+            // Mark the student as TRANSFERRED in the active roster so they are
+            // excluded from all active views (attendance, marks, fee rosters, etc.)
+            setLearners(prev =>
+              prev.map(l =>
+                l.id === studentId
+                  ? { ...l, status: 'TRANSFERRED' as const }
+                  : l
+              )
+            );
+            // Also persist the status update directly to localStorage
+            // (the useEffect will also sync, but this avoids a stale-gap)
+            try {
+              const raw = localStorage.getItem('school_learners_data');
+              if (raw) {
+                const parsed: Learner[] = JSON.parse(raw);
+                const updated = parsed.map(l =>
+                  l.id === studentId
+                    ? { ...l, status: 'TRANSFERRED' as const }
+                    : l
+                );
+                localStorage.setItem('school_learners_data', JSON.stringify(updated));
+              }
+            } catch { /* localStorage unavailable */ }
             setIsTransferOpen(false);
             setTransferLearner(null);
           }}
