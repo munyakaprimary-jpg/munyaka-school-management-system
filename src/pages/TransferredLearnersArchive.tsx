@@ -59,6 +59,11 @@ import {
   redownloadCertificate,
 } from '@/utils/pdfDownloader';
 import { showSuccess, showError } from '@/utils/toast';
+import {
+  exportToExcel,
+  exportToCSV,
+  exportToPDF,
+} from '@/utils/archiveExport';
 import { cn } from '@/lib/utils';
 import { getActiveAdminPassword } from '@/services/adminCredentials';
 import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
@@ -76,6 +81,7 @@ const TransferredLearnersArchive: React.FC = () => {
   const [restoreTarget, setRestoreTarget] =
     useState<TransferredLearnerArchive | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
   // Safe back handler: tries history.back() first (preserves scroll position
   // and prior filter state). Falls back to the active Learners page
@@ -196,6 +202,52 @@ const TransferredLearnersArchive: React.FC = () => {
     });
   };
 
+  // ── Export handlers (respect current filter/search) ─────────────────────
+  // `records` is already the filtered list (see load() above), so we just
+  // pass it straight to the export helpers.
+  const handleExportExcel = () => {
+    if (records.length === 0) {
+      showError('No records to export.');
+      return;
+    }
+    exportToExcel(records);
+    showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to Excel.`);
+    setExportMenuOpen(false);
+  };
+
+  const handleExportCSV = () => {
+    if (records.length === 0) {
+      showError('No records to export.');
+      return;
+    }
+    exportToCSV(records);
+    showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to CSV.`);
+    setExportMenuOpen(false);
+  };
+
+  const handleExportPDF = () => {
+    if (records.length === 0) {
+      showError('No records to export.');
+      return;
+    }
+    exportToPDF(records);
+    showSuccess(`Generating PDF summary for ${records.length} record${records.length === 1 ? '' : 's'}.`);
+    setExportMenuOpen(false);
+  };
+
+  // Close export dropdown when clicking outside
+  const exportMenuRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target as Node)) {
+        setExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [exportMenuOpen]);
+
   const formatLongDate = (iso: string) => {
     if (!iso) return '—';
     const d = new Date(iso);
@@ -274,6 +326,109 @@ const TransferredLearnersArchive: React.FC = () => {
               </option>
             ))}
           </select>
+
+          {/* Export List — split button */}
+          <div ref={exportMenuRef} className="relative inline-flex">
+            <button
+              type="button"
+              onClick={handleExportExcel}
+              disabled={records.length === 0}
+              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-l-xl border border-r-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+              aria-label="Quick export to Excel"
+              title="Quick export to Excel (.xlsx)"
+            >
+              <Download size={15} />
+              <span className="hidden sm:inline">Export Excel</span>
+              <span className="sm:hidden">Excel</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setExportMenuOpen((o) => !o)}
+              disabled={records.length === 0}
+              aria-label="More export options"
+              aria-haspopup="menu"
+              aria-expanded={exportMenuOpen}
+              className="inline-flex items-center justify-center px-2 h-[42px] rounded-r-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+            >
+              <ChevronLeft
+                size={14}
+                className={cn(
+                  'transition-transform rotate-180',
+                  exportMenuOpen && 'rotate-0'
+                )}
+              />
+            </button>
+
+            {exportMenuOpen && (
+              <div
+                role="menu"
+                className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/60 p-1.5 z-50 animate-in slide-in-from-top-2"
+              >
+                <p className="px-3 pt-2 pb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Export List
+                </p>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleExportExcel}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-emerald-50 text-left transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <Download size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">
+                      Export Excel
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                      .xlsx with formatted columns
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleExportCSV}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-sky-50 text-left transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-sky-100 text-sky-700 flex items-center justify-center shrink-0">
+                    <FileText size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">
+                      Export CSV
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                      .csv — universal spreadsheet format
+                    </p>
+                  </div>
+                </button>
+                <button
+                  type="button"
+                  role="menuitem"
+                  onClick={handleExportPDF}
+                  className="w-full flex items-start gap-3 p-2.5 rounded-xl hover:bg-rose-50 text-left transition-colors"
+                >
+                  <div className="w-9 h-9 rounded-lg bg-rose-100 text-rose-700 flex items-center justify-center shrink-0">
+                    <Printer size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-900">
+                      Print / PDF Summary
+                    </p>
+                    <p className="text-[11px] text-slate-500 font-medium leading-tight">
+                      Branded report with header &amp; footer
+                    </p>
+                  </div>
+                </button>
+                <div className="px-3 pt-2 pb-1.5 border-t border-slate-100 mt-1.5">
+                  <p className="text-[10px] text-slate-500 font-medium leading-tight">
+                    Exports respect the current search &amp; year filter. {records.length} record{records.length === 1 ? '' : 's'} will be included.
+                  </p>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
