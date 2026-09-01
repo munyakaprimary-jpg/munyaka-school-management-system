@@ -120,40 +120,40 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     // ── ADMIN has unrestricted access to every section ──
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'super_admin', 'head_teacher'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
+    { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
+    { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
+    { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
+    { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
+    { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin', 'super_admin'] },
-    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'super_admin', 'head_teacher', 'teacher'] },
+    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
+    { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
     // Staff Attendance
-    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'super_admin', 'head_teacher'] },
+    { icon: LogIn, label: 'Daily Check-In', path: '/staff/check-in', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: Activity, label: 'Attendance Monitor', path: '/staff/attendance-monitor', roles: ['admin', 'head_teacher'] },
+    { icon: Clock, label: 'Attendance Management', path: '/staff/attendance', roles: ['admin', 'head_teacher'] },
     // Academic Assessment & Analysis
-    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'super_admin', 'head_teacher', 'teacher'] },
-    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     // Digital Hub & ICT
-    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'super_admin', 'head_teacher', 'teacher'] },
-    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'super_admin', 'head_teacher', 'teacher'] },
-    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'super_admin', 'head_teacher', 'bursar'] },
-    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'super_admin', 'head_teacher'] },
+    { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },
+    { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
+    { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
   ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
@@ -169,12 +169,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const role = user.role ?? '';
     const roleLower = role.toLowerCase();
 
-    // ADMIN always sees every sidebar item — unrestricted.
-    if (roleLower === 'admin' || roleLower === 'owner' || roleLower === 'super_admin') {
-      // Still check requiresPermission for admin to keep the hook consistent,
-      // but admin always passes hasPermission().
+    // ADMIN (and legacy super_admin alias) always sees every sidebar item.
+    if (roleLower === 'admin' || roleLower === 'super_admin') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return true;
+    }
+
+    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data.
+    if (roleLower === 'owner') {
+      if (item.requiresPermission) return canAccessSystemManagement();
+      return item.roles.map(r => r.toLowerCase()).includes('owner');
     }
 
     // Check if user has the required role
@@ -195,15 +199,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Bottom Navigation Bar Quick Links - Filtered by user role
   // ADMIN has full access to all bottom-nav items.
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'super_admin', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'head_teacher', 'teacher'] },
+    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher'] },
-    { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'super_admin', 'head_teacher'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
+    { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
   ].filter(item => user && item.roles.includes(user.role));
 
   return (

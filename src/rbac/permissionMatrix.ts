@@ -10,18 +10,36 @@
  *
  *  ⚠️  CONTRACT — DO NOT BREAK
  *  ----------------------------------------------------------------------------
- *  - ADMIN (the school administrator) is the *most powerful operational* role.
- *    They have UNRESTRICTED access to every module, widget, route, sidebar
- *    entry, and operational control surface. ADMIN is treated as a super-set
- *    of HEADTEACHER + BURSAR + (limited) ICT + (limited) OWNER.
+ *  ROLE TAXONOMY
+ *  ───────────────────────────────────────────────────────────────────────────
+ *  admin        → SCHOOL ADMINISTRATOR. Full unrestricted access to every
+ *                  module, widget, route, sidebar entry, and operational
+ *                  control surface in the school system.  Super-set of
+ *                  HEADTEACHER + BURSAR + ICT + the old super_admin.
  *
- *  - OWNER / SUPER_ADMIN is the platform-billing super-role. The legacy
- *    "owner" alias maps to SUPER_ADMIN throughout the UI.
+ *                  NOTE: super_admin and admin are merged.  Both identifiers
+ *                  resolve to the admin role at runtime.  The canonical
+ *                  identifier stored in auth is "admin".
  *
- *  - All role comparisons are case-insensitive (lowercased before lookup).
+ *  owner        → PLATFORM BILLING OWNER. Completely separate from admin.
+ *                  Has NO operational access. Can see subscription/billing
+ *                  widgets, the payment-management page, and the owner
+ *                  executive dashboard only.
  *
- *  - Every guard helper short-circuits to "allowed" when the current role
- *    is ADMIN. This means we never accidentally lock ADMIN out of any view.
+ *  head_teacher → Operational school manager (learners, attendance, transfers,
+ *                  alerts, staff accounts, settings).
+ *
+ *  teacher      → Classroom scope (assigned classes, marksheets, registers).
+ *
+ *  bursar       → Finance scope (fee collection, payment logs, ledger).
+ *
+ *  ict_teacher  → Infrastructure scope (portal logins, network quotas, lab
+ *                  schedules). Granted via RBAC delegation.
+ *
+ *  parent / student → Read-only on own data.
+ *
+ *  All role comparisons are case-insensitive (lowercased before lookup).
+ *  Every guard helper short-circuits to "allowed" when role === "admin".
  * =============================================================================
  */
 
@@ -31,7 +49,7 @@ import type { WidgetKey } from "@/pages/Dashboard";
  *  1.  CORE ROLE CONSTANTS
  * ──────────────────────────────────────────────────────────────────────── */
 
-/** Canonical role identifiers. We keep a single source of truth. */
+/** Canonical role identifiers. */
 export const ROLES = {
   ADMIN: "admin",
   HEAD_TEACHER: "head_teacher",
@@ -41,32 +59,40 @@ export const ROLES = {
   PARENT: "parent",
   STUDENT: "student",
   OWNER: "owner",
-  SUPER_ADMIN: "super_admin",
 } as const;
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-/** Quick helpers — many places in the codebase use the older "owner" alias. */
-export const isOwnerLike = (role?: string | null) =>
-  !!role && ["owner", "super_admin"].includes(role.toLowerCase());
+/** Maps legacy "super_admin" identifier → canonical "admin" at runtime.
+ *  The canonical identifier stored in auth is always "admin".
+ *  Callers can pass either "admin" or "super_admin" and get admin behaviour. */
+export const normalizeAdmin = (role?: string | null): Role | null => {
+  if (!role) return null;
+  const r = role.toLowerCase();
+  if (r === "admin" || r === "super_admin") return ROLES.ADMIN;
+  if (r === "head_teacher" || r === "headteacher") return ROLES.HEAD_TEACHER;
+  if (r === "ict_teacher" || r === "ict_technician") return ROLES.ICT_TEACHER;
+  if (r in ROLES) return r as Role;
+  return null;
+};
 
-/**
- * ADMIN is the school administrator — the focus of the recent RBAC update.
- * The check is intentionally permissive: any of the documented admin
- * spellings should pass.
- */
-export const isAdmin = (role?: string | null) => {
+/** True when role is the school administrator (admin / super_admin merged). */
+export const isAdmin = (role?: string | null): boolean => {
   if (!role) return false;
   const r = role.toLowerCase();
-  return r === ROLES.ADMIN || r === ROLES.SUPER_ADMIN || r === ROLES.OWNER;
+  return r === "admin" || r === "super_admin";
+};
+
+/** True when role is the platform billing owner. Completely separate from
+ *  admin — owner has NO operational access. */
+export const isOwner = (role?: string | null): boolean => {
+  if (!role) return false;
+  return role.toLowerCase() === "owner";
 };
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  2.  SEMANTIC PERMISSION KEYS
- * ────────────────────────────────────────────────────────────────────────
- *  These are the *capability* identifiers used throughout the app.
- *  Each one corresponds to a specific operational domain.
- */
+ * ──────────────────────────────────────────────────────────────────────── */
 export const PERMISSIONS = {
   // Operational dashboard
   VIEW_OPERATIONAL_DASHBOARD: "view_operational_dashboard",
@@ -120,27 +146,22 @@ export type Permission = (typeof PERMISSIONS)[keyof typeof PERMISSIONS];
  *  3.  ROLE → PERMISSION MATRIX
  * ────────────────────────────────────────────────────────────────────────
  *
- *  ADMIN  → every permission in the system (the *complete* unrestricted set)
- *  HEAD   → operational + people + academics
- *  TEACHER→ academics + attendance for assigned classes
- *  BURSAR → finance + subscription (read-only subscription summary)
- *  ICT    → system infrastructure (granted via RBAC delegation)
- *  PARENT → read-only on own children
- *  STUDENT→ read-only on own profile
- *
- *  `null` in the matrix means the role is explicitly NOT granted the perm.
- *  `true`  means it IS granted.
- *  ADMIN rows use a helper that returns `true` for every permission.
+ *  admin      → every permission in the system (unrestricted)
+ *  head_teacher → operational + people + academics
+ *  teacher    → class marksheets & registers
+ *  bursar     → fee collection & payment logs
+ *  ict_teacher → system infrastructure (granted via RBAC delegation)
+ *  parent     → read-only on own children
+ *  student    → read-only on own profile
+ *  owner      → billing-only (subscription, payments, renewal) — no operational access
  */
-const ALL = new Set(Object.values(PERMISSIONS));
-
 const adminSet: Record<Permission, true> = Object.values(PERMISSIONS).reduce(
   (acc, p) => ({ ...acc, [p]: true }),
   {} as Record<Permission, true>
 );
 
 export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
-  /* ───────────── ADMIN: unrestricted, all features ───────────── */
+  /* ───────────── ADMIN: full unrestricted access ───────────── */
   admin: adminSet,
 
   /* ───────────── HEADTEACHER: operational scope ───────────── */
@@ -317,14 +338,34 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
     manage_parent_access: null,
   },
 
-  /* ───────────── OWNER: platform billing super-role ───────────── */
+  /* ───────────── OWNER: platform billing only — NO operational access ───────────── */
   owner: {
-    ...adminSet, // billing owner is a superset of operational admin
-  },
-
-  /* ───────────── SUPER_ADMIN: extends OWNER with infra ───────────── */
-  super_admin: {
-    ...adminSet, // unrestricted platform-level access
+    view_operational_dashboard: null,
+    manage_learners: null,
+    execute_transfers: null,
+    view_learner_archive: null,
+    view_attendance_trends: null,
+    mark_student_attendance: null,
+    manage_staff_attendance: null,
+    enter_marks: null,
+    view_results_analysis: null,
+    manage_timetable: null,
+    collect_fees: null,
+    view_fee_reports: null,
+    view_recent_alerts: null,
+    publish_notices: null,
+    manage_staff_accounts: null,
+    promote_students: null,
+    manage_parent_access: null,
+    manage_ict_systems: null,
+    access_portal_logins: null,
+    access_network_quotas: null,
+    access_lab_schedules: null,
+    edit_school_settings: null,
+    access_central_data: true,
+    // Owner has explicit billing access only
+    manage_subscription: true,
+    manage_billing: true,
   },
 };
 
@@ -332,37 +373,34 @@ export const ROLE_PERMISSIONS: Record<Role, Record<Permission, true | null>> = {
  *  4.  PUBLIC GUARD HELPERS
  * ──────────────────────────────────────────────────────────────────────── */
 
-const norm = (role?: string | null): Role | null => {
+/** Resolve a role string to a canonical Role, normalising admin aliases. */
+export function resolveRole(role?: string | null): Role | null {
   if (!role) return null;
-  const r = role.toLowerCase();
-  if (r in ROLE_PERMISSIONS) return r as Role;
-  // legacy aliases
-  if (r === "headteacher") return ROLES.HEAD_TEACHER;
-  return null;
-};
+  return normalizeAdmin(role);
+}
 
 /** Does the given role have a specific permission? ADMIN always passes. */
 export function roleHas(role: string | null | undefined, perm: Permission): boolean {
-  const r = norm(role);
+  if (isAdmin(role)) return true;
+  const r = resolveRole(role);
   if (!r) return false;
-  // ADMIN (and any admin-like role) is unrestricted.
-  if (isAdmin(r)) return true;
   return ROLE_PERMISSIONS[r]?.[perm] === true;
 }
 
-/** Convert the role-permission map into the legacy boolean shape used by
- *  older components that need a `{permission: boolean}` object. */
-export function permissionsForRole(role: string | null | undefined): Record<Permission, boolean> {
-  const r = norm(role);
-  if (!r) {
+/** Convert role → full boolean permission map. */
+export function permissionsForRole(
+  role: string | null | undefined
+): Record<Permission, boolean> {
+  if (isAdmin(role)) {
     return Object.values(PERMISSIONS).reduce(
-      (acc, p) => ({ ...acc, [p]: false }),
+      (acc, p) => ({ ...acc, [p]: true }),
       {} as Record<Permission, boolean>
     );
   }
-  if (isAdmin(r)) {
+  const r = resolveRole(role);
+  if (!r) {
     return Object.values(PERMISSIONS).reduce(
-      (acc, p) => ({ ...acc, [p]: true }),
+      (acc, p) => ({ ...acc, [p]: false }),
       {} as Record<Permission, boolean>
     );
   }
@@ -375,67 +413,59 @@ export function permissionsForRole(role: string | null | undefined): Record<Perm
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  5.  ROLE → DASHBOARD-WIDGET MAP
- * ────────────────────────────────────────────────────────────────────────
- *  Drives the role-aware Dashboard grid. ADMIN is intentionally given
- *  the FULL set of widgets (operational + ICT + subscription) — the
- *  dashboard router for ADMIN should look identical to the master
- *  overview, with no operational cards hidden.
- */
+ * ──────────────────────────────────────────────────────────────────────── */
 export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
+  // ADMIN: complete master set — operational + ICT + billing
   admin: [
-    // Operational vitals
     "totalStudents",
     "totalTeachers",
     "todayAttendance",
     "feesCollected",
-    // Attendance / transfers / alerts
     "systemStatus",
     "activePortalLogins",
     "networkQuotas",
     "labSchedule",
-    // Subscription & billing
     "subscriptionStatus",
     "totalActiveEnrollment",
     "renewalDate",
   ],
+
   head_teacher: [
     "totalStudents",
     "totalTeachers",
     "todayAttendance",
     "feesCollected",
   ],
+
   teacher: [
     "myAssignedClassCount",
     "myClassAttendanceRate",
     "pendingMarks",
     "todayLessonSchedule",
   ],
+
   bursar: [
     "feesCollected",
     "totalActiveEnrollment",
     "subscriptionStatus",
   ],
+
   ict_teacher: [
     "activePortalLogins",
     "networkQuotas",
     "labSchedule",
     "systemStatus",
   ],
+
   parent: ["totalActiveEnrollment"],
   student: ["todayAttendance"],
+
+  // OWNER: billing/subscription metrics only — NO operational widgets
   owner: [
     "subscriptionStatus",
     "totalActiveEnrollment",
     "renewalDate",
     "systemStatus",
-  ],
-  super_admin: [
-    "subscriptionStatus",
-    "totalActiveEnrollment",
-    "renewalDate",
-    "systemStatus",
-    "activePortalLogins",
-    "networkQuotas",
   ],
 };
 
@@ -443,7 +473,6 @@ export const ROLE_DASHBOARD_WIDGETS: Record<Role, WidgetKey[]> = {
  *  complete master list regardless of the underlying role map. */
 export function widgetsForRole(role: string | null | undefined): WidgetKey[] {
   if (isAdmin(role)) {
-    // Return the master, unrestricted widget set for ADMIN.
     return [
       "totalStudents",
       "totalTeachers",
@@ -458,18 +487,14 @@ export function widgetsForRole(role: string | null | undefined): WidgetKey[] {
       "renewalDate",
     ];
   }
-  const r = norm(role);
+  const r = resolveRole(role);
   if (!r) return ["systemStatus"];
   return ROLE_DASHBOARD_WIDGETS[r] ?? ["systemStatus"];
 }
 
 /* ──────────────────────────────────────────────────────────────────────────
  *  6.  ROUTE GUARDS
- * ────────────────────────────────────────────────────────────────────────
- *  Each route declares the minimum permission required. ADMIN bypasses
- *  every check. The `BLOCKED_ROLES` list still applies to ADMIN only in
- *  genuinely dangerous platform-internal paths.
- */
+ * ──────────────────────────────────────────────────────────────────────── */
 export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   "/students": PERMISSIONS.MANAGE_LEARNERS,
   "/learners/archive": PERMISSIONS.VIEW_LEARNER_ARCHIVE,
@@ -507,24 +532,24 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
 
 /**
  * Decide whether a user with the given role is allowed to visit `path`.
- * ADMIN always returns true. Unknown paths fall through to a permissive
- * default (the route is accessible to any authenticated user) — this is
- * the *fail-open* behaviour we want for ADMIN.
+ * ADMIN bypasses every check. OWNER is explicitly blocked from operational
+ * routes via the matrix (collect_fees, manage_learners, etc.).
  */
-export function canAccessPath(role: string | null | undefined, path: string): boolean {
+export function canAccessPath(
+  role: string | null | undefined,
+  path: string
+): boolean {
   if (!role) return false;
   if (isAdmin(role)) return true; // unrestricted
 
-  // Normalise: strip trailing slashes and any param segments for lookup.
-  const cleanPath = path.split("?")[0].replace(/\/+$/, "") || "/";
+  const cleanPath = (path.split("?")[0].replace(/\/+$/, "") || "/");
   if (cleanPath === "/" || cleanPath === "/dashboard") return true;
 
-  // Find the most specific matching route prefix.
   const match = Object.keys(ROUTE_PERMISSIONS)
     .filter((p) => cleanPath === p || cleanPath.startsWith(p + "/"))
     .sort((a, b) => b.length - a.length)[0];
 
-  if (!match) return true; // no specific guard required
+  if (!match) return true;
   return roleHas(role, ROUTE_PERMISSIONS[match]);
 }
 
@@ -540,5 +565,4 @@ export const ROLE_LABELS: Record<Role, string> = {
   parent: "Parent",
   student: "Student",
   owner: "Owner",
-  super_admin: "Super Admin",
 };

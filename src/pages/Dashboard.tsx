@@ -102,14 +102,6 @@ const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
     'renewalDate',
     'systemStatus',
   ],
-  super_admin: [
-    'subscriptionStatus',
-    'totalActiveEnrollment',
-    'renewalDate',
-    'systemStatus',
-    'activePortalLogins',
-    'networkQuotas',
-  ],
   // ADMIN: full unrestricted dashboard — all operational vitals + ICT + subscription
   admin: [
     'totalStudents',
@@ -623,13 +615,15 @@ const Dashboard = () => {
     if (!role) return FALLBACK_DASHBOARD;
     const normalized = role.toLowerCase();
 
-    // ADMIN: full unrestricted dashboard.
-    if (normalized === 'admin') return FULL_ADMIN_WIDGETS;
+    // ADMIN (and legacy super_admin alias) → full unrestricted dashboard.
+    if (normalized === 'admin' || normalized === 'super_admin') {
+      return FULL_ADMIN_WIDGETS;
+    }
 
     // Teachers who have been granted ICT management access via
     // RBAC inherit the ICT dashboard. This is checked AFTER the
     // explicit ict_teacher role so admins who also hold ICT
-    // permissions keep their admin/owner view.
+    // permissions keep their admin view.
     if (normalized === 'teacher' && canAccessSystemManagement()) {
       return ROLE_DASHBOARDS.ict_teacher;
     }
@@ -645,10 +639,11 @@ const Dashboard = () => {
   const activeRoleLabel = useMemo(() => {
     const role = user?.role;
     if (!role) return 'Guest';
+    const r = role.toLowerCase();
+    // admin and super_admin both resolve to "Administrator"
+    if (r === 'admin' || r === 'super_admin') return 'Administrator';
     const map: Record<string, string> = {
       owner: 'Owner',
-      super_admin: 'Super Admin',
-      admin: 'Administrator',
       head_teacher: 'Head Teacher',
       teacher: 'Teacher',
       bursar: 'Bursar',
@@ -656,20 +651,19 @@ const Dashboard = () => {
       student: 'Student',
       ict_teacher: 'ICT Teacher',
     };
-    return map[role.toLowerCase()] || role;
+    return map[r] || role;
   }, [user?.role]);
 
-  // ADMIN and OWNER/SUPER_ADMIN see executive-level metrics instead of
-  // classroom operational widgets.  ADMIN is also shown the full operational
-  // view (see seesOperationalWidgets above); the distinction here controls
-  // the OwnerExecutiveWidgets card at the bottom.
+  // OWNER (platform billing) sees the OwnerExecutiveWidgets card.
+  // ADMIN sees the full operational dashboard + subscription widgets via
+  // the admin ROLE_DASHBOARD entry — it does NOT use OwnerExecutiveWidgets.
   const isOwner = useMemo(
-    () => ['owner', 'super_admin', 'admin'].includes((user?.role || '').toLowerCase()),
+    () => ['owner'].includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
   // Roles that should see classroom operational widgets (attendance trends,
-  // class participation). OWNER and ICT_TEACHER are excluded.  ADMIN sees
+  // class participation). OWNER and ICT_TEACHER are excluded. ADMIN sees
   // everything — operational + ICT + subscription — by definition.
   const OPERATIONAL_ROLES = ['admin', 'head_teacher', 'teacher', 'bursar'];
   const seesOperationalWidgets = useMemo(
@@ -678,7 +672,7 @@ const Dashboard = () => {
   );
 
   // Recent Alerts is visible to ADMIN, HEADTEACHER, and BURSAR.
-  // OWNER / SUPERADMIN / TEACHER / ICT_TEACHER are excluded.
+  // OWNER, TEACHER, and ICT_TEACHER are excluded.
   const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher', 'bursar'];
   const canViewRecentAlerts = useMemo(
     () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),

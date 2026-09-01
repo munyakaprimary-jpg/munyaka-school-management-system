@@ -47,10 +47,8 @@ export function usePermissions() {
   const checkIctManager = (): boolean => {
     if (isAdminUser) return true; // admin always passes
 
-    const roleUpper = (role ?? '').toUpperCase();
-    if (roleUpper === 'SUPERADMIN') return true;
-    const systemMgmtRoles = ['ICT_TEACHER', 'ICT_TECHNICIAN'];
-    if (systemMgmtRoles.includes(roleUpper)) return true;
+    const roleLower = (role ?? '').toLowerCase();
+    if (roleLower === 'ict_teacher' || roleLower === 'ict_technician') return true;
 
     return getIctUserIds().includes(userId ?? '');
   };
