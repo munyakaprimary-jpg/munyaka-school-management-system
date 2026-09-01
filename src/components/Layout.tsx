@@ -129,7 +129,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['super_admin'] },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
         { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -162,8 +162,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
   // Used to enforce that OWNER cannot access administrative routes like /fees.
   const BLOCKED_ROUTES: Record<string, string[]> = {
-    '/fees': ['parent', 'student', 'teacher'],
-    '/system-management': ['head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+    '/fees': ['owner', 'parent', 'student', 'teacher'],
+    '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
   };
 
   const filteredMenu = menuItems.filter(item => {
@@ -185,13 +185,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   // Bottom Navigation Bar Quick Links - Filtered by user role
     // Includes core items (Home, Learners, Roll Call) plus role-specific tabs (Fees, Settings, Licensing)
-    // NOTE: 'owner' role has been deprecated and consolidated into 'super_admin'
     const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
-      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
-      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['super_admin'] },
+      { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+      { icon: Users, label: 'Learners', path: '/students', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
+      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['owner', 'super_admin', 'head_teacher', 'teacher'] },
+      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
+      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
       { icon: Key, label: 'Licensing', path: '/central-data', roles: ['super_admin', 'head_teacher'] },
       { icon: Database, label: 'Central', path: '/central-data', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },

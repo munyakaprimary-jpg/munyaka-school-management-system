@@ -96,6 +96,12 @@ const WIDGET_DEFINITIONS: Record<WidgetKey, WidgetDefinition> = {
 // ─────────────────────────────────────────────────────────────
 
 const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
+  owner: [
+    'subscriptionStatus',
+    'totalActiveEnrollment',
+    'renewalDate',
+    'systemStatus',
+  ],
   super_admin: [
     'subscriptionStatus',
     'totalActiveEnrollment',
@@ -580,18 +586,15 @@ const Dashboard = () => {
     if (!role) return FALLBACK_DASHBOARD;
     const normalized = role.toLowerCase();
 
-    // Legacy 'owner' token collapses to the super_admin dashboard.
-    const effective = normalized === 'owner' ? 'super_admin' : normalized;
-
     // Teachers who have been granted ICT management access via
     // RBAC inherit the ICT dashboard. This is checked AFTER the
     // explicit ict_teacher role so admins who also hold ICT
-    // permissions keep their admin/super_admin view.
-    if (effective === 'teacher' && canAccessSystemManagement()) {
+    // permissions keep their admin/owner view.
+    if (normalized === 'teacher' && canAccessSystemManagement()) {
       return ROLE_DASHBOARDS.ict_teacher;
     }
 
-    return ROLE_DASHBOARDS[effective] ?? FALLBACK_DASHBOARD;
+    return ROLE_DASHBOARDS[normalized] ?? FALLBACK_DASHBOARD;
   };
 
   const activeWidgetKeys = useMemo(
@@ -603,6 +606,7 @@ const Dashboard = () => {
     const role = user?.role;
     if (!role) return 'Guest';
     const map: Record<string, string> = {
+      owner: 'Owner',
       super_admin: 'Super Admin',
       head_teacher: 'Head Teacher',
       teacher: 'Teacher',
@@ -610,17 +614,14 @@ const Dashboard = () => {
       parent: 'Parent',
       student: 'Student',
       ict_teacher: 'ICT Teacher',
-      // Legacy: 'owner' has been consolidated into 'super_admin'
-      owner: 'Super Admin',
-      OWNER: 'Super Admin',
     };
     return map[role.toLowerCase()] || role;
   }, [user?.role]);
 
-  // True when the current user is the SuperAdmin (formerly Owner)
-  // who should see executive-level metrics instead of classroom operations.
+  // True when the current user is the school owner / super-admin who
+  // should see executive-level metrics instead of classroom operations.
   const isOwner = useMemo(
-    () => (user?.role || '').toLowerCase() === 'super_admin',
+    () => ['owner', 'super_admin'].includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -645,7 +646,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground">
             {user?.role?.toLowerCase() === 'teacher'
               ? "Your assigned classes and academic metrics for today."
-              : user?.role?.toLowerCase() === 'super_admin'
+              : user?.role?.toLowerCase() === 'owner'
               ? "High-level application, subscription and enrollment metrics."
               : user?.role?.toLowerCase() === 'ict_teacher'
               ? "System infrastructure, network quotas, and lab bookings."
