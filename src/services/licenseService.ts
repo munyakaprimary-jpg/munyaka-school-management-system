@@ -31,9 +31,7 @@ const NUM_SEGMENTS = 4; // MUNYAKA-2026-[AAAA]-[BBBB]-[CCCC]-[DDDD]
 // must always be able to reach the Payment & Subscriptions / activation page
 // so they can renew the license. Without this carve-out they would be
 // locked out of the very screen they need to fix the lock.
-// Note: 'owner' is retained for backward compatibility during migration from old records.
-// New records should use 'super_admin'.
-export const LICENSE_EXEMPT_ROLES = new Set(['super_admin']);
+export const LICENSE_EXEMPT_ROLES = new Set(['owner', 'super_admin']);
 
 // Storage key for the *currently authenticated role* (string). The lock
 // screen consults this key to decide whether to render the lock gate or
