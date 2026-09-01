@@ -15,7 +15,8 @@
  * is updated by the restore action.
  */
 
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   Archive,
@@ -65,6 +66,8 @@ import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 type YearFilter = number | 'ALL';
 
 const TransferredLearnersArchive: React.FC = () => {
+  const navigate = useNavigate();
+
   const [records, setRecords] = useState<TransferredLearnerArchive[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [yearFilter, setYearFilter] = useState<YearFilter>('ALL');
@@ -73,6 +76,17 @@ const TransferredLearnersArchive: React.FC = () => {
   const [restoreTarget, setRestoreTarget] =
     useState<TransferredLearnerArchive | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Safe back handler: tries history.back() first (preserves scroll position
+  // and prior filter state). Falls back to /learners if the history stack is
+  // empty (e.g. direct navigation or page refresh).
+  const handleBack = useCallback(() => {
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/learners', { replace: true });
+    }
+  }, [navigate]);
 
   // Available grades/streams for the restore target dropdown
   const gradesConfig = useMemo(() => {
@@ -216,9 +230,10 @@ const TransferredLearnersArchive: React.FC = () => {
         </div>
 
         <Button
+          type="button"
           variant="outline"
-          className="rounded-xl gap-2 border-slate-200"
-          onClick={() => window.history.back()}
+          onClick={handleBack}
+          className="rounded-xl gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer transition-colors"
         >
           <ChevronLeft size={16} />
           Back
