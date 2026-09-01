@@ -1,0 +1,40 @@
+/**
+ * Shape of a learner row as stored in `school_learners_data`.
+ *
+ * This type is the single source of truth for the active learner
+ * directory — both the Students page table and the various per-class
+ * roster views read against this contract.
+ */
+export interface Learner {
+  id: string;
+  admNo: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: 'Male' | 'Female' | 'Other';
+  guardian: string;
+  phone: string;
+  birthCertificateNo?: string;
+
+  /**
+   * Lifecycle status:
+   *   • Active        — currently enrolled and on the roster
+   *   • TRANSFERRED   — moved to the Transferred Learners Archive
+   *   • Graduated     — completed final grade
+   *   • Suspended     — temporarily off the roster
+   */
+  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
+
+  /** ISO date string. Optional so legacy rows still load. */
+  dob?: string;
+  /** ISO date string. */
+  dateOfAdmission?: string;
+  /** NEMIS / UPI / Assessment number — defaults to `admNo`. */
+  nemisUpi?: string;
+  /** Previous school captured at registration or transfer-in. */
+  previousSchool?: string;
+  /** Previous school's clearance / transfer reference number. */
+  previousSchoolClearanceRef?: string;
+  /** Free-form reason captured at registration or transfer-in. */
+  transferReason?: string;
+}

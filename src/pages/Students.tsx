@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  Loader2, ExternalLink, Eye, Archive
+  Loader2, ExternalLink, Eye, Archive, ArrowRightLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,16 +14,19 @@ import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
 import AdminPinModal from '@/components/students/AdminPinModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
+import TransferInModal from '@/components/students/TransferInModal';
 import { StudentTransferInfo } from '@/types/transfer';
+import { Learner } from '@/types/learners';
 import { showSuccess } from '@/utils/toast';
 import { logDeletionAudit } from '@/services/deletionAuditLog';
+import { useAuth } from '@/context/AuthContext';
 import {
   readGradesAndStreams,
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
 
-interface Learner {
+interface LearnerRowCompat {
   id: string;
   admNo: string;
   name: string;
@@ -36,7 +39,7 @@ interface Learner {
   status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
-const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
+const DEFAULT_LEARNERS: LearnerRowCompat[] = INITIAL_SEED_DATA.students as LearnerRowCompat[];
 
 // Key for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';
@@ -278,6 +281,9 @@ export default function Students() {
   // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
 
+  // ─── Transfer In Modal ───────────────────────────────────────────
+  const [isTransferInOpen, setIsTransferInOpen] = useState(false);
+
   // ─── Official school letterhead ──────────────────────────────────────────
     // The exported CSV has 8 data columns (A through H). To make the school
     // header text appear visually centered above the table, each letterhead
@@ -288,7 +294,7 @@ export default function Students() {
     const DATA_COLUMN_COUNT = 8;
     const LEADING_PADDING = 3; // 3 empty cells → text appears in column D (centered)
   
-    const buildCsvForDataset = (datasetToExport: Learner[]): string => {
+    const buildCsvForDataset = (datasetToExport: LearnerRowCompat[]): string => {
       const dataHeaders = [
         'Assessment No', 'Full Name', 'Birth Certificate No',
         'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
@@ -392,10 +398,15 @@ export default function Students() {
   const [transferLearner, setTransferLearner] = useState<StudentTransferInfo | null>(null);
 
   // ─── Navigation Hook ─────────────────────────────────────────────────
-  // Fix: `navigate` was undefined in handleViewProfile because the hook
-  // was never invoked. We now call useNavigate() so handleViewProfile can
-  // programmatically route to /students/:id with the full learner object.
-  const navigate = useNavigate();
+    // Fix: `navigate` was undefined in handleViewProfile because the hook
+    // was never invoked. We now call useNavigate() so handleViewProfile can
+    // programmatically route to /students/:id with the full learner object.
+    const navigate = useNavigate();
+  
+    // Resolve the current admin user for audit logging. The Transfer In
+    // workflow records `actorName` on every TRANSFERRED_IN event so the
+    // academic-history log shows who performed the enrollment.
+    const { user } = useAuth();
 
   // Ensure default grade is in the list only on initial mount when formData.grade is empty
   useEffect(() => {
@@ -422,7 +433,7 @@ export default function Students() {
   };
 
   // Open Edit Modal — populates ALL fields including Birth Certificate No
-  const handleOpenEdit = (learner: Learner) => {
+  const handleOpenEdit = (learner: LearnerRowCompat) => {
     setEditingLearnerId(learner.id);
     setFormData({
       admNo: learner.admNo,
@@ -440,14 +451,14 @@ export default function Students() {
 
   // View Profile Handler — navigates to the full student profile page,
   // passing the full student object through the route param.
-  const handleViewProfile = (learner: Learner) => {
+  const handleViewProfile = (learner: LearnerRowCompat) => {
     navigate(`/students/${learner.id}`);
   };
 
   // Transfer Handler — opens the Transfer Workflow modal and passes
   // the ENTIRE active learner object (cast to StudentTransferInfo) so the
   // workflow can render real data without any hardcoded fallback.
-  const handleTransfer = (learner: Learner) => {
+  const handleTransfer = (learner: LearnerRowCompat) => {
     // Build the StudentTransferInfo payload from the active learner.
     // No fallbacks to a hardcoded student — every field comes from the row.
     const transferPayload: StudentTransferInfo = {
@@ -528,7 +539,7 @@ export default function Students() {
         )
       );
     } else {
-      const newLearner: Learner = {
+      const newLearner: LearnerRowCompat = {
         id: Date.now().toString(),
         ...normalizedEntry,
       };
@@ -558,12 +569,40 @@ export default function Students() {
   // Close Transfer Modal
   const handleCloseTransfer = () => {
     setIsTransferOpen(false);
-    setTransferLearner(null);
-  };
+        setTransferLearner(null);
+      };
+    
+      // ─── Transfer In Handler ─────────────────────────────────────────────
+      // Called after the TransferInModal persists the learner + roster updates.
+      // The modal already shows the success toast; we only need to:
+      //   1. Push the freshly-inserted learner into local React state so the
+      //      table re-renders without a full page reload.
+      //   2. Open the learner's profile (or scroll to the class list view).
+      const handleTransferInComplete = (inserted: Learner) => {
+        setLearners((prev) => {
+          // Defensive de-dupe in case the row is already present.
+          if (prev.some((l) => l.id === inserted.id)) return prev;
+          return [inserted as unknown as LearnerRowCompat, ...prev];
+        });
+        setIsTransferInOpen(false);
+    
+        // Apply the grade & stream filters so the user lands on the updated
+        // class list view immediately.
+        setGradeFilter(inserted.grade);
+        setStreamFilter(inserted.stream);
+        setSearchTerm('');
+    
+        // Open the new learner's profile in the background for convenience.
+        navigate(`/students/${inserted.id}`);
+      };
+    
+      const handleCloseTransferIn = () => {
+        setIsTransferInOpen(false);
+      };
 
   // Handle Delete Confirmation — invoked by AdminPinModal when the entered
     // admin password is verified.
-    const confirmDelete = (learner: Learner) => {
+    const confirmDelete = (learner: LearnerRowCompat) => {
       setLearners((prev) => prev.filter((item) => item.id !== learner.id));
       // Write a secure audit-log entry so the deletion is traceable.
       logDeletionAudit({
@@ -656,13 +695,23 @@ export default function Students() {
           </button>
 
           <button
-            type="button"
-            onClick={handleOpenAdd}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
-          >
-            <Plus className="w-4 h-4 stroke-[2.5]" />
-            + Add Learner
-          </button>
+                      type="button"
+                      onClick={() => setIsTransferInOpen(true)}
+                      className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
+                      title="Transfer In a learner from another school"
+                    >
+                      <ArrowRightLeft className="w-4 h-4" />
+                      Transfer In Learner
+                    </button>
+          
+                    <button
+                      type="button"
+                      onClick={handleOpenAdd}
+                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                      + Add Learner
+                    </button>
         </div>
       </div>
 
@@ -894,7 +943,7 @@ export default function Students() {
             try {
               const raw = localStorage.getItem('school_learners_data');
               if (raw) {
-                const parsed: Learner[] = JSON.parse(raw);
+                const parsed: LearnerRowCompat[] = JSON.parse(raw);
                 const updated = parsed.map(l =>
                   l.id === studentId
                     ? { ...l, status: 'TRANSFERRED' as const }
@@ -923,6 +972,14 @@ export default function Students() {
                 }
               }}
             />
+
+            {/* Transfer In Modal — enroll an incoming learner and add them to the class roster. */}
+                        <TransferInModal
+                          isOpen={isTransferInOpen}
+                          onClose={handleCloseTransferIn}
+                          onTransferInComplete={handleTransferInComplete}
+                          actorName={user?.name || user?.email}
+                        />
 
     </div>
   );
