@@ -50,8 +50,6 @@ import PracticalCompetencies from "./pages/PracticalCompetencies";
 import ScienceLab from "./pages/ScienceLab";
 import CentralDataService from "./pages/CentralDataService";
 import PaymentManagement from "./pages/PaymentManagement";
-import AdminDashboard from "./pages/AdminDashboard";
-import DeveloperDashboard from "./pages/DeveloperDashboard";
 import AppUnlock from "./components/AppUnlock";
 
 const queryClient = new QueryClient();
@@ -86,10 +84,6 @@ const App = () => (
               <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
-
-                {/* Role-Specific Dashboard Routes */}
-                <Route path="/admin/dashboard" element={<ProtectedRoute><AppUnlock><AdminDashboard /></AppUnlock></ProtectedRoute>} />
-                <Route path="/developer/dashboard" element={<ProtectedRoute><AppUnlock><DeveloperDashboard /></AppUnlock></ProtectedRoute>} />
                 
                 {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
                 <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
