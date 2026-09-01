@@ -31,9 +31,10 @@ interface RecentAlert {
   id: string;
   type: 'fee' | 'reg' | 'attn';
   msg: string;
-  time: string;
+  time: string;       // ISO string
   color: string;
   dotClass: string;
+  _ts: number;       // unix ms — internal sort key
 }
 
 interface ClassRow {
@@ -71,14 +72,34 @@ const safeRead = <T,>(key: string, fallback: T): T => {
 
 function formatTimestamp(ts: string | number | null | undefined): string {
   if (!ts) return '—';
-  const d = new Date(ts);
+  const d = typeof ts === 'number' ? new Date(ts) : new Date(ts);
   if (isNaN(d.getTime())) return String(ts);
-  return d.toLocaleString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    hour: 'numeric',
-    minute: '2-digit',
-  });
+
+  const now = new Date();
+  const todayStr = now.toISOString().slice(0, 10);
+  const tsStr = d.toISOString().slice(0, 10);
+
+  // If it's today → show time only
+  if (tsStr === todayStr) {
+    return `Today, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  // If it's yesterday → show "Yesterday, HH:MM"
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (tsStr === yesterday.toISOString().slice(0, 10)) {
+    return `Yesterday, ${d.toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' })}`;
+  }
+
+  // Past date → show "MON DD, HH:MM AM/PM"
+  return d
+    .toLocaleString('en-KE', {
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+    .toUpperCase();
 }
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
@@ -131,6 +152,18 @@ const AlertItem = ({ alert }: { alert: RecentAlert }) => (
         {formatTimestamp(alert.time)}
       </p>
     </div>
+  </div>
+);
+
+const EmptyAlertsState = () => (
+  <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+    <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+      <Activity size={18} className="text-slate-400" />
+    </div>
+    <p className="text-sm font-semibold text-slate-600">No system activities recorded today.</p>
+    <p className="text-xs text-slate-400 max-w-xs">
+      Once fee payments, student registrations, or attendance logs are recorded, they will appear here.
+    </p>
   </div>
 );
 
@@ -248,92 +281,124 @@ const Dashboard = () => {
 
     const buildAlerts = (): RecentAlert[] => {
       const alerts: RecentAlert[] = [];
+      const today = new Date();
+      const todayStr = today.toISOString().slice(0, 10); // "YYYY-MM-DD"
 
-      // Fee transactions
-      const txRaw = localStorage.getItem('munyaka_transactions');
-      if (txRaw) {
-        try {
+      // ── Helper: parse a timestamp field into a Date, or null ───────────────
+      const parseDate = (raw: unknown): Date | null => {
+        if (!raw) return null;
+        if (typeof raw === 'number') return new Date(raw);
+        if (typeof raw === 'string') {
+          const d = new Date(raw);
+          return isNaN(d.getTime()) ? null : d;
+        }
+        return null;
+      };
+
+      // ── 1. Fee transactions ────────────────────────────────────────────────
+      try {
+        const txRaw = localStorage.getItem('munyaka_transactions');
+        if (txRaw) {
           const txs: any[] = JSON.parse(txRaw);
-          txs.slice(0, 2).forEach((tx: any) => {
+          txs.forEach((tx: any) => {
+            const ts = tx.createdAt || tx.date || tx.paidAt;
+            const date = parseDate(ts);
+            if (!date) return;
+            const dateStr = date.toISOString().slice(0, 10);
+            const isToday = dateStr === todayStr;
             alerts.push({
               id: `tx-${tx.id || Math.random()}`,
               type: 'fee',
               msg: `Fee payment: ${tx.ref || 'AUTO-GEN'} (KES ${(tx.amount || 0).toLocaleString()})`,
-              time: tx.createdAt || tx.date || new Date().toISOString(),
+              time: date.toISOString(),
               color: 'bg-orange-500',
               dotClass: 'bg-orange-400',
+              // Track whether this is a today entry for filtering
+              _isToday: isToday,
+              _ts: date.getTime(),
             });
           });
-        } catch { /* ignore */ }
-      }
+        }
+      } catch { /* ignore */ }
 
-      // Student registrations
-      const studentsRaw = localStorage.getItem('school_learners_data');
-      if (studentsRaw) {
-        try {
+      // ── 2. Student registrations ───────────────────────────────────────────
+      try {
+        const studentsRaw = localStorage.getItem('school_learners_data');
+        if (studentsRaw) {
           const students: any[] = JSON.parse(studentsRaw);
-          students.slice(0, 2).forEach((s: any) => {
+          students.forEach((s: any) => {
+            const ts = s.createdAt || s.dateOfAdmission || s.enrolledAt;
+            const date = parseDate(ts);
+            if (!date) return;
+            const dateStr = date.toISOString().slice(0, 10);
+            const isToday = dateStr === todayStr;
             alerts.push({
               id: `reg-${s.id || Math.random()}`,
               type: 'reg',
-              msg: `New student registered: ${s.name || 'Unknown'}`,
-              time: s.createdAt || s.dateOfAdmission || new Date().toISOString(),
+              msg: `New student registered: ${s.name || s.fullName || 'Unknown'}`,
+              time: date.toISOString(),
               color: 'bg-emerald-500',
               dotClass: 'bg-emerald-500',
+              _isToday: isToday,
+              _ts: date.getTime(),
             });
           });
-        } catch { /* ignore */ }
-      }
+        }
+      } catch { /* ignore */ }
 
-      // Attendance logs
-      const attnRaw = localStorage.getItem('munyaka_attendance_records');
-      if (attnRaw) {
-        try {
-          const attn = JSON.parse(attnRaw);
-          const keys = Object.keys(attn).filter(
-            (k) => attn[k] && typeof attn[k] === 'object' && (attn[k].savedAt || attn[k].timestamp)
-          );
-          if (keys.length > 0) {
+      // ── 3. Attendance logs ─────────────────────────────────────────────────
+      // Only include attendance records whose date actually matches today.
+      // Never stamp with "today" unless the record's date field is today's date.
+      try {
+        const attnRaw = localStorage.getItem('munyaka_attendance_records');
+        if (attnRaw) {
+          const attn: Record<string, any> = JSON.parse(attnRaw);
+          Object.entries(attn).forEach(([key, record]: [string, any]) => {
+            if (!record || typeof record !== 'object') return;
+            const savedAt = record.savedAt || record.timestamp || record.date;
+            const date = parseDate(savedAt);
+            if (!date) return;
+            const dateStr = date.toISOString().slice(0, 10);
+            const isToday = dateStr === todayStr;
+            // The message says "today" only when the record's date matches today
+            const count = 1; // individual records don't expose a count here
             alerts.push({
-              id: 'attn-1',
+              id: `attn-${key}`,
               type: 'attn',
-              msg: `Attendance marked: ${keys.length} record(s) saved today`,
-              time: attn[keys[0]]?.savedAt || attn[keys[0]]?.timestamp || new Date().toISOString(),
+              msg: isToday
+                ? `Attendance marked: ${count} record(s) saved today`
+                : `Attendance marked: ${date.toLocaleDateString('en-KE', { month: 'short', day: 'numeric' })} (${dateStr})`,
+              time: date.toISOString(),
               color: 'bg-purple-500',
               dotClass: 'bg-purple-400',
+              _isToday: isToday,
+              _ts: date.getTime(),
             });
-          }
-        } catch { /* ignore */ }
-      }
+          });
+        }
+      } catch { /* ignore */ }
 
+      // ── 4. Sort all alerts descending by timestamp ─────────────────────────
+      alerts.sort((a, b) => (b as any)._ts - (a as any)._ts);
+
+      // ── 5. Separate today's logs from historical logs ──────────────────────
+      const todayAlerts = alerts.filter((a) => (a as any)._isToday);
+      const historicalAlerts = alerts.filter((a) => !(a as any)._isToday);
+
+      // If there is any real activity today → show only today's activity (no historical).
+      // If there is NO activity today → show previous historical logs (if any).
+      // If there is NO data at all → show the empty state message.
       if (alerts.length === 0) {
-        alerts.push({
-          id: 'fallback-fee',
-          type: 'fee',
-          msg: 'Fee payment: AUTO-GEN (KES 300)',
-          time: new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString(),
-          color: 'bg-orange-500',
-          dotClass: 'bg-orange-400',
-        });
-        alerts.push({
-          id: 'fallback-reg',
-          type: 'reg',
-          msg: 'New student registered: ALICE WAITHAKA',
-          time: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-          color: 'bg-emerald-500',
-          dotClass: 'bg-emerald-500',
-        });
-        alerts.push({
-          id: 'fallback-attn',
-          type: 'attn',
-          msg: 'Attendance marked: Morning roll call saved',
-          time: new Date(Date.now() - 7 * 60 * 60 * 1000).toISOString(),
-          color: 'bg-purple-500',
-          dotClass: 'bg-purple-400',
-        });
+        return []; // empty array triggers the "no activity" empty state
       }
 
-      return alerts;
+      if (todayAlerts.length > 0) {
+        // Return only today's logs (already sorted by timestamp DESC)
+        return todayAlerts;
+      }
+
+      // No today's activity — return up to 6 most-recent historical logs
+      return historicalAlerts.slice(0, 6);
     };
 
     setRecentAlerts(buildAlerts());
@@ -529,9 +594,13 @@ const Dashboard = () => {
           <LiveBadge label="LIVE FACTUAL SYNC" />
         </CardHeader>
         <CardContent className="space-y-5">
-          {recentAlerts.map((alert) => (
-            <AlertItem key={alert.id} alert={alert} />
-          ))}
+          {recentAlerts.length === 0 ? (
+            <EmptyAlertsState />
+          ) : (
+            recentAlerts.map((alert) => (
+              <AlertItem key={alert.id} alert={alert} />
+            ))
+          )}
         </CardContent>
 
         {/* Simulation Buttons */}
