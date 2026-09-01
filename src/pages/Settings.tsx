@@ -81,8 +81,7 @@ const MODULES = [
 ];
 
 const ROLES = [
-  { id: 'owner', label: 'Super Admin / Owner' },
-  { id: 'super_admin', label: 'System Administrator' },
+  { id: 'super_admin', label: 'Super Admin' },
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
   { id: 'teacher', label: 'Class Teacher' },
@@ -91,10 +90,10 @@ const ROLES = [
 ];
 
 const DEFAULT_AUDIT_LOGS = [
-  { timestamp: "2026-03-31 09:14:02", admin: "School Owner", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
-  { timestamp: "2026-03-30 16:45:11", admin: "School Owner", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-31 09:14:02", admin: "Super Admin", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-30 16:45:11", admin: "Super Admin", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
   { timestamp: "2026-03-28 11:20:30", admin: "Head Teacher", action: "Grade Bounds Modified (Grade 4)", ip: "192.168.1.108 (Safari/Mac)" },
-  { timestamp: "2026-03-25 08:30:15", admin: "School Owner", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
+  { timestamp: "2026-03-25 08:30:15", admin: "Super Admin", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
 ];
 
 const getPasswordStrength = (pass: string) => {
@@ -118,16 +117,16 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
     MODULES.forEach(mod => {
       initialState[role.id][mod.id] = {
         read: true,
-        create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-        edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-        delete: role.id === 'owner' || role.id === 'super_admin'
+        create: role.id === 'super_admin' || role.id === 'head_teacher',
+        edit: role.id === 'super_admin' || role.id === 'head_teacher',
+        delete: role.id === 'super_admin'
       };
     });
   });
-  if (initialState['owner']) {
-    initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
+  if (initialState['super_admin']) {
+    initialState['super_admin']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
   }
-  ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
+  ['head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
     if (initialState[roleId]) {
       initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
     }
@@ -255,7 +254,7 @@ const Settings = () => {
     ]
   });
 
-  const [expandedRole, setExpandedRole] = useState<string | null>('owner');
+  const [expandedRole, setExpandedRole] = useState<string | null>('super_admin');
   const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => buildDefaultPermissions());
 
   const [pinForm, setPinForm] = useState({
@@ -308,26 +307,26 @@ const Settings = () => {
     if (isValid) {
       const roleInfo = {
         system_admin: { label: 'System Administrator', icon: 'settings' },
-        super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
+        super_admin: { label: 'Super Admin', icon: 'crown' }
       }[role];
-      
+
       const newSession: AdminSession = {
         role,
         roleLabel: roleInfo.label,
         roleIcon: roleInfo.icon,
         timestamp: Date.now()
       };
-      
+
       setSession(newSession);
       saveSession(role, roleInfo.label, roleInfo.icon);
       setAuthPassword("");
       setIsSwitchingRole(false);
-      
+
       // Role-specific success message
       if (role === 'system_admin') {
         showSuccess(`Welcome, System Administrator! Full system access granted.`);
       } else {
-        showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
+        showSuccess(`Welcome, Super Admin! Payment & Subscriptions module unlocked.`);
       }
     } else {
       setAuthError(`Invalid password for the selected role.`);
