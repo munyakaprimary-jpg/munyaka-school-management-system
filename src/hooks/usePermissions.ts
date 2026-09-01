@@ -5,14 +5,14 @@ const ICT_MANAGER_PERMISSION_KEY = 'munyaka_ict_manager_permission';
 /**
  * Check if the current user has the ICT system management permission.
  * This permission can be delegated to any staff member by the school admin.
- *
+ * 
  * ICT-related roles that are automatically granted this permission:
  * - ICT Officer
  * - ICT Teacher
  * - ICT Champion
  * - Lab Technician
- * - School Admin (admin, super_admin)
- *
+ * - School Admin (owner, super_admin)
+ * 
  * Additional roles can be granted permission via Settings > RBAC.
  */
 export function usePermissions() {
@@ -37,14 +37,14 @@ export function usePermissions() {
 
   /**
    * Internal check for ICT manager permission.
-   * System Management is restricted to ICT_TEACHER, ICT_TECHNICIAN, and ADMIN.
-   * Standard roles like TEACHER, BURSAR are excluded.
+   * System Management is restricted to ICT_TEACHER, ICT_TECHNICIAN, and SUPERADMIN.
+   * Standard roles like OWNER, TEACHER, BURSAR are excluded.
    */
   const checkICTManagerPermission = (): boolean => {
     const userRole = user?.role?.toUpperCase() ?? '';
 
-    // ADMIN (school manager) always has access
-    if (userRole === 'ADMIN') {
+    // SUPERADMIN (platform developers/superadmins) always have access
+    if (userRole === 'SUPERADMIN') {
       return true;
     }
 

@@ -77,33 +77,34 @@ const WIDGET_DEFINITIONS: Record<WidgetKey, WidgetDefinition> = {
 // ROLE → WIDGET MAP
 // ─────────────────────────────────────────────────────────────
 //
-// ADMIN (Platform Owner) → Platform metrics
-//   - App Subscription Status, Total Active Enrollment, Renewal Date
-//   - Also has access to ICT infrastructure widgets
-//
-// ADMIN (School Manager) / HEADTEACHER → Global system vitals
+// ADMIN / HEADTEACHER → Global system vitals
 //   - Total Students, Total Teachers, Today's Attendance %, Fees Collected
 //
 // TEACHER → Personal academic metrics
 //   - My Assigned Class Count, My Class Attendance Rate,
 //     Pending Assessment Marks to Enter, Today's Lesson Schedule
 //
+// OWNER → High-level app metrics
+//   - App Subscription Status, Total Active Enrollment, Renewal Date
+//
 // ICT_TEACHER (delegated via RBAC) → System infrastructure widgets
 //   - Active Portal Logins, Network Quotas, Lab Schedule
+//
+// SUPER_ADMIN → inherits OWNER + ICT infrastructure view
 //
 // Anything else (bursar/parent/student/other) → minimal fallback
 // ─────────────────────────────────────────────────────────────
 
 const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
-  admin: [
+  super_admin: [
     'subscriptionStatus',
     'totalActiveEnrollment',
-        'renewalDate',
-        'systemStatus',
-        'activePortalLogins',
-        'networkQuotas',
-      ],
-      head_teacher: [
+    'renewalDate',
+    'systemStatus',
+    'activePortalLogins',
+    'networkQuotas',
+  ],
+  head_teacher: [
     'totalStudents',
     'totalTeachers',
     'todayAttendance',
@@ -323,13 +324,8 @@ const Dashboard = () => {
     user?.name,
   ]);
 
-  // Load recent activity alerts dynamically from localStorage.
-  // Guard: skip entirely for non-admin roles so no alert data is ever
-  // computed or stored in state for unauthorized users.
+  // Load recent activity alerts dynamically from localStorage
   useEffect(() => {
-    const ALLOWED_ROLES = ['admin', 'head_teacher'];
-    if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
-
     try {
       const alerts: RecentAlert[] = [];
 
@@ -584,15 +580,18 @@ const Dashboard = () => {
     if (!role) return FALLBACK_DASHBOARD;
     const normalized = role.toLowerCase();
 
+    // Legacy 'owner' token collapses to the super_admin dashboard.
+    const effective = normalized === 'owner' ? 'super_admin' : normalized;
+
     // Teachers who have been granted ICT management access via
     // RBAC inherit the ICT dashboard. This is checked AFTER the
     // explicit ict_teacher role so admins who also hold ICT
-    // permissions keep their admin/owner view.
-    if (normalized === 'teacher' && canAccessSystemManagement()) {
+    // permissions keep their admin/super_admin view.
+    if (effective === 'teacher' && canAccessSystemManagement()) {
       return ROLE_DASHBOARDS.ict_teacher;
     }
 
-    return ROLE_DASHBOARDS[normalized] ?? FALLBACK_DASHBOARD;
+    return ROLE_DASHBOARDS[effective] ?? FALLBACK_DASHBOARD;
   };
 
   const activeWidgetKeys = useMemo(
@@ -603,45 +602,33 @@ const Dashboard = () => {
   const activeRoleLabel = useMemo(() => {
     const role = user?.role;
     if (!role) return 'Guest';
-        const map: Record<string, string> = {
-          admin: 'Admin',
-          head_teacher: 'Head Teacher',
-          teacher: 'Teacher',
-          bursar: 'Bursar',
-          parent: 'Parent',
-          student: 'Student',
-          ict_teacher: 'ICT Teacher',
-        };
+    const map: Record<string, string> = {
+      super_admin: 'Super Admin',
+      head_teacher: 'Head Teacher',
+      teacher: 'Teacher',
+      bursar: 'Bursar',
+      parent: 'Parent',
+      student: 'Student',
+      ict_teacher: 'ICT Teacher',
+      // Legacy: 'owner' has been consolidated into 'super_admin'
+      owner: 'Super Admin',
+      OWNER: 'Super Admin',
+    };
     return map[role.toLowerCase()] || role;
   }, [user?.role]);
 
-  // True when the current user is the super_admin (platform owner) who
-  // should see multi-school metrics, platform billing, and global system settings.
-  const isSuperAdmin = useMemo(
-    () => ['super_admin'].includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // True when the current user is the admin (school manager) who
-  // should see operational dashboard, student transfers, active rosters,
-  // attendance tracking, and recent activity alerts.
-  const isAdmin = useMemo(
-    () => ['admin'].includes((user?.role || '').toLowerCase()),
+  // True when the current user is the SuperAdmin (formerly Owner)
+  // who should see executive-level metrics instead of classroom operations.
+  const isOwner = useMemo(
+    () => (user?.role || '').toLowerCase() === 'super_admin',
     [user?.role]
   );
 
   // Roles that should see classroom operational widgets (attendance trends,
-  // class participation). ICT_TEACHER is excluded.
-  const OPERATIONAL_ROLES = ['admin', 'head_teacher', 'teacher', 'bursar'];
+  // recent alerts, class participation). OWNER and ICT_TEACHER are excluded.
+  const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
   const seesOperationalWidgets = useMemo(
     () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // Recent Alerts is visible to ADMIN (School Manager) and HEADTEACHER.
-  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher'];
-  const canViewRecentAlerts = useMemo(
-    () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -658,7 +645,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground">
             {user?.role?.toLowerCase() === 'teacher'
               ? "Your assigned classes and academic metrics for today."
-              : user?.role?.toLowerCase() === 'admin'
+              : user?.role?.toLowerCase() === 'super_admin'
               ? "High-level application, subscription and enrollment metrics."
               : user?.role?.toLowerCase() === 'ict_teacher'
               ? "System infrastructure, network quotas, and lab bookings."
@@ -766,14 +753,13 @@ const Dashboard = () => {
       )}
 
       {/* ────────────────────────────────────────────────
-                OPERATIONAL WIDGETS (Attendance Trends)
-                Hidden for ADMIN (Platform Owner) and ICT_TEACHER.
-                Admin sees high-level executive widgets further below instead.
-                The Recent Alerts widget has its own role gate (see below).
-                ──────────────────────────────────────────────── */}
+          OPERATIONAL WIDGETS (Attendance Trends + Recent Alerts)
+          Hidden for OWNER / SUPER_ADMIN / ICT_TEACHER.
+          Owner sees high-level executive widgets further below instead.
+          ──────────────────────────────────────────────── */}
       {seesOperationalWidgets && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
             <Badge variant="outline" className={`rounded-lg font-bold ${
@@ -822,17 +808,7 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-      )}
 
-      {/* ────────────────────────────────────────────────
-                RECENT ALERTS — granular operational visibility
-                Surfaces cross-cutting activity (fees, registrations,
-                attendance events) only for ADMIN (School Manager) and HEADTEACHER.
-                ADMIN (Platform Owner), TEACHER, BURSAR, and ICT_TEACHER
-                are explicitly excluded.
-                ──────────────────────────────────────────────── */}
-      {canViewRecentAlerts && (
         <Card className="border-none shadow-sm rounded-3xl bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Alerts</CardTitle>
@@ -869,6 +845,7 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+
             <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -894,17 +871,20 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       )}
 
       {/* ────────────────────────────────────────────────
-                SUPERADMIN-EXCLUSIVE EXECUTIVE WIDGETS
-                Platform billing, global system settings, user account creation,
-                and multi-school metrics for the platform owner.
-                ──────────────────────────────────────────────── */}
-      {isSuperAdmin && <SuperAdminExecutiveWidgets />}
+          OWNER-EXCLUSIVE EXECUTIVE WIDGETS
+          High-level cards that replace operational widgets
+          (Attendance Trends + Recent Alerts) for the owner.
+          All values are read live from localStorage — no
+          hardcoded fallbacks.
+          ──────────────────────────────────────────────── */}
+      {isOwner && <OwnerExecutiveWidgets />}
 
-      {/* Factual Class Participation Table - hidden for ADMIN (Platform Owner) and ICT_TEACHER since they
-                don't directly manage class-level data. TEACHER role benefits from this view. */}
+      {/* Factual Class Participation Table - hidden for OWNER and ICT_TEACHER since they
+          don't directly manage class-level data. TEACHER role benefits from this view. */}
       {seesOperationalWidgets && (
         <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader>
@@ -933,10 +913,17 @@ const Dashboard = () => {
 };
 
 // ─────────────────────────────────────────────────────────────
-// SuperAdminExecutiveWidgets — platform billing, global system settings,
-// user account creation, and multi-school metrics.
+// OwnerExecutiveWidgets — replaces classroom operational widgets
+// (Attendance Trends + Recent Alerts) when the current user is
+// the school owner. Shows high-level executive cards:
+//   1. School System Status  → Subscription plan, active modules,
+//                              expiry/next renewal date.
+//   2. Total Student Enrollment (across all grades)
+//   3. Total Staffing (Teachers + Non-teaching)
+//   4. System Activity Summary (platform health + last backup
+//                              timestamp)
 // ─────────────────────────────────────────────────────────────
-const SuperAdminExecutiveWidgets: React.FC = () => {
+const OwnerExecutiveWidgets: React.FC = () => {
   const [snapshot, setSnapshot] = useState<{
     planName: string;
     planTier: string;

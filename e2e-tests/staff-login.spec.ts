@@ -36,7 +36,7 @@ test('Staff / Teacher can sign in with Staff ID and Password', async ({ page }) 
   expect(page.url()).not.toContain('/payment-management');
 });
 
-test('Super Admin tab still works', async ({ page }) => {
+test('Super Admin (Owner) tab still works', async ({ page }) => {
   await page.goto('/login');
   await page.evaluate(() => {
     localStorage.removeItem('munyaka_session');
@@ -48,13 +48,13 @@ test('Super Admin tab still works', async ({ page }) => {
   await expect(superTab).toBeVisible();
   await superTab.click();
 
-  const superCard = page.getByRole('button', { name: /^Super Admin$/i });
+  const superCard = page.getByRole('button', { name: /Super Admin \(Owner\)/i });
   await expect(superCard).toBeVisible();
   await superCard.click();
 
   const passwordInput = page.getByPlaceholder(/Enter your password/i);
   await expect(passwordInput).toBeVisible();
-  await passwordInput.fill('superadmin2026');
+  await passwordInput.fill('ownerpass2026');
   await page.getByRole('button', { name: /^Sign In$/i }).click();
 
   await page.waitForURL('**/payment-management', { timeout: 10_000 });

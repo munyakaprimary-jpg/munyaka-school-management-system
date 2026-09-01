@@ -79,10 +79,10 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   super_admin: {
     id: 'super_admin',
     label: 'Super Admin',
-    description: 'Exclusive access to Payment & Subscriptions module',
-    fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
+    description: 'Full access to Payment & Subscriptions and all system management',
+    fullDescription: 'Unified administrative access to payment module, subscriptions, financial gateway management, system configuration, and user management.',
     email: 'munyakaprimary@gmail.com',
-    userName: 'Platform Super Admin',
+    userName: 'Super Admin',
     userRole: 'super_admin',
     redirectPath: '/payment-management',
     icon: Crown,
@@ -360,7 +360,7 @@ const Login: React.FC = () => {
               >
                 <Crown size={14} className="mr-1.5 shrink-0" />
                 <span className="hidden sm:inline">Super Admin</span>
-                <span className="sm:hidden">Super</span>
+                <span className="sm:hidden">Super Admin</span>
               </TabsTrigger>
               <TabsTrigger
                 value="staff"
@@ -497,7 +497,7 @@ const Login: React.FC = () => {
                     borderColor="border-amber-200"
                     featureIcons={[
                       { Icon: CreditCard, label: 'Payments' },
-                      { Icon: Crown, label: 'Super' },
+                      { Icon: Crown, label: 'Super Admin' },
                       { Icon: Shield, label: 'Billing' },
                     ]}
                     hasCustomPassword={hasCustomAdminPassword()}
