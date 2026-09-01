@@ -269,7 +269,7 @@ function daysUntilNextBilling(nextBilling: string): number {
 const PaymentManagement = () => {
   const { user } = useAuth();
 
-  if (!user || user.role !== 'owner') {
+  if (!user || (user.role !== 'SUPERADMIN' && user.role !== 'super_admin')) {
     return <Navigate to="/" replace />;
   }
 

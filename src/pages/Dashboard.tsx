@@ -8,6 +8,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
+import { DASHBOARD_VITALS_ROLES, DASHBOARD_ALERTS_ROLES, DASHBOARD_OWNER_ROLES, normalizeRole } from '@/data/rolePermissions';
 
 interface RecentAlert {
   id: string;
@@ -336,8 +337,7 @@ const Dashboard = () => {
   // HEADTEACHER may populate the feed — SUPERADMIN is intentionally
   // excluded.
   useEffect(() => {
-    const ALLOWED_ROLES = ['admin', 'head_teacher'];
-    if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
+    if (!(DASHBOARD_ALERTS_ROLES as readonly string[]).includes(normalizeRole(user?.role))) return;
 
     try {
       const alerts: RecentAlert[] = [];
@@ -613,9 +613,9 @@ const Dashboard = () => {
     const role = user?.role;
     if (!role) return 'Guest';
     const map: Record<string, string> = {
-      owner: 'Owner',
+      SUPERADMIN: 'Super Admin',
       super_admin: 'Super Admin',
-      head_teacher: 'Head Teacher',
+      head_teacher: 'Admin / Head Teacher',
       teacher: 'Teacher',
       bursar: 'Bursar',
       parent: 'Parent',
@@ -637,28 +637,30 @@ const Dashboard = () => {
   //                       Simulation Controls (fee/reg/attendance).
   //                     SUPERADMIN is intentionally excluded.
   //
-  //  CAN_VIEW_OWNER   : SUPERADMIN (owner / super_admin) only
+  //  CAN_VIEW_OWNER   : SUPERADMIN only
   //                     → see business/billing/subscription widgets.
   // ────────────────────────────────────────────────
-  const CAN_VIEW_VITALS = ['super_admin', 'admin', 'head_teacher', 'owner'];
-  const seesVitals = useMemo(
-    () => CAN_VIEW_VITALS.includes((user?.role || '').toLowerCase()),
+  const normalizedRole = useMemo(
+    () => normalizeRole(user?.role),
     [user?.role]
+  );
+
+  const seesVitals = useMemo(
+    () => (DASHBOARD_VITALS_ROLES as readonly string[]).includes(normalizedRole),
+    [normalizedRole]
   );
 
   // Recent Alerts (feed + simulation controls) — ADMIN & HEADTEACHER only.
-  // SUPERADMIN / OWNER, TEACHER, BURSAR, and ICT_TEACHER are excluded.
-  const CAN_VIEW_ALERTS = ['admin', 'head_teacher'];
+  // SUPERADMIN, TEACHER, BURSAR, and ICT_TEACHER are excluded.
   const canViewRecentAlerts = useMemo(
-    () => CAN_VIEW_ALERTS.includes((user?.role || '').toLowerCase()),
-    [user?.role]
+    () => (DASHBOARD_ALERTS_ROLES as readonly string[]).includes(normalizedRole),
+    [normalizedRole]
   );
 
   // Owner-only executive dashboard (business/billing/subscription metrics).
-  const CAN_VIEW_OWNER = ['owner', 'super_admin'];
   const isOwner = useMemo(
-    () => CAN_VIEW_OWNER.includes((user?.role || '').toLowerCase()),
-    [user?.role]
+    () => (DASHBOARD_OWNER_ROLES as readonly string[]).includes(normalizedRole),
+    [normalizedRole]
   );
 
   return (
@@ -672,13 +674,13 @@ const Dashboard = () => {
             </span>
           </h1>
           <p className="text-muted-foreground">
-            {user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'head_teacher'
+            {normalizedRole === 'head_teacher'
               ? "Full operational overview — student metrics, attendance, and recent activity."
-              : user?.role?.toLowerCase() === 'teacher'
+              : normalizedRole === 'teacher'
               ? "Your assigned classes and academic metrics for today."
-              : user?.role?.toLowerCase() === 'owner' || user?.role?.toLowerCase() === 'super_admin'
+              : normalizedRole === 'SUPERADMIN' || normalizedRole === 'super_admin'
               ? "High-level application, subscription and enrollment metrics."
-              : user?.role?.toLowerCase() === 'ict_teacher'
+              : normalizedRole === 'ict_teacher'
               ? "System infrastructure, network quotas, and lab bookings."
               : "System vitals for Munyaka Primary and Junior School."}
           </p>
@@ -955,7 +957,7 @@ const Dashboard = () => {
 // ─────────────────────────────────────────────────────────────
 // OwnerExecutiveWidgets — replaces classroom operational widgets
 // (Attendance Trends + Recent Alerts) when the current user is
-// the school owner. Shows high-level executive cards:
+// a SUPERADMIN. Shows high-level executive cards:
 //   1. School System Status  → Subscription plan, active modules,
 //                              expiry/next renewal date.
 //   2. Total Student Enrollment (across all grades)
