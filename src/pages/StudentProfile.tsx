@@ -700,21 +700,62 @@ const StudentProfile = () => {
       />
 
       {/* Transfer Workflow — receives the FULL student object, never a fallback. */}
-      {isTransferOpen && transferStudent && (
-        <TransferWorkflow
-          student={transferStudent}
-          isOpen={isTransferOpen}
-          onClose={handleCloseTransfer}
-          onTransferComplete={(studentId, certificateNumber) => {
-            // Toast + download action are handled inside TransferWorkflow.
-            // Close the modal and refresh the certificate reference so the
-            // "Download Clearance Certificate" button appears immediately.
-            setIsTransferOpen(false);
-            setTransferStudent(null);
-            setCertificateRef(getCertificateRef(studentId));
-          }}
-        />
-      )}
+            {isTransferOpen && transferStudent && (
+              <TransferWorkflow
+                student={transferStudent}
+                isOpen={isTransferOpen}
+                onClose={handleCloseTransfer}
+                onTransferComplete={(studentId, certificateNumber) => {
+                  // 1. Mark the learner as TRANSFERRED in the active roster so
+                  //    they are excluded from attendance, marks, fee rosters,
+                  //    AND the main Learners directory table.
+                  try {
+                    const raw = window.localStorage.getItem('school_learners_data');
+                    if (raw) {
+                      const parsed = JSON.parse(raw);
+                      if (Array.isArray(parsed)) {
+                        const updated = parsed.map((l: { id: string }) =>
+                          l.id === studentId
+                            ? { ...l, status: 'TRANSFERRED' as const }
+                            : l,
+                        );
+                        window.localStorage.setItem(
+                          'school_learners_data',
+                          JSON.stringify(updated),
+                        );
+                      }
+                    }
+                  } catch (err) {
+                    console.error('[StudentProfile] Failed to mark learner as TRANSFERRED:', err);
+                  }
+      
+                  // 2. Update local React state so the profile view reflects the
+                  //    new status immediately.
+                  setActiveLearner((prev) =>
+                    prev && prev.id === studentId
+                      ? ({ ...prev, status: 'TRANSFERRED' as const } as ProfileLearner)
+                      : prev,
+                  );
+      
+                  // 3. Refresh the certificate reference so the
+                  //    "Download Clearance Certificate" button appears.
+                  setCertificateRef(getCertificateRef(studentId));
+      
+                  // 4. Notify the parent / storage so the Learners page and
+                  //    Archive page refresh without a full page reload.
+                  try {
+                    window.dispatchEvent(new Event('learners_data_updated'));
+                    window.dispatchEvent(new Event('archive_updated'));
+                  } catch {
+                    /* SSR / no window */
+                  }
+      
+                  // 5. Close the modal & clear the transfer state.
+                  setIsTransferOpen(false);
+                  setTransferStudent(null);
+                }}
+              />
+            )}
 
       <UnifiedRecordPaymentModal
         isOpen={isPaymentModalOpen}

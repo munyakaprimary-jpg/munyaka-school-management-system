@@ -18,6 +18,10 @@ import type {
 
 const ARCHIVE_KEY = 'munyaka_transferred_archive';
 
+/** Event names — exported so consumers can subscribe. */
+export const ARCHIVE_UPDATED_EVENT = 'archive_updated';
+export const LEARNERS_UPDATED_EVENT = 'learners_data_updated';
+
 // ──────────────────────────────────────────────────────────────────────────
 //  Internal helpers
 // ──────────────────────────────────────────────────────────────────────────
@@ -55,6 +59,39 @@ function sortByDateDesc(
   });
 }
 
+/**
+ * Fire a 'cross-component' event so other components that subscribe to
+ * 'archive_updated' get notified without needing a shared context.
+ * We dispatch BOTH `archive_updated` and a `storage` event for the
+ * archive key so legacy listeners still wake up.
+ */
+function emitArchiveUpdated(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new Event(ARCHIVE_UPDATED_EVENT));
+    window.dispatchEvent(new StorageEvent('storage', { key: ARCHIVE_KEY }));
+  } catch {
+    /* SSR / worker context */
+  }
+}
+
+/**
+ * Notify subscribers that the active roster (`school_learners_data`) has
+ * changed — used after a restore to flush any "still showing the old
+ * status" UI without waiting for the user to refresh the page.
+ */
+function emitLearnersUpdated(): void {
+  if (typeof window === 'undefined') return;
+  try {
+    window.dispatchEvent(new Event(LEARNERS_UPDATED_EVENT));
+    window.dispatchEvent(
+      new StorageEvent('storage', { key: 'school_learners_data' },
+    ));
+  } catch {
+    /* ignore */
+  }
+}
+
 // ──────────────────────────────────────────────────────────────────────────
 //  Public API
 // ──────────────────────────────────────────────────────────────────────────
@@ -74,6 +111,11 @@ export function getArchivedLearner(
 /**
  * Insert or replace a transfer record in the archive.
  * Idempotent: re-saving the same certificate number is a no-op overwrite.
+ *
+ * Always emits `archive_updated` so the Transferred Learners Archive
+ * page (and any other listener) refreshes immediately. Without this,
+ * the page would not know a new row was written by `TransferWorkflow`
+ * and the learner would appear to have "disappeared".
  */
 export function saveArchivedLearner(
   record: TransferredLearnerArchive
@@ -86,6 +128,7 @@ export function saveArchivedLearner(
     all.push(record);
   }
   writeArchive(all);
+  emitArchiveUpdated();
   return record;
 }
 
@@ -95,6 +138,7 @@ export function deleteArchivedLearner(id: string): boolean {
   const filtered = all.filter((r) => r.id !== id);
   if (filtered.length === all.length) return false;
   writeArchive(filtered);
+  emitArchiveUpdated();
   return true;
 }
 
@@ -150,6 +194,10 @@ export function getArchiveCount(): number {
  * rosters. By default the archive entry is preserved (audit history
  * remains intact); pass `{ deleteArchiveEntry: true }` to also remove
  * the archived record.
+ *
+ * Emits both `learners_data_updated` and `archive_updated` events on
+ * success so the Learners table AND the Archive page reflect the
+ * restore immediately.
  */
 export interface RestoreOptions {
   /**
@@ -263,6 +311,13 @@ export function restoreLearnerToActiveRoster(
       writeArchive(all);
     }
   }
+
+  // Notify listeners on BOTH ends: the active roster changed (restore
+  // happened) AND the archive changed (row was deleted). Without these
+  // emissions, the Learners page and Archive page would still show stale
+  // state until the user manually refreshed.
+  emitLearnersUpdated();
+  emitArchiveUpdated();
 
   return restored;
 }

@@ -50,6 +50,7 @@ import {
   filterArchiveByYear,
   getArchiveYears,
   restoreLearnerToActiveRoster,
+  ARCHIVE_UPDATED_EVENT,
   type RestoredLearner,
 } from '@/utils/archiveStorage';
 import type {
@@ -142,14 +143,16 @@ const TransferredLearnersArchive: React.FC = () => {
       setRecords(final);
     };
     load();
-    // Listen for cross-tab updates AND same-tab custom events so the
-    // archive list reflects a restore performed in the same window.
-    window.addEventListener('storage', load);
-    window.addEventListener('learners_data_updated', load);
-    return () => {
-      window.removeEventListener('storage', load);
-      window.removeEventListener('learners_data_updated', load);
-    };
+        // Listen for cross-tab updates AND same-tab custom events so the
+        // archive list reflects a restore performed in the same window.
+        window.addEventListener('storage', load);
+        window.addEventListener('learners_data_updated', load);
+        window.addEventListener(ARCHIVE_UPDATED_EVENT, load);
+        return () => {
+          window.removeEventListener('storage', load);
+          window.removeEventListener('learners_data_updated', load);
+          window.removeEventListener(ARCHIVE_UPDATED_EVENT, load);
+        };
   }, [searchQuery, yearFilter]);
 
   const years = useMemo(() => getArchiveYears(), []);
