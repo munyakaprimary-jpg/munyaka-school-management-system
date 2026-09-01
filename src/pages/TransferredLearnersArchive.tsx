@@ -21,6 +21,7 @@ import {
   Archive,
   Download,
   Eye,
+  EyeOff,
   RotateCcw,
   X,
   Calendar,
@@ -35,8 +36,12 @@ import {
   History,
   UserCheck,
   ClipboardList,
+  Lock,
+  ShieldCheck,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import {
   getArchive,
@@ -44,6 +49,7 @@ import {
   filterArchiveByYear,
   getArchiveYears,
   restoreLearnerToActiveRoster,
+  type RestoredLearner,
 } from '@/utils/archiveStorage';
 import type {
   TransferredLearnerArchive,
@@ -53,6 +59,8 @@ import {
 } from '@/utils/pdfDownloader';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { getActiveAdminPassword } from '@/services/adminCredentials';
+import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 
 type YearFilter = number | 'ALL';
 
@@ -65,6 +73,15 @@ const TransferredLearnersArchive: React.FC = () => {
   const [restoreTarget, setRestoreTarget] =
     useState<TransferredLearnerArchive | null>(null);
   const [isRestoring, setIsRestoring] = useState(false);
+
+  // Available grades/streams for the restore target dropdown
+  const gradesConfig = useMemo(() => {
+    try {
+      return readGradesAndStreams();
+    } catch {
+      return { grades: [], streams: [], gradeStreamMap: {} };
+    }
+  }, []);
 
   // ── Load records on mount and whenever localStorage changes ────────────
   useEffect(() => {
@@ -109,21 +126,46 @@ const TransferredLearnersArchive: React.FC = () => {
     }
   };
 
-  const handleRestore = async () => {
-    if (!restoreTarget) return;
+  const handleRestore = async (
+    targetGrade: string,
+    targetStream: string,
+    adminPassword: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!restoreTarget) return { success: false, error: 'No target selected' };
     setIsRestoring(true);
     try {
-      const restored = restoreLearnerToActiveRoster(restoreTarget.id);
-      if (!restored) {
-        showError('Failed to restore learner to active roster.');
-        return;
+      // 1. Re-verify the admin password on submit (in case it changed mid-modal)
+      const storedPass = getActiveAdminPassword();
+      if (adminPassword.trim() !== storedPass) {
+        return {
+          success: false,
+          error: 'Admin password is incorrect. Authorization denied.',
+        };
       }
+
+      // 2. Execute the restore with the chosen target grade/stream
+      const restored = restoreLearnerToActiveRoster(
+        restoreTarget.id,
+        targetGrade,
+        targetStream
+      );
+      if (!restored) {
+        return {
+          success: false,
+          error: 'Failed to restore learner to active roster.',
+        };
+      }
+
+      // 3. Success feedback
+      const streamNote = targetStream
+        ? ` in Grade ${targetGrade} • ${targetStream}`
+        : ` to Grade ${targetGrade}`;
       showSuccess(
-        `${restored.name} restored to active roster. Reload the Learners page to see them.`
+        `${restored.name} restored to active roster${streamNote}. Reload the Learners page to see them.`
       );
       setRestoreTarget(null);
-      // Refresh local list
       setRecords((prev) => prev.filter((r) => r.id !== restoreTarget.id));
+      return { success: true };
     } finally {
       setIsRestoring(false);
     }
@@ -384,11 +426,12 @@ const TransferredLearnersArchive: React.FC = () => {
         />
       )}
 
-      {/* ─── Restore Confirmation Modal ─────────────────────────────── */}
+      {/* ─── Restore Authorization Modal ──────────────────────────── */}
       {restoreTarget && (
-        <RestoreConfirmModal
+        <RestoreAuthorizationModal
           record={restoreTarget}
           isLoading={isRestoring}
+          gradesConfig={gradesConfig}
           onConfirm={handleRestore}
           onClose={() => setRestoreTarget(null)}
         />
@@ -605,74 +648,267 @@ const DetailItem: React.FC<{
 );
 
 // ─────────────────────────────────────────────────────────────────────────
-//  Restore Confirmation Modal
+//  Restore Authorization Modal
 // ─────────────────────────────────────────────────────────────────────────
+//
+// Re-enrolling an archived learner is a privileged operation. This modal
+// requires the admin to:
+//   1. Confirm the learner's identity (read-only context card)
+//   2. Choose the target grade/stream they will be restored to
+//   3. Re-enter the system admin password
+//
+// Only after all three are valid does the parent restore action fire.
 
-interface RestoreConfirmModalProps {
+interface RestoreAuthorizationModalProps {
   record: TransferredLearnerArchive;
   isLoading: boolean;
-  onConfirm: () => void;
+  gradesConfig: {
+    grades: string[];
+    streams: string[];
+    gradeStreamMap: Record<string, string[]>;
+  };
+  /**
+   * Returns `{ success: false, error }` when validation or restore fails.
+   * The modal renders the error inline.
+   */
+  onConfirm: (
+    targetGrade: string,
+    targetStream: string,
+    adminPassword: string
+  ) => Promise<{ success: boolean; error?: string }>;
   onClose: () => void;
 }
 
-const RestoreConfirmModal: React.FC<RestoreConfirmModalProps> = ({
+const RestoreAuthorizationModal: React.FC<RestoreAuthorizationModalProps> = ({
   record,
   isLoading,
+  gradesConfig,
   onConfirm,
   onClose,
 }) => {
+  // ── Form state ──────────────────────────────────────────────────────
+  const [adminPassword, setAdminPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [targetGrade, setTargetGrade] = useState<string>(record.grade);
+  const [targetStream, setTargetStream] = useState<string>(record.stream);
+  const [error, setError] = useState<string | null>(null);
+
+  // Derive the available streams for the currently-selected grade
+  const availableStreams = useMemo<string[]>(() => {
+    if (targetGrade && gradesConfig.gradeStreamMap[targetGrade]) {
+      return gradesConfig.gradeStreamMap[targetGrade];
+    }
+    if (targetGrade && gradesConfig.gradeStreamMap[targetGrade.toLowerCase()]) {
+      return gradesConfig.gradeStreamMap[targetGrade.toLowerCase()];
+    }
+    return gradesConfig.streams;
+  }, [targetGrade, gradesConfig]);
+
+  const grades = gradesConfig.grades.length > 0 ? gradesConfig.grades : [record.grade];
+
+  const isReady = adminPassword.trim().length > 0 && targetGrade && targetStream;
+
+  // ── Handlers ────────────────────────────────────────────────────────
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+
+    if (!adminPassword.trim()) {
+      setError('Please enter the admin password to authorise this restore.');
+      return;
+    }
+    if (!targetGrade) {
+      setError('Please select a target grade.');
+      return;
+    }
+    if (!targetStream) {
+      setError('Please select a target stream.');
+      return;
+    }
+
+    const result = await onConfirm(targetGrade, targetStream, adminPassword);
+    if (!result.success) {
+      setError(result.error ?? 'Restore failed. Please try again.');
+    }
+    // On success, the parent closes the modal — no further action here.
+  };
+
   return (
     <div
       className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in"
-      onClick={onClose}
+      onClick={isLoading ? undefined : onClose}
     >
       <div
-        className="bg-white rounded-3xl shadow-2xl max-w-md w-full"
+        className="bg-white rounded-3xl shadow-2xl max-w-lg w-full overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="p-6 border-b border-slate-100">
+        {/* ── Header ─────────────────────────────────────────────── */}
+        <div className="p-6 border-b border-slate-100 bg-gradient-to-br from-amber-50 to-orange-50/50">
           <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center">
-              <AlertTriangle size={20} />
+            <div className="w-11 h-11 bg-amber-100 text-amber-700 rounded-2xl flex items-center justify-center shrink-0">
+              <ShieldCheck size={22} />
             </div>
-            <h2 className="text-xl font-black text-slate-900">
-              Restore Learner
-            </h2>
+            <div>
+              <h2 className="text-xl font-black text-slate-900">
+                Admin Authorization Required
+              </h2>
+              <p className="text-[11px] font-bold text-amber-700 uppercase tracking-widest">
+                Restricted action · Re-enrolment
+              </p>
+            </div>
           </div>
-          <p className="text-sm text-slate-600 font-medium">
-            Are you sure you want to restore{' '}
-            <strong className="text-slate-900">{record.name}</strong> to the
-            active roster? They will reappear in attendance, marks, and fee
-            rosters.
+          <p className="text-sm text-slate-700 font-medium leading-relaxed">
+            Restoring learner:{' '}
+            <strong className="text-slate-900">{record.name}</strong> (
+            <span className="font-mono text-xs">{record.admNo}</span>)
           </p>
         </div>
 
-        <div className="p-6 space-y-3 text-sm">
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-              Last Grade
-            </p>
-            <p className="font-bold text-slate-800">
-              Grade {record.grade} • {record.stream}
-            </p>
+        {/* ── Body ───────────────────────────────────────────────── */}
+        <form
+          id="restore-form"
+          onSubmit={handleSubmit}
+          className="p-6 space-y-5 max-h-[65vh] overflow-y-auto"
+        >
+          {/* Student context — read-only */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                Last Grade (Exit)
+              </p>
+              <p className="font-bold text-slate-800 text-sm">
+                Grade {record.grade} • {record.stream}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
+                Certificate on File
+              </p>
+              <p className="font-mono font-bold text-slate-800 text-xs">
+                {record.certificateNumber}
+              </p>
+            </div>
           </div>
-          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-              Certificate on File
-            </p>
-            <p className="font-mono font-bold text-slate-800 text-xs">
-              {record.certificateNumber}
-            </p>
-          </div>
-          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium">
-            The archive entry will be retained with an audit note. Use the
-            delete action in the audit log to fully remove the historical
-            record.
-          </div>
-        </div>
 
+          {/* Target grade + stream */}
+          <div className="space-y-3">
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5">
+              <GraduationCap size={12} />
+              Select Grade / Class to restore to
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="restore-grade"
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                >
+                  Grade
+                </label>
+                <select
+                  id="restore-grade"
+                  value={targetGrade}
+                  onChange={(e) => {
+                    const newGrade = e.target.value;
+                    setTargetGrade(newGrade);
+                    // If the previously selected stream is not in the new
+                    // grade's available streams, reset it.
+                    const newStreams =
+                      gradesConfig.gradeStreamMap[newGrade] ?? gradesConfig.streams;
+                    if (!newStreams.includes(targetStream)) {
+                      setTargetStream(newStreams[0] ?? '');
+                    }
+                  }}
+                  disabled={isLoading}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 outline-none"
+                >
+                  {grades.map((g) => (
+                    <option key={g} value={g}>
+                      Grade {g}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-1.5">
+                <label
+                  htmlFor="restore-stream"
+                  className="text-[10px] font-black uppercase tracking-widest text-slate-400"
+                >
+                  Stream
+                </label>
+                <select
+                  id="restore-stream"
+                  value={targetStream}
+                  onChange={(e) => setTargetStream(e.target.value)}
+                  disabled={isLoading}
+                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-800 focus:ring-2 focus:ring-amber-200 focus:border-amber-300 outline-none"
+                >
+                  {availableStreams.map((s) => (
+                    <option key={s} value={s}>
+                      {s}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Admin password */}
+          <div className="space-y-1.5">
+            <label
+              htmlFor="restore-admin-password"
+              className="text-[10px] font-black uppercase tracking-widest text-slate-500 flex items-center gap-1.5"
+            >
+              <Lock size={12} />
+              Admin Password
+            </label>
+            <div className="relative">
+              <Input
+                id="restore-admin-password"
+                type={showPassword ? 'text' : 'password'}
+                value={adminPassword}
+                onChange={(e) => {
+                  setAdminPassword(e.target.value);
+                  if (error) setError(null);
+                }}
+                placeholder="Enter your system admin password"
+                disabled={isLoading}
+                autoComplete="current-password"
+                autoFocus
+                className="h-12 pl-4 pr-12 rounded-xl bg-slate-50 border-slate-200 font-bold text-sm focus:bg-white focus:ring-2 focus:ring-amber-200 focus:border-amber-300"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                disabled={isLoading}
+                className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors disabled:opacity-50"
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
+          </div>
+
+          {/* Inline error */}
+          {error && (
+            <div className="flex items-start gap-2 p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs font-bold animate-in slide-in-from-top-2">
+              <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          )}
+
+          {/* Info note */}
+          <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-xs font-medium leading-relaxed">
+            The archive entry will be retained with an audit note. To fully
+            remove the historical record, use the audit log delete action
+            afterwards.
+          </div>
+        </form>
+
+        {/* ── Footer ─────────────────────────────────────────────── */}
         <div className="p-4 border-t border-slate-100 bg-slate-50/70 flex justify-end gap-2">
           <Button
+            type="button"
             variant="ghost"
             onClick={onClose}
             disabled={isLoading}
@@ -681,16 +917,22 @@ const RestoreConfirmModal: React.FC<RestoreConfirmModalProps> = ({
             Cancel
           </Button>
           <Button
-            onClick={onConfirm}
-            disabled={isLoading}
-            className="rounded-xl bg-amber-600 hover:bg-amber-700 font-bold gap-2 text-white"
+            type="submit"
+            form="restore-form"
+            disabled={isLoading || !isReady}
+            className="rounded-xl bg-amber-600 hover:bg-amber-700 font-bold gap-2 text-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isLoading ? (
-              <RotateCcw size={16} className="animate-spin" />
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                Authorising &amp; Restoring…
+              </>
             ) : (
-              <RotateCcw size={16} />
+              <>
+                <ShieldCheck size={16} />
+                Confirm Restore
+              </>
             )}
-            {isLoading ? 'Restoring…' : 'Confirm Restore'}
           </Button>
         </div>
       </div>

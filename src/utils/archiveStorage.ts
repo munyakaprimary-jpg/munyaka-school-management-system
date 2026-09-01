@@ -152,6 +152,7 @@ export function getArchiveCount(): number {
  * the archived record.
  */
 export interface RestoreOptions {
+  /** If true, permanently removes the archive entry after restoring. */
   deleteArchiveEntry?: boolean;
 }
 
@@ -174,17 +175,24 @@ export interface RestoredLearner {
 
 export function restoreLearnerToActiveRoster(
   id: string,
+  targetGrade?: string,
+  targetStream?: string,
   options: RestoreOptions = {}
 ): RestoredLearner | null {
   const record = getArchivedLearner(id);
   if (!record) return null;
 
+  // Allow the caller to specify the grade/stream to restore to.
+  // If not provided, defaults to the last known grade/stream from the archive.
+  const restoredGrade = targetGrade ?? record.grade;
+  const restoredStream = targetStream ?? record.stream;
+
   const restored: RestoredLearner = {
     id: record.id,
     admNo: record.admNo,
     name: record.name,
-    grade: record.grade,
-    stream: record.stream,
+    grade: restoredGrade,
+    stream: restoredStream,
     gender: record.gender,
     guardian: record.guardian,
     phone: record.phone,
