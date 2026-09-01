@@ -50,7 +50,9 @@ import {
 } from '@/utils/pdfDownloader';
 import {
   saveArchivedLearner,
-  type TransferredLearnerArchive,
+} from '@/utils/archiveStorage';
+import type {
+  TransferredLearnerArchive,
 } from '@/types/archive';
 
 interface TransferWorkflowProps {
