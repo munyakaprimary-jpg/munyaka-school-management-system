@@ -1,10 +1,12 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Users, UserCheck, GraduationCap, TrendingUp, User, Loader2, Activity, AlertCircle, DollarSign } from 'lucide-react';
+import { Users, UserCheck, GraduationCap, TrendingUp, User, Loader2, Activity, AlertCircle, DollarSign, UserCog, Settings, Monitor, Wifi, Calendar, Shield } from 'lucide-react';
 import { Badge } from "@/components/ui/badge";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
+import { useNavigate } from 'react-router-dom';
 
 interface RecentAlert {
   id: string;
@@ -28,6 +30,8 @@ interface RecentAlert {
 const Dashboard = () => {
   // Consume the custom hook for offline system statistics
   const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useDashboardData();
+  const { canAccessSystemManagement } = usePermissions();
+  const navigate = useNavigate();
 
   const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
   const [hasLiveData, setHasLiveData] = useState<boolean>(false);
@@ -403,6 +407,49 @@ const Dashboard = () => {
           </Card>
         ))}
       </div>
+
+      {/* System Management Quick Actions - Only visible to users with ICT management permission */}
+      {canAccessSystemManagement() && (
+        <Card className="border-none shadow-sm rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <UserCog size={20} className="text-indigo-600" />
+              ICT System Administration
+            </CardTitle>
+            <Badge className="bg-indigo-100 text-indigo-700 border-indigo-200 font-bold">
+              Portal Access
+            </Badge>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-slate-600 mb-4">
+              Manage Portal Logins, Network & Quotas, and Lab Schedules from the System Management portal.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <Button
+                onClick={() => navigate('/system-management')}
+                className="h-auto py-4 px-4 bg-white hover:bg-indigo-50 text-slate-800 border border-indigo-100 rounded-2xl flex flex-col items-center gap-2 transition-all"
+              >
+                <Shield size={24} className="text-indigo-600" />
+                <span className="text-xs font-bold">Portal Logins</span>
+              </Button>
+              <Button
+                onClick={() => navigate('/system-management')}
+                className="h-auto py-4 px-4 bg-white hover:bg-indigo-50 text-slate-800 border border-indigo-100 rounded-2xl flex flex-col items-center gap-2 transition-all"
+              >
+                <Wifi size={24} className="text-indigo-600" />
+                <span className="text-xs font-bold">Network & Quotas</span>
+              </Button>
+              <Button
+                onClick={() => navigate('/system-management')}
+                className="h-auto py-4 px-4 bg-white hover:bg-indigo-50 text-slate-800 border border-indigo-100 rounded-2xl flex flex-col items-center gap-2 transition-all"
+              >
+                <Calendar size={24} className="text-indigo-600" />
+                <span className="text-xs font-bold">Lab Schedules</span>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Charts & Recent Alerts Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

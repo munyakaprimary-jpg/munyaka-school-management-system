@@ -48,6 +48,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -58,6 +59,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
+  const { canAccessSystemManagement } = usePermissions();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -124,7 +126,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -155,7 +157,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
   ];
 
-  const filteredMenu = menuItems.filter(item => user && item.roles.includes(user.role));
+  const filteredMenu = menuItems.filter(item => {
+    if (!user) return false;
+    // Check if user has the required role
+    if (!item.roles.includes(user.role)) return false;
+    // Check if item requires a specific permission
+    if (item.requiresPermission) {
+      // Admins bypass permission checks
+      if (user.role === 'owner' || user.role === 'super_admin') return true;
+      // Check the specific permission
+      return canAccessSystemManagement();
+    }
+    return true;
+  });
 
   // Bottom Navigation Bar Quick Links - Filtered by user role
     // Includes core items (Home, Learners, Roll Call) plus role-specific tabs (Fees, Settings, Licensing)

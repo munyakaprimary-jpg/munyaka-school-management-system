@@ -53,6 +53,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { usePermissions } from '@/hooks/usePermissions';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +64,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
+  const { canAccessSystemManagement } = usePermissions();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -96,7 +98,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['super_admin'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['owner', 'super_admin'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -123,32 +125,21 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['owner', 'super_admin', 'head_teacher'] },
   ];
 
-  const { user, logout } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  useMobileBackButton(isOpen, () => setIsOpen(false));
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (!scrollContainerRef.current) return;
-      const currentScrollY = scrollContainerRef.current.scrollTop;
-      if (Math.abs(currentScrollY - lastScrollY.current) < 10) return;
-      if (currentScrollY > lastScrollY.current && currentScrollY > 60) setShowBottomNav(false);
-      else setShowBottomNav(true);
-      lastScrollY.current = currentScrollY;
-    };
-    const container = scrollContainerRef.current;
-    if (container) container.addEventListener('scroll', handleScroll, { passive: true });
-    return () => container?.removeEventListener('scroll', handleScroll);
-  }, []);
-
-  useEffect(() => setShowBottomNav(true), [location.pathname]);
-
   const filteredMenu = React.useMemo(() => {
     if (!user) return [];
-    return menuItems.filter(item => item.roles.includes(user.role));
-  }, [user?.role]);
+    return menuItems.filter(item => {
+      // Check if user has the required role
+      if (!item.roles.includes(user.role)) return false;
+      // Check if item requires a specific permission
+      if (item.requiresPermission) {
+        // Admins bypass permission checks
+        if (user.role === 'owner' || user.role === 'super_admin') return true;
+        // Check the specific permission
+        return canAccessSystemManagement();
+      }
+      return true;
+    });
+  }, [user?.role, canAccessSystemManagement]);
 
   const bottomQuickNav = [
     { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },

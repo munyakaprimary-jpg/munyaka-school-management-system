@@ -3,10 +3,22 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  /**
+   * Optional permission required to access the route. If specified, the
+   * user must have this permission in addition to being authenticated.
+   * Admins (owner, super_admin) bypass all permission checks.
+   */
+  requiredPermission?: string;
+}
+
+const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const location = useLocation();
 
   if (isLoading) {
@@ -20,6 +32,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   if (!isAuthenticated) {
     // Redirect to login but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // If a specific permission is required, check it
+  if (requiredPermission) {
+    const allowed = hasPermission(requiredPermission);
+    if (!allowed) {
+      // Send the user back to the dashboard so they don't see a
+      // confusing "404" — they simply lack the access grant.
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;
