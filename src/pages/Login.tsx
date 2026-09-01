@@ -21,7 +21,7 @@ import {
   CreditCard,
   ArrowRight,
   Send,
-  User,
+  Mail,
   KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -277,7 +277,13 @@ const Login: React.FC = () => {
     const trimmedPass = staffPassword.trim();
 
     if (!trimmedId) {
-      setStaffAuthError('Please enter your Staff ID / Username.');
+      setStaffAuthError('Please enter your Email Address.');
+      return;
+    }
+    // Basic email format validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(trimmedId)) {
+      setStaffAuthError('Please enter a valid email address (e.g. teacher@school.com).');
       return;
     }
     if (!trimmedPass) {
@@ -289,8 +295,7 @@ const Login: React.FC = () => {
     setStaffAuthError('');
     await new Promise(r => setTimeout(r, 700));
 
-    // AuthContext.login accepts both the staffId (e.g. "teacher1", "T001")
-    // and the email as the username field. Pass the staffId directly.
+    // AuthContext.login accepts email as the username field.
     const success = await login(trimmedId, trimmedPass);
     if (success) {
       // Look up the staff ledger (if any) so we can route based on system role
@@ -299,13 +304,13 @@ const Login: React.FC = () => {
         ? JSON.parse(savedLedgerJson)
         : [];
       const match = staffLedger.find(
-        s => s.staffId && s.staffId.toLowerCase() === trimmedId.toLowerCase()
+        s => s.email?.toLowerCase() === trimmedId.toLowerCase()
       );
       const systemRole = match?.systemRole ?? 'subject_teacher';
       showSuccess(match ? `Welcome, ${match.fullName}!` : 'Welcome!');
       navigate(getStaffRedirectPath(systemRole), { replace: true });
     } else {
-      setStaffAuthError('Invalid Staff ID or Password. Please try again.');
+      setStaffAuthError('Invalid Email or Password. Please try again.');
       showError('Authentication failed');
     }
     setIsStaffVerifying(false);
@@ -587,19 +592,21 @@ const Login: React.FC = () => {
                   )}
 
                   <form onSubmit={handleStaffLogin} className="space-y-5">
-                    {/* Staff ID / Username */}
+                    {/* Email Address */}
                     <div className="space-y-2">
                       <Label htmlFor="staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
-                        Staff ID / Username
+                        Email Address
                       </Label>
                       <div className="relative">
-                        <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
                         <Input
                           id="staff-id"
-                          type="text"
+                          type="email"
+                          inputMode="email"
+                          autoCapitalize="none"
                           value={staffId}
                           onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                          placeholder="e.g. teacher1 or T001"
+                          placeholder="e.g. teacher@school.com"
                           autoComplete="username"
                           className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-emerald-200"
                           autoFocus
