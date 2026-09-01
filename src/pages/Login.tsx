@@ -193,7 +193,7 @@ const Login: React.FC = () => {
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
       showSuccess('Welcome, School Admin!');
-      navigate('/admin/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     } else {
       setAdminAuthError('Login failed. Please try again.');
       showError('Authentication failed');
@@ -226,13 +226,13 @@ const Login: React.FC = () => {
     const success = await login(DEVELOPER_EMAIL, entered);
     if (success) {
       const devSession = {
-        role: 'dev',
+        role: 'developer',
         roleLabel: 'Platform Developer',
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_dev_session', JSON.stringify(devSession));
       showSuccess(`Welcome, ${DEVELOPER_NAME}!`);
-      navigate('/dev/dashboard', { replace: true });
+      navigate('/dashboard', { replace: true });
     } else {
       setDevAuthError('Developer login failed. Please try again.');
       showError('Developer authentication failed');

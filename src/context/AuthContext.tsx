@@ -12,7 +12,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 
-export type UserRole = 'owner' | 'super_admin' | 'admin' | 'dev' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -52,11 +52,11 @@ const DEFAULT_ADMIN = {
   password: 'ownerpass2026',
   user: {
     id: 'admin-001',
-    name: 'School Admin',
+    name: 'School Owner',
     email: 'munyakaprimary@gmail.com',
     phone: '+254 700 000 000',
-    role: 'admin' as UserRole,
-    avatar: 'AD'
+    role: 'owner' as UserRole,
+    avatar: 'OW'
   }
 };
 
@@ -68,7 +68,7 @@ const DEFAULT_SYSTEM_ADMIN = {
     name: 'System Administrator',
     email: 'sysadmin@munyaka.sc.ke',
     phone: '+254 700 000 001',
-    role: 'admin' as UserRole,
+    role: 'super_admin' as UserRole,
     avatar: 'SA'
   }
 };
@@ -95,7 +95,7 @@ const DEFAULT_DEVELOPER = {
     name: 'Platform Developer',
     email: 'developer@munyaka-platform.ke',
     phone: '+254 700 000 999',
-    role: 'dev' as UserRole,
+    role: 'super_admin' as UserRole,
     avatar: 'PD'
   }
 };
@@ -105,20 +105,15 @@ const USERS_STORAGE_KEY = 'munyaka_users';
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
     case 'owner':
-      return 'admin';
+      return 'owner';
     case 'super_admin':
-      return 'admin';
-    case 'admin':
-      return 'admin';
-    case 'dev':
-    case 'developer':
-      return 'dev';
+      return 'super_admin';
     case 'head_teacher':
       return 'head_teacher';
     case 'bursar':
       return 'bursar';
     case 'support_admin':
-      return 'admin';
+      return 'super_admin';
     case 'senior_teacher':
     case 'class_teacher':
     case 'subject_teacher':
@@ -271,15 +266,17 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const foundUser = users[normalizedEmail] || users[normalizedStaffId];
     
     if (foundUser) {
-      // ── Admin pre-check: 'admin' (school admin / owner / system admin)
-      // can authenticate with whatever the Configuration tab has just
-      // saved into the unified MUNYAKA_ADMIN_PASSWORD key. This is the
-      // precedence path: the custom PIN wins over both the default and
-      // whatever the user record was initialised with.
+      // ── Admin pre-check: owner + system_admin can authenticate with
+      // whatever the Configuration tab has just saved into the unified
+      // MUNYAKA_ADMIN_PASSWORD key. This is the precedence path: the
+      // custom PIN wins over both the default and whatever the user
+      // record was initialised with.
       //
-      // Developer accounts ('dev') use their own dedicated credential
-      // and route to the developer dashboard — they are NOT admins.
-      const isAdminUser = foundUser.role === 'admin';
+      // We check the active PIN (custom or default) FIRST and return
+      // success when the entered value matches it — exactly mirroring
+      // the Login page's own dual-mode check so a saved-or-default
+      // flow works the same way in both directions.
+      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'super_admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = pass.trim();

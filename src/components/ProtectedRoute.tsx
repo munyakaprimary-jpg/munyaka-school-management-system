@@ -4,16 +4,9 @@ import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Loader2 } from 'lucide-react';
-import { UserRole } from '@/context/AuthContext';
 
-interface ProtectedRouteProps {
-  children: React.ReactNode;
-  /** If set, only these roles are allowed through. Others are redirected to /login. */
-  allowedRoles?: UserRole[];
-}
-
-const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
-  const { user, isAuthenticated, isLoading } = useAuth();
+const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated, isLoading } = useAuth();
   const location = useLocation();
 
   if (isLoading) {
@@ -24,16 +17,9 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     );
   }
 
-  if (!isAuthenticated || !user) {
+  if (!isAuthenticated) {
+    // Redirect to login but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // Role guard: if allowedRoles is specified, enforce strict equality
-  if (allowedRoles && allowedRoles.length > 0) {
-    if (!allowedRoles.includes(user.role)) {
-      // Redirect to login (or a 403 page) to prevent unauthorized access
-      return <Navigate to="/login" state={{ from: location }} replace />;
-    }
   }
 
   return <>{children}</>;
