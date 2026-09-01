@@ -85,24 +85,37 @@ const WIDGET_DEFINITIONS: Record<WidgetKey, WidgetDefinition> = {
 //   - My Assigned Class Count, My Class Attendance Rate,
 //     Pending Assessment Marks to Enter, Today's Lesson Schedule
 //
-// OWNER → High-level app metrics
-//   - App Subscription Status, Total Active Enrollment, Renewal Date
+// SUPERADMIN / SUPER_ADMIN → High-level app metrics
+//   - App Subscription Status, Total Active Enrollment, Renewal Date,
+//     Active Portal Logins, Network Quotas
 //
 // ICT_TEACHER (delegated via RBAC) → System infrastructure widgets
 //   - Active Portal Logins, Network Quotas, Lab Schedule
-//
-// SUPER_ADMIN → inherits OWNER + ICT infrastructure view
 //
 // Anything else (bursar/parent/student/other) → minimal fallback
 // ─────────────────────────────────────────────────────────────
 
 const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
+  // Legacy key — kept for back-compat with any persisted user record
+  // that still has the lowercase-with-underscore 'owner' role.
   owner: [
     'subscriptionStatus',
     'totalActiveEnrollment',
     'renewalDate',
     'systemStatus',
   ],
+  // New canonical key — DEFAULT_ADMIN.user stores role as 'SUPERADMIN'
+  // (uppercase, no underscore). Required so renderRoleDashboard()
+  // doesn't fall through to FALLBACK_DASHBOARD for Super Admins.
+  superadmin: [
+    'subscriptionStatus',
+    'totalActiveEnrollment',
+    'renewalDate',
+    'systemStatus',
+    'activePortalLogins',
+    'networkQuotas',
+  ],
+  // Lowercase legacy variant for staff records with systemRole: super_admin.
   super_admin: [
     'subscriptionStatus',
     'totalActiveEnrollment',
