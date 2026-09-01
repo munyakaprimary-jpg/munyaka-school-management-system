@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
+import TransferredLearnersArchive from "./pages/TransferredLearnersArchive";
 import StudentProfile from "./pages/StudentProfile";
 import Registration from "./pages/Registration";
 import Attendance from "./pages/Attendance";
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/grades" element={<ProtectedRoute><AppUnlock><Layout><GradesStreams /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/learning-areas" element={<ProtectedRoute><AppUnlock><Layout><LearningAreas /></Layout></AppUnlock></ProtectedRoute>} />
@@ -115,7 +117,7 @@ const App = () => (
                 <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/fees" element={<ProtectedRoute><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/fees" element={<ProtectedRoute blockedRoles={['owner', 'parent', 'student', 'teacher']}><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/central-data" element={<ProtectedRoute><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><AppUnlock><Layout><ReportCards /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><Settings /></Layout></AppUnlock></ProtectedRoute>} />
@@ -124,7 +126,7 @@ const App = () => (
                 <Route path="/digital-hub" element={<ProtectedRoute><AppUnlock><Layout><DigitalHub /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/digital-literacy-videos" element={<ProtectedRoute><AppUnlock><Layout><DigitalLiteracyVideos /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/ict-lab" element={<ProtectedRoute><AppUnlock><Layout><ICTLabManagement /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/system-management" element={<ProtectedRoute><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/system-management" element={<ProtectedRoute requiredPermission="manage_ict_systems" blockedRoles={['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student']}><AppUnlock><Layout><SystemAndAccountManagement /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/payment-management" element={<ProtectedRoute><AppUnlock><Layout><PaymentManagement /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/digital-skills" element={<ProtectedRoute><AppUnlock><Layout><DigitalSkillsAssessment /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/practical-competencies" element={<ProtectedRoute><AppUnlock><Layout><PracticalCompetencies /></Layout></AppUnlock></ProtectedRoute>} />

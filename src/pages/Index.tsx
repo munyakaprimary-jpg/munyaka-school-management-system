@@ -1,15 +1,10 @@
 "use client";
 
 import React from 'react';
-import { Link } from "react-router-dom"; // Updated import statement
+import { Navigate } from 'react-router-dom';
 
 const Index = () => {
-  return (
-    <div className="p-4">
-      <Link to="/">Home</Link>
-      {/* Other existing code */}
-    </div>
-  );
+  return <Navigate to="/dashboard" replace />;
 };
 
 export default Index;

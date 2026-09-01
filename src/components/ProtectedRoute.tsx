@@ -3,10 +3,34 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Loader2 } from 'lucide-react';
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { isAuthenticated, isLoading } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  /**
+   * Optional permission required to access the route. If specified, the
+   * user must have this permission in addition to being authenticated.
+   * ADMIN (and the legacy super_admin alias) bypass all permission checks
+   * via the hasPermission() short-circuit. OWNER has no operational access
+   * and is blocked by the blockedRoles list on operational routes.
+   */
+  requiredPermission?: string;
+  /**
+   * Roles explicitly blocked from accessing this route, regardless of
+   * authentication status. Used to enforce RBAC at the route level.
+   * ADMIN is never listed here — it has unrestricted access.
+   */
+  blockedRoles?: string[];
+}
+
+const ProtectedRoute = ({
+  children,
+  requiredPermission,
+  blockedRoles = [],
+}: ProtectedRouteProps) => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+  const { hasPermission } = usePermissions();
   const location = useLocation();
 
   if (isLoading) {
@@ -18,8 +42,20 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (!isAuthenticated) {
-    // Redirect to login but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Route-level role denylist: redirect blocked roles back to dashboard.
+  if (user && blockedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If a specific permission is required, check it
+  if (requiredPermission) {
+    const allowed = hasPermission(requiredPermission);
+    if (!allowed) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   return <>{children}</>;

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -68,22 +68,27 @@ interface LabReservation {
   status: 'Upcoming' | 'In Session' | 'Completed';
 }
 
-// --- Mock Data ---
-const INITIAL_USERS: SystemUser[] = [
+// --- Storage Keys ---
+const SYSTEM_USERS_KEY = 'munyaka_system_users';
+const SYSTEM_DEVICES_KEY = 'munyaka_system_devices';
+const LAB_RESERVATIONS_KEY = 'munyaka_lab_reservations';
+
+// --- Default Seed Data (used only when localStorage is empty) ---
+const DEFAULT_USERS: SystemUser[] = [
   { id: "USR-001", name: "Grace Njeri", role: "Admin", username: "grace.njeri@munyaka.sc.ke", lastLogin: "10 mins ago", status: "Active" },
   { id: "USR-042", name: "John Kamau", role: "Teacher", username: "john.kamau", lastLogin: "2 hours ago", status: "Active" },
   { id: "USR-108", name: "Brian Kiptoo", role: "Student", username: "A827361", lastLogin: "Yesterday", status: "Active" },
   { id: "USR-005", name: "Peter Omondi", role: "Lab Tech", username: "peter.tech", lastLogin: "Just now", status: "Disabled" },
 ];
 
-const INITIAL_DEVICES: NetworkDevice[] = [
+const DEFAULT_DEVICES: NetworkDevice[] = [
   { id: "DEV-1", mac: "00:1A:2B:3C:4D:5E", owner: "ICT Lab Main", role: "Infrastructure", quota: 50, used: 32.4, status: "Online" },
   { id: "DEV-2", mac: "A1:B2:C3:D4:E5:F6", owner: "Jane Mwangi", role: "Teacher", quota: 2.0, used: 1.1, status: "Online" },
   { id: "DEV-3", mac: "11:22:33:44:55:66", owner: "Staff Room Guest", role: "Guest", quota: 0.5, used: 0.45, status: "Online" },
   { id: "DEV-4", mac: "99:88:77:66:55:44", owner: "Tablets Cart A", role: "Student", quota: 10, used: 2.5, status: "Offline" },
 ];
 
-const INITIAL_RESERVATIONS: LabReservation[] = [
+const DEFAULT_RESERVATIONS: LabReservation[] = [
   { id: "RES-01", day: "Monday", time: "08:00 AM - 09:30 AM", grade: "Grade 7 Alpha", subject: "Digital Literacy", teacher: "Mr. Omondi", room: "Main Lab", status: "Completed" },
   { id: "RES-02", day: "Wednesday", time: "11:00 AM - 12:30 PM", grade: "Grade 4 Blue", subject: "Creative Arts", teacher: "Ms. Mwangi", room: "Main Lab", status: "In Session" },
   { id: "RES-03", day: "Friday", time: "02:00 PM - 03:30 PM", grade: "Grade 8 Beta", subject: "Pre-Tech", teacher: "Mr. Kamau", room: "Mini Lab", status: "Upcoming" },
@@ -92,10 +97,55 @@ const INITIAL_RESERVATIONS: LabReservation[] = [
 const SystemAndAccountManagement = () => {
   const [activeTab, setActiveTab] = useState("logins");
   
-  // --- States ---
-  const [users, setUsers] = useState<SystemUser[]>(INITIAL_USERS);
-  const [devices, setDevices] = useState<NetworkDevice[]>(INITIAL_DEVICES);
-  const [reservations, setReservations] = useState<LabReservation[]>(INITIAL_RESERVATIONS);
+  // --- States with localStorage persistence ---
+  const [users, setUsers] = useState<SystemUser[]>(() => {
+    try {
+      const saved = localStorage.getItem(SYSTEM_USERS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(DEFAULT_USERS));
+    return DEFAULT_USERS;
+  });
+
+  const [devices, setDevices] = useState<NetworkDevice[]>(() => {
+    try {
+      const saved = localStorage.getItem(SYSTEM_DEVICES_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem(SYSTEM_DEVICES_KEY, JSON.stringify(DEFAULT_DEVICES));
+    return DEFAULT_DEVICES;
+  });
+
+  const [reservations, setReservations] = useState<LabReservation[]>(() => {
+    try {
+      const saved = localStorage.getItem(LAB_RESERVATIONS_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem(LAB_RESERVATIONS_KEY, JSON.stringify(DEFAULT_RESERVATIONS));
+    return DEFAULT_RESERVATIONS;
+  });
+
+  // --- Persist to localStorage on changes ---
+  useEffect(() => {
+    try { localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(users)); } catch { /* ignore */ }
+  }, [users]);
+
+  useEffect(() => {
+    try { localStorage.setItem(SYSTEM_DEVICES_KEY, JSON.stringify(devices)); } catch { /* ignore */ }
+  }, [devices]);
+
+  useEffect(() => {
+    try { localStorage.setItem(LAB_RESERVATIONS_KEY, JSON.stringify(reservations)); } catch { /* ignore */ }
+  }, [reservations]);
 
   const [userSearch, setUserSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
@@ -138,16 +188,20 @@ const SystemAndAccountManagement = () => {
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
-    // Simplified handler for demo
+    const form = e.target as HTMLFormElement;
+    const nameInput = form.querySelector<HTMLInputElement>('input[name="fullName"]');
+    const roleInput = form.querySelector<HTMLSelectElement>('select[name="role"]');
+    const usernameInput = form.querySelector<HTMLInputElement>('input[name="username"]');
+
     const newUser: SystemUser = {
       id: `USR-${Math.floor(Math.random() * 900) + 100}`,
-      name: "New User Account",
-      role: "Teacher",
-      username: "new.user",
+      name: nameInput?.value || "New User Account",
+      role: (roleInput?.value || "Teacher") as SystemUser['role'],
+      username: usernameInput?.value || "new.user",
       lastLogin: "Never",
       status: "Active"
     };
-    setUsers([newUser, ...users]);
+    setUsers(prev => [newUser, ...prev]);
     setIsAddUserOpen(false);
     showSuccess("User account provisioned successfully.");
   };
@@ -478,16 +532,16 @@ const SystemAndAccountManagement = () => {
         description="Configure system access rights and initial security credentials."
         footer={<div className="flex gap-2 justify-end w-full"><Button variant="ghost" onClick={() => setIsAddUserOpen(false)} className="rounded-xl font-bold h-12 px-6">Cancel</Button><Button onClick={handleAddUser} className="rounded-xl bg-indigo-600 text-white font-bold h-12 px-8">Create User Account</Button></div>}
       >
-        <div className="space-y-4">
+        <form onSubmit={handleAddUser} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Full Name</Label><Input placeholder="e.g. Samuel Kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Full Name</Label><Input name="fullName" placeholder="e.g. Samuel Kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
             <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">System Role</Label>
-              <Select defaultValue="Teacher"><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Teacher">Teacher</SelectItem><SelectItem value="Admin">Administrator</SelectItem><SelectItem value="Lab Tech">Lab Technician</SelectItem></SelectContent></Select>
+              <Select defaultValue="Teacher" name="role"><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Teacher">Teacher</SelectItem><SelectItem value="Admin">Administrator</SelectItem><SelectItem value="Lab Tech">Lab Technician</SelectItem></SelectContent></Select>
             </div>
           </div>
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Username / Email</Label><Input placeholder="e.g. sam.kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
-          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Temporary Password</Label><div className="flex gap-2"><Input value="MUNYAKA_TEMP_2024" readOnly className="rounded-xl h-12 bg-slate-100 border-none font-black text-indigo-600 text-center" /><Button variant="outline" className="h-12 w-12 rounded-xl border-slate-200"><RefreshCw size={16} /></Button></div></div>
-        </div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Username / Email</Label><Input name="username" placeholder="e.g. sam.kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Temporary Password</Label><div className="flex gap-2"><Input value="MUNYAKA_TEMP_2024" readOnly className="rounded-xl h-12 bg-slate-100 border-none font-black text-indigo-600 text-center" /><Button type="button" variant="outline" className="h-12 w-12 rounded-xl border-slate-200"><RefreshCw size={16} /></Button></div></div>
+        </form>
       </Modal>
 
       <Modal

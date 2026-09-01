@@ -34,11 +34,26 @@ import {
   FileCheck,
   Award
 } from 'lucide-react';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showSuccessWithAction } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
+import { archiveLearner } from '@/services/transferArchiveService';
+import { useAuth } from '@/context/AuthContext';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import {
+  jsPdfToBlob,
+  downloadPdfBlob,
+  buildCertificateFilename,
+  saveCertificateRef,
+  type DownloadPdfResult,
+} from '@/utils/pdfDownloader';
+import {
+  saveArchivedLearner,
+} from '@/utils/archiveStorage';
+import type {
+  TransferredLearnerArchive,
+} from '@/types/archive';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -53,6 +68,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   onClose,
   onTransferComplete
 }) => {
+  const { user } = useAuth();
   const [currentStep, setCurrentStep] = useState<'FORM' | 'CERTIFICATE'>('FORM');
   const [isExecuting, setIsExecuting] = useState(false);
   const [transferData, setTransferData] = useState<Partial<TransferData>>({
@@ -79,6 +95,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Stable download callback passed back to the parent via onTransferComplete
+  // so the toast action button can re-trigger the download without re-rendering
+  const downloadCallbackRef = useRef<(() => DownloadPdfResult) | null>(null);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -161,7 +181,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
   // Generate PDF certificate by rendering the node to a canvas, then placing
   // that image into a standard A4 jsPDF document.
-  const generateCertificatePdf = async (): Promise<boolean> => {
+  // On success, the certificate reference (including a data URL) is persisted
+  // to localStorage so the profile page can offer a re-download button.
+  const generateCertificatePdf = async (): Promise<DownloadPdfResult> => {
     setIsGeneratingPdf(true);
     setPdfError(null);
 
@@ -176,7 +198,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       const maxWidth = pageWidth - margin * 2;
       const maxHeight = pageHeight - margin * 2;
 
-      // Fit the certificate onto the A4 page while preserving its aspect ratio.
       const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
       const drawWidth = canvas.width * ratio;
       const drawHeight = canvas.height * ratio;
@@ -185,70 +206,477 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       pdf.addImage(imgData, 'JPEG', x, y, drawWidth, drawHeight);
 
-      const safeStudentName = (student?.name || '').replace(/\s+/g, '_');
-      pdf.save(`Munyaka_Clearance_Certificate_${safeStudentName}.pdf`);
-      return true;
+      const filename = buildCertificateFilename(student?.name, certificateNumber);
+
+      // Trigger immediate auto-download via hidden <a> click
+      const blob = jsPdfToBlob(pdf);
+      const result = downloadPdfBlob(blob, filename);
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'PDF download failed');
+      }
+
+      // Persist the certificate reference (including a data URL) to localStorage
+      // so the profile page's "Download Clearance Certificate" button can
+      // re-generate the PDF on demand without asking for admin credentials again.
+      saveCertificateRef(student.id, {
+        certificateNumber,
+        filename,
+        issuedAt: new Date().toISOString(),
+        pdfDataUrl: pdf.output('datauristring'),
+      });
+
+      // Expose the download closure via the ref so the toast action button can
+      // call it directly (avoids prop drilling and stale closures).
+      downloadCallbackRef.current = () => {
+        const reBlob = jsPdfToBlob(pdf);
+        return downloadPdfBlob(reBlob, filename);
+      };
+
+      return result;
     } catch (err) {
       console.error('PDF generation error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate PDF';
       setPdfError(errorMessage);
-      return false;
+      return { success: false, error: errorMessage };
     } finally {
       setIsGeneratingPdf(false);
     }
   };
 
-  // Auto-generate PDF after certificate mounts - with proper lifecycle handling
-  useEffect(() => {
-    if (currentStep === 'CERTIFICATE' && certificateNumber && isCertificateMounted) {
-      // Use setTimeout to ensure React has flushed the DOM and browser has painted
-      const timer = setTimeout(() => {
-        generateCertificatePdf();
-      }, 300); // 300ms delay for render + paint
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep, certificateNumber, isCertificateMounted]);
+  // ─── Pure jsPDF text-based certificate generator ────────────────────────────────────
+  // This function builds the clearance certificate as a proper jsPDF text document
+  // so it works even if the DOM certificate node failed to mount. It includes all
+  // required certificate elements: school header, student details, transfer metadata,
+  // headteacher remarks, and admin sign-off placeholders.
+  //
+  // The generated jsPDF instance is passed to downloadJsPdf (from pdfDownloader.ts)
+  // which handles the Blob creation, Object URL, and hidden <a download> click.
+  const generateClearanceCertificatePDF = (): jsPDF => {
+    const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 18;
+    const contentWidth = pageWidth - margin * 2;
+    let y = margin;
 
-  const handleExecuteTransfer = async () => {
+    // ── Helper: draw a thin horizontal rule ─────────────────────────────────
+    const drawLine = (yPos: number, thickness = 0.3) => {
+      doc.setDrawColor(180, 180, 180);
+      doc.setLineWidth(thickness);
+      doc.line(margin, yPos, pageWidth - margin, yPos);
+    };
+
+    // ── Helper: add wrapped text, advancing y ───────────────────────────────
+    const addWrappedText = (
+      text: string,
+      x: number,
+      fontSize: number,
+      fontStyle: 'normal' | 'bold' = 'normal',
+      color = [40, 40, 40] as [number, number, number],
+      lineHeight = 6
+    ) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', fontStyle);
+      doc.setTextColor(...color);
+      const lines = doc.splitTextToSize(text, contentWidth);
+      lines.forEach((line: string) => {
+        if (y + lineHeight > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, x, y + fontSize * 0.35);
+        y += lineHeight;
+      });
+    };
+
+    // ── Helper: centered text ───────────────────────────────────────────────
+    const addCenteredText = (
+      text: string,
+      fontSize: number,
+      fontStyle: 'normal' | 'bold' = 'bold',
+      color = [30, 30, 30] as [number, number, number],
+      yOffset = 0
+    ) => {
+      doc.setFontSize(fontSize);
+      doc.setFont('helvetica', fontStyle);
+      doc.setTextColor(...color);
+      const x = pageWidth / 2;
+      doc.text(text, x, y + yOffset, { align: 'center' });
+    };
+
+    // ════════════════════════════════════════════════════════════════════════
+    //  1. SCHOOL INSTITUTIONAL HEADER
+    // ════════════════════════════════════════════════════════════════════════
+
+    // School logo placeholder — filled circle
+    doc.setFillColor(99, 102, 241); // indigo-600
+    doc.circle(pageWidth / 2, y + 10, 10, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('M', pageWidth / 2, y + 13.5, { align: 'center' });
+
+    y += 24;
+    addCenteredText('MUNYAKA PRIMARY AND JUNIOR SCHOOL', 16, 'bold', [20, 20, 60]);
+    y += 7;
+    addCenteredText('P.O. Box 5239-30100, Eldoret | Tel: +254 738 873 359', 8, 'normal', [100, 100, 120], 0);
+    y += 4;
+    addCenteredText('Email: munyakaprimary@gmail.com', 8, 'normal', [100, 100, 120], 0);
+    y += 4;
+    addCenteredText('"Knowledge is Power"', 9, 'italic', [100, 100, 140], 0);
+    y += 6;
+    drawLine(y, 1);
+    y += 8;
+
+    // ── 2. CERTIFICATE TITLE ────────────────────────────────────────────────
+    addCenteredText('OFFICIAL STUDENT CLEARANCE & TRANSFER CERTIFICATE', 13, 'bold', [99, 102, 241], 0);
+    y += 6;
+    addCenteredText(`Certificate No: ${certificateNumber}  |  Date Issued: ${formatDate(new Date().toISOString())}`, 9, 'normal', [80, 80, 80], 0);
+    y += 10;
+    drawLine(y, 0.5);
+    y += 10;
+
+    // ── 3. STUDENT DETAILS ─────────────────────────────────────────────────
+    addCenteredText('STUDENT PARTICULARS', 11, 'bold', [40, 40, 40], 0);
+    y += 8;
+
+    const studentDetails: [string, string][] = [
+      ['Student Full Name:', student?.name || '—'],
+      ['NEMIS / UPI / Assessment Code:', student?.assessment || '—'],
+      ['Gender:', student?.gender === 'M' ? 'Male' : 'Female'],
+      ['Date of Birth:', formatDate(student?.dob || '')],
+      ['Date of Admission:', formatDate(student?.dateOfAdmission || '')],
+      ['Grade / Class at Exit:', `Grade ${student?.grade ?? '—'}, ${student?.stream ?? '—'} Stream`],
+    ];
+
+    studentDetails.forEach(([label, value]) => {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, margin, y + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+      doc.text(value, margin + 60, y + 5);
+      y += 7;
+    });
+
+    y += 4;
+    drawLine(y, 0.3);
+    y += 10;
+
+    // ── 4. TRANSFER METADATA ────────────────────────────────────────────────
+    addCenteredText('TRANSFER PARTICULARS', 11, 'bold', [40, 40, 40], 0);
+    y += 8;
+
+    const transferDetails: [string, string][] = [
+      ['Date of Exit:', formatDate(transferData.dateOfExit || '')],
+      ['Destination School / Reason:', transferData.destinationSchool || 'Not specified'],
+      ['Additional Notes:', transferData.reason || '—'],
+    ];
+
+    transferDetails.forEach(([label, value]) => {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.setTextColor(80, 80, 80);
+      doc.text(label, margin, y + 5);
+      doc.setFont('helvetica', 'normal');
+      doc.setTextColor(30, 30, 30);
+      const wrapped = doc.splitTextToSize(value, contentWidth - 65);
+      wrapped.forEach((line: string, i: number) => {
+        doc.text(line, margin + 65, y + 5 + i * 5);
+      });
+      y += 7 + (wrapped.length - 1) * 5;
+    });
+
+    y += 4;
+    drawLine(y, 0.3);
+    y += 10;
+
+    // ── 5. FINANCIAL CLEARANCE ─────────────────────────────────────────────
+    addCenteredText('FINANCIAL CLEARANCE STATUS', 11, 'bold', [40, 40, 40], 0);
+    y += 8;
+
+    const feeBalance = student?.feeBalance ?? 0;
+    const feeStatus = feeBalance <= 0 ? 'CLEARED — No Outstanding Fees' : `PENDING — Outstanding Balance: KES ${feeBalance.toLocaleString()}`;
+    const feeColor: [number, number, number] = feeBalance <= 0 ? [5, 120, 60] : [200, 60, 20];
+
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(...feeColor);
+    doc.text(feeStatus, margin, y + 5);
+    y += 10;
+
+    drawLine(y, 0.3);
+    y += 10;
+
+    // ── 6. CO-CURRICULAR ACTIVITIES ────────────────────────────────────────
+    addCenteredText('CO-CURRICULAR ACTIVITIES & ACHIEVEMENTS', 11, 'bold', [40, 40, 40], 0);
+    y += 8;
+    drawLine(y, 0.2);
+    y += 5;
+    const activities = transferData.coCurricularActivities || 'No co-curricular activities recorded.';
+    addWrappedText(activities, margin, 9.5, 'normal', [50, 50, 50], 6);
+    y += 6;
+
+    drawLine(y, 0.3);
+    y += 10;
+
+    // ── 7. HEADTEACHER REMARKS ─────────────────────────────────────────────
+    addCenteredText('HEADTEACHER REMARKS & CHARACTER REFERENCE', 11, 'bold', [40, 40, 40], 0);
+    y += 8;
+    drawLine(y, 0.2);
+    y += 5;
+    const remarks = transferData.headteacherRemarks || 'No additional remarks provided.';
+    addWrappedText(remarks, margin, 9.5, 'normal', [50, 50, 50], 6);
+    y += 10;
+
+    drawLine(y, 0.3);
+    y += 12;
+
+    // ── 8. AUTHORIZATION BLOCK ─────────────────────────────────────────────
+    addCenteredText('AUTHORIZATION & SIGN-OFF', 11, 'bold', [40, 40, 40], 0);
+    y += 10;
+
+    const halfWidth = (contentWidth - 20) / 2;
+    const sigBoxHeight = 28;
+    const sigBoxY = y;
+
+    // Left: Bursar / Finance
+    doc.setFillColor(248, 248, 250);
+    doc.rect(margin, sigBoxY, halfWidth, sigBoxHeight, 'F');
+    doc.setDrawColor(200, 200, 210);
+    doc.setLineWidth(0.3);
+    doc.rect(margin, sigBoxY, halfWidth, sigBoxHeight, 'S');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text('BURSAR / FINANCE CLEARANCE', margin + halfWidth / 2, sigBoxY + 7, { align: 'center' });
+    doc.setLineWidth(0.4);
+    doc.line(margin + 10, sigBoxY + 14, margin + halfWidth - 10, sigBoxY + 14);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text('Signature & Date', margin + halfWidth / 2, sigBoxY + 19, { align: 'center' });
+    doc.text('Official Stamp', margin + halfWidth / 2, sigBoxY + 24, { align: 'center' });
+
+    // Right: Headteacher
+    const htX = margin + halfWidth + 20;
+    doc.setFillColor(248, 248, 250);
+    doc.rect(htX, sigBoxY, halfWidth, sigBoxHeight, 'F');
+    doc.setDrawColor(200, 200, 210);
+    doc.setLineWidth(0.3);
+    doc.rect(htX, sigBoxY, halfWidth, sigBoxHeight, 'S');
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(80, 80, 80);
+    doc.text('HEADTEACHER SIGNATURE & STAMP', htX + halfWidth / 2, sigBoxY + 7, { align: 'center' });
+    doc.setLineWidth(0.4);
+    doc.line(htX + 10, sigBoxY + 14, htX + halfWidth - 10, sigBoxY + 14);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(120, 120, 120);
+    doc.text('Signature & Date', htX + halfWidth / 2, sigBoxY + 19, { align: 'center' });
+    doc.text('Official School Stamp', htX + halfWidth / 2, sigBoxY + 24, { align: 'center' });
+
+    y += sigBoxHeight + 14;
+
+    // ── 9. FOOTER ──────────────────────────────────────────────────────────
+    drawLine(y, 0.5);
+    y += 6;
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(140, 140, 160);
+    doc.text('This certificate is issued without erasure or alteration.', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+    doc.text('Munyaka Primary and Junior School  •  P.O. Box 5239-30100, Eldoret  •  Tel: +254 738 873 359', pageWidth / 2, y, { align: 'center' });
+    y += 4;
+    doc.text(`Generated: ${new Date().toLocaleString('en-GB')}  |  Certificate: ${certificateNumber}`, pageWidth / 2, y, { align: 'center' });
+
+    return doc;
+  };
+
+  // Auto-generate PDF after certificate mounts - with proper lifecycle handling
+  // NOTE: useEffect intentionally removed: PDF generation is now driven explicitly by
+  // handleExecuteTransfer once the certificate DOM has been confirmed mounted
+  // and the transfer has succeeded. This prevents double-generation and ensures
+  // the modal only closes after the download is complete.
+
+  const handleExecuteTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!transferData.destinationSchool?.trim()) {
       showError("Please enter the destination school or reason for transfer.");
       return;
     }
 
     if (!adminPassword.trim()) {
-      setAuthError("Admin password is required to authorize this transfer.");
+      const msg = "Admin password is required to authorize this transfer.";
+      setAuthError(msg);
+      showError(msg);
       return;
     }
 
     setIsExecuting(true);
     setAuthError("");
 
-    // Validate admin password against stored credentials
+    // ── Step 1: Authorize ────────────────────────────────────────────────
     const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     if (adminPassword !== storedAdminPass) {
-      setAuthError("Invalid admin password. Authorization required to transfer learner.");
+      const msg = "Invalid admin password. Authorization required to transfer learner.";
+      setAuthError(msg);
+      showError(msg);
       setIsExecuting(false);
       return;
     }
 
-    // Generate certificate number
-    const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
-    setCertificateNumber(certNum);
+    // ── Step 2: Archive record MUST be written BEFORE onTransferComplete ─
+        // Writing to the archive first guarantees the record survives even if
+        // the parent's onTransferComplete throws (e.g., localStorage write
+        // failure). If we called onTransferComplete first and it failed, the
+        // archive entry would never be saved and the learner would vanish.
+        const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
+        setCertificateNumber(certNum);
     
-    // Notify parent of completion (but DON'T close modal)
-    onTransferComplete(student.id, certNum);
+        const transferDate = transferData.dateOfExit || new Date().toISOString().split('T')[0];
+        const archiveRecord: TransferredLearnerArchive = {
+          id: student.id,
+          admNo: student.assessment || '',
+          name: student.name,
+          grade: student.grade,
+          stream: student.stream,
+          gender: (student.gender === 'M'
+            ? 'Male'
+            : student.gender === 'F'
+            ? 'Female'
+            : 'Other') as 'Male' | 'Female' | 'Other',
+          guardian: student.guardian || '',
+          phone: student.phone || '',
+          email: student.email || '',
+          dob: student.dob || '',
+          dateOfAdmission: student.dateOfAdmission || '',
+          birthCertificateNo: (student as any).birthCertificateNo || '',
+          transferDate,
+          transferYear: new Date(transferDate).getFullYear(),
+          destinationSchool: transferData.destinationSchool || '—',
+          reason: transferData.reason || '—',
+          reasonNotes: transferData.reason || '',
+          headteacherRemarks: transferData.headteacherRemarks || '—',
+          coCurricularActivities: transferData.coCurricularActivities || '',
+          certificateNumber: certNum,
+          feeBalanceAtExit: student.feeBalance ?? 0,
+          isFeeCleared: (student.feeBalance ?? 0) <= 0,
+          audit: {
+            executedBy: user?.name || user?.email || 'Admin',
+            executedAt: new Date().toISOString(),
+            authorizedVia: 'admin_password',
+          },
+        };
+        // Persist to archive — emitArchiveUpdated() is called inside here so
+        // the archive page refreshes immediately without a page reload.
+        saveArchivedLearner(archiveRecord);
     
-    // Advance to Stage 2 - Certificate View
-    // PDF auto-generation will trigger via useEffect once certificate mounts
+        // Now notify the parent: the archive row is already safely written, so
+        // even if the parent's state update fails the record is not lost.
+        onTransferComplete(student.id, certNum);
+
+    // ── Step 3: Show certificate & wait for it to mount ─────────────────
     setCurrentStep('CERTIFICATE');
+
+    // Poll until the certificate DOM node is mounted and ready
+    let retries = 20;
+    while (!certificateRef.current && retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      retries--;
+    }
+    // Extra delay for React flush + browser paint
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // ── Step 4: Generate PDF and trigger auto-download ──────────────────
+    //
+    // Strategy:
+    //  1. Try the DOM-based generator (screenshots the visual certificate).
+    //  2. If that fails (DOM not ready, html2canvas error, etc.), fall back to
+    //     the pure jsPDF text generator — which never depends on the DOM.
+    //  This ensures the user ALWAYS gets a PDF regardless of rendering state.
+    //
+    // The jsPDF doc instance is kept in a ref so the toast action button can
+    // re-trigger the download without re-building the document.
+    let pdfResult: ReturnType<typeof generateCertificatePdf> extends Promise<infer T> ? T : never = { success: false };
+    let pdfDoc: jsPDF | null = null;
+
+    try {
+      pdfResult = await generateCertificatePdf();
+    } catch {
+      pdfResult = { success: false };
+    }
+
+    // Fall back to pure jsPDF if the DOM-based generator failed
+    if (!pdfResult.success) {
+      try {
+        pdfDoc = generateClearanceCertificatePDF();
+        const filename = buildCertificateFilename(student?.name, certificateNumber);
+        const blob = jsPdfToBlob(pdfDoc);
+        const dlResult = downloadPdfBlob(blob, filename);
+        pdfResult = dlResult;
+      } catch (err) {
+        console.error('[TransferWorkflow] Pure jsPDF fallback also failed:', err);
+        pdfResult = { success: false, error: err instanceof Error ? err.message : 'PDF generation failed' };
+      }
+    }
+
+    // ── Wire the download closure into the ref so the toast action button
+    //    can re-trigger the download without re-building the document ──────
+    downloadCallbackRef.current = () => {
+      if (pdfDoc) {
+        const filename = buildCertificateFilename(student?.name, certificateNumber);
+        const blob = jsPdfToBlob(pdfDoc);
+        return downloadPdfBlob(blob, filename);
+      }
+      return { success: false, error: 'PDF document not available' };
+    };
+
+    // Persist the certificate reference to localStorage so the profile page's
+    // "Download Clearance Certificate" button works even after the session ends.
+    saveCertificateRef(student.id, {
+      certificateNumber: certNum,
+      filename: buildCertificateFilename(student?.name, certNum),
+      issuedAt: new Date().toISOString(),
+      // Store the raw jsPDF output as a data URL for reliable re-downloads
+      pdfDataUrl: pdfDoc ? pdfDoc.output('datauristring') : undefined,
+    });
+
     setIsExecuting(false);
-    
-    showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
+
+    if (!pdfResult.success) {
+      // Transfer already succeeded — show error but keep the modal open
+      showError(pdfResult.error ?? 'Certificate download failed. Please use the Download button above.');
+      return;
+    }
+
+    // ── Step 5: All done — close modal and notify with download action ──
+    const studentName = student?.name ?? 'The learner';
+    showSuccessWithAction(
+      `${studentName} has been transferred successfully. Certificate ${certNum} downloaded.`,
+      'Download Certificate PDF',
+      () => {
+        if (downloadCallbackRef.current) {
+          const retry = downloadCallbackRef.current();
+          if (!retry.success) {
+            showError(retry.error ?? 'Download failed. Please try again.');
+          } else {
+            showSuccess('Certificate re-downloaded.');
+          }
+        } else {
+          showError('Download unavailable. Please re-open the transfer modal.');
+        }
+      },
+      'Re-download the transfer clearance certificate'
+    );
+
+    onClose();
   };
 
   const handlePrintCertificate = async () => {
@@ -322,9 +750,28 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   };
 
   const handleDownloadPdf = async () => {
-    const success = await generateCertificatePdf();
-    if (success) {
-      showSuccess('Certificate downloaded successfully!');
+    // Try the download closure first (stored from the most recent generation)
+    if (downloadCallbackRef.current) {
+      const result = downloadCallbackRef.current();
+      if (result.success) {
+        showSuccess('Certificate downloaded successfully!');
+        return;
+      }
+      // Fall through to re-generate if the stored closure failed
+    }
+    // Fall back to regenerating the pure jsPDF document
+    try {
+      const doc = generateClearanceCertificatePDF();
+      const filename = buildCertificateFilename(student?.name, certificateNumber);
+      const blob = jsPdfToBlob(doc);
+      const result = downloadPdfBlob(blob, filename);
+      if (result.success) {
+        showSuccess('Certificate downloaded successfully!');
+      } else {
+        showError(result.error ?? 'Download failed. Please try again.');
+      }
+    } catch (err) {
+      showError(err instanceof Error ? err.message : 'Failed to generate certificate.');
     }
   };
 
@@ -351,13 +798,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
             Cancel
           </Button>
-          <Button 
-            onClick={handleExecuteTransfer} 
+          <Button
+            type="submit"
+            form="transfer-form"
             disabled={isExecuting || !adminPassword.trim()}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
             {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
-            Execute Transfer & Generate Clearance Certificate
+            {isExecuting ? 'Generating Certificate & Transferring…' : 'Execute Transfer & Generate Clearance Certificate'}
           </Button>
         </>
       );
@@ -409,7 +857,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     >
       {/* Stage 1: Transfer Setup Form */}
       {currentStep === 'FORM' && (
-        <div className="space-y-6 animate-in fade-in">
+        <form id="transfer-form" onSubmit={handleExecuteTransfer} className="space-y-6 animate-in fade-in">
           {/* Student Info Header */}
           <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg">
@@ -590,7 +1038,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* Stage 2: Official Clearance Certificate Preview */}
