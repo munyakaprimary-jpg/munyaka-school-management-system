@@ -376,10 +376,9 @@ const TransferredLearnersArchive: React.FC = () => {
             <button
               type="button"
               onClick={handleExportExcel}
-              disabled={records.length === 0}
-              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-l-xl border border-r-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
-              aria-label="Quick export to Excel"
-              title="Quick export to Excel (.xlsx)"
+              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-l-xl border border-r-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 active:scale-95"
+              aria-label="Export to Excel"
+              title="Export to Excel (.xlsx)"
             >
               <Download size={15} />
               <span className="hidden sm:inline">Export Excel</span>
@@ -388,17 +387,16 @@ const TransferredLearnersArchive: React.FC = () => {
             <button
               type="button"
               onClick={() => setExportMenuOpen((o) => !o)}
-              disabled={records.length === 0}
               aria-label="More export options"
               aria-haspopup="menu"
               aria-expanded={exportMenuOpen}
-              className="inline-flex items-center justify-center px-2 h-[42px] rounded-r-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+              className="inline-flex items-center justify-center px-2 h-[42px] rounded-r-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300 active:scale-95"
             >
               <ChevronLeft
                 size={14}
                 className={cn(
-                  'transition-transform rotate-180',
-                  exportMenuOpen && 'rotate-0'
+                  'transition-transform',
+                  exportMenuOpen ? 'rotate-90' : '-rotate-90'
                 )}
               />
             </button>
