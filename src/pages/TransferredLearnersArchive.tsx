@@ -83,30 +83,9 @@ const TransferredLearnersArchive: React.FC = () => {
   const [isRestoring, setIsRestoring] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
 
-  // Safe back handler: tries history.back() first (preserves scroll position
-  // and prior filter state). Falls back to the active Learners page
-  // (`/students`) if the history stack is empty (e.g. direct navigation
-  // or page refresh).
+  // Direct back handler — always navigates to the active Learners page.
   const handleBack = useCallback(() => {
-    if (typeof window === 'undefined') {
-      navigate('/students', { replace: true });
-      return;
-    }
-    // window.history.length is unreliable in some embedded contexts (e.g.
-    // when the app is hosted inside an iframe preview), so we also try
-    // document.referrer as a secondary signal that the user arrived here
-    // from another page on this site.
-    const hasInternalHistory =
-      window.history.length > 1 &&
-      // If we know the referrer is on this app, treat as navigable
-      (!document.referrer ||
-        document.referrer.includes(window.location.host));
-
-    if (hasInternalHistory) {
-      navigate(-1);
-    } else {
-      navigate('/students', { replace: true });
-    }
+    navigate('/students');
   }, [navigate]);
 
   // Available grades/streams for the restore target dropdown
@@ -252,9 +231,15 @@ const TransferredLearnersArchive: React.FC = () => {
       showError('No records to export.');
       return;
     }
-    exportToExcel(records);
-    showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to Excel.`);
-    setExportMenuOpen(false);
+    try {
+      exportToExcel(records);
+      showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to Excel.`);
+    } catch (err) {
+      showError('Excel export failed. Please try again.');
+      console.error('[Archive] exportToExcel error:', err);
+    } finally {
+      setExportMenuOpen(false);
+    }
   };
 
   const handleExportCSV = () => {
@@ -262,9 +247,15 @@ const TransferredLearnersArchive: React.FC = () => {
       showError('No records to export.');
       return;
     }
-    exportToCSV(records);
-    showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to CSV.`);
-    setExportMenuOpen(false);
+    try {
+      exportToCSV(records);
+      showSuccess(`Exported ${records.length} record${records.length === 1 ? '' : 's'} to CSV.`);
+    } catch (err) {
+      showError('CSV export failed. Please try again.');
+      console.error('[Archive] exportToCSV error:', err);
+    } finally {
+      setExportMenuOpen(false);
+    }
   };
 
   const handleExportPDF = () => {
@@ -272,9 +263,15 @@ const TransferredLearnersArchive: React.FC = () => {
       showError('No records to export.');
       return;
     }
-    exportToPDF(records);
-    showSuccess(`Generating PDF summary for ${records.length} record${records.length === 1 ? '' : 's'}.`);
-    setExportMenuOpen(false);
+    try {
+      exportToPDF(records);
+      showSuccess(`Generating PDF summary for ${records.length} record${records.length === 1 ? '' : 's'}.`);
+    } catch (err) {
+      showError('PDF export failed. Please try again.');
+      console.error('[Archive] exportToPDF error:', err);
+    } finally {
+      setExportMenuOpen(false);
+    }
   };
 
   // Close export dropdown when clicking outside
@@ -330,7 +327,7 @@ const TransferredLearnersArchive: React.FC = () => {
         <div className="relative z-[80]">
           <button
             type="button"
-            onClick={handleBack}
+            onClick={() => navigate('/students')}
             aria-label="Go back to Learners"
             className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-5 h-11 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 active:scale-95"
           >
@@ -380,7 +377,7 @@ const TransferredLearnersArchive: React.FC = () => {
               type="button"
               onClick={handleExportExcel}
               disabled={records.length === 0}
-              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-l-xl border border-r-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+              className="inline-flex items-center justify-center gap-2 px-4 h-[42px] rounded-l-xl border border-r-0 border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
               aria-label="Quick export to Excel"
               title="Quick export to Excel (.xlsx)"
             >
@@ -395,7 +392,7 @@ const TransferredLearnersArchive: React.FC = () => {
               aria-label="More export options"
               aria-haspopup="menu"
               aria-expanded={exportMenuOpen}
-              className="inline-flex items-center justify-center px-2 h-[42px] rounded-r-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
+              className="inline-flex items-center justify-center px-2 h-[42px] rounded-r-xl border border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300"
             >
               <ChevronLeft
                 size={14}
@@ -409,7 +406,7 @@ const TransferredLearnersArchive: React.FC = () => {
             {exportMenuOpen && (
               <div
                 role="menu"
-                className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/60 p-1.5 z-50 animate-in slide-in-from-top-2"
+                className="absolute right-0 top-full mt-2 w-64 bg-white rounded-2xl border border-slate-200 shadow-xl shadow-slate-200/60 p-1.5 z-[90] animate-in slide-in-from-top-2"
               >
                 <p className="px-3 pt-2 pb-1.5 text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Export List
