@@ -169,42 +169,63 @@ const EmptyAlertsState = () => (
   </div>
 );
 
-const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => (
-  <div className="w-full overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
-    <table className="w-full text-sm min-w-[480px]">
-      <thead>
-        <tr className="border-b border-slate-100">
-          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Class Name
-          </th>
-          <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-            Enrollment
-          </th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-slate-50">
-        {rows.length === 0 ? (
-          <tr>
-            <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-sm">
-              No class data available yet.
-            </td>
+const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
+  // Live total — recomputed on every render from the rows (which are themselves
+  // re-aggregated from the live school_learners_data whenever it changes).
+  const totalEnrollment = rows.reduce((sum, row) => sum + (row.enrolled || 0), 0);
+
+  return (
+    <div className="w-full overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
+      <table className="w-full text-sm min-w-[480px]">
+        <thead>
+          <tr className="border-b border-slate-100">
+            <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Class Name
+            </th>
+            <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Enrollment
+            </th>
           </tr>
-        ) : (
-          rows.map((row) => (
-            <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
-              <td className="px-6 py-4 font-semibold text-slate-800">{row.name}</td>
-              <td className="px-6 py-4">
-                <span className={`text-sm font-bold ${row.enrolled > 0 ? 'text-slate-700' : 'text-slate-400'}`}>
-                  {row.enrolled} Registered
-                </span>
+        </thead>
+        <tbody className="divide-y divide-slate-50">
+          {rows.length === 0 ? (
+            <tr>
+              <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-sm">
+                No class data available yet.
               </td>
             </tr>
-          ))
-        )}
-      </tbody>
-    </table>
-  </div>
-);
+          ) : (
+            rows.map((row) => (
+              <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
+                <td className="px-6 py-4 font-semibold text-slate-800">{row.name}</td>
+                <td className="px-6 py-4">
+                  <span className={`text-sm font-bold ${row.enrolled > 0 ? 'text-slate-700' : 'text-slate-400'}`}>
+                    {row.enrolled} Registered
+                  </span>
+                </td>
+              </tr>
+            ))
+          )}
+
+          {/* Total Summary Row — always rendered at the bottom */}
+          <tr className="bg-slate-50/80 border-t-2 border-slate-200">
+            <td className="px-6 py-4 font-black text-slate-900 text-sm">
+              Total Enrollment
+            </td>
+            <td className="px-6 py-4">
+              <span className="text-sm font-black text-indigo-600">
+                Total: {totalEnrollment.toLocaleString()}
+              </span>
+              <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                {totalEnrollment === 1 ? 'Registered' : 'Total Registered'}
+              </span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  );
+};
 
 // ─── Main Dashboard Component ──────────────────────────────────────────────────
 
@@ -851,11 +872,11 @@ const Dashboard = () => {
         </div>
       </Card>
 
-      {/* ── Factual Class Participation ────────────────────────────────────── */}
+      {/* ── Current School Enrollment ───────────────────────────────────────── */}
       <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
         <CardHeader className="pb-2">
           <CardTitle className="text-base font-bold text-slate-800">
-            Factual Class Participation
+            Current School Enrollment
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
