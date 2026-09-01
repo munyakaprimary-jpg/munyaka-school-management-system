@@ -88,7 +88,21 @@ const TransferredLearnersArchive: React.FC = () => {
   // (`/students`) if the history stack is empty (e.g. direct navigation
   // or page refresh).
   const handleBack = useCallback(() => {
-    if (window.history.length > 1) {
+    if (typeof window === 'undefined') {
+      navigate('/students', { replace: true });
+      return;
+    }
+    // window.history.length is unreliable in some embedded contexts (e.g.
+    // when the app is hosted inside an iframe preview), so we also try
+    // document.referrer as a secondary signal that the user arrived here
+    // from another page on this site.
+    const hasInternalHistory =
+      window.history.length > 1 &&
+      // If we know the referrer is on this app, treat as navigable
+      (!document.referrer ||
+        document.referrer.includes(window.location.host));
+
+    if (hasInternalHistory) {
       navigate(-1);
     } else {
       navigate('/students', { replace: true });
@@ -310,15 +324,20 @@ const TransferredLearnersArchive: React.FC = () => {
           </p>
         </div>
 
-        <button
-          type="button"
-          onClick={handleBack}
-          aria-label="Go back to Learners"
-          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-5 h-11 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 active:scale-95"
-        >
-          <ChevronLeft size={16} aria-hidden="true" />
-          Back
-        </button>
+        {/* Isolated stacking island — guaranteed above the export dropdown's
+            z-50 stacking context so AppUnlock / any overlay can never
+            intercept this button. */}
+        <div className="relative z-[80]">
+          <button
+            type="button"
+            onClick={handleBack}
+            aria-label="Go back to Learners"
+            className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-5 h-11 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 active:scale-95"
+          >
+            <ChevronLeft size={16} aria-hidden="true" />
+            Back
+          </button>
+        </div>
       </div>
 
       {/* Filter Bar */}
