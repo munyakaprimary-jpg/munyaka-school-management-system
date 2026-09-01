@@ -666,17 +666,6 @@ const Login: React.FC = () => {
                     </Button>
                   </form>
 
-                  {/* Default test account hint */}
-                  <div className="p-4 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-start gap-3">
-                    <User size={16} className="text-emerald-600 mt-0.5 shrink-0" />
-                    <div className="text-xs text-emerald-900 font-medium leading-relaxed">
-                      <p className="font-black text-[10px] uppercase tracking-widest text-emerald-700 mb-1">
-                        Default Test Account
-                      </p>
-                      Username: <span className="font-bold">teacher1</span> &middot; Password: <span className="font-bold">munyaka5239</span>
-                    </div>
-                  </div>
-
                   {/* Help note */}
                   <div className="p-4 bg-slate-50 rounded-2xl flex items-start gap-3">
                     <Send size={16} className="text-slate-400 mt-0.5 shrink-0" />
