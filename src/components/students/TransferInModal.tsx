@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   FileSignature,
   Hash,
-  IdCard,
   Loader2,
   School,
   Sparkles,
@@ -442,22 +441,22 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                NEMIS / UPI / Assessment No.
-              </Label>
-              <div className="relative">
-                <IdCard
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                />
-                <Input
-                  value={form.nemisUpi}
-                  onChange={(e) => update('nemisUpi', e.target.value)}
-                  placeholder="Optional"
-                  className="pl-9 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
-              </div>
-            </div>
+                          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                            NEMIS / UPI / Assessment No.
+                          </Label>
+                          <div className="relative">
+                            <Hash
+                              size={14}
+                              className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                            />
+                            <Input
+                              value={form.nemisUpi}
+                              onChange={(e) => update('nemisUpi', e.target.value)}
+                              placeholder="Optional"
+                              className="pl-9 rounded-xl h-12 bg-slate-50 border-none font-bold"
+                            />
+                          </div>
+                        </div>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
