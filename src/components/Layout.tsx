@@ -126,7 +126,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['super_admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['super_admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['owner', 'super_admin'], requiresPermission: 'manage_ict_systems' },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['super_admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -163,9 +163,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     if (!item.roles.includes(user.role)) return false;
     // Check if item requires a specific permission
     if (item.requiresPermission) {
-      // Admins bypass permission checks
-      if (user.role === 'owner' || user.role === 'super_admin') return true;
-      // Check the specific permission
+      // SUPERADMIN bypasses permission checks
+      if (user.role === 'SUPERADMIN') return true;
+      // ICT_TEACHER and ICT_TECHNICIAN checked via permission hook
       return canAccessSystemManagement();
     }
     return true;

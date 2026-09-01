@@ -26,11 +26,6 @@ export function usePermissions() {
   const hasPermission = (permission: string): boolean => {
     if (!user) return false;
 
-    // Owner and super_admin always have all permissions
-    if (user.role === 'owner' || user.role === 'super_admin') {
-      return true;
-    }
-
     // Check specific permissions
     switch (permission) {
       case 'manage_ict_systems':
@@ -42,14 +37,20 @@ export function usePermissions() {
 
   /**
    * Internal check for ICT manager permission.
-   * Checks both role-based and delegated permission flags.
+   * System Management is restricted to ICT_TEACHER, ICT_TECHNICIAN, and SUPERADMIN.
+   * Standard roles like OWNER, TEACHER, BURSAR are excluded.
    */
   const checkICTManagerPermission = (): boolean => {
-    // Check if the user has an ICT-related system role
-    const ictRoles = ['ict_officer', 'ict_teacher', 'ict_champion', 'lab_technician'];
-    const userRole = user?.role?.toLowerCase() || '';
-    
-    if (ictRoles.includes(userRole)) {
+    const userRole = user?.role?.toUpperCase() ?? '';
+
+    // SUPERADMIN (platform developers/superadmins) always have access
+    if (userRole === 'SUPERADMIN') {
+      return true;
+    }
+
+    // ICT_TEACHER and ICT_TECHNICIAN have explicit access
+    const systemMgmtRoles = ['ICT_TEACHER', 'ICT_TECHNICIAN'];
+    if (systemMgmtRoles.includes(userRole)) {
       return true;
     }
 
@@ -58,7 +59,6 @@ export function usePermissions() {
       const ictPermissionFlag = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
       if (ictPermissionFlag) {
         const permissions = JSON.parse(ictPermissionFlag);
-        // Check if current user's ID or email is in the permissions list
         if (Array.isArray(permissions.userIds) && user?.id) {
           return permissions.userIds.includes(user.id);
         }
