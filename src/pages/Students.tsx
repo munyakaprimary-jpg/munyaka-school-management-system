@@ -237,40 +237,63 @@ export default function Students() {
   };
 
   // Filtered learners
-  const filteredLearners = useMemo(() => {
-    const selectedGradeNormalized = (gradeFilter || '').trim().toLowerCase();
-
-    return normalizedLearners.filter(s => {
-      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
-      const rawStudentGrade = s.grade || '';
-      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
-
-      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
-      const matchesGrade = !studentGradeNormalized ||
-        studentGradeNormalized === selectedGradeNormalized ||
-        studentGradeNormalized.replace(/[^0-9]/g, '') === selectedGradeNormalized.replace(/[^0-9]/g, '') && selectedGradeNormalized.replace(/[^0-9]/g, '') !== '';
-
-      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
-      const rawStudentStream = s.stream || '';
-      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
-      const selectedStreamNormalized = (streamFilter || '').trim().toLowerCase();
-
-      const isAllStreams = !streamFilter || selectedStreamNormalized === 'all' || selectedStreamNormalized === '';
-      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
-
-      // 3. Search Filter (also matches Birth Certificate No when looking up by name/ID)
-      const matchesSearch = !searchTerm.trim() ||
-        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.admNo && s.admNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.birthCertificateNo && s.birthCertificateNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
-
-      return matchesGrade && matchesStream && matchesSearch;
-    })
-    // Exclude transferred learners from the active roster. They live in the
-    // dedicated Transferred Learners Archive (/learners/archive) instead.
-    .filter((s) => s.status !== 'TRANSFERRED');
-  }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
+    const filteredLearners = useMemo(() => {
+      // Normalise the filter values for comparison.  Accepted "all" values
+      // (case-insensitive, with or without whitespace) all resolve to the
+      // sentinel string 'ALL_GRADES' so we can test them in a single branch.
+      const isAllGrades = !gradeFilter
+        || gradeFilter === 'All'
+        || gradeFilter === 'All Grades'
+        || gradeFilter.trim().toLowerCase() === 'all';
+  
+      const isAllStreams = !streamFilter
+        || streamFilter === 'All'
+        || streamFilter === 'All Streams'
+        || streamFilter.trim().toLowerCase() === 'all';
+  
+      return normalizedLearners.filter(s => {
+        // ── Grade match ─────────────────────────────────────────────────────
+        // Skip grade comparison entirely when "All Grades" is selected.
+        // When a specific grade IS selected, accept:
+        //   • exact case-insensitive match ("Grade 7" === "Grade 7")
+        //   • bare numeric match ("7" in DB  vs  "Grade 7" selected)
+        //   • "grade 7" in DB         vs  "Grade 7" selected)
+        //   • "GRADE 7" in DB         vs  "Grade 7" selected)
+        let matchesGrade = true;
+        if (!isAllGrades) {
+          const filterGrade = gradeFilter.trim().toLowerCase();
+          const learnerGrade = (s.grade || '').trim().toLowerCase();
+          matchesGrade =
+            learnerGrade === filterGrade ||
+            learnerGrade.replace(/\s+/g, '') === filterGrade.replace(/\s+/g, '') ||
+            learnerGrade.replace(/[^0-9]/g, '') === filterGrade.replace(/[^0-9]/g, '');
+        }
+  
+        // ── Stream match ────────────────────────────────────────────────────
+        // Same pattern as grade: skip when "All Streams" is selected.
+        let matchesStream = true;
+        if (!isAllStreams) {
+          const filterStream = (streamFilter || '').trim().toLowerCase();
+          const learnerStream = (s.stream || '').trim().toLowerCase();
+          matchesStream =
+            learnerStream === filterStream ||
+            learnerStream.replace(/\s+/g, '') === filterStream.replace(/\s+/g, '');
+        }
+  
+        // ── Search match ────────────────────────────────────────────────────
+        const q = (searchTerm || '').trim().toLowerCase();
+        const matchesSearch = !q ||
+          (s.name || '').toLowerCase().includes(q) ||
+          (s.admNo || '').toLowerCase().includes(q) ||
+          ((s as any).birthCertificateNo || '').toLowerCase().includes(q) ||
+          (s.id || '').toLowerCase().includes(q);
+  
+        return matchesGrade && matchesStream && matchesSearch;
+      })
+      // Exclude transferred learners from the active roster. They live in the
+      // dedicated Transferred Learners Archive (/learners/archive) instead.
+      .filter((s) => s.status !== 'TRANSFERRED');
+    }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
 
   // === Unified file-download state ===
   // We track a single download state for the export menu's "all / current view"
