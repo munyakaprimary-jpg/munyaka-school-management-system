@@ -3,12 +3,13 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
+import DevDashboard from "./pages/DevDashboard";
 import Login from "./pages/Login";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
@@ -88,6 +89,10 @@ const App = () => (
                 {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
                 <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                {/* Admin dashboard — strict 'admin' role only */}
+                <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                {/* Developer dashboard — strict 'dev' role only */}
+                <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
