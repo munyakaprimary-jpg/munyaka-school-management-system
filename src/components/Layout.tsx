@@ -151,16 +151,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['super_admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['super_admin', 'head_teacher'] },
-    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['owner', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
+    { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['super_admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['super_admin', 'head_teacher'] },
   ];
 
+  // Route-level role denylist: these roles are blocked even if listed in item.roles.
+  // Used to enforce that OWNER cannot access administrative routes like /fees.
+  const BLOCKED_ROUTES: Record<string, string[]> = {
+    '/fees': ['owner', 'parent', 'student', 'teacher'],
+    '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+  };
+
   const filteredMenu = menuItems.filter(item => {
     if (!user) return false;
     // Check if user has the required role
     if (!item.roles.includes(user.role)) return false;
+    // Route-level denylist guard
+    const blocked = BLOCKED_ROUTES[item.path];
+    if (blocked && blocked.includes(user.role)) return false;
     // Check if item requires a specific permission
     if (item.requiresPermission) {
       // SUPERADMIN bypasses permission checks

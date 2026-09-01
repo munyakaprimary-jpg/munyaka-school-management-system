@@ -14,9 +14,18 @@ interface ProtectedRouteProps {
    * Admins (owner, super_admin) bypass all permission checks.
    */
   requiredPermission?: string;
+  /**
+   * Roles explicitly blocked from accessing this route, regardless of
+   * authentication status. Used to enforce RBAC at the route level.
+   */
+  blockedRoles?: string[];
 }
 
-const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) => {
+const ProtectedRoute = ({
+  children,
+  requiredPermission,
+  blockedRoles = [],
+}: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
   const location = useLocation();
@@ -30,16 +39,18 @@ const ProtectedRoute = ({ children, requiredPermission }: ProtectedRouteProps) =
   }
 
   if (!isAuthenticated) {
-    // Redirect to login but save the attempted location
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Route-level role denylist: redirect blocked roles back to dashboard.
+  if (user && blockedRoles.includes(user.role)) {
+    return <Navigate to="/dashboard" replace />;
   }
 
   // If a specific permission is required, check it
   if (requiredPermission) {
     const allowed = hasPermission(requiredPermission);
     if (!allowed) {
-      // Send the user back to the dashboard so they don't see a
-      // confusing "404" — they simply lack the access grant.
       return <Navigate to="/dashboard" replace />;
     }
   }
