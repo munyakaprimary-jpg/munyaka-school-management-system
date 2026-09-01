@@ -867,11 +867,10 @@ export default function Students() {
           isOpen={isTransferOpen}
           onClose={handleCloseTransfer}
           onTransferComplete={(studentId, certificateNumber) => {
+            // Toast + download action are handled inside TransferWorkflow once the
+            // PDF has been generated. Parents only need to close the modal here.
             setIsTransferOpen(false);
             setTransferLearner(null);
-            showSuccess(
-              `${transferLearner.name} has been transferred successfully. Certificate: ${certificateNumber}`
-            );
           }}
         />
       )}

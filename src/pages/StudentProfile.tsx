@@ -24,17 +24,24 @@ import {
   Receipt,
   Activity,
   ShieldCheck,
+  Download,
+  FileCheck,
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import UnifiedRecordPaymentModal from '@/components/fees/UnifiedRecordPaymentModal';
-import { showSuccess } from '@/utils/toast';
+import { showSuccess, showError } from '@/utils/toast';
 import { marks as mockMarks } from '@/data/mockMarks';
 import { attendance as mockAttendance } from '@/data/mockAttendance';
 import { transactions as mockTransactions } from '@/data/mockTransactions';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo } from '@/types/transfer';
+import {
+  getCertificateRef,
+  redownloadCertificate,
+  type ClearanceCertificateRef,
+} from '@/utils/pdfDownloader';
 
 const LEARNERS_STORAGE_KEY = 'school_learners_data';
 
@@ -117,6 +124,11 @@ const StudentProfile = () => {
   // pass `null` and the modal stays closed.
   const [transferStudent, setTransferStudent] = useState<StudentTransferInfo | null>(null);
 
+  // Clearance certificate reference — loaded once when the profile mounts.
+  // Shows a "Download Clearance Certificate" button if this student has been transferred.
+  const [certificateRef, setCertificateRef] = useState<ClearanceCertificateRef | null>(null);
+  const [isRedownloading, setIsRedownloading] = useState(false);
+
   const handleRecordPayment = (result: { transaction: any }) => {
     if (!activeLearner) return;
     showSuccess(
@@ -153,6 +165,40 @@ const StudentProfile = () => {
   const handleCloseTransfer = () => {
     setIsTransferOpen(false);
     setTransferStudent(null);
+  };
+
+  // Load the clearance certificate reference whenever the active learner
+  // changes so the header button appears the moment a transferred learner
+  // opens their profile.
+  useEffect(() => {
+    if (!activeLearner) {
+      setCertificateRef(null);
+      return;
+    }
+    setCertificateRef(getCertificateRef(activeLearner.id));
+  }, [activeLearner]);
+
+  // Manually re-download a previously-issued certificate. Used by the
+  // "Download Clearance Certificate" button on the profile header.
+  const handleRedownloadCertificate = async () => {
+    if (!activeLearner) return;
+    setIsRedownloading(true);
+    try {
+      // Refresh from storage first so the latest persisted ref is used.
+      const latest = getCertificateRef(activeLearner.id);
+      if (!latest) {
+        showError('No clearance certificate on file for this learner.');
+        return;
+      }
+      const result = redownloadCertificate(activeLearner.id, activeLearner.name);
+      if (!result.success) {
+        showError(result.error ?? 'Could not re-download the certificate.');
+      } else {
+        showSuccess(`Certificate ${latest.certificateNumber} downloaded.`);
+      }
+    } finally {
+      setIsRedownloading(false);
+    }
   };
 
   // ==================== Subject performance chart ====================
@@ -297,6 +343,18 @@ const StudentProfile = () => {
           </div>
         </div>
         <div className="flex gap-2 overflow-x-auto shrink-0">
+          {certificateRef && (
+            <Button
+              variant="outline"
+              className="rounded-xl gap-2 border-emerald-200 text-emerald-700 hover:bg-emerald-50"
+              onClick={handleRedownloadCertificate}
+              disabled={isRedownloading}
+              title={`Re-download Clearance Certificate ${certificateRef.certificateNumber}`}
+            >
+              {isRedownloading ? <ShieldCheck size={18} className="animate-pulse" /> : <FileCheck size={18} />}
+              Download Clearance Certificate
+            </Button>
+          )}
           <Button
             variant="outline"
             className="rounded-xl gap-2 border-slate-200 text-slate-600 hover:bg-slate-50"
@@ -648,9 +706,12 @@ const StudentProfile = () => {
           isOpen={isTransferOpen}
           onClose={handleCloseTransfer}
           onTransferComplete={(studentId, certificateNumber) => {
+            // Toast + download action are handled inside TransferWorkflow.
+            // Close the modal and refresh the certificate reference so the
+            // "Download Clearance Certificate" button appears immediately.
             setIsTransferOpen(false);
             setTransferStudent(null);
-            showSuccess(`${student.name} has been transferred successfully. Certificate: ${certificateNumber}`);
+            setCertificateRef(getCertificateRef(studentId));
           }}
         />
       )}

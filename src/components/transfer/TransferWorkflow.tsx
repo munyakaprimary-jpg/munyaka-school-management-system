@@ -34,11 +34,18 @@ import {
   FileCheck,
   Award
 } from 'lucide-react';
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, showSuccessWithAction } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 import { StudentTransferInfo, TransferData } from '@/types/transfer';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import {
+  jsPdfToBlob,
+  downloadPdfBlob,
+  buildCertificateFilename,
+  saveCertificateRef,
+  type DownloadPdfResult,
+} from '@/utils/pdfDownloader';
 
 interface TransferWorkflowProps {
   student: StudentTransferInfo;
@@ -79,6 +86,10 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const [isPrinting, setIsPrinting] = useState(false);
   const [pdfError, setPdfError] = useState<string | null>(null);
+
+  // Stable download callback passed back to the parent via onTransferComplete
+  // so the toast action button can re-trigger the download without re-rendering
+  const downloadCallbackRef = useRef<(() => DownloadPdfResult) | null>(null);
 
   // Reset when modal opens/closes
   useEffect(() => {
@@ -161,7 +172,9 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
   // Generate PDF certificate by rendering the node to a canvas, then placing
   // that image into a standard A4 jsPDF document.
-  const generateCertificatePdf = async (): Promise<boolean> => {
+  // On success, the certificate reference (including a data URL) is persisted
+  // to localStorage so the profile page can offer a re-download button.
+  const generateCertificatePdf = async (): Promise<DownloadPdfResult> => {
     setIsGeneratingPdf(true);
     setPdfError(null);
 
@@ -176,7 +189,6 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
       const maxWidth = pageWidth - margin * 2;
       const maxHeight = pageHeight - margin * 2;
 
-      // Fit the certificate onto the A4 page while preserving its aspect ratio.
       const ratio = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
       const drawWidth = canvas.width * ratio;
       const drawHeight = canvas.height * ratio;
@@ -185,14 +197,39 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
 
       pdf.addImage(imgData, 'JPEG', x, y, drawWidth, drawHeight);
 
-      const safeStudentName = (student?.name || '').replace(/\s+/g, '_');
-      pdf.save(`Munyaka_Clearance_Certificate_${safeStudentName}.pdf`);
-      return true;
+      const filename = buildCertificateFilename(student?.name, certificateNumber);
+
+      // Trigger immediate auto-download via hidden <a> click
+      const blob = jsPdfToBlob(pdf);
+      const result = downloadPdfBlob(blob, filename);
+
+      if (!result.success) {
+        throw new Error(result.error ?? 'PDF download failed');
+      }
+
+      // Persist the certificate reference (including a data URL) to localStorage
+      // so the profile page's "Download Clearance Certificate" button can
+      // re-generate the PDF on demand without asking for admin credentials again.
+      saveCertificateRef(student.id, {
+        certificateNumber,
+        filename,
+        issuedAt: new Date().toISOString(),
+        pdfDataUrl: pdf.output('datauristring'),
+      });
+
+      // Expose the download closure via the ref so the toast action button can
+      // call it directly (avoids prop drilling and stale closures).
+      downloadCallbackRef.current = () => {
+        const reBlob = jsPdfToBlob(pdf);
+        return downloadPdfBlob(reBlob, filename);
+      };
+
+      return result;
     } catch (err) {
       console.error('PDF generation error:', err);
       const errorMessage = err instanceof Error ? err.message : 'Failed to generate PDF';
       setPdfError(errorMessage);
-      return false;
+      return { success: false, error: errorMessage };
     } finally {
       setIsGeneratingPdf(false);
     }
@@ -255,17 +292,35 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     await new Promise(resolve => setTimeout(resolve, 400));
 
     // ── Step 4: Generate PDF and trigger auto-download ──────────────────
-    const pdfSuccess = await generateCertificatePdf();
+    const pdfResult = await generateCertificatePdf();
 
-    if (!pdfSuccess) {
+    setIsExecuting(false);
+
+    if (!pdfResult.success) {
       // PDF failed but transfer already happened — show error, keep modal open
-      setIsExecuting(false);
       return;
     }
 
-    // ── Step 5: All done — close modal and notify ───────────────────────
-    showSuccess(`Transfer executed! Certificate ${certNum} downloaded.`);
-    setIsExecuting(false);
+    // ── Step 5: All done — close modal and notify with download action ──
+    const studentName = student?.name ?? 'The learner';
+    showSuccessWithAction(
+      `${studentName} has been transferred successfully. Certificate ${certNum} downloaded.`,
+      'Download Certificate PDF',
+      () => {
+        if (downloadCallbackRef.current) {
+          const retry = downloadCallbackRef.current();
+          if (!retry.success) {
+            showError(retry.error ?? 'Download failed. Please try again.');
+          } else {
+            showSuccess('Certificate re-downloaded.');
+          }
+        } else {
+          showError('Download unavailable. Please re-open the transfer modal.');
+        }
+      },
+      'Re-download the transfer clearance certificate'
+    );
+
     onClose();
   };
 
