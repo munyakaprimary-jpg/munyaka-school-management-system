@@ -19,12 +19,20 @@ interface ProtectedRouteProps {
    * authentication status. Used to enforce RBAC at the route level.
    */
   blockedRoles?: string[];
+  /**
+   * Roles explicitly allowed to access this route. When provided, any
+   * user whose role is NOT in this list is redirected to /dashboard.
+   * Comparison is case-insensitive. Takes precedence over `blockedRoles`
+   * so route-level allowlists can be set explicitly.
+   */
+  allowedRoles?: string[];
 }
 
 const ProtectedRoute = ({
   children,
   requiredPermission,
   blockedRoles = [],
+  allowedRoles = [],
 }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -40,6 +48,17 @@ const ProtectedRoute = ({
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  // Route-level role allowlist: if configured, only listed roles
+  // (case-insensitive) may access the route. Everything else is
+  // redirected to the dashboard.
+  if (allowedRoles.length > 0 && user) {
+    const userRole = (user.role || '').toUpperCase();
+    const allowList = allowedRoles.map(r => r.toUpperCase());
+    if (!allowList.includes(userRole)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // Route-level role denylist: redirect blocked roles back to dashboard.
