@@ -1,127 +1,129 @@
+/**
+ * =============================================================================
+ *  MUNYAKA  ·  usePermissions hook
+ * =============================================================================
+ *  Bridges the legacy ICT-permission-only hook with the new full RBAC matrix
+ *  in src/rbac/permissionMatrix.ts.
+ *
+ *  Key principle: ADMIN (school administrator) always gets `true` for every
+ *  permission, every route, and every sidebar item.  The hook does NOT
+ *  change the external API — existing consumers like Layout.tsx, Sidebar.tsx,
+ *  Dashboard.tsx, and ProtectedRoute.tsx all continue to work with the same
+ *  return shape.
+ * =============================================================================
+ */
 import { useAuth } from '@/context/AuthContext';
+import {
+  isAdmin,
+  roleHas,
+  canAccessPath,
+  permissionsForRole,
+  PERMISSIONS,
+} from '@/rbac/permissionMatrix';
 
 const ICT_MANAGER_PERMISSION_KEY = 'munyaka_ict_manager_permission';
 
-/**
- * Check if the current user has the ICT system management permission.
- * This permission can be delegated to any staff member by the school admin.
- * 
- * ICT-related roles that are automatically granted this permission:
- * - ICT Officer
- * - ICT Teacher
- * - ICT Champion
- * - Lab Technician
- * - School Admin (owner, super_admin)
- * 
- * Additional roles can be granted permission via Settings > RBAC.
- */
+/* ── legacy localStorage helpers (kept intact for RBAC-delegation) ── */
+const getIctUserIds = (): string[] => {
+  try {
+    const raw = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed.userIds) ? parsed.userIds : [];
+  } catch {
+    return [];
+  }
+};
+
 export function usePermissions() {
   const { user } = useAuth();
+  const role = user?.role;
+  const userId = user?.id;
 
-  /**
-   * Check if user has a specific permission.
-   * @param permission - The permission key to check (e.g., 'manage_ict_systems')
-   * @returns boolean indicating if the user has the permission
-   */
-  const hasPermission = (permission: string): boolean => {
-    if (!user) return false;
+  /* ── helper: does this role match any of the admin-like identifiers ── */
+  const isAdminUser = isAdmin(role);
 
-    // Check specific permissions
-    switch (permission) {
-      case 'manage_ict_systems':
-        return checkICTManagerPermission();
-      default:
-        return false;
-    }
-  };
+  /* ── legacy ICT permission (still respected for non-admin roles) ── */
+  const checkIctManager = (): boolean => {
+    if (isAdminUser) return true; // admin always passes
 
-  /**
-   * Internal check for ICT manager permission.
-   * System Management is restricted to ICT_TEACHER, ICT_TECHNICIAN, and SUPERADMIN.
-   * Standard roles like OWNER, TEACHER, BURSAR are excluded.
-   */
-  const checkICTManagerPermission = (): boolean => {
-    const userRole = user?.role?.toUpperCase() ?? '';
-
-    // SUPERADMIN (platform developers/superadmins) always have access
-    if (userRole === 'SUPERADMIN') {
-      return true;
-    }
-
-    // ICT_TEACHER and ICT_TECHNICIAN have explicit access
+    const roleUpper = (role ?? '').toUpperCase();
+    if (roleUpper === 'SUPERADMIN') return true;
     const systemMgmtRoles = ['ICT_TEACHER', 'ICT_TECHNICIAN'];
-    if (systemMgmtRoles.includes(userRole)) {
-      return true;
-    }
+    if (systemMgmtRoles.includes(roleUpper)) return true;
 
-    // Check if permission was explicitly delegated via localStorage
-    try {
-      const ictPermissionFlag = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
-      if (ictPermissionFlag) {
-        const permissions = JSON.parse(ictPermissionFlag);
-        if (Array.isArray(permissions.userIds) && user?.id) {
-          return permissions.userIds.includes(user.id);
-        }
-      }
-    } catch {
-      // localStorage read failed, permission not granted
-    }
-
-    return false;
+    return getIctUserIds().includes(userId ?? '');
   };
 
-  /**
-   * Grant ICT manager permission to a user (admin function).
-   * @param userId - The user ID to grant permission to
-   */
-  const grantICTPermission = (userId: string): void => {
-    try {
-      const ictPermissionFlag = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
-      let permissions: { userIds: string[] } = { userIds: [] };
-      
-      if (ictPermissionFlag) {
-        permissions = JSON.parse(ictPermissionFlag);
-      }
-      
-      if (!permissions.userIds.includes(userId)) {
-        permissions.userIds.push(userId);
-      }
-      
-      localStorage.setItem(ICT_MANAGER_PERMISSION_KEY, JSON.stringify(permissions));
-    } catch {
-      console.error('Failed to grant ICT permission');
-    }
+  /* ── legacy permission switch (extended with RBAC matrix) ── */
+  const hasPermission = (permission: string): boolean => {
+    if (isAdminUser) return true; // unrestricted
+    if (permission === 'manage_ict_systems') return checkIctManager();
+
+    // Delegate to the matrix for all other permission keys
+    return roleHas(role, permission as any);
   };
 
-  /**
-   * Revoke ICT manager permission from a user (admin function).
-   * @param userId - The user ID to revoke permission from
-   */
-  const revokeICTPermission = (userId: string): void => {
-    try {
-      const ictPermissionFlag = localStorage.getItem(ICT_MANAGER_PERMISSION_KEY);
-      if (ictPermissionFlag) {
-        const permissions = JSON.parse(ictPermissionFlag);
-        permissions.userIds = permissions.userIds.filter((id: string) => id !== userId);
-        localStorage.setItem(ICT_MANAGER_PERMISSION_KEY, JSON.stringify(permissions));
-      }
-    } catch {
-      console.error('Failed to revoke ICT permission');
-    }
+  /* ── route-level guard (used by ProtectedRoute) ── */
+  const canAccessRoute = (path: string): boolean => {
+    if (isAdminUser) return true;
+    return canAccessPath(role, path);
   };
 
-  /**
-   * Check if user can access System Management module.
-   * Includes: Portal Logins, Network & Quotas, Lab Schedules
-   */
-  const canAccessSystemManagement = (): boolean => {
-    return hasPermission('manage_ict_systems');
+  /* ── full boolean permission map (for Settings RBAC panel) ── */
+  const allPermissions = permissionsForRole(role);
+
+  /* ── specific capability flags ── */
+  const canAccessSystemManagement = (): boolean => hasPermission('manage_ict_systems');
+  const canViewOperationalDashboard = (): boolean => hasPermission(PERMISSIONS.VIEW_OPERATIONAL_DASHBOARD);
+  const canManageLearners = (): boolean => hasPermission(PERMISSIONS.MANAGE_LEARNERS);
+  const canExecuteTransfers = (): boolean => hasPermission(PERMISSIONS.EXECUTE_TRANSFERS);
+  const canViewAlerts = (): boolean => hasPermission(PERMISSIONS.VIEW_RECENT_ALERTS);
+  const canManageStaff = (): boolean => hasPermission(PERMISSIONS.MANAGE_STAFF_ACCOUNTS);
+  const canCollectFees = (): boolean => hasPermission(PERMISSIONS.COLLECT_FEES);
+  const canManageSubscription = (): boolean => hasPermission(PERMISSIONS.MANAGE_SUBSCRIPTION);
+
+  /* ── legacy delegation helpers (admin always passes) ── */
+  const grantIctPermission = (uid: string): void => {
+    try {
+      const ids = getIctUserIds();
+      if (!ids.includes(uid)) {
+        localStorage.setItem(
+          ICT_MANAGER_PERMISSION_KEY,
+          JSON.stringify({ userIds: [...ids, uid] })
+        );
+      }
+    } catch { /* ignore */ }
+  };
+
+  const revokeIctPermission = (uid: string): void => {
+    try {
+      localStorage.setItem(
+        ICT_MANAGER_PERMISSION_KEY,
+        JSON.stringify({ userIds: getIctUserIds().filter((id) => id !== uid) })
+      );
+    } catch { /* ignore */ }
   };
 
   return {
+    // core helpers
+    isAdminUser,
     hasPermission,
+    canAccessRoute,
+    allPermissions,
+
+    // capability flags
     canAccessSystemManagement,
-    grantICTPermission,
-    revokeICTPermission,
+    canViewOperationalDashboard,
+    canManageLearners,
+    canExecuteTransfers,
+    canViewAlerts,
+    canManageStaff,
+    canCollectFees,
+    canManageSubscription,
+
+    // legacy
+    grantIctPermission,
+    revokeIctPermission,
   };
 }

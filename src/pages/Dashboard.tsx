@@ -110,6 +110,20 @@ const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
     'activePortalLogins',
     'networkQuotas',
   ],
+  // ADMIN: full unrestricted dashboard — all operational vitals + ICT + subscription
+  admin: [
+    'totalStudents',
+    'totalTeachers',
+    'todayAttendance',
+    'feesCollected',
+    'systemStatus',
+    'activePortalLogins',
+    'networkQuotas',
+    'labSchedule',
+    'subscriptionStatus',
+    'totalActiveEnrollment',
+    'renewalDate',
+  ],
   head_teacher: [
     'totalStudents',
     'totalTeachers',
@@ -586,10 +600,31 @@ const Dashboard = () => {
    * ensures parents/students/other roles see only data directly
    * relevant to them and never the school's financial or
    * infrastructure telemetry.
+   *
+   * ADMIN is intentionally mapped to the *complete* master set:
+   * operational vitals + ICT infrastructure + subscription. No
+   * widget is hidden, no card is gated.
    */
+  const FULL_ADMIN_WIDGETS: WidgetKey[] = [
+    'totalStudents',
+    'totalTeachers',
+    'todayAttendance',
+    'feesCollected',
+    'systemStatus',
+    'activePortalLogins',
+    'networkQuotas',
+    'labSchedule',
+    'subscriptionStatus',
+    'totalActiveEnrollment',
+    'renewalDate',
+  ];
+
   const renderRoleDashboard = (role: string | undefined | null): WidgetKey[] => {
     if (!role) return FALLBACK_DASHBOARD;
     const normalized = role.toLowerCase();
+
+    // ADMIN: full unrestricted dashboard.
+    if (normalized === 'admin') return FULL_ADMIN_WIDGETS;
 
     // Teachers who have been granted ICT management access via
     // RBAC inherit the ICT dashboard. This is checked AFTER the
@@ -613,6 +648,7 @@ const Dashboard = () => {
     const map: Record<string, string> = {
       owner: 'Owner',
       super_admin: 'Super Admin',
+      admin: 'Administrator',
       head_teacher: 'Head Teacher',
       teacher: 'Teacher',
       bursar: 'Bursar',
@@ -623,24 +659,27 @@ const Dashboard = () => {
     return map[role.toLowerCase()] || role;
   }, [user?.role]);
 
-  // True when the current user is the school owner / super-admin who
-  // should see executive-level metrics instead of classroom operations.
+  // ADMIN and OWNER/SUPER_ADMIN see executive-level metrics instead of
+  // classroom operational widgets.  ADMIN is also shown the full operational
+  // view (see seesOperationalWidgets above); the distinction here controls
+  // the OwnerExecutiveWidgets card at the bottom.
   const isOwner = useMemo(
-    () => ['owner', 'super_admin'].includes((user?.role || '').toLowerCase()),
+    () => ['owner', 'super_admin', 'admin'].includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
   // Roles that should see classroom operational widgets (attendance trends,
-  // class participation). OWNER and ICT_TEACHER are excluded.
-  const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
+  // class participation). OWNER and ICT_TEACHER are excluded.  ADMIN sees
+  // everything — operational + ICT + subscription — by definition.
+  const OPERATIONAL_ROLES = ['admin', 'head_teacher', 'teacher', 'bursar'];
   const seesOperationalWidgets = useMemo(
     () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
-  // Recent Alerts is visible only to ADMIN and HEADTEACHER.
-  // SUPERADMIN / OWNER / TEACHER / BURSAR / ICT_TEACHER are excluded.
-  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher'];
+  // Recent Alerts is visible to ADMIN, HEADTEACHER, and BURSAR.
+  // OWNER / SUPERADMIN / TEACHER / ICT_TEACHER are excluded.
+  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher', 'bursar'];
   const canViewRecentAlerts = useMemo(
     () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
@@ -657,7 +696,9 @@ const Dashboard = () => {
             </span>
           </h1>
           <p className="text-muted-foreground">
-            {user?.role?.toLowerCase() === 'teacher'
+            {user?.role?.toLowerCase() === 'admin'
+              ? "Full system overview — all operational vitals, ICT infrastructure, and billing controls."
+              : user?.role?.toLowerCase() === 'teacher'
               ? "Your assigned classes and academic metrics for today."
               : user?.role?.toLowerCase() === 'owner'
               ? "High-level application, subscription and enrollment metrics."
@@ -723,7 +764,8 @@ const Dashboard = () => {
         })}
       </div>
 
-      {/* System Management Quick Actions - Only visible to users with ICT management permission */}
+      {/* System Management Quick Actions - visible to ADMIN (unrestricted) and
+          users with ICT management permission. */}
       {canAccessSystemManagement() && (
         <Card className="border-none shadow-sm rounded-3xl bg-gradient-to-br from-indigo-50 to-purple-50 overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
