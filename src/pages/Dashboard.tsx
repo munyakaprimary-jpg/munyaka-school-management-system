@@ -330,13 +330,8 @@ const Dashboard = () => {
     user?.name,
   ]);
 
-  // Load recent activity alerts dynamically from localStorage.
-  // Guard: skip entirely for non-admin roles so no alert data is ever
-  // computed or stored in state for unauthorized users.
+  // Load recent activity alerts dynamically from localStorage
   useEffect(() => {
-    const ALLOWED_ROLES = ['super_admin', 'admin', 'head_teacher', 'owner'];
-    if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
-
     try {
       const alerts: RecentAlert[] = [];
 
@@ -631,20 +626,10 @@ const Dashboard = () => {
   );
 
   // Roles that should see classroom operational widgets (attendance trends,
-  // class participation). OWNER and ICT_TEACHER are excluded.
+  // recent alerts, class participation). OWNER and ICT_TEACHER are excluded.
   const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
   const seesOperationalWidgets = useMemo(
     () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // Recent Alerts is an elevated-management-only widget. It surfaces
-  // cross-cutting activity (fees, registrations, attendance events) that
-  // only school-wide administrators need to monitor. Regular roles such as
-  // TEACHER, BURSAR, or ICT_TEACHER must never see this feed.
-  const RECENT_ALERTS_ADMIN_ROLES = ['super_admin', 'admin', 'head_teacher', 'owner'];
-  const canViewRecentAlerts = useMemo(
-    () => RECENT_ALERTS_ADMIN_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -769,14 +754,13 @@ const Dashboard = () => {
       )}
 
       {/* ────────────────────────────────────────────────
-          OPERATIONAL WIDGETS (Attendance Trends)
+          OPERATIONAL WIDGETS (Attendance Trends + Recent Alerts)
           Hidden for OWNER / SUPER_ADMIN / ICT_TEACHER.
           Owner sees high-level executive widgets further below instead.
-          The Recent Alerts widget has its own role gate (see below).
           ──────────────────────────────────────────────── */}
       {seesOperationalWidgets && (
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
             <Badge variant="outline" className={`rounded-lg font-bold ${
@@ -825,18 +809,7 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
-      </div>
-      )}
 
-      {/* ────────────────────────────────────────────────
-          RECENT ALERTS — elevated management only
-          Surfaces cross-cutting activity (fees, registrations,
-          attendance events) for SUPER_ADMIN, ADMIN, and HEADTEACHER.
-          Regular roles (TEACHER, BURSAR, ICT_TEACHER) are excluded.
-          Rendered outside the operational-widgets block so it is
-          also visible to OWNER / SUPER_ADMIN who do not see that section.
-          ──────────────────────────────────────────────── */}
-      {canViewRecentAlerts && (
         <Card className="border-none shadow-sm rounded-3xl bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Alerts</CardTitle>
@@ -873,6 +846,7 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
+
             <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -898,6 +872,7 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
       )}
 
       {/* ────────────────────────────────────────────────
