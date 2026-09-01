@@ -2739,6 +2739,75 @@ const PaymentManagement = () => {
           </div>
         </div>
       )}
+
+      {/* Bulk Delete Confirmation Modal */}
+      <Modal
+        isOpen={isBulkDeleteModalOpen}
+        onClose={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+        title="Confirm Bulk Deletion"
+        description={`This will permanently delete ${selectedLicenseIds.size} selected license${selectedLicenseIds.size !== 1 ? 's' : ''} and their tied payment records. This action cannot be undone.`}
+        footer={
+          <div className="flex gap-2 justify-end w-full">
+            <Button
+              variant="ghost"
+              onClick={() => { setIsBulkDeleteModalOpen(false); setBulkDeletePassword(''); setBulkDeletePasswordError(''); }}
+              className="rounded-xl font-bold h-12 px-6"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmBulkDelete}
+              disabled={isBulkDeleting || !bulkDeletePassword.trim()}
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
+            >
+              {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+              {isBulkDeleting ? 'Deleting...' : `Delete ${selectedLicenseIds.size} Selected`}
+            </Button>
+          </div>
+        }
+      >
+        <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-4">
+          <ShieldCheck size={20} className="text-amber-600 shrink-0" />
+          <p className="text-xs font-bold text-amber-800">
+            Owner authentication required to delete license records.
+          </p>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Owner Password
+          </Label>
+          <div className="relative">
+            <Lock size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
+            <Input
+              type={showBulkDeletePassword ? 'text' : 'password'}
+              value={bulkDeletePassword}
+              onChange={e => {
+                setBulkDeletePassword(e.target.value);
+                if (bulkDeletePasswordError) setBulkDeletePasswordError('');
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
+              }}
+              placeholder="Enter your owner password"
+              className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowBulkDeletePassword(p => !p)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              {showBulkDeletePassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+          {bulkDeletePasswordError && (
+            <p className="text-xs font-bold text-red-600 flex items-center gap-1 mt-1">
+              <AlertCircle size={12} /> {bulkDeletePasswordError}
+            </p>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

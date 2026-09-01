@@ -4,7 +4,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
   Search, Plus, Edit3, Trash2, X, UserPlus,
   Printer, Download, ChevronDown, FileText, Users,
-  Loader2, ExternalLink, Eye, Archive, ArrowRightLeft
+  Loader2, ExternalLink, Eye
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,19 +14,16 @@ import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
 import AdminPinModal from '@/components/students/AdminPinModal';
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
-import TransferInModal from '@/components/students/TransferInModal';
 import { StudentTransferInfo } from '@/types/transfer';
-import { Learner } from '@/types/learners';
 import { showSuccess } from '@/utils/toast';
 import { logDeletionAudit } from '@/services/deletionAuditLog';
-import { useAuth } from '@/context/AuthContext';
 import {
   readGradesAndStreams,
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
 
-interface LearnerRowCompat {
+interface Learner {
   id: string;
   admNo: string;
   name: string;
@@ -36,10 +33,9 @@ interface LearnerRowCompat {
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
-  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
-const DEFAULT_LEARNERS: LearnerRowCompat[] = INITIAL_SEED_DATA.students as LearnerRowCompat[];
+const DEFAULT_LEARNERS: Learner[] = INITIAL_SEED_DATA.students as Learner[];
 
 // Key for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';
@@ -237,63 +233,37 @@ export default function Students() {
   };
 
   // Filtered learners
-    const filteredLearners = useMemo(() => {
-      // Normalise the filter values for comparison.  Accepted "all" values
-      // (case-insensitive, with or without whitespace) all resolve to the
-      // sentinel string 'ALL_GRADES' so we can test them in a single branch.
-      const isAllGrades = !gradeFilter
-        || gradeFilter === 'All'
-        || gradeFilter === 'All Grades'
-        || gradeFilter.trim().toLowerCase() === 'all';
-  
-      const isAllStreams = !streamFilter
-        || streamFilter === 'All'
-        || streamFilter === 'All Streams'
-        || streamFilter.trim().toLowerCase() === 'all';
-  
-      return normalizedLearners.filter(s => {
-        // ── Grade match ─────────────────────────────────────────────────────
-        // Skip grade comparison entirely when "All Grades" is selected.
-        // When a specific grade IS selected, accept:
-        //   • exact case-insensitive match ("Grade 7" === "Grade 7")
-        //   • bare numeric match ("7" in DB  vs  "Grade 7" selected)
-        //   • "grade 7" in DB         vs  "Grade 7" selected)
-        //   • "GRADE 7" in DB         vs  "Grade 7" selected)
-        let matchesGrade = true;
-        if (!isAllGrades) {
-          const filterGrade = gradeFilter.trim().toLowerCase();
-          const learnerGrade = (s.grade || '').trim().toLowerCase();
-          matchesGrade =
-            learnerGrade === filterGrade ||
-            learnerGrade.replace(/\s+/g, '') === filterGrade.replace(/\s+/g, '') ||
-            learnerGrade.replace(/[^0-9]/g, '') === filterGrade.replace(/[^0-9]/g, '');
-        }
-  
-        // ── Stream match ────────────────────────────────────────────────────
-        // Same pattern as grade: skip when "All Streams" is selected.
-        let matchesStream = true;
-        if (!isAllStreams) {
-          const filterStream = (streamFilter || '').trim().toLowerCase();
-          const learnerStream = (s.stream || '').trim().toLowerCase();
-          matchesStream =
-            learnerStream === filterStream ||
-            learnerStream.replace(/\s+/g, '') === filterStream.replace(/\s+/g, '');
-        }
-  
-        // ── Search match ────────────────────────────────────────────────────
-        const q = (searchTerm || '').trim().toLowerCase();
-        const matchesSearch = !q ||
-          (s.name || '').toLowerCase().includes(q) ||
-          (s.admNo || '').toLowerCase().includes(q) ||
-          ((s as any).birthCertificateNo || '').toLowerCase().includes(q) ||
-          (s.id || '').toLowerCase().includes(q);
-  
-        return matchesGrade && matchesStream && matchesSearch;
-      })
-      // Exclude transferred learners from the active roster. They live in the
-      // dedicated Transferred Learners Archive (/learners/archive) instead.
-      .filter((s) => s.status !== 'TRANSFERRED');
-    }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
+  const filteredLearners = useMemo(() => {
+    const selectedGradeNormalized = (gradeFilter || '').trim().toLowerCase();
+
+    return normalizedLearners.filter(s => {
+      // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
+      const rawStudentGrade = s.grade || '';
+      const studentGradeNormalized = String(rawStudentGrade).trim().toLowerCase();
+
+      // 1. String Normalization & Sanitization for Grade (handling "9", "Grade 9", "GRADE 9", "grade 9")
+      const matchesGrade = !studentGradeNormalized ||
+        studentGradeNormalized === selectedGradeNormalized ||
+        studentGradeNormalized.replace(/[^0-9]/g, '') === selectedGradeNormalized.replace(/[^0-9]/g, '') && selectedGradeNormalized.replace(/[^0-9]/g, '') !== '';
+
+      // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
+      const rawStudentStream = s.stream || '';
+      const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
+      const selectedStreamNormalized = (streamFilter || '').trim().toLowerCase();
+
+      const isAllStreams = !streamFilter || selectedStreamNormalized === 'all' || selectedStreamNormalized === '';
+      const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
+
+      // 3. Search Filter (also matches Birth Certificate No when looking up by name/ID)
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admNo && s.admNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.birthCertificateNo && s.birthCertificateNo.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+
+      return matchesGrade && matchesStream && matchesSearch;
+    });
+  }, [normalizedLearners, searchTerm, gradeFilter, streamFilter]);
 
   // === Unified file-download state ===
   // We track a single download state for the export menu's "all / current view"
@@ -303,9 +273,6 @@ export default function Students() {
 
   // Export CSV with options ("All Learners" vs "Current View")
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
-
-  // ─── Transfer In Modal ───────────────────────────────────────────
-  const [isTransferInOpen, setIsTransferInOpen] = useState(false);
 
   // ─── Official school letterhead ──────────────────────────────────────────
     // The exported CSV has 8 data columns (A through H). To make the school
@@ -317,7 +284,7 @@ export default function Students() {
     const DATA_COLUMN_COUNT = 8;
     const LEADING_PADDING = 3; // 3 empty cells → text appears in column D (centered)
   
-    const buildCsvForDataset = (datasetToExport: LearnerRowCompat[]): string => {
+    const buildCsvForDataset = (datasetToExport: Learner[]): string => {
       const dataHeaders = [
         'Assessment No', 'Full Name', 'Birth Certificate No',
         'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
@@ -421,22 +388,17 @@ export default function Students() {
   const [transferLearner, setTransferLearner] = useState<StudentTransferInfo | null>(null);
 
   // ─── Navigation Hook ─────────────────────────────────────────────────
-    // Fix: `navigate` was undefined in handleViewProfile because the hook
-    // was never invoked. We now call useNavigate() so handleViewProfile can
-    // programmatically route to /students/:id with the full learner object.
-    const navigate = useNavigate();
-  
-    // Resolve the current admin user for audit logging. The Transfer In
-    // workflow records `actorName` on every TRANSFERRED_IN event so the
-    // academic-history log shows who performed the enrollment.
-    const { user } = useAuth();
+  // Fix: `navigate` was undefined in handleViewProfile because the hook
+  // was never invoked. We now call useNavigate() so handleViewProfile can
+  // programmatically route to /students/:id with the full learner object.
+  const navigate = useNavigate();
 
-  // Ensure default grade is in the list only on initial mount when formData.grade is empty
+  // Ensure default grade is in the list
   useEffect(() => {
-    if (!formData.grade && GRADES_LIST.length > 0) {
+    if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
       setFormData(prev => ({ ...prev, grade: GRADES_LIST[0] }));
     }
-  }, [GRADES_LIST]);
+  }, [GRADES_LIST, formData.grade]);
 
   // Open Add Modal — randomizes Assessment No and clears Birth Certificate No
   const handleOpenAdd = () => {
@@ -456,7 +418,7 @@ export default function Students() {
   };
 
   // Open Edit Modal — populates ALL fields including Birth Certificate No
-  const handleOpenEdit = (learner: LearnerRowCompat) => {
+  const handleOpenEdit = (learner: Learner) => {
     setEditingLearnerId(learner.id);
     setFormData({
       admNo: learner.admNo,
@@ -474,14 +436,14 @@ export default function Students() {
 
   // View Profile Handler — navigates to the full student profile page,
   // passing the full student object through the route param.
-  const handleViewProfile = (learner: LearnerRowCompat) => {
+  const handleViewProfile = (learner: Learner) => {
     navigate(`/students/${learner.id}`);
   };
 
   // Transfer Handler — opens the Transfer Workflow modal and passes
   // the ENTIRE active learner object (cast to StudentTransferInfo) so the
   // workflow can render real data without any hardcoded fallback.
-  const handleTransfer = (learner: LearnerRowCompat) => {
+  const handleTransfer = (learner: Learner) => {
     // Build the StudentTransferInfo payload from the active learner.
     // No fallbacks to a hardcoded student — every field comes from the row.
     const transferPayload: StudentTransferInfo = {
@@ -562,7 +524,7 @@ export default function Students() {
         )
       );
     } else {
-      const newLearner: LearnerRowCompat = {
+      const newLearner: Learner = {
         id: Date.now().toString(),
         ...normalizedEntry,
       };
@@ -592,40 +554,12 @@ export default function Students() {
   // Close Transfer Modal
   const handleCloseTransfer = () => {
     setIsTransferOpen(false);
-        setTransferLearner(null);
-      };
-    
-      // ─── Transfer In Handler ─────────────────────────────────────────────
-      // Called after the TransferInModal persists the learner + roster updates.
-      // The modal already shows the success toast; we only need to:
-      //   1. Push the freshly-inserted learner into local React state so the
-      //      table re-renders without a full page reload.
-      //   2. Open the learner's profile (or scroll to the class list view).
-      const handleTransferInComplete = (inserted: Learner) => {
-        setLearners((prev) => {
-          // Defensive de-dupe in case the row is already present.
-          if (prev.some((l) => l.id === inserted.id)) return prev;
-          return [inserted as unknown as LearnerRowCompat, ...prev];
-        });
-        setIsTransferInOpen(false);
-    
-        // Apply the grade & stream filters so the user lands on the updated
-        // class list view immediately.
-        setGradeFilter(inserted.grade);
-        setStreamFilter(inserted.stream);
-        setSearchTerm('');
-    
-        // Open the new learner's profile in the background for convenience.
-        navigate(`/students/${inserted.id}`);
-      };
-    
-      const handleCloseTransferIn = () => {
-        setIsTransferInOpen(false);
-      };
+    setTransferLearner(null);
+  };
 
   // Handle Delete Confirmation — invoked by AdminPinModal when the entered
     // admin password is verified.
-    const confirmDelete = (learner: LearnerRowCompat) => {
+    const confirmDelete = (learner: Learner) => {
       setLearners((prev) => prev.filter((item) => item.id !== learner.id));
       // Write a secure audit-log entry so the deletion is traceable.
       logDeletionAudit({
@@ -654,16 +588,7 @@ export default function Students() {
             </span>
           </div>
           <p className="text-sm font-medium text-slate-500">
-            {filteredLearners.length} active learners
-            {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
-            {' · '}
-            <Link
-              to="/learners/archive"
-              className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
-            >
-              <Archive size={13} />
-              View Transferred Archive
-            </Link>
+            {filteredLearners.length} learners found {learners.length !== filteredLearners.length && `(filtered from ${learners.length} total)`}
           </p>
         </div>
 
@@ -718,23 +643,13 @@ export default function Students() {
           </button>
 
           <button
-                      type="button"
-                      onClick={() => setIsTransferInOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
-                      title="Transfer In a learner from another school"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" />
-                      Transfer In Learner
-                    </button>
-          
-                    <button
-                      type="button"
-                      onClick={handleOpenAdd}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
-                    >
-                      <Plus className="w-4 h-4 stroke-[2.5]" />
-                      + Add Learner
-                    </button>
+            type="button"
+            onClick={handleOpenAdd}
+            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            + Add Learner
+          </button>
         </div>
       </div>
 
@@ -924,19 +839,19 @@ export default function Students() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         fullName={formData.name}
-        setFullName={(v) => setFormData(prev => ({ ...prev, name: v }))}
+        setFullName={(v) => setFormData({ ...formData, name: v })}
         assessmentNo={formData.admNo}
-        setAssessmentNo={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
+        setAssessmentNo={(v) => setFormData({ ...formData, admNo: v })}
         birthCertificateNo={formData.birthCertificateNo}
-        setBirthCertificateNo={(v) => setFormData(prev => ({ ...prev, birthCertificateNo: v }))}
+        setBirthCertificateNo={(v) => setFormData({ ...formData, birthCertificateNo: v })}
         regGrade={formData.grade}
-        setRegGrade={(v) => setFormData(prev => ({ ...prev, grade: v }))}
+        setRegGrade={(v) => setFormData({ ...formData, grade: v })}
         regStream={formData.stream}
-        setRegStream={(v) => setFormData(prev => ({ ...prev, stream: v }))}
+        setRegStream={(v) => setFormData({ ...formData, stream: v })}
         guardianName={formData.guardian}
-        setGuardianName={(v) => setFormData(prev => ({ ...prev, guardian: v }))}
+        setGuardianName={(v) => setFormData({ ...formData, guardian: v })}
         phone={formData.phone}
-        setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
+        setPhone={(v) => setFormData({ ...formData, phone: v })}
         formError={formError}
         onRegister={validateAndSave}
       />
@@ -952,31 +867,11 @@ export default function Students() {
           isOpen={isTransferOpen}
           onClose={handleCloseTransfer}
           onTransferComplete={(studentId, certificateNumber) => {
-            // Mark the student as TRANSFERRED in the active roster so they are
-            // excluded from all active views (attendance, marks, fee rosters, etc.)
-            setLearners(prev =>
-              prev.map(l =>
-                l.id === studentId
-                  ? { ...l, status: 'TRANSFERRED' as const }
-                  : l
-              )
-            );
-            // Also persist the status update directly to localStorage
-            // (the useEffect will also sync, but this avoids a stale-gap)
-            try {
-              const raw = localStorage.getItem('school_learners_data');
-              if (raw) {
-                const parsed: LearnerRowCompat[] = JSON.parse(raw);
-                const updated = parsed.map(l =>
-                  l.id === studentId
-                    ? { ...l, status: 'TRANSFERRED' as const }
-                    : l
-                );
-                localStorage.setItem('school_learners_data', JSON.stringify(updated));
-              }
-            } catch { /* localStorage unavailable */ }
             setIsTransferOpen(false);
             setTransferLearner(null);
+            showSuccess(
+              `${transferLearner.name} has been transferred successfully. Certificate: ${certificateNumber}`
+            );
           }}
         />
       )}
@@ -995,14 +890,6 @@ export default function Students() {
                 }
               }}
             />
-
-            {/* Transfer In Modal — enroll an incoming learner and add them to the class roster. */}
-                        <TransferInModal
-                          isOpen={isTransferInOpen}
-                          onClose={handleCloseTransferIn}
-                          onTransferInComplete={handleTransferInComplete}
-                          actorName={user?.name || user?.email}
-                        />
 
     </div>
   );

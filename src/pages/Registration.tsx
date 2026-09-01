@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -6,12 +6,13 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate as useRouterNavigate } from 'react-router-dom';
 import { X, AlertCircle } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
 
 const Registration = () => {
   const { toast } = useToast();
-  const navigate = useNavigate();
+  const navigate = useRouterNavigate();
 
   const [formData, setFormData] = useState({
     fullName: '',
