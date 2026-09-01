@@ -32,13 +32,6 @@ interface RegisterModalProps {
   onRegister: () => void;
 }
 
-// Normalisation helpers
-const normalizeGradeName = (name: string): string => {
-  if (!name) return '';
-  const t = name.trim();
-  return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
-};
-
 export default function RegisterModal({
   isOpen,
   onClose,
@@ -59,7 +52,6 @@ export default function RegisterModal({
   formError = '',
   onRegister
 }: RegisterModalProps) {
-  // Live Grades & Streams configuration
   const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
     readGradesAndStreams()
   );
@@ -92,25 +84,16 @@ export default function RegisterModal({
     };
   }, []);
 
-  // Streams for the currently selected grade
   const availableStreams = useMemo((): string[] => {
     if (!regGrade) return [];
     return getStreamsForGrade(regGrade, gradesConfig);
   }, [regGrade, gradesConfig]);
 
-  // Reset stream when grade changes and selected stream is invalid
   useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
       setRegStream(availableStreams[0]);
     }
   }, [regGrade, availableStreams, regStream, setRegStream]);
-
-  // Set default grade if none selected
-  useEffect(() => {
-    if (!regGrade && gradesConfig.grades.length > 0) {
-      setRegGrade(gradesConfig.grades[0]);
-    }
-  }, [regGrade, gradesConfig.grades, setRegGrade]);
 
   return (
     <Modal
@@ -145,7 +128,6 @@ export default function RegisterModal({
           </div>
         )}
 
-        {/* Full Name */}
         <div className="space-y-2">
           <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
             Full Name <span className="text-rose-500">*</span>
@@ -158,7 +140,6 @@ export default function RegisterModal({
           />
         </div>
 
-        {/* Identifier row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
@@ -195,34 +176,27 @@ export default function RegisterModal({
           Both are accepted if available.
         </p>
 
-        {/* Grade + Stream row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
               Grade Level
             </Label>
             <Select
-              value={regGrade}
+              value={regGrade || ''}
               onValueChange={(val) => {
                 setRegGrade(val);
-                setRegStream(''); // Reset stream when grade changes
+                setRegStream('');
               }}
             >
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
-                <SelectValue placeholder={gradesConfig.grades.length === 0 ? "No grades configured" : "Select grade"} />
+                <SelectValue placeholder="Select grade" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                {gradesConfig.grades.length === 0 ? (
-                  <SelectItem value="__none__" disabled>
-                    No grades configured — set them in Grades & Streams
+                {gradesConfig.grades.map((gradeName) => (
+                  <SelectItem key={gradeName} value={gradeName}>
+                    {gradeName}
                   </SelectItem>
-                ) : (
-                  gradesConfig.grades.map((gradeName) => (
-                    <SelectItem key={gradeName} value={gradeName}>
-                      {gradeName}
-                    </SelectItem>
-                  ))
-                )}
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -231,7 +205,7 @@ export default function RegisterModal({
               Stream
             </Label>
             <Select
-              value={regStream}
+              value={regStream || ''}
               onValueChange={setRegStream}
               disabled={!regGrade || availableStreams.length === 0}
             >
@@ -241,7 +215,7 @@ export default function RegisterModal({
                     !regGrade
                       ? "Select grade first..."
                       : availableStreams.length === 0
-                      ? "No streams configured for this grade"
+                      ? "No streams"
                       : "Choose stream..."
                   }
                 />
@@ -252,17 +226,11 @@ export default function RegisterModal({
                     {s}
                   </SelectItem>
                 ))}
-                {availableStreams.length === 0 && gradesConfig.grades.length > 0 && (
-                  <SelectItem value="__hint__" disabled>
-                    Configure streams for this grade in Grades & Streams
-                  </SelectItem>
-                )}
               </SelectContent>
             </Select>
           </div>
         </div>
 
-        {/* Guardian + Phone row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-50">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">

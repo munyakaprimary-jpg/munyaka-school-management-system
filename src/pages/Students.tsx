@@ -393,12 +393,12 @@ export default function Students() {
   // programmatically route to /students/:id with the full learner object.
   const navigate = useNavigate();
 
-  // Ensure default grade is in the list
+  // Ensure default grade is in the list only on initial mount when formData.grade is empty
   useEffect(() => {
-    if (GRADES_LIST.length > 0 && !GRADES_LIST.includes(formData.grade)) {
+    if (!formData.grade && GRADES_LIST.length > 0) {
       setFormData(prev => ({ ...prev, grade: GRADES_LIST[0] }));
     }
-  }, [GRADES_LIST, formData.grade]);
+  }, [GRADES_LIST]);
 
   // Open Add Modal — randomizes Assessment No and clears Birth Certificate No
   const handleOpenAdd = () => {
@@ -839,19 +839,19 @@ export default function Students() {
         isOpen={isModalOpen}
         onClose={handleCloseModal}
         fullName={formData.name}
-        setFullName={(v) => setFormData({ ...formData, name: v })}
+        setFullName={(v) => setFormData(prev => ({ ...prev, name: v }))}
         assessmentNo={formData.admNo}
-        setAssessmentNo={(v) => setFormData({ ...formData, admNo: v })}
+        setAssessmentNo={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
         birthCertificateNo={formData.birthCertificateNo}
-        setBirthCertificateNo={(v) => setFormData({ ...formData, birthCertificateNo: v })}
+        setBirthCertificateNo={(v) => setFormData(prev => ({ ...prev, birthCertificateNo: v }))}
         regGrade={formData.grade}
-        setRegGrade={(v) => setFormData({ ...formData, grade: v })}
+        setRegGrade={(v) => setFormData(prev => ({ ...prev, grade: v }))}
         regStream={formData.stream}
-        setRegStream={(v) => setFormData({ ...formData, stream: v })}
+        setRegStream={(v) => setFormData(prev => ({ ...prev, stream: v }))}
         guardianName={formData.guardian}
-        setGuardianName={(v) => setFormData({ ...formData, guardian: v })}
+        setGuardianName={(v) => setFormData(prev => ({ ...prev, guardian: v }))}
         phone={formData.phone}
-        setPhone={(v) => setFormData({ ...formData, phone: v })}
+        setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
         formError={formError}
         onRegister={validateAndSave}
       />
