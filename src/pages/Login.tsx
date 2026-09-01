@@ -22,6 +22,7 @@ import {
   ArrowRight,
   Send,
   Mail,
+  User,
   KeyRound,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
