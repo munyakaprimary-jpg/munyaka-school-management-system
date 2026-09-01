@@ -12,7 +12,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 
-export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -52,11 +52,11 @@ const DEFAULT_ADMIN = {
   password: 'ownerpass2026',
   user: {
     id: 'admin-001',
-    name: 'School Owner',
+    name: 'Platform Super Admin',
     email: 'munyakaprimary@gmail.com',
     phone: '+254 700 000 000',
-    role: 'owner' as UserRole,
-    avatar: 'OW'
+    role: 'super_admin' as UserRole,
+    avatar: 'SA'
   }
 };
 
@@ -91,16 +91,13 @@ const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
-    case 'owner':
-      return 'owner';
     case 'super_admin':
+    case 'support_admin':
       return 'super_admin';
     case 'head_teacher':
       return 'head_teacher';
     case 'bursar':
       return 'bursar';
-    case 'support_admin':
-      return 'super_admin';
     case 'senior_teacher':
     case 'class_teacher':
     case 'subject_teacher':
@@ -118,7 +115,7 @@ const initializeUsersStorage = () => {
   const existingUsersJson = localStorage.getItem(USERS_STORAGE_KEY);
   const users = existingUsersJson ? JSON.parse(existingUsersJson) : {};
 
-  // Ensure default Super Admin (Owner) with updated credentials is generated & active
+  // Ensure default Super Admin with updated credentials is generated & active
   const ownerEmailKey = normalizeEmail(DEFAULT_ADMIN.email);
   users[ownerEmailKey] = {
     ...DEFAULT_ADMIN.user,
@@ -187,7 +184,7 @@ const initializeUsersStorage = () => {
  * Persist the role of the *currently signed-in* user to localStorage
  * so the AppUnlock license-gate (which lives outside AuthProvider
  * and decides whether to lock the app on expiry) can read it
- * synchronously on first render. Without this, the Owner would see
+ * synchronously on first render. Without this, the Super Admin would see
  * the lock screen for a frame even after signing in, because the
  * storage write happens after the first paint.
  */
@@ -243,7 +240,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const foundUser = users[normalizedEmail] || users[normalizedStaffId];
     
     if (foundUser) {
-      // ── Admin pre-check: owner + system_admin can authenticate with
+      // ── Admin pre-check: super_admin + system_admin can authenticate with
       // whatever the Configuration tab has just saved into the unified
       // MUNYAKA_ADMIN_PASSWORD key. This is the precedence path: the
       // custom PIN wins over both the default and whatever the user
@@ -253,7 +250,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // success when the entered value matches it — exactly mirroring
       // the Login page's own dual-mode check so a saved-or-default
       // flow works the same way in both directions.
-      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'super_admin';
+      const isAdminUser = foundUser.role === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = pass.trim();
@@ -328,7 +325,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         // Persist the role synchronously so the AppUnlock gate (which
         // reads the role from localStorage on first render) agrees
         // that the new user is exempt from the license lock BEFORE
-        // we re-render. This is what makes the Owner able to log
+        // we re-render. This is what makes the Super Admin able to log
         // in even when the subscription has expired.
         persistCurrentAuthRole(userData.role);
         setUser(userData);
@@ -424,7 +421,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Keep legacy key in sync if updating the default admin
     if (normalizedEmail === normalizeEmail(DEFAULT_ADMIN.email)) {
-      localStorage.setItem('munyaka_owner_pass', newPass);
+      localStorage.setItem('munyaka_superadmin_pass', newPass);
     }
     if (normalizedEmail === normalizeEmail(DEFAULT_SYSTEM_ADMIN.email)) {
       localStorage.setItem('munyaka_sysadmin_pass', newPass);

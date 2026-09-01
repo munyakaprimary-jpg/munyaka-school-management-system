@@ -332,7 +332,7 @@ const AppUnlock = ({ children, forceShow = false, currentRole }: AppUnlockProps)
                 }}
               />
 
-              {/* Exempt-role hint — visible only to Owners / Super Admins
+              {/* Exempt-role hint — visible only to Super Admins
                   so they know the renewal workflow is still available to
                   them after they sign in. */}
               {isExempt && (

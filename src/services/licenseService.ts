@@ -27,11 +27,11 @@ const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const SEGMENT_LEN = 4;
 const NUM_SEGMENTS = 4; // MUNYAKA-2026-[AAAA]-[BBBB]-[CCCC]-[DDDD]
 
-// Roles that bypass license expiration locks. The School Owner / Super Admin
+// Roles that bypass license expiration locks. The SUPERADMIN (Platform Owner)
 // must always be able to reach the Payment & Subscriptions / activation page
 // so they can renew the license. Without this carve-out they would be
 // locked out of the very screen they need to fix the lock.
-export const LICENSE_EXEMPT_ROLES = new Set(['owner', 'super_admin']);
+export const LICENSE_EXEMPT_ROLES = new Set(['super_admin']);
 
 // Storage key for the *currently authenticated role* (string). The lock
 // screen consults this key to decide whether to render the lock gate or
@@ -297,14 +297,14 @@ export function getActiveLicense(): License | null {
 }
 
 /** True if the app is currently locked (no valid active license).
- *  The School Owner / Super Admin is exempt from the lock so they can
+ *  The SUPERADMIN (Platform Owner) is exempt from the lock so they can
  *  always reach the Payment & Subscriptions screen to renew the
  *  license. Read the current authenticated role from
  *  `munyaka_current_auth_role` (written by AuthContext).
  */
 export function isAppLocked(opts: { currentRole?: string | null } = {}): boolean {
   // If there's no active license, the app is locked for everyone
-  // EXCEPT the Owner / Super Admin — they can still log in to renew.
+  // EXCEPT the SUPERADMIN — they can still log in to renew.
   if (!getActiveLicense()) {
     return !isExemptRole(opts.currentRole ?? currentAuthRole());
   }
@@ -331,7 +331,7 @@ export function shouldShowLicenseGate(opts: { currentRole?: string | null } = {}
   if (isExemptRole(opts.currentRole ?? currentAuthRole())) {
     // Exempt role: only show the gate if there is no active license at
     // all (so a fresh install with no key still shows the lock screen
-    // so an Owner can enter their first key).
+    // so a SUPERADMIN can enter their first key).
     return !getActiveLicense();
   }
   return isAppLocked(opts);

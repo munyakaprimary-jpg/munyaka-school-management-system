@@ -269,7 +269,7 @@ function daysUntilNextBilling(nextBilling: string): number {
 const PaymentManagement = () => {
   const { user } = useAuth();
 
-  if (!user || user.role !== 'owner') {
+  if (!user || user.role !== 'super_admin') {
     return <Navigate to="/" replace />;
   }
 
@@ -810,7 +810,7 @@ const PaymentManagement = () => {
     setIsDeleting(true);
     setDeletePasswordError('');
 
-    // Verify owner password against stored credentials
+    // Verify superadmin password against stored credentials
     const OWNER_EMAIL = 'munyakaprimary@gmail.com';
     const usersJson = localStorage.getItem('munyaka_users');
     if (!usersJson) {
@@ -823,7 +823,7 @@ const PaymentManagement = () => {
     const owner = users[OWNER_EMAIL];
 
     if (!owner || !owner.password) {
-      setDeletePasswordError('Owner credentials not found. Contact administrator.');
+      setDeletePasswordError('Super Admin credentials not found. Contact administrator.');
       setIsDeleting(false);
       return;
     }
@@ -1233,7 +1233,7 @@ const PaymentManagement = () => {
     setIsBulkDeleting(true);
     setBulkDeletePasswordError('');
 
-    // Verify owner password against stored credentials
+    // Verify superadmin password against stored credentials
     const OWNER_EMAIL = 'munyakaprimary@gmail.com';
     const usersJson = localStorage.getItem('munyaka_users');
     if (!usersJson) {
@@ -1246,7 +1246,7 @@ const PaymentManagement = () => {
     const owner = users[OWNER_EMAIL];
 
     if (!owner || !owner.password) {
-      setBulkDeletePasswordError('Owner credentials not found. Contact administrator.');
+      setBulkDeletePasswordError('Super Admin credentials not found. Contact administrator.');
       setIsBulkDeleting(false);
       return;
     }
@@ -1360,9 +1360,9 @@ const PaymentManagement = () => {
           <ShieldCheck size={24} className="text-white" />
         </div>
         <div>
-          <p className="font-black text-sm">Super Admin / Owner Access</p>
+          <p className="font-black text-sm">Super Admin Access</p>
           <p className="text-xs text-indigo-200">
-            This panel is exclusively for the School Owner. Credentials are encrypted at rest and masked by default.
+            This panel is exclusively for the Platform Super Admin. Credentials are encrypted at rest and masked by default.
           </p>
         </div>
       </div>

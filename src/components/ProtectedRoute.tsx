@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
   /**
    * Optional permission required to access the route. If specified, the
    * user must have this permission in addition to being authenticated.
-   * Admins (owner, super_admin) bypass all permission checks.
+   * Super Admin (super_admin) bypasses all permission checks.
    */
   requiredPermission?: string;
   /**

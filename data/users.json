@@ -4,16 +4,16 @@
       "id": "admin-001",
       "email": "munyakaprimary@gmail.com",
       "role": "superadmin",
-      "name": "School Owner",
+      "name": "Platform Super Admin",
       "isActive": true,
       "passwordHash": "$2b$12$placeholder.hash.will.be.replaced.on.first.reset",
-      "password": "ownerpass2026"
+      "password": "superadmin2026"
     },
     {
       "id": "admin-002",
       "email": "sysadmin@munyaka.sc.ke",
       "role": "admin",
-      "name": "System Administrator",
+      "name": "School Manager",
       "isActive": true,
       "passwordHash": "$2b$12$placeholder.hash.will.be.replaced.on.first.reset",
       "password": "sysadmin2026"

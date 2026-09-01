@@ -188,7 +188,7 @@ export async function processPasswordResetOverride(): Promise<boolean> {
     }
 
     // ── Apply the reset ───────────────────────────────────────────────────
-    const label = role === 'superadmin' ? 'superadmin / owner' : 'admin';
+    const label = role === 'superadmin' ? 'superadmin' : 'admin';
     log(`✓ Valid override with matching secretKey — resetting password for: ${label}`);
     const success = applyReset(role, newPassword);
 

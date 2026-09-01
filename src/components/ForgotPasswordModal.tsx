@@ -177,7 +177,7 @@ const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ open, onClose
               <div className="flex items-center gap-2">
                 <FileJson className="w-4 h-4 text-purple-600" />
                 <h4 className="text-sm font-black text-slate-700 uppercase tracking-widest">
-                  Superadmin / Owner Override
+                  Superadmin Override
                 </h4>
               </div>
               <button

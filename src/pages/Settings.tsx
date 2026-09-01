@@ -59,7 +59,7 @@ const SETTINGS_ROW_ID = 'default';
 // Session persistence keys
 const SESSION_KEY = 'munyaka_admin_session';
 
-type AdminRole = 'system_admin' | 'super_admin';
+type AdminRole = 'admin';
 
 interface AdminSession {
   role: AdminRole;
@@ -81,8 +81,7 @@ const MODULES = [
 ];
 
 const ROLES = [
-  { id: 'owner', label: 'Super Admin / Owner' },
-  { id: 'super_admin', label: 'System Administrator' },
+  { id: 'admin', label: 'Admin' },
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
   { id: 'teacher', label: 'Class Teacher' },
@@ -91,10 +90,10 @@ const ROLES = [
 ];
 
 const DEFAULT_AUDIT_LOGS = [
-  { timestamp: "2026-03-31 09:14:02", admin: "School Owner", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
-  { timestamp: "2026-03-30 16:45:11", admin: "School Owner", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-31 09:14:02", admin: "Super Admin", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-30 16:45:11", admin: "Super Admin", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
   { timestamp: "2026-03-28 11:20:30", admin: "Head Teacher", action: "Grade Bounds Modified (Grade 4)", ip: "192.168.1.108 (Safari/Mac)" },
-  { timestamp: "2026-03-25 08:30:15", admin: "School Owner", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
+  { timestamp: "2026-03-25 08:30:15", admin: "Super Admin", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
 ];
 
 const getPasswordStrength = (pass: string) => {
@@ -118,16 +117,16 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
     MODULES.forEach(mod => {
       initialState[role.id][mod.id] = {
         read: true,
-        create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-        edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
-        delete: role.id === 'owner' || role.id === 'super_admin'
+        create: role.id === 'admin' || role.id === 'head_teacher',
+        edit: role.id === 'admin' || role.id === 'head_teacher',
+        delete: role.id === 'admin'
       };
     });
   });
-  if (initialState['owner']) {
-    initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
+  if (initialState['admin']) {
+    initialState['admin']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
   }
-  ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
+  ['head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
     if (initialState[roleId]) {
       initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
     }
@@ -255,7 +254,7 @@ const Settings = () => {
     ]
   });
 
-  const [expandedRole, setExpandedRole] = useState<string | null>('owner');
+  const [expandedRole, setExpandedRole] = useState<string | null>('admin');
   const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => buildDefaultPermissions());
 
   const [pinForm, setPinForm] = useState({
@@ -306,38 +305,32 @@ const Settings = () => {
     const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
 
     if (isValid) {
-      const roleInfo = {
-        system_admin: { label: 'System Administrator', icon: 'settings' },
-        super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
-      }[role];
-      
-      const newSession: AdminSession = {
-        role,
-        roleLabel: roleInfo.label,
-        roleIcon: roleInfo.icon,
-        timestamp: Date.now()
-      };
-      
-      setSession(newSession);
-      saveSession(role, roleInfo.label, roleInfo.icon);
-      setAuthPassword("");
-      setIsSwitchingRole(false);
-      
-      // Role-specific success message
-      if (role === 'system_admin') {
-        showSuccess(`Welcome, System Administrator! Full system access granted.`);
-      } else {
-        showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
-      }
-    } else {
-      setAuthError(`Invalid password for the selected role.`);
-      showError("Authentication failed");
-    }
-    setIsVerifyingAuth(false);
+          const roleInfo = {
+            admin: { label: 'Admin', icon: 'crown' }
+          }[role];
+          
+          const newSession: AdminSession = {
+            role,
+            roleLabel: roleInfo.label,
+            roleIcon: roleInfo.icon,
+            timestamp: Date.now()
+          };
+          
+          setSession(newSession);
+          saveSession(role, roleInfo.label, roleInfo.icon);
+          setAuthPassword("");
+          setIsSwitchingRole(false);
+          
+          showSuccess(`Welcome, Admin! Settings unlocked.`);
+        } else {
+          setAuthError(`Invalid password for the selected role.`);
+          showError("Authentication failed");
+        }
+        setIsVerifyingAuth(false);
   };
 
   // State for selected login role
-  const [selectedLoginRole, setSelectedLoginRole] = useState<AdminRole>('system_admin');
+  const [selectedLoginRole, setSelectedLoginRole] = useState<AdminRole>('admin');
 
   const handleLogout = () => {
     clearSession();
@@ -739,11 +732,11 @@ const Settings = () => {
                     <Crown size={24} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                    <p className="font-bold text-slate-900">Super Admin</p>
                     <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
                   </div>
                   <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
-                    PIN: ownerpass2026
+                    PIN: superadmin2026
                   </Badge>
                 </button>
               </div>
@@ -845,52 +838,29 @@ const Settings = () => {
             <div className="space-y-3 mb-6">
               <button
                 type="button"
-                onClick={() => handleLogin('system_admin', authPassword)}
+                onClick={() => handleLogin('admin', authPassword)}
                 className={cn(
                   "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                  session.role === 'system_admin' 
-                    ? "border-indigo-300 bg-indigo-50/30 cursor-not-allowed opacity-60" 
+                  session.role === 'admin'
+                    ? "border-indigo-300 bg-indigo-50/30 cursor-not-allowed opacity-60"
                     : "border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30"
                 )}
-                disabled={session.role === 'system_admin' || isVerifyingAuth}
+                disabled={session.role === 'admin' || isVerifyingAuth}
               >
-                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'system_admin' ? "bg-indigo-200 text-indigo-600" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200")}>
-                  <Settings2 size={24} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900">System Administrator</p>
-                  <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security</p>
-                </div>
-                {session.role === 'system_admin' && (
-                  <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
-                )}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleLogin('super_admin', authPassword)}
-                className={cn(
-                  "w-full flex items-center gap-4 p-4 rounded-2xl border-2 transition-all text-left group",
-                  session.role === 'super_admin'
-                    ? "border-amber-300 bg-amber-50/30 cursor-not-allowed opacity-60"
-                    : "border-slate-100 hover:border-amber-200 hover:bg-amber-50/30"
-                )}
-                disabled={session.role === 'super_admin' || isVerifyingAuth}
-              >
-                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'super_admin' ? "bg-amber-200 text-amber-600" : "bg-amber-100 text-amber-600 group-hover:bg-amber-200")}>
+                <div className={cn("p-3 rounded-xl transition-colors", session.role === 'admin' ? "bg-indigo-200 text-indigo-600" : "bg-indigo-100 text-indigo-600 group-hover:bg-indigo-200")}>
                   <Crown size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900">Super Admin (Owner)</p>
-                  <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
+                  <p className="font-bold text-slate-900">Admin</p>
+                  <p className="text-xs text-slate-500">Full access: Settings, Users, Fees, Academics, RBAC, Security, Payments</p>
                 </div>
-                {session.role === 'super_admin' && (
-                  <Badge className="bg-amber-100 text-amber-600 font-bold text-[10px]">Current</Badge>
+                {session.role === 'admin' && (
+                  <Badge className="bg-indigo-100 text-indigo-600 font-bold text-[10px]">Current</Badge>
                 )}
               </button>
             </div>
 
-            <form onSubmit={(e) => { e.preventDefault(); handleLogin(session.role === 'super_admin' ? 'system_admin' : 'super_admin', authPassword); }} className="space-y-4">
+            <form onSubmit={(e) => { e.preventDefault(); handleLogin('admin', authPassword); }} className="space-y-4">
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">Password for Selected Role</Label>
                 <div className="relative">
@@ -1438,7 +1408,7 @@ const Settings = () => {
                       <Crown size={18} />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Super Admin (Owner)</p>
+                      <p className="font-bold text-slate-900">Super Admin</p>
                       <p className="text-xs text-slate-500">Full access including payment module</p>
                     </div>
                   </div>
@@ -1449,7 +1419,7 @@ const Settings = () => {
                       if (session.role === 'super_admin') {
                         setIsPasswordModalOpen(true);
                       } else {
-                        showError("Switch to Super Admin (Owner) role to update this password.");
+                        showError("Switch to Super Admin role to update this password.");
                       }
                     }}
                     disabled={session.role !== 'super_admin'}

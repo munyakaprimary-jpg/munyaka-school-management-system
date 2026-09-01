@@ -243,7 +243,7 @@ async function processOverride(): Promise<void> {
   await deleteFile();
 
   // ── 13. Terminal banner ─────────────────────────────────────────────────
-  console.log(BANNER(role === 'superadmin' ? 'superadmin / owner' : 'admin'));
+  console.log(BANNER(role === 'superadmin' ? 'superadmin' : 'admin'));
 }
 
 // ─── Delete helper ─────────────────────────────────────────────────────────────
