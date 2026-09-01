@@ -222,28 +222,40 @@ const TransferredLearnersArchive: React.FC = () => {
       {/* Archive Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table
+            className="w-full text-sm table-auto"
+            style={{ minWidth: '1080px' }}
+          >
+            <colgroup>
+              <col style={{ width: '260px' }} />   {/* Student */}
+              <col style={{ width: '140px' }} />   {/* Adm. No / NEMIS */}
+              <col style={{ width: '180px' }} />   {/* Last Grade */}
+              <col style={{ width: '160px' }} />   {/* Transfer Ref # */}
+              <col style={{ width: '220px' }} />   {/* Destination */}
+              <col style={{ width: '120px' }} />   {/* Transfer Date */}
+              <col style={{ width: '120px' }} />   {/* Actions */}
+            </colgroup>
             <thead className="bg-slate-50 border-b border-slate-200">
               <tr className="text-left">
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Student
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Adm. No / NEMIS
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Last Grade
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Transfer Ref #
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Destination
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">
                   Transfer Date
                 </th>
-                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 text-right">
+                <th className="px-5 py-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap text-right">
                   Actions
                 </th>
               </tr>
@@ -253,7 +265,7 @@ const TransferredLearnersArchive: React.FC = () => {
                 <tr>
                   <td
                     colSpan={7}
-                    className="px-5 py-16 text-center text-slate-400"
+                    className="px-5 py-16 text-center text-slate-400 whitespace-nowrap"
                   >
                     <div className="flex flex-col items-center gap-3">
                       <Archive size={40} className="text-slate-300" />
@@ -271,8 +283,8 @@ const TransferredLearnersArchive: React.FC = () => {
                     key={r.id}
                     className="hover:bg-slate-50/70 transition-colors"
                   >
-                    <td className="px-5 py-4">
-                      <div className="flex items-center gap-3">
+                    <td className="px-5 py-4 whitespace-nowrap align-middle">
+                      <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center shrink-0">
                           {r.name
                             .split(' ')
@@ -281,34 +293,54 @@ const TransferredLearnersArchive: React.FC = () => {
                             .join('')
                             .toUpperCase()}
                         </div>
-                        <div>
-                          <p className="font-bold text-slate-900">{r.name}</p>
-                          <p className="text-[11px] text-slate-500 font-medium">
+                        <div className="min-w-0">
+                          <p
+                            className="font-bold text-slate-900 truncate"
+                            style={{ maxWidth: '200px' }}
+                            title={r.name}
+                          >
+                            {r.name}
+                          </p>
+                          <p
+                            className="text-[11px] text-slate-500 font-medium truncate"
+                            style={{ maxWidth: '200px' }}
+                            title={`${r.gender} • ${r.guardian}`}
+                          >
                             {r.gender} • {r.guardian}
                           </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-5 py-4 font-mono text-xs font-bold text-slate-700">
+                    <td className="px-5 py-4 font-mono text-xs font-bold text-slate-700 whitespace-nowrap align-middle">
                       {r.admNo}
                     </td>
-                    <td className="px-5 py-4">
-                      <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold text-[11px]">
-                        Grade {r.grade} • {r.stream}
-                      </Badge>
+                    <td className="px-5 py-4 whitespace-nowrap align-middle">
+                      <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 font-bold text-[11px] px-2.5 py-1 rounded-lg whitespace-nowrap">
+                        <span>Grade {r.grade}</span>
+                        <span className="opacity-60">•</span>
+                        <span>{r.stream}</span>
+                      </span>
                     </td>
-                    <td className="px-5 py-4">
-                      <code className="text-[11px] font-black text-slate-600 bg-slate-100 px-2 py-1 rounded-md">
+                    <td className="px-5 py-4 whitespace-nowrap align-middle">
+                      <code className="text-[11px] font-black text-slate-600 bg-slate-100 px-2 py-1 rounded-md whitespace-nowrap inline-block">
                         {r.certificateNumber}
                       </code>
                     </td>
-                    <td className="px-5 py-4 text-slate-700 font-medium text-xs max-w-[200px] truncate">
-                      {r.destinationSchool}
+                    <td
+                      className="px-5 py-4 text-slate-700 font-medium text-xs align-middle"
+                      style={{ maxWidth: '220px' }}
+                    >
+                      <span
+                        className="block truncate"
+                        title={r.destinationSchool}
+                      >
+                        {r.destinationSchool}
+                      </span>
                     </td>
-                    <td className="px-5 py-4 text-slate-600 font-medium text-xs whitespace-nowrap">
+                    <td className="px-5 py-4 text-slate-600 font-medium text-xs whitespace-nowrap align-middle">
                       {formatDate(r.transferDate)}
                     </td>
-                    <td className="px-5 py-4">
+                    <td className="px-5 py-4 whitespace-nowrap align-middle">
                       <div className="flex items-center justify-end gap-1.5">
                         <button
                           type="button"
