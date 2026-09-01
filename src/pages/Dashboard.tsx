@@ -187,7 +187,7 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-blue-600">
               Boys
             </th>
-            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-pink-600">
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-emerald-600">
               Girls
             </th>
             <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-red-600">
@@ -212,9 +212,9 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
                     {row.boys}
                   </span>
                 </td>
-                {/* GIRLS column — pink / magenta */}
+                {/* GIRLS column — emerald green (high contrast vs red) */}
                 <td className="px-6 py-4 text-right">
-                  <span className={`font-bold ${row.girls > 0 ? 'text-pink-600' : 'text-pink-200'}`}>
+                  <span className={`font-bold ${row.girls > 0 ? 'text-emerald-600' : 'text-emerald-200'}`}>
                     {row.girls}
                   </span>
                 </td>
@@ -237,9 +237,9 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             <td className="px-6 py-4 text-right">
               <span className="font-black text-blue-700">{grandTotalBoys}</span>
             </td>
-            {/* Total Girls — pink / magenta */}
+            {/* Total Girls — emerald green */}
             <td className="px-6 py-4 text-right">
-              <span className="font-black text-pink-700">{grandTotalGirls}</span>
+              <span className="font-black text-emerald-700">{grandTotalGirls}</span>
             </td>
             {/* Grand Total — red */}
             <td className="px-6 py-4 text-right">
