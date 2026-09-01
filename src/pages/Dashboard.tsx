@@ -334,7 +334,7 @@ const Dashboard = () => {
   // Guard: skip entirely for non-admin roles so no alert data is ever
   // computed or stored in state for unauthorized users.
   useEffect(() => {
-    const ALLOWED_ROLES = ['super_admin', 'admin', 'head_teacher', 'owner'];
+    const ALLOWED_ROLES = ['admin', 'head_teacher'];
     if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
 
     try {
@@ -638,13 +638,11 @@ const Dashboard = () => {
     [user?.role]
   );
 
-  // Recent Alerts is an elevated-management-only widget. It surfaces
-  // cross-cutting activity (fees, registrations, attendance events) that
-  // only school-wide administrators need to monitor. Regular roles such as
-  // TEACHER, BURSAR, or ICT_TEACHER must never see this feed.
-  const RECENT_ALERTS_ADMIN_ROLES = ['super_admin', 'admin', 'head_teacher', 'owner'];
+  // Recent Alerts is visible only to ADMIN and HEADTEACHER.
+  // SUPERADMIN / OWNER / TEACHER / BURSAR / ICT_TEACHER are excluded.
+  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher'];
   const canViewRecentAlerts = useMemo(
-    () => RECENT_ALERTS_ADMIN_ROLES.includes((user?.role || '').toLowerCase()),
+    () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -829,12 +827,11 @@ const Dashboard = () => {
       )}
 
       {/* ────────────────────────────────────────────────
-          RECENT ALERTS — elevated management only
+          RECENT ALERTS — granular operational visibility
           Surfaces cross-cutting activity (fees, registrations,
-          attendance events) for SUPER_ADMIN, ADMIN, and HEADTEACHER.
-          Regular roles (TEACHER, BURSAR, ICT_TEACHER) are excluded.
-          Rendered outside the operational-widgets block so it is
-          also visible to OWNER / SUPER_ADMIN who do not see that section.
+          attendance events) only for ADMIN and HEADTEACHER.
+          SUPERADMIN / OWNER, TEACHER, BURSAR, and ICT_TEACHER
+          are explicitly excluded.
           ──────────────────────────────────────────────── */}
       {canViewRecentAlerts && (
         <Card className="border-none shadow-sm rounded-3xl bg-white">
