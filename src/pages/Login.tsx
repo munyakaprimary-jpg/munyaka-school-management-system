@@ -58,6 +58,11 @@ const DEVELOPER_PASSWORD = 'dev_munyaka_2026';
 const DEVELOPER_NAME = 'Platform Developer';
 const DEVELOPER_ROLE = 'super_admin'; // maps to super_admin so routing works
 
+// ─── Admin credentials (school system administrator) ─────────────────────────
+const ADMIN_EMAIL = 'munyakaprimary@gmail.com';
+const ADMIN_NAME = 'School System Administrator';
+const ADMIN_ROLE = 'super_admin'; // school-level admin role
+
 // ─── Role configs ─────────────────────────────────────────────────────────────
 
 type LoginTab = 'admin' | 'developer' | 'staff';
@@ -142,9 +147,19 @@ const Login: React.FC = () => {
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
 
-  // ── Redirect already-authenticated users straight to the dashboard ─────────
+  // ── Redirect already-authenticated users to their role-specific dashboard ────
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (!isAuthenticated || !user) return;
+
+    // Check session storage to determine the correct dashboard.
+    const devSession = localStorage.getItem('munyaka_dev_session');
+    const adminSession = localStorage.getItem('munyaka_admin_session');
+
+    if (devSession) {
+      navigate('/developer/dashboard', { replace: true });
+    } else if (adminSession) {
+      navigate('/admin/dashboard', { replace: true });
+    } else {
       navigate('/dashboard', { replace: true });
     }
   }, [isAuthenticated, user, navigate]);
@@ -160,7 +175,7 @@ const Login: React.FC = () => {
     setStaffAuthError('');
   }, [activeTab]);
 
-  // ── Admin login handler ────────────────────────────────────────────────────
+  // ── Admin login handler (School System Administrator) ─────────────────────
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const entered = adminPassword.trim();
@@ -183,17 +198,22 @@ const Login: React.FC = () => {
       return;
     }
 
-    const adminEmail = 'munyakaprimary@gmail.com';
-    const success = await login(adminEmail, entered);
+    // Authenticate as the SCHOOL ADMIN (not the developer).
+    const success = await login(ADMIN_EMAIL, entered);
     if (success) {
       const adminSession = {
         role: 'admin',
-        roleLabel: 'School Admin',
+        roleLabel: 'School System Administrator',
+        userRole: 'system_admin',
+        email: ADMIN_EMAIL,
+        name: ADMIN_NAME,
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
-      showSuccess('Welcome, School Admin!');
-      navigate('/dashboard', { replace: true });
+      // Clear any stale developer session to prevent role confusion.
+      localStorage.removeItem('munyaka_dev_session');
+      showSuccess(`Welcome, ${ADMIN_NAME}!`);
+      navigate('/admin/dashboard', { replace: true });
     } else {
       setAdminAuthError('Login failed. Please try again.');
       showError('Authentication failed');
@@ -201,7 +221,7 @@ const Login: React.FC = () => {
     setIsAdminVerifying(false);
   };
 
-  // ── Developer login handler ────────────────────────────────────────────────
+  // ── Developer login handler (App Developer) ────────────────────────────────
   const handleDevLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     const entered = devPassword.trim();
@@ -223,16 +243,22 @@ const Login: React.FC = () => {
       return;
     }
 
+    // Authenticate as the APP DEVELOPER (not the school admin).
     const success = await login(DEVELOPER_EMAIL, entered);
     if (success) {
       const devSession = {
         role: 'developer',
-        roleLabel: 'Platform Developer',
+        roleLabel: 'App Developer',
+        userRole: 'super_admin',
+        email: DEVELOPER_EMAIL,
+        name: DEVELOPER_NAME,
         timestamp: Date.now(),
       };
       localStorage.setItem('munyaka_dev_session', JSON.stringify(devSession));
+      // Clear any stale admin session to prevent role confusion.
+      localStorage.removeItem('munyaka_admin_session');
       showSuccess(`Welcome, ${DEVELOPER_NAME}!`);
-      navigate('/dashboard', { replace: true });
+      navigate('/developer/dashboard', { replace: true });
     } else {
       setDevAuthError('Developer login failed. Please try again.');
       showError('Developer authentication failed');
@@ -267,6 +293,9 @@ const Login: React.FC = () => {
       const match = staffLedger.find(
         s => s.staffId && s.staffId.toLowerCase() === trimmedId.toLowerCase()
       );
+      // Clear any stale admin/developer sessions to prevent role confusion.
+      localStorage.removeItem('munyaka_admin_session');
+      localStorage.removeItem('munyaka_dev_session');
       showSuccess(match ? `Welcome, ${match.fullName}!` : 'Welcome!');
       navigate('/dashboard', { replace: true });
     } else {
