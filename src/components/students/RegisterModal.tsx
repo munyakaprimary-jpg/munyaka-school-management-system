@@ -32,31 +32,11 @@ interface RegisterModalProps {
   onRegister: () => void;
 }
 
-// ─── Normalisation helpers ──────────────────────────────────────────────
+// Normalisation helpers
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
   const t = name.trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
-};
-
-/**
- * Map a "regGrade" value (e.g. "4") coming from the existing select trigger
- * to its full match key for lookup against the live gradeStreamMap.
- *
- * We try a few variants so we work with whatever shape the caller's grade
- * string takes.
- */
-const toGradeMatchValue = (regGrade: string): string => {
-  if (!regGrade) return '';
-  const trimmed = regGrade.trim();
-  const asTitle = normalizeGradeName(trimmed);
-  // If it already looks like a full name (contains letters), return as-is
-  // so getStreamsForGrade can match by title. Otherwise, if it's purely a
-  // digit like "4", normalise to "Grade 4".
-  if (/^\d+$/.test(trimmed)) {
-    return `Grade ${trimmed}`;
-  }
-  return asTitle;
 };
 
 export default function RegisterModal({
@@ -79,11 +59,7 @@ export default function RegisterModal({
   formError = '',
   onRegister
 }: RegisterModalProps) {
-  // Live Grades & Streams configuration pulled directly from the
-  // shared gradesStreamsConfig service (the same source used by the
-  // Learners Management filter). Re-reads on a tick + the
-  // `munyaka_grades_updated` custom event so any change made in the
-  // GradesStreams setter module is reflected here automatically.
+  // Live Grades & Streams configuration
   const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
     readGradesAndStreams()
   );
@@ -116,26 +92,20 @@ export default function RegisterModal({
     };
   }, []);
 
-  // Streams for the currently selected grade from the live configuration.
+  // Streams for the currently selected grade
   const availableStreams = useMemo((): string[] => {
     if (!regGrade) return [];
-    return getStreamsForGrade(toGradeMatchValue(regGrade), gradesConfig);
+    return getStreamsForGrade(regGrade, gradesConfig);
   }, [regGrade, gradesConfig]);
 
-  // Aggregate stream list across every configured grade.
-  const uniqueStreams = useMemo(
-    () => gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b)),
-    [gradesConfig]
-  );
-
-  // Reset stream when grade changes and the selected stream no longer exists
+  // Reset stream when grade changes and selected stream is invalid
   useEffect(() => {
     if (regStream && availableStreams.length > 0 && !availableStreams.includes(regStream)) {
       setRegStream(availableStreams[0]);
     }
   }, [regGrade, availableStreams, regStream, setRegStream]);
 
-  // Fall back to the first configured grade if none is currently set
+  // Set default grade if none selected
   useEffect(() => {
     if (!regGrade && gradesConfig.grades.length > 0) {
       setRegGrade(gradesConfig.grades[0]);
@@ -168,7 +138,6 @@ export default function RegisterModal({
       maxWidth="max-w-xl"
     >
       <div className="space-y-6">
-        {/* Error message display */}
         {formError && (
           <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2 animate-in slide-in-from-top-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
@@ -176,7 +145,7 @@ export default function RegisterModal({
           </div>
         )}
 
-        {/* Full Name — always required */}
+        {/* Full Name */}
         <div className="space-y-2">
           <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
             Full Name <span className="text-rose-500">*</span>
@@ -226,7 +195,7 @@ export default function RegisterModal({
           Both are accepted if available.
         </p>
 
-        {/* Grade + Stream row — both options come from the live configuration */}
+        {/* Grade + Stream row */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
@@ -236,7 +205,7 @@ export default function RegisterModal({
               value={regGrade}
               onValueChange={(val) => {
                 setRegGrade(val);
-                setRegStream('');
+                setRegStream(''); // Reset stream when grade changes
               }}
             >
               <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
@@ -245,7 +214,7 @@ export default function RegisterModal({
               <SelectContent className="rounded-xl">
                 {gradesConfig.grades.length === 0 ? (
                   <SelectItem value="__none__" disabled>
-                    No grades configured — set them in Grades &amp; Streams
+                    No grades configured — set them in Grades & Streams
                   </SelectItem>
                 ) : (
                   gradesConfig.grades.map((gradeName) => (
@@ -279,11 +248,13 @@ export default function RegisterModal({
               </SelectTrigger>
               <SelectContent className="rounded-xl">
                 {availableStreams.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
                 ))}
-                {availableStreams.length === 0 && uniqueStreams.length > 0 && (
+                {availableStreams.length === 0 && gradesConfig.grades.length > 0 && (
                   <SelectItem value="__hint__" disabled>
-                    Configure streams for this grade in Grades &amp; Streams
+                    Configure streams for this grade in Grades & Streams
                   </SelectItem>
                 )}
               </SelectContent>
