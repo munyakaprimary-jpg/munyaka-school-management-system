@@ -78,13 +78,14 @@ const TransferredLearnersArchive: React.FC = () => {
   const [isRestoring, setIsRestoring] = useState(false);
 
   // Safe back handler: tries history.back() first (preserves scroll position
-  // and prior filter state). Falls back to /learners if the history stack is
-  // empty (e.g. direct navigation or page refresh).
+  // and prior filter state). Falls back to the active Learners page
+  // (`/students`) if the history stack is empty (e.g. direct navigation
+  // or page refresh).
   const handleBack = useCallback(() => {
     if (window.history.length > 1) {
       navigate(-1);
     } else {
-      navigate('/learners', { replace: true });
+      navigate('/students', { replace: true });
     }
   }, [navigate]);
 
@@ -208,8 +209,8 @@ const TransferredLearnersArchive: React.FC = () => {
   // ── Render ─────────────────────────────────────────────────────────────
   return (
     <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
+      {/* Page Header — raised above AppUnlock's fixed z-50 license indicator */}
+      <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 bg-indigo-600 rounded-2xl flex items-center justify-center text-white shadow-md shadow-indigo-200">
@@ -229,15 +230,15 @@ const TransferredLearnersArchive: React.FC = () => {
           </p>
         </div>
 
-        <Button
+        <button
           type="button"
-          variant="outline"
           onClick={handleBack}
-          className="rounded-xl gap-2 border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-slate-900 cursor-pointer transition-colors"
+          aria-label="Go back to Learners"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-5 h-11 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-slate-900 hover:border-slate-300 cursor-pointer transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300 focus-visible:ring-offset-2 active:scale-95"
         >
-          <ChevronLeft size={16} />
+          <ChevronLeft size={16} aria-hidden="true" />
           Back
-        </Button>
+        </button>
       </div>
 
       {/* Filter Bar */}
