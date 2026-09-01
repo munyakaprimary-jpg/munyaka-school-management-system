@@ -40,8 +40,10 @@ interface RecentAlert {
 interface ClassRow {
   id: string;
   name: string;
-  enrolled: number;
-  gradeOrder: number; // numeric sort key: PP1=0, PP2=0, Grade 1=1 … Grade 9=9
+  boys: number;
+  girls: number;
+  total: number;
+  gradeOrder: number; // numeric sort key: PP1=1, PP2=2, Grade 1=3 … Grade 9=11
 }
 
 // ─── Weekly attendance bar chart colours ──────────────────────────────────────
@@ -170,27 +172,33 @@ const EmptyAlertsState = () => (
 );
 
 const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
-  // Live total — recomputed on every render from the rows (which are themselves
-  // re-aggregated from the live school_learners_data whenever it changes).
-  const totalEnrollment = rows.reduce((sum, row) => sum + (row.enrolled || 0), 0);
+  const grandTotalBoys   = rows.reduce((s, r) => s + (r.boys  || 0), 0);
+  const grandTotalGirls = rows.reduce((s, r) => s + (r.girls || 0), 0);
+  const grandTotal      = rows.reduce((s, r) => s + (r.total || 0), 0);
 
   return (
     <div className="w-full overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
-      <table className="w-full text-sm min-w-[480px]">
+      <table className="w-full text-sm min-w-[560px]">
         <thead>
           <tr className="border-b border-slate-100">
-            <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 w-1/2">
               Class Name
             </th>
-            <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-              Enrollment
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Boys
+            </th>
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Girls
+            </th>
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+              Total
             </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-50">
           {rows.length === 0 ? (
             <tr>
-              <td colSpan={2} className="px-6 py-8 text-center text-slate-400 text-sm">
+              <td colSpan={4} className="px-6 py-10 text-center text-slate-400 text-sm">
                 No class data available yet.
               </td>
             </tr>
@@ -198,27 +206,38 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             rows.map((row) => (
               <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
                 <td className="px-6 py-4 font-semibold text-slate-800">{row.name}</td>
-                <td className="px-6 py-4">
-                  <span className={`text-sm font-bold ${row.enrolled > 0 ? 'text-slate-700' : 'text-slate-400'}`}>
-                    {row.enrolled} Registered
+                <td className="px-6 py-4 text-right">
+                  <span className={`font-bold ${row.boys > 0 ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {row.boys}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <span className={`font-bold ${row.girls > 0 ? 'text-slate-700' : 'text-slate-300'}`}>
+                    {row.girls}
+                  </span>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <span className={`font-bold ${row.total > 0 ? 'text-indigo-600' : 'text-slate-300'}`}>
+                    {row.total}
                   </span>
                 </td>
               </tr>
             ))
           )}
 
-          {/* Total Summary Row — always rendered at the bottom */}
-          <tr className="bg-slate-50/80 border-t-2 border-slate-200">
-            <td className="px-6 py-4 font-black text-slate-900 text-sm">
-              Total Enrollment
+          {/* Grand Total Summary Row */}
+          <tr className="bg-indigo-50/70 border-t-2 border-indigo-200">
+            <td className="px-6 py-4 font-black text-indigo-900 text-sm">
+              Total
             </td>
-            <td className="px-6 py-4">
-              <span className="text-sm font-black text-indigo-600">
-                Total: {totalEnrollment.toLocaleString()}
-              </span>
-              <span className="ml-2 text-[10px] font-bold uppercase tracking-widest text-slate-500">
-                {totalEnrollment === 1 ? 'Registered' : 'Total Registered'}
-              </span>
+            <td className="px-6 py-4 text-right">
+              <span className="font-black text-indigo-700">{grandTotalBoys}</span>
+            </td>
+            <td className="px-6 py-4 text-right">
+              <span className="font-black text-indigo-700">{grandTotalGirls}</span>
+            </td>
+            <td className="px-6 py-4 text-right">
+              <span className="font-black text-indigo-900">{grandTotal.toLocaleString()}</span>
             </td>
           </tr>
         </tbody>
@@ -387,84 +406,87 @@ const Dashboard = () => {
     });
   }, [totalStudents]);
 
-  // ── Class participation rows — live query from school_learners_data ───────────────────
-  // • Reads every active learner from school_learners_data (real-time, no mock data)
-  // • Groups count by the normalised grade string (e.g. "Grade 1", "Grade 8", "PP1")
-  // • Joins against munyaka_grades to get the authoritative class list and IDs
-  // • Sorts by grade order: PP1/PP2 → Grade 1–6 → Grade 7–9
-  // • Re-computes whenever totalStudents changes (which tracks school_learners_data)
+  // ── Class participation rows — live gender-split query ────────────────────────────────────
+  // • Reads every active (non-TRANSFERRED) learner from school_learners_data
+  // • Groups by normalised grade name and splits counts into Boys / Girls
+  // • Falls back to 0 for grades with no students
+  // • Sorts using GRADE_ORDER index: PP1 → PP2 → Grade 1 … Grade 9
   const classRows = useMemo<ClassRow[]>(() => {
-    const gradesRaw = localStorage.getItem('munyaka_grades');
-    if (!gradesRaw) return [];
+    const GRADE_ORDER = [
+      'PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4',
+      'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9',
+    ];
 
-    let grades: any[] = [];
-    try {
-      grades = JSON.parse(gradesRaw);
-      if (!Array.isArray(grades)) grades = [];
-    } catch {
-      return [];
-    }
-
-    // Live learner data — any new registration/transferred status is reflected immediately
-    const learners: any[] = safeRead('school_learners_data', []);
-
-    // Normalise a grade name to a numeric sort key
-    // "PP1" / "pp1" → 0, "PP2" / "pp2" → 1, "Grade 1" → 1, "Grade 8" → 8, "GRADE 9" → 9
-    const gradeOrderOf = (name: string): number => {
-      const upper = name.trim().toUpperCase();
-      if (/^PP\s*1$/i.test(upper) || upper === 'PP1') return 0;
-      if (/^PP\s*2$/i.test(upper) || upper === 'PP2') return 1;
-      const match = upper.match(/GRADE\s*(\d+)/);
-      if (match) return parseInt(match[1], 10);
-      return 99; // unknown grades go at the bottom
+    // Normalise a raw grade name to a GRADE_ORDER key: "grade 5" → "Grade 5", "pp1" → "PP1"
+    const normalise = (raw: string): string => {
+      if (!raw) return '';
+      const trimmed = raw.trim();
+      const upper = trimmed.toUpperCase();
+      if (upper === 'PP1') return 'PP1';
+      if (upper === 'PP2') return 'PP2';
+      const match = trimmed.match(/^([A-Za-z]+)\s*(\d+)$/);
+      if (match) {
+        const word = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+        return `${word} ${match[2]}`;
+      }
+      return trimmed;
     };
 
-    // Count enrolled (non-transferred) learners per normalised grade string
-    // Build a map: "Grade 1" → 3, "Grade 8" → 12, etc.
-    const countByGrade: Record<string, number> = {};
+    // Numeric rank: index in GRADE_ORDER + 1 so PP1=1, PP2=2 … Grade 9=11
+    const gradeRank = (name: string): number => {
+      const idx = GRADE_ORDER.indexOf(normalise(name));
+      return idx >= 0 ? idx + 1 : 999;
+    };
+
+    const learners: any[] = safeRead('school_learners_data', []);
+
+    // Accumulate { boys, girls } per normalised grade key
+    const acc: Record<string, { boys: number; girls: number }> = {};
     learners.forEach((l: any) => {
       if (l.status === 'TRANSFERRED') return;
       const raw = (l.grade || '').trim();
       if (!raw) return;
-      countByGrade[raw] = (countByGrade[raw] || 0) + 1;
-    });
-
-    // Map: raw grade name → display name (standardised casing)
-    const displayName = (raw: string): string => {
-      const upper = raw.trim().toUpperCase();
-      if (/^PP\s*1$/i.test(raw)) return 'PP 1';
-      if (/^PP\s*2$/i.test(raw)) return 'PP 2';
-      const match = raw.match(/^([A-Za-z]+\s*)(\d+)$/);
-      if (match) return `${match[1].charAt(0).toUpperCase()}${match[1].slice(1).toLowerCase()} ${match[2]}`;
-      return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
-    };
-
-    // Build rows from the grades master list (authoritative), joined with live counts
-    const rows: ClassRow[] = grades.map((g: any) => {
-      const rawName = g.name || '';
-      return {
-        id: g.id,
-        name: displayName(rawName),
-        enrolled: countByGrade[rawName] || 0,
-        gradeOrder: gradeOrderOf(rawName),
-      };
-    });
-
-    // Also include any grade names that appear in school_learners_data but are NOT
-    // in munyaka_grades yet (e.g., a class that was registered before grades were set up)
-    Object.entries(countByGrade).forEach(([rawName, count]) => {
-      const alreadyExists = rows.some((r) => r.name.toUpperCase() === displayName(rawName).toUpperCase());
-      if (!alreadyExists) {
-        rows.push({
-          id: `dynamic-${rawName}`,
-          name: displayName(rawName),
-          enrolled: count,
-          gradeOrder: gradeOrderOf(rawName),
-        });
+      const key = normalise(raw);
+      if (!acc[key]) acc[key] = { boys: 0, girls: 0 };
+      const gender = (l.gender || '').toLowerCase().trim();
+      if (gender === 'male' || gender === 'boy') {
+        acc[key].boys += 1;
+      } else if (gender === 'female' || gender === 'girl') {
+        acc[key].girls += 1;
+      } else {
+        // Treat unspecified gender as neutral — add to total but not boy/girl columns
+        acc[key].boys += 0;
+        acc[key].girls += 0;
       }
     });
 
-    // Sort: PP1 → PP2 → Grade 1 … Grade 9, then unknown
+    // Build a unique list of all grade keys (from both grades config AND learner data)
+    const gradeNamesFromConfig: string[] = (() => {
+      const raw = localStorage.getItem('munyaka_grades');
+      if (!raw) return [];
+      try {
+        const grades = JSON.parse(raw);
+        return Array.isArray(grades) ? grades.map((g: any) => normalise(g.name || '')) : [];
+      } catch { return []; }
+    })();
+
+    const allKeys = Array.from(new Set([...gradeNamesFromConfig, ...Object.keys(acc)]));
+
+    const rows: ClassRow[] = allKeys
+      .filter((k) => k) // drop empty strings
+      .map((key) => {
+        const counts = acc[key] || { boys: 0, girls: 0 };
+        return {
+          id: key,
+          name: key,
+          boys: counts.boys,
+          girls: counts.girls,
+          total: counts.boys + counts.girls,
+          gradeOrder: gradeRank(key),
+        };
+      });
+
+    // Canonical grades first (PP1–Grade 9), then any unknown grades alphabetically
     rows.sort((a, b) => {
       if (a.gradeOrder !== b.gradeOrder) return a.gradeOrder - b.gradeOrder;
       return a.name.localeCompare(b.name);
