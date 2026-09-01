@@ -299,19 +299,19 @@ const Login: React.FC = () => {
           <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as LoginTab)} className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
               <TabsTrigger
+                value="developer"
+                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+              >
+                <Code2 size={14} className="mr-1.5 shrink-0" />
+                <span className="hidden sm:inline">Dev</span>
+                <span className="sm:hidden">Dev</span>
+              </TabsTrigger>
+              <TabsTrigger
                 value="admin"
                 className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
               >
                 <Settings2 size={14} className="mr-1.5 shrink-0" />
                 Admin
-              </TabsTrigger>
-              <TabsTrigger
-                value="developer"
-                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-violet-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-              >
-                <Code2 size={14} className="mr-1.5 shrink-0" />
-                <span className="hidden sm:inline">Developer</span>
-                <span className="sm:hidden">Dev</span>
               </TabsTrigger>
               <TabsTrigger
                 value="staff"
