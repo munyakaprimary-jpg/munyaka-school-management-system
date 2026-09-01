@@ -93,6 +93,10 @@ const App = () => (
                 <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 {/* Developer dashboard — strict 'dev' role only */}
                 <Route path="/dev/dashboard" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dev/build-deploy" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dev/system-config" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dev/multi-tenant" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/dev/debug" element={<ProtectedRoute allowedRoles={['dev']}><AppUnlock><Layout><DevDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
