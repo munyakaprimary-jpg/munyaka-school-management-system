@@ -8,7 +8,6 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { DASHBOARD_VITALS_ROLES, DASHBOARD_ALERTS_ROLES, DASHBOARD_OWNER_ROLES, normalizeRole } from '@/data/rolePermissions';
 
 interface RecentAlert {
   id: string;
@@ -85,37 +84,24 @@ const WIDGET_DEFINITIONS: Record<WidgetKey, WidgetDefinition> = {
 //   - My Assigned Class Count, My Class Attendance Rate,
 //     Pending Assessment Marks to Enter, Today's Lesson Schedule
 //
-// SUPERADMIN / SUPER_ADMIN → High-level app metrics
-//   - App Subscription Status, Total Active Enrollment, Renewal Date,
-//     Active Portal Logins, Network Quotas
+// OWNER → High-level app metrics
+//   - App Subscription Status, Total Active Enrollment, Renewal Date
 //
 // ICT_TEACHER (delegated via RBAC) → System infrastructure widgets
 //   - Active Portal Logins, Network Quotas, Lab Schedule
+//
+// SUPER_ADMIN → inherits OWNER + ICT infrastructure view
 //
 // Anything else (bursar/parent/student/other) → minimal fallback
 // ─────────────────────────────────────────────────────────────
 
 const ROLE_DASHBOARDS: Record<string, WidgetKey[]> = {
-  // Legacy key — kept for back-compat with any persisted user record
-  // that still has the lowercase-with-underscore 'owner' role.
   owner: [
     'subscriptionStatus',
     'totalActiveEnrollment',
     'renewalDate',
     'systemStatus',
   ],
-  // New canonical key — DEFAULT_ADMIN.user stores role as 'SUPERADMIN'
-  // (uppercase, no underscore). Required so renderRoleDashboard()
-  // doesn't fall through to FALLBACK_DASHBOARD for Super Admins.
-  superadmin: [
-    'subscriptionStatus',
-    'totalActiveEnrollment',
-    'renewalDate',
-    'systemStatus',
-    'activePortalLogins',
-    'networkQuotas',
-  ],
-  // Lowercase legacy variant for staff records with systemRole: super_admin.
   super_admin: [
     'subscriptionStatus',
     'totalActiveEnrollment',
@@ -350,7 +336,8 @@ const Dashboard = () => {
   // HEADTEACHER may populate the feed — SUPERADMIN is intentionally
   // excluded.
   useEffect(() => {
-    if (!(DASHBOARD_ALERTS_ROLES as readonly string[]).includes(normalizeRole(user?.role))) return;
+    const ALLOWED_ROLES = ['admin', 'head_teacher'];
+    if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
 
     try {
       const alerts: RecentAlert[] = [];
@@ -626,9 +613,9 @@ const Dashboard = () => {
     const role = user?.role;
     if (!role) return 'Guest';
     const map: Record<string, string> = {
-      SUPERADMIN: 'Super Admin',
+      owner: 'Owner',
       super_admin: 'Super Admin',
-      head_teacher: 'Admin / Head Teacher',
+      head_teacher: 'Head Teacher',
       teacher: 'Teacher',
       bursar: 'Bursar',
       parent: 'Parent',
@@ -650,30 +637,28 @@ const Dashboard = () => {
   //                       Simulation Controls (fee/reg/attendance).
   //                     SUPERADMIN is intentionally excluded.
   //
-  //  CAN_VIEW_OWNER   : SUPERADMIN only
+  //  CAN_VIEW_OWNER   : SUPERADMIN (owner / super_admin) only
   //                     → see business/billing/subscription widgets.
   // ────────────────────────────────────────────────
-  const normalizedRole = useMemo(
-    () => normalizeRole(user?.role),
+  const CAN_VIEW_VITALS = ['super_admin', 'admin', 'head_teacher', 'owner'];
+  const seesVitals = useMemo(
+    () => CAN_VIEW_VITALS.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
-  const seesVitals = useMemo(
-    () => (DASHBOARD_VITALS_ROLES as readonly string[]).includes(normalizedRole),
-    [normalizedRole]
-  );
-
   // Recent Alerts (feed + simulation controls) — ADMIN & HEADTEACHER only.
-  // SUPERADMIN, TEACHER, BURSAR, and ICT_TEACHER are excluded.
+  // SUPERADMIN / OWNER, TEACHER, BURSAR, and ICT_TEACHER are excluded.
+  const CAN_VIEW_ALERTS = ['admin', 'head_teacher'];
   const canViewRecentAlerts = useMemo(
-    () => (DASHBOARD_ALERTS_ROLES as readonly string[]).includes(normalizedRole),
-    [normalizedRole]
+    () => CAN_VIEW_ALERTS.includes((user?.role || '').toLowerCase()),
+    [user?.role]
   );
 
   // Owner-only executive dashboard (business/billing/subscription metrics).
+  const CAN_VIEW_OWNER = ['owner', 'super_admin'];
   const isOwner = useMemo(
-    () => (DASHBOARD_OWNER_ROLES as readonly string[]).includes(normalizedRole),
-    [normalizedRole]
+    () => CAN_VIEW_OWNER.includes((user?.role || '').toLowerCase()),
+    [user?.role]
   );
 
   return (
@@ -687,13 +672,13 @@ const Dashboard = () => {
             </span>
           </h1>
           <p className="text-muted-foreground">
-            {normalizedRole === 'head_teacher'
+            {user?.role?.toLowerCase() === 'admin' || user?.role?.toLowerCase() === 'head_teacher'
               ? "Full operational overview — student metrics, attendance, and recent activity."
-              : normalizedRole === 'teacher'
+              : user?.role?.toLowerCase() === 'teacher'
               ? "Your assigned classes and academic metrics for today."
-              : normalizedRole === 'SUPERADMIN' || normalizedRole === 'super_admin'
+              : user?.role?.toLowerCase() === 'owner' || user?.role?.toLowerCase() === 'super_admin'
               ? "High-level application, subscription and enrollment metrics."
-              : normalizedRole === 'ict_teacher'
+              : user?.role?.toLowerCase() === 'ict_teacher'
               ? "System infrastructure, network quotas, and lab bookings."
               : "System vitals for Munyaka Primary and Junior School."}
           </p>
@@ -970,7 +955,7 @@ const Dashboard = () => {
 // ─────────────────────────────────────────────────────────────
 // OwnerExecutiveWidgets — replaces classroom operational widgets
 // (Attendance Trends + Recent Alerts) when the current user is
-// a SUPERADMIN. Shows high-level executive cards:
+// the school owner. Shows high-level executive cards:
 //   1. School System Status  → Subscription plan, active modules,
 //                              expiry/next renewal date.
 //   2. Total Student Enrollment (across all grades)

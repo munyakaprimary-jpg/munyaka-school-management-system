@@ -765,7 +765,7 @@ export const INITIAL_SEED_DATA = {
       ]
     },
     "permissions": {
-      "SUPERADMIN": {
+      "owner": {
         "sys_config": { "read": true, "create": true, "edit": true, "delete": true },
         "academic_grading": { "read": true, "create": true, "edit": true, "delete": true },
         "student_records": { "read": true, "create": true, "edit": true, "delete": true },

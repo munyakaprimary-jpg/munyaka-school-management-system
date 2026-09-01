@@ -27,11 +27,11 @@ const CHARS = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const SEGMENT_LEN = 4;
 const NUM_SEGMENTS = 4; // MUNYAKA-2026-[AAAA]-[BBBB]-[CCCC]-[DDDD]
 
-// Roles that bypass license expiration locks. SUPERADMIN / Super Admin
+// Roles that bypass license expiration locks. The School Owner / Super Admin
 // must always be able to reach the Payment & Subscriptions / activation page
 // so they can renew the license. Without this carve-out they would be
 // locked out of the very screen they need to fix the lock.
-export const LICENSE_EXEMPT_ROLES = new Set(['SUPERADMIN', 'super_admin']);
+export const LICENSE_EXEMPT_ROLES = new Set(['owner', 'super_admin']);
 
 // Storage key for the *currently authenticated role* (string). The lock
 // screen consults this key to decide whether to render the lock gate or

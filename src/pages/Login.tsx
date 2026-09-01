@@ -57,7 +57,7 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'SUPERADMIN' | 'super_admin';
+  userRole: 'owner' | 'super_admin';
   redirectPath: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   primaryColor: 'indigo' | 'amber';
@@ -78,12 +78,12 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   },
   super_admin: {
     id: 'super_admin',
-    label: 'Super Admin',
+    label: 'Super Admin (Owner)',
     description: 'Exclusive access to Payment & Subscriptions module',
     fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
     email: 'munyakaprimary@gmail.com',
-    userName: 'Super Admin',
-    userRole: 'SUPERADMIN',
+    userName: 'School Owner',
+    userRole: 'owner',
     redirectPath: '/payment-management',
     icon: Crown,
     primaryColor: 'amber',
@@ -360,7 +360,7 @@ const Login: React.FC = () => {
               >
                 <Crown size={14} className="mr-1.5 shrink-0" />
                 <span className="hidden sm:inline">Super Admin</span>
-                <span className="sm:hidden">Admin</span>
+                <span className="sm:hidden">Owner</span>
               </TabsTrigger>
               <TabsTrigger
                 value="staff"
@@ -449,7 +449,7 @@ const Login: React.FC = () => {
                           {hasCustomAdminPassword() ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Super Admin Security
+                              Custom PIN — set via Configuration &rarr; Owner Security
                             </span>
                           ) : (
                             <>
@@ -497,7 +497,7 @@ const Login: React.FC = () => {
                     borderColor="border-amber-200"
                     featureIcons={[
                       { Icon: CreditCard, label: 'Payments' },
-                      { Icon: Crown, label: 'Admin' },
+                      { Icon: Crown, label: 'Owner' },
                       { Icon: Shield, label: 'Billing' },
                     ]}
                     hasCustomPassword={hasCustomAdminPassword()}
@@ -554,7 +554,7 @@ const Login: React.FC = () => {
                           {hasCustomAdminPassword() ? (
                             <span className="flex items-center gap-1">
                               <KeyRound size={9} />
-                              Custom PIN — set via Configuration &rarr; Super Admin Security
+                              Custom PIN — set via Configuration &rarr; Owner Security
                             </span>
                           ) : (
                             <>

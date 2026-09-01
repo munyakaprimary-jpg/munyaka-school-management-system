@@ -81,7 +81,7 @@ const MODULES = [
 ];
 
 const ROLES = [
-  { id: 'SUPERADMIN', label: 'Super Admin' },
+  { id: 'owner', label: 'Super Admin / Owner' },
   { id: 'super_admin', label: 'System Administrator' },
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
@@ -91,10 +91,10 @@ const ROLES = [
 ];
 
 const DEFAULT_AUDIT_LOGS = [
-  { timestamp: "2026-03-31 09:14:02", admin: "Super Admin", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
-  { timestamp: "2026-03-30 16:45:11", admin: "Super Admin", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-31 09:14:02", admin: "School Owner", action: "Geofence Radius Updated (150m)", ip: "192.168.1.102 (Chrome/Win)" },
+  { timestamp: "2026-03-30 16:45:11", admin: "School Owner", action: "Credentials Reset for J. Mwangi", ip: "192.168.1.102 (Chrome/Win)" },
   { timestamp: "2026-03-28 11:20:30", admin: "Head Teacher", action: "Grade Bounds Modified (Grade 4)", ip: "192.168.1.108 (Safari/Mac)" },
-  { timestamp: "2026-03-25 08:30:15", admin: "Super Admin", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
+  { timestamp: "2026-03-25 08:30:15", admin: "School Owner", action: "Idle Session Timeout set to 30m", ip: "192.168.1.102 (Chrome/Win)" }
 ];
 
 const getPasswordStrength = (pass: string) => {
@@ -118,14 +118,14 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
     MODULES.forEach(mod => {
       initialState[role.id][mod.id] = {
         read: true,
-        create: role.id === 'SUPERADMIN' || role.id === 'super_admin' || role.id === 'head_teacher',
-        edit: role.id === 'SUPERADMIN' || role.id === 'super_admin' || role.id === 'head_teacher',
-        delete: role.id === 'SUPERADMIN' || role.id === 'super_admin'
+        create: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        edit: role.id === 'owner' || role.id === 'super_admin' || role.id === 'head_teacher',
+        delete: role.id === 'owner' || role.id === 'super_admin'
       };
     });
   });
-  if (initialState['SUPERADMIN']) {
-    initialState['SUPERADMIN']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
+  if (initialState['owner']) {
+    initialState['owner']['payment_subscriptions'] = { read: true, create: true, edit: true, delete: true };
   }
   ['super_admin', 'head_teacher', 'bursar', 'teacher', 'parent', 'student'].forEach(roleId => {
     if (initialState[roleId]) {
@@ -255,7 +255,7 @@ const Settings = () => {
     ]
   });
 
-  const [expandedRole, setExpandedRole] = useState<string | null>('SUPERADMIN');
+  const [expandedRole, setExpandedRole] = useState<string | null>('owner');
   const [permissions, setPermissions] = useState<Record<string, PermissionState>>(() => buildDefaultPermissions());
 
   const [pinForm, setPinForm] = useState({
@@ -308,26 +308,26 @@ const Settings = () => {
     if (isValid) {
       const roleInfo = {
         system_admin: { label: 'System Administrator', icon: 'settings' },
-        super_admin: { label: 'Super Admin', icon: 'crown' }
+        super_admin: { label: 'Super Admin (Owner)', icon: 'crown' }
       }[role];
-
+      
       const newSession: AdminSession = {
         role,
         roleLabel: roleInfo.label,
         roleIcon: roleInfo.icon,
         timestamp: Date.now()
       };
-
+      
       setSession(newSession);
       saveSession(role, roleInfo.label, roleInfo.icon);
       setAuthPassword("");
       setIsSwitchingRole(false);
-
+      
       // Role-specific success message
       if (role === 'system_admin') {
         showSuccess(`Welcome, System Administrator! Full system access granted.`);
       } else {
-        showSuccess(`Welcome, Super Admin! Payment module unlocked.`);
+        showSuccess(`Welcome, Super Admin (Owner)! Payment module unlocked.`);
       }
     } else {
       setAuthError(`Invalid password for the selected role.`);
@@ -739,11 +739,11 @@ const Settings = () => {
                     <Crown size={24} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-bold text-slate-900">Super Admin</p>
+                    <p className="font-bold text-slate-900">Super Admin (Owner)</p>
                     <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
                   </div>
                   <Badge variant="outline" className="border-amber-200 bg-amber-50 text-amber-600 font-bold text-[10px]">
-                    PIN: superadmin2026
+                    PIN: ownerpass2026
                   </Badge>
                 </button>
               </div>
@@ -881,7 +881,7 @@ const Settings = () => {
                   <Crown size={24} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-slate-900">Super Admin</p>
+                  <p className="font-bold text-slate-900">Super Admin (Owner)</p>
                   <p className="text-xs text-slate-500">Exclusive access to Payment &amp; Subscriptions module</p>
                 </div>
                 {session.role === 'super_admin' && (
@@ -1438,7 +1438,7 @@ const Settings = () => {
                       <Crown size={18} />
                     </div>
                     <div>
-                      <p className="font-bold text-slate-900">Super Admin</p>
+                      <p className="font-bold text-slate-900">Super Admin (Owner)</p>
                       <p className="text-xs text-slate-500">Full access including payment module</p>
                     </div>
                   </div>
@@ -1449,7 +1449,7 @@ const Settings = () => {
                       if (session.role === 'super_admin') {
                         setIsPasswordModalOpen(true);
                       } else {
-                        showError("Switch to Super Admin role to update this password.");
+                        showError("Switch to Super Admin (Owner) role to update this password.");
                       }
                     }}
                     disabled={session.role !== 'super_admin'}

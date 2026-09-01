@@ -26,16 +26,16 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['SUPERADMIN', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-  { icon: Users, label: 'Learners', path: '/students', roles: ['SUPERADMIN', 'super_admin', 'head_teacher', 'teacher', 'bursar'] },
-  { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['SUPERADMIN', 'super_admin', 'head_teacher', 'teacher'] },
-  { icon: Wallet, label: 'Fees', path: '/fees', roles: ['SUPERADMIN', 'super_admin', 'head_teacher', 'bursar', 'parent'] },
-  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['SUPERADMIN', 'super_admin'] },
-  { icon: Settings, label: 'Settings', path: '/settings', roles: ['SUPERADMIN', 'super_admin', 'head_teacher'] },
-  { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['SUPERADMIN', 'super_admin', 'head_teacher'] },
-  { icon: Key, label: 'Licenses', path: '/licenses', roles: ['SUPERADMIN', 'super_admin', 'head_teacher'] },
-  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['SUPERADMIN', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-  { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['SUPERADMIN', 'super_admin', 'head_teacher'] },
+  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+  { icon: Users, label: 'Learners', path: '/students', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar'] },
+  { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['super_admin', 'head_teacher', 'teacher'] },
+  { icon: Wallet, label: 'Fees', path: '/fees', roles: ['super_admin', 'head_teacher', 'bursar', 'parent'] },
+  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
+  { icon: Settings, label: 'Settings', path: '/settings', roles: ['super_admin', 'head_teacher'] },
+  { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['super_admin', 'head_teacher'] },
+  { icon: Key, label: 'Licenses', path: '/licenses', roles: ['super_admin', 'head_teacher'] },
+  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+  { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['super_admin', 'head_teacher'] },
 ];
 
 export const BottomNavigation = () => {
