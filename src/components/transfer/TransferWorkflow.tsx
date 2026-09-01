@@ -199,56 +199,74 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   };
 
   // Auto-generate PDF after certificate mounts - with proper lifecycle handling
-  useEffect(() => {
-    if (currentStep === 'CERTIFICATE' && certificateNumber && isCertificateMounted) {
-      // Use setTimeout to ensure React has flushed the DOM and browser has painted
-      const timer = setTimeout(() => {
-        generateCertificatePdf();
-      }, 300); // 300ms delay for render + paint
-      
-      return () => clearTimeout(timer);
-    }
-  }, [currentStep, certificateNumber, isCertificateMounted]);
+  // NOTE: useEffect intentionally removed: PDF generation is now driven explicitly by
+  // handleExecuteTransfer once the certificate DOM has been confirmed mounted
+  // and the transfer has succeeded. This prevents double-generation and ensures
+  // the modal only closes after the download is complete.
 
-  const handleExecuteTransfer = async () => {
+  const handleExecuteTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+
     if (!transferData.destinationSchool?.trim()) {
       showError("Please enter the destination school or reason for transfer.");
       return;
     }
 
     if (!adminPassword.trim()) {
-      setAuthError("Admin password is required to authorize this transfer.");
+      const msg = "Admin password is required to authorize this transfer.";
+      setAuthError(msg);
+      showError(msg);
       return;
     }
 
     setIsExecuting(true);
     setAuthError("");
 
-    // Validate admin password against stored credentials
+    // ── Step 1: Authorize ────────────────────────────────────────────────
     const storedAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-    
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 800));
 
     if (adminPassword !== storedAdminPass) {
-      setAuthError("Invalid admin password. Authorization required to transfer learner.");
+      const msg = "Invalid admin password. Authorization required to transfer learner.";
+      setAuthError(msg);
+      showError(msg);
       setIsExecuting(false);
       return;
     }
 
-    // Generate certificate number
+    // ── Step 2: Execute transfer & update student state ──────────────────
     const certNum = `TRF-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`;
     setCertificateNumber(certNum);
-    
-    // Notify parent of completion (but DON'T close modal)
+
+    // Notify parent so it can update the students list / DB
     onTransferComplete(student.id, certNum);
-    
-    // Advance to Stage 2 - Certificate View
-    // PDF auto-generation will trigger via useEffect once certificate mounts
+
+    // ── Step 3: Show certificate & wait for it to mount ─────────────────
     setCurrentStep('CERTIFICATE');
+
+    // Poll until the certificate DOM node is mounted and ready
+    let retries = 20;
+    while (!certificateRef.current && retries > 0) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      retries--;
+    }
+
+    // Small extra delay to let React flush the DOM + browser paint
+    await new Promise(resolve => setTimeout(resolve, 400));
+
+    // ── Step 4: Generate PDF and trigger auto-download ──────────────────
+    const pdfSuccess = await generateCertificatePdf();
+
+    if (!pdfSuccess) {
+      // PDF failed but transfer already happened — show error, keep modal open
+      setIsExecuting(false);
+      return;
+    }
+
+    // ── Step 5: All done — close modal and notify ───────────────────────
+    showSuccess(`Transfer executed! Certificate ${certNum} downloaded.`);
     setIsExecuting(false);
-    
-    showSuccess(`Transfer executed successfully! Certificate ${certNum} generated.`);
+    onClose();
   };
 
   const handlePrintCertificate = async () => {
@@ -351,13 +369,14 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <Button variant="ghost" onClick={onClose} disabled={isExecuting} className="rounded-xl font-bold">
             Cancel
           </Button>
-          <Button 
-            onClick={handleExecuteTransfer} 
+          <Button
+            type="submit"
+            form="transfer-form"
             disabled={isExecuting || !adminPassword.trim()}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
             {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
-            Execute Transfer & Generate Clearance Certificate
+            {isExecuting ? 'Transferring & Exporting…' : 'Execute Transfer & Generate Clearance Certificate'}
           </Button>
         </>
       );
@@ -409,7 +428,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     >
       {/* Stage 1: Transfer Setup Form */}
       {currentStep === 'FORM' && (
-        <div className="space-y-6 animate-in fade-in">
+        <form id="transfer-form" onSubmit={handleExecuteTransfer} className="space-y-6 animate-in fade-in">
           {/* Student Info Header */}
           <div className="bg-indigo-50/50 border border-indigo-100 rounded-2xl p-5 flex items-center gap-4">
             <div className="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black shadow-lg">
@@ -590,7 +609,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
               )}
             </div>
           </div>
-        </div>
+        </form>
       )}
 
       {/* Stage 2: Official Clearance Certificate Preview */}
