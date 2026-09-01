@@ -330,8 +330,13 @@ const Dashboard = () => {
     user?.name,
   ]);
 
-  // Load recent activity alerts dynamically from localStorage
+  // Load recent activity alerts dynamically from localStorage.
+  // Guard: skip entirely for non-admin roles so no alert data is ever
+  // computed or stored in state for unauthorized users.
   useEffect(() => {
+    const ALLOWED_ROLES = ['admin', 'head_teacher'];
+    if (!ALLOWED_ROLES.includes((user?.role || '').toLowerCase())) return;
+
     try {
       const alerts: RecentAlert[] = [];
 
@@ -626,10 +631,18 @@ const Dashboard = () => {
   );
 
   // Roles that should see classroom operational widgets (attendance trends,
-  // recent alerts, class participation). OWNER and ICT_TEACHER are excluded.
+  // class participation). OWNER and ICT_TEACHER are excluded.
   const OPERATIONAL_ROLES = ['head_teacher', 'teacher', 'bursar'];
   const seesOperationalWidgets = useMemo(
     () => OPERATIONAL_ROLES.includes((user?.role || '').toLowerCase()),
+    [user?.role]
+  );
+
+  // Recent Alerts is visible only to ADMIN and HEADTEACHER.
+  // SUPERADMIN / OWNER / TEACHER / BURSAR / ICT_TEACHER are excluded.
+  const ALERT_VISIBLE_ROLES = ['admin', 'head_teacher'];
+  const canViewRecentAlerts = useMemo(
+    () => ALERT_VISIBLE_ROLES.includes((user?.role || '').toLowerCase()),
     [user?.role]
   );
 
@@ -754,13 +767,14 @@ const Dashboard = () => {
       )}
 
       {/* ────────────────────────────────────────────────
-          OPERATIONAL WIDGETS (Attendance Trends + Recent Alerts)
+          OPERATIONAL WIDGETS (Attendance Trends)
           Hidden for OWNER / SUPER_ADMIN / ICT_TEACHER.
           Owner sees high-level executive widgets further below instead.
+          The Recent Alerts widget has its own role gate (see below).
           ──────────────────────────────────────────────── */}
       {seesOperationalWidgets && (
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-none shadow-sm rounded-3xl bg-white overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-none shadow-sm rounded-3xl bg-white overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Attendance Trends (Weekly)</CardTitle>
             <Badge variant="outline" className={`rounded-lg font-bold ${
@@ -809,7 +823,17 @@ const Dashboard = () => {
             </ResponsiveContainer>
           </CardContent>
         </Card>
+      </div>
+      )}
 
+      {/* ────────────────────────────────────────────────
+          RECENT ALERTS — granular operational visibility
+          Surfaces cross-cutting activity (fees, registrations,
+          attendance events) only for ADMIN and HEADTEACHER.
+          SUPERADMIN / OWNER, TEACHER, BURSAR, and ICT_TEACHER
+          are explicitly excluded.
+          ──────────────────────────────────────────────── */}
+      {canViewRecentAlerts && (
         <Card className="border-none shadow-sm rounded-3xl bg-white">
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="text-lg">Recent Alerts</CardTitle>
@@ -846,7 +870,6 @@ const Dashboard = () => {
                 </div>
               )}
             </div>
-
             <div className="mt-6 pt-4 border-t border-slate-100 flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -872,7 +895,6 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
-      </div>
       )}
 
       {/* ────────────────────────────────────────────────
