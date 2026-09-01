@@ -87,19 +87,6 @@ const DEFAULT_TEACHER = {
   }
 };
 
-const DEFAULT_DEVELOPER = {
-  email: 'developer@munyaka-platform.ke',
-  password: 'dev_munyaka_2026',
-  user: {
-    id: 'developer-001',
-    name: 'Platform Developer',
-    email: 'developer@munyaka-platform.ke',
-    phone: '+254 700 000 999',
-    role: 'super_admin' as UserRole,
-    avatar: 'PD'
-  }
-};
-
 const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
@@ -157,16 +144,6 @@ const initializeUsersStorage = () => {
     ...DEFAULT_TEACHER.user,
     password: DEFAULT_TEACHER.password,
     alternativePasswords: [DEFAULT_TEACHER.password, 'munyaka5239'],
-    isActive: true,
-    emailConfirmed: true
-  };
-
-  // Ensure default platform developer account is generated & active
-  const devEmailKey = normalizeEmail(DEFAULT_DEVELOPER.email);
-  users[devEmailKey] = {
-    ...DEFAULT_DEVELOPER.user,
-    password: DEFAULT_DEVELOPER.password,
-    alternativePasswords: [DEFAULT_DEVELOPER.password],
     isActive: true,
     emailConfirmed: true
   };
