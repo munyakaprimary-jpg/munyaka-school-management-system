@@ -20,9 +20,6 @@ import {
   Users,
   CreditCard,
   ArrowRight,
-  BookOpen,
-  Calculator,
-  GraduationCap,
   Send,
   User,
   KeyRound,
@@ -582,20 +579,6 @@ const Login: React.FC = () => {
             <TabsContent value="staff" className="mt-4">
               <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
                 <CardContent className="p-6 md:p-8 space-y-6">
-                  {/* Role legend */}
-                  <div className="flex flex-wrap gap-2">
-                    {[
-                      { Icon: GraduationCap, label: 'Teacher', color: 'bg-blue-50 text-blue-700 border-blue-200' },
-                      { Icon: BookOpen, label: 'Head Teacher', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-                      { Icon: Calculator, label: 'Bursar', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-                    ].map(({ Icon: RoleIcon, label, color }) => (
-                      <div key={label} className={cn('inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[10px] font-bold border', color)}>
-                        <RoleIcon size={11} />
-                        {label}
-                      </div>
-                    ))}
-                  </div>
-
                   {staffAuthError && (
                     <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
                       <ShieldAlert size={18} className="shrink-0" />
