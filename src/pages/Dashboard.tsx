@@ -184,13 +184,13 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400 w-1/2">
               Class Name
             </th>
-            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-blue-600">
               Boys
             </th>
-            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-pink-600">
               Girls
             </th>
-            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
+            <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-red-600">
               Total
             </th>
           </tr>
@@ -206,18 +206,21 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             rows.map((row) => (
               <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
                 <td className="px-6 py-4 font-semibold text-slate-800">{row.name}</td>
+                {/* BOYS column — blue */}
                 <td className="px-6 py-4 text-right">
-                  <span className={`font-bold ${row.boys > 0 ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <span className={`font-bold ${row.boys > 0 ? 'text-blue-600' : 'text-blue-200'}`}>
                     {row.boys}
                   </span>
                 </td>
+                {/* GIRLS column — pink / magenta */}
                 <td className="px-6 py-4 text-right">
-                  <span className={`font-bold ${row.girls > 0 ? 'text-slate-700' : 'text-slate-300'}`}>
+                  <span className={`font-bold ${row.girls > 0 ? 'text-pink-600' : 'text-pink-200'}`}>
                     {row.girls}
                   </span>
                 </td>
+                {/* TOTAL column — red */}
                 <td className="px-6 py-4 text-right">
-                  <span className={`font-bold ${row.total > 0 ? 'text-indigo-600' : 'text-slate-300'}`}>
+                  <span className={`font-bold ${row.total > 0 ? 'text-red-600' : 'text-red-200'}`}>
                     {row.total}
                   </span>
                 </td>
@@ -226,18 +229,21 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
           )}
 
           {/* Grand Total Summary Row */}
-          <tr className="bg-indigo-50/70 border-t-2 border-indigo-200">
-            <td className="px-6 py-4 font-black text-indigo-900 text-sm">
+          <tr className="bg-red-50 border-t-2 border-red-200">
+            <td className="px-6 py-4 font-black text-red-700 text-sm">
               Total
             </td>
+            {/* Total Boys — blue */}
             <td className="px-6 py-4 text-right">
-              <span className="font-black text-indigo-700">{grandTotalBoys}</span>
+              <span className="font-black text-blue-700">{grandTotalBoys}</span>
             </td>
+            {/* Total Girls — pink / magenta */}
             <td className="px-6 py-4 text-right">
-              <span className="font-black text-indigo-700">{grandTotalGirls}</span>
+              <span className="font-black text-pink-700">{grandTotalGirls}</span>
             </td>
+            {/* Grand Total — red */}
             <td className="px-6 py-4 text-right">
-              <span className="font-black text-indigo-900">{grandTotal.toLocaleString()}</span>
+              <span className="font-black text-red-700">{grandTotal.toLocaleString()}</span>
             </td>
           </tr>
         </tbody>
