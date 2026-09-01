@@ -107,10 +107,29 @@ const TransferredLearnersArchive: React.FC = () => {
   // ── Load records on mount and whenever localStorage changes ────────────
   useEffect(() => {
     const load = () => {
-      const all = getArchive();
+      // ── Roster visibility guard ───────────────────────────────────────
+      // Defensive cross-check: a learner whose `id` is already present in
+      // the active `school_learners_data` roster (regardless of how that
+      // happened — restore, direct seed, etc.) must NEVER appear here.
+      // The archive is historical; if the learner is back on the active
+      // roster, they are no longer "transferred".
+      let activeIds: Set<string>;
+      try {
+        const raw = window.localStorage.getItem('school_learners_data');
+        const arr = raw ? JSON.parse(raw) : [];
+        activeIds = new Set<string>(
+          Array.isArray(arr) ? arr.map((l: { id?: string }) => l.id).filter(Boolean) : []
+        );
+      } catch {
+        activeIds = new Set();
+      }
+
+      const all = getArchive().filter((r) => !activeIds.has(r.id));
+
       const filtered = filterArchiveByYear(
         yearFilter === 'ALL' ? null : yearFilter
-      );
+      ).filter((r) => !activeIds.has(r.id));
+
       // Apply search as well
       const final = searchQuery.trim()
         ? filtered.filter((r) =>
@@ -130,9 +149,14 @@ const TransferredLearnersArchive: React.FC = () => {
       setRecords(final);
     };
     load();
-    // Listen for cross-tab updates
+    // Listen for cross-tab updates AND same-tab custom events so the
+    // archive list reflects a restore performed in the same window.
     window.addEventListener('storage', load);
-    return () => window.removeEventListener('storage', load);
+    window.addEventListener('learners_data_updated', load);
+    return () => {
+      window.removeEventListener('storage', load);
+      window.removeEventListener('learners_data_updated', load);
+    };
   }, [searchQuery, yearFilter]);
 
   const years = useMemo(() => getArchiveYears(), []);
@@ -164,11 +188,15 @@ const TransferredLearnersArchive: React.FC = () => {
         };
       }
 
-      // 2. Execute the restore with the chosen target grade/stream
+      // 2. Execute the restore with the chosen target grade/stream.
+      //    deleteArchiveEntry: true is the default — the archive row is
+      //    permanently removed from localStorage so it cannot bounce back
+      //    on a future load() call (page refresh, cross-tab sync, etc.).
       const restored = restoreLearnerToActiveRoster(
         restoreTarget.id,
         targetGrade,
-        targetStream
+        targetStream,
+        { deleteArchiveEntry: true }
       );
       if (!restored) {
         return {

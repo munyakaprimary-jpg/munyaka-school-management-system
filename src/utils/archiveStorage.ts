@@ -152,7 +152,13 @@ export function getArchiveCount(): number {
  * the archived record.
  */
 export interface RestoreOptions {
-  /** If true, permanently removes the archive entry after restoring. */
+  /**
+   * When true (the default), permanently removes the archive entry so the
+   * learner does not reappear in the archive list after a page refresh or a
+   * cross-tab storage sync. Set to false only if the archive row must be
+   * preserved for audit purposes — in that case the caller is responsible for
+   * keeping the UI in sync with the storage state.
+   */
   deleteArchiveEntry?: boolean;
 }
 
@@ -169,6 +175,8 @@ export interface RestoredLearner {
   dob?: string;
   dateOfAdmission?: string;
   birthCertificateNo?: string;
+  /** Canonical active status. Must be the exact string 'Active' (case-sensitive)
+   *  so that roster filters using `status === 'Active'` work correctly. */
   status: 'Active';
   restoredAt: string;
 }
@@ -177,7 +185,7 @@ export function restoreLearnerToActiveRoster(
   id: string,
   targetGrade?: string,
   targetStream?: string,
-  options: RestoreOptions = {}
+  options: RestoreOptions = { deleteArchiveEntry: true }
 ): RestoredLearner | null {
   const record = getArchivedLearner(id);
   if (!record) return null;
@@ -204,7 +212,8 @@ export function restoreLearnerToActiveRoster(
     restoredAt: new Date().toISOString(),
   };
 
-  // Push to the active roster
+  // Push to the active roster, overwriting any existing entry (including one
+  // that may have status === 'TRANSFERRED' from a previous transfer-out).
   try {
     const raw = window.localStorage.getItem('school_learners_data');
     const learners: RestoredLearner[] = raw ? JSON.parse(raw) : [];
@@ -226,11 +235,20 @@ export function restoreLearnerToActiveRoster(
     return null;
   }
 
-  // Optionally remove from archive
+  // ── Archive cleanup ──────────────────────────────────────────────────────
+  //
+  // By default (deleteArchiveEntry: true) the archive row is PERMANENTLY
+  // REMOVED so it will NOT bounce back into the archive list on any future
+  // load() call (page refresh, cross-tab storage sync, etc.).
+  //
+  // The archive entry is deleted BEFORE any success is returned to prevent
+  // a race condition where a concurrent storage event could re-fire load()
+  // and re-populate the table before the component's setRecords runs.
   if (options.deleteArchiveEntry) {
     deleteArchivedLearner(id);
   } else {
-    // Mark the audit trail but keep the row
+    // Only mark the audit trail — caller is responsible for keeping the
+    // component state in sync since the row stays in localStorage.
     const all = readArchive();
     const idx = all.findIndex((r) => r.id === id);
     if (idx >= 0) {
