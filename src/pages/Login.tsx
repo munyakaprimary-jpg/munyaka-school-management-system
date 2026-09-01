@@ -336,14 +336,14 @@ const Login: React.FC = () => {
                   {/* Role description card */}
                   <div className="flex items-start gap-4 p-5 bg-indigo-50 border border-indigo-100 rounded-2xl">
                     <div className="p-3 bg-indigo-100 rounded-xl text-indigo-600 shrink-0">
-                      <Settings2 size={24} />
+                      <Crown size={24} />
                     </div>
                     <div>
                       <h2 className="text-base md:text-lg font-black text-slate-900 mb-1">
-                        School Admin Access
+                        School Admin / Owner Access
                       </h2>
                       <p className="text-xs md:text-sm text-slate-600 font-medium">
-                        For school directors, school owners, head teachers, and school-level administrators. Grants full access to settings, user management, academics, fees, RBAC permissions, and security configuration.
+                        For school directors, school owners, and school-level administrators. Grants full access to settings, user management, academics, fees, RBAC permissions, and security configuration.
                       </p>
                     </div>
                   </div>
@@ -360,20 +360,20 @@ const Login: React.FC = () => {
                         <span className="font-black text-sm text-slate-900">System Administrator</span>
                       </div>
                       <p className="text-[10px] text-slate-500 font-medium pl-11">
-                        Full access: Settings, Users, Fees, Academics, RBAC, Security, School Management
+                        Full access: Settings, Users, Fees, Academics, RBAC, Security
                       </p>
                     </div>
-                    <div className="p-4 border-2 border-violet-100 rounded-2xl bg-white hover:border-violet-300 hover:shadow-md transition-all cursor-pointer"
+                    <div className="p-4 border-2 border-amber-100 rounded-2xl bg-white hover:border-amber-300 hover:shadow-md transition-all cursor-pointer"
                       onClick={() => {}}
                     >
                       <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 bg-violet-50 rounded-xl text-violet-600">
-                          <Code2 size={18} />
+                        <div className="p-2 bg-amber-50 rounded-xl text-amber-600">
+                          <CreditCard size={18} />
                         </div>
-                        <span className="font-black text-sm text-slate-900">App Developer</span>
+                        <span className="font-black text-sm text-slate-900">School Owner</span>
                       </div>
                       <p className="text-[10px] text-slate-500 font-medium pl-11">
-                        Exclusive access: Subscriptions, Billing, App Payments, License Management, Global System Maintenance
+                        Exclusive access: Payments, Subscriptions, Billing
                       </p>
                     </div>
                   </div>
@@ -438,9 +438,9 @@ const Login: React.FC = () => {
                     <User size={16} className="text-indigo-600 mt-0.5 shrink-0" />
                     <div className="text-xs text-indigo-900 font-medium leading-relaxed">
                       <p className="font-black text-[10px] uppercase tracking-widest text-indigo-700 mb-1">
-                        Default Admin Credentials
+                        Default Test Credentials
                       </p>
-                      <p>System Admin PIN: <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span></p>
+                      <p>Owner / Super Admin — PIN: <span className="font-bold">{DEFAULT_ADMIN_PASSWORD}</span></p>
                       <p className="mt-0.5">Email: <span className="font-bold">munyakaprimary@gmail.com</span></p>
                     </div>
                   </div>
