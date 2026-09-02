@@ -102,7 +102,9 @@ test("ADMIN sees Dashboard Overview with all required sections", async ({ page }
   // Class participation table
   await expect(page.getByText(/Current School Enrollment/i)).toBeVisible();
   await expect(page.getByText(/CLASS NAME/i)).toBeVisible();
-  await expect(page.getByText(/ENROLLMENT/i)).toBeVisible();
+  await expect(page.getByText(/BOYS/i)).toBeVisible();
+  await expect(page.getByText(/GIRLS/i)).toBeVisible();
+  await expect(page.getByText(/TOTAL/i)).toBeVisible();
 });
 
 test("Simulation buttons append a new alert to the Recent Alerts timeline", async ({ page }) => {

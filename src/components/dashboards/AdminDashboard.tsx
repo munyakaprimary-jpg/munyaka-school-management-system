@@ -31,6 +31,7 @@ import {
   type ActivityLogEntry,
 } from '@/services/activityLog';
 import { cn } from '@/lib/utils';
+import { CANONICAL_GRADE_NAMES_IN_ORDER } from '@/utils/gradeSort';
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 
@@ -58,7 +59,9 @@ interface AlertItem {
 
 interface ClassRow {
   name: string;
-  enrolled: number;
+  boys: number;
+  girls: number;
+  total: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -526,21 +529,45 @@ const AdminDashboard: React.FC = () => {
     return `${monthShort} ${day}, ${time}`;
   }, []);
 
-  // ── Class Participation — count active learners by grade
+  // ── School Enrollment — active learners grouped by grade (PP1 → Grade 9), with gender breakdown
   const classRows = useMemo<ClassRow[]>(() => {
     const learners = safeRead<any[]>('school_learners_data', []);
-    const grades = safeRead<any[]>('munyaka_grades', []);
-    const gradeNames: string[] = grades.length > 0
-      ? grades.map((g: any) => g.name).filter(Boolean)
-      : ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+    const isActive = (l: any) => {
+      if (!l) return false;
+      if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
+      return true;
+    };
+    const isBoy = (l: any) => {
+      const g = (l.gender || '').toLowerCase();
+      return g === 'male' || g === 'boy';
+    };
+    const isGirl = (l: any) => {
+      const g = (l.gender || '').toLowerCase();
+      return g === 'female' || g === 'girl';
+    };
 
-    return gradeNames.map((g) => {
-      const enrolled = learners.filter((l: any) => {
-        if (!l) return false;
-        if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
-        return (l.grade || '').toLowerCase() === g.toLowerCase();
-      }).length;
-      return { name: g, enrolled };
+    // Use canonical grade order (PP1 → Grade 9); unrecognised grades go at the end
+    const allGrades = new Set<string>();
+    learners.forEach((l: any) => {
+      if (!isActive(l)) return;
+      const g = (l.grade || '').trim();
+      if (g) allGrades.add(g);
+    });
+
+    const canonical = CANONICAL_GRADE_NAMES_IN_ORDER.filter((g) => allGrades.has(g));
+    const others = [...allGrades].filter(
+      (g) => !CANONICAL_GRADE_NAMES_IN_ORDER.includes(g)
+    ).sort();
+
+    const orderedGrades = [...canonical, ...others];
+
+    return orderedGrades.map((grade) => {
+      const classLearners = learners.filter((l: any) =>
+        isActive(l) && (l.grade || '').trim() === grade
+      );
+      const boys = classLearners.filter(isBoy).length;
+      const girls = classLearners.filter(isGirl).length;
+      return { name: grade, boys, girls, total: boys + girls };
     });
   }, [activityVersion]);
 
@@ -774,7 +801,7 @@ const AdminDashboard: React.FC = () => {
           <div className="mb-4">
             <h2 className="text-lg font-black text-slate-900">Current School Enrollment</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Active enrollment count by class
+              Active enrollment by class and gender — live from student records
             </p>
           </div>
 
@@ -786,15 +813,21 @@ const AdminDashboard: React.FC = () => {
                     CLASS NAME
                   </th>
                   <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    ENROLLMENT
+                    BOYS
+                  </th>
+                  <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    GIRLS
+                  </th>
+                  <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    TOTAL
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {classRows.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center text-sm text-slate-400">
-                      No classes configured yet.
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-400">
+                      No enrollment data available.
                     </td>
                   </tr>
                 ) : (
@@ -803,10 +836,14 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-4 py-3 text-sm font-semibold text-slate-700">
                         {row.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        <span className="font-semibold text-slate-700">
-                          {row.enrolled} Registered
-                        </span>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-slate-600">
+                        {row.boys}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-medium text-slate-600">
+                        {row.girls}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-bold text-slate-800">
+                        {row.total}
                       </td>
                     </tr>
                   ))
@@ -814,14 +851,18 @@ const AdminDashboard: React.FC = () => {
               </tbody>
               {classRows.length > 0 && (
                 <tfoot>
-                  <tr className="bg-slate-100 border-t-2 border-slate-200">
-                    <td className="px-4 py-3 text-sm font-black text-slate-800">
-                      Total Enrollment
+                  <tr className="bg-emerald-50 border-t-2 border-emerald-200">
+                    <td className="px-4 py-3 text-sm font-black text-emerald-800">
+                      Total
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      <span className="font-black text-slate-900">
-                        {classRows.reduce((sum, r) => sum + r.enrolled, 0)} Total Registered
-                      </span>
+                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-700">
+                      {classRows.reduce((sum, r) => sum + r.boys, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-700">
+                      {classRows.reduce((sum, r) => sum + r.girls, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-800">
+                      {classRows.reduce((sum, r) => sum + r.total, 0)}
                     </td>
                   </tr>
                 </tfoot>
