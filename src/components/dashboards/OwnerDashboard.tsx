@@ -45,8 +45,10 @@ import {
   Phone,
   RefreshCw,
   ExternalLink,
+  Settings,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { useCentralData } from '@/hooks/useCentralData';
 import {
   getActiveLicense,
@@ -330,6 +332,11 @@ const resolveLicenseInfo = (): LicenseInfo => {
  */
 const OwnerDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+
+  const handleOpenProfileSettings = () => {
+    navigate('/settings/profile');
+  };
 
   // ── Central data: live student & teacher counts ─────────────────────────────
   const { totalStudents: centralStudents, isLoading: centralLoading } = useCentralData();
@@ -693,6 +700,15 @@ const OwnerDashboard: React.FC = () => {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleOpenProfileSettings}
+            className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
+          >
+            <Settings size={14} className="mr-1.5" />
+            Profile Settings
+          </Button>
           <Button
             variant="outline"
             size="sm"

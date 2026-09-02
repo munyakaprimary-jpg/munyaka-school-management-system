@@ -134,7 +134,7 @@ const App = () => (
                 <Route path="/practical-competencies" element={<ProtectedRoute><AppUnlock><Layout><PracticalCompetencies /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/games" element={<ProtectedRoute><AppUnlock><Layout><GamesHub /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/settings/profile" element={<ProtectedRoute><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/settings/profile" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
 
                 <Route path="*" element={<NotFound />} />
               </Routes>
