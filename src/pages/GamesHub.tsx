@@ -179,6 +179,11 @@ const GamesHub = () => {
     memoryMatchesCompleted: 0,
     wordsCompleted: 0,
     sudokuPuzzlesSolved: 0,
+    bilingualBestScore: 0,
+    bilingualMatchesCompleted: 0,
+    targetMathHighScore: 0,
+    targetMathPuzzlesSolved: 0,
+    patternMemoryBestRound: 0,
   });
 
   const reloadStats = useCallback(() => {
@@ -188,6 +193,11 @@ const GamesHub = () => {
       memoryMatchesCompleted: loadMemoryMatchesCompleted(),
       wordsCompleted: loadWordWordsCompleted(),
       sudokuPuzzlesSolved: loadSudokuPuzzlesSolved(),
+      bilingualBestScore: loadBilingualBestScore(),
+      bilingualMatchesCompleted: loadBilingualMatchesCompleted(),
+      targetMathHighScore: loadTargetMathHighScore(),
+      targetMathPuzzlesSolved: loadTargetMathPuzzlesSolved(),
+      patternMemoryBestRound: loadPatternMemoryBestRound(),
     });
   }, []);
 
@@ -232,7 +242,7 @@ const GamesHub = () => {
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/80">
                 <Sparkles size={12} className="text-cyan-300" /> Modes
               </div>
-              <p className="text-2xl font-black mt-0.5">4</p>
+              <p className="text-2xl font-black mt-0.5">{GAMES.length}</p>
             </div>
           </div>
         </div>
@@ -242,7 +252,7 @@ const GamesHub = () => {
       {/* Global stats banner — always visible above the hub grid */}
       {activeGame === null && (
         <section
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 animate-in slide-in-from-top-4 fade-in duration-700"
+          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4 animate-in slide-in-from-top-4 fade-in duration-700"
           aria-label="Global game statistics"
         >
           <StatBanner
@@ -277,6 +287,22 @@ const GamesHub = () => {
             textAccent="text-sky-700 dark:text-sky-300"
             subValue={`${stats.wordsCompleted} words too`}
           />
+          <StatBanner
+            icon={<Languages size={16} className="text-teal-500" />}
+            label="Word Matches"
+            value={stats.bilingualBestScore}
+            accent="bg-teal-100 dark:bg-teal-950/40"
+            textAccent="text-teal-700 dark:text-teal-300"
+            subValue={`${stats.bilingualMatchesCompleted} rounds`}
+          />
+          <StatBanner
+            icon={<Calculator size={16} className="text-rose-500" />}
+            label="Target Math"
+            value={stats.targetMathHighScore}
+            accent="bg-rose-100 dark:bg-rose-950/40"
+            textAccent="text-rose-700 dark:text-rose-300"
+            subValue={`${stats.targetMathPuzzlesSolved} puzzles`}
+          />
         </section>
       )}
 
@@ -293,6 +319,15 @@ const GamesHub = () => {
       )}
       {activeGame === "sudoku-mini" && (
         <SudokuMini onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "bilingual-match" && (
+        <BilingualMatch onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "target-math" && (
+        <TargetMath onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "pattern-memory" && (
+        <PatternMemory onBack={() => setActiveGame(null)} />
       )}
 
       {/* Game Hub grid — shown when no game is active */}
@@ -390,6 +425,9 @@ const GamesHub = () => {
         activeGame !== "memory-match" &&
         activeGame !== "word-scramble" &&
         activeGame !== "sudoku-mini" &&
+        activeGame !== "bilingual-match" &&
+        activeGame !== "target-math" &&
+        activeGame !== "pattern-memory" &&
         selectedGame && (
           <section className="space-y-6">
             <Button
