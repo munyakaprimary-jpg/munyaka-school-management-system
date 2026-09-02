@@ -66,6 +66,10 @@ interface FeeTransaction {
   studentId?: string;
   learnerName?: string;
   studentName?: string;
+  payerName?: string;
+  invoiceTitle?: string;
+  paymentFor?: string;
+  billingPeriod?: string;
   amount: number;
   paidAt?: string;
   date?: string;
@@ -74,6 +78,8 @@ interface FeeTransaction {
   status?: string;
   category?: string;
   ref?: string;
+  mpesaReceiptNumber?: string;
+  type?: 'fee' | 'invoice' | 'subscription' | string;
 }
 
 interface FeeStructure {
@@ -124,7 +130,7 @@ interface FinancialMetrics {
 
 interface AuditRow {
   key: string;
-  type: 'fee' | 'invoice';
+  type: 'fee' | 'invoice' | 'subscription';
   label: string;
   category: string;
   method: string;
@@ -134,6 +140,9 @@ interface AuditRow {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconBg: string;
   iconColor: string;
+  paymentFor?: string;
+  billingPeriod?: string;
+  rawType?: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
