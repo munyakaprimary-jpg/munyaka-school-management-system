@@ -10,6 +10,7 @@ import { getNotices } from '@/utils/notice-board';
 import { formatRelativeTime } from '@/services/activityLog';
 import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
 import type { LucideIcon } from 'lucide-react';
+import EnrollmentTrendChart from './EnrollmentTrendChart';
 import {
   Users,
   UserCheck,
@@ -578,6 +579,14 @@ const AdminDashboard: React.FC = () => {
           value="0"
           subtitle="no critical alerts"
         />
+      </div>
+
+      {/* ── Enrollment Trend Chart ── */}
+      <div>
+        <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+          Enrollment Analytics
+        </h2>
+        <EnrollmentTrendChart />
       </div>
 
       {/* ── Administrative Management ── */}
