@@ -307,11 +307,72 @@ export function hydrateAllStores(): HydrationReport {
     }
     report.keys.push(STORAGE_KEYS.STUDENTS);
 
+    // 1b. Staff directory (from seed)
+    if (!ls.getItem(STORAGE_KEYS.STAFF) && Array.isArray(INITIAL_SEED_DATA.staff)) {
+      ls.setItem(STORAGE_KEYS.STAFF, JSON.stringify(INITIAL_SEED_DATA.staff));
+      ls.setItem('munyaka_staff', JSON.stringify(INITIAL_SEED_DATA.staff));
+      report.restoredFromSeed.push(STORAGE_KEYS.STAFF);
+    }
+    report.keys.push(STORAGE_KEYS.STAFF);
+
+    // 1c. Staff pre-registration
+    if (!ls.getItem(STORAGE_KEYS.STAFF_PREREG) && Array.isArray(INITIAL_SEED_DATA.staffPrereg)) {
+      ls.setItem(STORAGE_KEYS.STAFF_PREREG, JSON.stringify(INITIAL_SEED_DATA.staffPrereg));
+      report.restoredFromSeed.push(STORAGE_KEYS.STAFF_PREREG);
+    }
+    report.keys.push(STORAGE_KEYS.STAFF_PREREG);
+
+    // 1d. Grades / Classes
+    if (!ls.getItem(STORAGE_KEYS.GRADES) && Array.isArray(INITIAL_SEED_DATA.grades)) {
+      ls.setItem(STORAGE_KEYS.GRADES, JSON.stringify(INITIAL_SEED_DATA.grades));
+      report.restoredFromSeed.push(STORAGE_KEYS.GRADES);
+    }
+    report.keys.push(STORAGE_KEYS.GRADES);
+
+    // 1e. Exam types
+    if (!ls.getItem(STORAGE_KEYS.EXAM_TYPES) && Array.isArray(INITIAL_SEED_DATA.examTypes)) {
+      ls.setItem(STORAGE_KEYS.EXAM_TYPES, JSON.stringify(INITIAL_SEED_DATA.examTypes));
+      report.restoredFromSeed.push(STORAGE_KEYS.EXAM_TYPES);
+    }
+    report.keys.push(STORAGE_KEYS.EXAM_TYPES);
+
+    // 1f. Assessment scores
+    if (!ls.getItem(STORAGE_KEYS.ASSESSMENT_SCORES) && INITIAL_SEED_DATA.assessmentScores) {
+      ls.setItem(STORAGE_KEYS.ASSESSMENT_SCORES, JSON.stringify(INITIAL_SEED_DATA.assessmentScores));
+      report.restoredFromSeed.push(STORAGE_KEYS.ASSESSMENT_SCORES);
+    }
+    report.keys.push(STORAGE_KEYS.ASSESSMENT_SCORES);
+
+    // 1g. Library books
+    if (!ls.getItem(STORAGE_KEYS.LIBRARY_BOOKS) && Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
+      ls.setItem(STORAGE_KEYS.LIBRARY_BOOKS, JSON.stringify(INITIAL_SEED_DATA.libraryBooks));
+      report.restoredFromSeed.push(STORAGE_KEYS.LIBRARY_BOOKS);
+    }
+    report.keys.push(STORAGE_KEYS.LIBRARY_BOOKS);
+
+    // 1h. ICT assets
+    if (!ls.getItem(STORAGE_KEYS.ICT_ASSETS) && Array.isArray(INITIAL_SEED_DATA.ictAssets)) {
+      ls.setItem(STORAGE_KEYS.ICT_ASSETS, JSON.stringify(INITIAL_SEED_DATA.ictAssets));
+      report.restoredFromSeed.push(STORAGE_KEYS.ICT_ASSETS);
+    }
+    report.keys.push(STORAGE_KEYS.ICT_ASSETS);
+
+    // 1i. Attendance
+    if (!ls.getItem(STORAGE_KEYS.ATTENDANCE) && INITIAL_SEED_DATA.attendance) {
+      ls.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(INITIAL_SEED_DATA.attendance));
+      report.restoredFromSeed.push(STORAGE_KEYS.ATTENDANCE);
+    }
+    report.keys.push(STORAGE_KEYS.ATTENDANCE);
+
     // 2. CBC Learning Areas (from canonical defaults)
     const existingClusters = ls.getItem(STORAGE_KEYS.CBC_LEARNING_AREAS);
     if (!existingClusters) {
-      const defaultClusters = buildDefaultClusters();
-      ls.setItem(STORAGE_KEYS.CBC_LEARNING_AREAS, JSON.stringify(defaultClusters));
+      // Prefer the seed-defined learning areas if present, otherwise build defaults
+      const seedAreas = Array.isArray(INITIAL_SEED_DATA.learningAreas)
+        ? INITIAL_SEED_DATA.learningAreas
+        : null;
+      const value = seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
+      ls.setItem(STORAGE_KEYS.CBC_LEARNING_AREAS, JSON.stringify(value));
       report.restoredFromSeed.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
     }
     report.keys.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
