@@ -5,7 +5,10 @@
  * to the LAN server when Wi-Fi connection is available.
  */
 
-const SERVER_URL_KEY = 'munyaka_lan_server_url';
+// Primary storage key — used by LANServerConfig page
+const SERVER_URL_KEY = 'lan_server_url';
+// Legacy fallback — migrate old values on read
+const LEGACY_SERVER_URL_KEY = 'munyaka_lan_server_url';
 const SYNC_QUEUE_KEY = 'munyaka_sync_queue';
 const LAST_SYNC_KEY = 'munyaka_last_sync';
 const DEVICE_ID_KEY = 'munyaka_device_id';
@@ -38,8 +41,25 @@ export interface SyncResult {
   errors: string[];
 }
 
+/**
+ * Get the configured LAN server URL.
+ * Reads `lan_server_url` (primary). Falls back to the legacy
+ * `munyaka_lan_server_url` key and migrates it on first access.
+ */
 const getServerUrl = (): string => {
-  return localStorage.getItem(SERVER_URL_KEY) || '';
+  // Primary key first
+  const primary = localStorage.getItem(SERVER_URL_KEY);
+  if (primary) return primary;
+
+  // Legacy fallback + one-time migration
+  const legacy = localStorage.getItem(LEGACY_SERVER_URL_KEY);
+  if (legacy) {
+    localStorage.setItem(SERVER_URL_KEY, legacy);
+    localStorage.removeItem(LEGACY_SERVER_URL_KEY);
+    return legacy;
+  }
+
+  return '';
 };
 
 const getDeviceId = (): string => {

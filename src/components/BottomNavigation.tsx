@@ -13,8 +13,9 @@ import {
   Database,
   GraduationCap,
   CreditCard,
-  Server
-} from 'lucide-react';
+  Server,
+    Wifi
+  } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { UserRole } from '@/context/AuthContext';
@@ -34,6 +35,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
   { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
   { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Wifi, label: 'LAN', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin', 'head_teacher'] },
   { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },

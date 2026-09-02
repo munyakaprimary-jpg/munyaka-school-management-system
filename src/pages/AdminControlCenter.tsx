@@ -84,7 +84,7 @@ interface User {
   created_at: string;
 }
 
-const LAN_SERVER_KEY = 'munyaka_lan_server_url';
+const LAN_SERVER_KEY = 'lan_server_url';
 const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || 'http://localhost:5000';
 
 const formatUptime = (seconds: number): string => {

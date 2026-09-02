@@ -29,7 +29,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 
-const SERVER_URL_KEY = 'munyaka_lan_server_url';
+const SERVER_URL_KEY = 'lan_server_url';
 const DEVICE_ID_KEY = 'munyaka_device_id';
 const SYNC_QUEUE_KEY = 'munyaka_sync_queue';
 const LAST_SYNC_KEY = 'munyaka_last_sync';

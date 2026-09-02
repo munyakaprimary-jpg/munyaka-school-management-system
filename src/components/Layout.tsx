@@ -45,8 +45,9 @@ import {
     CreditCard,
     Archive,
     Gamepad2,
-    Server
-  } from 'lucide-react';
+        Server,
+        Wifi
+      } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
@@ -136,7 +137,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
-        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner', 'super_admin'] },
+            { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner', 'super_admin'] },
+        { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
