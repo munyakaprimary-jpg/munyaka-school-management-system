@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,12 +20,14 @@ import {
   Clock,
   ArrowRight,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
 import { useLanSync } from '@/hooks/useLanSync';
 import { formatRelativeTime } from '@/services/activityLog';
+import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -116,12 +118,25 @@ const QuickActionCard: React.FC<{
 
 // ─── LAN Sync Status Banner ───────────────────────────────────────────────────
 
-const LanSyncBanner: React.FC<{
+interface LanSyncBannerProps {
   isOnline: boolean;
   isConnected: boolean;
   serverUrl: string;
   latency: number | null;
-}> = ({ isOnline, isConnected, serverUrl, latency }) => {
+  onOpenSettings: () => void;
+  onRefresh: () => Promise<void>;
+}
+
+const LanSyncBanner: React.FC<LanSyncBannerProps> = ({
+  isOnline,
+  isConnected,
+  serverUrl,
+  latency,
+  onOpenSettings,
+  onRefresh,
+}) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
   const displayHost = useMemo(() => {
     if (!serverUrl) return 'Not configured';
     try {
@@ -150,6 +165,7 @@ const LanSyncBanner: React.FC<{
         iconColor: 'text-emerald-600',
         text: 'text-emerald-700',
         dot: 'bg-emerald-500',
+        hover: 'hover:bg-emerald-100',
       }
     : {
         ring: 'ring-amber-200',
@@ -158,11 +174,28 @@ const LanSyncBanner: React.FC<{
         iconColor: 'text-amber-600',
         text: 'text-amber-700',
         dot: 'bg-amber-500',
+        hover: 'hover:bg-amber-100',
       };
 
+  const handleRefresh = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRefreshing) return;
+
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, [isRefreshing, onRefresh]);
+
   return (
-    <Card className={`border-none shadow-sm ${accent.bg} ring-1 ${accent.ring} rounded-2xl overflow-hidden`}>
-      <CardContent className="p-4 sm:p-5">
+    <button
+      type="button"
+      onClick={onOpenSettings}
+      className={`w-full text-left border-none shadow-sm ${accent.bg} ring-1 ${accent.ring} rounded-2xl overflow-hidden cursor-pointer transition-all duration-200 active:scale-[0.99] hover:shadow-md ${accent.hover}`}
+    >
+      <div className="p-4 sm:p-5">
         <div className="flex items-center gap-4">
           <div className={`${accent.iconBg} p-3 rounded-xl shrink-0`}>
             <StatusIcon size={20} className={accent.iconColor} />
@@ -193,15 +226,25 @@ const LanSyncBanner: React.FC<{
               )}
             </div>
           </div>
-          <Badge
-            variant="outline"
-            className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 ${accent.bg} ${accent.text} hidden sm:inline-flex`}
-          >
-            {isHealthy ? 'Live' : 'Cached'}
-          </Badge>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className={`p-2 rounded-xl bg-white/70 dark:bg-slate-800/70 text-slate-500 hover:text-indigo-600 hover:bg-white transition-all active:scale-90 ${isRefreshing ? 'animate-spin' : ''}`}
+              title="Re-test connection"
+            >
+              <RefreshCw size={16} />
+            </button>
+            <Badge
+              variant="outline"
+              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 ${accent.bg} ${accent.text}`}
+            >
+              {isHealthy ? 'Live' : 'Cached'}
+            </Badge>
+          </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </button>
   );
 };
 
@@ -257,7 +300,18 @@ const NoticeItem: React.FC<{ notice: any; onClick: () => void }> = ({ notice, on
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  const { isConnected, isOnline, connectionStatus } = useLanSync();
+  const { connectionStatus } = useLanSync();
+
+  // Local state for refresh updates — synced with the global hook via subscription
+  const [localStatus, setLocalStatus] = useState(connectionStatus);
+
+  // Keep localStatus in sync with the global hook's connection status
+  useEffect(() => {
+    const unsubscribe = subscribeToConnectionStatus((status) => {
+      setLocalStatus(status);
+    });
+    return unsubscribe;
+  }, []);
 
   const today = useMemo(() => new Date(), []);
   const todayLabel = useMemo(
@@ -283,14 +337,28 @@ const TeacherDashboard: React.FC = () => {
   // Recent notices
   const recentNotices = useMemo(() => getNotices().slice(0, 5), []);
 
+  // Trigger an immediate ping against the stored LAN server URL.
+    // checkServerConnection() reads from localStorage.getItem('lan_server_url')
+    // internally, so we just need to invoke it and reflect the result.
+    const handleLanRefresh = useCallback(async () => {
+      const status = await checkServerConnection();
+      setLocalStatus(status);
+    }, []);
+
+  const handleOpenLanSettings = () => {
+    navigate('/lan-config');
+  };
+
   return (
     <div className="space-y-6 pb-10">
-      {/* ── LAN Server Sync Status Badge ── */}
+      {/* ── LAN Server Sync Status Badge (clickable) ── */}
       <LanSyncBanner
-        isOnline={isOnline}
-        isConnected={isConnected}
+        isOnline={localStatus.isOnline}
+        isConnected={localStatus.serverReachable}
         serverUrl={serverUrl}
-        latency={connectionStatus.latency}
+        latency={localStatus.latency}
+        onOpenSettings={handleOpenLanSettings}
+        onRefresh={handleLanRefresh}
       />
 
       {/* ── Quick Action Cards ── */}
