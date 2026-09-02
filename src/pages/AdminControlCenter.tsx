@@ -87,6 +87,91 @@ interface User {
 const LAN_SERVER_KEY = 'lan_server_url';
 const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || 'http://localhost:5000';
 
+/**
+ * Detect the machine's external LAN IPv4 address via a WebRTC ICE
+ * candidate gather. This works without privileged access because it
+ * only uses STUN. Falls back to null when the browser blocks WebRTC
+ * (e.g. some privacy modes) or when no candidate is gathered.
+ */
+const detectClientLanIP = (): Promise<string | null> => {
+  return new Promise((resolve) => {
+    try {
+      const pc = new RTCPeerConnection({
+        iceServers: [{ urls: 'stun:stun.l.google.com:19302' }],
+      });
+
+      pc.createDataChannel('');
+
+      const tryResolve = (ip: string) => {
+        // Reject obviously non-routable addresses
+        if (
+          ip &&
+          ip !== '0.0.0.0' &&
+          ip !== '127.0.0.1' &&
+          ip !== '255.255.255.255'
+        ) {
+          try { pc.close(); } catch {}
+          resolve(ip);
+        }
+      };
+
+      pc.onicecandidate = (e) => {
+        if (!e || !e.candidate) return;
+        const cand = e.candidate.candidate || '';
+        // ICE candidate format: "candidate:<foundation> <component> <protocol> <priority> <address> <port> ..."
+        const ipMatch = cand.match(/(\d+\.\d+\.\d+\.\d+)/);
+        if (ipMatch) {
+          tryResolve(ipMatch[1]);
+        }
+      };
+
+      // Failsafe: after 4 seconds, give up and resolve null
+      setTimeout(() => {
+        try { pc.close(); } catch {}
+        resolve(null);
+      }, 4000);
+
+      pc.createOffer({}).then((offer) => pc.setLocalDescription(offer)).catch(() => resolve(null));
+    } catch {
+      resolve(null);
+    }
+  });
+};
+
+/**
+ * The backend's `getLocalIP()` may return 127.0.0.1 / ::1 / 0.0.0.0
+ * (especially in containers or hosts without an external NIC). When this
+ * happens, the `serverInfo.url` returned by `/api/server/info` is
+ * useless for mobile clients on the LAN. This helper rewrites the URL
+ * to point at the host machine's real LAN IPv4 address when one is
+ * detectable from the browser.
+ */
+const resolveLanUrl = (
+  serverUrl: string,
+  clientLanIP: string | null
+): { url: string; isLoopback: boolean; resolved: boolean } => {
+  if (!serverUrl) return { url: 'http://localhost:5000', isLoopback: false, resolved: false };
+
+  const isLoopback =
+    serverUrl.includes('127.') ||
+    serverUrl.includes('localhost') ||
+    serverUrl.includes('0.0.0.0') ||
+    serverUrl.includes('::1');
+
+  if (!isLoopback) {
+    return { url: serverUrl, isLoopback: false, resolved: false };
+  }
+
+  if (!clientLanIP) {
+    return { url: serverUrl, isLoopback: true, resolved: false };
+  }
+
+  const portMatch = serverUrl.match(/:(\d+)/);
+  const port = portMatch ? portMatch[1] : '5000';
+  const resolvedUrl = `http://${clientLanIP}:${port}`;
+  return { url: resolvedUrl, isLoopback: true, resolved: true };
+};
+
 const formatUptime = (seconds: number): string => {
   const hours = Math.floor(seconds / 3600);
   const minutes = Math.floor((seconds % 3600) / 60);
@@ -112,25 +197,37 @@ export default function AdminControlCenter() {
   const [stats, setStats] = useState<DBStats | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [isOnline, setIsOnline] = useState<boolean>(navigator.onLine);
-  const [isLoading, setIsLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
-  const [serverUrl, setServerUrl] = useState(getServerUrl());
+    const [isLoading, setIsLoading] = useState(true);
+    const [refreshing, setRefreshing] = useState(false);
+    const [serverUrl, setServerUrl] = useState(getServerUrl());
+    const [clientLanIP, setClientLanIP] = useState<string | null>(null);
   const [editUser, setEditUser] = useState<User | null>(null);
   const [showAddUser, setShowAddUser] = useState(false);
   const [newUser, setNewUser] = useState({ name: '', email: '', phone: '', role: 'teacher', password: '', staff_id: '' });
   const [showServerSettings, setShowServerSettings] = useState(false);
 
   // Monitor online/offline status
-  useEffect(() => {
-    const handleOnline = () => setIsOnline(true);
-    const handleOffline = () => setIsOnline(false);
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-    };
-  }, []);
+    useEffect(() => {
+      const handleOnline = () => setIsOnline(true);
+      const handleOffline = () => setIsOnline(false);
+      window.addEventListener('online', handleOnline);
+      window.addEventListener('offline', handleOffline);
+      return () => {
+        window.removeEventListener('online', handleOnline);
+        window.removeEventListener('offline', handleOffline);
+      };
+    }, []);
+  
+    // Detect the host machine's external LAN IPv4 address so we can
+    // surface a routable "Server Address (for Mobile APK)" even when the
+    // backend reports 127.0.0.1 / ::1 / 0.0.0.0 (containers / no NIC).
+    useEffect(() => {
+      let cancelled = false;
+      detectClientLanIP().then((ip) => {
+        if (!cancelled) setClientLanIP(ip);
+      });
+      return () => { cancelled = true; };
+    }, []);
 
   const fetchData = useCallback(async () => {
     if (!isOnline) return;
@@ -350,42 +447,61 @@ export default function AdminControlCenter() {
           </div>
         </div>
         
-        {serverInfo && (
-          <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 space-y-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-1">Server Address (for Mobile APK)</p>
-                <p className="text-xl font-black font-mono">{serverInfo.url}</p>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => copyToClipboard(serverInfo.url)}
-                className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl"
-              >
-                <Copy className="w-4 h-4" />
-              </Button>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-white/10">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Port</p>
-                <p className="font-bold">{serverInfo.port}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Version</p>
-                <p className="font-bold">{serverInfo.version}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Uptime</p>
-                <p className="font-bold">{formatUptime(serverInfo.uptime)}</p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Connected</p>
-                <p className="font-bold">{stats?.connected_devices || 0} devices</p>
-              </div>
-            </div>
-          </div>
-        )}
+        {serverInfo && (() => {
+                  // If the backend reported a loopback / 0.0.0.0 URL (containers,
+                  // misconfigured hosts), surface the host's real LAN address so
+                  // the mobile APK has a routable target.
+                  const lan = resolveLanUrl(serverInfo.url, clientLanIP);
+                  const displayUrl = lan.url;
+                  const loopbackWarning = lan.isLoopback && !lan.resolved;
+        
+                  return (
+                    <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70 mb-1">Server Address (for Mobile APK)</p>
+                          <p className="text-xl font-black font-mono truncate">{displayUrl}</p>
+                          {lan.resolved && (
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-emerald-200 mt-1">
+                              ✓ Resolved from {serverInfo.url}
+                            </p>
+                          )}
+                          {loopbackWarning && (
+                            <p className="text-[10px] font-bold uppercase tracking-wider text-amber-200 mt-1">
+                              ⚠ Backend reported a loopback address. Manual LAN IP needed.
+                            </p>
+                          )}
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => copyToClipboard(displayUrl)}
+                          className="text-white/80 hover:text-white hover:bg-white/20 rounded-xl shrink-0"
+                        >
+                          <Copy className="w-4 h-4" />
+                        </Button>
+                      </div>
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 pt-2 border-t border-white/10">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Port</p>
+                          <p className="font-bold">{serverInfo.port}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Version</p>
+                          <p className="font-bold">{serverInfo.version}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Uptime</p>
+                          <p className="font-bold">{formatUptime(serverInfo.uptime)}</p>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-wider opacity-70">Connected</p>
+                          <p className="font-bold">{stats?.connected_devices || 0} devices</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
         
         {!serverInfo && !isLoading && (
           <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-6 text-center">
