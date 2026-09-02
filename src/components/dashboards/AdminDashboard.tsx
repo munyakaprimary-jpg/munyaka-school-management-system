@@ -44,7 +44,9 @@ interface SystemVitals {
 
 interface WeeklyAttendance {
   day: string;
-  rate: number;
+  dateStr: string;           // "YYYY-MM-DD" for identification
+  rate: number;              // 0–100; 0 means no records
+  hasRecord: boolean;        // true only when real attendance data exists for this day
 }
 
 interface AlertItem {
@@ -60,6 +62,15 @@ interface ClassRow {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const safeParseRecord = <T,>(raw: string | null): T | null => {
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return null;
+  }
+};
 
 const safeRead = <T,>(key: string, fallback: T): T => {
   try {
@@ -126,13 +137,28 @@ const VitalCard: React.FC<VitalCardProps> = ({ icon, iconBg, title, value, subti
 const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data }) => {
   const CustomTooltip: React.FC<any> = ({ active, payload }) => {
     if (active && payload && payload.length) {
+      const datum = payload[0].payload as WeeklyAttendance;
+      const dayLabel = `${datum.day} · ${datum.dateStr}`;
+      if (!datum.hasRecord) {
+        return (
+          <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 min-w-[140px]">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+              {dayLabel}
+            </p>
+            <p className="text-sm font-bold text-slate-500">No records</p>
+            <p className="text-[10px] text-slate-400 mt-0.5">
+              Register not marked for this day
+            </p>
+          </div>
+        );
+      }
       return (
-        <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 min-w-[120px]">
+        <div className="bg-white rounded-xl shadow-lg border border-slate-100 p-3 min-w-[140px]">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-            {payload[0].payload.day}
+            {dayLabel}
           </p>
           <p className="text-lg font-black text-emerald-600">
-            {payload[0].value}% Attendance
+            {datum.rate}% Attendance
           </p>
         </div>
       );
@@ -140,23 +166,52 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
     return null;
   };
 
+  // Custom bar shape with rounded top corners; uses dashed outline when
+  // the day has no record so the bar is visible but clearly "empty".
   const RoundedBar: React.FC<any> = (props) => {
-    const { x, y, width, height, fill } = props;
-    if (height <= 0) return null;
+    const { x, y, width, height, fill, payload } = props;
     const radius = 6;
+    const hasRecord: boolean = payload?.hasRecord ?? true;
+
+    if (hasRecord) {
+      if (height <= 0) return null;
+      return (
+        <g>
+          <path
+            d={`
+              M ${x},${y + height}
+              L ${x},${y + radius}
+              Q ${x},${y} ${x + radius},${y}
+              L ${x + width - radius},${y}
+              Q ${x + width},${y} ${x + width},${y + radius}
+              L ${x + width},${y + height}
+              Z
+            `}
+            fill={fill}
+          />
+        </g>
+      );
+    }
+
+    // Unrecorded day: render a hollow, dashed-outlined "empty" bar so it
+    // is visible in the chart but obviously has no data.
+    const emptyY = y + 1; // nudge to show 1px line at zero
     return (
       <g>
         <path
           d={`
-            M ${x},${y + height}
-            L ${x},${y + radius}
-            Q ${x},${y} ${x + radius},${y}
-            L ${x + width - radius},${y}
-            Q ${x + width},${y} ${x + width},${y + radius}
-            L ${x + width},${y + height}
+            M ${x},${emptyY}
+            L ${x},${emptyY - radius}
+            Q ${x},${emptyY - radius - 1} ${x + radius},${emptyY - radius - 1}
+            L ${x + width - radius},${emptyY - radius - 1}
+            Q ${x + width},${emptyY - radius - 1} ${x + width},${emptyY}
+            L ${x + width},${emptyY}
             Z
           `}
-          fill={fill}
+          fill="none"
+          stroke="#CBD5E1"
+          strokeWidth={1.5}
+          strokeDasharray="3 3"
         />
       </g>
     );
@@ -193,7 +248,11 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
             {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={index === data.length - 1 ? '#10B981' : '#86EFAC'}
+                fill={
+                  !entry.hasRecord
+                    ? 'transparent'
+                    : index === data.length - 1 ? '#10B981' : '#86EFAC'
+                }
               />
             ))}
           </Bar>
@@ -237,13 +296,98 @@ const AdminDashboard: React.FC = () => {
     };
   }, [isLoading, totalStudents, totalTeachers, todayAttendanceRate, activityVersion]);
 
-  // ── Weekly attendance — last 7 days from real logs, with deterministic mock fallback
+  // ── Weekly attendance — last 7 days, fully driven by real DB-style data
+  //   No mock percentages. If a day has no records, the bar shows 0% and
+  //   the tooltip says "No records". Formula:
+  //     rate = (present_students / total_enrolled_students) * 100
   const weeklyAttendance = useMemo<WeeklyAttendance[]>(() => {
     const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
     const today = new Date();
-    const todayIdx = (today.getDay() + 6) % 7; // make Monday = 0
-    const result: WeeklyAttendance[] = [];
+    const todayIdx = (today.getDay() + 6) % 7; // Monday = 0
 
+    // Total enrolled students (denominator) — read once
+    const learners = safeRead<any[]>('school_learners_data', []);
+    const totalEnrolled = learners.filter((l: any) => {
+      if (!l) return false;
+      if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
+      return true;
+    }).length;
+
+    // ── Aggregate present/late counts per date from all known sources
+    // Source 1: school_attendance_logs (flat array, {date, status, studentId})
+    // Source 2: munyaka_attendance_records (object keyed by class/stream/date)
+    // Source 3: per-class v2 keys (munyaka_attendance_v2_*) — morning.P / afternoon.P
+    const presentByDate: Record<string, Set<string>> = {};
+    const totalMarkedByDate: Record<string, number> = {};
+
+    const notePresent = (dateStr: string, studentId: string) => {
+      if (!dateStr || !studentId) return;
+      if (!presentByDate[dateStr]) presentByDate[dateStr] = new Set();
+      presentByDate[dateStr].add(studentId);
+    };
+    const noteMarked = (dateStr: string, count: number) => {
+      if (!dateStr) return;
+      totalMarkedByDate[dateStr] = (totalMarkedByDate[dateStr] || 0) + count;
+    };
+
+    // Source 1: school_attendance_logs
+    try {
+      const raw = localStorage.getItem('school_attendance_logs');
+      if (raw) {
+        const logs = JSON.parse(raw);
+        if (Array.isArray(logs)) {
+          for (const l of logs) {
+            if (!l?.date) continue;
+            if (l.status === 'present' || l.status === 'late') {
+              notePresent(l.date, l.studentId);
+            }
+            noteMarked(l.date, 1);
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    // Source 2: munyaka_attendance_records
+    try {
+      const raw = localStorage.getItem('munyaka_attendance_records');
+      if (raw) {
+        const records = JSON.parse(raw);
+        if (records && typeof records === 'object') {
+          for (const [, record] of Object.entries(records as Record<string, any>)) {
+            if (!record) continue;
+            const date = record.date;
+            if (!date) continue;
+            if (record.morning?.status === 'P' || record.afternoon?.status === 'P') {
+              notePresent(date, record.studentId);
+            }
+            noteMarked(date, 1);
+          }
+        }
+      }
+    } catch { /* ignore */ }
+
+    // Source 3: per-class v2 keys (munyaka_attendance_v2_*)
+    try {
+      for (const key of Object.keys(localStorage)) {
+        if (!key.startsWith('munyaka_attendance_v2_')) continue;
+        const raw = localStorage.getItem(key);
+        if (!raw) continue;
+        const record = safeParseRecord<Record<string, any>>(raw);
+        if (!record) continue;
+        for (const [, entry] of Object.entries(record)) {
+          if (!entry || typeof entry !== 'object') continue;
+          const date = entry.date;
+          if (!date) continue;
+          if (entry.morning?.status === 'P' || entry.afternoon?.status === 'P') {
+            notePresent(date, entry.studentId);
+          }
+          noteMarked(date, 1);
+        }
+      }
+    } catch { /* ignore */ }
+
+    // Build 7-day series (most recent last)
+    const result: WeeklyAttendance[] = [];
     for (let i = 6; i >= 0; i--) {
       const dayIdx = (todayIdx - i + 7) % 7;
       const d = new Date(today);
@@ -253,30 +397,22 @@ const AdminDashboard: React.FC = () => {
       const dd = String(d.getDate()).padStart(2, '0');
       const dateStr = `${yyyy}-${mm}-${dd}`;
 
-      // Try real logs
-      let rate = 0;
-      try {
-        const raw = localStorage.getItem('school_attendance_logs');
-        if (raw) {
-          const logs = JSON.parse(raw);
-          if (Array.isArray(logs)) {
-            const dayLogs = logs.filter((l: any) => l?.date === dateStr);
-            if (dayLogs.length > 0) {
-              const present = dayLogs.filter((l: any) => l?.status === 'present' || l?.status === 'late').length;
-              rate = Math.min(100, Math.round((present / dayLogs.length) * 100));
-            }
-          }
-        }
-      } catch { /* ignore */ }
+      const presentCount = presentByDate[dateStr]?.size ?? 0;
+      const markedCount = totalMarkedByDate[dateStr] ?? 0;
 
-      if (rate === 0) {
-        // Deterministic mock fallback derived from totalStudents
-        const seed = d.getDate() + d.getMonth() * 31;
-        const base = 85 + ((seed * 7) % 11); // 85-95
-        rate = Math.max(70, Math.min(98, base));
-      }
+      // hasRecord: a register was actually marked for this day.
+      // We accept the day as "recorded" if either:
+      //   (a) the per-student log shows at least one entry, OR
+      //   (b) any source flagged present/late that day.
+      const hasRecord = markedCount > 0 || presentCount > 0;
 
-      result.push({ day: days[dayIdx], rate });
+      // Formula: (present / total_enrolled) * 100
+      // If no records, rate is strictly 0% (no dummy numbers).
+      const rate = hasRecord && totalEnrolled > 0
+        ? Math.min(100, Math.round((presentCount / totalEnrolled) * 100))
+        : 0;
+
+      result.push({ day: days[dayIdx], dateStr, rate, hasRecord });
     }
 
     return result;
