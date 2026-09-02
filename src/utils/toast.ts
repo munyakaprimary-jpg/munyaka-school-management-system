@@ -30,14 +30,13 @@ export function showSuccessWithAction(
   message: string,
   actionLabel?: string,
   onAction?: () => void,
-  actionAriaLabel?: string
+  _actionAriaLabel?: string
 ) {
   if (actionLabel && onAction) {
     toast.success(message, {
       action: {
         label: actionLabel,
         onClick: onAction,
-        ariaLabel: actionAriaLabel,
       },
       duration: 10000, // Keep the toast visible longer when there's an action
     });

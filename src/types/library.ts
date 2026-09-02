@@ -5,8 +5,13 @@ export type BookAllocationStatus = 'Active' | 'Returned' | 'Overdue' | 'Lost';
 export interface Book {
   id: string;
   title: string;
+  author?: string;
   subject: string;
   grade: string;
+  /** Total copies currently held in the library (alias of totalCopies). */
+  stock?: number;
+  /** Copies currently out on loan. */
+  borrowed?: number;
   isbn: string;
   publisher: string;
   totalCopies: number;
@@ -24,12 +29,20 @@ export interface BorrowLog {
   stream?: string;
   issuedDate: string;
   dueDate: string;
+  /** Alias of returnDate kept for legacy callers. */
+  returnedDate?: string;
   status: string;
   qty_issued: number;
   qty_returned?: number;
   qty_lost?: number;
   returnDate?: string;
   condition?: string;
+  /** Convenience alias used by some views. */
+  accession_no?: string;
+  /** Optional condition snapshot recorded at issue time. */
+  condition_on_issue?: ConditionStatus;
+  /** Optional condition snapshot recorded at return time. */
+  condition_on_return?: ConditionReturnStatus;
 }
 
 export interface BookAllocation {
@@ -62,10 +75,14 @@ export function getLogBalance(
   return logOrQty - (qtyReturned + qtyLost);
 }
 
-export function getLogStatusInfo(log: BookAllocation): { label: string; color: string } {
+export function getLogStatusInfo(
+  log: BookAllocation | BorrowLog
+): { label: string; color: string } {
   const balance = getLogBalance(log.qty_issued, log.qty_returned || 0, log.qty_lost || 0);
   const todayStr = new Date().toISOString().split('T')[0];
-  const isOverdue = log.due_date < todayStr && balance > 0;
+  // Support both BookAllocation (due_date) and BorrowLog (dueDate)
+  const dueDate = 'due_date' in log ? log.due_date : log.dueDate;
+  const isOverdue = dueDate < todayStr && balance > 0;
 
   if (balance === 0) {
     if ((log.qty_lost || 0) > 0) {

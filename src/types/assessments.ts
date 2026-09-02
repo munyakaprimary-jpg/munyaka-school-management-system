@@ -7,6 +7,7 @@ export interface LearningArea {
 export interface ClusterData {
   id: string;
   name: string;
+  description?: string;
   learningAreas: LearningArea[];
 }
 

@@ -42,6 +42,7 @@ import {
   BadgeDollarSign,
   RefreshCcw,
   ShieldCheck,
+  type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -122,7 +123,7 @@ interface BillingRow {
   status: 'paid' | 'pending' | 'failed';
   /** Date the record was issued / paid */
   date: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   iconBg: string;
   iconColor: string;
   /** Raw plan name for receipt generation */
@@ -230,7 +231,7 @@ type BillingKind = 'subscription' | 'add_on' | 'renewal' | 'upgrade';
 
 interface KindPresentation {
   typeLabel: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   iconBg: string;
   iconColor: string;
 }

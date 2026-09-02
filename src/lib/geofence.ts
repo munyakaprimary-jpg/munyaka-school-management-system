@@ -112,3 +112,9 @@ export const formatDistance = (meters: number): string => {
   }
   return `${(meters / 1000).toFixed(1)} km`;
 };
+
+/** Canonical school coordinates — exported for use in attendance hooks. */
+export const SCHOOL_COORDINATES = {
+  lat: 0.5304,
+  lng: 35.3078,
+};

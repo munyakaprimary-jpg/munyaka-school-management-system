@@ -35,7 +35,7 @@ import {
 } from '@/types/academic-history';
 import { MOCK_HISTORICAL_ASSESSMENTS } from '@/lib/academic-history-data';
 import { cn } from '@/lib/utils';
-import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/Select';
+import { Select, SelectTrigger, SelectContent, SelectItem, SelectValue } from '@/components/ui/select';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 

@@ -8,6 +8,8 @@
 export interface Learner {
   id: string;
   admNo: string;
+  /** Alias for admNo — used by some result analysis views. */
+  admissionNumber?: string;
   name: string;
   grade: string;
   stream: string;
@@ -37,4 +39,14 @@ export interface Learner {
   previousSchoolClearanceRef?: string;
   /** Free-form reason captured at registration or transfer-in. */
   transferReason?: string;
+
+  // ── Optional enrichment fields used by dashboard/analysis pages ──
+  email?: string;
+  health?: string;
+  needs?: string;
+  feeBalance?: number;
+  coCurricularActivities?: string;
+  examType?: string;
+  /** Optional assessment / notes field. */
+  assessment?: string;
 }

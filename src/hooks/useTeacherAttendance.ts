@@ -15,7 +15,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
   const fetchTodayRecord = async () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('teacher_attendance')
       .select('*')
       .eq('teacher_id', user.id)
@@ -40,7 +40,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('teacher_attendance')
       .upsert({
         teacher_id: user.id,
@@ -73,7 +73,7 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       return;
     }
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('teacher_attendance')
       .update({
         departure_time: new Date().toISOString(),

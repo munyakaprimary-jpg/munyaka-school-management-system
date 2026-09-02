@@ -24,6 +24,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import type { LucideIcon } from "lucide-react";
 import SpeedMath from "@/components/games/SpeedMath";
 import MemoryMatch from "@/components/games/MemoryMatch";
 import WordScramble from "@/components/games/WordScramble";
@@ -50,7 +51,7 @@ interface Game {
   id: string;
   title: string;
   description: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   difficulty: Difficulty;
   category: string;
   accent: string; // gradient class
@@ -58,7 +59,7 @@ interface Game {
   iconBg: string;
   iconColor: string;
   stat: string;
-  statIcon: React.ComponentType<{ size?: number; className?: string }>;
+  statIcon: LucideIcon;
 }
 
 const GAMES: Game[] = [

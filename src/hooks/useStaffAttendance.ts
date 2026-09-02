@@ -13,6 +13,8 @@ const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
 export interface StaffAttendanceRecord {
   staffId: string;
   staffName: string;
+  /** Alias of staffName used by some pages. */
+  name?: string;
   role: string;
   morning?: { status: AttendanceStatus; time: string; verifiedLat?: number; verifiedLng?: number };
   afternoon?: { status: AttendanceStatus; time: string; verifiedLat?: number; verifiedLng?: number };
@@ -73,6 +75,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
         currentMaster[staff.id] = {
           staffId: staff.id,
           staffName: staff.fullName,
+          name: staff.fullName,
           role: staff.systemRole.replace('_', ' '),
           date: todayStr,
         };
@@ -160,6 +163,7 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     const staffRecord = currentMaster[user.id] || {
       staffId: user.id,
       staffName: user.name,
+      name: user.name,
       role: user.role,
       date,
     };

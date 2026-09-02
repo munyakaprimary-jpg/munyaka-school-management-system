@@ -40,6 +40,7 @@ import {
   Lock,
   ShieldCheck,
   Loader2,
+  type LucideIcon,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -839,7 +840,7 @@ const ExitProfileModal: React.FC<ExitProfileModalProps> = ({
 // ─────────────────────────────────────────────────────────────────────────
 
 const DetailItem: React.FC<{
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   label: string;
   value: string;
   mono?: boolean;

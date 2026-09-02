@@ -4,6 +4,25 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
+import type { LucideIcon } from 'lucide-react';
+
+/** Identifiers for the dashboard widgets used by the RBAC matrix. */
+export type WidgetKey =
+  | 'totalStudents'
+  | 'totalTeachers'
+  | 'todayAttendance'
+  | 'feesCollected'
+  | 'systemStatus'
+  | 'activePortalLogins'
+  | 'networkQuotas'
+  | 'labSchedule'
+  | 'subscriptionStatus'
+  | 'totalActiveEnrollment'
+  | 'renewalDate'
+  | 'myAssignedClassCount'
+  | 'myClassAttendanceRate'
+  | 'pendingMarks'
+  | 'todayLessonSchedule';
 import {
   Users,
   UserCheck,
@@ -65,7 +84,7 @@ const StatCard = ({
   value,
   subtitle,
 }: {
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   iconBg: string;
   iconColor: string;
   title: string;
@@ -89,7 +108,7 @@ const StatCard = ({
 // ─── Quick Action Card ────────────────────────────────────────────────────────
 
 const QuickActionCard: React.FC<{
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   gradient: string;
   title: string;
   description: string;

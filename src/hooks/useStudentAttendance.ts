@@ -16,7 +16,7 @@ export const useStudentAttendance = (studentId: string | null) => {
     setLoading(true);
     const targetDate = date || new Date().toISOString().split('T')[0];
     
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from('student_attendance')
       .select('*')
       .eq('student_id', studentId)
@@ -34,10 +34,10 @@ export const useStudentAttendance = (studentId: string | null) => {
     records.forEach(record => {
       const session = record.arrival_time ? 'morning' : 'afternoon';
       recordMap[record.date] = {
-        morning: record.status === 'present' || record.status === 'late' 
+        morning: record.status === 'present' || record.status === 'late'
           ? { status: record.status, time: record.arrival_time || '' }
           : undefined,
-        afternoon: record.departure_time 
+        afternoon: record.departure_time
           ? { status: record.status, time: record.departure_time }
           : undefined
       };
@@ -68,7 +68,7 @@ export const useStudentAttendance = (studentId: string | null) => {
 
     setLoading(true);
 
-    const { data: existingRecord, error: fetchError } = await supabase
+    const { data: existingRecord, error: fetchError } = await (supabase as any)
       .from('student_attendance')
       .select('*')
       .eq('student_id', studentId)
@@ -93,7 +93,7 @@ export const useStudentAttendance = (studentId: string | null) => {
         updateData.departure_time = new Date().toISOString();
       }
 
-      result = await supabase
+      result = await (supabase as any)
         .from('student_attendance')
         .update(updateData)
         .eq('id', existingRecord.id)
@@ -112,7 +112,7 @@ export const useStudentAttendance = (studentId: string | null) => {
         verified_lng: location?.lng ?? null,
       };
 
-      result = await supabase
+      result = await (supabase as any)
         .from('student_attendance')
         .insert(newRecord)
         .select()

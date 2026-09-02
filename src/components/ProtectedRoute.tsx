@@ -22,12 +22,19 @@ interface ProtectedRouteProps {
    * ADMIN is never listed here — it has unrestricted access.
    */
   blockedRoles?: string[];
+  /**
+   * Whitelist of roles that are allowed to access this route.
+   * If specified, ONLY these roles may access the route.
+   * ADMIN bypasses this check.
+   */
+  allowedRoles?: string[];
 }
 
 const ProtectedRoute = ({
   children,
   requiredPermission,
   blockedRoles = [],
+  allowedRoles,
 }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -48,6 +55,15 @@ const ProtectedRoute = ({
   // Route-level role denylist: redirect blocked roles back to dashboard.
   if (user && blockedRoles.includes(user.role)) {
     return <Navigate to="/dashboard" replace />;
+  }
+
+  // Role allowlist: if specified, only these roles may access.
+  if (allowedRoles && allowedRoles.length > 0 && user) {
+    const normalizedUserRole = user.role.toLowerCase();
+    const isAllowed = allowedRoles.some(r => r.toLowerCase() === normalizedUserRole);
+    if (!isAllowed) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // If a specific permission is required, check it

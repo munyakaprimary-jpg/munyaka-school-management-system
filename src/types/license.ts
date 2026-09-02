@@ -22,12 +22,19 @@ export interface License {
   deviceId: string;
   status: LicenseStatus;
   validityDays: ValidityDuration;
-  issuedAt: string;     // ISO date string
-  expiresAt: string;   // ISO date string
+  issuedAt: string;   // ISO date string
+  expiresAt: string;  // ISO date string
   payment: LicensePaymentDetails;
   /** Auto-renew flag — if true, system will extend on next renewal */
   autoRenew: boolean;
   notes?: string;
+
+  /** Plan tier label (e.g. "Starter", "Professional", "Enterprise"). */
+  planName?: string;
+  /** Billing cycle or type label (e.g. "Monthly", "Annual"). */
+  type?: string;
+  /** ISO timestamp of when the last payment was received. */
+  paidAt?: string;
 }
 
 // Payment method labels

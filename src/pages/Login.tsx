@@ -24,6 +24,7 @@ import {
   Mail,
   User,
   KeyRound,
+  type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
@@ -70,8 +71,9 @@ interface RoleConfig {
   userName: string;
   userRole: 'owner' | 'admin';
   redirectPath: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: LucideIcon;
   primaryColor: 'indigo' | 'amber';
+  defaultPassword: string;
 }
 
 const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
@@ -86,6 +88,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     redirectPath: '/system-management',
     icon: Settings2,
     primaryColor: 'indigo',
+    defaultPassword: DEFAULT_ADMIN_PASSWORD,
   },
   owner: {
     id: 'owner',
@@ -98,6 +101,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     redirectPath: '/dashboard',
     icon: Crown,
     primaryColor: 'amber',
+    defaultPassword: 'ownerpass2026',
   },
 };
 
@@ -117,7 +121,7 @@ interface RoleCardProps {
   bgColor: string;
   textColor: string;
   borderColor: string;
-  featureIcons: { Icon: React.ComponentType<{ size?: number }>; label: string }[];
+  featureIcons: { Icon: LucideIcon; label: string }[];
   /** Whether a custom PIN has been set for this role. */
   hasCustomPassword: boolean;
 }

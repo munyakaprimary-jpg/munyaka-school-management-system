@@ -16,15 +16,15 @@ interface StaffAttendanceProps {
 
 const StaffAttendance = ({ staffId, staffName }: StaffAttendanceProps) => {
   const { location, accuracy, error, isLoading: geoLoading } = useGeolocation();
-  const { attendanceRecords, loading, markAttendance, getAttendanceForDate } = useStaffAttendance(location);
+  const { personalRecords, loading, selfMarkAttendance } = useStaffAttendance(location);
   const [isExporting, setIsExporting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
   const currentDate = format(new Date(), "yyyy-MM-dd");
-  const attendanceData = getAttendanceForDate(currentDate);
+  const attendanceData = personalRecords[currentDate] || {};
 
-  const handleMarkAttendance = async (session: 'morning' | 'afternoon', status: string) => {
-    const success = await markAttendance(currentDate, session, status);
+  const handleMarkAttendance = async (session: 'morning' | 'afternoon', status: any) => {
+    const success = await selfMarkAttendance(session, status, currentDate);
     if (success) {
       setIsEditing(false);
     }
