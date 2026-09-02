@@ -136,89 +136,95 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-    if (!user) return [];
-    const role = user.role ?? '';
-    const roleLower = role.toLowerCase();
-
-    // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
-    // The Dashboard item is the single navigation entry point that routes
-    // to the user's role-specific view (/).  It must appear regardless of
-    // role so the owner always has a way to reach OwnerDashboard.
-    // The remaining items are then filtered by role below.
-    const dashboardItem = menuItems.find(item => item.path === '/');
-
-    // ADMIN always sees every sidebar item.
-            if (roleLower === 'admin') {
-          return menuItems.filter(item => {
-            if (item.requiresPermission) return canAccessSystemManagement();
-            return true;
-          });
-        }
-
-    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-    // Central Data + Profile Settings, plus global items (Games Hub).
-    if (roleLower === 'owner') {
-      const roleFiltered = menuItems.filter(item => {
-        if (item.global) return true;
-        if (item.requiresPermission) return canAccessSystemManagement();
-        return item.roles.map(r => r.toLowerCase()).includes('owner');
-      });
-      // Ensure Dashboard is always present.
-      const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
-        ? [dashboardItem, ...roleFiltered]
-        : roleFiltered;
-      // Enforce the explicit owner render order:
-      //   1. Dashboard
-      //   2. Payment & Subscriptions
-      //   3. Central Data & APK
-      //   4. Games Hub (global)
-      //   5. Profile Settings
-      const order = [
-        '/',                       // Dashboard
-        '/payment-management',     // Payment & Subscriptions
-        '/central-data',           // Central Data & APK
-        '/games',                  // Games Hub (global)
-        '/settings/profile',       // Profile Settings
-      ];
-      const ordered: typeof withDashboard = [];
-      order.forEach(p => {
-        const found = withDashboard.find((i: any) => i.path === p);
-        if (found) ordered.push(found);
-      });
-      // Append anything that wasn't in the explicit order (defensive).
-      withDashboard.forEach((i: any) => {
-        if (!ordered.includes(i)) ordered.push(i);
-      });
-      return ordered;
-    }
-
-    // For teacher role, show "Teacher's Dashboard" label
-    if (roleLower === 'teacher') {
-      return menuItems.filter(item => {
-        if (item.global) return true;
-        if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-        if (item.requiresPermission) return canAccessSystemManagement();
-        return true;
-      }).map(item => {
-        if (item.path === '/') {
-          return { ...item, label: "Teacher's Dashboard" };
-        }
-        return item;
-      });
-    }
-
-    return menuItems.filter(item => {
-      // Global items are visible to every authenticated user.
-      if (item.global) return true;
-      // Check if user has the required role
-      if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-      // Check if item requires a specific permission
-      if (item.requiresPermission) {
-        return canAccessSystemManagement();
+      if (!user) return [];
+      const role = user.role ?? '';
+      const roleLower = role.toLowerCase();
+  
+      // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
+      // The Dashboard item is the single navigation entry point that routes
+      // to the user's role-specific view (/).  It must appear regardless of
+      // role so the owner always has a way to reach OwnerDashboard.
+      // The remaining items are then filtered by role below.
+      const dashboardItem = menuItems.find(item => item.path === '/');
+  
+      // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
+      // always sees every sidebar item.
+      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
+              if (isAdminRole) {
+            return menuItems.filter(item => {
+              if (item.requiresPermission) return canAccessSystemManagement();
+              return true;
+            });
+          }
+  
+      // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+      // Central Data + Profile Settings, plus global items (Games Hub).
+      if (roleLower === 'owner') {
+        const roleFiltered = menuItems.filter(item => {
+          if (item.global) return true;
+          if (item.requiresPermission) return canAccessSystemManagement();
+          return item.roles.map(r => r.toLowerCase()).includes('owner');
+        });
+        // Ensure Dashboard is always present.
+        const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
+          ? [dashboardItem, ...roleFiltered]
+          : roleFiltered;
+        // Enforce the explicit owner render order:
+        //   1. Dashboard
+        //   2. Payment & Subscriptions
+        //   3. Central Data & APK
+        //   4. Games Hub (global)
+        //   5. Profile Settings
+        const order = [
+          '/',                       // Dashboard
+          '/payment-management',     // Payment & Subscriptions
+          '/central-data',           // Central Data & APK
+          '/games',                  // Games Hub (global)
+          '/settings/profile',       // Profile Settings
+        ];
+        const ordered: typeof withDashboard = [];
+        order.forEach(p => {
+          const found = withDashboard.find((i: any) => i.path === p);
+          if (found) ordered.push(found);
+        });
+        // Append anything that wasn't in the explicit order (defensive).
+        withDashboard.forEach((i: any) => {
+          if (!ordered.includes(i)) ordered.push(i);
+        });
+        return ordered;
       }
-      return true;
-    });
-  }, [user?.role, canAccessSystemManagement]);
+  
+      // For teacher role, show "Teacher's Dashboard" label
+      if (roleLower === 'teacher') {
+        return menuItems.filter(item => {
+          if (item.global) return true;
+          if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+          if (item.requiresPermission) return canAccessSystemManagement();
+          return true;
+        }).map(item => {
+          if (item.path === '/') {
+            return { ...item, label: "Teacher's Dashboard" };
+          }
+          return item;
+        });
+      }
+  
+      return menuItems.filter(item => {
+        // Global items are visible to every authenticated user.
+        if (item.global) return true;
+        // Check if user has the required role.  Match either the literal role
+        // or the legacy "super_admin" alias so persisted sessions keep working.
+        const itemRoles = item.roles.map(r => r.toLowerCase());
+        const roleMatches = itemRoles.includes(roleLower) ||
+          (roleLower === 'super_admin' && itemRoles.includes('admin'));
+        if (!roleMatches) return false;
+        // Check if item requires a specific permission
+        if (item.requiresPermission) {
+          return canAccessSystemManagement();
+        }
+        return true;
+      });
+    }, [user?.role, canAccessSystemManagement]);
 
   // OWNER is BILLING-ONLY: gets Dashboard, Payments, Central Data, Profile Settings,
   //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
@@ -235,10 +241,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {
-      if (!user) return false;
-      if (item.global) return true;
-      return item.roles.includes(user.role);
-    });
+          if (!user) return false;
+          if (item.global) return true;
+          const roleLower = user.role?.toLowerCase() ?? '';
+          // Treat super_admin as admin for bottom-nav role matching
+          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
+          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
+        });
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
@@ -285,7 +294,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           })}
           {(() => {
             const r = (user?.role ?? '').toLowerCase();
-            const seesLab = ['admin', 'head_teacher', 'teacher'].includes(r);
+                        // Treat super_admin as admin for Science Lab visibility
+                        const effectiveLabRole = r === 'super_admin' ? 'admin' : r;
+                        const seesLab = ['admin', 'head_teacher', 'teacher'].includes(effectiveLabRole);
             if (!seesLab) return null;
             return (
               <Link to="/science-lab" onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group ${location.pathname === '/science-lab' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"}`}>

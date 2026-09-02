@@ -178,40 +178,41 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     };
 
   const filteredMenu = menuItems.filter(item => {
-    if (!user) return false;
-    const role = user.role ?? '';
-    const roleLower = role.toLowerCase();
-
-    // Global items are visible to every authenticated user.
-    if (item.global) return true;
-
-    // ADMIN always sees every sidebar item.
-        if (roleLower === 'admin') {
-      if (item.requiresPermission) return canAccessSystemManagement();
+      if (!user) return false;
+      const role = user.role ?? '';
+      const roleLower = role.toLowerCase();
+  
+      // Global items are visible to every authenticated user.
+      if (item.global) return true;
+  
+      // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item.
+      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
+          if (isAdminRole) {
+        if (item.requiresPermission) return canAccessSystemManagement();
+        return true;
+      }
+  
+      // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+      // Central Data, plus global items (Games Hub).
+      if (roleLower === 'owner') {
+        if (item.requiresPermission) return canAccessSystemManagement();
+        return item.roles.map(r => r.toLowerCase()).includes('owner');
+      }
+  
+      // Check if user has the required role
+      if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+  
+      // Route-level denylist guard
+      const blocked = BLOCKED_ROUTES[item.path];
+      if (blocked && blocked.includes(role)) return false;
+  
+      // Check if item requires a specific permission
+      if (item.requiresPermission) {
+        // ICT_TEACHER and ICT_TECHNICIAN checked via permission hook
+        return canAccessSystemManagement();
+      }
       return true;
-    }
-
-    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-    // Central Data, plus global items (Games Hub).
-    if (roleLower === 'owner') {
-      if (item.requiresPermission) return canAccessSystemManagement();
-      return item.roles.map(r => r.toLowerCase()).includes('owner');
-    }
-
-    // Check if user has the required role
-    if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-
-    // Route-level denylist guard
-    const blocked = BLOCKED_ROUTES[item.path];
-    if (blocked && blocked.includes(role)) return false;
-
-    // Check if item requires a specific permission
-    if (item.requiresPermission) {
-      // ICT_TEACHER and ICT_TECHNICIAN checked via permission hook
-      return canAccessSystemManagement();
-    }
-    return true;
-  });
+    });
 
   // ── Dashboard enforcement for the OWNER role ───────────────────────────────
   // Guarantee that the owner always sees Dashboard as the first menu item,
@@ -243,10 +244,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {
-      if (!user) return false;
-      if (item.global) return true;
-      return item.roles.includes(user.role);
-    });
+          if (!user) return false;
+          if (item.global) return true;
+          const roleLower = user.role?.toLowerCase() ?? '';
+          // Treat super_admin as admin for bottom-nav role matching
+          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
+          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
+        });
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>

@@ -94,6 +94,8 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
     case 'owner':
       return 'owner';
+    // Normalize legacy identifiers to the canonical 'admin' role.
+    case 'super_admin':
     case 'support_admin':
     case 'admin':
       return 'admin';
@@ -212,13 +214,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     initializeUsersStorage();
     
     const savedUser = localStorage.getItem('munyaka_session');
-    if (savedUser) {
-      try {
-        const parsed = JSON.parse(savedUser) as User;
-        setUser(parsed);
-        // Re-sync the role key on app boot so the lock gate always
-        // agrees with the active session.
-        persistCurrentAuthRole(parsed.role);
+        if (savedUser) {
+          try {
+            const parsed = JSON.parse(savedUser) as User;
+            // Normalize legacy role identifiers so persisted sessions work correctly.
+            if ((parsed.role as string) === 'super_admin') parsed.role = 'admin' as UserRole;
+            setUser(parsed);
+            // Re-sync the role key on app boot so the lock gate always
+            // agrees with the active session.
+            persistCurrentAuthRole(parsed.role);
       } catch {
         persistCurrentAuthRole(null);
       }
