@@ -57,7 +57,6 @@ import ProfileSettings from "./pages/ProfileSettings";
 import AdminControlCenter from "./pages/AdminControlCenter";
 import MobileSettings from "./pages/MobileSettings";
 import LANServerConfig from "./pages/LANServerConfig";
-import AdminDashboard from "./pages/AdminDashboard";
 
 const queryClient = new QueryClient();
 
@@ -95,7 +94,6 @@ const App = () => (
                 {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
                 <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/admin-dashboard" element={<ProtectedRoute blockedRoles={['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student']}><AppUnlock><Layout><AdminDashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
