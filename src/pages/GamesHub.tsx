@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useCallback } from "react";
 import {
   Gamepad2,
   Zap,
@@ -14,6 +14,10 @@ import {
   Flame,
   Puzzle,
   Lock,
+  Target,
+  BrainCircuit,
+  BarChart3,
+  Zap as ZapIcon,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +26,13 @@ import SpeedMath from "@/components/games/SpeedMath";
 import MemoryMatch from "@/components/games/MemoryMatch";
 import WordScramble from "@/components/games/WordScramble";
 import SudokuMini from "@/components/games/SudokuMini";
+import {
+  loadMeta,
+  getHighScore,
+  loadMemoryMatchesCompleted,
+  loadWordWordsCompleted,
+  loadSudokuPuzzlesSolved,
+} from "@/lib/gameStats";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 
@@ -109,6 +120,30 @@ const GamesHub = () => {
   // Toggles between the main Games Hub grid (null) and an individual game view.
   const [activeGame, setActiveGame] = useState<string | null>(null);
 
+  // Persisted stats — reloaded whenever the user returns to the hub.
+  const [stats, setStats] = useState({
+    totalGamesPlayed: 0,
+    topMathScore: 0,
+    memoryMatchesCompleted: 0,
+    wordsCompleted: 0,
+    sudokuPuzzlesSolved: 0,
+  });
+
+  const reloadStats = useCallback(() => {
+    setStats({
+      totalGamesPlayed: loadMeta().totalGamesPlayed,
+      topMathScore: getHighScore("speed-math"),
+      memoryMatchesCompleted: loadMemoryMatchesCompleted(),
+      wordsCompleted: loadWordWordsCompleted(),
+      sudokuPuzzlesSolved: loadSudokuPuzzlesSolved(),
+    });
+  }, []);
+
+  // Reload stats every time the hub becomes active (i.e., user returns from a game).
+  React.useEffect(() => {
+    if (activeGame === null) reloadStats();
+  }, [activeGame, reloadStats]);
+
   const selectedGame = GAMES.find((g) => g.id === activeGame) ?? null;
 
   return (
@@ -152,6 +187,48 @@ const GamesHub = () => {
       </header>
 
       {/* ── Conditional View ───────────────────────────────────────── */}
+      {/* Global stats banner — always visible above the hub grid */}
+      {activeGame === null && (
+        <section
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 animate-in slide-in-from-top-4 fade-in duration-700"
+          aria-label="Global game statistics"
+        >
+          <StatBanner
+            icon={<BarChart3 size={16} className="text-indigo-500" />}
+            label="Games Played"
+            value={stats.totalGamesPlayed}
+            accent="bg-indigo-100 dark:bg-indigo-950/40"
+            textAccent="text-indigo-700 dark:text-indigo-300"
+            subValue="across all titles"
+          />
+          <StatBanner
+            icon={<ZapIcon size={16} className="text-amber-500" />}
+            label="Top Math Score"
+            value={stats.topMathScore}
+            accent="bg-amber-100 dark:bg-amber-950/40"
+            textAccent="text-amber-700 dark:text-amber-300"
+            subValue="best of all time"
+          />
+          <StatBanner
+            icon={<BrainCircuit size={16} className="text-violet-500" />}
+            label="Memory Matches"
+            value={stats.memoryMatchesCompleted}
+            accent="bg-violet-100 dark:bg-violet-950/40"
+            textAccent="text-violet-700 dark:text-violet-300"
+            subValue="puzzles completed"
+          />
+          <StatBanner
+            icon={<Target size={16} className="text-sky-500" />}
+            label="Sudoku Solved"
+            value={stats.sudokuPuzzlesSolved}
+            accent="bg-sky-100 dark:bg-sky-950/40"
+            textAccent="text-sky-700 dark:text-sky-300"
+            subValue={`${stats.wordsCompleted} words too`}
+          />
+        </section>
+      )}
+
+
       {/* Individual game views */}
       {activeGame === "speed-math-blitz" && (
         <SpeedMath onBack={() => setActiveGame(null)} />
@@ -311,3 +388,41 @@ const GamesHub = () => {
 };
 
 export default GamesHub;
+
+interface StatBannerProps {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  accent: string;
+  textAccent: string;
+  subValue?: string;
+}
+
+const StatBanner: React.FC<StatBannerProps> = ({
+  icon,
+  label,
+  value,
+  accent,
+  textAccent,
+  subValue,
+}) => (
+  <div className="group relative overflow-hidden rounded-2xl border border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900 p-4 shadow-sm hover:shadow-md transition-all duration-300">
+    <div
+      className={`absolute top-0 right-0 w-20 h-20 ${accent} rounded-full blur-2xl opacity-50 group-hover:opacity-80 transition-opacity`}
+    />
+    <div className="relative space-y-1">
+      <div className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest text-slate-400">
+        {icon}
+        {label}
+      </div>
+      <div className={`text-3xl sm:text-4xl font-black tabular-nums ${textAccent}`}>
+        {value.toLocaleString()}
+      </div>
+      {subValue && (
+        <div className="text-[10px] font-bold text-slate-400 mt-0.5">
+          {subValue}
+        </div>
+      )}
+    </div>
+  </div>
+);

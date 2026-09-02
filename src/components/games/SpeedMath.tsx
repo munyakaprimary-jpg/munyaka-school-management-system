@@ -19,6 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  KEYS,
+  loadMeta,
+  getHighScore,
+  setHighScore,
+  saveSpeedMathBestStreak,
+  incrementGamesPlayed,
+} from "@/lib/gameStats";
 
 type Operator = "+" | "-" | "*";
 type Feedback = "idle" | "correct" | "wrong";
@@ -31,7 +39,6 @@ interface Problem {
 }
 
 const GAME_DURATION = 60; // seconds
-const HIGH_SCORE_KEY = "munyaka:games:speed-math:high-score";
 
 const buildProblem = (): Problem => {
   const ops: Operator[] = ["+", "-", "*"];
@@ -68,13 +75,7 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
   const [secondsLeft, setSecondsLeft] = useState(GAME_DURATION);
   const [isRunning, setIsRunning] = useState(false);
   const [isOver, setIsOver] = useState(false);
-  const [highScore, setHighScore] = useState<number>(() => {
-    try {
-      return parseInt(localStorage.getItem(HIGH_SCORE_KEY) ?? "0", 10) || 0;
-    } catch {
-      return 0;
-    }
-  });
+  const [highScore, setHighScoreState] = useState<number>(() => getHighScore("speed-math"));
   const [shake, setShake] = useState(false);
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -100,13 +101,12 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
 
   // Persist high score on game over
   useEffect(() => {
-    if (isOver && score > highScore) {
-      try {
-        localStorage.setItem(HIGH_SCORE_KEY, String(score));
-        setHighScore(score);
-      } catch {
-        // ignore quota / privacy errors
+    if (isOver) {
+      if (score > highScore) {
+        setHighScore("speed-math", score);
+        setHighScoreState(score);
       }
+      saveSpeedMathBestStreak(bestStreak);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOver]);
@@ -124,6 +124,7 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
     correctCountRef.current = 0;
     totalAnsweredRef.current = 0;
     setIsRunning(true);
+    incrementGamesPlayed();
   }, []);
 
   const submit = useCallback(() => {
@@ -191,7 +192,7 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
       : "text-slate-700 dark:text-slate-200";
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <Button

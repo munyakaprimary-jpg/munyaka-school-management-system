@@ -15,6 +15,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  saveSudokuSolved,
+  incrementGamesPlayed,
+} from "@/lib/gameStats";
 
 // ─── Mini Sudoku generation ─────────────────────────────────────────────────
 // 4×4 Mini Sudoku uses numbers 1–4. Each row, column, and 2×2 block must be
@@ -210,6 +214,7 @@ const SudokuMini: React.FC<SudokuMiniProps> = ({ onBack }) => {
         if (checkWin(next)) {
           setCompleted(true);
           setPhase("done");
+          saveSudokuSolved();
         }
       } else {
         setErrors(new Set());
@@ -232,6 +237,7 @@ const SudokuMini: React.FC<SudokuMiniProps> = ({ onBack }) => {
     setErrors(new Set());
     setCompleted(false);
     setPhase("playing");
+    incrementGamesPlayed();
   }, []);
 
   // ── Derived state ──────────────────────────────────────────────
@@ -241,7 +247,7 @@ const SudokuMini: React.FC<SudokuMiniProps> = ({ onBack }) => {
   );
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <Button

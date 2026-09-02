@@ -13,6 +13,8 @@ import {
   Trophy,
   Sparkles,
   RotateCcw,
+  Clock,
+  Zap,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +24,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  saveMemoryResult,
+  incrementGamesPlayed,
+} from "@/lib/gameStats";
 
 type CardSymbol = {
   id: string;
@@ -86,6 +92,8 @@ const MemoryMatch: React.FC<MemoryMatchProps> = ({ onBack }) => {
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const checkingRef = useRef(false);
+  const movesRef = useRef(0);
+  const elapsedRef = useRef(0);
 
   // ── Timer ─────────────────────────────────────────────────────
   const clearTimer = useCallback(() => {
@@ -120,6 +128,7 @@ const MemoryMatch: React.FC<MemoryMatchProps> = ({ onBack }) => {
     setElapsed(0);
     setPhase("playing");
     startTimer();
+    incrementGamesPlayed();
   }, [clearTimer, startTimer]);
 
   // ── Card flip logic ───────────────────────────────────────────
@@ -172,10 +181,16 @@ const MemoryMatch: React.FC<MemoryMatchProps> = ({ onBack }) => {
     [phase, selected, deck]
   );
 
+  // Keep refs in sync with state
+  useEffect(() => { movesRef.current = moves; }, [moves]);
+  useEffect(() => { elapsedRef.current = elapsed; }, [elapsed]);
+
   // Check for completion
   useEffect(() => {
     if (phase === "playing" && deck.length > 0 && deck.every((c) => c.matched)) {
       setPhase("completed");
+      // Use refs to avoid stale closure values
+      saveMemoryResult(elapsedRef.current, movesRef.current);
     }
   }, [phase, deck]);
 
@@ -189,7 +204,7 @@ const MemoryMatch: React.FC<MemoryMatchProps> = ({ onBack }) => {
   const stars = moves <= 12 ? 3 : moves <= 20 ? 2 : 1;
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500">
+    <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-500">
       {/* ── Header ───────────────────────────────────────────── */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <Button
