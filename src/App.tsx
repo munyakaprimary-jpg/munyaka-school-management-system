@@ -55,7 +55,6 @@ import GamesHub from "./pages/GamesHub";
 import AppUnlock from "./components/AppUnlock";
 import ProfileSettings from "./pages/ProfileSettings";
 import AdminControlCenter from "./pages/AdminControlCenter";
-import SystemAdminDashboardPage from "./pages/SystemAdminDashboardPage";
 import MobileSettings from "./pages/MobileSettings";
 import LANServerConfig from "./pages/LANServerConfig";
 
@@ -96,8 +95,6 @@ const App = () => (
                 <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
-                {/* System Admin Dashboard — dedicated route for 'admin' role, explicitly blocks 'owner' */}
-                <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} blockedRoles={['owner']}><AppUnlock><Layout><SystemAdminDashboardPage /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students" element={<ProtectedRoute><AppUnlock><Layout><Students /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/learners/archive" element={<ProtectedRoute><AppUnlock><Layout><TransferredLearnersArchive /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/students/:id" element={<ProtectedRoute><AppUnlock><Layout><StudentProfile /></Layout></AppUnlock></ProtectedRoute>} />
@@ -141,7 +138,7 @@ const App = () => (
                 <Route path="/science-lab" element={<ProtectedRoute><AppUnlock><Layout><ScienceLab /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/games" element={<ProtectedRoute><AppUnlock><Layout><GamesHub /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/settings/profile" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                                <Route path="/admin/control-center" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']} blockedRoles={['owner']}><AppUnlock><Layout><AdminControlCenter /></Layout></AppUnlock></ProtectedRoute>} />
+                                <Route path="/admin/control-center" element={<ProtectedRoute allowedRoles={['admin', 'super_admin']}><AppUnlock><Layout><AdminControlCenter /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/mobile/settings" element={<ProtectedRoute><AppUnlock><Layout><MobileSettings /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/lan-config" element={<ProtectedRoute><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
                 

@@ -22,21 +22,12 @@ interface ProtectedRouteProps {
    * ADMIN is never listed here — it has unrestricted access.
    */
   blockedRoles?: string[];
-  /**
-   * If provided, ONLY the listed roles may access this route. This is
-   * evaluated BEFORE blockedRoles and applies even to admin role — it
-   * is the most restrictive gate. Use it to lock a route to one role
-   * family, e.g. allowedRoles={['admin', 'super_admin']} to keep the
-   * owner out of an operational-only page.
-   */
-  allowedRoles?: string[];
 }
 
 const ProtectedRoute = ({
   children,
   requiredPermission,
   blockedRoles = [],
-  allowedRoles,
 }: ProtectedRouteProps) => {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { hasPermission } = usePermissions();
@@ -52,16 +43,6 @@ const ProtectedRoute = ({
 
   if (!isAuthenticated) {
     return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  // Route-level allowlist: redirect disallowed roles back to dashboard.
-  // Strict: even admin must be in the list if the list is provided.
-  if (user && allowedRoles && allowedRoles.length > 0) {
-    const userRoleLower = (user.role || '').toLowerCase();
-    const allowedLower = allowedRoles.map(r => r.toLowerCase());
-    if (!allowedLower.includes(userRoleLower)) {
-      return <Navigate to="/dashboard" replace />;
-    }
   }
 
   // Route-level role denylist: redirect blocked roles back to dashboard.

@@ -79,8 +79,8 @@ const signInAsAdmin = async (page: import("@playwright/test").Page) => {
   await passwordInput.fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: /^Sign In$/i }).click();
 
-  // super_admin lands on /admin-dashboard after sign-in (redirected from /dashboard)
-  await page.waitForURL("**/admin-dashboard", { timeout: 10_000 });
+  // super_admin lands on /dashboard after sign-in
+  await page.waitForURL("**/dashboard", { timeout: 10_000 });
 };
 
 test("ADMIN sees Dashboard Overview with all required sections", async ({ page }) => {
@@ -88,19 +88,13 @@ test("ADMIN sees Dashboard Overview with all required sections", async ({ page }
   await seedAdminData(page);
   await page.reload();
 
-  // System Administrator Dashboard heading
-  await expect(page.getByRole("heading", { name: /System Administrator Dashboard/i })).toBeVisible();
+  // Dashboard page title for admin
+  await expect(page.getByRole("heading", { name: /Dashboard/i })).toBeVisible();
 
   // System vitals section renders
   await expect(page.getByText(/Total Students/i)).toBeVisible();
   await expect(page.getByText(/Total Teachers/i)).toBeVisible();
   await expect(page.getByText(/Fees Collected/i)).toBeVisible();
-
-  // Admin-specific sections are visible
-  await expect(page.getByText(/Quick Actions/i)).toBeVisible();
-  await expect(page.getByText(/System Alerts/i)).toBeVisible();
-  await expect(page.getByText(/Connected Devices/i)).toBeVisible();
-  await expect(page.getByText(/LAN Server Status/i)).toBeVisible();
 });
 
 test("OWNER is redirected to Owner Dashboard and does NOT see admin operational sections", async ({ page }) => {

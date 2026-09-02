@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 import {
   Users,
@@ -526,36 +526,28 @@ const AdminDashboard: React.FC = () => {
  * Top-level Dashboard component.
  *
  * Reads the current user's role and renders the role-specific view:
- *   • owner    → OwnerDashboard (billing & subscription executive view)
- *   • teacher  → TeacherDashboard (quick actions + LAN sync + notices)
- *   • admin    → Redirects to /admin-dashboard (System Admin Dashboard)
- *   • others   → Redirects to /admin-dashboard
+ *   • teacher  → quick action tiles (Enter Marks, Mark Attendance, Timetable)
+ *                 + LAN sync status + notice feed
+ *   • admin     → system-wide statistics (total students, teachers,
+ *                 attendance, fees, etc.)
  *
  * The header title is dynamic:
  *   • "Teacher's Dashboard" for the teacher role
  *   • "Dashboard" for every other role
  *
- * Admin and super_admin users are explicitly redirected to the dedicated
- * /admin-dashboard route to enforce strict separation between the
- * admin role (operational) and owner role (billing-only).
+ * No fallback "Limited Access" banner — non-teacher / non-admin users
+ * are not expected to land on this page (route guards handle them).
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const role = user?.role;
-  const roleLower = (role || '').toLowerCase();
 
   // Owner sees the full Owner Dashboard; no wrapper header needed there
-  if (roleLower === 'owner') {
+  if (role === 'owner') {
     return <OwnerDashboard />;
   }
 
-  // Admin / super_admin: redirect to the dedicated System Admin Dashboard
-  // to enforce strict role separation between admin and owner.
-  if (roleLower === 'admin' || roleLower === 'super_admin') {
-    return <Navigate to="/admin-dashboard" replace />;
-  }
-
-  const title = roleLower === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
+  const title = role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
 
   return (
     <div className="space-y-6">
@@ -569,11 +561,11 @@ const Dashboard: React.FC = () => {
             Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
           </p>
         </div>
-        <LiveBadge label={roleLower === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
+        <LiveBadge label={role === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
       </div>
 
       {/* ── Role-Based View Switch ── */}
-      {roleLower === 'teacher' ? <TeacherDashboard /> : <AdminDashboard />}
+      {role === 'teacher' ? <TeacherDashboard /> : <AdminDashboard />}
     </div>
   );
 };
