@@ -93,7 +93,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useCentralData, notifyDataChanged } from '@/hooks/useCentralData';
 import { useLanSync } from '@/hooks/useLanSync';
 import { formatRelativeTime } from '@/services/activityLog';
-import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
+import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncService';
 import {
   getActiveLicense,
   getAllLicenses,
