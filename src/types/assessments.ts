@@ -1,7 +1,10 @@
 export interface LearningArea {
-  id: string;
+  id?: string;
   name: string;
   type: 'Core' | 'Elective';
+  description?: string;
+  periodsPerWeek?: number;
+  isDefault?: boolean;
 }
 
 export interface ClusterData {
@@ -9,6 +12,7 @@ export interface ClusterData {
   name: string;
   description?: string;
   learningAreas: LearningArea[];
+  periodsPerWeek?: number;
 }
 
 export interface ExamTypeOption {

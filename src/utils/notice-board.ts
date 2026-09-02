@@ -14,8 +14,9 @@ export const addNoticeToBoard = (noticeData: {
   const newNotice: Notice = {
     id: `notice-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
     title: noticeData.title,
-    message: noticeData.message,
+    content: noticeData.message,
     date: new Date().toISOString(),
+    category: 'General',
     priority: noticeData.priority || 'medium',
   };
 

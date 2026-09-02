@@ -2,23 +2,26 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, FileText, ExternalLink } from 'lucide-react';
+import { ArrowLeft, FileText, ExternalLink, History, UserX, UserCircle, Hash, Calendar } from 'lucide-react';
 import { Link, useParams } from 'react-router-dom';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 const StudentProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
+  const [isTransferOpen, setIsTransferOpen] = useState(false);
   // ... existing state and handlers
 
   // Add birthCertificateNo to the student data structure
   const student = useMemo(() => {
     const found = INITIAL_SEED_DATA.students.find(s => s.id === id);
     if (!found) return INITIAL_SEED_DATA.students[0];
-    // Ensure birthCertificateNo is included (fallback to undefined for legacy data)
+    // Ensure birthCertificateNo and dob are included (fallback to undefined for legacy data)
     return {
       ...found,
       birthCertificateNo: (found as any).birthCertificateNo || undefined,
-    };
+      dob: (found as any).dob || undefined,
+    } as typeof INITIAL_SEED_DATA.students[0] & { birthCertificateNo?: string; dob?: string };
   }, [id]);
 
   // ... rest of the component

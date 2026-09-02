@@ -514,6 +514,9 @@ export default function Students() {
       status: (learner as any).status ?? 'Active',
       dateOfAdmission: (learner as any).dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: (learner as any).coCurricularActivities ?? '',
+      health: '',
+      needs: '',
+      examType: '',
     };
     setTransferLearner(transferPayload);
     setIsTransferOpen(true);
@@ -958,7 +961,7 @@ export default function Students() {
         phone={formData.phone}
         setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
         formError={formError}
-        onRegister={validateAndSave}
+        onRegister={validateAndSave as unknown as (e?: React.FormEvent) => void}
       />
 
       {/* ── Transfer Workflow Modal ─────────────────────────────────────── */}

@@ -22,6 +22,14 @@ interface User {
   phone?: string;
   role: UserRole;
   avatar?: string;
+  /** Optional persisted password (used by admin/owner PIN flows). */
+  password?: string;
+  /** Optional staff identifier for staffId-based login. */
+  staff_id?: string;
+  /** Whether the account is currently active. */
+  is_active?: number | boolean;
+  /** ISO timestamp the record was created. */
+  created_at?: string;
 }
 
 interface AuthContextType {

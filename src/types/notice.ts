@@ -3,18 +3,19 @@ export interface Notice {
   title: string;
   content: string;
   description?: string;
-  message?: string;
   date: string;
   category: 'Urgent' | 'General' | 'Finance' | 'Notice' | 'Event';
   color?: string;
   attachmentName?: string;
   attachmentUrl?: string;
   pinned?: boolean;
-  // ID of the user who created the notice. Used for permission checks
-  // (admins or the original author can delete a notice).
   createdBy?: string;
-  /** Optional priority used by the notice board. */
+  /** Optional priority used for sorting / highlighting. */
   priority?: 'low' | 'medium' | 'high' | 'Normal' | 'Important' | 'Urgent Alert';
+  /** Legacy alias of `content`. */
+  message?: string;
+  /** Optional type tag (e.g. "message", "alert"). */
+  type?: string;
 }
 
 export interface SchoolEvent {
@@ -24,5 +25,7 @@ export interface SchoolEvent {
   time: string; // HH:mm
   location?: string;
   type?: string;
-  priority?: 'low' | 'medium' | 'high' | 'Normal' | 'Important' | 'Urgent Alert';
+  /** Optional priority label (free-form string). */
+  priority?: string;
+  description?: string;
 }

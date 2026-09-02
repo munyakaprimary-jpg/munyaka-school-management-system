@@ -146,6 +146,7 @@ const StudentProfile = () => {
       id: activeLearner.id,
       admNo: activeLearner.admNo,
       name: activeLearner.name,
+      assessment: activeLearner.admNo,
       grade: activeLearner.grade,
       stream: activeLearner.stream,
       gender: activeLearner.gender,
@@ -153,10 +154,13 @@ const StudentProfile = () => {
       phone: activeLearner.phone,
       email: activeLearner.email ?? '',
       dob: activeLearner.dob ?? '',
+      health: '',
+      needs: '',
       feeBalance: activeLearner.feeBalance ?? 0,
-      status: activeLearner.status ?? 'Active',
+      status: (activeLearner.status === 'TRANSFERRED' ? 'Transferred' : (activeLearner.status as 'Active' | 'Transferred' | 'Graduated' | 'Suspended')) ?? 'Active',
       dateOfAdmission: activeLearner.dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: activeLearner.coCurricularActivities ?? '',
+      examType: '',
     };
     setTransferStudent(transferPayload);
     setIsTransferOpen(true);
@@ -733,7 +737,7 @@ const StudentProfile = () => {
                   //    new status immediately.
                   setActiveLearner((prev) =>
                     prev && prev.id === studentId
-                      ? ({ ...prev, status: 'TRANSFERRED' as const } as ProfileLearner)
+                      ? ({ ...prev, status: 'Transferred' as const } as ProfileLearner)
                       : prev,
                   );
       

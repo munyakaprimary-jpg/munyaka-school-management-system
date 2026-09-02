@@ -4,6 +4,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { cn } from '@/lib/utils';
+import { Search } from 'lucide-react';
 import { StudentResult } from '@/lib/resultsUtils';
 
 interface ResultsBreakdownTableProps {

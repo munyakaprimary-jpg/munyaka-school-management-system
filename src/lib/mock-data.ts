@@ -1,12 +1,27 @@
 import { sortGrades, formatGradeName } from '@/utils/gradeSort';
 
-export const STUDENTS = [
-  { id: "1787737452457", admNo: "B002961576", name: "MUTWIKA KILONZO", grade: "Grade 7", stream: "VENUS", gender: "Female", guardian: "STEPHEN KILONZO KINGOO", phone: "0705221675" },
-  { id: "1787724752520", admNo: "B004123291", name: "OCTEVIOR LUVISIA", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "TITUS KIJUSA LUVISIA", phone: "0705138090" },
-  { id: "1787724509755", admNo: "B004761829", name: "SAMWEL KAMAU WANJIKU", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "MARY WANJIKU WAIRIMU", phone: "0719182804" },
-  { id: "1787655781527", admNo: "A009702345", name: "EMILY CHEBET", grade: "Grade 5", stream: "Yellow", gender: "Female", guardian: "EDWARD LIMO", phone: "07892356787" },
-  { id: "2", admNo: "B004779091", name: "PETER WAITITU", grade: "Grade 6", stream: "South", gender: "Male", guardian: "JANE WANJIKU WAITITO", phone: "0114222031" },
-  { id: "3", admNo: "B004276095", name: "ALFRED JUMA", grade: "Grade 6", stream: "East", gender: "Male", guardian: "PHANICE NASIMIYU KIRISWA", phone: "0141893904" }
+export const STUDENTS: Array<{
+  id: string;
+  admNo: string;
+  assessment: string;
+  admissionNumber?: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: string;
+  guardian: string;
+  phone: string;
+  email?: string;
+  dob?: string;
+  status?: string;
+  schoolId?: string;
+}> = [
+  { id: "1787737452457", admNo: "B002961576", assessment: "B002961576", name: "MUTWIKA KILONZO", grade: "Grade 7", stream: "VENUS", gender: "Female", guardian: "STEPHEN KILONZO KINGOO", phone: "0705221675" },
+  { id: "1787724752520", admNo: "B004123291", assessment: "B004123291", name: "OCTEVIOR LUVISIA", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "TITUS KIJUSA LUVISIA", phone: "0705138090" },
+  { id: "1787724509755", admNo: "B004761829", assessment: "B004761829", name: "SAMWEL KAMAU WANJIKU", grade: "Grade 6", stream: "Yellow", gender: "Male", guardian: "MARY WANJIKU WAIRIMU", phone: "0719182804" },
+  { id: "1787655781527", admNo: "A009702345", assessment: "A009702345", name: "EMILY CHEBET", grade: "Grade 5", stream: "Yellow", gender: "Female", guardian: "EDWARD LIMO", phone: "07892356787" },
+  { id: "2", admNo: "B004779091", assessment: "B004779091", name: "PETER WAITITU", grade: "Grade 6", stream: "South", gender: "Male", guardian: "JANE WANJIKU WAITITO", phone: "0114222031" },
+  { id: "3", admNo: "B004276095", assessment: "B004276095", name: "ALFRED JUMA", grade: "Grade 6", stream: "East", gender: "Male", guardian: "PHANICE NASIMIYU KIRISWA", phone: "0141893904" }
 ];
 
 export interface Stream {
@@ -129,7 +144,7 @@ export const GRADES_DATA: Grade[] = sortGrades([
   streams: Array.from(
     new Map(g.streams.map(s => [s.name.trim().toLowerCase(), s])).values()
   )
-})));
+}))) as unknown as Grade[];
 
 export const BOOKS = [
   { id: "1", title: "Spark: English Grade 4", author: "Oxford", isbn: "978-019", category: "Core Text", stock: 120, borrowed: 85 },
@@ -205,7 +220,6 @@ export const STAFF: StaffMember[] = [
     department: "Languages & Humanities"
   },
   {
-    id: "ST-103",
     id: "ST-103",
     id_no: "25839102",
     tsc_no: "TSC-382910",

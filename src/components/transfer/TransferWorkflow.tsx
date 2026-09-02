@@ -294,7 +294,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
     const addCenteredText = (
       text: string,
       fontSize: number,
-      fontStyle: 'normal' | 'bold' = 'bold',
+      fontStyle: 'normal' | 'bold' | 'italic' = 'bold',
       color = [30, 30, 30] as [number, number, number],
       yOffset = 0
     ) => {

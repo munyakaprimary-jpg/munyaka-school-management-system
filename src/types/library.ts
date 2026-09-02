@@ -72,7 +72,7 @@ export function getLogBalance(
   if (typeof logOrQty === 'object' && logOrQty !== null) {
     return logOrQty.qty_issued - ((logOrQty.qty_returned || 0) + (logOrQty.qty_lost || 0));
   }
-  return logOrQty - (qtyReturned + qtyLost);
+  return (logOrQty as number) - (qtyReturned + qtyLost);
 }
 
 export function getLogStatusInfo(
@@ -81,8 +81,8 @@ export function getLogStatusInfo(
   const balance = getLogBalance(log.qty_issued, log.qty_returned || 0, log.qty_lost || 0);
   const todayStr = new Date().toISOString().split('T')[0];
   // Support both BookAllocation (due_date) and BorrowLog (dueDate)
-  const dueDate = 'due_date' in log ? log.due_date : log.dueDate;
-  const isOverdue = dueDate < todayStr && balance > 0;
+  const dueDate = 'due_date' in log ? log.due_date : (log as BorrowLog).dueDate;
+  const isOverdue = dueDate != null && dueDate < todayStr && balance > 0;
 
   if (balance === 0) {
     if ((log.qty_lost || 0) > 0) {

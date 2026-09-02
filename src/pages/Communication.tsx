@@ -51,7 +51,6 @@ const Communication = () => {
     addNotification({
       title: `New ${msgType} Message Sent`,
       message: `Sent to ${recipient}: ${subject}`,
-      type: 'message', // We can use this to customize the icon in the bell if needed
     });
   };
 

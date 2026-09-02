@@ -29,7 +29,7 @@ interface RegisterModalProps {
   phone: string;
   setPhone: (value: string) => void;
   formError?: string;
-  onRegister: () => void;
+  onRegister: (e?: React.FormEvent) => void;
 }
 
 export default function RegisterModal({

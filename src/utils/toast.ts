@@ -1,5 +1,8 @@
 import { toast } from "sonner";
 
+/** Re-export the raw sonner `toast` for callers that need direct access. */
+export { toast };
+
 export const showSuccess = (message: string) => {
   toast.success(message);
 };

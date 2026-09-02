@@ -74,7 +74,7 @@ export interface PaymentRecord {
   id: string;
   studentId?: string;
   studentName?: string;
-  amount: number;
+  amount?: number;
   paid?: number;
   total?: number;
   method?: string;
@@ -607,7 +607,7 @@ export function deleteLearningArea(clusterId: string, areaId: string): boolean {
 
 // ── Payment Records ─────────────────────────────────────────────────────────
 export function createPaymentRecord(input: Omit<PaymentRecord, 'id'> & { id?: string }): PaymentRecord {
-  const newRec: PaymentRecord = { ...input, id: input.id ?? generateId('pay') };
+  const newRec = { ...input, id: input.id ?? generateId('pay') } as PaymentRecord;
   const next = [...getPaymentRecords(), newRec];
   setPaymentRecords(next);
   return newRec;

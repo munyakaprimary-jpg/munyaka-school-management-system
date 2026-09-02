@@ -12,7 +12,7 @@ import { Book } from '@/types/library';
 interface RegisterBookModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onRegisterBook: (bookData: Omit<Book, 'id' | 'borrowed'>) => void;
+  onRegisterBook: (bookData: Partial<Omit<Book, 'id'>>) => void;
 }
 
 export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({

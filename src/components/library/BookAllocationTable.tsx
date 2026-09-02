@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Card, CardContent, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from '@/components/ui';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Table, TableBody, TableCell, TableHead, TableRow } from '@/components/ui/table';
 
 type Book = {
   id: string;

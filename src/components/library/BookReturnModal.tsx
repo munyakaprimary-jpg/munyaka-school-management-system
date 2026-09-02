@@ -32,7 +32,7 @@ export const BookReturnModal: React.FC<BookReturnModalProps> = ({
 
   const filteredLogs = useMemo(() => {
     return historyLogs.filter(log => log.id === selectedLogId);
-  });
+  }, [historyLogs, selectedLogId]);
 
   const selectedLog = selectedLogId ? historyLogs.find(log => log.id === selectedLogId) : null;
 
