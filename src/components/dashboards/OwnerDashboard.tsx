@@ -562,52 +562,67 @@ const computeBillingRowsSync = (): BillingRow[] => {
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Revenue Trend (last 6 months) — from student fee transactions
-// (kept in the Executive Financial Summary card; separate from billing table)
+// Platform Billing Trend (last 6 months) — from platform subscription invoices
+// Queries getAllLicenses() for paid subscription / add-on / renewal amounts,
+// grouped by the month each license was issued (paidAt / issuedAt).
+// Student fee transactions are NOT included here — that data belongs to the
+// Administrator / Bursar role.
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface FeeTransaction {
-  id: string;
+interface BillingTrendEntry {
+  /** Short month label, e.g. "Aug" */
+  label: string;
+  /** Total platform billing amount for this month in KES */
   amount: number;
-  paidAt?: string;
-  date?: string;
-  status?: string;
+  /** Whether this month has an active paid invoice */
+  hasInvoice: boolean;
 }
 
-const computeRevenueTrend = () => {
-  // Student fee transactions still drive the "Revenue Collected" chart
-  // in the Executive Financial Summary card — that card is about school
-  // fee collection, not platform billing.
-  try {
-    const raw = localStorage.getItem('munyaka_transactions');
-    if (!raw) return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date();
-      d.setMonth(d.getMonth() - (5 - i));
-      return { label: d.toLocaleDateString('en-KE', { month: 'short' }), total: 0 };
-    });
-    const transactions: FeeTransaction[] = JSON.parse(raw);
-    const paid = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
-    const now = new Date();
+/**
+ * Compute the monthly platform billing totals over the last 6 months.
+ * Each license with a `payment.amount > 0` contributes its amount to the
+ * month it was issued (paidAt / issuedAt). Months with no invoices show 0.
+ */
+const computeBillingTrend = (): BillingTrendEntry[] => {
+  const now = new Date();
 
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      const label = d.toLocaleDateString('en-KE', { month: 'short' });
-      const total = paid.reduce((s, t) => {
-        const td = safeDate(t.paidAt ?? t.date);
-        if (!td) return s;
-        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
-          ? s + (Number(t.amount) || 0)
-          : s;
-      }, 0);
-      return { label, total };
+  // Build a map of month-key → amount for all paid licenses
+  const monthAmounts = new Map<string, number>();
+
+  try {
+    const allLicenses = getAllLicenses();
+    allLicenses.forEach((l) => {
+      const amount = Number(l.payment?.amount) || 0;
+      if (amount <= 0) return;
+
+      // Use paidAt if available, otherwise fall back to issuedAt
+      const dateStr = l.paidAt || l.issuedAt || '';
+      const d = safeDate(dateStr);
+      if (!d) return;
+
+      // Only include dates within the 6-month window
+      const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+      if (d < sixMonthsAgo) return;
+
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      monthAmounts.set(key, (monthAmounts.get(key) ?? 0) + amount);
     });
   } catch {
-    const now = new Date();
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      return { label: d.toLocaleDateString('en-KE', { month: 'short' }), total: 0 };
-    });
+    // Graceful fallback — show empty months
   }
+
+  // Generate all 6 months (oldest → newest)
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const label = d.toLocaleDateString('en-KE', { month: 'short' });
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const amount = monthAmounts.get(key) ?? 0;
+    return {
+      label,
+      amount,
+      hasInvoice: amount > 0,
+    };
+  });
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -619,7 +634,7 @@ interface OwnerDashboardData {
   seats: SeatMetrics;
   financials: FinancialMetrics;
   billingRows: BillingRow[];
-  revenueTrend: ReturnType<typeof computeRevenueTrend>;
+  billingTrend: BillingTrendEntry[];
   allLicensesCount: number;
   now: string;
   isLoading: boolean;
@@ -688,7 +703,7 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
     return rows;
   }, [tick]);
 
-  const revenueTrend = useMemo(() => computeRevenueTrend(), [tick]);
+  const billingTrend = useMemo(() => computeBillingTrend(), [tick]);
 
   const allLicensesCount = useMemo(() => getAllLicenses().length, [tick]);
 
@@ -702,7 +717,7 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
     seats,
     financials,
     billingRows,
-    revenueTrend,
+    billingTrend,
     allLicensesCount,
     now,
     isLoading: centralLoading,
@@ -755,8 +770,8 @@ const BillingRowSkeleton: React.FC = () => (
  *   - Subscription: `getActiveLicense()` + subscription settings
  *   - Seats: `useCentralData` + `getActiveLearners()` / `getActiveTeachers()`
  *   - Financials: `munyaka_fee_structures` + `munyaka_student_fees`
- *   - Revenue Trend chart: `munyaka_transactions` (student fees — displayed in
- *     the "Executive Financial Summary" card, not the billing table)
+ *   - Billing Trend chart: `getAllLicenses()` — platform subscription / add-on
+ *     invoices, grouped by month. Shows SaaS expenses only — NO student fees.
  *   - Billing Table: `getAllLicenses()` — platform subscription invoices ONLY.
  *     Student fee collections (tuitions, learner payments) are NOT shown here;
  *     they belong to the Administrator / Bursar role.
@@ -773,7 +788,7 @@ const OwnerDashboard: React.FC = () => {
     seats,
     financials,
     billingRows,
-    revenueTrend,
+    billingTrend,
     allLicensesCount,
     now,
     isLoading: centralLoading,
@@ -1204,23 +1219,23 @@ const OwnerDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Revenue trend chart */}
+        {/* Platform billing trend chart */}
         <Card className="border-none shadow-sm rounded-2xl bg-white mt-4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
               <CardTitle className="text-base font-bold text-slate-800">
-                Revenue Collected (Last 6 Months)
+                Platform Billing &amp; Subscription Expenses (Last 6 Months)
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Monthly fee collection trend in KES — live from student fee records
+                Monthly SaaS payments, module add-ons, and system maintenance fees in KES
               </p>
             </div>
-            <TrendingUp size={18} className="text-emerald-500" />
+            <TrendingUp size={18} className="text-indigo-500" />
           </CardHeader>
           <CardContent>
             <div className="h-[200px] w-full">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={revenueTrend} barCategoryGap="35%">
+                <BarChart data={billingTrend} barCategoryGap="35%">
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis
                     dataKey="label"
@@ -1241,13 +1256,16 @@ const OwnerDashboard: React.FC = () => {
                     content={({ active, payload }) => {
                       if (active && payload && payload.length) {
                         const d = payload[0].payload;
+                        const formattedAmount = formatKES(d.amount);
                         return (
                           <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">
                               {d.label}
                             </p>
-                            <p className="text-lg font-black text-emerald-600 mt-0.5">
-                              {formatKES(d.total)}
+                            <p className="text-lg font-black text-indigo-600 mt-0.5">
+                              {d.amount > 0
+                                ? `${formattedAmount} paid`
+                                : 'No invoices'}
                             </p>
                           </div>
                         );
@@ -1255,11 +1273,13 @@ const OwnerDashboard: React.FC = () => {
                       return null;
                     }}
                   />
-                  <Bar dataKey="total" radius={[8, 8, 0, 0]}>
-                    {revenueTrend.map((entry, idx) => (
+                  <Bar dataKey="amount" radius={[8, 8, 0, 0]}>
+                    {billingTrend.map((entry, idx) => (
                       <Cell
                         key={entry.label}
-                        fill={idx === revenueTrend.length - 1 ? '#10b981' : '#a7f3d0'}
+                        fill={entry.amount > 0
+                          ? (idx === billingTrend.length - 1 ? '#6366f1' : '#a5b4fc')
+                          : '#f1f5f9'}
                       />
                     ))}
                   </Bar>
