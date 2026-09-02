@@ -1,4 +1,5 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo } from 'react';
+import { differenceInDays } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,8 +38,10 @@ import {
   Phone,
   RefreshCw,
   ExternalLink,
+  RefreshCcw,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useCentralData } from '@/hooks/useCentralData';
 import {
   getActiveLicense,
   getAllLicenses,
@@ -51,6 +54,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import { formatRelativeTime } from '@/services/activityLog';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+type SubscriptionStatus = 'active' | 'due' | 'grace_period' | 'expired';
 
 interface FeeTransaction {
   id: string;
@@ -68,7 +73,34 @@ interface FeeTransaction {
   ref?: string;
 }
 
-type SubscriptionStatus = 'active' | 'due' | 'grace_period' | 'expired';
+interface FeeStructure {
+  year: string;
+  term: string;
+  gradeId: string;
+  amount: number;
+}
+
+interface StudentFeeRecord {
+  id: string;
+  student: string;
+  paid: number;
+  total: number;
+  balance: number;
+  status: string;
+}
+
+interface LicenseInfo {
+  planName: string;
+  billingInterval: string;
+  nextBillingDate: string | null;
+  daysRemaining: number;
+  expiresAt: string | null;
+  maxStudentSeats: number;
+  maxStaffSeats: number;
+  isEnterprise: boolean;
+  status: SubscriptionStatus;
+  licenseId: string | null;
+}
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -82,15 +114,14 @@ const safeRead = <T,>(key: string, fallback: T): T => {
   }
 };
 
-const formatKES = (n: number): string => `KES ${Math.round(n).toLocaleString()}`;
+const formatKES = (n: number): string =>
+  `KES ${Math.round(n).toLocaleString()}`;
 
 const formatDate = (iso: string | undefined | null): string => {
   if (!iso) return '—';
   try {
     return new Date(iso).toLocaleDateString('en-KE', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
+      year: 'numeric', month: 'short', day: 'numeric',
     });
   } catch {
     return iso;
@@ -101,59 +132,98 @@ const formatDateLong = (iso: string | undefined | null): string => {
   if (!iso) return '—';
   try {
     return new Date(iso).toLocaleDateString('en-KE', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
+      year: 'numeric', month: 'long', day: 'numeric',
     });
   } catch {
     return iso;
   }
 };
 
-const safeDate = (raw: any): Date | null => {
+const safeDate = (raw: string | undefined | null): Date | null => {
   if (!raw) return null;
   const d = new Date(raw);
   return isNaN(d.getTime()) ? null : d;
 };
 
-// ─── Subscription Status Logic ───────────────────────────────────────────────
+/** Read staff from the canonical directory key (matches useCentralData). */
+const getActiveStaffCount = (): number => {
+  const staff: any[] = safeRead('munyaka_staff_directory', []);
+  if (Array.isArray(staff) && staff.length > 0) {
+    return staff.filter((s) => s.status !== 'Suspended').length;
+  }
+  // Fallback to legacy key
+  const legacy: any[] = safeRead('munyaka_staff', []);
+  return Array.isArray(legacy)
+    ? legacy.filter((s) => s.status !== 'Suspended').length
+    : 0;
+};
+
+// ─── Live Subscription Resolution ─────────────────────────────────────────────
 
 /**
- * Maps the active license's expiry to one of:
- *  - 'active'       : > 14 days remaining
- *  - 'due'          : 1–14 days remaining
- *  - 'grace_period' : expired within the last 7 days
- *  - 'expired'      : expired > 7 days ago
+ * Reads the active license from the state/store and resolves a rich
+ * SubscriptionInfo object with plan name, billing interval, seat caps,
+ * and status derived from real data.
  *
- * Returns 'due' as a sensible default when no license is installed
- * (so the owner still sees a real badge rather than an empty state).
+ * Uses date-fns differenceInDays for the renewal countdown.
  */
-const resolveSubscriptionStatus = (): {
-  status: SubscriptionStatus;
-  daysRemaining: number;
-  expiresAt: string | null;
-  validityDays: number;
-} => {
+const resolveLicenseInfo = (): LicenseInfo => {
   const license = getActiveLicense();
+
   if (!license) {
-    return { status: 'due', daysRemaining: 0, expiresAt: null, validityDays: 365 };
+    return {
+      planName: 'No Active Plan',
+      billingInterval: '—',
+      nextBillingDate: null,
+      daysRemaining: 0,
+      expiresAt: null,
+      maxStudentSeats: 500,
+      maxStaffSeats: 50,
+      isEnterprise: false,
+      status: 'due',
+      licenseId: null,
+    };
   }
-  const days = daysRemainingUntil(license.expiresAt);
-  const expired = isLicenseExpiredAt(license.expiresAt);
+
+  const validityDays = license.validityDays ?? 365;
+  const isEnterprise = validityDays >= 730;
+  const maxStudentSeats = isEnterprise ? 2000 : 500;
+  const maxStaffSeats = isEnterprise ? 200 : 50;
+
+  // billingInterval derived from validity period
+  const billingInterval = validityDays >= 730
+    ? 'Annual'
+    : validityDays >= 180
+      ? 'Semi-Annual'
+      : 'Monthly';
+
+  // Days remaining: positive integer while active, 0 once expired
+  const daysRemaining = daysRemainingUntil(license.expiresAt ?? '');
+
+  // Subscription status
   let status: SubscriptionStatus = 'active';
-  if (expired) {
-    // Compute days since expiry for grace period
-    const ms = new Date(license.expiresAt).getTime() - Date.now();
-    const daysSinceExpiry = Math.ceil(Math.abs(ms) / (1000 * 60 * 60 * 24));
+  if (isLicenseExpiredAt(license.expiresAt ?? '')) {
+    const issued = safeDate(license.expiresAt);
+    const now = new Date();
+    const daysSinceExpiry = issued
+      ? differenceInDays(now, issued)
+      : 0;
     status = daysSinceExpiry <= 7 ? 'grace_period' : 'expired';
-  } else if (days <= 14) {
+  } else if (daysRemaining <= 14) {
     status = 'due';
   }
+
   return {
-    status,
-    daysRemaining: days,
+    planName: isEnterprise ? 'Enterprise Plan' : 'Pro Plan',
+    billingInterval,
+    nextBillingDate: license.expiresAt,
+    daysRemaining,
     expiresAt: license.expiresAt,
-    validityDays: license.validityDays,
+    maxStudentSeats,
+    maxStaffSeats,
+    isEnterprise,
+    status,
+    licenseId: license.id,
   };
 };
 
@@ -162,128 +232,160 @@ const resolveSubscriptionStatus = (): {
 /**
  * Executive dashboard for the `owner` role.
  *
- * Tailored for platform billing and financial oversight:
- *   1. System Subscription & Licensing Status card (tier, renewal, seats)
- *   2. Executive Financial Summary cards (revenue, outstanding, status)
- *   3. Recent Transactions & Payment Audit Logs
- *   4. Quick actions: export financial report / download PDF receipt
+ * All metrics are derived live from:
+ *   - Active license (licenseService)          → subscription tier, seats, renewal date
+ *   - useCentralData hook                    → real-time student & teacher headcounts
+ *   - munyaka_staff_directory               → live staff roster
+ *   - munyaka_fee_structures                → per-grade expected fee amounts
+ *   - munyaka_transactions                   → actual cleared payment records
+ *   - getAllLicenses()                       → subscription billing history
  *
- * Reads:
- *   - Active license + all licenses (licenseService)
- *   - School learners (school_learners_data) for seat counts
- *   - Transactions (munyaka_transactions) for fee audit
+ * Financial aggregations:
+ *   - Expected Revenue  = sum of (feeStructure.amount × activeLearnersInGrade)
+ *   - Collected        = sum of all transactions where status === 'paid'
+ *   - Outstanding      = Expected Revenue − Collected Revenue
  */
 const OwnerDashboard: React.FC = () => {
   const { user } = useAuth();
 
-  // ── Subscription / licensing ───────────────────────────────────────────────
-  const [subState, setSubState] = useState(() => resolveSubscriptionStatus());
-  const [history, setHistory] = useState(() => getAllLicenses());
+  // ── Central data: live student & teacher counts ─────────────────────────────
+  const { totalStudents: centralStudents, isLoading: centralLoading } = useCentralData();
 
-  useEffect(() => {
-    // Re-resolve on mount in case the license changed since last render
-    setSubState(resolveSubscriptionStatus());
-    setHistory(getAllLicenses());
-  }, []);
+  // ── Live subscription / license info ───────────────────────────────────────
+  const license = useMemo(() => resolveLicenseInfo(), []);
 
-  // ── Seat capacity: students + staff ────────────────────────────────────────
-  const seatCounts = useMemo(() => {
+  // ── Live license history ───────────────────────────────────────────────────
+  const allLicenses = useMemo(() => getAllLicenses(), []);
+
+  // ── Active student count ────────────────────────────────────────────────────
+  // Use the authoritative central-data count; fall back to a direct read
+  const activeStudentCount = useMemo(() => {
+    if (!centralLoading && centralStudents > 0) return centralStudents;
     const learners: any[] = safeRead('school_learners_data', []);
-    const activeLearners = learners.filter((l: any) => l.status !== 'TRANSFERRED').length;
+    return learners.filter((l) => l.status !== 'TRANSFERRED').length;
+  }, [centralStudents, centralLoading]);
 
-    // Staff seats read from a few plausible sources
-    const staffRaw = safeRead<any[]>('munyaka_staff_prereg', []);
-    const activeStaff = Array.isArray(staffRaw)
-      ? staffRaw.filter((s: any) => s.status !== 'Suspended').length
-      : 0;
+  // ── Active staff count ──────────────────────────────────────────────────────
+  const activeStaffCount = useMemo(() => getActiveStaffCount(), []);
 
-    // Cap per plan tier: Pro = 500 students / 50 staff; Enterprise = 2000 / 200
-    const isEnterprise = (subState.validityDays ?? 0) >= 730;
-    const studentCap = isEnterprise ? 2000 : 500;
-    const staffCap = isEnterprise ? 200 : 50;
+  // ── Seat utilization ────────────────────────────────────────────────────────
+  const seats = useMemo(() => ({
+    studentsUsed: activeStudentCount,
+    studentCap: license.maxStudentSeats,
+    studentsPercent: Math.min(
+      100,
+      Math.round((activeStudentCount / license.maxStudentSeats) * 100),
+    ),
+    staffUsed: activeStaffCount,
+    staffCap: license.maxStaffSeats,
+    staffPercent: Math.min(
+      100,
+      Math.round((activeStaffCount / license.maxStaffSeats) * 100),
+    ),
+  }), [activeStudentCount, activeStaffCount, license.maxStudentSeats, license.maxStaffSeats]);
 
-    return {
-      studentsUsed: activeLearners,
-      studentCap,
-      studentsPercent: Math.min(100, Math.round((activeLearners / studentCap) * 100)),
-      staffUsed: activeStaff,
-      staffCap,
-      staffPercent: Math.min(100, Math.round((activeStaff / staffCap) * 100)),
-      isEnterprise,
-    };
-  }, [subState.validityDays]);
-
-  // ── Financial aggregates ──────────────────────────────────────────────────
+  // ── Live financial aggregates ────────────────────────────────────────────────
   const financials = useMemo(() => {
-    const tx: FeeTransaction[] = safeRead<FeeTransaction[]>('munyaka_transactions', []);
-
-    // Total collected
-    const paid = tx.filter((t) => t.status === 'paid' || t.paidAt);
-    const totalCollected = paid.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-
-    // Outstanding unpaid balances from active learners
+    // ── Total Expected Revenue ──────────────────────────────────────────────
+    // Sum of: for every active learner, the current grade's fee structure amount
     const learners: any[] = safeRead('school_learners_data', []);
-    const paidByLearner: Record<string, number> = {};
-    paid.forEach((t) => {
-      const key = t.learnerId || t.studentId || '';
-      paidByLearner[key] = (paidByLearner[key] || 0) + (Number(t.amount) || 0);
+    const activeLearners = learners.filter((l) => l.status !== 'TRANSFERRED');
+
+    const feeStructures: FeeStructure[] = safeRead('munyaka_fee_structures', []);
+
+    // Build a per-gradeId → amount map from the fee structures table
+    const gradeFeeMap: Record<string, number> = {};
+    feeStructures.forEach((f) => {
+      const existing = gradeFeeMap[f.gradeId];
+      gradeFeeMap[f.gradeId] = existing ? Math.max(existing, f.amount) : f.amount;
     });
-    let outstanding = 0;
-    let outstandingCount = 0;
+
+    // Sum expected revenue: active learners × their grade's fee structure
+    // Normalise gradeId: grade name on learner record vs gradeId in structures
     let totalExpected = 0;
-    learners.filter((l: any) => l.status !== 'TRANSFERRED').forEach((l: any) => {
-      const feeBalance = Number(l.feeBalance) || 0;
-      const paidByStudent = paidByLearner[l.id] || 0;
-      const remaining = feeBalance - paidByStudent;
-      if (remaining > 0) {
-        outstanding += remaining;
-        outstandingCount += 1;
-      }
-      // Sum all expected fee balances across active learners
-      totalExpected += feeBalance;
+    activeLearners.forEach((l: any) => {
+      const gradeId = (l.grade || '').replace(/\s+/g, '').toLowerCase();
+      const amount = gradeFeeMap[gradeId] ?? 0;
+      totalExpected += amount;
     });
 
-    // Collection rate
-    const collectionRate = totalExpected > 0
-      ? Math.round((totalCollected / totalExpected) * 100)
-      : 0;
+    // ── Total Collected Revenue ─────────────────────────────────────────────
+    const transactions: FeeTransaction[] = safeRead('munyaka_transactions', []);
+    const paidTx = transactions.filter(
+      (t) => t.status === 'paid' || !!t.paidAt,
+    );
+    const totalCollected = paidTx.reduce(
+      (s, t) => s + (Number(t.amount) || 0), 0,
+    );
 
+    // ── Outstanding Unpaid ──────────────────────────────────────────────────
+    // Outstanding = Total Expected (per grade fees × active learners) − Collected
+    // If fee structures haven't been configured yet, fall back to computing
+    // expected from the per-student 'fees' ledger stored by the Fees page.
+    if (totalExpected === 0 && activeLearners.length > 0) {
+      // Per-student fees ledger: sum (total − paid) across all active students
+      const feeRecords: StudentFeeRecord[] = safeRead('munyaka_student_fees', []);
+      const outstandingByStudent: Record<string, number> = {};
+      feeRecords.forEach((r) => {
+        if (r.status === 'Cleared') return;
+        outstandingByStudent[r.student] = (outstandingByStudent[r.student] ?? 0) + (r.balance ?? (r.total - r.paid));
+      });
+      // Collected from transactions + per-student ledger
+      const ledgerCollected = feeRecords.reduce((s, r) => s + (Number(r.paid) || 0), 0);
+      const ledgerExpected = feeRecords.reduce((s, r) => s + (Number(r.total) || 0), 0);
+      const outstanding = Math.max(0, ledgerExpected - totalCollected);
+
+      return {
+        totalExpected: ledgerExpected,
+        totalCollected,
+        outstanding,
+        transactionCount: paidTx.length,
+        collectionRate: ledgerExpected > 0
+          ? Math.round((totalCollected / ledgerExpected) * 100)
+          : 0,
+      };
+    }
+
+    const outstanding = Math.max(0, totalExpected - totalCollected);
     return {
       totalExpected,
       totalCollected,
       outstanding,
-      outstandingCount,
-      transactionCount: paid.length,
-      collectionRate,
+      transactionCount: paidTx.length,
+      collectionRate: totalExpected > 0
+        ? Math.round((totalCollected / totalExpected) * 100)
+        : 0,
     };
   }, []);
 
-  // ── Recent transactions (audit log) ────────────────────────────────────────
-  const recentTransactions = useMemo(() => {
-    const tx: FeeTransaction[] = safeRead<FeeTransaction[]>('munyaka_transactions', []);
+  // ── Recent payment transactions (chronological, most recent first) ──────────
+  const recentTransactions = useMemo((): FeeTransaction[] => {
+    const tx: FeeTransaction[] = safeRead('munyaka_transactions', []);
     return tx
-      .filter((t) => t.status === 'paid' || t.paidAt)
+      .filter((t) => t.status === 'paid' || !!t.paidAt)
       .sort((a, b) => {
-        const da = safeDate(a.paidAt || a.date)?.getTime() ?? 0;
-        const db = safeDate(b.paidAt || b.date)?.getTime() ?? 0;
+        const da = safeDate(a.paidAt ?? a.date)?.getTime() ?? 0;
+        const db = safeDate(b.paidAt ?? b.date)?.getTime() ?? 0;
         return db - da;
       })
       .slice(0, 10)
       .map((t) => ({
-        id: t.id || `${Date.now()}-${Math.random()}`,
-        learner: t.learnerName || t.studentName || 'Unknown',
+        id: t.id || `tx-${Date.now()}-${Math.random()}`,
+        learner: t.learnerName || t.studentName || 'Unknown Student',
         amount: Number(t.amount) || 0,
         date: t.paidAt || t.date || '',
         method: t.paymentMethod || t.method || 'Cash',
         status: t.status || 'paid',
         ref: t.ref || t.id || '—',
         category: t.category || 'Tuition',
+        learnerId: t.learnerId,
+        studentId: t.studentId,
       }));
   }, []);
 
-  // Subscription billing invoices synthesized from the license history
+  // ── Subscription billing invoices ────────────────────────────────────────────
   const subscriptionInvoices = useMemo(() => {
-    return history
+    return allLicenses
       .filter((l) => l.payment?.amount)
       .slice()
       .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''))
@@ -297,9 +399,9 @@ const OwnerDashboard: React.FC = () => {
         validity: validityLabel(l.validityDays as 30 | 365 | 730),
         status: l.status,
       }));
-  }, [history]);
+  }, [allLicenses]);
 
-  // Merge transactions + subscription invoices for the audit log
+  // ── Combined audit log (transactions + invoices, merged & sorted) ───────────
   const auditRows = useMemo(() => {
     const txRows = recentTransactions.map((t) => ({
       key: `tx-${t.id}`,
@@ -334,32 +436,30 @@ const OwnerDashboard: React.FC = () => {
     });
   }, [recentTransactions, subscriptionInvoices]);
 
-  // ── Revenue trend (last 6 months) ──────────────────────────────────────────
+  // ── Revenue trend (last 6 months) ─────────────────────────────────────────
   const revenueTrend = useMemo(() => {
-    const tx: FeeTransaction[] = safeRead<FeeTransaction[]>('munyaka_transactions', []);
-    const paid = tx.filter((t) => t.status === 'paid' || t.paidAt);
+    const tx: FeeTransaction[] = safeRead('munyaka_transactions', []);
+    const paid = tx.filter((t) => t.status === 'paid' || !!t.paidAt);
     const now = new Date();
-    const buckets: { label: string; total: number; sortKey: number }[] = [];
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${d.getMonth()}`;
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
       const label = d.toLocaleDateString('en-KE', { month: 'short' });
       const total = paid.reduce((s, t) => {
-        const td = safeDate(t.paidAt || t.date);
+        const td = safeDate(t.paidAt ?? t.date);
         if (!td) return s;
-        if (td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()) {
-          return s + (Number(t.amount) || 0);
-        }
-        return s;
+        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
+          ? s + (Number(t.amount) || 0)
+          : s;
       }, 0);
-      buckets.push({ label, total, sortKey: d.getTime() });
-    }
-    return buckets;
+      return { label, total, sortKey: d.getTime() };
+    });
   }, []);
+
+  // ── Live timestamp for display ─────────────────────────────────────────────
+  const now = useMemo(() => new Date().toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }), []);
 
   // ── Handlers ──────────────────────────────────────────────────────────────
   const handleUpgrade = () => {
-    // Route to payment-management page
     window.location.hash = '#/payment-management';
   };
 
@@ -373,8 +473,20 @@ const OwnerDashboard: React.FC = () => {
         ['Executive Financial Report'],
         [`Generated: ${new Date().toLocaleString('en-KE')}`],
         [''],
-        ['SUMMARY'],
-        ['Metric', 'Amount (KES)'],
+        ['SUBSCRIPTION DETAILS'],
+        ['Plan', license.planName],
+        ['Billing Interval', license.billingInterval],
+        ['Next Billing / Renewal Date', formatDateLong(license.nextBillingDate)],
+        ['Days Remaining', license.daysRemaining.toString()],
+        ['Status', license.status.charAt(0).toUpperCase() + license.status.slice(1)],
+        [''],
+        ['SEAT UTILIZATION'],
+        ['Metric', 'Used', 'Maximum', 'Utilization (%)'],
+        ['Student Seats', activeStudentCount.toString(), license.maxStudentSeats.toString(), `${seats.studentsPercent}%`],
+        ['Staff Seats', activeStaffCount.toString(), license.maxStaffSeats.toString(), `${seats.staffPercent}%`],
+        [''],
+        ['FINANCIAL SUMMARY'],
+        ['Metric', 'KES'],
         ['Total Expected Revenue', financials.totalExpected.toString()],
         ['Total Collected', financials.totalCollected.toString()],
         ['Outstanding Unpaid', financials.outstanding.toString()],
@@ -401,12 +513,13 @@ const OwnerDashboard: React.FC = () => {
           i.amount.toString(),
         ]),
       ];
-      const csv = rows.map((r) => r.map((c) => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n');
-      const filename = `Munyaka_Financial_Report_${new Date().toISOString().slice(0, 10)}.csv`;
-      await downloadCSV(csv, filename);
+      const csv = rows.map((r) =>
+        r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','),
+      ).join('\n');
+      await downloadCSV(csv, `Munyaka_Financial_Report_${new Date().toISOString().slice(0, 10)}.csv`);
       showSuccess('Financial report downloaded.');
     } catch (err) {
-      console.error(err);
+      console.error('[OwnerDashboard] export error:', err);
       showError('Could not export the report. Please try again.');
     }
   };
@@ -417,7 +530,6 @@ const OwnerDashboard: React.FC = () => {
       showError('No recent transactions available to download.');
       return;
     }
-    // Build a minimal printable receipt and download as a text file
     const body = [
       'MUNYAKA PRIMARY AND JUNIOR SCHOOL',
       'P.O. BOX 5239, ELDORET',
@@ -448,44 +560,19 @@ const OwnerDashboard: React.FC = () => {
     showSuccess('Latest receipt downloaded.');
   };
 
-  // ── Subscription Status Badge Config ──────────────────────────────────────
+  // ── Status badge config ────────────────────────────────────────────────────
   const statusConfig: Record<SubscriptionStatus, {
-    label: string;
-    bg: string;
-    text: string;
-    dot: string;
+    label: string; bg: string; text: string; dot: string;
   }> = {
-    active: {
-      label: 'Active',
-      bg: 'bg-emerald-50',
-      text: 'text-emerald-700',
-      dot: 'bg-emerald-500',
-    },
-    due: {
-      label: 'Due',
-      bg: 'bg-amber-50',
-      text: 'text-amber-700',
-      dot: 'bg-amber-500',
-    },
-    grace_period: {
-      label: 'Grace Period',
-      bg: 'bg-orange-50',
-      text: 'text-orange-700',
-      dot: 'bg-orange-500',
-    },
-    expired: {
-      label: 'Expired',
-      bg: 'bg-red-50',
-      text: 'text-red-700',
-      dot: 'bg-red-500',
-    },
+    active:      { label: 'Active',       bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
+    due:         { label: 'Due',          bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
+    grace_period:{ label: 'Grace Period', bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-500' },
+    expired:     { label: 'Expired',      bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
   };
-  const sub = statusConfig[subState.status];
+  const sub = statusConfig[license.status];
 
-  const tierName = seatCounts.isEnterprise ? 'Enterprise Plan' : 'Pro Plan';
-  const tierIcon = seatCounts.isEnterprise ? Crown : Sparkles;
-  const TierIcon = tierIcon;
-  const tierGradient = seatCounts.isEnterprise
+  const TierIcon = license.isEnterprise ? Crown : Sparkles;
+  const tierGradient = license.isEnterprise
     ? 'from-indigo-600 via-violet-600 to-fuchsia-600'
     : 'from-blue-600 via-cyan-600 to-teal-500';
 
@@ -495,15 +582,24 @@ const OwnerDashboard: React.FC = () => {
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5">
+          <div className="flex flex-wrap items-center gap-2 mb-2">
+            <Badge
+              variant="outline"
+              className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5"
+            >
               <Shield size={10} />
               Owner Console
             </Badge>
-            <Badge variant="outline" className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 ${sub.bg} ${sub.text} gap-1.5`}>
+            <Badge
+              variant="outline"
+              className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 ${sub.bg} ${sub.text} gap-1.5`}
+            >
               <span className={`w-1.5 h-1.5 rounded-full ${sub.dot} animate-pulse`} />
               {sub.label}
             </Badge>
+            <span className="text-[10px] text-slate-400">
+              Live · {now}
+            </span>
           </div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight">
             Owner Dashboard
@@ -529,7 +625,7 @@ const OwnerDashboard: React.FC = () => {
             className="rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-md"
           >
             <RefreshCw size={14} className="mr-1.5" />
-            {subState.status === 'active' ? 'Manage Plan' : 'Upgrade / Renew'}
+            {license.status === 'active' ? 'Manage Plan' : 'Upgrade / Renew'}
           </Button>
         </div>
       </div>
@@ -539,7 +635,6 @@ const OwnerDashboard: React.FC = () => {
         <div className={`relative bg-gradient-to-br ${tierGradient} p-6 md:p-8`}>
           <div className="absolute top-0 right-0 w-48 h-48 bg-white/10 rounded-full blur-3xl -mr-12 -mt-12 pointer-events-none" />
           <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl -ml-8 -mb-8 pointer-events-none" />
-
           <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-6">
             <div className="flex items-start gap-4">
               <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center shrink-0 ring-1 ring-white/30">
@@ -550,30 +645,32 @@ const OwnerDashboard: React.FC = () => {
                   Current Subscription
                 </p>
                 <h2 className="text-2xl md:text-3xl font-black text-white mt-1">
-                  {tierName}
+                  {license.planName}
                 </h2>
                 <div className="flex flex-wrap items-center gap-3 mt-3">
                   <div className="flex items-center gap-1.5 text-white/90 text-xs">
                     <Calendar size={12} />
                     <span>
-                      Next billing: <strong className="font-bold text-white">{formatDateLong(subState.expiresAt)}</strong>
+                      Next billing:{' '}
+                      <strong className="font-bold text-white">
+                        {formatDateLong(license.nextBillingDate)}
+                      </strong>
                     </span>
                   </div>
                   <span className="w-1 h-1 rounded-full bg-white/40" />
                   <div className="flex items-center gap-1.5 text-white/90 text-xs">
                     <Clock size={12} />
                     <span>
-                      {subState.status === 'expired'
+                      {license.status === 'expired'
                         ? 'Expired'
-                        : subState.status === 'grace_period'
+                        : license.status === 'grace_period'
                           ? 'In grace period'
-                          : `${subState.daysRemaining} day${subState.daysRemaining === 1 ? '' : 's'} remaining`}
+                          : `${license.daysRemaining} day${license.daysRemaining === 1 ? '' : 's'} remaining`}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
-
             <Button
               onClick={handleUpgrade}
               className="rounded-xl bg-white text-slate-900 hover:bg-white/90 font-bold shadow-lg"
@@ -600,18 +697,20 @@ const OwnerDashboard: React.FC = () => {
                       Student Seats
                     </p>
                     <p className="text-sm font-bold text-slate-900">
-                      {seatCounts.studentsUsed} / {seatCounts.studentCap.toLocaleString()} used
+                      {centralLoading
+                        ? 'Loading…'
+                        : `${seats.studentsUsed.toLocaleString()} / ${seats.studentCap.toLocaleString()} used`}
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-black text-blue-600">
-                  {seatCounts.studentsPercent}%
+                  {seats.studentsPercent}%
                 </span>
               </div>
               <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all"
-                  style={{ width: `${seatCounts.studentsPercent}%` }}
+                  className="h-full bg-gradient-to-r from-blue-500 to-cyan-500 rounded-full transition-all duration-500"
+                  style={{ width: `${seats.studentsPercent}%` }}
                 />
               </div>
             </div>
@@ -628,18 +727,18 @@ const OwnerDashboard: React.FC = () => {
                       Staff Seats
                     </p>
                     <p className="text-sm font-bold text-slate-900">
-                      {seatCounts.staffUsed} / {seatCounts.staffCap} used
+                      {seats.staffUsed} / {seats.staffCap} used
                     </p>
                   </div>
                 </div>
                 <span className="text-xs font-black text-violet-600">
-                  {seatCounts.staffPercent}%
+                  {seats.staffPercent}%
                 </span>
               </div>
               <div className="h-2.5 w-full bg-slate-100 rounded-full overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all"
-                  style={{ width: `${seatCounts.staffPercent}%` }}
+                  className="h-full bg-gradient-to-r from-violet-500 to-fuchsia-500 rounded-full transition-all duration-500"
+                  style={{ width: `${seats.staffPercent}%` }}
                 />
               </div>
             </div>
@@ -647,22 +746,22 @@ const OwnerDashboard: React.FC = () => {
 
           <div className="mt-6 pt-6 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
             <div className="flex items-center gap-2 text-slate-500">
-              <Mail size={12} className="text-slate-400" />
+              <Mail size={12} className="text-slate-400 shrink-0" />
               <span className="truncate">billing@munyaka.sc.ke</span>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
-              <Phone size={12} className="text-slate-400" />
+              <Phone size={12} className="text-slate-400 shrink-0" />
               <span>+254 712 345 678</span>
             </div>
             <div className="flex items-center gap-2 text-slate-500">
-              <Receipt size={12} className="text-slate-400" />
-              <span>{history.length} license{history.length === 1 ? '' : 's'} on file</span>
+              <Receipt size={12} className="text-slate-400 shrink-0" />
+              <span>{allLicenses.length} license{allLicenses.length === 1 ? '' : 's'} on file</span>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* ── 2. Executive Financial Summary Cards ───────────────────────── */}
+      {/* ── 2. Executive Financial Summary ──────────────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -670,17 +769,20 @@ const OwnerDashboard: React.FC = () => {
               Executive Financial Summary
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Real-time revenue, outstanding balances, and subscription health.
+              Live revenue, outstanding balances, and subscription health.
             </p>
           </div>
-          <Badge variant="outline" className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-slate-100 text-slate-700 gap-1.5">
+          <Badge
+            variant="outline"
+            className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-slate-100 text-slate-700 gap-1.5"
+          >
             <DollarSign size={10} />
             KES · Kenyan Shilling
           </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total expected */}
+          {/* Total Expected Revenue */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -696,12 +798,12 @@ const OwnerDashboard: React.FC = () => {
                 {formatKES(financials.totalExpected)}
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
-                Total fee balance across active learners
+                Per-grade fees × {activeStudentCount} active learners
               </p>
             </CardContent>
           </Card>
 
-          {/* Total collected */}
+          {/* Total Collected */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -725,7 +827,7 @@ const OwnerDashboard: React.FC = () => {
             </CardContent>
           </Card>
 
-          {/* Outstanding unpaid */}
+          {/* Outstanding Unpaid */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
@@ -741,27 +843,30 @@ const OwnerDashboard: React.FC = () => {
                 {formatKES(financials.outstanding)}
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
-                Across {financials.outstandingCount} account{financials.outstandingCount === 1 ? '' : 's'}
+                Expected − Collected
               </p>
             </CardContent>
           </Card>
 
-          {/* Subscription status */}
+          {/* Subscription Status */}
           <Card className={`border-none shadow-sm rounded-2xl bg-gradient-to-br ${
-            subState.status === 'active'
+            license.status === 'active'
               ? 'from-emerald-50 to-teal-50'
-              : subState.status === 'due'
+              : license.status === 'due'
                 ? 'from-amber-50 to-orange-50'
                 : 'from-red-50 to-rose-50'
           }`}>
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className={`w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center`}>
-                  <CreditCard size={18} className={
-                    subState.status === 'active' ? 'text-emerald-600'
-                      : subState.status === 'due' ? 'text-amber-600'
-                        : 'text-red-600'
-                  } />
+                <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center">
+                  <CreditCard
+                    size={18}
+                    className={
+                      license.status === 'active' ? 'text-emerald-600'
+                        : license.status === 'due' ? 'text-amber-600'
+                          : 'text-red-600'
+                    }
+                  />
                 </div>
                 <span className={`w-2.5 h-2.5 rounded-full ${sub.dot} animate-pulse`} />
               </div>
@@ -772,9 +877,9 @@ const OwnerDashboard: React.FC = () => {
                 {sub.label}
               </p>
               <p className="text-[10px] text-slate-500 mt-1">
-                {subState.status === 'active' && subState.daysRemaining > 0
-                  ? `Renews ${formatDate(subState.expiresAt)}`
-                  : subState.status === 'expired'
+                {license.status === 'active' && license.daysRemaining > 0
+                  ? `Renews ${formatDate(license.nextBillingDate)}`
+                  : license.status === 'expired'
                     ? 'Renew now to restore access'
                     : 'Action recommended'}
               </p>
@@ -782,7 +887,7 @@ const OwnerDashboard: React.FC = () => {
           </Card>
         </div>
 
-        {/* Collection vs Expected Chart */}
+        {/* Revenue trend chart */}
         <Card className="border-none shadow-sm rounded-2xl bg-white mt-4">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <div>
@@ -790,7 +895,7 @@ const OwnerDashboard: React.FC = () => {
                 Revenue Collected (Last 6 Months)
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Monthly fee collection trend in KES
+                Monthly fee collection trend in KES — live from transaction records
               </p>
             </div>
             <TrendingUp size={18} className="text-emerald-500" />
@@ -834,15 +939,12 @@ const OwnerDashboard: React.FC = () => {
                     }}
                   />
                   <Bar dataKey="total" radius={[8, 8, 0, 0]}>
-                    {revenueTrend.map((entry, idx) => {
-                      const isLast = idx === revenueTrend.length - 1;
-                      return (
-                        <Cell
-                          key={entry.label}
-                          fill={isLast ? '#10b981' : '#a7f3d0'}
-                        />
-                      );
-                    })}
+                    {revenueTrend.map((entry, idx) => (
+                      <Cell
+                        key={entry.label}
+                        fill={idx === revenueTrend.length - 1 ? '#10b981' : '#a7f3d0'}
+                      />
+                    ))}
                   </Bar>
                 </BarChart>
               </ResponsiveContainer>
@@ -856,7 +958,7 @@ const OwnerDashboard: React.FC = () => {
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4">
           <div>
             <CardTitle className="text-base font-bold text-slate-800">
-              Recent Transactions & Payment Audit
+              Recent Transactions &amp; Payment Audit
             </CardTitle>
             <p className="text-xs text-slate-500 mt-0.5">
               M-Pesa receipts, fee collections, and system billing invoices
@@ -891,46 +993,34 @@ const OwnerDashboard: React.FC = () => {
                 <Receipt size={20} className="text-slate-400" />
               </div>
               <p className="text-sm font-semibold text-slate-600">
-                No payment activity yet.
+                No recent transactions found.
               </p>
               <p className="text-xs text-slate-400 max-w-sm">
-                Once fee payments and subscription invoices are recorded, they will appear
-                here for executive review.
+                Once fee payments and subscription invoices are recorded, they
+                will appear here for executive review.
               </p>
             </div>
           ) : (
-            <div className="w-full overflow-auto" style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}>
+            <div
+              className="w-full overflow-auto"
+              style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}
+            >
               <table className="w-full text-sm min-w-[720px]">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Type
-                    </th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Payer / Invoice
-                    </th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Method
-                    </th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Reference
-                    </th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Date
-                    </th>
-                    <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">
-                      Amount (KES)
-                    </th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Type</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer / Invoice</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Method</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Reference</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</th>
+                    <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount (KES)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {auditRows.map((row) => {
                     const Icon = row.icon;
                     return (
-                      <tr
-                        key={row.key}
-                        className="hover:bg-slate-50/60 transition-colors"
-                      >
+                      <tr key={row.key} className="hover:bg-slate-50/60 transition-colors">
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className={`w-9 h-9 rounded-lg ${row.iconBg} flex items-center justify-center shrink-0`}>
@@ -990,7 +1080,6 @@ const OwnerDashboard: React.FC = () => {
           )}
         </CardContent>
 
-        {/* Quick action footer */}
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/40 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-slate-500">
             Showing the most recent {auditRows.length} payment event{auditRows.length === 1 ? '' : 's'}.
@@ -1014,7 +1103,7 @@ const OwnerDashboard: React.FC = () => {
               className="rounded-lg text-slate-600 hover:text-slate-900"
             >
               <Receipt size={13} className="mr-1" />
-              Latest PDF Receipt
+              Latest Receipt
             </Button>
           </div>
         </div>
