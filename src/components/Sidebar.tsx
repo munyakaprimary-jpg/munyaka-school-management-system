@@ -148,10 +148,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const dashboardItem = menuItems.find(item => item.path === '/');
 
     // ADMIN (and legacy super_admin alias) always sees every sidebar item.
+    // The Dashboard link points to /admin-dashboard for admin role.
         if (roleLower === 'admin' || roleLower === 'super_admin') {
           return menuItems.filter(item => {
             if (item.requiresPermission) return canAccessSystemManagement();
             return true;
+          }).map(item => {
+            // Override the Dashboard link for admin users to go to the
+            // dedicated System Admin Dashboard route.
+            if (item.path === '/') {
+              return { ...item, path: '/admin-dashboard', label: 'Dashboard' };
+            }
+            return item;
           });
         }
 
@@ -224,21 +232,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
     //   Settings, Promote) are NOT in scope for the owner role.
     const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
-      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-      { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
-      { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-      { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    ].filter(item => {
-      if (!user) return false;
-      if (item.global) return true;
-      return item.roles.includes(user.role);
-    });
+        { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+        { icon: LayoutDashboard, label: 'Home', path: '/admin-dashboard', roles: ['admin', 'super_admin'] },
+        { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+        { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
+        { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+        { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+        { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+        { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
+        { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+        { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+        { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+      ].filter(item => {
+        if (!user) return false;
+        if (item.global) return true;
+        return item.roles.map(r => r.toLowerCase()).includes((user.role || '').toLowerCase());
+      });
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
