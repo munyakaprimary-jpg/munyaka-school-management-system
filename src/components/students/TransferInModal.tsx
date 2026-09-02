@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { notifyDataChanged } from '@/hooks/useDashboardData';
 import {
   Select,
   SelectContent,
@@ -266,6 +267,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     const updated = [learner, ...existing];
     try {
       localStorage.setItem('school_learners_data', JSON.stringify(updated));
+      notifyDataChanged('school_learners_data');
     } catch (err) {
       console.error('[TransferInModal] Failed to persist learner:', err);
       showError('Could not save the learner record. Please retry.');
