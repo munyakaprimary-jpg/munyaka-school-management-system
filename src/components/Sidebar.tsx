@@ -91,8 +91,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   useEffect(() => setShowBottomNav(true), [location.pathname]);
 
   const menuItems = [
-    // ── ADMIN has unrestricted access to every section ──
-    // ── Dashboard — first item for every role, routing to their role-specific view ──
+    // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
@@ -134,22 +133,35 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const role = user.role ?? '';
     const roleLower = role.toLowerCase();
 
+    // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
+    // The Dashboard item is the single navigation entry point that routes
+    // to the user's role-specific view (/).  It must appear regardless of
+    // role so the owner always has a way to reach OwnerDashboard.
+    // The remaining items are then filtered by role below.
+    const dashboardItem = menuItems.find(item => item.path === '/');
+
     // ADMIN (and legacy super_admin alias) always sees every sidebar item.
     if (roleLower === 'admin' || roleLower === 'super_admin') {
       return menuItems.filter(item => {
-        if (!item.requiresPermission) return true;
-        return canAccessSystemManagement();
+        if (item.requiresPermission) return canAccessSystemManagement();
+        return true;
       });
     }
 
-    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data,
-    // but always sees global items (e.g. Games Hub).
+    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+    // Central Data, plus global items (Games Hub).
     if (roleLower === 'owner') {
-      return menuItems.filter(item => {
+      const roleFiltered = menuItems.filter(item => {
         if (item.global) return true;
         if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
       });
+      // Ensure Dashboard is always prepended (it may not pass the role filter
+      // if roles[] is ever misconfigured for this item).
+      if (dashboardItem && !roleFiltered.includes(dashboardItem)) {
+        return [dashboardItem, ...roleFiltered];
+      }
+      return roleFiltered;
     }
 
     return menuItems.filter(item => {
