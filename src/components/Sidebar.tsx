@@ -148,12 +148,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     const dashboardItem = menuItems.find(item => item.path === '/');
 
     // ADMIN (and legacy super_admin alias) always sees every sidebar item.
-    if (roleLower === 'admin' || roleLower === 'super_admin') {
-      return menuItems.filter(item => {
-        if (item.requiresPermission) return canAccessSystemManagement();
-        return true;
-      });
-    }
+        if (roleLower === 'admin' || roleLower === 'super_admin') {
+          return menuItems.filter(item => {
+            if (item.requiresPermission) return canAccessSystemManagement();
+            return true;
+          });
+        }
 
     // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
     // Central Data + Profile Settings, plus global items (Games Hub).
@@ -190,6 +190,21 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         if (!ordered.includes(i)) ordered.push(i);
       });
       return ordered;
+    }
+
+    // For teacher role, show "Teacher's Dashboard" label
+    if (roleLower === 'teacher') {
+      return menuItems.filter(item => {
+        if (item.global) return true;
+        if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+        if (item.requiresPermission) return canAccessSystemManagement();
+        return true;
+      }).map(item => {
+        if (item.path === '/') {
+          return { ...item, label: "Teacher's Dashboard" };
+        }
+        return item;
+      });
     }
 
     return menuItems.filter(item => {
