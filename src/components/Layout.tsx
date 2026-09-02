@@ -37,20 +37,22 @@ import {
   LogIn,
   MoreHorizontal,
   Laptop,
-  Monitor,
-  UserCog,
-  Keyboard,
-  Target,
-  Database,
-  CreditCard,
-  Archive,
-  Gamepad2
-} from 'lucide-react';
+    Monitor,
+    UserCog,
+    Keyboard,
+    Target,
+    Database,
+    CreditCard,
+    Archive,
+    Gamepad2,
+    Server
+  } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useLanSync } from '@/hooks/useLanSync';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -61,12 +63,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
-  const { canAccessSystemManagement } = usePermissions();
-  const location = useLocation();
-  const navigate = useNavigate();
-
-  // Attach Hardware Back Button Handling for Capacitor/Android
-  useMobileBackButton(isOpen, () => setIsOpen(false));
+    const { canAccessSystemManagement } = usePermissions();
+    const { connectionStatus, isConnected } = useLanSync();
+    const location = useLocation();
+    const navigate = useNavigate();
+  
+    // Attach Hardware Back Button Handling for Capacitor/Android
+    useMobileBackButton(isOpen, () => setIsOpen(false));
 
   // Remove any stray hash-like tokens that might be leaking into the DOM
   useEffect(() => {
@@ -133,6 +136,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
+        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner', 'super_admin'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -223,6 +227,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'head_teacher', 'teacher'] },
     { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+        { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin', 'owner'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
     { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -386,15 +391,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           
           <div className="flex items-center gap-2">
             <NotificationBell />
-            <button 
-              onClick={() => setIsDarkMode(!isDarkMode)}
-              className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
-              aria-label="Toggle theme"
-            >
-              {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
-            </button>
-          </div>
-        </header>
+                        <button
+                          onClick={() => setIsDarkMode(!isDarkMode)}
+                          className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
+                          aria-label="Toggle theme"
+                        >
+                          {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
+                        </button>
+                        {/* LAN Server Connection Indicator */}
+                        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold">
+                          {isConnected ? (
+                            <>
+                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
+                            </>
+                          ) : (
+                            <>
+                              <div className="w-2 h-2 rounded-full bg-slate-300" />
+                              <span className="text-slate-400">Offline</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    </header>
 
         {/* Dynamic Main Viewport */}
         <div 

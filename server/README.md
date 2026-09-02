@@ -1,63 +1,63 @@
-# Emergency Password Reset Server
+# Munyaka LAN School Management Server
 
-A standalone Node.js backend that processes `reset-override.json` on startup.
+A lightweight Node.js/Express server with SQLite database for LAN-based school management.
 
-## Setup
-
-```bash
-# Install dependencies
-npm install bcrypt
-
-# Set the emergency secret in your environment
-echo "EMERGENCY_SECRET=$(openssl rand -base64 32)" >> .env
-```
-
-## Create a reset-override.json at the project root
-
-```json
-{
-  "action": "reset_password",
-  "secretKey": "your-secret-from-env",
-  "role": "superadmin",
-  "newPassword": "NewSecurePassword123"
-}
-```
-
-## Run on server startup
+## Quick Start
 
 ```bash
-# Using tsx (TypeScript runner)
-npx tsx server/reset-server.ts
-
-# Or compile and run
-npx tsc server/reset-server.ts --outDir dist/server
-node dist/server/reset-server.js
+cd server
+npm install
+npm start
 ```
 
-For automatic startup, add a `prestart` script in `package.json`:
+The server runs on port **5000** by default.
 
-```json
-"scripts": {
-  "prestart": "tsx server/reset-server.ts",
-  "start": "node index.js"
-}
-```
+## Features
 
-## Behavior
+- **RESTful API** for Students, Teachers, Attendance, and Fees
+- **SQLite database** stored locally in `data/school.db`
+- **Device tracking** for connected mobile devices
+- **Offline sync queue** for data entered on disconnected devices
+- **Database backup/restore** via JSON export
 
-1. **No `reset-override.json`** → starts normally, no action.
-2. **Invalid `secretKey`** → aborts, logs warning, file NOT deleted.
-3. **Valid `secretKey`** → hashes new password, updates user record, deletes the file, prints success banner.
+## API Endpoints
 
-## Security
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/students` | List all students |
+| POST | `/api/students` | Create new student |
+| GET | `/api/students/:id` | Get student details |
+| PUT | `/api/students/:id` | Update student |
+| GET | `/api/teachers` | List all teachers |
+| POST | `/api/teachers` | Create new teacher |
+| PUT | `/api/teachers/:id` | Update teacher |
+| GET | `/api/attendance` | Get attendance records |
+| POST | `/api/attendance` | Record attendance |
+| POST | `/api/attendance/bulk` | Bulk record attendance |
+| GET | `/api/fees` | Get fee records |
+| POST | `/api/fees` | Create fee record |
+| POST | `/api/fees/:id/payment` | Record fee payment |
+| GET | `/api/devices` | List connected devices |
+| POST | `/api/devices/register` | Register device |
+| POST | `/api/devices/heartbeat` | Device heartbeat |
+| POST | `/api/sync` | Sync offline data |
+| GET | `/api/stats` | Database statistics |
+| GET | `/api/backup` | Export database backup |
+| POST | `/api/backup/restore` | Restore from backup |
+| GET | `/api/users` | List users |
+| POST | `/api/users` | Create user |
+| PUT | `/api/users/:id` | Update user |
+| DELETE | `/api/users/:id` | Delete user |
+| GET | `/api/server/info` | Server connection info |
 
-- Constant-time `secretKey` comparison to prevent timing attacks.
-- Passwords are hashed with **bcrypt** (cost factor 12) before storage.
-- Override file is deleted immediately after successful reset.
-- Failed resets leave the file in place for an admin to inspect.
+## Connecting from Mobile APK
 
-## File locations
+1. Find the Admin PC's IP address (displayed in the Admin Dashboard)
+2. Open Settings in the mobile app
+3. Enter the IP address (e.g., `192.168.1.100`)
+4. Tap "Test Connection" to verify
+5. The app will sync data via `http://{IP}:5000/api`
 
-- **Override file** (must be at project root): `reset-override.json`
-- **Users database** (created on first run): `data/users.json`
-- **Env variable**: `EMERGENCY_SECRET`
+## Database Location
+
+`data/school.db` — automatically created on first run.
