@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
+import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 import {
   Users,
   UserCheck,
@@ -539,8 +540,14 @@ const AdminDashboard: React.FC = () => {
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
-  const title = user?.role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
   const role = user?.role;
+
+  // Owner sees the full Owner Dashboard; no wrapper header needed there
+  if (role === 'owner') {
+    return <OwnerDashboard />;
+  }
+
+  const title = role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
 
   return (
     <div className="space-y-6">
