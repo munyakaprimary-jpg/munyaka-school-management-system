@@ -105,35 +105,70 @@ export default function MobileSettings() {
     }
   }, [serverUrl, connectionStatus.isOnline]);
 
-  const checkConnection = useCallback(async () => {
-    if (!serverUrl) {
-      setConnectionStatus(prev => ({ ...prev, serverReachable: false, latency: null }));
-      return;
-    }
-
-    setIsTesting(true);
-    const startTime = Date.now();
-
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const response = await fetch(`${serverUrl}/api/health`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-
-      clearTimeout(timeoutId);
-      const latency = Date.now() - startTime;
-
-      if (response.ok) {
-        setConnectionStatus({
-          isOnline: navigator.onLine,
-          latency,
-          lastChecked: new Date().toISOString(),
-          serverReachable: true
+  // Ping the dedicated /api/health endpoint. Treat status:"ok" (or any 2xx
+    // response from that path) as Online. Persist the URL when reachable
+    // so it becomes the active base URL for the rest of the app.
+    const checkConnection = useCallback(async () => {
+      if (!serverUrl) {
+        setConnectionStatus(prev => ({ ...prev, serverReachable: false, latency: null }));
+        return;
+      }
+  
+      setIsTesting(true);
+      const startTime = Date.now();
+  
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+  
+        const response = await fetch(`${serverUrl}/api/health`, {
+          method: 'GET',
+          signal: controller.signal
         });
-      } else {
+  
+        clearTimeout(timeoutId);
+        const latency = Date.now() - startTime;
+  
+        if (response.ok) {
+          // Confirm the body really says we're online — guards against a
+          // captive portal or proxy that returns 200 but wrong content.
+          let isReallyOnline = true;
+          try {
+            const payload = await response.clone().json();
+            isReallyOnline =
+              payload?.status === 'ok' ||
+              payload?.status === 'healthy' ||
+              payload?.success === true;
+          } catch { /* non-JSON body is still fine if 2xx */ }
+  
+          if (isReallyOnline) {
+            setConnectionStatus({
+              isOnline: navigator.onLine,
+              latency,
+              lastChecked: new Date().toISOString(),
+              serverReachable: true
+            });
+            // Persist as the active base URL so the global sync layer picks it up.
+            localStorage.setItem(SERVER_URL_KEY, serverUrl);
+          } else {
+            setConnectionStatus(prev => ({
+              ...prev,
+              isOnline: navigator.onLine,
+              latency: null,
+              lastChecked: new Date().toISOString(),
+              serverReachable: false
+            }));
+          }
+        } else {
+          setConnectionStatus(prev => ({
+            ...prev,
+            isOnline: navigator.onLine,
+            latency: null,
+            lastChecked: new Date().toISOString(),
+            serverReachable: false
+          }));
+        }
+      } catch {
         setConnectionStatus(prev => ({
           ...prev,
           isOnline: navigator.onLine,
@@ -142,18 +177,9 @@ export default function MobileSettings() {
           serverReachable: false
         }));
       }
-    } catch {
-      setConnectionStatus(prev => ({
-        ...prev,
-        isOnline: navigator.onLine,
-        latency: null,
-        lastChecked: new Date().toISOString(),
-        serverReachable: false
-      }));
-    }
-
-    setIsTesting(false);
-  }, [serverUrl]);
+  
+      setIsTesting(false);
+    }, [serverUrl]);
 
   const testConnection = async () => {
     if (!serverUrl.trim()) {

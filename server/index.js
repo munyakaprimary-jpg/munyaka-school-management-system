@@ -27,7 +27,27 @@ if (!fs.existsSync(dataDir)) {
 
 // Initialize Express
 const app = express();
-app.use(cors());
+
+// Permissive CORS — allows the mobile APK and any browser origin to call
+// the API. Mobile APKs often have unusual Origin headers (e.g. capacitor://,
+// file://, http://10.x.x.x:port) which the default CORS middleware blocks.
+app.use(cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['*'],
+  exposedHeaders: ['*'],
+  credentials: false,
+  maxAge: 86400, // cache preflight for 24h
+}));
+
+// Explicit preflight handler for routes that may not be covered by the
+// global CORS middleware (e.g. legacy browsers, native HTTP clients).
+app.options('*', cors({
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['*'],
+}));
+
 app.use(express.json({ limit: '50mb' }));
 
 // ============================================
@@ -1084,12 +1104,22 @@ app.get('/api/server/info', (req, res) => {
   });
 });
 
-// Health check
+// Dedicated ping endpoints used by the mobile APK to detect server
+// reachability.  Returns the minimum payload needed for the client to
+// flip its connection state to "Online".
 app.get('/api/health', (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
-    status: 'healthy',
+    status: 'ok',
     engine: 'sql.js',
+    timestamp: new Date().toISOString()
+  });
+});
+
+// Lightweight alias kept at /ping for clients that prefer the shorter path.
+app.get('/ping', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
     timestamp: new Date().toISOString()
   });
 });

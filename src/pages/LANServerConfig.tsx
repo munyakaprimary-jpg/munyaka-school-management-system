@@ -72,88 +72,107 @@ export default function LANServerConfig() {
     testConnectionSilent(serverUrl);
   }, []);
 
-  const testConnectionSilent = async (url: string) => {
-    if (!url) return;
-    const normalized = normalizeUrl(url);
-    setStatus('testing');
-    const start = Date.now();
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${normalized}/api/stats`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      const ms = Date.now() - start;
-      setLatency(ms);
-      setLastChecked(new Date().toISOString());
-      if (res.ok) {
-        setStatus('connected');
+  // Ping the dedicated health endpoint and parse { status: "ok" }.
+    // On success, flip status to 'connected' (Online) and persist the URL.
+    const pingHealth = async (url: string): Promise<{
+      ok: boolean;
+      latency: number | null;
+      stats: ServerStats | null;
+    }> => {
+      const normalized = normalizeUrl(url);
+      const start = Date.now();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+  
+        const res = await fetch(`${normalized}/api/health`, {
+          method: 'GET',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        const ms = Date.now() - start;
+  
+        if (!res.ok) {
+          return { ok: false, latency: null, stats: null };
+        }
+  
+        let payload: any = null;
+        try { payload = await res.json(); } catch { /* non-JSON ok */ }
+  
+        // Treat any of these as "Online": explicit status:"ok", status:"healthy",
+        // or simply a 2xx response from the health endpoint.
+        const isOnline =
+          !!payload &&
+          (payload.status === 'ok' ||
+            payload.status === 'healthy' ||
+            payload.success === true);
+  
+        if (!isOnline) {
+          return { ok: false, latency: ms, stats: null };
+        }
+  
+        // Optionally pull fresh stats so the Live Server Snapshot stays live
+        let stats: ServerStats | null = null;
         try {
-          const data = await res.json();
-          if (data?.data) setStats(data.data);
-        } catch {}
+          const statsRes = await fetch(`${normalized}/api/stats`);
+          if (statsRes.ok) {
+            const data = await statsRes.json();
+            if (data?.data) stats = data.data;
+          }
+        } catch { /* stats fetch is best-effort */ }
+  
+        return { ok: true, latency: ms, stats };
+      } catch {
+        return { ok: false, latency: null, stats: null };
+      }
+    };
+  
+    const testConnectionSilent = async (url: string) => {
+      if (!url) return;
+      setStatus('testing');
+      const result = await pingHealth(url);
+      setLastChecked(new Date().toISOString());
+      if (result.ok) {
+        setLatency(result.latency);
+        setStatus('connected');
+        if (result.stats) setStats(result.stats);
       } else {
         setStatus('offline');
+        setLatency(null);
       }
-    } catch {
-      setStatus('offline');
-      setLatency(null);
+    };
+  
+    const handleSaveAndTest = async () => {
+      if (!serverUrl.trim()) {
+        showError('Please enter a LAN Server Address');
+        return;
+      }
+  
+      setIsSaving(true);
+      const normalized = normalizeUrl(serverUrl);
+      localStorage.setItem(LAN_SERVER_KEY, normalized);
+      setServerUrl(normalized);
+      showSuccess(`LAN Server Address saved: ${normalized}`);
+  
+      setIsTesting(true);
+      setStatus('testing');
+      const result = await pingHealth(normalized);
       setLastChecked(new Date().toISOString());
-    }
-  };
-
-  const handleSaveAndTest = async () => {
-    if (!serverUrl.trim()) {
-      showError('Please enter a LAN Server Address');
-      return;
-    }
-
-    setIsSaving(true);
-    const normalized = normalizeUrl(serverUrl);
-    localStorage.setItem(LAN_SERVER_KEY, normalized);
-    setServerUrl(normalized);
-    showSuccess('LAN Server Address saved');
-
-    // Test connection
-    setIsTesting(true);
-    setStatus('testing');
-    const start = Date.now();
-    try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${normalized}/api/stats`, {
-        method: 'GET',
-        signal: controller.signal
-      });
-      clearTimeout(timeoutId);
-      const ms = Date.now() - start;
-      setLatency(ms);
-      setLastChecked(new Date().toISOString());
-      if (res.ok) {
+  
+      if (result.ok) {
+        setLatency(result.latency);
         setStatus('connected');
-        try {
-          const data = await res.json();
-          if (data?.data) setStats(data.data);
-        } catch {}
-        showSuccess(`Connected to ${normalized} (${ms}ms)`);
+        if (result.stats) setStats(result.stats);
+        showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
       } else {
         setStatus('offline');
-        showError(`Server returned HTTP ${res.status}`);
+        setLatency(null);
+        showError(`Could not reach ${normalized}. Working offline.`);
       }
-    } catch (err: any) {
-      setStatus('offline');
-      setLatency(null);
-      setLastChecked(new Date().toISOString());
-      showError(`Could not reach ${normalized}. Working offline.`);
-    } finally {
+  
       setIsSaving(false);
       setIsTesting(false);
-    }
-  };
+    };
 
   const handleTestOnly = async () => {
     setIsTesting(true);
