@@ -8,6 +8,7 @@ import type { TimeSlot } from '@/hooks/useTimetable';
 interface InlineTimeCellProps {
   slot: TimeSlot;
   periodNumber: number;
+  isReadOnly?: boolean;
   onSave: (startTime: string, endTime: string, category: string | null) => void;
   onDelete: () => void;
 }
@@ -15,6 +16,7 @@ interface InlineTimeCellProps {
 const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
   slot,
   periodNumber,
+  isReadOnly = false,
   onSave,
   onDelete,
 }) => {
@@ -190,7 +192,7 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
   const iconBg = isCategory ? 'bg-amber-100' : 'bg-indigo-100';
 
   return (
-    <td className="px-3 py-4 bg-slate-50/30 group align-middle">
+    <td className={`px-3 py-4 bg-slate-50/30 group align-middle ${isReadOnly ? '' : 'group'}`}>
       <div className="flex items-center justify-between gap-1">
         <div className="flex items-center gap-2 min-w-0">
           <div className={`w-6 h-6 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
@@ -215,24 +217,26 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
             )}
           </div>
         </div>
-        <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button
-            onClick={() => setIsEditing(true)}
-            className="w-6 h-6 rounded-md hover:bg-indigo-100 flex items-center justify-center transition-colors"
-            aria-label="Edit time slot"
-            title="Edit slot"
-          >
-            <Pencil className="w-3 h-3 text-indigo-600" />
-          </button>
-          <button
-            onClick={onDelete}
-            className="w-6 h-6 rounded-md hover:bg-rose-100 flex items-center justify-center transition-colors"
-            aria-label="Delete period"
-            title="Delete period"
-          >
-            <X className="w-3 h-3 text-rose-500" />
-          </button>
-        </div>
+        {!isReadOnly && (
+          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button
+              onClick={() => setIsEditing(true)}
+              className="w-6 h-6 rounded-md hover:bg-indigo-100 flex items-center justify-center transition-colors"
+              aria-label="Edit time slot"
+              title="Edit slot"
+            >
+              <Pencil className="w-3 h-3 text-indigo-600" />
+            </button>
+            <button
+              onClick={onDelete}
+              className="w-6 h-6 rounded-md hover:bg-rose-100 flex items-center justify-center transition-colors"
+              aria-label="Delete period"
+              title="Delete period"
+            >
+              <X className="w-3 h-3 text-rose-500" />
+            </button>
+          </div>
+        )}
       </div>
     </td>
   );

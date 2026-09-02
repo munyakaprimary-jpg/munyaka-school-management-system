@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Printer, Clock, Settings2, Plus } from 'lucide-react';
 import { useTimetable } from '@/hooks/useTimetable';
+import { useAuth } from '@/context/AuthContext';
 import TimeSlotModal from '@/components/timetable/TimeSlotModal';
 import LessonDrawer from '@/components/timetable/LessonDrawer';
 import InlineTimeCell from '@/components/timetable/InlineTimeCell';
@@ -27,6 +28,9 @@ const getCategoryStyle = (category: string | null) => {
 };
 
 const Timetable = () => {
+  const { user } = useAuth();
+  const isReadOnly = user?.role === 'teacher';
+
   const {
     grades,
     selectedGrade,
@@ -46,11 +50,13 @@ const Timetable = () => {
   const [selectedCell, setSelectedCell] = useState<{ slotIndex: number; day: string } | null>(null);
 
   const handleCellClick = (slotIndex: number, day: string) => {
+    if (isReadOnly) return;
     setSelectedCell({ slotIndex, day });
     setLessonDrawerOpen(true);
   };
 
   const handleSaveLesson = (subject: string, colorClass?: string) => {
+    if (isReadOnly) return;
     if (selectedCell) {
       setLesson(selectedCell.slotIndex, selectedCell.day, subject, colorClass);
       setLessonDrawerOpen(false);
@@ -59,6 +65,7 @@ const Timetable = () => {
   };
 
   const handleDeleteLesson = () => {
+    if (isReadOnly) return;
     if (selectedCell) {
       deleteLesson(selectedCell.slotIndex, selectedCell.day);
       setLessonDrawerOpen(false);
@@ -81,18 +88,22 @@ const Timetable = () => {
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>
           <h1 className="text-3xl font-bold tracking-tight text-slate-900">School Timetable</h1>
-          <p className="text-muted-foreground">Manage and view weekly schedules for different grades.</p>
+          <p className="text-muted-foreground">
+            {isReadOnly ? 'View weekly schedules for different grades.' : 'Manage and view weekly schedules for different grades.'}
+          </p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <Button variant="outline" className="rounded-xl" onClick={() => window.print()}>
             <Printer size={18} className="mr-2" /> Print
           </Button>
-          <Button
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100"
-            onClick={() => setSlotModalOpen(true)}
-          >
-            <Settings2 size={18} className="mr-2" /> Manage Slots
-          </Button>
+          {!isReadOnly && (
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-100"
+              onClick={() => setSlotModalOpen(true)}
+            >
+              <Settings2 size={18} className="mr-2" /> Manage Slots
+            </Button>
+          )}
         </div>
       </div>
 
@@ -141,11 +152,17 @@ const Timetable = () => {
                         </div>
                         <div>
                           <p className="text-slate-600 font-semibold">No time slots configured</p>
-                          <p className="text-slate-400 text-sm mt-1">Click "Manage Slots" to add your first period</p>
+                          <p className="text-slate-400 text-sm mt-1">
+                            {isReadOnly
+                              ? 'No schedule has been set up yet.'
+                              : 'Click "Manage Slots" to add your first period'}
+                          </p>
                         </div>
-                        <Button onClick={() => setSlotModalOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
-                          <Plus size={16} className="mr-2" /> Add Time Slot
-                        </Button>
+                        {!isReadOnly && (
+                          <Button onClick={() => setSlotModalOpen(true)} className="rounded-xl bg-indigo-600 hover:bg-indigo-700">
+                            <Plus size={16} className="mr-2" /> Add Time Slot
+                          </Button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -161,6 +178,7 @@ const Timetable = () => {
                           <InlineTimeCell
                             slot={slot}
                             periodNumber={slotIndex + 1}
+                            isReadOnly={isReadOnly}
                             onSave={(st, et, cat) => updateSlotTimes(slot.id, st, et, cat)}
                             onDelete={() => deleteTimeSlot(slot.id)}
                           />
@@ -188,11 +206,27 @@ const Timetable = () => {
                         <InlineTimeCell
                           slot={slot}
                           periodNumber={slotIndex + 1}
+                          isReadOnly={isReadOnly}
                           onSave={(st, et, cat) => updateSlotTimes(slot.id, st, et, cat)}
                           onDelete={() => deleteTimeSlot(slot.id)}
                         />
                         {DAYS.map((day) => {
                           const entry = entries[slotIndex]?.[day];
+                          if (isReadOnly) {
+                            return (
+                              <td key={day} className="px-3 py-3">
+                                <div
+                                  className={`w-full min-h-[64px] p-2.5 rounded-2xl text-xs font-bold flex items-center justify-center ${
+                                    entry?.color || 'bg-slate-50 text-slate-400'
+                                  }`}
+                                >
+                                  <span className="block truncate">
+                                    {entry?.subject || <span className="text-slate-300">—</span>}
+                                  </span>
+                                </div>
+                              </td>
+                            );
+                          }
                           return (
                             <td key={day} className="px-3 py-3">
                               <button
@@ -225,18 +259,24 @@ const Timetable = () => {
       {/* Legend */}
       <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500 px-2">
         <span className="font-semibold">Tip:</span>
-        <span>Click any lesson cell to assign a subject. Hover the time column to inline-edit a period or change its type (regular, break, lunch, etc.).</span>
+        <span>
+          {isReadOnly
+            ? 'This is a read-only view. Contact an administrator to update the schedule.'
+            : 'Click any lesson cell to assign a subject. Hover the time column to inline-edit a period or change its type (regular, break, lunch, etc.).'}
+        </span>
       </div>
 
       {/* Modals */}
-      <TimeSlotModal
-        open={slotModalOpen}
-        onClose={() => setSlotModalOpen(false)}
-        timeSlots={timeSlots}
-        onAdd={addTimeSlot}
-        onUpdate={updateTimeSlot}
-        onDelete={deleteTimeSlot}
-      />
+      {!isReadOnly && (
+        <TimeSlotModal
+          open={slotModalOpen}
+          onClose={() => setSlotModalOpen(false)}
+          timeSlots={timeSlots}
+          onAdd={addTimeSlot}
+          onUpdate={updateTimeSlot}
+          onDelete={deleteTimeSlot}
+        />
+      )}
 
       <LessonDrawer
         open={lessonDrawerOpen}
@@ -244,6 +284,7 @@ const Timetable = () => {
           setLessonDrawerOpen(false);
           setSelectedCell(null);
         }}
+        isReadOnly={isReadOnly}
         day={selectedCell?.day || null}
         slotIndex={selectedCell?.slotIndex ?? null}
         timeLabel={timeLabel}
