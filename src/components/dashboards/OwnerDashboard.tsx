@@ -42,6 +42,9 @@ import {
   BadgeDollarSign,
   RefreshCcw,
   ShieldCheck,
+  Loader2,
+  User as UserIcon,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -65,13 +68,6 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Loader2,
-  User as UserIcon,
-  Mail,
-  Phone,
-  AlertTriangle,
-} from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
