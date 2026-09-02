@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { differenceInDays } from 'date-fns';
+import { differenceInDays, addDays } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,14 +38,12 @@ import {
   Phone,
   RefreshCw,
   ExternalLink,
-  RefreshCcw,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useCentralData } from '@/hooks/useCentralData';
 import {
   getActiveLicense,
   getAllLicenses,
-  daysRemainingUntil,
   isLicenseExpiredAt,
   validityLabel,
 } from '@/services/licenseService';
@@ -158,65 +156,138 @@ const getActiveStaffCount = (): number => {
     : 0;
 };
 
+// ─── Subscription Settings ────────────────────────────────────────────────────
+
+const SUBSCRIPTION_SETTINGS_KEY = 'munyaka_subscription_settings';
+
+type BillingCycle = 'monthly' | 'semi-annual' | 'annual';
+
+interface SubscriptionSettings {
+  billingCycle: BillingCycle;
+  /** ISO date — the start of the current billing period. */
+  cycleStartDate: string;
+}
+
+/** Days in each billing cycle. */
+const BILLING_CYCLE_DAYS: Record<BillingCycle, number> = {
+  monthly:      30,
+  'semi-annual': 183,
+  annual:       365,
+};
+
+/** Read or initialise subscription settings.
+ *  Defaults to monthly billing anchored on the license's issuedAt date.
+ *  Writes back to localStorage so the settings persist across renders. */
+const getSubscriptionSettings = (
+  issuedAt: string | undefined,
+): SubscriptionSettings => {
+  try {
+    const raw = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw) as SubscriptionSettings;
+      // Guard against corrupted data
+      if (
+        parsed &&
+        typeof parsed.billingCycle === 'string' &&
+        parsed.cycleStartDate
+      ) {
+        return parsed;
+      }
+    }
+  } catch { /* fall through to defaults */ }
+
+  // Derive cycleStartDate from the license issuedAt, or today as a fallback
+  const cycleStart = issuedAt ? new Date(issuedAt) : new Date();
+
+  const defaults: SubscriptionSettings = {
+    billingCycle: 'monthly',
+    cycleStartDate: cycleStart.toISOString().slice(0, 10),
+  };
+  localStorage.setItem(SUBSCRIPTION_SETTINGS_KEY, JSON.stringify(defaults));
+  return defaults;
+};
+
 // ─── Live Subscription Resolution ─────────────────────────────────────────────
 
 /**
- * Reads the active license from the state/store and resolves a rich
- * SubscriptionInfo object with plan name, billing interval, seat caps,
- * and status derived from real data.
+ * Resolves a rich LicenseInfo object from the live license record and
+ * subscription settings.
+ *
+ * The billing cycle is stored in localStorage (munyaka_subscription_settings)
+ * and defaults to 'monthly'.  nextBillingDate is computed as
+ * addDays(cycleStartDate, billingCycleDays) so the monthly countdown is
+ * always correct regardless of the license validityDays.
  *
  * Uses date-fns differenceInDays for the renewal countdown.
  */
 const resolveLicenseInfo = (): LicenseInfo => {
   const license = getActiveLicense();
 
+  // ── No active license: show Pro Plan / Monthly defaults ──────────────────────
   if (!license) {
+    const today = new Date();
+    const cycleStartDate = today.toISOString().slice(0, 10);
+    const nextBilling = addDays(today, 30).toISOString().slice(0, 10);
+    const daysRemaining = Math.max(0, differenceInDays(addDays(today, 30), today));
+
     return {
-      planName: 'No Active Plan',
-      billingInterval: '—',
-      nextBillingDate: null,
-      daysRemaining: 0,
+      planName: 'Pro Plan',
+      billingInterval: 'Monthly',
+      nextBillingDate: nextBilling,
+      daysRemaining,
       expiresAt: null,
       maxStudentSeats: 500,
       maxStaffSeats: 50,
       isEnterprise: false,
-      status: 'due',
+      status: 'active',
       licenseId: null,
     };
   }
 
-  const validityDays = license.validityDays ?? 365;
-  const isEnterprise = validityDays >= 730;
+  // ── Read live subscription settings ────────────────────────────────────────
+  const settings = getSubscriptionSettings(license.issuedAt);
+  const billingCycle: BillingCycle = settings.billingCycle;
+  const cycleStartDate = settings.cycleStartDate;
+
+  // ── Seat caps ──────────────────────────────────────────────────────────────
+  const isEnterprise = (license.validityDays ?? 0) >= 730;
   const maxStudentSeats = isEnterprise ? 2000 : 500;
   const maxStaffSeats = isEnterprise ? 200 : 50;
 
-  // billingInterval derived from validity period
-  const billingInterval = validityDays >= 730
-    ? 'Annual'
-    : validityDays >= 180
-      ? 'Semi-Annual'
-      : 'Monthly';
+  // ── Monthly billing: nextBillingDate = cycleStart + billingCycleDays ─────────
+  const billingDays = BILLING_CYCLE_DAYS[billingCycle] ?? 30;
+  const cycleStart = safeDate(cycleStartDate) ?? new Date();
+  const nextBillingDate = addDays(cycleStart, billingDays).toISOString().slice(0, 10);
+  const today = new Date();
 
-  // Days remaining: positive integer while active, 0 once expired
-  const daysRemaining = daysRemainingUntil(license.expiresAt ?? '');
+  // Days remaining in the current monthly cycle (never negative while active)
+  let daysRemaining = Math.max(
+    0,
+    differenceInDays(addDays(cycleStart, billingDays), today),
+  );
 
-  // Subscription status
+  // ── Subscription status ─────────────────────────────────────────────────────
   let status: SubscriptionStatus = 'active';
   if (isLicenseExpiredAt(license.expiresAt ?? '')) {
-    const issued = safeDate(license.expiresAt);
-    const now = new Date();
-    const daysSinceExpiry = issued
-      ? differenceInDays(now, issued)
-      : 0;
+    const daysSinceExpiry = Math.max(
+      0,
+      differenceInDays(today, safeDate(license.expiresAt) ?? today),
+    );
     status = daysSinceExpiry <= 7 ? 'grace_period' : 'expired';
   } else if (daysRemaining <= 14) {
     status = 'due';
   }
 
+  // ── billingInterval label ───────────────────────────────────────────────────
+  const billingInterval: string =
+    billingCycle === 'monthly'      ? 'Monthly'      :
+    billingCycle === 'semi-annual' ? 'Semi-Annual'  :
+                                     'Annual';
+
   return {
     planName: isEnterprise ? 'Enterprise Plan' : 'Pro Plan',
     billingInterval,
-    nextBillingDate: license.expiresAt,
+    nextBillingDate,
     daysRemaining,
     expiresAt: license.expiresAt,
     maxStudentSeats,
@@ -233,17 +304,22 @@ const resolveLicenseInfo = (): LicenseInfo => {
  * Executive dashboard for the `owner` role.
  *
  * All metrics are derived live from:
- *   - Active license (licenseService)          → subscription tier, seats, renewal date
- *   - useCentralData hook                    → real-time student & teacher headcounts
- *   - munyaka_staff_directory               → live staff roster
- *   - munyaka_fee_structures                → per-grade expected fee amounts
- *   - munyaka_transactions                   → actual cleared payment records
- *   - getAllLicenses()                       → subscription billing history
+ *   - Active license (licenseService)            → subscription tier, seats, issued date
+ *   - munyaka_subscription_settings            → billingCycle (default 'monthly')
+ *   - useCentralData hook                      → real-time student & teacher headcounts
+ *   - munyaka_staff_directory                   → live staff roster
+ *   - munyaka_fee_structures                    → per-grade expected fee amounts
+ *   - munyaka_transactions                      → actual cleared payment records
+ *   - getAllLicenses()                          → subscription billing history
+ *
+ * Billing cycle: Defaults to MONTHLY. The nextBillingDate is computed as
+ *   addDays(cycleStartDate, 30)  and daysRemaining is recalculated on
+ *   every render via differenceInDays.
  *
  * Financial aggregations:
  *   - Expected Revenue  = sum of (feeStructure.amount × activeLearnersInGrade)
- *   - Collected        = sum of all transactions where status === 'paid'
- *   - Outstanding      = Expected Revenue − Collected Revenue
+ *   - Collected         = sum of all transactions where status === 'paid'
+ *   - Outstanding       = Expected Revenue − Collected Revenue
  */
 const OwnerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -475,9 +551,9 @@ const OwnerDashboard: React.FC = () => {
         [''],
         ['SUBSCRIPTION DETAILS'],
         ['Plan', license.planName],
-        ['Billing Interval', license.billingInterval],
+        ['Billing Cycle', license.billingInterval],
         ['Next Billing / Renewal Date', formatDateLong(license.nextBillingDate)],
-        ['Days Remaining', license.daysRemaining.toString()],
+        ['Days Remaining in Cycle', license.daysRemaining.toString()],
         ['Status', license.status.charAt(0).toUpperCase() + license.status.slice(1)],
         [''],
         ['SEAT UTILIZATION'],
@@ -644,9 +720,14 @@ const OwnerDashboard: React.FC = () => {
                 <p className="text-[10px] font-black uppercase tracking-widest text-white/80">
                   Current Subscription
                 </p>
-                <h2 className="text-2xl md:text-3xl font-black text-white mt-1">
-                  {license.planName}
-                </h2>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <h2 className="text-2xl md:text-3xl font-black text-white">
+                    {license.planName}
+                  </h2>
+                  <span className="inline-flex items-center rounded-full bg-white/20 px-2.5 py-0.5 text-[10px] font-black uppercase tracking-widest text-white">
+                    {license.billingInterval} Billing
+                  </span>
+                </div>
                 <div className="flex flex-wrap items-center gap-3 mt-3">
                   <div className="flex items-center gap-1.5 text-white/90 text-xs">
                     <Calendar size={12} />
