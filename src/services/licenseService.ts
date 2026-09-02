@@ -232,7 +232,27 @@ export function revokeLicense(activationKey: string, reason?: string): void {
  * system continues to work without any special casing.
  */
 export function validateActivationKey(key: string): License | null {
-  const k = key.trim().toUpperCase();
+  // ── Lenient normalization ────────────────────────────────────────
+  // Strip whitespace AND hyphens, then uppercase. This lets users enter
+  // the key with or without hyphens and still have it validate
+  // identically (e.g. "MUNYAKA-2026-A3B7" ≡ "MUNYAKA2026A3B7").
+  const normalized = key.replace(/[\s-]/g, '').toUpperCase();
+
+  // Re-hyphenate into the canonical form so downstream comparisons
+  // (master-key check, stored license lookup) work against a single,
+  // predictable shape.
+  const rehyphenate = (s: string): string => {
+    const prefix = 'MUNYAKA2026';
+    if (s.startsWith(prefix)) {
+      const tail = s.slice(prefix.length);
+      const chunks = tail.match(/.{1,4}/g) || [];
+      return ['MUNYAKA-2026', ...chunks].join('-');
+    }
+    // Generic 4-char chunking for master/wildcard keys that don't
+    // carry the issued prefix.
+    return s.match(/.{1,4}/g)?.join('-') ?? s;
+  };
+  const k = rehyphenate(normalized);
 
   // ── Master / wildcard shortcuts ──────────────────────────────────
   if (k === MASTER_TEST_KEY || MASTER_KEY_PATTERN.test(k)) {

@@ -102,55 +102,46 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
   };
 
   // ─────────────────────────────────────────────
-  // FIXED: Activation Key Input Formatting Logic
+  // Activation Key Auto-Formatting Logic
   // ─────────────────────────────────────────────
   const handleKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let raw = e.target.value.toUpperCase().replace(/[^A-Z0-9-]/g, '');
-    
-    // If the input already contains hyphens and matches the expected pattern,
-    // preserve it exactly as entered (don't re-chunk).
-    const standardPattern = /^MUNYAKA-2026-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
-    if (standardPattern.test(raw)) {
-      setKey(raw);
-      setError('');
-      return;
-    }
+    // 1. Always uppercase and strip everything except A-Z / 0-9
+    const alphanumeric = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
 
-    // If it looks like a partial standard format (has hyphens but not complete),
-    // don't aggressively re-chunk - just sanitize and let user continue typing.
-    if (raw.includes('-') && raw.startsWith('MUNYAKA-2026')) {
-      // Only remove any non-alphanumeric/hyphen chars, keep existing hyphens
-      const sanitized = raw.replace(/[^A-Z0-9-]/g, '');
-      setKey(sanitized);
-      setError('');
-      return;
-    }
-
-    // For raw alphanumeric input (no hyphens or incomplete), format into the
-    // strict structure: MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX
-    const alphanumeric = raw.replace(/[^A-Z0-9]/g, '');
-    
-    // If user is typing the prefix, allow it to build naturally
-    if (alphanumeric.startsWith('MUNYAKA2026')) {
-      const afterPrefix = alphanumeric.slice(12); // Remove 'MUNYAKA2026'
-      const chunks = afterPrefix.match(/.{1,4}/g) || [];
-      let formatted = 'MUNYAKA-2026';
-      if (chunks.length > 0) {
-        formatted += '-' + chunks.join('-');
-      }
-      setKey(formatted);
-      setError('');
-      return;
-    }
-
-    // If they're typing MUNYAKA but not yet 2026, allow natural typing
-    if ('MUNYAKA2026'.startsWith(alphanumeric) || alphanumeric.startsWith('MUNYAKA')) {
+    // 2. If already in full canonical form, keep it exactly as-is
+    const canonicalFull =
+      /^MUNYAKA-2026-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/;
+    if (canonicalFull.test(alphanumeric)) {
       setKey(alphanumeric);
       setError('');
       return;
     }
 
-    // Fallback: generic 4-char chunking for any other input
+    // 3. Build / extend the structure: MUNYAKA-2026-XXXX-XXXX-XXXX-XXXX
+    const PREFIX = 'MUNYAKA2026'; // 12 chars
+
+    if (alphanumeric.startsWith(PREFIX)) {
+      // After the fixed prefix, chunk every remaining character into
+      // 4-char blocks separated by hyphens.
+      const tail = alphanumeric.slice(PREFIX.length);
+      const chunks = tail.match(/.{1,4}/g) || [];
+      const formatted =
+        chunks.length === 0
+          ? 'MUNYAKA-2026'
+          : ['MUNYAKA-2026', ...chunks].join('-');
+      setKey(formatted);
+      setError('');
+      return;
+    }
+
+    // 4. Still building the MUNYAKA prefix — let them type freely
+    if (PREFIX.startsWith(alphanumeric) || alphanumeric.startsWith('MUNYAKA')) {
+      setKey(alphanumeric);
+      setError('');
+      return;
+    }
+
+    // 5. Generic 4-char chunking as a fallback for any other partial input
     const formatted = alphanumeric.match(/.{1,4}/g)?.join('-') ?? alphanumeric;
     setKey(formatted);
     setError('');
