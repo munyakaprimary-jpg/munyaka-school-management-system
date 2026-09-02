@@ -13,10 +13,13 @@ import {
   Star,
   Flame,
   Puzzle,
+  Lock,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import SpeedMath from "@/components/games/SpeedMath";
+import MemoryMatch from "@/components/games/MemoryMatch";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 
@@ -147,7 +150,16 @@ const GamesHub = () => {
       </header>
 
       {/* ── Conditional View ───────────────────────────────────────── */}
-      {activeGame === null ? (
+      {/* Individual game views */}
+      {activeGame === "speed-math-blitz" && (
+        <SpeedMath onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "memory-match" && (
+        <MemoryMatch onBack={() => setActiveGame(null)} />
+      )}
+
+      {/* Game Hub grid — shown when no game is active */}
+      {activeGame === null && (
         <section>
           <div className="flex items-end justify-between mb-5">
             <div>
@@ -233,55 +245,57 @@ const GamesHub = () => {
             })}
           </div>
         </section>
-      ) : (
-        <section className="space-y-6">
-          <Button
-            variant="ghost"
-            onClick={() => setActiveGame(null)}
-            className="rounded-2xl gap-2 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
-          >
-            <ArrowLeft size={18} />
-            Back to Games Hub
-          </Button>
+      ) : null}
 
-          {selectedGame && (
+      {/* "Coming soon" placeholder for games not yet implemented */}
+      {activeGame !== null &&
+        activeGame !== "speed-math-blitz" &&
+        activeGame !== "memory-match" &&
+        selectedGame && (
+          <section className="space-y-6">
+            <Button
+              variant="ghost"
+              onClick={() => setActiveGame(null)}
+              className="rounded-2xl gap-2 font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800"
+            >
+              <ArrowLeft size={18} />
+              Back to Games Hub
+            </Button>
+
             <Card
               className={`overflow-hidden rounded-3xl border-0 shadow-xl bg-gradient-to-br ${selectedGame.accent} text-white`}
             >
               <CardContent className="p-8 sm:p-12 text-center space-y-5">
                 <div className="mx-auto w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center shadow-inner">
-                  <selectedGame.icon size={40} className="text-white" />
+                  <Lock size={36} className="text-white" />
                 </div>
                 <div className="space-y-2">
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tight">
                     {selectedGame.title}
                   </h2>
                   <p className="text-white/90 font-medium max-w-xl mx-auto">
-                    {selectedGame.description}
+                    This game is in development. Check back soon!
                   </p>
                 </div>
                 <Badge
                   variant="outline"
                   className="rounded-full px-3 py-1 text-[11px] font-bold border-white/40 bg-white/15 text-white"
                 >
-                  Difficulty: {selectedGame.difficulty}
+                  Coming Soon
                 </Badge>
                 <div className="pt-2">
                   <Button
-                    onClick={() => {
-                      // Game session would launch here.
-                    }}
+                    onClick={() => setActiveGame(null)}
                     className="rounded-2xl h-12 px-8 font-black text-sm gap-2 bg-white text-slate-900 hover:bg-white/90 active:scale-[0.98] shadow-lg"
                   >
-                    <Play size={18} className="fill-slate-900" />
-                    Start {selectedGame.title}
+                    <ArrowLeft size={18} className="text-slate-900" />
+                    Back to Games
                   </Button>
                 </div>
               </CardContent>
             </Card>
-          )}
-        </section>
-      )}
+          </section>
+        )}
     </div>
   );
 };
