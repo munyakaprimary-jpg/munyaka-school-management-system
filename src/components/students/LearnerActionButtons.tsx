@@ -3,6 +3,7 @@ import AcademicHistoryModal from '@/components/academic-history/AcademicHistoryM
 import TransferWorkflow from '@/components/transfer/TransferWorkflow';
 import { showSuccess } from '@/utils/toast';
 import { StudentTransferInfo } from '@/types/transfer';
+import { notifyDataChanged } from '@/utils/storage';
 
 const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => {
   const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
@@ -48,6 +49,7 @@ const LearnerActionButtons = ({ student }: { student: StudentTransferInfo }) => 
             'school_learners_data',
             JSON.stringify(updated),
           );
+          notifyDataChanged('school_learners_data');
         }
       }
     } catch (err) {

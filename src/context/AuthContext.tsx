@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { useInactivityTimeout } from '@/hooks/useInactivityTimeout';
@@ -181,6 +182,7 @@ const initializeUsersStorage = () => {
   });
 
   localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users));
+  notifyDataChanged(USERS_STORAGE_KEY);
 };
 
 /**

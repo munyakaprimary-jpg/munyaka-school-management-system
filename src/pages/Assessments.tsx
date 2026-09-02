@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { showSuccess, showError } from "@/utils/toast";
+import { notifyDataChanged } from "@/utils/storage";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -418,6 +419,7 @@ const Assessments = () => {
       // 3. History Preservation & Merging: Save into specific targetKey
       try {
         localStorage.setItem(targetKey, JSON.stringify(updated));
+        notifyDataChanged(targetKey);
 
         const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
         let masterObj: Record<string, any> = {};
@@ -430,6 +432,7 @@ const Assessments = () => {
         }
         masterObj[targetKey] = updated;
         localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+        notifyDataChanged("munyaka_assessment_scores");
       } catch (e) {
         console.error("Autosave/History preservation error:", e);
       }
@@ -544,6 +547,7 @@ const Assessments = () => {
     await new Promise(r => setTimeout(r, 600));
     try {
       localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
+      notifyDataChanged(targetKey);
 
       const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
       let masterObj: Record<string, any> = {};
@@ -556,6 +560,7 @@ const Assessments = () => {
       }
       masterObj[targetKey] = marksMatrix;
       localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+      notifyDataChanged("munyaka_assessment_scores");
 
       setIsSaving(false);
       showSuccess("All marks successfully committed to localStorage!");

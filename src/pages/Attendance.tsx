@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
@@ -182,6 +183,7 @@ const writeLocksMap = (next: Record<string, SessionLock>): void => {
   if (typeof window === 'undefined') return;
   try {
     localStorage.setItem(ATTENDANCE_LOCKS_KEY, JSON.stringify(next));
+    notifyDataChanged('munyaka_attendance_locks');
   } catch (e) {
     console.error('Error persisting attendance locks map:', e);
   }
@@ -290,6 +292,7 @@ const Attendance = () => {
   useEffect(() => {
     if (typeof window === 'undefined') return;
     localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, adminBypass ? 'true' : 'false');
+    notifyDataChanged('munyaka_attendance_admin_bypass');
   }, [adminBypass]);
 
   // ====== Unified file-download state for CSV export ======
@@ -653,6 +656,7 @@ const Attendance = () => {
       const storageKey = `munyaka_attendance_v2_${filters.grade}_${filters.stream}_${filters.date}`;
       // Persist as {studentId: {morning: {...}, afternoon: {...}}}
       localStorage.setItem(storageKey, JSON.stringify(attendance));
+      notifyDataChanged(storageKey);
 
       // Also update the master record map used by the dashboard
       const masterRaw = localStorage.getItem('munyaka_attendance_records') || '{}';
@@ -665,6 +669,7 @@ const Attendance = () => {
         savedAt: new Date().toISOString()
       };
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
+      notifyDataChanged('munyaka_attendance_records');
 
       setIsSaving(false);
 

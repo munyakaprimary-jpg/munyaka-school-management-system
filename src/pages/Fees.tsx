@@ -563,6 +563,7 @@ const Fees = () => {
         status,
         reason: `Auto-update from ${tx.method} payment ${tx.id}`,
       }));
+      notifyDataChanged(overrideKey);
     } catch (e) {
       console.error('Failed to update student fee override:', e);
     }
@@ -586,6 +587,7 @@ const Fees = () => {
     setAuditLogs(newAuditLogs);
     try {
       localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(newAuditLogs));
+      notifyDataChanged('munyaka_fee_audit_logs');
     } catch (e) { console.error('Failed to persist audit log:', e); }
 
     // 4) Notify any other listeners (balance cards, dashboards) that the
@@ -661,6 +663,7 @@ const Fees = () => {
       reason
     };
     localStorage.setItem(storageKey, JSON.stringify(feeData));
+    notifyDataChanged(storageKey);
 
     // Add a transaction record for the adjustment if feePaid changed
     const diff = feePaid - oldPaid;
@@ -699,6 +702,7 @@ const Fees = () => {
     const newAuditLogs = [auditEntry, ...auditLogs];
     setAuditLogs(newAuditLogs);
     localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(newAuditLogs));
+    notifyDataChanged('munyaka_fee_audit_logs');
 
     // Dispatch update event for multi-component reactivity
     window.dispatchEvent(new Event('munyaka_fees_updated'));

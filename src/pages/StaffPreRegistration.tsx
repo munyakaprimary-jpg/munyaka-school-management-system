@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
@@ -69,6 +70,7 @@ const StaffPreRegistration = () => {
     const updatedList = [newStaff, ...staffList];
     setStaffList(updatedList);
     localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+    notifyDataChanged('munyaka_staff_prereg');
     setIsAddModalOpen(false);
     showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
   };
@@ -98,6 +100,7 @@ const StaffPreRegistration = () => {
         const updatedList = staffList.filter(s => s.id !== deleteTarget.id);
         setStaffList(updatedList);
         localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+        notifyDataChanged('munyaka_staff_prereg');
         showSuccess(`Staff "${deleteTarget.name}" deleted successfully.`);
       }
       setIsDeleteAuthOpen(false);

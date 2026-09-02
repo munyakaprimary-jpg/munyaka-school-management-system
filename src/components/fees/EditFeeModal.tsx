@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import Modal from "@/components/ui/Modal";
 import { Save, Loader2, AlertCircle, Shield, Eye, EyeOff } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from "@/lib/utils";
 
 interface EditFeeModalProps {
@@ -121,7 +122,8 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
     
           try {
             localStorage.setItem(storageKey, JSON.stringify(feeData));
-            
+            notifyDataChanged(storageKey);
+
             // Also update munyaka_fees_records array in localStorage if present
             const savedRecords = localStorage.getItem('munyaka_fees_records');
             if (savedRecords) {
@@ -134,6 +136,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
                   return r;
                 });
                 localStorage.setItem('munyaka_fees_records', JSON.stringify(updatedRecords));
+                notifyDataChanged('munyaka_fees_records');
               } catch (err) {
                 console.error("Failed to update munyaka_fees_records array:", err);
               }
