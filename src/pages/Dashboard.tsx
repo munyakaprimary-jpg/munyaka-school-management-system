@@ -144,86 +144,51 @@ const safeRead = <T,>(key: string, fallback: T): T => {
 // ─── Main Dashboard Router ─────────────────────────────────────────────────────
 
 /**
- * Top-level Dashboard component.  Mounted at the single route `/dashboard`
- * (and its alias `/`) so EVERY authenticated user — regardless of role —
- * lands on this one component, and the component itself dispatches to the
- * correct role-specific view via a clean switch on `user.role`.
+ * Top-level Dashboard component.  Reads the current user's role and
+ * delegates to the appropriate role-specific view:
  *
- * No role is ever redirected to a separate path like `/teachers-dashboard`
- * or `/admin-dashboard`; the routing layer stays uniform.
+ *   • Owner Dashboard           → owner
+ *   • Full Dashboard Overview  → admin, head_teacher, dev
+ *   • Class Dashboard          → teacher, ict_teacher
+ *   • Finance Dashboard        → bursar
+ *   • Student Portal           → parent, student
  *
- *   • admin / head_teacher / dev      → <AdminDashboardView />
- *   • teacher / ict_teacher           → <TeacherDashboardView />
- *   • student / parent                → <StudentDashboardView />
- *   • bursar / accountant / finance   → <FinanceDashboardView />
- *   • owner                           → OwnerDashboard (billing-only)
- *   • default (unknown role)          → <GeneralDashboardView />
- *
- * The matrix-level helpers in `src/rbac/permissionMatrix.ts` continue to
- * supply the canonical role list via `normalizeAdmin`.
+ * All role checks go through the canonical helpers in
+ * `src/rbac/permissionMatrix.ts` so the list of qualifying roles is
+ * maintained in a single place.
  */
 const Dashboard = () => {
   const { user } = useAuth();
-  const raw = user?.role ?? '';
-  const role = raw.toLowerCase();
-  const normalized = normalizeAdmin(raw);
+  const role = user?.role;
 
-  // ── Owner — billing-only, completely separate ──────────────────────────────
+  // ── Owner / platform billing dashboard ─────────────────────────────────────
   if (isOwner(role)) {
     return <OwnerDashboard />;
   }
 
-  // ── Explicit role-based dispatcher ──────────────────────────────────────────
-  switch (normalized ?? role) {
-    // Administrative / executive — full school-wide overview.
-    case 'admin':
-    case 'head_teacher':
-    case 'dev': {
-      return <AdminDashboardView />;
-    }
-
-    // Teaching staff — feature-rich class-level dashboard.
-    case 'teacher':
-    case 'ict_teacher': {
-      return <TeacherDashboardView />;
-    }
-
-    // Students & parents — personalised portal view.
-    case 'student':
-    case 'parent': {
-      return <StudentDashboardView />;
-    }
-
-    // Finance staff — fees / payments / ledger dashboard.
-    case 'bursar':
-    case 'accountant':
-    case 'finance': {
-      return <FinanceDashboardView />;
-    }
-
-    // Catch-all for any authenticated role that does not yet have a
-    // dedicated view.
-    default: {
-      return <GeneralDashboardView user={user} />;
-    }
+  // ── Full school-wide overview (admin / head_teacher / dev) ──────────────────
+  if (hasFullDashboardAccess(role)) {
+    return <FullAdminDashboard />;
   }
+
+  // ── Class-level dashboard for teachers ───────────────────────────────────────
+  if (hasClassDashboardAccess(role)) {
+    return <ClassTeacherDashboard />;
+  }
+
+  // ── Finance-only dashboard for bursars ────────────────────────────────────────
+  if (hasFinanceDashboardAccess(role)) {
+    return <FinanceDashboard />;
+  }
+
+  // ── Student / parent portal ──────────────────────────────────────────────────
+  if (hasStudentPortalAccess(role)) {
+    return <StudentPortalDashboard />;
+  }
+
+  // ── Fallback: authenticated but unrecognised role ────────────────────────────
+  return <UnauthenticatedDashboard user={user} />;
 };
-
-// ─── Role-specific View aliases ───────────────────────────────────────────────
-// Thin aliases keep the dispatcher above readable while the implementation
-// components below retain their descriptive names (unchanged in the rest
-// of this file).  Each maps directly to the existing component:
-//   AdminDashboardView    → FullAdminDashboard
-//   TeacherDashboardView  → ClassTeacherDashboard
-//   StudentDashboardView  → StudentPortalDashboard
-//   FinanceDashboardView  → FinanceDashboard
-//   GeneralDashboardView  → UnauthenticatedDashboard
-
-const AdminDashboardView = FullAdminDashboard;
-const TeacherDashboardView = ClassTeacherDashboard;
-const StudentDashboardView = StudentPortalDashboard;
-const FinanceDashboardView = FinanceDashboard;
-const GeneralDashboardView = UnauthenticatedDashboard;
 
 // ─── Shared Sub-components (used across multiple dashboards) ──────────────────
 
