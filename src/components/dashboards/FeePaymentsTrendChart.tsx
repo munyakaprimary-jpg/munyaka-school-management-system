@@ -91,25 +91,14 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({ active, payload }) => {
   return null;
 };
 
-// Custom bar shape with rounded top corners.
-// Defensive: Recharts can briefly pass undefined coordinates when
-// <ResponsiveContainer /> first renders with a zero-sized parent.
-// Guard against that to prevent runtime crashes.
+// Custom bar shape with rounded top corners
 const RoundedBar: React.FC<any> = (props) => {
   const { x, y, width, height, fill } = props;
-
-  if (
-    typeof x !== 'number' ||
-    typeof y !== 'number' ||
-    typeof width !== 'number' ||
-    typeof height !== 'number'
-  ) {
-    return null;
-  }
+  
   if (height <= 0) return null;
-
+  
   const radius = 8;
-
+  
   return (
     <g>
       <path
@@ -301,7 +290,7 @@ const FeePaymentsTrendChart: React.FC = () => {
         </div>
 
         {/* Chart Container */}
-        <div className="min-h-[280px] h-[280px] w-full">
+        <div className="h-[280px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={termData}

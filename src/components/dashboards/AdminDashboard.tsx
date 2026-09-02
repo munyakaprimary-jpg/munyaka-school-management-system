@@ -207,23 +207,10 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
 
   // Custom bar shape with rounded top corners; uses dashed outline when
   // the day has no record so the bar is visible but clearly "empty".
-  // Defensive: Recharts can briefly pass undefined coordinates on the
-  // first paint of <ResponsiveContainer /> when the parent is zero-sized;
-  // returning null in that case prevents the "Cannot read properties of
-  // undefined (reading 'frame')" runtime exception.
   const RoundedBar: React.FC<any> = (props) => {
     const { x, y, width, height, fill, payload } = props;
     const radius = 6;
     const hasRecord: boolean = payload?.hasRecord ?? true;
-
-    if (
-      typeof x !== 'number' ||
-      typeof y !== 'number' ||
-      typeof width !== 'number' ||
-      typeof height !== 'number'
-    ) {
-      return null;
-    }
 
     if (hasRecord) {
       if (height <= 0) return null;
@@ -270,7 +257,7 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
   };
 
   return (
-    <div className="min-h-[220px] h-[220px] w-full">
+    <div className="h-[220px] w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
