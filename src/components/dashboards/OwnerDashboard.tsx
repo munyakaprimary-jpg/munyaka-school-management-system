@@ -1,15 +1,8 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useCallback, useEffect, useRef } from 'react';
 import { differenceInDays, addDays } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import {
-  getBillingContacts,
-  setBillingContacts,
-  BillingContacts,
-} from '@/services/billingSettingsService';
 import {
   BarChart,
   Bar,
@@ -49,18 +42,21 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { useCentralData } from '@/hooks/useCentralData';
+import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
 import {
   getActiveLicense,
   getAllLicenses,
   isLicenseExpiredAt,
   validityLabel,
+  daysRemainingUntil,
 } from '@/services/licenseService';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
 import { formatRelativeTime } from '@/services/activityLog';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────────────────────────────────────
 
 type SubscriptionStatus = 'active' | 'due' | 'grace_period' | 'expired';
 
@@ -109,7 +105,66 @@ interface LicenseInfo {
   licenseId: string | null;
 }
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+interface SeatMetrics {
+  studentsUsed: number;
+  studentCap: number;
+  studentsPercent: number;
+  staffUsed: number;
+  staffCap: number;
+  staffPercent: number;
+}
+
+interface FinancialMetrics {
+  totalExpected: number;
+  totalCollected: number;
+  outstanding: number;
+  transactionCount: number;
+  collectionRate: number;
+}
+
+interface AuditRow {
+  key: string;
+  type: 'fee' | 'invoice';
+  label: string;
+  category: string;
+  method: string;
+  ref: string;
+  amount: number;
+  date: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  iconBg: string;
+  iconColor: string;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Storage Keys
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STORAGE_KEYS = {
+  TRANSACTIONS:         'munyaka_transactions',
+  FEE_STRUCTURES:       'munyaka_fee_structures',
+  STUDENT_FEES:         'munyaka_student_fees',
+  SUBSCRIPTION_SETTINGS: 'munyaka_subscription_settings',
+  LEARNERS:             'school_learners_data',
+  STAFF:                'munyaka_staff_directory',
+} as const;
+
+type BillingCycle = 'monthly' | 'semi-annual' | 'annual';
+
+interface SubscriptionSettings {
+  billingCycle: BillingCycle;
+  cycleStartDate: string;
+}
+
+const BILLING_CYCLE_DAYS: Record<BillingCycle, number> = {
+  monthly:       30,
+  'semi-annual': 183,
+  annual:        365,
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Safe localStorage Reader
+// ─────────────────────────────────────────────────────────────────────────────
 
 const safeRead = <T,>(key: string, fallback: T): T => {
   try {
@@ -120,6 +175,10 @@ const safeRead = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
 };
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Date Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 
 const formatKES = (n: number): string =>
   `KES ${Math.round(n).toLocaleString()}`;
@@ -152,98 +211,46 @@ const safeDate = (raw: string | undefined | null): Date | null => {
   return isNaN(d.getTime()) ? null : d;
 };
 
-/** Read staff from the canonical directory key (matches useCentralData). */
-const getActiveStaffCount = (): number => {
-  const staff: any[] = safeRead('munyaka_staff_directory', []);
-  if (Array.isArray(staff) && staff.length > 0) {
-    return staff.filter((s) => s.status !== 'Suspended').length;
-  }
-  // Fallback to legacy key
-  const legacy: any[] = safeRead('munyaka_staff', []);
-  return Array.isArray(legacy)
-    ? legacy.filter((s) => s.status !== 'Suspended').length
-    : 0;
-};
+// ─────────────────────────────────────────────────────────────────────────────
+// Subscription Settings Reader
+// ─────────────────────────────────────────────────────────────────────────────
 
-// ─── Subscription Settings ────────────────────────────────────────────────────
-
-const SUBSCRIPTION_SETTINGS_KEY = 'munyaka_subscription_settings';
-
-type BillingCycle = 'monthly' | 'semi-annual' | 'annual';
-
-interface SubscriptionSettings {
-  billingCycle: BillingCycle;
-  /** ISO date — the start of the current billing period. */
-  cycleStartDate: string;
-}
-
-/** Days in each billing cycle. */
-const BILLING_CYCLE_DAYS: Record<BillingCycle, number> = {
-  monthly:      30,
-  'semi-annual': 183,
-  annual:       365,
-};
-
-/** Read or initialise subscription settings.
- *  Defaults to monthly billing anchored on the license's issuedAt date.
- *  Writes back to localStorage so the settings persist across renders. */
-const getSubscriptionSettings = (
-  issuedAt: string | undefined,
-): SubscriptionSettings => {
+const getSubscriptionSettings = (issuedAt?: string): SubscriptionSettings => {
   try {
-    const raw = localStorage.getItem(SUBSCRIPTION_SETTINGS_KEY);
+    const raw = localStorage.getItem(STORAGE_KEYS.SUBSCRIPTION_SETTINGS);
     if (raw) {
       const parsed = JSON.parse(raw) as SubscriptionSettings;
-      // Guard against corrupted data
-      if (
-        parsed &&
-        typeof parsed.billingCycle === 'string' &&
-        parsed.cycleStartDate
-      ) {
+      if (parsed && typeof parsed.billingCycle === 'string' && parsed.cycleStartDate) {
         return parsed;
       }
     }
-  } catch { /* fall through to defaults */ }
+  } catch { /* fall through */ }
 
-  // Derive cycleStartDate from the license issuedAt, or today as a fallback
   const cycleStart = issuedAt ? new Date(issuedAt) : new Date();
-
   const defaults: SubscriptionSettings = {
     billingCycle: 'monthly',
     cycleStartDate: cycleStart.toISOString().slice(0, 10),
   };
-  localStorage.setItem(SUBSCRIPTION_SETTINGS_KEY, JSON.stringify(defaults));
+  localStorage.setItem(STORAGE_KEYS.SUBSCRIPTION_SETTINGS, JSON.stringify(defaults));
   return defaults;
 };
 
-// ─── Live Subscription Resolution ─────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Subscription Resolver
+// ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Resolves a rich LicenseInfo object from the live license record and
- * subscription settings.
- *
- * The billing cycle is stored in localStorage (munyaka_subscription_settings)
- * and defaults to 'monthly'.  nextBillingDate is computed as
- * addDays(cycleStartDate, billingCycleDays) so the monthly countdown is
- * always correct regardless of the license validityDays.
- *
- * Uses date-fns differenceInDays for the renewal countdown.
- */
 const resolveLicenseInfo = (): LicenseInfo => {
   const license = getActiveLicense();
 
-  // ── No active license: show Pro Plan / Monthly defaults ──────────────────────
+  // No active license → Pro Plan defaults
   if (!license) {
     const today = new Date();
-    const cycleStartDate = today.toISOString().slice(0, 10);
     const nextBilling = addDays(today, 30).toISOString().slice(0, 10);
-    const daysRemaining = Math.max(0, differenceInDays(addDays(today, 30), today));
-
     return {
       planName: 'Pro Plan',
       billingInterval: 'Monthly',
       nextBillingDate: nextBilling,
-      daysRemaining,
+      daysRemaining: 30,
       expiresAt: null,
       maxStudentSeats: 500,
       maxStaffSeats: 50,
@@ -253,45 +260,38 @@ const resolveLicenseInfo = (): LicenseInfo => {
     };
   }
 
-  // ── Read live subscription settings ────────────────────────────────────────
+  // Read billing cycle from subscription settings
   const settings = getSubscriptionSettings(license.issuedAt);
   const billingCycle: BillingCycle = settings.billingCycle;
   const cycleStartDate = settings.cycleStartDate;
 
-  // ── Seat caps ──────────────────────────────────────────────────────────────
+  // Seat caps based on license duration
   const isEnterprise = (license.validityDays ?? 0) >= 730;
   const maxStudentSeats = isEnterprise ? 2000 : 500;
   const maxStaffSeats = isEnterprise ? 200 : 50;
 
-  // ── Monthly billing: nextBillingDate = cycleStart + billingCycleDays ─────────
+  // Compute next billing date from cycle start + billing cycle days
   const billingDays = BILLING_CYCLE_DAYS[billingCycle] ?? 30;
   const cycleStart = safeDate(cycleStartDate) ?? new Date();
   const nextBillingDate = addDays(cycleStart, billingDays).toISOString().slice(0, 10);
   const today = new Date();
 
-  // Days remaining in the current monthly cycle (never negative while active)
-  let daysRemaining = Math.max(
-    0,
-    differenceInDays(addDays(cycleStart, billingDays), today),
-  );
+  // Days remaining until next billing (dynamically calculated)
+  const daysRemaining = Math.max(0, differenceInDays(addDays(cycleStart, billingDays), today));
 
-  // ── Subscription status ─────────────────────────────────────────────────────
+  // Determine subscription status
   let status: SubscriptionStatus = 'active';
   if (isLicenseExpiredAt(license.expiresAt ?? '')) {
-    const daysSinceExpiry = Math.max(
-      0,
-      differenceInDays(today, safeDate(license.expiresAt) ?? today),
-    );
+    const daysSinceExpiry = Math.max(0, differenceInDays(today, safeDate(license.expiresAt) ?? today));
     status = daysSinceExpiry <= 7 ? 'grace_period' : 'expired';
   } else if (daysRemaining <= 14) {
     status = 'due';
   }
 
-  // ── billingInterval label ───────────────────────────────────────────────────
   const billingInterval: string =
-    billingCycle === 'monthly'      ? 'Monthly'      :
-    billingCycle === 'semi-annual' ? 'Semi-Annual'  :
-                                     'Annual';
+    billingCycle === 'monthly'       ? 'Monthly'       :
+    billingCycle === 'semi-annual'  ? 'Semi-Annual'   :
+                                      'Annual';
 
   return {
     planName: isEnterprise ? 'Enterprise Plan' : 'Pro Plan',
@@ -307,253 +307,315 @@ const resolveLicenseInfo = (): LicenseInfo => {
   };
 };
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Seat Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+const computeSeatMetrics = (
+  license: LicenseInfo,
+  centralStudents: number,
+  centralLoading: boolean,
+  staffFromHook: number,
+): SeatMetrics => {
+  // Use hook's central students if loaded, otherwise query directly
+  const studentsUsed = !centralLoading && centralStudents > 0
+    ? centralStudents
+    : getActiveLearners().length;
+
+  const studentsPercent = Math.min(100, Math.round((studentsUsed / license.maxStudentSeats) * 100));
+
+  return {
+    studentsUsed,
+    studentCap: license.maxStudentSeats,
+    studentsPercent,
+    staffUsed: staffFromHook,
+    staffCap: license.maxStaffSeats,
+    staffPercent: Math.min(100, Math.round((staffFromHook / license.maxStaffSeats) * 100)),
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Financial Metrics
+// ─────────────────────────────────────────────────────────────────────────────
+
+const computeFinancialMetrics = (): FinancialMetrics => {
+  // Active learners
+  const activeLearners = getActiveLearners();
+  const learnerCount = activeLearners.length;
+
+  // Fee structures → build grade → amount map
+  const feeStructures: FeeStructure[] = safeRead(STORAGE_KEYS.FEE_STRUCTURES, []);
+  const gradeFeeMap: Record<string, number> = {};
+  feeStructures.forEach((f) => {
+    const key = (f.gradeId || '').replace(/\s+/g, '').toLowerCase();
+    const existing = gradeFeeMap[key];
+    gradeFeeMap[key] = existing ? Math.max(existing, f.amount) : f.amount;
+  });
+
+  // Total expected = sum of each active learner's grade fee
+  let totalExpected = 0;
+  activeLearners.forEach((l) => {
+    const gradeId = (l.grade || '').replace(/\s+/g, '').toLowerCase();
+    totalExpected += gradeFeeMap[gradeId] ?? 0;
+  });
+
+  // Transactions → total collected
+  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
+  const paidTx = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
+  const totalCollected = paidTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
+
+  // Fallback: if no fee structures configured, use per-student ledger
+  if (totalExpected === 0 && learnerCount > 0) {
+    const feeRecords: StudentFeeRecord[] = safeRead(STORAGE_KEYS.STUDENT_FEES, []);
+    const ledgerExpected = feeRecords.reduce((s, r) => s + (Number(r.total) || 0), 0);
+    const ledgerCollected = feeRecords.reduce((s, r) => s + (Number(r.paid) || 0), 0);
+    const ledgerOutstanding = Math.max(0, ledgerExpected - ledgerCollected);
+    return {
+      totalExpected: ledgerExpected,
+      totalCollected: Math.max(totalCollected, ledgerCollected),
+      outstanding: ledgerOutstanding,
+      transactionCount: paidTx.length,
+      collectionRate: ledgerExpected > 0
+        ? Math.round((Math.max(totalCollected, ledgerCollected) / ledgerExpected) * 100)
+        : 0,
+    };
+  }
+
+  const outstanding = Math.max(0, totalExpected - totalCollected);
+  return {
+    totalExpected,
+    totalCollected,
+    outstanding,
+    transactionCount: paidTx.length,
+    collectionRate: totalExpected > 0
+      ? Math.round((totalCollected / totalExpected) * 100)
+      : 0,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Dynamic Audit Rows
+// ─────────────────────────────────────────────────────────────────────────────
+
+const computeAuditRows = (): AuditRow[] => {
+  // Recent paid transactions
+  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
+  const paidTx = transactions
+    .filter((t) => t.status === 'paid' || !!t.paidAt)
+    .sort((a, b) => {
+      const da = safeDate(a.paidAt ?? a.date)?.getTime() ?? 0;
+      const db = safeDate(b.paidAt ?? b.date)?.getTime() ?? 0;
+      return db - da;
+    })
+    .slice(0, 10)
+    .map((t) => ({
+      key: `tx-${t.id || Date.now()}`,
+      type: 'fee' as const,
+      label: t.learnerName || t.studentName || 'Unknown Student',
+      category: t.category || 'Tuition',
+      method: t.paymentMethod || t.method || 'Cash',
+      ref: t.ref || t.id || '—',
+      amount: Number(t.amount) || 0,
+      date: t.paidAt || t.date || '',
+      icon: Smartphone,
+      iconBg: 'bg-emerald-50',
+      iconColor: 'text-emerald-600',
+    }));
+
+  // Subscription invoices from license history
+  const allLicenses = getAllLicenses();
+  const invoices = allLicenses
+    .filter((l) => l.payment?.amount)
+    .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''))
+    .slice(0, 6)
+    .map((l) => ({
+      key: `inv-${l.id}`,
+      type: 'invoice' as const,
+      label: 'Subscription Invoice',
+      category: validityLabel(l.validityDays as 30 | 365 | 730),
+      method: l.payment?.method || 'cash',
+      ref: l.payment?.refNumber || '—',
+      amount: Number(l.payment?.amount) || 0,
+      date: l.issuedAt || '',
+      icon: Building2,
+      iconBg: 'bg-indigo-50',
+      iconColor: 'text-indigo-600',
+    }));
+
+  // Merge and sort by date descending
+  return [...paidTx, ...invoices].sort((a, b) => {
+    const da = safeDate(a.date)?.getTime() ?? 0;
+    const db = safeDate(b.date)?.getTime() ?? 0;
+    return db - da;
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Revenue Trend (last 6 months)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const computeRevenueTrend = () => {
+  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
+  const paid = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
+  const now = new Date();
+
+  return Array.from({ length: 6 }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const label = d.toLocaleDateString('en-KE', { month: 'short' });
+    const total = paid.reduce((s, t) => {
+      const td = safeDate(t.paidAt ?? t.date);
+      if (!td) return s;
+      return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
+        ? s + (Number(t.amount) || 0)
+        : s;
+    }, 0);
+    return { label, total, sortKey: d.getTime() };
+  });
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Hook: useOwnerDashboardData
+// Reactive, real-time data aggregation for the Owner Dashboard
+// ─────────────────────────────────────────────────────────────────────────────
+
+interface OwnerDashboardData {
+  license: LicenseInfo;
+  seats: SeatMetrics;
+  financials: FinancialMetrics;
+  auditRows: AuditRow[];
+  revenueTrend: ReturnType<typeof computeRevenueTrend>;
+  allLicensesCount: number;
+  now: string;
+  isLoading: boolean;
+}
+
+const useOwnerDashboardData = (): OwnerDashboardData => {
+  const { totalStudents: centralStudents, totalTeachers: centralTeachers, isLoading: centralLoading } = useCentralData();
+
+  // Use a counter to force re-renders when localStorage changes
+  const [tick, setTick] = React.useState(0);
+  const tickRef = useRef(tick);
+  tickRef.current = tick;
+
+  // Force a re-render to pick up localStorage changes
+  const triggerRefresh = useCallback(() => {
+    setTick((t) => t + 1);
+  }, []);
+
+  useEffect(() => {
+    // Cross-tab storage events
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key) return;
+      const watchedKeys = Object.values(STORAGE_KEYS);
+      if (watchedKeys.includes(e.key as typeof watchedKeys[number])) {
+        triggerRefresh();
+      }
+    };
+
+    // Same-tab custom events
+    const onCustom = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.key) {
+        const watchedKeys = Object.values(STORAGE_KEYS);
+        if (watchedKeys.includes(detail.key as typeof watchedKeys[number])) {
+          triggerRefresh();
+        }
+      }
+    };
+
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('munyaka:data-changed', onCustom as EventListener);
+
+    // Polling every 10 seconds for the clock display and any missed updates
+    const interval = setInterval(triggerRefresh, 10_000);
+
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('munyaka:data-changed', onCustom as EventListener);
+      clearInterval(interval);
+    };
+  }, [triggerRefresh]);
+
+  // All data is derived from localStorage; adding `tick` as dependency
+  // forces a re-computation whenever the underlying data changes.
+  const license = useMemo(() => resolveLicenseInfo(), [tick]);
+
+  const seats = useMemo(
+    () => computeSeatMetrics(license, centralStudents, centralLoading, centralTeachers),
+    [license, centralStudents, centralLoading, centralTeachers, tick],
+  );
+
+  const financials = useMemo(() => computeFinancialMetrics(), [tick]);
+
+  const auditRows = useMemo(() => computeAuditRows(), [tick]);
+
+  const revenueTrend = useMemo(() => computeRevenueTrend(), [tick]);
+
+  const allLicensesCount = useMemo(() => getAllLicenses().length, [tick]);
+
+  const now = useMemo(
+    () => new Date().toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }),
+    [tick],
+  );
+
+  return {
+    license,
+    seats,
+    financials,
+    auditRows,
+    revenueTrend,
+    allLicensesCount,
+    now,
+    isLoading: centralLoading,
+  };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Badge Config
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<SubscriptionStatus, { label: string; bg: string; text: string; dot: string }> = {
+  active:       { label: 'Active',        bg: 'bg-emerald-50',  text: 'text-emerald-700',  dot: 'bg-emerald-500' },
+  due:          { label: 'Due',           bg: 'bg-amber-50',    text: 'text-amber-700',    dot: 'bg-amber-500' },
+  grace_period: { label: 'Grace Period',  bg: 'bg-orange-50',   text: 'text-orange-700',   dot: 'bg-orange-500' },
+  expired:      { label: 'Expired',       bg: 'bg-red-50',      text: 'text-red-700',      dot: 'bg-red-500' },
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Owner Dashboard Component
+// ─────────────────────────────────────────────────────────────────────────────
 
 /**
  * Executive dashboard for the `owner` role.
  *
- * All metrics are derived live from:
- *   - Active license (licenseService)            → subscription tier, seats, issued date
- *   - munyaka_subscription_settings            → billingCycle (default 'monthly')
- *   - useCentralData hook                      → real-time student & teacher headcounts
- *   - munyaka_staff_directory                   → live staff roster
- *   - munyaka_fee_structures                    → per-grade expected fee amounts
- *   - munyaka_transactions                      → actual cleared payment records
- *   - getAllLicenses()                          → subscription billing history
+ * All metrics are dynamically computed from live localStorage data:
+ *   - Subscription: `getActiveLicense()` + subscription settings
+ *   - Seats: `useCentralData` hook + `getActiveLearners()` / `getActiveTeachers()`
+ *   - Financials: `munyaka_transactions` + `munyaka_fee_structures`
+ *   - Audit: Combined transactions + license invoices, sorted chronologically
  *
- * Billing cycle: Defaults to MONTHLY. The nextBillingDate is computed as
- *   addDays(cycleStartDate, 30)  and daysRemaining is recalculated on
- *   every render via differenceInDays.
- *
- * Financial aggregations:
- *   - Expected Revenue  = sum of (feeStructure.amount × activeLearnersInGrade)
- *   - Collected         = sum of all transactions where status === 'paid'
- *   - Outstanding       = Expected Revenue − Collected Revenue
+ * Data is reactive: changes to localStorage (from any source, including
+ * cross-tab updates) trigger an immediate re-render within ~100ms.
  */
 const OwnerDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
 
-  const handleOpenProfileSettings = () => {
-    navigate('/settings/profile');
-  };
+  const {
+    license,
+    seats,
+    financials,
+    auditRows,
+    revenueTrend,
+    allLicensesCount,
+    now,
+    isLoading: centralLoading,
+  } = useOwnerDashboardData();
 
-  // ── Central data: live student & teacher counts ─────────────────────────────
-  const { totalStudents: centralStudents, isLoading: centralLoading } = useCentralData();
+  const handleOpenProfileSettings = () => navigate('/settings/profile');
+  const handleUpgrade = () => { window.location.hash = '#/payment-management'; };
 
-  // ── Live subscription / license info ───────────────────────────────────────
-  const license = useMemo(() => resolveLicenseInfo(), []);
-
-  // ── Live license history ───────────────────────────────────────────────────
-  const allLicenses = useMemo(() => getAllLicenses(), []);
-
-  // ── Active student count ────────────────────────────────────────────────────
-  // Use the authoritative central-data count; fall back to a direct read
-  const activeStudentCount = useMemo(() => {
-    if (!centralLoading && centralStudents > 0) return centralStudents;
-    const learners: any[] = safeRead('school_learners_data', []);
-    return learners.filter((l) => l.status !== 'TRANSFERRED').length;
-  }, [centralStudents, centralLoading]);
-
-  // ── Active staff count ──────────────────────────────────────────────────────
-  const activeStaffCount = useMemo(() => getActiveStaffCount(), []);
-
-  // ── Seat utilization ────────────────────────────────────────────────────────
-  const seats = useMemo(() => ({
-    studentsUsed: activeStudentCount,
-    studentCap: license.maxStudentSeats,
-    studentsPercent: Math.min(
-      100,
-      Math.round((activeStudentCount / license.maxStudentSeats) * 100),
-    ),
-    staffUsed: activeStaffCount,
-    staffCap: license.maxStaffSeats,
-    staffPercent: Math.min(
-      100,
-      Math.round((activeStaffCount / license.maxStaffSeats) * 100),
-    ),
-  }), [activeStudentCount, activeStaffCount, license.maxStudentSeats, license.maxStaffSeats]);
-
-  // ── Live financial aggregates ────────────────────────────────────────────────
-  const financials = useMemo(() => {
-    // ── Total Expected Revenue ──────────────────────────────────────────────
-    // Sum of: for every active learner, the current grade's fee structure amount
-    const learners: any[] = safeRead('school_learners_data', []);
-    const activeLearners = learners.filter((l) => l.status !== 'TRANSFERRED');
-
-    const feeStructures: FeeStructure[] = safeRead('munyaka_fee_structures', []);
-
-    // Build a per-gradeId → amount map from the fee structures table
-    const gradeFeeMap: Record<string, number> = {};
-    feeStructures.forEach((f) => {
-      const existing = gradeFeeMap[f.gradeId];
-      gradeFeeMap[f.gradeId] = existing ? Math.max(existing, f.amount) : f.amount;
-    });
-
-    // Sum expected revenue: active learners × their grade's fee structure
-    // Normalise gradeId: grade name on learner record vs gradeId in structures
-    let totalExpected = 0;
-    activeLearners.forEach((l: any) => {
-      const gradeId = (l.grade || '').replace(/\s+/g, '').toLowerCase();
-      const amount = gradeFeeMap[gradeId] ?? 0;
-      totalExpected += amount;
-    });
-
-    // ── Total Collected Revenue ─────────────────────────────────────────────
-    const transactions: FeeTransaction[] = safeRead('munyaka_transactions', []);
-    const paidTx = transactions.filter(
-      (t) => t.status === 'paid' || !!t.paidAt,
-    );
-    const totalCollected = paidTx.reduce(
-      (s, t) => s + (Number(t.amount) || 0), 0,
-    );
-
-    // ── Outstanding Unpaid ──────────────────────────────────────────────────
-    // Outstanding = Total Expected (per grade fees × active learners) − Collected
-    // If fee structures haven't been configured yet, fall back to computing
-    // expected from the per-student 'fees' ledger stored by the Fees page.
-    if (totalExpected === 0 && activeLearners.length > 0) {
-      // Per-student fees ledger: sum (total − paid) across all active students
-      const feeRecords: StudentFeeRecord[] = safeRead('munyaka_student_fees', []);
-      const outstandingByStudent: Record<string, number> = {};
-      feeRecords.forEach((r) => {
-        if (r.status === 'Cleared') return;
-        outstandingByStudent[r.student] = (outstandingByStudent[r.student] ?? 0) + (r.balance ?? (r.total - r.paid));
-      });
-      // Collected from transactions + per-student ledger
-      const ledgerCollected = feeRecords.reduce((s, r) => s + (Number(r.paid) || 0), 0);
-      const ledgerExpected = feeRecords.reduce((s, r) => s + (Number(r.total) || 0), 0);
-      const outstanding = Math.max(0, ledgerExpected - totalCollected);
-
-      return {
-        totalExpected: ledgerExpected,
-        totalCollected,
-        outstanding,
-        transactionCount: paidTx.length,
-        collectionRate: ledgerExpected > 0
-          ? Math.round((totalCollected / ledgerExpected) * 100)
-          : 0,
-      };
-    }
-
-    const outstanding = Math.max(0, totalExpected - totalCollected);
-    return {
-      totalExpected,
-      totalCollected,
-      outstanding,
-      transactionCount: paidTx.length,
-      collectionRate: totalExpected > 0
-        ? Math.round((totalCollected / totalExpected) * 100)
-        : 0,
-    };
-  }, []);
-
-  // ── Recent payment transactions (chronological, most recent first) ──────────
-  const recentTransactions = useMemo((): FeeTransaction[] => {
-    const tx: FeeTransaction[] = safeRead('munyaka_transactions', []);
-    return tx
-      .filter((t) => t.status === 'paid' || !!t.paidAt)
-      .sort((a, b) => {
-        const da = safeDate(a.paidAt ?? a.date)?.getTime() ?? 0;
-        const db = safeDate(b.paidAt ?? b.date)?.getTime() ?? 0;
-        return db - da;
-      })
-      .slice(0, 10)
-      .map((t) => ({
-        id: t.id || `tx-${Date.now()}-${Math.random()}`,
-        learner: t.learnerName || t.studentName || 'Unknown Student',
-        amount: Number(t.amount) || 0,
-        date: t.paidAt || t.date || '',
-        method: t.paymentMethod || t.method || 'Cash',
-        status: t.status || 'paid',
-        ref: t.ref || t.id || '—',
-        category: t.category || 'Tuition',
-        learnerId: t.learnerId,
-        studentId: t.studentId,
-      }));
-  }, []);
-
-  // ── Subscription billing invoices ────────────────────────────────────────────
-  const subscriptionInvoices = useMemo(() => {
-    return allLicenses
-      .filter((l) => l.payment?.amount)
-      .slice()
-      .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''))
-      .slice(0, 6)
-      .map((l) => ({
-        id: l.id,
-        amount: Number(l.payment?.amount) || 0,
-        method: l.payment?.method || 'cash',
-        ref: l.payment?.refNumber || '—',
-        issuedAt: l.issuedAt,
-        validity: validityLabel(l.validityDays as 30 | 365 | 730),
-        status: l.status,
-      }));
-  }, [allLicenses]);
-
-  // ── Combined audit log (transactions + invoices, merged & sorted) ───────────
-  const auditRows = useMemo(() => {
-    const txRows = recentTransactions.map((t) => ({
-      key: `tx-${t.id}`,
-      type: 'fee' as const,
-      label: t.learner,
-      category: t.category,
-      method: t.method,
-      ref: t.ref,
-      amount: t.amount,
-      date: t.date,
-      icon: Smartphone,
-      iconBg: 'bg-emerald-50',
-      iconColor: 'text-emerald-600',
-    }));
-    const invRows = subscriptionInvoices.map((i) => ({
-      key: `inv-${i.id}`,
-      type: 'invoice' as const,
-      label: 'Subscription Invoice',
-      category: i.validity,
-      method: i.method,
-      ref: i.ref,
-      amount: i.amount,
-      date: i.issuedAt,
-      icon: Building2,
-      iconBg: 'bg-indigo-50',
-      iconColor: 'text-indigo-600',
-    }));
-    return [...txRows, ...invRows].sort((a, b) => {
-      const da = safeDate(a.date)?.getTime() ?? 0;
-      const db = safeDate(b.date)?.getTime() ?? 0;
-      return db - da;
-    });
-  }, [recentTransactions, subscriptionInvoices]);
-
-  // ── Revenue trend (last 6 months) ─────────────────────────────────────────
-  const revenueTrend = useMemo(() => {
-    const tx: FeeTransaction[] = safeRead('munyaka_transactions', []);
-    const paid = tx.filter((t) => t.status === 'paid' || !!t.paidAt);
-    const now = new Date();
-    return Array.from({ length: 6 }, (_, i) => {
-      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-      const label = d.toLocaleDateString('en-KE', { month: 'short' });
-      const total = paid.reduce((s, t) => {
-        const td = safeDate(t.paidAt ?? t.date);
-        if (!td) return s;
-        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
-          ? s + (Number(t.amount) || 0)
-          : s;
-      }, 0);
-      return { label, total, sortKey: d.getTime() };
-    });
-  }, []);
-
-  // ── Live timestamp for display ─────────────────────────────────────────────
-  const now = useMemo(() => new Date().toLocaleTimeString('en-KE', { hour: '2-digit', minute: '2-digit' }), []);
-
-  // ── Handlers ──────────────────────────────────────────────────────────────
-  const handleUpgrade = () => {
-    window.location.hash = '#/payment-management';
-  };
-
-  const handleExportReport = async () => {
+  const handleExportReport = useCallback(async () => {
     try {
       const rows = [
         ['MUNYAKA PRIMARY AND JUNIOR SCHOOL'],
@@ -572,8 +634,8 @@ const OwnerDashboard: React.FC = () => {
         [''],
         ['SEAT UTILIZATION'],
         ['Metric', 'Used', 'Maximum', 'Utilization (%)'],
-        ['Student Seats', activeStudentCount.toString(), license.maxStudentSeats.toString(), `${seats.studentsPercent}%`],
-        ['Staff Seats', activeStaffCount.toString(), license.maxStaffSeats.toString(), `${seats.staffPercent}%`],
+        ['Student Seats', seats.studentsUsed.toString(), license.maxStudentSeats.toString(), `${seats.studentsPercent}%`],
+        ['Staff Seats', seats.staffUsed.toString(), license.maxStaffSeats.toString(), `${seats.staffPercent}%`],
         [''],
         ['FINANCIAL SUMMARY'],
         ['Metric', 'KES'],
@@ -584,38 +646,42 @@ const OwnerDashboard: React.FC = () => {
         [''],
         ['RECENT TRANSACTIONS'],
         ['Date', 'Payer', 'Method', 'Reference', 'Category', 'Amount (KES)'],
-        ...recentTransactions.map((t) => [
-          formatDate(t.date),
-          t.learner,
-          t.method,
-          t.ref,
-          t.category,
-          t.amount.toString(),
-        ]),
+        ...auditRows
+          .filter((r) => r.type === 'fee')
+          .map((t) => [
+            formatDate(t.date),
+            t.label,
+            t.method,
+            t.ref,
+            t.category,
+            t.amount.toString(),
+          ]),
         [''],
         ['SUBSCRIPTION INVOICES'],
         ['Issued', 'Validity', 'Method', 'Reference', 'Amount (KES)'],
-        ...subscriptionInvoices.map((i) => [
-          formatDate(i.issuedAt),
-          i.validity,
-          i.method,
-          i.ref,
-          i.amount.toString(),
-        ]),
+        ...auditRows
+          .filter((r) => r.type === 'invoice')
+          .map((i) => [
+            formatDate(i.date),
+            i.category,
+            i.method,
+            i.ref,
+            i.amount.toString(),
+          ]),
       ];
-      const csv = rows.map((r) =>
-        r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','),
-      ).join('\n');
+      const csv = rows
+        .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
+        .join('\n');
       await downloadCSV(csv, `Munyaka_Financial_Report_${new Date().toISOString().slice(0, 10)}.csv`);
       showSuccess('Financial report downloaded.');
     } catch (err) {
       console.error('[OwnerDashboard] export error:', err);
       showError('Could not export the report. Please try again.');
     }
-  };
+  }, [license, seats, financials, auditRows]);
 
-  const handleDownloadLatestReceipt = () => {
-    const latest = recentTransactions[0];
+  const handleDownloadLatestReceipt = useCallback(() => {
+    const latest = auditRows.find((r) => r.type === 'fee');
     if (!latest) {
       showError('No recent transactions available to download.');
       return;
@@ -629,7 +695,7 @@ const OwnerDashboard: React.FC = () => {
       '',
       `Receipt No:    ${latest.ref}`,
       `Date:          ${formatDateLong(latest.date)}`,
-      `Payer:         ${latest.learner}`,
+      `Payer:         ${latest.label}`,
       `Method:        ${latest.method}`,
       `Category:      ${latest.category}`,
       '',
@@ -648,23 +714,15 @@ const OwnerDashboard: React.FC = () => {
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
     showSuccess('Latest receipt downloaded.');
-  };
+  }, [auditRows]);
 
-  // ── Status badge config ────────────────────────────────────────────────────
-  const statusConfig: Record<SubscriptionStatus, {
-    label: string; bg: string; text: string; dot: string;
-  }> = {
-    active:      { label: 'Active',       bg: 'bg-emerald-50', text: 'text-emerald-700', dot: 'bg-emerald-500' },
-    due:         { label: 'Due',          bg: 'bg-amber-50',   text: 'text-amber-700',   dot: 'bg-amber-500' },
-    grace_period:{ label: 'Grace Period', bg: 'bg-orange-50',  text: 'text-orange-700',  dot: 'bg-orange-500' },
-    expired:     { label: 'Expired',      bg: 'bg-red-50',     text: 'text-red-700',     dot: 'bg-red-500' },
-  };
-  const sub = statusConfig[license.status];
-
+  const sub = STATUS_CONFIG[license.status];
   const TierIcon = license.isEnterprise ? Crown : Sparkles;
   const tierGradient = license.isEnterprise
     ? 'from-indigo-600 via-violet-600 to-fuchsia-600'
     : 'from-blue-600 via-cyan-600 to-teal-500';
+
+  const hasTransactions = auditRows.some((r) => r.type === 'fee');
 
   return (
     <div className="space-y-8 pb-10">
@@ -699,7 +757,7 @@ const OwnerDashboard: React.FC = () => {
             {user?.name ? ` for ${user.name}` : ''}.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
             size="sm"
@@ -859,7 +917,7 @@ const OwnerDashboard: React.FC = () => {
             </div>
             <div className="flex items-center gap-2 text-slate-500">
               <Receipt size={12} className="text-slate-400 shrink-0" />
-              <span>{allLicenses.length} license{allLicenses.length === 1 ? '' : 's'} on file</span>
+              <span>{allLicensesCount} license{allLicensesCount === 1 ? '' : 's'} on file</span>
             </div>
           </div>
         </CardContent>
@@ -902,7 +960,7 @@ const OwnerDashboard: React.FC = () => {
                 {formatKES(financials.totalExpected)}
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
-                Per-grade fees × {activeStudentCount} active learners
+                Per-grade fees × {seats.studentsUsed} active learners
               </p>
             </CardContent>
           </Card>
@@ -1074,7 +1132,7 @@ const OwnerDashboard: React.FC = () => {
               size="sm"
               onClick={handleDownloadLatestReceipt}
               className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
-              disabled={recentTransactions.length === 0}
+              disabled={!hasTransactions}
             >
               <Download size={14} className="mr-1.5" />
               Latest Receipt
@@ -1203,7 +1261,7 @@ const OwnerDashboard: React.FC = () => {
               variant="ghost"
               size="sm"
               onClick={handleDownloadLatestReceipt}
-              disabled={recentTransactions.length === 0}
+              disabled={!hasTransactions}
               className="rounded-lg text-slate-600 hover:text-slate-900"
             >
               <Receipt size={13} className="mr-1" />
