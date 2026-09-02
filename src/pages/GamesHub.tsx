@@ -18,6 +18,8 @@ import {
   BrainCircuit,
   BarChart3,
   Zap as ZapIcon,
+  Languages,
+  Calculator,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -26,12 +28,20 @@ import SpeedMath from "@/components/games/SpeedMath";
 import MemoryMatch from "@/components/games/MemoryMatch";
 import WordScramble from "@/components/games/WordScramble";
 import SudokuMini from "@/components/games/SudokuMini";
+import BilingualMatch from "@/components/games/BilingualMatch";
+import TargetMath from "@/components/games/TargetMath";
+import PatternMemory from "@/components/games/PatternMemory";
 import {
   loadMeta,
   getHighScore,
   loadMemoryMatchesCompleted,
   loadWordWordsCompleted,
   loadSudokuPuzzlesSolved,
+  loadBilingualBestScore,
+  loadBilingualMatchesCompleted,
+  loadTargetMathHighScore,
+  loadTargetMathPuzzlesSolved,
+  loadPatternMemoryBestRound,
 } from "@/lib/gameStats";
 
 type Difficulty = "Easy" | "Medium" | "Hard";

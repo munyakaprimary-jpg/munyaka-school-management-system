@@ -24,6 +24,17 @@ export const KEYS = {
 
   // Sudoku Mini
   sudokuPuzzlesSolved: key("sudoku:puzzles-solved"),
+
+  // Bilingual Match
+  bilingualBestScore: key("bilingual:best-score"),
+  bilingualMatchesCompleted: key("bilingual:matches-completed"),
+
+  // Target Math
+  targetMathHighScore: key("target-math:high-score"),
+  targetMathPuzzlesSolved: key("target-math:puzzles-solved"),
+
+  // Pattern Memory
+  patternMemoryBestRound: key("pattern-memory:best-round"),
 } as const;
 
 // ── Generic helpers ─────────────────────────────────────────────────────────
@@ -109,4 +120,26 @@ export const saveWordResult = (score: number, wordsCompleted: number) => {
 export const loadSudokuPuzzlesSolved = () => safeGet(KEYS.sudokuPuzzlesSolved, 0);
 export const saveSudokuSolved = () => {
   safeSet(KEYS.sudokuPuzzlesSolved, loadSudokuPuzzlesSolved() + 1);
+};
+
+// Bilingual Match (Kiswahili & English)
+export const loadBilingualBestScore = () => safeGet(KEYS.bilingualBestScore, 0);
+export const loadBilingualMatchesCompleted = () => safeGet(KEYS.bilingualMatchesCompleted, 0);
+export const saveBilingualResult = (score: number, matchesCompleted: number) => {
+  if (score > loadBilingualBestScore()) safeSet(KEYS.bilingualBestScore, score);
+  safeSet(KEYS.bilingualMatchesCompleted, loadBilingualMatchesCompleted() + matchesCompleted);
+};
+
+// Target Math
+export const loadTargetMathHighScore = () => safeGet(KEYS.targetMathHighScore, 0);
+export const loadTargetMathPuzzlesSolved = () => safeGet(KEYS.targetMathPuzzlesSolved, 0);
+export const saveTargetMathResult = (score: number, puzzlesSolved: number) => {
+  if (score > loadTargetMathHighScore()) safeSet(KEYS.targetMathHighScore, score);
+  safeSet(KEYS.targetMathPuzzlesSolved, loadTargetMathPuzzlesSolved() + puzzlesSolved);
+};
+
+// Pattern Memory
+export const loadPatternMemoryBestRound = () => safeGet(KEYS.patternMemoryBestRound, 0);
+export const savePatternMemoryResult = (round: number) => {
+  if (round > loadPatternMemoryBestRound()) safeSet(KEYS.patternMemoryBestRound, round);
 };
