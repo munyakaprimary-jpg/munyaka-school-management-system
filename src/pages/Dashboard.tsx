@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   BarChart,
   Bar,
@@ -11,6 +12,7 @@ import {
   ResponsiveContainer,
   Cell,
 } from 'recharts';
+import { useNavigate } from 'react-router-dom';
 import {
   Users,
   UserCheck,
@@ -30,6 +32,19 @@ import {
   Receipt,
   AlertCircle,
   Bell,
+  PenLine,
+  ClipboardCheck,
+  CalendarDays,
+  Wifi,
+  WifiOff,
+  Server,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  ArrowRight,
+  BookMarked,
+  FileText,
+  AlertTriangle,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
@@ -42,6 +57,7 @@ import {
   isOwner,
 } from '@/rbac/permissionMatrix';
 import { getNotices } from '@/utils/notice-board';
+import { useLanSync } from '@/hooks/useLanSync';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -368,15 +384,27 @@ const UnauthenticatedDashboard = ({ user }: { user: { name?: string; role?: stri
 // ─── Role: Class Teacher Dashboard (teacher / ict_teacher) ───────────────────
 
 /**
- * Displays a restricted class-level dashboard for teachers showing:
- * - Assigned learning areas (subjects)
- * - Class attendance rate for their classes
- * - Pending marks count
- * - Today's lesson schedule
- * - Student performance summary
+ * Displays a feature-rich class-level dashboard for teachers:
+ * - Quick Action Cards (Enter Marks, Mark Attendance, Class Timetable)
+ * - Summary Metric Cards (Students, Pending Submissions, Today's Attendance)
+ * - Real-Time LAN Server Connection Banner
+ * - Notice & Events Feed
  */
 const ClassTeacherDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  const { isConnected, isOnline, connectionStatus } = useLanSync();
+
+  // ── Today's date helpers ─────────────────────────────────────────────────────
+  const today = useMemo(() => new Date(), []);
+  const todayKey = useMemo(
+    () => today.toISOString().slice(0, 10),
+    [today]
+  );
+  const todayLabel = useMemo(
+    () => today.toLocaleDateString('en-KE', { weekday: 'long', month: 'long', day: 'numeric' }),
+    [today]
+  );
 
   // ── Assigned learning areas from localStorage ─────────────────────────────────
   const assignedAreas = useMemo(() => {
@@ -384,242 +412,590 @@ const ClassTeacherDashboard = () => {
     if (!raw) return [];
     try {
       const areas = JSON.parse(raw);
-      return Array.isArray(areas) ? areas.slice(0, 6) : [];
+      return Array.isArray(areas) ? areas : [];
     } catch {
       return [];
     }
   }, []);
 
-  // ── Assigned classes ─────────────────────────────────────────────────────────
+  // ── Assigned classes (grades/streams) ────────────────────────────────────────
   const assignedClasses = useMemo(() => {
     const raw = localStorage.getItem('munyaka_grades');
     if (!raw) return [];
     try {
       const grades = JSON.parse(raw);
-      return Array.isArray(grades) ? grades.slice(0, 3) : [];
+      return Array.isArray(grades) ? grades : [];
     } catch {
       return [];
     }
   }, []);
 
-  // ── Class attendance rate ────────────────────────────────────────────────────
-  const classAttendanceRate = useMemo(() => {
-    const learners = safeRead<any[]>('school_learners_data', []);
-    const present = learners.filter((l: any) => {
-      const attn = (l.attendanceStatus || '').toLowerCase();
-      return attn === 'present' || attn === 'p';
-    }).length;
-    const total = learners.filter((l: any) => l.status !== 'TRANSFERRED').length;
-    return total > 0 ? Math.round((present / total) * 100) : 0;
-  }, []);
+  // ── Assigned Students Count ──────────────────────────────────────────────────
+  // Derived from total enrolled learners in the teacher's assigned streams/grades.
+  // If no explicit assignment is configured, falls back to all active learners.
+  const assignedStudentsCount = useMemo(() => {
+    const learners: any[] = safeRead('school_learners_data', []);
+    const active = learners.filter((l: any) => l.status !== 'TRANSFERRED');
 
-  // ── Pending marks count ──────────────────────────────────────────────────────
-  const pendingMarksCount = useMemo(() => {
-    const raw = localStorage.getItem('munyaka_exam_types');
-    if (!raw) return 0;
+    if (assignedClasses.length === 0) {
+      return active.length;
+    }
+
+    const assignedNames = new Set(
+      assignedClasses.map((c: any) => (c.name || '').toLowerCase().trim())
+    );
+
+    return active.filter((l: any) => {
+      const gradeName = (l.grade || '').toLowerCase().trim();
+      return assignedNames.has(gradeName);
+    }).length;
+  }, [assignedClasses]);
+
+  // ── Today's Attendance Summary ───────────────────────────────────────────────
+  const todayAttendanceSummary = useMemo(() => {
+    const learners: any[] = safeRead('school_learners_data', []);
+    const active = learners.filter((l: any) => l.status !== 'TRANSFERRED');
+
+    // Try the v2 storage path (per-grade records)
+    const STORAGE_KEY_PREFIX = 'munyaka_attendance_v2_';
+    let v2Records: Record<string, any> = {};
+    Object.keys(localStorage).forEach((key) => {
+      if (key.startsWith(STORAGE_KEY_PREFIX)) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (raw) v2Records = { ...v2Records, ...JSON.parse(raw) };
+        } catch { /* ignore */ }
+      }
+    });
+
+    // Also read the legacy aggregate key
+    let legacyRecords: Record<string, any> = {};
     try {
-      const exams = JSON.parse(raw);
-      return Array.isArray(exams) ? Math.floor(exams.length * 0.3) : 0;
-    } catch {
+      const raw = localStorage.getItem('munyaka_attendance_records');
+      if (raw) legacyRecords = JSON.parse(raw);
+    } catch { /* ignore */ }
+
+    const merged = { ...legacyRecords, ...v2Records };
+
+    let present = 0;
+    let absent = 0;
+    let hasData = false;
+
+    Object.values(merged).forEach((record: any) => {
+      if (!record || typeof record !== 'object') return;
+      const recDate = (record.date || record.savedAt || record.timestamp || '').slice(0, 10);
+      if (recDate !== todayKey) return;
+      hasData = true;
+      Object.values(record).forEach((entry: any) => {
+        if (!entry || typeof entry !== 'object') return;
+        const m = entry.morning?.status || entry.morning;
+        const a = entry.afternoon?.status || entry.afternoon;
+        if (m === 'P' || m === 'present' || m === true || a === 'P' || a === 'present' || a === true) {
+          present += 1;
+        } else if (m === 'A' || m === 'absent' || a === 'A' || a === 'absent') {
+          absent += 1;
+        }
+      });
+    });
+
+    // Also scan legacy keys containing the date string
+    Object.entries(legacyRecords).forEach(([key, record]: [string, any]) => {
+      if (!key.includes(todayKey) || !record || typeof record !== 'object') return;
+      hasData = true;
+      Object.values(record).forEach((val: any) => {
+        if (val === 'P' || val === 'present' || val === true) present += 1;
+        else if (val === 'A' || val === 'absent') absent += 1;
+      });
+    });
+
+    // Fall back to per-learner attendanceStatus snapshot if no registers
+    if (!hasData) {
+      present = active.filter((l: any) => {
+        const s = (l.attendanceStatus || '').toLowerCase();
+        return s === 'present' || s === 'p';
+      }).length;
+      absent = active.filter((l: any) => {
+        const s = (l.attendanceStatus || '').toLowerCase();
+        return s === 'absent' || s === 'a';
+      }).length;
+      hasData = present + absent > 0;
+    }
+
+    return { present, absent, hasData };
+  }, [todayKey]);
+
+  // ── Pending Assessment Submissions ──────────────────────────────────────────
+  // Count of students without a recorded mark for any of the teacher's active
+  // learning areas.  We approximate "incomplete mark entries" by computing:
+  //   active learners  −  students who have at least one mark per assigned area
+  const pendingAssessmentSubmissions = useMemo(() => {
+    const learners: any[] = safeRead('school_learners_data', []);
+    const active = learners.filter((l: any) => l.status !== 'TRANSFERRED');
+
+    if (assignedAreas.length === 0) {
       return 0;
     }
+
+    const marksRaw = localStorage.getItem('munyaka_marks');
+    let marks: any[] = [];
+    try {
+      if (marksRaw) marks = Array.isArray(JSON.parse(marksRaw)) ? JSON.parse(marksRaw) : [];
+    } catch { /* ignore */ }
+
+    // Active learning-area names
+    const activeAreaNames = new Set(
+      assignedAreas
+        .filter((a: any) => a.isActive !== false && a.active !== false)
+        .map((a: any) => (a.name || a.code || '').toLowerCase().trim())
+    );
+
+    if (activeAreaNames.size === 0) return 0;
+
+    // For each learner, check if they have at least one mark in any active area
+    return active.filter((learner: any) => {
+      const hasMark = marks.some((m: any) => {
+        const learnerMatch =
+          m.learnerId === learner.id ||
+          m.studentId === learner.id ||
+          m.learnerName === learner.name ||
+          m.studentName === learner.name;
+        if (!learnerMatch) return false;
+        const areaName = (m.learningArea || m.subject || '').toLowerCase().trim();
+        return activeAreaNames.has(areaName);
+      });
+      return !hasMark;
+    }).length;
+  }, [assignedAreas]);
+
+  // ── School notices for the feed ─────────────────────────────────────────────
+  const recentNotices = useMemo(() => {
+    const notices = getNotices();
+    return notices.slice(0, 5);
   }, []);
 
-  // ── Student performance data ─────────────────────────────────────────────────
-  const performanceData = useMemo(() => {
-    const raw = localStorage.getItem('munyaka_marks');
-    if (!raw) return [];
-    try {
-      const marks = JSON.parse(raw);
-      if (!Array.isArray(marks)) return [];
-      // Group by grade/subject and compute averages
-      const groups: Record<string, number[]> = {};
-      marks.forEach((m: any) => {
-        const key = m.grade || 'Unknown';
-        if (!groups[key]) groups[key] = [];
-        if (typeof m.score === 'number') groups[key].push(m.score);
-      });
-      return Object.entries(groups).map(([name, scores]) => ({
-        name,
-        avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
-      })).slice(0, 5);
-    } catch {
-      return [];
-    }
+  // ── LAN server IP for the connection banner ─────────────────────────────────
+  const serverUrl = useMemo(() => {
+    const primary = localStorage.getItem('lan_server_url');
+    if (primary) return primary;
+    return localStorage.getItem('munyaka_lan_server_url') || '';
   }, []);
+
+  // ── Quick Action Handlers ───────────────────────────────────────────────────
+  const handleEnterMarks = () => navigate('/assessments');
+  const handleMarkAttendance = () => navigate('/attendance');
+  const handleClassTimetable = () => navigate('/timetable');
 
   return (
-    <div className="space-y-8 pb-10">
+    <div className="space-y-6 pb-10">
       {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            Teacher Dashboard
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'Teacher'}</span> — {todayLabel}
+          </p>
+        </div>
+        <LiveBadge label="TEACHER SYNC" />
+      </div>
+
+      {/* ── Real-Time LAN Server Connection Banner ─────────────────────────── */}
+      <LanSyncBanner
+        isOnline={isOnline}
+        isConnected={isConnected}
+        serverUrl={serverUrl}
+        latency={connectionStatus.latency}
+      />
+
+      {/* ── Quick Action Cards ─────────────────────────────────────────────── */}
       <div>
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-              My Class Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Welcome back, {user?.name || 'Teacher'}. Here is your class overview.
-            </p>
-          </div>
-          <LiveBadge label="CLASS SYNC" />
+        <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+          Quick Actions
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <QuickActionCard
+            icon={PenLine}
+            gradient="from-indigo-500 to-violet-600"
+            title="Enter Marks / Assessments"
+            description="Record learner scores for active learning areas."
+            onClick={handleEnterMarks}
+            cta="Open Marks Entry"
+          />
+          <QuickActionCard
+            icon={ClipboardCheck}
+            gradient="from-emerald-500 to-teal-600"
+            title="Mark Attendance"
+            description="Take the daily student roll call for your class."
+            onClick={handleMarkAttendance}
+            cta="Take Roll Call"
+          />
+          <QuickActionCard
+            icon={CalendarDays}
+            gradient="from-amber-500 to-orange-600"
+            title="Class Timetable"
+            description="View your weekly lesson schedule and periods."
+            onClick={handleClassTimetable}
+            cta="Open Timetable"
+          />
         </div>
       </div>
 
-      {/* ── Teacher Stats ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={BookOpen}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          title="Assigned Classes"
-          value={assignedClasses.length || '—'}
-        />
-        <StatCard
-          icon={ClipboardList}
-          iconBg="bg-indigo-50"
-          iconColor="text-indigo-500"
-          title="Learning Areas"
-          value={assignedAreas.length || '—'}
-        />
-        <StatCard
-          icon={UserCheck}
-          iconBg="bg-green-50"
-          iconColor="text-green-500"
-          title="Class Attendance"
-          value={`${classAttendanceRate}%`}
-        />
-        <StatCard
-          icon={TrendingDown}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-500"
-          title="Pending Marks"
-          value={pendingMarksCount}
-        />
-      </div>
+      {/* ── Summary Metric Cards ───────────────────────────────────────────── */}
+      <div>
+        <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+          Today at a Glance
+        </h2>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {/* Assigned Students Count */}
+          <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden hover:-translate-y-0.5 transition-transform">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="bg-blue-50 p-3 rounded-xl shrink-0">
+                  <Users size={22} className="text-blue-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-slate-500 mb-0.5">
+                    Assigned Students
+                  </p>
+                  <p className="text-3xl font-black text-slate-900 leading-none">
+                    {assignedStudentsCount}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1.5 uppercase tracking-wider font-semibold">
+                    in {assignedClasses.length || '—'} stream(s)
+                  </p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* ── My Assigned Learning Areas ──────────────────────────────────────── */}
-      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-bold text-slate-800">
-            My Learning Areas
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {assignedAreas.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <BookOpen size={24} className="text-slate-300" />
-              <p className="text-sm text-slate-500">No learning areas assigned yet.</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {assignedAreas.map((area: any, idx: number) => (
-                <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <BookOpen size={18} className="text-blue-600" />
+          {/* Pending Assessment Submissions */}
+          <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden hover:-translate-y-0.5 transition-transform">
+            <CardContent className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="bg-amber-50 p-3 rounded-xl shrink-0">
+                  <FileText size={22} className="text-amber-500" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-xs font-medium text-slate-500 mb-0.5">
+                    Pending Submissions
+                  </p>
+                  <p className="text-3xl font-black text-slate-900 leading-none">
+                    {pendingAssessmentSubmissions}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1.5 uppercase tracking-wider font-semibold">
+                    learners without marks
+                  </p>
+                </div>
+              </div>
+              {pendingAssessmentSubmissions > 0 && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={handleEnterMarks}
+                  className="mt-3 w-full text-amber-700 hover:bg-amber-50 hover:text-amber-800 gap-1.5 h-8 text-xs font-bold"
+                >
+                  Resolve Now
+                  <ArrowRight size={12} />
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Today's Attendance Summary */}
+          <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden hover:-translate-y-0.5 transition-transform">
+            <CardContent className="p-5">
+              <div className="flex items-start justify-between gap-2 mb-2">
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  <div className="bg-green-50 p-3 rounded-xl shrink-0">
+                    <UserCheck size={22} className="text-green-500" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-semibold text-slate-800 truncate">
-                      {area.name || 'Unnamed Area'}
+                    <p className="text-xs font-medium text-slate-500 mb-0.5">
+                      Today's Attendance
                     </p>
-                    <p className="text-xs text-slate-400">
-                      {area.code || '—'}
+                    <p className="text-3xl font-black text-slate-900 leading-none">
+                      {todayAttendanceSummary.present + todayAttendanceSummary.absent > 0
+                        ? `${Math.round(
+                            (todayAttendanceSummary.present /
+                              Math.max(
+                                1,
+                                todayAttendanceSummary.present + todayAttendanceSummary.absent
+                              )) *
+                              100
+                          )}%`
+                        : '—'}
                     </p>
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              </div>
+              <div className="flex items-center gap-3 mt-2">
+                <Badge className="rounded-full bg-emerald-50 text-emerald-700 gap-1.5 px-2.5 py-1 text-xs font-bold">
+                  <CheckCircle2 size={12} />
+                  Present: {todayAttendanceSummary.present}
+                </Badge>
+                <Badge className="rounded-full bg-red-50 text-red-700 gap-1.5 px-2.5 py-1 text-xs font-bold">
+                  <XCircle size={12} />
+                  Absent: {todayAttendanceSummary.absent}
+                </Badge>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
 
-      {/* ── My Classes ──────────────────────────────────────────────────────── */}
+      {/* ── Notice & Events Feed ───────────────────────────────────────────── */}
       <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="pb-4">
-          <CardTitle className="text-base font-bold text-slate-800">
-            My Classes
-          </CardTitle>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <div className="flex items-center gap-2">
+            <Megaphone size={18} className="text-purple-500" />
+            <CardTitle className="text-base font-bold text-slate-800">
+              Notice & Events
+            </CardTitle>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={() => navigate('/notices')}
+            className="text-purple-700 hover:bg-purple-50 hover:text-purple-800 gap-1.5 h-8 text-xs font-bold"
+          >
+            View all
+            <ArrowRight size={12} />
+          </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {assignedClasses.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
-              <Users size={24} className="text-slate-300" />
-              <p className="text-sm text-slate-500">No classes assigned yet.</p>
+          {recentNotices.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
+                <Megaphone size={20} className="text-purple-400" />
+              </div>
+              <p className="text-sm font-semibold text-slate-700">No new notices</p>
+              <p className="text-xs text-slate-400 max-w-xs">
+                School announcements published by the admin will appear here in real time.
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {assignedClasses.map((cls: any, idx: number) => (
-                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
-                      <Users size={18} className="text-indigo-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-slate-800">
-                        {cls.name || `Class ${idx + 1}`}
-                      </p>
-                      <p className="text-xs text-slate-400">Stream</p>
-                    </div>
-                  </div>
-                  <Badge className="rounded-full bg-indigo-50 text-indigo-700 text-xs">
-                    Active
-                  </Badge>
-                </div>
-              ))}
-            </div>
+            recentNotices.map((notice: any) => (
+              <NoticeItem
+                key={notice.id}
+                notice={notice}
+                onClick={() => navigate('/notices')}
+              />
+            ))
           )}
         </CardContent>
       </Card>
-
-      {/* ── Student Performance ──────────────────────────────────────────────── */}
-      {performanceData.length > 0 && (
-        <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
-          <CardHeader className="flex flex-row items-center justify-between pb-4">
-            <CardTitle className="text-base font-bold text-slate-800">
-              Performance Overview
-            </CardTitle>
-            <TrendingUp size={18} className="text-emerald-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="h-[200px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={performanceData} barCategoryGap="35%">
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis
-                    dataKey="name"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
-                  />
-                  <YAxis domain={[0, 100]} hide />
-                  <Tooltip
-                    cursor={{ fill: '#f8fafc' }}
-                    content={({ active, payload }) => {
-                      if (active && payload && payload.length) {
-                        const d = payload[0].payload;
-                        return (
-                          <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
-                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
-                              {d.name}
-                            </p>
-                            <p className="text-xl font-black text-slate-900 mt-0.5">
-                              {d.avg}
-                              <span className="text-xs text-slate-400 font-medium ml-1">%</span>
-                            </p>
-                            <p className="text-[10px] text-slate-400 mt-1">Average score</p>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Bar dataKey="avg" fill="#6366f1" radius={[6, 6, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </CardContent>
-        </Card>
-      )}
     </div>
+  );
+};
+
+// ─── Teacher Dashboard sub-components ─────────────────────────────────────────
+
+/**
+ * Top mini-card displaying real-time LAN sync status to the school server.
+ * Shows online/offline state, server IP, and connection latency.
+ */
+const LanSyncBanner: React.FC<{
+  isOnline: boolean;
+  isConnected: boolean;
+  serverUrl: string;
+  latency: number | null;
+}> = ({ isOnline, isConnected, serverUrl, latency }) => {
+  const displayHost = useMemo(() => {
+    if (!serverUrl) return 'Not configured';
+    try {
+      // Strip protocol & trailing slash
+      return serverUrl
+        .replace(/^https?:\/\//, '')
+        .replace(/\/+$/, '')
+        .slice(0, 32);
+    } catch {
+      return serverUrl;
+    }
+  }, [serverUrl]);
+
+  const isHealthy = isOnline && isConnected;
+  const statusLabel = !isOnline
+    ? 'Offline / Local Mode'
+    : isConnected
+    ? 'Online / Connected'
+    : 'Reachable / Local Mode';
+  const StatusIcon = isHealthy ? Wifi : !isOnline ? WifiOff : Server;
+
+  const accent = isHealthy
+    ? {
+        ring: 'ring-emerald-200',
+        bg: 'bg-emerald-50',
+        iconBg: 'bg-emerald-100',
+        iconColor: 'text-emerald-600',
+        text: 'text-emerald-700',
+        dot: 'bg-emerald-500',
+      }
+    : {
+        ring: 'ring-amber-200',
+        bg: 'bg-amber-50',
+        iconBg: 'bg-amber-100',
+        iconColor: 'text-amber-600',
+        text: 'text-amber-700',
+        dot: 'bg-amber-500',
+      };
+
+  return (
+    <Card className={`border-none shadow-sm ${accent.bg} ring-1 ${accent.ring} rounded-2xl overflow-hidden`}>
+      <CardContent className="p-4 sm:p-5">
+        <div className="flex items-center gap-4">
+          <div className={`${accent.iconBg} p-3 rounded-xl shrink-0`}>
+            <StatusIcon size={20} className={accent.iconColor} />
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 flex-wrap">
+              <p className={`text-[10px] font-black uppercase tracking-widest ${accent.text}`}>
+                LAN Sync Status
+              </p>
+              <span className="relative flex h-2 w-2">
+                {isHealthy && (
+                  <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${accent.dot} opacity-75`} />
+                )}
+                <span className={`relative inline-flex rounded-full h-2 w-2 ${accent.dot}`} />
+              </span>
+            </div>
+            <p className="text-base font-black text-slate-900 mt-0.5">
+              {statusLabel}
+            </p>
+            <div className="flex items-center gap-3 mt-1 flex-wrap">
+              <p className="text-xs text-slate-500 flex items-center gap-1">
+                <Server size={11} className="text-slate-400" />
+                <span className="font-mono">{displayHost}</span>
+              </p>
+              {latency !== null && (
+                <p className="text-xs text-slate-500 flex items-center gap-1">
+                  <Clock size={11} className="text-slate-400" />
+                  {latency} ms
+                </p>
+              )}
+            </div>
+          </div>
+          <Badge
+            variant="outline"
+            className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 ${accent.bg} ${accent.text} hidden sm:inline-flex`}
+          >
+            {isHealthy ? 'Live' : 'Cached'}
+          </Badge>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+/**
+ * Clickable gradient-tinted card used for the three Quick Action entries.
+ */
+const QuickActionCard: React.FC<{
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  gradient: string;
+  title: string;
+  description: string;
+  cta: string;
+  onClick: () => void;
+}> = ({ icon: Icon, gradient, title, description, cta, onClick }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className="group text-left bg-white border border-slate-100 shadow-sm rounded-2xl p-5 hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-300"
+  >
+    <div className="flex items-start gap-4">
+      <div className={`bg-gradient-to-br ${gradient} p-3 rounded-xl shadow-md shrink-0`}>
+        <Icon size={22} className="text-white" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <h3 className="text-base font-black text-slate-900 leading-tight">
+          {title}
+        </h3>
+        <p className="text-xs text-slate-500 mt-1.5 line-clamp-2 leading-relaxed">
+          {description}
+        </p>
+        <div className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 group-hover:gap-2 transition-all">
+          {cta}
+          <ArrowRight size={12} />
+        </div>
+      </div>
+    </div>
+  </button>
+);
+
+/**
+ * Compact notice row used in the Notice & Events feed.
+ */
+const NoticeItem: React.FC<{
+  notice: any;
+  onClick: () => void;
+}> = ({ notice, onClick }) => {
+  const meta = useMemo(() => {
+    const category = (notice.category || 'General').toLowerCase();
+    if (category.includes('urgent') || notice.priority === 'high') {
+      return {
+        bg: 'bg-red-100',
+        text: 'text-red-600',
+        icon: AlertTriangle,
+        label: 'Urgent',
+      };
+    }
+    if (category.includes('event')) {
+      return {
+        bg: 'bg-blue-100',
+        text: 'text-blue-600',
+        icon: CalendarDays,
+        label: 'Event',
+      };
+    }
+    if (category.includes('finance')) {
+      return {
+        bg: 'bg-amber-100',
+        text: 'text-amber-600',
+        icon: Wallet,
+        label: 'Finance',
+      };
+    }
+    return {
+      bg: 'bg-purple-100',
+      text: 'text-purple-600',
+      icon: Megaphone,
+      label: 'Notice',
+    };
+  }, [notice]);
+
+  const Icon = meta.icon;
+  const displayBody = notice.content || notice.message || notice.description || '';
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="w-full text-left flex items-start gap-3 p-4 bg-slate-50 hover:bg-slate-100 rounded-xl transition-colors"
+    >
+      <div className={`${meta.bg} p-2 rounded-lg shrink-0`}>
+        <Icon size={16} className={meta.text} />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2 mb-0.5 flex-wrap">
+          <p className="text-sm font-bold text-slate-800 truncate">
+            {notice.title || 'School Notice'}
+          </p>
+          <Badge
+            variant="outline"
+            className={`rounded-full px-2 py-0 text-[9px] font-black uppercase tracking-wider border-0 ${meta.bg} ${meta.text}`}
+          >
+            {meta.label}
+          </Badge>
+        </div>
+        <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed">
+          {displayBody}
+        </p>
+        <p className="text-[10px] font-semibold text-slate-400 mt-1.5 uppercase tracking-wider">
+          {formatRelativeTime(notice.date || notice.createdAt || new Date().toISOString())}
+        </p>
+      </div>
+    </button>
   );
 };
 
