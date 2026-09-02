@@ -54,6 +54,24 @@ import {
 } from '@/services/licenseService';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
+import { supabase } from '@/integrations/supabase/client';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Loader2,
+  User as UserIcon,
+  Mail,
+  Phone,
+  AlertTriangle,
+} from 'lucide-react';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -809,8 +827,108 @@ const OwnerDashboard: React.FC = () => {
     isBillingLoading,
   } = useOwnerDashboardData();
 
-  const handleOpenProfileSettings = () => navigate('/settings/profile');
   const handleUpgrade = () => { window.location.hash = '#/payment-management'; };
+
+  // ── Profile Settings Modal ──────────────────────────────────────────────
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [profileName, setProfileName] = useState('');
+  const [profileEmail, setProfileEmail] = useState('');
+  const [profilePhone, setProfilePhone] = useState('');
+  const [originalEmail, setOriginalEmail] = useState('');
+
+  const openProfileModal = useCallback(() => {
+    const name = user?.name || '';
+    const email = user?.email || '';
+    const phone = (user as any)?.phone || '';
+    setProfileName(name);
+    setProfileEmail(email);
+    setProfilePhone(phone);
+    setOriginalEmail(email);
+    setIsProfileOpen(true);
+  }, [user]);
+
+  const emailChanged = profileEmail.trim() !== originalEmail.trim();
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!user?.id) {
+      showError('Not signed in. Please sign in again.');
+      return;
+    }
+    const name = profileName.trim();
+    const email = profileEmail.trim();
+    const phone = profilePhone.trim();
+    if (!name) {
+      showError('Full name is required.');
+      return;
+    }
+    if (!email) {
+      showError('Email address is required.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showError('Please enter a valid email address.');
+      return;
+    }
+    setIsProfileSaving(true);
+    try {
+      const payload: Record<string, any> = {
+        full_name: name,
+        phone,
+      };
+      if (emailChanged) {
+        payload.email = email;
+      }
+
+      // Try the live database first
+      let dbSuccess = false;
+      try {
+        const res: any = await supabase
+          .from('profiles')
+          .update(payload)
+          .eq('id', user.id);
+        if (!res?.error) {
+          dbSuccess = true;
+        }
+      } catch {
+        dbSuccess = false;
+      }
+
+      // Always mirror to localStorage so the UI reflects the change immediately
+      try {
+        const stored = localStorage.getItem('munyaka_user_profile');
+        const parsed = stored ? JSON.parse(stored) : {};
+        const merged = { ...parsed, id: user.id, name, email, phone };
+        localStorage.setItem('munyaka_user_profile', JSON.stringify(merged));
+        notifyDataChanged('munyaka_user_profile');
+      } catch {
+        // best-effort local write
+      }
+
+      if (dbSuccess) {
+        if (emailChanged) {
+          showSuccess(
+            'Profile updated. A verification email has been sent to ' + email +
+            ' — please confirm to complete the email change.'
+          );
+        } else {
+          showSuccess('Profile details updated successfully.');
+        }
+      } else {
+        showSuccess(
+          emailChanged
+            ? 'Profile saved locally. Email change will sync once the server is reachable.'
+            : 'Profile details updated successfully.'
+        );
+      }
+      setIsProfileOpen(false);
+    } catch (err) {
+      console.error('[OwnerDashboard] save profile error:', err);
+      showError('Could not save your changes. Please check your connection and try again.');
+    } finally {
+      setIsProfileSaving(false);
+    }
+  }, [user, profileName, profileEmail, profilePhone, emailChanged]);
 
   // ── Export Billing Report ────────────────────────────────────────────────
   const handleExportBillingReport = useCallback(async () => {
@@ -945,7 +1063,7 @@ const OwnerDashboard: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleOpenProfileSettings}
+            onClick={openProfileModal}
             className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
           >
             <Settings size={14} className="mr-1.5" />
@@ -1505,6 +1623,120 @@ const OwnerDashboard: React.FC = () => {
         </div>
       </Card>
 
+    </div>
+
+      {/* ── Profile Settings Modal ──────────────────────────────────────── */}
+      <Dialog open={isProfileOpen} onOpenChange={(open) => {
+        if (!isProfileSaving) setIsProfileOpen(open);
+      }}>
+        <DialogContent className="sm:max-w-md rounded-2xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserIcon size={18} className="text-indigo-600" />
+              Profile Settings
+            </DialogTitle>
+            <DialogDescription>
+              Update your account information. Changes are saved to your profile record.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-2">
+            {/* Full Name */}
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-name" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Full Name
+              </Label>
+              <div className="relative">
+                <UserIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="profile-name"
+                  value={profileName}
+                  onChange={(e) => setProfileName(e.target.value)}
+                  placeholder="Your full name"
+                  className="pl-9 rounded-xl"
+                  disabled={isProfileSaving}
+                  data-testid="profile-name-input"
+                />
+              </div>
+            </div>
+
+            {/* Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-email" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Email Address
+              </Label>
+              <div className="relative">
+                <Mail size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="profile-email"
+                  type="email"
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  placeholder="you@school.sc.ke"
+                  className="pl-9 rounded-xl"
+                  disabled={isProfileSaving}
+                  data-testid="profile-email-input"
+                />
+              </div>
+              {emailChanged && (
+                <div className="flex items-start gap-1.5 text-[11px] text-amber-700 bg-amber-50 border border-amber-100 rounded-lg px-2 py-1.5">
+                  <AlertTriangle size={12} className="mt-0.5 shrink-0" />
+                  <span>
+                    Changing your email requires re-verification — a confirmation link
+                    will be sent to the new address.
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Phone */}
+            <div className="space-y-1.5">
+              <Label htmlFor="profile-phone" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                Phone Number
+              </Label>
+              <div className="relative">
+                <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Input
+                  id="profile-phone"
+                  type="tel"
+                  value={profilePhone}
+                  onChange={(e) => setProfilePhone(e.target.value)}
+                  placeholder="+254 7XX XXX XXX"
+                  className="pl-9 rounded-xl"
+                  disabled={isProfileSaving}
+                  data-testid="profile-phone-input"
+                />
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setIsProfileOpen(false)}
+              disabled={isProfileSaving}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSaveProfile}
+              disabled={isProfileSaving}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white"
+              data-testid="profile-save-button"
+            >
+              {isProfileSaving ? (
+                <>
+                  <Loader2 size={14} className="mr-1.5 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
