@@ -120,10 +120,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
 
   const menuItems = [
-    // ── ADMIN has unrestricted access to every section ──
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
@@ -180,8 +180,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       return true;
     }
 
-    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data,
-    // but always sees global items (e.g. Games Hub).
+    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+    // Central Data, plus global items (Games Hub).
     if (roleLower === 'owner') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return item.roles.map(r => r.toLowerCase()).includes('owner');
@@ -202,10 +202,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     return true;
   });
 
+  // ── Dashboard enforcement for the OWNER role ───────────────────────────────
+  // Guarantee that the owner always sees Dashboard as the first menu item,
+  // regardless of the upstream filter result. This is a safety net so the
+  // owner can never be locked out of their executive dashboard.
+  const ownerNormalized = (user?.role ?? '').toLowerCase() === 'owner';
+  const dashboardAlreadyInMenu = filteredMenu.some(
+    (i) => i.path === '/' || i.path === '/dashboard',
+  );
+  const finalMenu: typeof filteredMenu =
+    ownerNormalized && !dashboardAlreadyInMenu
+      ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
+      : filteredMenu;
+
   // Bottom Navigation Bar Quick Links - Filtered by user role
   // ADMIN has full access to all bottom-nav items.
   const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'head_teacher', 'teacher'] },
     { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
@@ -275,7 +288,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {filteredMenu.map((item) => {
+          {finalMenu.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link 
