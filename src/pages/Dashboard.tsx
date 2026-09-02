@@ -39,8 +39,10 @@ import {
   hasClassDashboardAccess,
   hasFinanceDashboardAccess,
   hasStudentPortalAccess,
+  isOwner,
 } from '@/rbac/permissionMatrix';
 import { getNotices } from '@/utils/notice-board';
+import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -129,6 +131,7 @@ const safeRead = <T,>(key: string, fallback: T): T => {
  * Top-level Dashboard component.  Reads the current user's role and
  * delegates to the appropriate role-specific view:
  *
+ *   • Owner Dashboard           → owner
  *   • Full Dashboard Overview  → admin, head_teacher, dev
  *   • Class Dashboard          → teacher, ict_teacher
  *   • Finance Dashboard        → bursar
@@ -141,6 +144,11 @@ const safeRead = <T,>(key: string, fallback: T): T => {
 const Dashboard = () => {
   const { user } = useAuth();
   const role = user?.role;
+
+  // ── Owner / platform billing dashboard ─────────────────────────────────────
+  if (isOwner(role)) {
+    return <OwnerDashboard />;
+  }
 
   // ── Full school-wide overview (admin / head_teacher / dev) ──────────────────
   if (hasFullDashboardAccess(role)) {
