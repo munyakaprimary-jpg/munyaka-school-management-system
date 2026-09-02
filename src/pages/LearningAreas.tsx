@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
-import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit } from 'lucide-react';
+import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit, Sparkles } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { DEFAULT_CBC_CLUSTERS, buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
 
 interface LearningArea {
   id: string;
@@ -19,6 +20,8 @@ interface LearningArea {
   periodsPerWeek: number;
   type: 'Core' | 'Elective';
   description?: string;
+  /** True for auto-seeded CBC areas; false for user-created items */
+  isDefault?: boolean;
 }
 
 interface ClusterData {
@@ -28,102 +31,171 @@ interface ClusterData {
   learningAreas: LearningArea[];
 }
 
-const DEFAULT_CLUSTERS: ClusterData[] = [
-  { id: "pre-primary", name: "Pre-Primary", description: "Early childhood development learning areas", learningAreas: [] },
-  { id: "lower-primary", name: "Lower Primary", description: "Foundational learning areas for Grades 1, 2, and 3", learningAreas: [] },
-  { id: "upper-primary", name: "Upper Primary", description: "Intermediate learning areas for Grades 4, 5, and 6", learningAreas: [] },
-  { id: "junior-school", name: "Junior School", description: "Secondary preparation learning areas", learningAreas: [] }
-];
+/** Rehydrate a saved cluster, restoring missing default areas if any were removed */
+const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
+  return DEFAULT_CBC_CLUSTERS.map((defaultCluster) => {
+    const saved = savedClusters.find((c) => c.id === defaultCluster.id);
+    if (saved && saved.learningAreas.length > 0) {
+      // Preserve user modifications; re-attach isDefault to items that were defaults
+      return {
+        ...saved,
+        description: defaultCluster.description,
+        learningAreas: saved.learningAreas.map((la) => ({
+          ...la,
+          isDefault: defaultCluster.learningAreas.some(
+            (d) => d.name.toLowerCase() === la.name.toLowerCase()
+          )
+            ? true
+            : la.isDefault ?? false,
+        })),
+      };
+    }
+    // No saved data for this cluster — seed with defaults
+    return {
+      ...defaultCluster,
+      learningAreas: defaultCluster.learningAreas.map((area, index) => ({
+        id: `default-${defaultCluster.id}-${index}-${Date.now().toString(36)}`,
+        name: area.name,
+        periodsPerWeek: 4,
+        type: area.type,
+        isDefault: true,
+      })),
+    };
+  });
+};
+
+const STORAGE_KEY = 'munyaka_learning_areas';
 
 const LearningAreas = () => {
   const [clusters, setClusters] = useState<ClusterData[]>(() => {
-    const saved = localStorage.getItem('munyaka_learning_areas');
-    return saved ? JSON.parse(saved) : DEFAULT_CLUSTERS;
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        return hydrateClusters(JSON.parse(saved));
+      } catch {
+        return buildDefaultClusters();
+      }
+    }
+    return buildDefaultClusters();
   });
-  const [activeTab, setActiveTab] = useState<string>("pre-primary");
+
+  const [activeTab, setActiveTab] = useState<string>('pre-primary');
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
 
   const [isAuthOpen, setIsAuthOpen] = useState(false);
-  const [authPassword, setAuthPassword] = useState("");
-  const [authError, setAuthError] = useState("");
+  const [authPassword, setAuthPassword] = useState('');
+  const [authError, setAuthError] = useState('');
   const [isVerifying, setIsVerifying] = useState(false);
   const [actionToPerform, setActionToPerform] = useState<'delete' | 'edit' | null>(null);
   const [targetLearningArea, setTargetLearningArea] = useState<{ id: string; name: string; clusterId: string } | null>(null);
-  const [targetClusterId, setTargetClusterId] = useState<string>("");
+  const [targetClusterId, setTargetClusterId] = useState<string>('');
 
-  const [selectedClusterId, setSelectedClusterId] = useState<string>("pre-primary");
-  const [name, setName] = useState("");
-  const [periods, setPeriods] = useState("4");
-  const [type, setType] = useState<'Core' | 'Elective'>("Core");
-  const [description, setDescription] = useState("");
+  const [selectedClusterId, setSelectedClusterId] = useState<string>('pre-primary');
+  const [name, setName] = useState('');
+  const [periods, setPeriods] = useState('4');
+  const [type, setType] = useState<'Core' | 'Elective'>('Core');
+  const [description, setDescription] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('munyaka_learning_areas', JSON.stringify(clusters));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(clusters));
   }, [clusters]);
 
   const isNameUniqueInCluster = (clusterId: string, proposedName: string, excludeId?: string) => {
-    const selectedCluster = clusters.find(c => c.id === clusterId);
+    const selectedCluster = clusters.find((c) => c.id === clusterId);
     if (!selectedCluster) return true;
-    return !selectedCluster.learningAreas.some(la => 
-      la.name.toLowerCase() === proposedName.toLowerCase() && la.id !== excludeId
+    return !selectedCluster.learningAreas.some(
+      (la) => la.name.toLowerCase() === proposedName.toLowerCase() && la.id !== excludeId
     );
   };
 
   const handleAddLearningArea = () => {
     if (!name.trim()) {
-      showError("Please enter a learning area name.");
+      showError('Please enter a learning area name.');
       return;
     }
 
     if (!isNameUniqueInCluster(selectedClusterId, name.trim())) {
-      showError(`A learning area named "${name.trim()}" already exists in ${clusters.find(c => c.id === selectedClusterId)?.name}.`);
+      showError(
+        `A learning area named "${name.trim()}" already exists in ${
+          clusters.find((c) => c.id === selectedClusterId)?.name
+        }.`
+      );
       return;
     }
 
-    const newArea: LearningArea = { id: `la-${Date.now()}`, name: name.trim(), periodsPerWeek: parseInt(periods) || 4, type, description: description.trim() || undefined };
-    setClusters(prev => prev.map(c => c.id === selectedClusterId ? { ...c, learningAreas: [...c.learningAreas, newArea] } : c));
+    const newArea: LearningArea = {
+      id: `la-${Date.now()}`,
+      name: name.trim(),
+      periodsPerWeek: parseInt(periods) || 4,
+      type,
+      description: description.trim() || undefined,
+      isDefault: false,
+    };
+
+    // Append to the selected cluster — never wipe existing items
+    setClusters((prev) =>
+      prev.map((c) =>
+        c.id === selectedClusterId
+          ? { ...c, learningAreas: [...c.learningAreas, newArea] }
+          : c
+      )
+    );
+
     setIsAddOpen(false);
-    setName("");
-    setDescription("");
-    setPeriods("4");
-    setType("Core");
+    setName('');
+    setDescription('');
+    setPeriods('4');
+    setType('Core');
     showSuccess(`Successfully added "${newArea.name}"!`);
   };
 
   const handleEditLearningArea = () => {
     if (!name.trim()) {
-      showError("Please enter a learning area name.");
+      showError('Please enter a learning area name.');
       return;
     }
 
     if (!isNameUniqueInCluster(targetClusterId, name.trim(), targetLearningArea?.id)) {
-      showError(`A learning area named "${name.trim()}" already exists in ${clusters.find(c => c.id === targetClusterId)?.name}.`);
+      showError(
+        `A learning area named "${name.trim()}" already exists in ${
+          clusters.find((c) => c.id === targetClusterId)?.name
+        }.`
+      );
       return;
     }
 
     if (targetLearningArea) {
-      setClusters(prev => prev.map(c => 
-        c.id === targetClusterId 
-          ? { 
-              ...c, 
-              learningAreas: c.learningAreas.map(la => 
-                la.id === targetLearningArea.id 
-                  ? { ...la, name: name.trim(), periodsPerWeek: parseInt(periods) || 4, type, description: description.trim() || undefined } 
-                  : la
-              ) 
-            } 
-          : c
-      ));
+      setClusters((prev) =>
+        prev.map((c) =>
+          c.id === targetClusterId
+            ? {
+                ...c,
+                learningAreas: c.learningAreas.map((la) =>
+                  la.id === targetLearningArea.id
+                    ? {
+                        ...la,
+                        name: name.trim(),
+                        periodsPerWeek: parseInt(periods) || 4,
+                        type,
+                        description: description.trim() || undefined,
+                      }
+                    : la
+                ),
+              }
+            : c
+        )
+      );
       showSuccess(`Successfully updated "${name.trim()}"!`);
     }
+
     setIsEditOpen(false);
     setTargetLearningArea(null);
-    setTargetClusterId("");
-    setName("");
-    setDescription("");
-    setPeriods("4");
-    setType("Core");
+    setTargetClusterId('');
+    setName('');
+    setDescription('');
+    setPeriods('4');
+    setType('Core');
   };
 
   const requestEditLearningArea = useCallback((area: LearningArea, clusterId: string) => {
@@ -132,49 +204,56 @@ const LearningAreas = () => {
     setName(area.name);
     setPeriods(area.periodsPerWeek.toString());
     setType(area.type);
-    setDescription(area.description || "");
+    setDescription(area.description || '');
     setIsEditOpen(true);
   }, []);
 
   const requestDeleteLearningArea = useCallback((area: LearningArea, clusterId: string) => {
     setTargetLearningArea({ id: area.id, name: area.name, clusterId });
     setActionToPerform('delete');
-    setAuthPassword("");
-    setAuthError("");
+    setAuthPassword('');
+    setAuthError('');
     setIsAuthOpen(true);
   }, []);
 
   const handleVerifyAuth = useCallback(async () => {
     if (!authPassword.trim()) {
-      setAuthError("Password is required");
+      setAuthError('Password is required');
       return;
     }
 
     setIsVerifying(true);
-    setAuthError("");
-    
-    await new Promise(r => setTimeout(r, 600));
+    setAuthError('');
+
+    await new Promise((r) => setTimeout(r, 600));
 
     const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
 
     if (authPassword === currentAdminPass) {
       if (actionToPerform === 'delete' && targetLearningArea) {
-        setClusters(prev => prev.map(c => 
-          c.id === targetLearningArea.clusterId 
-            ? { ...c, learningAreas: c.learningAreas.filter(la => la.id !== targetLearningArea.id) } 
-            : c
-        ));
+        setClusters((prev) =>
+          prev.map((c) =>
+            c.id === targetLearningArea.clusterId
+              ? {
+                  ...c,
+                  learningAreas: c.learningAreas.filter(
+                    (la) => la.id !== targetLearningArea.id
+                  ),
+                }
+              : c
+          )
+        );
         showSuccess(`Removed "${targetLearningArea.name}" successfully.`);
       }
       setIsAuthOpen(false);
       setTargetLearningArea(null);
-      setTargetClusterId("");
+      setTargetClusterId('');
       setActionToPerform(null);
-      setAuthPassword("");
+      setAuthPassword('');
     } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
-      setAuthPassword("");
+      setAuthError('Invalid admin password');
+      showError('Authorization failed');
+      setAuthPassword('');
     }
     setIsVerifying(false);
   }, [authPassword, actionToPerform, targetLearningArea]);
@@ -182,14 +261,19 @@ const LearningAreas = () => {
   const handleAuthClose = useCallback(() => {
     setIsAuthOpen(false);
     setTargetLearningArea(null);
-    setTargetClusterId("");
+    setTargetClusterId('');
     setActionToPerform(null);
-    setAuthPassword("");
-    setAuthError("");
+    setAuthPassword('');
+    setAuthError('');
   }, []);
+
+  const activeCluster = clusters.find((c) => c.id === activeTab);
+  const defaultCount = activeCluster?.learningAreas.filter((la) => la.isDefault).length ?? 0;
+  const customCount = activeCluster?.learningAreas.filter((la) => !la.isDefault).length ?? 0;
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
@@ -198,171 +282,361 @@ const LearningAreas = () => {
             <p className="text-muted-foreground">Manage CBC subjects and lesson classifications.</p>
           </div>
         </div>
-        <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700" onClick={() => { setSelectedClusterId(activeTab); setIsAddOpen(true); }}>
+        <Button
+          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700"
+          onClick={() => {
+            setSelectedClusterId(activeTab);
+            setName('');
+            setDescription('');
+            setPeriods('4');
+            setType('Core');
+            setIsAddOpen(true);
+          }}
+        >
           <Plus size={18} /> Add Learning Area
         </Button>
       </div>
 
+      {/* CBC info banner */}
+      <div className="bg-gradient-to-r from-indigo-50 via-purple-50 to-pink-50 border border-indigo-100 rounded-3xl p-5 flex items-start gap-4">
+        <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-2xl shrink-0">
+          <Sparkles size={18} />
+        </div>
+        <div>
+          <h3 className="font-bold text-indigo-900 text-sm">CBC Default Learning Areas Loaded</h3>
+          <p className="text-xs text-indigo-700/70 mt-0.5 leading-relaxed">
+            The official CBC learning areas have been pre-populated per level. You can edit or remove any of them,
+            and add new custom areas — they will persist across sessions.
+          </p>
+        </div>
+      </div>
+
+      {/* Tabs */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-12 mb-8 flex overflow-x-auto">
-          {clusters.map(c => <TabsTrigger key={c.id} value={c.id} className="rounded-xl px-6 h-full font-bold shrink-0 text-xs">{c.name}</TabsTrigger>)}
+          {clusters.map((c) => (
+            <TabsTrigger
+              key={c.id}
+              value={c.id}
+              className="rounded-xl px-5 h-full font-bold shrink-0 text-xs gap-1.5"
+            >
+              {c.name}
+              <span className="bg-indigo-100 text-indigo-600 text-[10px] font-black rounded-full px-1.5 py-0.5 leading-none">
+                {c.learningAreas.length}
+              </span>
+            </TabsTrigger>
+          ))}
         </TabsList>
-        {clusters.map(cluster => (
+
+        {clusters.map((cluster) => (
           <TabsContent key={cluster.id} value={cluster.id} className="space-y-6">
+            {/* Cluster header */}
             <div className="bg-indigo-50/50 border border-indigo-100 rounded-3xl p-6 flex items-center gap-4">
-              <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl"><GraduationCap size={24} /></div>
-              <div><h3 className="font-bold text-indigo-900">{cluster.name} Cluster</h3><p className="text-sm text-indigo-700/80">{cluster.description}</p></div>
+              <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+                <GraduationCap size={24} />
+              </div>
+              <div className="flex-1">
+                <h3 className="font-bold text-indigo-900">{cluster.name} Cluster</h3>
+                <p className="text-sm text-indigo-700/80">{cluster.description}</p>
+              </div>
+              <div className="flex gap-3">
+                {defaultCount > 0 && (
+                  <Badge className="bg-indigo-50 text-indigo-600 font-bold border-indigo-100">
+                    {defaultCount} default
+                  </Badge>
+                )}
+                {customCount > 0 && (
+                  <Badge className="bg-purple-50 text-purple-600 font-bold border-purple-100">
+                    {customCount} custom
+                  </Badge>
+                )}
+              </div>
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {cluster.learningAreas.map(area => (
-                <Card key={area.id} className="border-none shadow-sm hover:shadow-md transition-all rounded-[2rem] bg-white group overflow-hidden">
-                  <CardContent className="p-8 h-full flex flex-col justify-between">
-                    <div>
-                      <div className="flex justify-between items-start mb-4">
-                        <Badge className={area.type === 'Core' ? "bg-emerald-50 text-emerald-700 font-bold" : "bg-amber-50 text-amber-700 font-bold"}>{area.type}</Badge>
-                        <div className="flex gap-1">
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-9 w-9"
-                            onClick={() => requestEditLearningArea(area, cluster.id)}
-                          >
-                            <Edit size={16} />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-9 w-9"
-                            onClick={() => requestDeleteLearningArea(area, cluster.id)}
-                          >
-                            <Trash2 size={16} />
-                          </Button>
+
+            {/* Learning area cards */}
+            {cluster.learningAreas.length === 0 ? (
+              <div className="text-center py-16 text-slate-400">
+                <GraduationCap size={40} className="mx-auto mb-3 opacity-30" />
+                <p className="font-medium">No learning areas yet.</p>
+                <p className="text-sm">Click &ldquo;Add Learning Area&rdquo; to get started.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {cluster.learningAreas.map((area) => (
+                  <Card
+                    key={area.id}
+                    className="border-none shadow-sm hover:shadow-md transition-all rounded-[1.5rem] bg-white group overflow-hidden"
+                  >
+                    <CardContent className="p-7 h-full flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start mb-4">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge
+                              className={
+                                area.type === 'Core'
+                                  ? 'bg-emerald-50 text-emerald-700 font-bold'
+                                  : 'bg-amber-50 text-amber-700 font-bold'
+                              }
+                            >
+                              {area.type}
+                            </Badge>
+                            {area.isDefault && (
+                              <Badge className="bg-slate-50 text-slate-400 font-bold border border-slate-100 gap-1">
+                                <Sparkles size={10} /> CBC Default
+                              </Badge>
+                            )}
+                          </div>
+                          <div className="flex gap-1 ml-auto">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full text-slate-300 hover:text-indigo-600 hover:bg-indigo-50 h-8 w-8"
+                              onClick={() => requestEditLearningArea(area, cluster.id)}
+                            >
+                              <Edit size={14} />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="rounded-full text-slate-300 hover:text-red-500 hover:bg-red-50 h-8 w-8"
+                              onClick={() => requestDeleteLearningArea(area, cluster.id)}
+                            >
+                              <Trash2 size={14} />
+                            </Button>
+                          </div>
                         </div>
+                        <h4 className="text-base font-bold text-slate-900 leading-snug mb-2 group-hover:text-indigo-600 transition-colors">
+                          {area.name}
+                        </h4>
+                        {area.description && (
+                          <p className="text-xs text-slate-500 leading-relaxed mb-4">{area.description}</p>
+                        )}
                       </div>
-                      <h4 className="text-lg font-bold text-slate-900 leading-tight mb-2 group-hover:text-indigo-600 transition-colors">
-                        {area.name}
-                      </h4>
-                      {area.description && <p className="text-xs text-slate-500 leading-relaxed mb-4">{area.description}</p>}
-                    </div>
-                    <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
-                      <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">Lessons / Week</span>
-                      <Badge variant="outline" className="rounded-lg font-bold text-slate-700 bg-slate-50 px-2.5 py-1">{area.periodsPerWeek} Periods</Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+                      <div className="pt-4 border-t border-slate-50 flex justify-between items-center mt-auto">
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                          Lessons / Week
+                        </span>
+                        <Badge
+                          variant="outline"
+                          className="rounded-lg font-bold text-slate-700 bg-slate-50 px-2.5 py-1 text-xs"
+                        >
+                          {area.periodsPerWeek} Periods
+                        </Badge>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </TabsContent>
         ))}
       </Tabs>
 
-      {/* Add Learning Area Modal */}
+      {/* ── Add Learning Area Modal ── */}
       <Modal
         isOpen={isAddOpen}
-        onClose={() => setIsAddOpen(false)}
+        onClose={() => {
+          setIsAddOpen(false);
+          setName('');
+          setDescription('');
+          setPeriods('4');
+          setType('Core');
+        }}
         title="Add Learning Area"
-        description="Create a new subject or learning area."
+        description="Create a new subject or learning area. It will be appended to the selected level without affecting existing items."
         footer={
           <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100" onClick={handleAddLearningArea}>Add Learning Area</Button>
+            <Button
+              variant="ghost"
+              className="rounded-xl font-bold"
+              onClick={() => {
+                setIsAddOpen(false);
+                setName('');
+                setDescription('');
+                setPeriods('4');
+                setType('Core');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              onClick={handleAddLearningArea}
+            >
+              Add Learning Area
+            </Button>
           </>
         }
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>CBC Cluster</Label>
-            <Select value={selectedClusterId} onValueChange={setSelectedClusterId}>
-              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Cluster" /></SelectTrigger>
-              <SelectContent>{clusters.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <Label>CBC Level</Label>
+            <Select
+              value={selectedClusterId}
+              onValueChange={(val) => setSelectedClusterId(val)}
+            >
+              <SelectTrigger className="rounded-xl h-12">
+                <SelectValue placeholder="Select Level" />
+              </SelectTrigger>
+              <SelectContent>
+                {clusters.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Learning Area Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Creative Arts" className="rounded-xl h-12" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Creative Arts"
+              className="rounded-xl h-12"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Periods per Week</Label>
-              <Input type="number" value={periods} onChange={(e) => setPeriods(e.target.value)} placeholder="e.g. 4" className="rounded-xl h-12" />
+              <Input
+                type="number"
+                value={periods}
+                onChange={(e) => setPeriods(e.target.value)}
+                placeholder="e.g. 4"
+                className="rounded-xl h-12"
+              />
             </div>
             <div className="space-y-2">
               <Label>Classification</Label>
-              <Select value={type} onValueChange={(val: any) => setType(val)}>
-                <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Type" /></SelectTrigger>
-                <SelectContent><SelectItem value="Core">Core Subject</SelectItem><SelectItem value="Elective">Elective Subject</SelectItem></SelectContent>
+              <Select value={type} onValueChange={(val: 'Core' | 'Elective') => setType(val)}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Core">Core Subject</SelectItem>
+                  <SelectItem value="Elective">Elective Subject</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
             <Label>Description / Scope (Optional)</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Basic programming" className="rounded-xl h-12" />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Visual arts, music, and performance"
+              className="rounded-xl h-12"
+            />
           </div>
         </div>
       </Modal>
 
-      {/* Edit Learning Area Modal */}
+      {/* ── Edit Learning Area Modal ── */}
       <Modal
         isOpen={isEditOpen}
         onClose={() => {
           setIsEditOpen(false);
           setTargetLearningArea(null);
-          setTargetClusterId("");
-          setName("");
-          setDescription("");
-          setPeriods("4");
-          setType("Core");
+          setTargetClusterId('');
+          setName('');
+          setDescription('');
+          setPeriods('4');
+          setType('Core');
         }}
         title="Edit Learning Area"
         description="Modify the learning area details."
         footer={
           <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={() => {
-              setIsEditOpen(false);
-              setTargetLearningArea(null);
-              setTargetClusterId("");
-              setName("");
-              setDescription("");
-              setPeriods("4");
-              setType("Core");
-            }}>Cancel</Button>
-            <Button className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100" onClick={handleEditLearningArea}>Update Learning Area</Button>
+            <Button
+              variant="ghost"
+              className="rounded-xl font-bold"
+              onClick={() => {
+                setIsEditOpen(false);
+                setTargetLearningArea(null);
+                setTargetClusterId('');
+                setName('');
+                setDescription('');
+                setPeriods('4');
+                setType('Core');
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100"
+              onClick={handleEditLearningArea}
+            >
+              Update Learning Area
+            </Button>
           </>
         }
       >
         <div className="space-y-4">
           <div className="space-y-2">
-            <Label>CBC Cluster</Label>
-            <Select value={targetClusterId} onValueChange={setTargetClusterId}>
-              <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Cluster" /></SelectTrigger>
-              <SelectContent>{clusters.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+            <Label>CBC Level</Label>
+            <Select
+              value={targetClusterId}
+              onValueChange={(val) => setTargetClusterId(val)}
+            >
+              <SelectTrigger className="rounded-xl h-12">
+                <SelectValue placeholder="Select Level" />
+              </SelectTrigger>
+              <SelectContent>
+                {clusters.map((c) => (
+                  <SelectItem key={c.id} value={c.id}>
+                    {c.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Learning Area Name</Label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Creative Arts" className="rounded-xl h-12" />
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g. Creative Arts"
+              className="rounded-xl h-12"
+            />
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Periods per Week</Label>
-              <Input type="number" value={periods} onChange={(e) => setPeriods(e.target.value)} placeholder="e.g. 4" className="rounded-xl h-12" />
+              <Input
+                type="number"
+                value={periods}
+                onChange={(e) => setPeriods(e.target.value)}
+                placeholder="e.g. 4"
+                className="rounded-xl h-12"
+              />
             </div>
             <div className="space-y-2">
               <Label>Classification</Label>
-              <Select value={type} onValueChange={(val: any) => setType(val)}>
-                <SelectTrigger className="rounded-xl h-12"><SelectValue placeholder="Select Type" /></SelectTrigger>
-                <SelectContent><SelectItem value="Core">Core Subject</SelectItem><SelectItem value="Elective">Elective Subject</SelectItem></SelectContent>
+              <Select value={type} onValueChange={(val: 'Core' | 'Elective') => setType(val)}>
+                <SelectTrigger className="rounded-xl h-12">
+                  <SelectValue placeholder="Select Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Core">Core Subject</SelectItem>
+                  <SelectItem value="Elective">Elective Subject</SelectItem>
+                </SelectContent>
               </Select>
             </div>
           </div>
           <div className="space-y-2">
             <Label>Description / Scope (Optional)</Label>
-            <Input value={description} onChange={(e) => setDescription(e.target.value)} placeholder="e.g. Basic programming" className="rounded-xl h-12" />
+            <Input
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="e.g. Visual arts, music, and performance"
+              className="rounded-xl h-12"
+            />
           </div>
         </div>
       </Modal>
 
-      {/* Admin Auth Modal */}
+      {/* ── Admin Authorization Modal ── */}
       <Modal
         isOpen={isAuthOpen}
         onClose={handleAuthClose}
@@ -370,13 +644,15 @@ const LearningAreas = () => {
         description={`Enter your admin password to ${actionToPerform === 'delete' ? 'delete' : 'edit'} "${targetLearningArea?.name}".`}
         footer={
           <>
-            <Button variant="ghost" className="rounded-xl font-bold" onClick={handleAuthClose}>Cancel</Button>
-            <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8" 
+            <Button variant="ghost" className="rounded-xl font-bold" onClick={handleAuthClose}>
+              Cancel
+            </Button>
+            <Button
+              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold px-8"
               onClick={handleVerifyAuth}
               disabled={isVerifying}
             >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
+              {isVerifying && <Loader2 className="animate-spin mr-2" size={16} />}
               Authorize Action
             </Button>
           </>
@@ -389,14 +665,19 @@ const LearningAreas = () => {
             </div>
           )}
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
+            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+              Admin Password
+            </Label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
+              <Input
+                type="password"
+                value={authPassword}
+                onChange={(e) => {
+                  setAuthPassword(e.target.value);
+                  setAuthError('');
+                }}
+                placeholder="••••••••"
                 className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
                 autoFocus
               />
