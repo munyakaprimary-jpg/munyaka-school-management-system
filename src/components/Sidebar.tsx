@@ -47,7 +47,8 @@ import {
   Database,
   FlaskConical,
   Fingerprint,
-  CreditCard
+  CreditCard,
+  Gamepad2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: Gamepad2, label: 'Games', path: '/games', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent'] },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -168,6 +170,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
     { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+    { icon: Gamepad2, label: 'Games', path: '/games', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent'] },
   ].filter(item => user && item.roles.includes(user.role));
 
   return (
