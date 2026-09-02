@@ -313,7 +313,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
       content: noticeContent.trim(),
       description: noticeContent.trim().substring(0, 120) + '...',
       date: 'Just now',
-      category: noticePriority,
+      category: noticePriority as any,
       pinned: noticePriority === 'Urgent Alert',
       color: badgeColor,
       attachmentName: noticeAttachment?.name || undefined,

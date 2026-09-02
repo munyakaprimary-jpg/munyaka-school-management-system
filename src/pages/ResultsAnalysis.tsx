@@ -340,7 +340,7 @@ const ResultsAnalysis = () => {
     const line4 = `YEAR: ${academicYear}, GRADE: ${currentGrade.name}, STREAM: ${selectedStreamName}, TERM: ${termLabel}, EXAM: ${examType}`;
     const line5 = `CLASS MEAN SCORE: ${classMeanScore}%, TOTAL LEARNERS: ${studentResults.length}`;
 
-    const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => a.name), "Total Marks", "Mean Score (%)", "Grade Level"];
+    const headers = ["Rank", "Assessment No", "Student Name", "Stream", ...learningAreas.map(a => (a as any).name), "Total Marks", "Mean Score (%)", "Grade Level"];
 
     const rows = studentResults.map(s => {
       const subjectScores = learningAreas.map(a => s.scores[a] || 0);

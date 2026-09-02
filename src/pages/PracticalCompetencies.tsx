@@ -839,7 +839,7 @@ const PracticalCompetencies = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Student Name</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Grade / Stream</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Project</th>
-                      {getRubricCriteriaArray(MOCK_RUBRICS[0]?.rubricCriteria || "").map((crit, i) => (
+                      {getRubricCriteriaArray((MOCK_RUBRICS[0] as any)?.rubricCriteria || "").map((crit, i) => (
                         <th key={i} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[90px]">
                           {crit.split('(')[0].trim()}
                         </th>
@@ -1149,7 +1149,7 @@ const PracticalCompetencies = () => {
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Status</Label>
-                  <Select value={newProjectStatus} onValueChange={setNewProjectStatus}>
+                  <Select value={newProjectStatus} onValueChange={setNewProjectStatus as (value: string) => void}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="Draft">Draft</SelectItem>
@@ -1220,7 +1220,7 @@ const PracticalCompetencies = () => {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Rating</Label>
-                  <Select value={newObsRating} onValueChange={setNewObsRating}>
+                  <Select value={newObsRating} onValueChange={setNewObsRating as (value: string) => void}>
                     <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="EE">EE - Exceeding Expectation</SelectItem>
@@ -1258,7 +1258,7 @@ const PracticalCompetencies = () => {
               <div className="p-4 bg-indigo-50 rounded-2xl border border-indigo-100">
                 <div className="grid grid-cols-3 gap-4 text-center">
                   <div><p className="text-2xl font-black text-indigo-700">{selectedRubric.percentage}%</p><p className="text-xs font-bold text-indigo-600 uppercase">Total Score</p></div>
-                  <div><p className="text-2xl font-black text-slate-900">{selectedRubric.totalScore} / {selectedRubric.maxPoints || 100}</p><p className="text-xs font-bold text-slate-400 uppercase">Points</p></div>
+                  <div><p className="text-2xl font-black text-slate-900">{selectedRubric.totalScore} / {(selectedRubric as any).maxPoints || 100}</p><p className="text-xs font-bold text-slate-400 uppercase">Points</p></div>
                   <div>{getRatingBadge(selectedRubric.level)}</div>
                 </div>
               </div>

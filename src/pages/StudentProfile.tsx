@@ -157,7 +157,7 @@ const StudentProfile = () => {
       health: '',
       needs: '',
       feeBalance: activeLearner.feeBalance ?? 0,
-      status: (activeLearner.status === 'TRANSFERRED' ? 'Transferred' : (activeLearner.status as 'Active' | 'Transferred' | 'Graduated' | 'Suspended')) ?? 'Active',
+      status: (activeLearner.status === 'Transferred' ? 'Transferred' : (activeLearner.status as 'Active' | 'Transferred' | 'Graduated' | 'Suspended')) ?? 'Active',
       dateOfAdmission: activeLearner.dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: activeLearner.coCurricularActivities ?? '',
       examType: '',

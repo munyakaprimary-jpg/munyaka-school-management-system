@@ -35,7 +35,8 @@ const RecordCardGenerator = () => {
   const [preview, setPreview] = useState<RecordCardData | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, type } = e.target;
+    const checked = (e.target as HTMLInputElement).checked;
     setFormData(prev => ({
       ...prev,
       [name]: type === 'checkbox' ? checked : value,
@@ -113,11 +114,10 @@ const RecordCardGenerator = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="grade">Grade</Label>
-                <Select 
-                  id="grade"
+                <Select
                   name="grade"
                   value={formData.grade}
-                  onChange={handleChange}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, grade: val }))}
                 >
                   <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
                     <SelectValue placeholder="Select grade" />
@@ -133,11 +133,10 @@ const RecordCardGenerator = () => {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="stream">Stream</Label>
-                <Select 
-                  id="stream"
+                <Select
                   name="stream"
                   value={formData.stream}
-                  onChange={handleChange}
+                  onValueChange={(val) => setFormData(prev => ({ ...prev, stream: val }))}
                 >
                   <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none">
                     <SelectValue placeholder="Select stream" />

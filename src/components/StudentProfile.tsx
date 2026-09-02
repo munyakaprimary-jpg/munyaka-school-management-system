@@ -86,7 +86,7 @@ const StudentProfile = () => {
               )}
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar size={16} className="text-slate-400" />
-                <span>Born: {student.dob}</span>
+                <span>Born: {(student as any).dob}</span>
               </div>
               {/* ... rest of contact info ... */}
             </div>

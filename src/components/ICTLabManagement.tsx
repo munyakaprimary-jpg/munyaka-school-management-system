@@ -1001,7 +1001,7 @@ const ICTLabManagement = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Condition on Return</Label>
-                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm}>
+                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm as unknown as (value: string) => void}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                     <SelectValue />
                   </SelectTrigger>
@@ -1039,7 +1039,7 @@ const ICTLabManagement = () => {
                     const log = logs.find(l => l.id === logForm.returnLogId);
                     const maxReturn = log ? log.quantityIssued - log.quantityReturned : 1;
                     const val = Math.max(1, Math.min(maxReturn, parseInt(e.target.value) || 1));
-                    setLogForm({...logForm, quantityReturned: val});
+                    setLogForm({...logForm, quantityReturned: val} as any);
                   }}
                   className="h-12 rounded-xl bg-slate-50 border-none font-bold text-center"
                 />

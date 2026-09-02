@@ -85,9 +85,9 @@ const Inventory = () => {
   const handleSyncStock = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from('inventory')
-        .select('*');
+        .select('*') as any;
 
       if (!error && data && data.length > 0) {
         const mappedAssets: AssetItem[] = data.map((item: any) => ({

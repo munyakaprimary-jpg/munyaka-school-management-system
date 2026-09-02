@@ -37,9 +37,7 @@ const OVERRIDE_FILE = '/reset-override.json';
  * If no secret is configured, the override is always rejected.
  */
 const EXPECTED_SECRET: string =
-  // @ts-expect-error import.meta.env is provided by Vite at build time
   (import.meta.env?.VITE_EMERGENCY_SECRET as string | undefined) ||
-  // @ts-expect-error import.meta.env is provided by Vite at build time
   (import.meta.env?.EMERGENCY_SECRET as string | undefined) ||
   '';
 

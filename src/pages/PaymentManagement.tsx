@@ -2522,7 +2522,7 @@ const PaymentManagement = () => {
         transaction={selectedTransactionForReceipt || {
           id: '',
           date: '',
-          amount: '0',
+          amount: 0,
           currency: 'KES',
           ref: '',
           category: '',

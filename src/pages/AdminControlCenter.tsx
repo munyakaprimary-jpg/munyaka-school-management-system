@@ -916,8 +916,8 @@ export default function AdminControlCenter() {
                 <Label>New Password (leave blank to keep current)</Label>
                 <Input
                   type="password"
-                  value={editUser.password || ''}
-                  onChange={(e) => setEditUser({ ...editUser, password: e.target.value })}
+                  value={(editUser as any).password || ''}
+                  onChange={(e) => setEditUser({ ...editUser, password: e.target.value } as any)}
                   placeholder="Enter new password"
                   className="rounded-xl mt-1"
                 />

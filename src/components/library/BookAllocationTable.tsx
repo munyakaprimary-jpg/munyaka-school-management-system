@@ -33,33 +33,31 @@ export const BookAllocationTable: React.FC<Props> = ({ books }) => {
     <Card>
       <CardContent>
         <Table>
-          <TableContainer>
-            <TableHead>
-              <TableRow>
-                <TableCell>Title</TableCell>
-                <TableCell>Author</TableCell>
-                <TableCell>Allocated To</TableCell>
-                <TableCell>Action</TableCell>
+          <TableHead>
+            <TableRow>
+              <TableCell>Title</TableCell>
+              <TableCell>Author</TableCell>
+              <TableCell>Allocated To</TableCell>
+              <TableCell>Action</TableCell>
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {books.map((book) => (
+              <TableRow key={book.id}>
+                <TableCell>{book.title}</TableCell>
+                <TableCell>{book.author}</TableCell>
+                <TableCell>{allocation[book.id] || '—'}</TableCell>
+                <TableCell>
+                  <Button
+                    variant="secondary"
+                    onClick={() => handleAllocate(book.id, 'user1')}
+                  >
+                    Allocate
+                  </Button>
+                </TableCell>
               </TableRow>
-            </TableHead>
-            <TableBody>
-              {books.map((book) => (
-                <TableRow key={book.id}>
-                  <TableCell>{book.title}</TableCell>
-                  <TableCell>{book.author}</TableCell>
-                  <TableCell>{allocation[book.id] || '—'}</TableCell>
-                  <TableCell>
-                    <Button
-                      variant="secondary"
-                      onClick={() => handleAllocate(book.id, 'user1')}
-                    >
-                      Allocate
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </TableContainer>
+            ))}
+          </TableBody>
         </Table>
       </CardContent>
     </Card>

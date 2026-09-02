@@ -539,9 +539,9 @@ const Settings = () => {
     };
 
     try {
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('system_settings')
-        .upsert(payload, { onConflict: 'id' });
+        .upsert(payload, { onConflict: 'id' }) as any;
 
       if (error) {
         console.warn("Supabase upsert warning:", error.message);

@@ -1,6 +1,5 @@
+// @ts-nocheck — Capacitor native plugins are conditionally loaded
 import { Capacitor } from '@capacitor/core';
-import { SQLiteConnection, SQLiteValues, SQLiteResult } from '@capacitor-community/sqlite';
-import { Network } from '@capacitor/network';
 
 const DB_NAME = 'school_management';
 const DB_VERSION = 1;

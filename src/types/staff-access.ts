@@ -11,6 +11,7 @@ export interface PreRegisteredStaff {
   email: string;
   phone: string;
   systemRole: SystemRole;
+  department?: string;
   assignedGrade?: string;
   assignedStream?: string;
   assignedSubjects: string[];

@@ -561,7 +561,7 @@ const ScienceLab = () => {
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab as (value: string) => void} className="w-full">
         <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex w-fit">
           <TabsTrigger value="chemicals" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><FlaskConical size={16} /> Chemicals</TabsTrigger>
           <TabsTrigger value="equipment" className="rounded-xl px-6 h-full font-bold text-xs gap-2"><Microscope size={16} /> Equipment</TabsTrigger>

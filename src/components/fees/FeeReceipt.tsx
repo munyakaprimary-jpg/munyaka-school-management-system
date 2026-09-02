@@ -172,7 +172,7 @@ const FeeReceipt = ({ student, transaction, year, term, onDownload }: FeeReceipt
 
   // Render method-specific detail rows
   const renderPaymentDetails = () => {
-    const details = transaction.paymentDetails as Record<string, string>;
+    const details = transaction.paymentDetails as unknown as Record<string, string>;
     if (!details || Object.keys(details).length === 0) return null;
     return (
       <div className="mt-3 pt-3 border-t border-dashed border-slate-200">

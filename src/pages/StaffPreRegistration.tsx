@@ -58,7 +58,7 @@ const StaffPreRegistration = () => {
       email: staffData.email || "",
       phone: staffData.phone || "",
       systemRole: staffData.systemRole || "subject_teacher",
-      department: staffData.department || "",
+      department: (staffData as any).department || "",
       assignedGrade: staffData.assignedGrade,
       assignedStream: staffData.assignedStream,
       assignedSubjects: staffData.assignedSubjects || [],

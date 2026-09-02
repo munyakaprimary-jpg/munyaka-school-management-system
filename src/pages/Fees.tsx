@@ -511,7 +511,8 @@ const Fees = () => {
     showSuccess(`Fee structure updated for ${targetLabel}`);
   };
 
-  const handleRecordPayment = (tx: Transaction) => {
+  const handleRecordPayment = (result: { transaction: Transaction; activationKey?: string; issuedTo?: string; deviceId?: string; expiresAt?: string } | Transaction) => {
+    const tx = 'transaction' in result ? result.transaction : result;
     const matchedLearner = normalizedLearners.find(l => l.id === tx.studentId);
     const studentName = matchedLearner ? matchedLearner.name : "Learner";
     const studentGrade = matchedLearner ? matchedLearner.grade : tx.grade ?? "";
@@ -595,15 +596,16 @@ const Fees = () => {
     window.dispatchEvent(new Event('munyaka_fees_updated'));
 
     // 5) Build a lightweight student record for the receipt
+    const receiptFee = calculatedFees.find(f => f.id === tx.studentId);
     const receiptStudent = {
       student: studentName,
       admNo: matchedLearner?.admNo ?? matchedLearner?.id ?? tx.studentId ?? '',
       grade: matchedLearner?.grade ?? tx.grade ?? '',
       stream: matchedLearner?.stream ?? tx.stream ?? '',
-      total: fee?.total ?? 0,
-      paid: (fee?.paid ?? 0) + tx.amount,
-      balance: Math.max(0, (fee?.total ?? 0) - ((fee?.paid ?? 0) + tx.amount)),
-      status: fee?.status ?? 'Partial',
+      total: receiptFee?.total ?? 0,
+      paid: (receiptFee?.paid ?? 0) + tx.amount,
+      balance: Math.max(0, (receiptFee?.total ?? 0) - ((receiptFee?.paid ?? 0) + tx.amount)),
+      status: receiptFee?.status ?? 'Partial',
     };
 
     // 6) Show the receipt modal so the cashier can print/download a receipt.
@@ -679,7 +681,7 @@ const Fees = () => {
         studentId,
         grade: studentGrade,
       }, ...transactionsList];
-      setTransactionsList(newTransactions);
+      setTransactionsList(newTransactions as any);
       localStorage.setItem('munyaka_transactions', JSON.stringify(newTransactions));
       notifyDataChanged('munyaka_transactions');
     }
@@ -1131,7 +1133,7 @@ const Fees = () => {
       <UnifiedRecordPaymentModal
         isOpen={isRecordOpen}
         onClose={() => setIsRecordOpen(false)}
-        onSubmitPayment={handleRecordPayment}
+        onSubmitPayment={handleRecordPayment as any}
         gradesData={GRADES_DATA}
         studentsData={normalizedLearners}
         hideActivationKey={true}

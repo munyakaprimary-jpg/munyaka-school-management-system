@@ -14,23 +14,7 @@ import { Plus, Trash2, GraduationCap, AlertCircle, Lock, Loader2, Edit, Sparkles
 import { showSuccess, showError } from '@/utils/toast';
 import { DEFAULT_CBC_CLUSTERS, buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
 import { notifyDataChanged } from '@/utils/storage';
-
-interface LearningArea {
-  id: string;
-  name: string;
-  periodsPerWeek: number;
-  type: 'Core' | 'Elective';
-  description?: string;
-  /** True for auto-seeded CBC areas; false for user-created items */
-  isDefault?: boolean;
-}
-
-interface ClusterData {
-  id: string;
-  name: string;
-  description: string;
-  learningAreas: LearningArea[];
-}
+import type { LearningArea, ClusterData } from '@/types/assessments';
 
 /** Rehydrate a saved cluster, restoring missing default areas if any were removed */
 const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
@@ -54,6 +38,7 @@ const hydrateClusters = (savedClusters: ClusterData[]): ClusterData[] => {
     // No saved data for this cluster — seed with defaults
     return {
       ...defaultCluster,
+      description: defaultCluster.description ?? '',
       learningAreas: defaultCluster.learningAreas.map((area, index) => ({
         id: `default-${defaultCluster.id}-${index}-${Date.now().toString(36)}`,
         name: area.name,
@@ -72,9 +57,9 @@ const LearningAreas = () => {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       try {
-        return hydrateClusters(JSON.parse(saved));
+        return hydrateClusters(JSON.parse(saved)) as ClusterData[];
       } catch {
-        return buildDefaultClusters();
+        return buildDefaultClusters() as ClusterData[];
       }
     }
     return buildDefaultClusters();

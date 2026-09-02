@@ -886,7 +886,7 @@ const ICTLabManagement = () => {
           </div>
         }
       >
-        <Tabs value={logMode} onValueChange={setLogMode} className="w-full mb-6">
+        <Tabs value={logMode} onValueChange={setLogMode as unknown as (value: string) => void} className="w-full mb-6">
           <TabsList className="bg-slate-100 p-1 rounded-xl h-10">
             <TabsTrigger value="issue" className="rounded-lg px-6 h-full font-bold text-xs">
               <ArrowUpRight size={14} className="mr-1" /> Issue Device
@@ -1038,7 +1038,7 @@ const ICTLabManagement = () => {
               </div>
               <div className="space-y-1.5">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Condition on Return</Label>
-                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm}>
+                <Select value={logForm.conditionOnReturn} onValueChange={setLogForm as unknown as (value: string) => void}>
                   <SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold">
                     <SelectValue />
                   </SelectTrigger>

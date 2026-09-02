@@ -22,7 +22,7 @@ const Notices = () => {
 
   const handlePostNotice = () => {
     if (!title.trim() || !content.trim()) return;
-    const newNotice = { id: Date.now().toString(), title, content, description: content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
+    const newNotice = { id: Date.now().toString(), title, content, date: "Just now", category, color: "bg-emerald-50 text-emerald-600" };
     setNoticesList([newNotice, ...noticesList]);
     setIsOpen(false);
     setTitle(""); setContent("");
