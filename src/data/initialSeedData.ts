@@ -405,35 +405,10 @@ export const INITIAL_SEED_DATA = {
   ],
 
   // ── Fee Records ──────────────────────────────────────────────────────────────
-  fees: [
-    {
-      id: "1",
-      student: "Brian Kiptoo",
-      studentId: "4",
-      total: 15000,
-      paid: 0,
-      balance: 15000,
-      status: "Pending"
-    },
-    {
-      id: "2",
-      student: "Mary Atieno",
-      studentId: "5",
-      total: 15000,
-      paid: 15000,
-      balance: 0,
-      status: "Cleared"
-    },
-    {
-      id: "3",
-      student: "Emmanuel Maina",
-      studentId: "6",
-      total: 15000,
-      paid: 5000,
-      balance: 10000,
-      status: "Pending"
-    }
-  ],
+    // Seeded EMPTY: per-student fee ledgers should reflect real payments recorded
+    // through the Fees page. Hardcoded `paid` amounts here would inflate the
+    // executive financial cards with mock figures on first run.
+    fees: [],
 
   // ── Fee Structures (per grade) ───────────────────────────────────────────────
   feeStructures: [
@@ -451,47 +426,10 @@ export const INITIAL_SEED_DATA = {
   ],
 
   // ── Transactions ─────────────────────────────────────────────────────────────
-  transactions: [
-    {
-      id: "TX-516",
-      date: "8/26/2026",
-      paidAt: "2026-08-26T10:15:00.000Z",
-      amount: 700,
-      method: "M-Pesa",
-      ref: "AUTO-GEN",
-      category: "Tuition",
-      studentId: "1787737452457",
-      learnerName: "MUTWIKA KILONZO",
-      status: "paid"
-    },
-    {
-      id: "TX-901",
-      date: "Oct 12, 2024",
-      amount: 5000,
-      method: "M-Pesa",
-      ref: "RI82JD91S",
-      category: "Tuition",
-      status: "paid"
-    },
-    {
-      id: "TX-882",
-      date: "Sep 28, 2024",
-      amount: 2000,
-      method: "Bank Deposit",
-      ref: "DEP-2938",
-      category: "Activity",
-      status: "paid"
-    },
-    {
-      id: "TX-750",
-      date: "Aug 15, 2024",
-      amount: 5000,
-      method: "M-Pesa",
-      ref: "QH12LK34P",
-      category: "Tuition",
-      status: "paid"
-    }
-  ],
+    // Seeded EMPTY: the executive financial summary derives "Total Collected"
+    // from real, paid transactions. Hardcoded demo payments would surface as
+    // mock data on first run.
+    transactions: [],
 
   // ── Attendance Records ───────────────────────────────────────────────────────
   attendance: {
