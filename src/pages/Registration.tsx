@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { X, AlertCircle } from 'lucide-react';
 import BackButton from '@/components/ui/BackButton';
+import { logActivity } from '@/services/activityLog';
+import { notifyDataChanged } from '@/hooks/useDashboardData';
 
 const Registration = () => {
   const { toast } = useToast();
@@ -72,7 +74,11 @@ const Registration = () => {
         address: formData.address.trim(),
       });
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
-      window.dispatchEvent(new Event('learners_data_updated'));
+      notifyDataChanged('school_learners_data');
+      logActivity({
+        type: 'student_registration',
+        title: `New student registered: ${formData.fullName.trim()} (${formData.gender}, ${formData.grade})`,
+      });
     } catch (err) {
       console.error('Failed to persist learner:', err);
     }
