@@ -42,8 +42,10 @@ import {
   Settings,
   Hash,
   Banknote,
-  Coins,
   CircleDollarSign,
+  Package,
+  FileCheck2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -53,41 +55,15 @@ import {
   getAllLicenses,
   isLicenseExpiredAt,
   validityLabel,
-  daysRemainingUntil,
 } from '@/services/licenseService';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
-import { formatRelativeTime } from '@/services/activityLog';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
 type SubscriptionStatus = 'active' | 'due' | 'grace_period' | 'expired';
-
-interface FeeTransaction {
-  id: string;
-  learnerId?: string;
-  studentId?: string;
-  learnerName?: string;
-  studentName?: string;
-  payerName?: string;
-  invoiceTitle?: string;
-  paymentFor?: string;
-  billingPeriod?: string;
-  amount: number;
-  paidAt?: string;
-  date?: string;
-  paymentMethod?: string;
-  method?: string;
-  status?: string;
-  category?: string;
-  ref?: string;
-  receiptNumber?: string;
-  mpesaReceiptNumber?: string;
-  type?: string;
-  description?: string;
-}
 
 interface FeeStructure {
   year: string;
@@ -135,22 +111,33 @@ interface FinancialMetrics {
   collectionRate: number;
 }
 
-interface AuditRow {
+/**
+ * A platform billing record — represents a single subscription invoice,
+ * add-on charge, or license renewal sourced from the license store.
+ */
+interface BillingRow {
   key: string;
-  type: 'fee' | 'invoice' | 'subscription';
-  label: string;
-  subtext: string;
+  /** SUBSCRIPTION | ADD-ON | LICENSE RENEWAL */
+  typeLabel: string;
+  /** e.g. "Pro Plan Monthly", "SMS Gateway Add-on" */
+  serviceName: string;
+  /** M-Pesa, Card, Bank Transfer, Cash */
   method: string;
-  ref: string;
+  /** M-Pesa transaction code or invoice # */
+  reference: string;
+  /** Amount in KES */
   amount: number;
+  /** Paid | Pending | Failed */
+  status: 'paid' | 'pending' | 'failed';
+  /** Date the record was issued / paid */
   date: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconBg: string;
   iconColor: string;
-  paymentFor?: string;
-  billingPeriod?: string;
-  category?: string;
-  rawType?: string;
+  /** Raw plan name for receipt generation */
+  planName: string;
+  /** Validity label e.g. "30 Days (Trial)" */
+  validityLabel: string;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -158,12 +145,11 @@ interface AuditRow {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STORAGE_KEYS = {
-  TRANSACTIONS:         'munyaka_transactions',
-  FEE_STRUCTURES:       'munyaka_fee_structures',
-  STUDENT_FEES:         'munyaka_student_fees',
+  FEE_STRUCTURES:        'munyaka_fee_structures',
+  STUDENT_FEES:          'munyaka_student_fees',
   SUBSCRIPTION_SETTINGS: 'munyaka_subscription_settings',
-  LEARNERS:             'school_learners_data',
-  STAFF:                'munyaka_staff_directory',
+  LEARNERS:              'school_learners_data',
+  STAFF:                 'munyaka_staff_directory',
 } as const;
 
 type BillingCycle = 'monthly' | 'semi-annual' | 'annual';
@@ -233,147 +219,116 @@ const titleCase = (s: string): string => {
   return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
 };
 
+const formatRelativeTime = (iso: string): string => {
+  if (!iso) return '—';
+  const d = safeDate(iso);
+  if (!d) return '—';
+  const diffMs = Date.now() - d.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 30) return `${diffDays} days ago`;
+  const diffMonths = Math.floor(diffDays / 30);
+  if (diffMonths < 12) return `${diffMonths} month${diffMonths === 1 ? '' : 's'} ago`;
+  return `${Math.floor(diffMonths / 12)} year${Math.floor(diffMonths / 12) === 1 ? '' : 's'} ago`;
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamic Type → Badge & Icon Mapping
+// Platform Billing Kind → Presentation Mapping
 // ─────────────────────────────────────────────────────────────────────────────
 
-type RowKind = 'fee' | 'invoice' | 'subscription' | 'unknown';
+type BillingKind = 'subscription' | 'add_on' | 'renewal' | 'upgrade';
 
 interface KindPresentation {
-  label: string;
+  typeLabel: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconBg: string;
   iconColor: string;
-  badgeBg: string;
-  badgeText: string;
 }
 
-/**
- * Map a transaction's raw `type` (or `category`) value to a presentation
- * (badge label, icon, color). Falls back to the `paymentMethod` when no
- * explicit type is set, so M-Pesa / Bank / Cash each get their own icon.
- */
-const mapRowKind = (
+const mapBillingKind = (
   rawType: string | undefined,
-  rawCategory: string | undefined,
-  method: string | undefined,
-): { kind: RowKind; presentation: KindPresentation } => {
+  serviceName: string,
+): { kind: BillingKind; presentation: KindPresentation } => {
   const t = (rawType || '').toLowerCase().trim();
-  const c = (rawCategory || '').toLowerCase().trim();
-  const m = (method || '').toLowerCase().trim();
+  const s = serviceName.toLowerCase();
 
-  // 1. Explicit fee / mpesa / payment kinds
-  if (t === 'fee' || t === 'payment' || t === 'tuition' ||
-      c === 'tuition' || c === 'fee' || c === 'school-fee' || c === 'school_fees') {
+  if (s.includes('addon') || s.includes('add-on') || s.includes('module') || s.includes('extra')) {
     return {
-      kind: 'fee',
+      kind: 'add_on',
       presentation: {
-        label: t === 'mpesa' || c === 'mpesa' ? 'M-Pesa Fee' : 'Fee',
-        icon: Smartphone,
-        iconBg: 'bg-emerald-50',
-        iconColor: 'text-emerald-600',
-        badgeBg: 'bg-emerald-50',
-        badgeText: 'text-emerald-700',
+        typeLabel: 'ADD-ON',
+        icon: Package,
+        iconBg: 'bg-violet-50',
+        iconColor: 'text-violet-600',
       },
     };
   }
-
-  // 2. Subscription / system billing invoice
-  if (t === 'subscription' || t === 'subscription_invoice' || t === 'billing') {
+  if (t.includes('renew') || s.includes('renewal') || s.includes('renew')) {
     return {
-      kind: 'subscription',
+      kind: 'renewal',
       presentation: {
-        label: 'Subscription',
-        icon: Building2,
-        iconBg: 'bg-indigo-50',
-        iconColor: 'text-indigo-600',
-        badgeBg: 'bg-indigo-50',
-        badgeText: 'text-indigo-700',
+        typeLabel: 'LICENSE RENEWAL',
+        icon: RefreshCw,
+        iconBg: 'bg-teal-50',
+        iconColor: 'text-teal-600',
       },
     };
   }
-
-  // 3. Plain invoice (no explicit type)
-  if (t === 'invoice' || c === 'invoice') {
+  if (t.includes('upgrade') || s.includes('upgrade')) {
     return {
-      kind: 'invoice',
+      kind: 'upgrade',
       presentation: {
-        label: 'Invoice',
-        icon: FileText,
+        typeLabel: 'UPGRADE',
+        icon: ArrowUpRight,
         iconBg: 'bg-amber-50',
         iconColor: 'text-amber-600',
-        badgeBg: 'bg-amber-50',
-        badgeText: 'text-amber-700',
       },
     };
   }
-
-  // 4. Method-based fallback (M-Pesa / Bank / Cash / Cheque)
-  if (m === 'mpesa' || m.includes('m-pesa') || m.includes('mpesa')) {
-    return {
-      kind: 'fee',
-      presentation: {
-        label: 'M-Pesa / Fee',
-        icon: Smartphone,
-        iconBg: 'bg-emerald-50',
-        iconColor: 'text-emerald-600',
-        badgeBg: 'bg-emerald-50',
-        badgeText: 'text-emerald-700',
-      },
-    };
-  }
-  if (m === 'bank' || m.includes('bank') || m.includes('deposit')) {
-    return {
-      kind: 'fee',
-      presentation: {
-        label: 'Bank Payment',
-        icon: Building2,
-        iconBg: 'bg-blue-50',
-        iconColor: 'text-blue-600',
-        badgeBg: 'bg-blue-50',
-        badgeText: 'text-blue-700',
-      },
-    };
-  }
-  if (m === 'cash') {
-    return {
-      kind: 'fee',
-      presentation: {
-        label: 'Cash Payment',
-        icon: Banknote,
-        iconBg: 'bg-amber-50',
-        iconColor: 'text-amber-600',
-        badgeBg: 'bg-amber-50',
-        badgeText: 'text-amber-700',
-      },
-    };
-  }
-  if (m === 'cheque' || m.includes('cheque')) {
-    return {
-      kind: 'fee',
-      presentation: {
-        label: 'Cheque',
-        icon: FileText,
-        iconBg: 'bg-slate-50',
-        iconColor: 'text-slate-600',
-        badgeBg: 'bg-slate-100',
-        badgeText: 'text-slate-700',
-      },
-    };
-  }
-
-  // 5. Default
   return {
-    kind: 'unknown',
+    kind: 'subscription',
     presentation: {
-      label: rawType ? rawType.toUpperCase() : 'Payment',
-      icon: CircleDollarSign,
-      iconBg: 'bg-slate-50',
-      iconColor: 'text-slate-600',
-      badgeBg: 'bg-slate-100',
-      badgeText: 'text-slate-700',
+      typeLabel: 'SUBSCRIPTION',
+      icon: Building2,
+      iconBg: 'bg-indigo-50',
+      iconColor: 'text-indigo-600',
     },
   };
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Status Presentation
+// ─────────────────────────────────────────────────────────────────────────────
+
+type PaymentStatus = 'paid' | 'pending' | 'failed';
+
+interface StatusPresentation {
+  label: string;
+  bg: string;
+  text: string;
+  dot: string;
+}
+
+const STATUS_PRESENTATION: Record<PaymentStatus, StatusPresentation> = {
+  paid: {
+    label: 'Paid',
+    bg: 'bg-emerald-50',
+    text: 'text-emerald-700',
+    dot: 'bg-emerald-500',
+  },
+  pending: {
+    label: 'Pending',
+    bg: 'bg-amber-50',
+    text: 'text-amber-700',
+    dot: 'bg-amber-500',
+  },
+  failed: {
+    label: 'Failed',
+    bg: 'bg-red-50',
+    text: 'text-red-700',
+    dot: 'bg-red-500',
+  },
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -407,7 +362,6 @@ const getSubscriptionSettings = (issuedAt?: string): SubscriptionSettings => {
 const resolveLicenseInfo = (): LicenseInfo => {
   const license = getActiveLicense();
 
-  // No active license → Pro Plan defaults
   if (!license) {
     const today = new Date();
     const nextBilling = addDays(today, 30).toISOString().slice(0, 10);
@@ -425,26 +379,21 @@ const resolveLicenseInfo = (): LicenseInfo => {
     };
   }
 
-  // Read billing cycle from subscription settings
   const settings = getSubscriptionSettings(license.issuedAt);
   const billingCycle: BillingCycle = settings.billingCycle;
   const cycleStartDate = settings.cycleStartDate;
 
-  // Seat caps based on license duration
   const isEnterprise = (license.validityDays ?? 0) >= 730;
   const maxStudentSeats = isEnterprise ? 2000 : 500;
   const maxStaffSeats = isEnterprise ? 200 : 50;
 
-  // Compute next billing date from cycle start + billing cycle days
   const billingDays = BILLING_CYCLE_DAYS[billingCycle] ?? 30;
   const cycleStart = safeDate(cycleStartDate) ?? new Date();
   const nextBillingDate = addDays(cycleStart, billingDays).toISOString().slice(0, 10);
   const today = new Date();
 
-  // Days remaining until next billing (dynamically calculated)
   const daysRemaining = Math.max(0, differenceInDays(addDays(cycleStart, billingDays), today));
 
-  // Determine subscription status
   let status: SubscriptionStatus = 'active';
   if (isLicenseExpiredAt(license.expiresAt ?? '')) {
     const daysSinceExpiry = Math.max(0, differenceInDays(today, safeDate(license.expiresAt) ?? today));
@@ -482,11 +431,9 @@ const computeSeatMetrics = (
   centralLoading: boolean,
   staffFromHook: number,
 ): SeatMetrics => {
-  // Use hook's central students if loaded, otherwise query directly
   const studentsUsed = !centralLoading && centralStudents > 0
     ? centralStudents
     : getActiveLearners().length;
-
   const studentsPercent = Math.min(100, Math.round((studentsUsed / license.maxStudentSeats) * 100));
 
   return {
@@ -504,226 +451,195 @@ const computeSeatMetrics = (
 // ─────────────────────────────────────────────────────────────────────────────
 
 const computeFinancialMetrics = (): FinancialMetrics => {
-  // Active learners
   const activeLearners = getActiveLearners();
   const learnerCount = activeLearners.length;
 
-  // Fee structures → build grade → amount map
   const feeStructures: FeeStructure[] = safeRead(STORAGE_KEYS.FEE_STRUCTURES, []);
   const gradeFeeMap: Record<string, number> = {};
   feeStructures.forEach((f) => {
     const key = (f.gradeId || '').replace(/\s+/g, '').toLowerCase();
-    const existing = gradeFeeMap[key];
-    gradeFeeMap[key] = existing ? Math.max(existing, f.amount) : f.amount;
+    gradeFeeMap[key] = gradeFeeMap[key] ? Math.max(gradeFeeMap[key]!, f.amount) : f.amount;
   });
 
-  // Total expected = sum of each active learner's grade fee
   let totalExpected = 0;
   activeLearners.forEach((l) => {
     const gradeId = (l.grade || '').replace(/\s+/g, '').toLowerCase();
     totalExpected += gradeFeeMap[gradeId] ?? 0;
   });
 
-  // Transactions → total collected
-  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
-  const paidTx = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
-  const totalCollected = paidTx.reduce((s, t) => s + (Number(t.amount) || 0), 0);
-
-  // Fallback: if no fee structures configured, use per-student ledger
   if (totalExpected === 0 && learnerCount > 0) {
     const feeRecords: StudentFeeRecord[] = safeRead(STORAGE_KEYS.STUDENT_FEES, []);
     const ledgerExpected = feeRecords.reduce((s, r) => s + (Number(r.total) || 0), 0);
     const ledgerCollected = feeRecords.reduce((s, r) => s + (Number(r.paid) || 0), 0);
-    const ledgerOutstanding = Math.max(0, ledgerExpected - ledgerCollected);
     return {
       totalExpected: ledgerExpected,
-      totalCollected: Math.max(totalCollected, ledgerCollected),
-      outstanding: ledgerOutstanding,
-      transactionCount: paidTx.length,
-      collectionRate: ledgerExpected > 0
-        ? Math.round((Math.max(totalCollected, ledgerCollected) / ledgerExpected) * 100)
-        : 0,
+      totalCollected: ledgerCollected,
+      outstanding: Math.max(0, ledgerExpected - ledgerCollected),
+      transactionCount: feeRecords.filter((r) => Number(r.paid) > 0).length,
+      collectionRate: ledgerExpected > 0 ? Math.round((ledgerCollected / ledgerExpected) * 100) : 0,
     };
   }
 
-  const outstanding = Math.max(0, totalExpected - totalCollected);
   return {
     totalExpected,
-    totalCollected,
-    outstanding,
-    transactionCount: paidTx.length,
-    collectionRate: totalExpected > 0
-      ? Math.round((totalCollected / totalExpected) * 100)
-      : 0,
+    totalCollected: 0,
+    outstanding: totalExpected,
+    transactionCount: 0,
+    collectionRate: 0,
   };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamic Audit Row Builders (live from `munyaka_transactions` + license store)
+// Platform Billing Row Builder
+// Reads ONLY from license history — no student fee queries.
 // ─────────────────────────────────────────────────────────────────────────────
 
 /**
- * Build a single audit row from a fee transaction record.
- * Reads dynamically from real fields: payer_name, invoice_title, payment_for,
- * billing_period, mpesa_receipt_number, payment_method, status, etc.
+ * Derive a payment status from the license payment data.
+ * A record is "paid" when `payment.amount` is present.
  */
-const buildFeeRow = (t: FeeTransaction): AuditRow => {
-  // Payer / Invoice label — priority: payer_name → invoice_title → learner
-  const payer = t.payerName || t.invoiceTitle || t.learnerName || t.studentName;
-  const label = payer || 'Unknown Payer';
+const derivePaymentStatus = (
+  paymentAmount: number | undefined,
+  expiresAt: string | undefined,
+): PaymentStatus => {
+  if (!paymentAmount || paymentAmount <= 0) {
+    // No payment recorded — check expiry to infer pending vs failed
+    if (expiresAt && isLicenseExpiredAt(expiresAt)) {
+      return 'failed';
+    }
+    return 'pending';
+  }
+  return 'paid';
+};
 
-  // Subtext — show payment_for, billing_period, or category
-  const subParts: string[] = [];
-  if (t.paymentFor)        subParts.push(t.paymentFor);
-  if (t.billingPeriod)     subParts.push(t.billingPeriod);
-  if (t.category && !subParts.includes(t.category)) subParts.push(t.category);
-  const subtext = subParts.length > 0 ? subParts.join(' · ') : (t.description || 'School Payment');
+/**
+ * Build a BillingRow from a single license record.
+ * Maps to: type badge, service name, method, reference, amount, status, date.
+ */
+const buildBillingRow = (
+  license: ReturnType<typeof getAllLicenses>[number],
+): BillingRow => {
+  const { presentation } = mapBillingKind(license.type, license.planName || 'Pro Plan');
+  const amount = Number(license.payment?.amount) || 0;
+  const status = derivePaymentStatus(amount, license.expiresAt);
+  const method = license.payment?.method || 'cash';
 
-  // Method — prefer explicit payment_method
-  const method = t.paymentMethod || t.method || 'cash';
-
-  // Reference — prefer M-Pesa receipt number, then ref, then id
-  const ref = t.mpesaReceiptNumber || t.receiptNumber || t.ref || t.id || '—';
-
-  // Icon / color from dynamic type mapper
-  const { presentation } = mapRowKind(t.type, t.category, method);
+  // Build a descriptive service name
+  const plan = license.planName || 'Pro Plan';
+  const validity = validityLabel(license.validityDays as 30 | 365 | 730);
+  const serviceName = amount > 0
+    ? `${plan} ${validity}`
+    : `${plan} (Unpaid)`;
 
   return {
-    key: `tx-${t.id || Math.random().toString(36).slice(2)}`,
-    type: 'fee',
-    label,
-    subtext,
+    key: `billing-${license.id}`,
+    typeLabel: presentation.typeLabel,
+    serviceName,
     method,
-    ref,
-    amount: Number(t.amount) || 0,
-    date: t.paidAt || t.date || '',
+    reference: license.payment?.refNumber || license.id || '—',
+    amount,
+    status,
+    date: license.issuedAt || '',
     icon: presentation.icon,
     iconBg: presentation.iconBg,
     iconColor: presentation.iconColor,
-    paymentFor: t.paymentFor,
-    billingPeriod: t.billingPeriod,
-    category: t.category,
-    rawType: t.type,
+    planName: plan,
+    validityLabel: validity,
   };
 };
 
 /**
- * Build an audit row for a subscription invoice.
- * Read from license history (live data).
+ * Compute platform billing rows from license history only.
+ * Excludes all student fee / tuition / learner payment records.
  */
-const buildInvoiceRow = (l: ReturnType<typeof getAllLicenses>[number]): AuditRow => {
-  const { presentation } = mapRowKind('subscription', undefined, l.payment?.method);
-  return {
-    key: `inv-${l.id}`,
-    type: 'invoice',
-    label: 'Subscription Invoice',
-    subtext: validityLabel(l.validityDays as 30 | 365 | 730),
-    method: l.payment?.method || 'cash',
-    ref: l.payment?.refNumber || '—',
-    amount: Number(l.payment?.amount) || 0,
-    date: l.issuedAt || '',
-    icon: presentation.icon,
-    iconBg: presentation.iconBg,
-    iconColor: presentation.iconColor,
-    paymentFor: 'Subscription',
-    billingPeriod: validityLabel(l.validityDays as 30 | 365 | 730),
-    category: 'Subscription',
-    rawType: 'subscription',
-  };
-};
-
-/**
- * Compute audit rows synchronously from live localStorage.
- * (Called by the async hook below; returned through state so the table
- *  can render skeletons while the work is in flight.)
- */
-const computeAuditRowsSync = (): AuditRow[] => {
-  // Recent paid transactions — fully dynamic field mapping
-  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
-  const paidTx = transactions
-    .filter((t) => t.status === 'paid' || !!t.paidAt)
-    .sort((a, b) => {
-      const da = safeDate(a.paidAt ?? a.date)?.getTime() ?? 0;
-      const db = safeDate(b.paidAt ?? b.date)?.getTime() ?? 0;
-      return db - da;
-    })
-    .slice(0, 10)
-    .map(buildFeeRow);
-
-  // Subscription invoices from license history
+const computeBillingRowsSync = (): BillingRow[] => {
   const allLicenses = getAllLicenses();
-  const invoices = allLicenses
-    .filter((l) => l.payment?.amount)
-    .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''))
-    .slice(0, 6)
-    .map(buildInvoiceRow);
 
-  // Merge and sort by date descending
-  return [...paidTx, ...invoices].sort((a, b) => {
-    const da = safeDate(a.date)?.getTime() ?? 0;
-    const db = safeDate(b.date)?.getTime() ?? 0;
-    return db - da;
-  });
+  return allLicenses
+    .filter((l) => l.payment != null)
+    .sort((a, b) => (b.issuedAt || '').localeCompare(a.issuedAt || ''))
+    .map(buildBillingRow);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Revenue Trend (last 6 months)
+// Revenue Trend (last 6 months) — from student fee transactions
+// (kept in the Executive Financial Summary card; separate from billing table)
 // ─────────────────────────────────────────────────────────────────────────────
+
+interface FeeTransaction {
+  id: string;
+  amount: number;
+  paidAt?: string;
+  date?: string;
+  status?: string;
+}
 
 const computeRevenueTrend = () => {
-  const transactions: FeeTransaction[] = safeRead(STORAGE_KEYS.TRANSACTIONS, []);
-  const paid = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
-  const now = new Date();
+  // Student fee transactions still drive the "Revenue Collected" chart
+  // in the Executive Financial Summary card — that card is about school
+  // fee collection, not platform billing.
+  try {
+    const raw = localStorage.getItem('munyaka_transactions');
+    if (!raw) return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date();
+      d.setMonth(d.getMonth() - (5 - i));
+      return { label: d.toLocaleDateString('en-KE', { month: 'short' }), total: 0 };
+    });
+    const transactions: FeeTransaction[] = JSON.parse(raw);
+    const paid = transactions.filter((t) => t.status === 'paid' || !!t.paidAt);
+    const now = new Date();
 
-  return Array.from({ length: 6 }, (_, i) => {
-    const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const label = d.toLocaleDateString('en-KE', { month: 'short' });
-    const total = paid.reduce((s, t) => {
-      const td = safeDate(t.paidAt ?? t.date);
-      if (!td) return s;
-      return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
-        ? s + (Number(t.amount) || 0)
-        : s;
-    }, 0);
-    return { label, total, sortKey: d.getTime() };
-  });
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      const label = d.toLocaleDateString('en-KE', { month: 'short' });
+      const total = paid.reduce((s, t) => {
+        const td = safeDate(t.paidAt ?? t.date);
+        if (!td) return s;
+        return td.getFullYear() === d.getFullYear() && td.getMonth() === d.getMonth()
+          ? s + (Number(t.amount) || 0)
+          : s;
+      }, 0);
+      return { label, total };
+    });
+  } catch {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, i) => {
+      const d = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+      return { label: d.toLocaleDateString('en-KE', { month: 'short' }), total: 0 };
+    });
+  }
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // useOwnerDashboardData Hook
-// Reactive, real-time data aggregation for the Owner Dashboard
 // ─────────────────────────────────────────────────────────────────────────────
 
 interface OwnerDashboardData {
   license: LicenseInfo;
   seats: SeatMetrics;
   financials: FinancialMetrics;
-  auditRows: AuditRow[];
+  billingRows: BillingRow[];
   revenueTrend: ReturnType<typeof computeRevenueTrend>;
   allLicensesCount: number;
   now: string;
   isLoading: boolean;
-  isTransactionsLoading: boolean;
+  isBillingLoading: boolean;
 }
 
 const useOwnerDashboardData = (): OwnerDashboardData => {
   const { totalStudents: centralStudents, totalTeachers: centralTeachers, isLoading: centralLoading } = useCentralData();
 
-  // Use a counter to force re-renders when localStorage changes
   const [tick, setTick] = React.useState(0);
   const tickRef = useRef(tick);
   tickRef.current = tick;
 
-  // Async loading state for the transactions table
-  const [isTransactionsLoading, setIsTransactionsLoading] = useState(true);
+  const [isBillingLoading, setIsBillingLoading] = useState(true);
 
-  // Force a re-render to pick up localStorage changes
   const triggerRefresh = useCallback(() => {
     setTick((t) => t + 1);
   }, []);
 
   useEffect(() => {
-    // Cross-tab storage events
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       const watchedKeys = Object.values(STORAGE_KEYS);
@@ -731,8 +647,6 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
         triggerRefresh();
       }
     };
-
-    // Same-tab custom events
     const onCustom = (e: Event) => {
       const detail = (e as CustomEvent).detail;
       if (detail?.key) {
@@ -745,8 +659,6 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
 
     window.addEventListener('storage', onStorage);
     window.addEventListener('munyaka:data-changed', onCustom as EventListener);
-
-    // Polling every 10 seconds for the clock display and any missed updates
     const interval = setInterval(triggerRefresh, 10_000);
 
     return () => {
@@ -756,8 +668,6 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
     };
   }, [triggerRefresh]);
 
-  // All data is derived from localStorage; adding `tick` as dependency
-  // forces a re-computation whenever the underlying data changes.
   const license = useMemo(() => resolveLicenseInfo(), [tick]);
 
   const seats = useMemo(
@@ -767,16 +677,13 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
 
   const financials = useMemo(() => computeFinancialMetrics(), [tick]);
 
-  const auditRows = useMemo(() => {
-    // Simulate async fetch with a microtask so the skeleton state is visible
-    // on first render and any state change that empties the list.
-    setIsTransactionsLoading(true);
-    const rows = computeAuditRowsSync();
-    // Defer the loading-off state to next tick so the UI can show skeletons.
+  const billingRows = useMemo(() => {
+    setIsBillingLoading(true);
+    const rows = computeBillingRowsSync();
     if (typeof window !== 'undefined') {
-      window.setTimeout(() => setIsTransactionsLoading(false), 200);
+      window.setTimeout(() => setIsBillingLoading(false), 200);
     } else {
-      setIsTransactionsLoading(false);
+      setIsBillingLoading(false);
     }
     return rows;
   }, [tick]);
@@ -794,17 +701,17 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
     license,
     seats,
     financials,
-    auditRows,
+    billingRows,
     revenueTrend,
     allLicensesCount,
     now,
     isLoading: centralLoading,
-    isTransactionsLoading,
+    isBillingLoading,
   };
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Status Badge Config
+// Subscription Status Badge Config
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG: Record<SubscriptionStatus, { label: string; bg: string; text: string; dot: string }> = {
@@ -815,28 +722,25 @@ const STATUS_CONFIG: Record<SubscriptionStatus, { label: string; bg: string; tex
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Skeleton row for the audit table (loading state)
+// Skeleton row for the billing table
 // ─────────────────────────────────────────────────────────────────────────────
 
-const AuditRowSkeleton: React.FC = () => (
+const BillingRowSkeleton: React.FC = () => (
   <tr className="border-b border-slate-50">
     <td className="px-6 py-3.5">
       <div className="flex items-center gap-2.5">
         <Skeleton className="w-9 h-9 rounded-lg" />
-        <Skeleton className="h-4 w-20 rounded-full" />
+        <Skeleton className="h-4 w-28 rounded-full" />
       </div>
     </td>
     <td className="px-6 py-3.5">
-      <Skeleton className="h-4 w-40 mb-1.5" />
+      <Skeleton className="h-4 w-48 mb-1.5" />
       <Skeleton className="h-3 w-24" />
     </td>
-    <td className="px-6 py-3.5"><Skeleton className="h-4 w-16" /></td>
-    <td className="px-6 py-3.5"><Skeleton className="h-4 w-24" /></td>
-    <td className="px-6 py-3.5">
-      <Skeleton className="h-4 w-20 mb-1.5" />
-      <Skeleton className="h-3 w-12" />
-    </td>
-    <td className="px-6 py-3.5 text-right"><Skeleton className="h-4 w-20 ml-auto" /></td>
+    <td className="px-6 py-3.5"><Skeleton className="h-4 w-20" /></td>
+    <td className="px-6 py-3.5"><Skeleton className="h-4 w-28" /></td>
+    <td className="px-6 py-3.5 text-right"><Skeleton className="h-5 w-24 ml-auto" /></td>
+    <td className="px-6 py-3.5"><Skeleton className="h-5 w-16 rounded-full" /></td>
   </tr>
 );
 
@@ -847,16 +751,18 @@ const AuditRowSkeleton: React.FC = () => (
 /**
  * Executive dashboard for the `owner` role.
  *
- * All metrics are dynamically computed from live localStorage data:
+ * Data sources:
  *   - Subscription: `getActiveLicense()` + subscription settings
- *   - Seats: `useCentralData` hook + `getActiveLearners()` / `getActiveTeachers()`
- *   - Financials: `munyaka_transactions` + `munyaka_fee_structures`
- *   - Audit: Combined transactions + license invoices, mapped via `mapRowKind`
- *     so badges, icons, and colors reflect each row's actual type & method.
+ *   - Seats: `useCentralData` + `getActiveLearners()` / `getActiveTeachers()`
+ *   - Financials: `munyaka_fee_structures` + `munyaka_student_fees`
+ *   - Revenue Trend chart: `munyaka_transactions` (student fees — displayed in
+ *     the "Executive Financial Summary" card, not the billing table)
+ *   - Billing Table: `getAllLicenses()` — platform subscription invoices ONLY.
+ *     Student fee collections (tuitions, learner payments) are NOT shown here;
+ *     they belong to the Administrator / Bursar role.
  *
- * Transactions use a real reactive hook with a proper loading skeleton and
- * empty state, and the "Latest Receipt" / "Export Report" buttons hook into
- * live download handlers that stream the actual receipt or full CSV report.
+ * The "System Billing & Subscription Audit" table shows only platform-level
+ * charges: subscription renewals, add-ons, and license upgrades.
  */
 const OwnerDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -866,28 +772,26 @@ const OwnerDashboard: React.FC = () => {
     license,
     seats,
     financials,
-    auditRows,
+    billingRows,
     revenueTrend,
     allLicensesCount,
     now,
     isLoading: centralLoading,
-    isTransactionsLoading,
+    isBillingLoading,
   } = useOwnerDashboardData();
 
   const handleOpenProfileSettings = () => navigate('/settings/profile');
   const handleUpgrade = () => { window.location.hash = '#/payment-management'; };
 
-  const handleExportReport = useCallback(async () => {
+  // ── Export Billing Report ────────────────────────────────────────────────
+  const handleExportBillingReport = useCallback(async () => {
     try {
-      const feeRows = auditRows.filter((r) => r.type === 'fee');
-      const invoiceRows = auditRows.filter((r) => r.type === 'invoice');
-
       const rows = [
         ['MUNYAKA PRIMARY AND JUNIOR'],
         ['P.O. BOX 5239, ELDORET'],
         ['MOTTO: Knowledge Is Power'],
         [''],
-        ['Executive Financial Report'],
+        ['System Billing & Subscription Audit Report'],
         [`Generated: ${new Date().toLocaleString('en-KE')}`],
         [''],
         ['SUBSCRIPTION DETAILS'],
@@ -902,89 +806,69 @@ const OwnerDashboard: React.FC = () => {
         ['Student Seats', seats.studentsUsed.toString(), license.maxStudentSeats.toString(), `${seats.studentsPercent}%`],
         ['Staff Seats', seats.staffUsed.toString(), license.maxStaffSeats.toString(), `${seats.staffPercent}%`],
         [''],
-        ['FINANCIAL SUMMARY'],
-        ['Metric', 'KES'],
-        ['Total Expected Revenue', financials.totalExpected.toString()],
-        ['Total Collected', financials.totalCollected.toString()],
-        ['Outstanding Unpaid', financials.outstanding.toString()],
-        ['Collection Rate (%)', financials.collectionRate.toString()],
-        [''],
-        ['RECENT TRANSACTIONS'],
-        ['Date', 'Payer / Invoice', 'Payment For', 'Billing Period', 'Method', 'Reference', 'Type', 'Amount (KES)'],
-        ...feeRows.map((t) => [
-          formatDate(t.date),
-          t.label,
-          t.paymentFor || '',
-          t.billingPeriod || '',
-          titleCase(t.method),
-          t.ref,
-          t.rawType || 'fee',
-          t.amount.toString(),
-        ]),
-        [''],
-        ['SUBSCRIPTION INVOICES'],
-        ['Issued', 'Validity', 'Method', 'Reference', 'Amount (KES)'],
-        ...invoiceRows.map((i) => [
-          formatDate(i.date),
-          i.billingPeriod || '',
-          titleCase(i.method),
-          i.ref,
-          i.amount.toString(),
+        ['PLATFORM BILLING HISTORY'],
+        ['Date', 'Type', 'Service / Plan', 'Method', 'Reference', 'Amount (KES)', 'Status'],
+        ...billingRows.map((row) => [
+          formatDate(row.date),
+          row.typeLabel,
+          row.serviceName,
+          titleCase(row.method),
+          row.reference,
+          row.amount.toString(),
+          row.status.charAt(0).toUpperCase() + row.status.slice(1),
         ]),
       ];
       const csv = rows
         .map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(','))
         .join('\n');
-      await downloadCSV(csv, `Munyaka_Financial_Report_${new Date().toISOString().slice(0, 10)}.csv`);
-      showSuccess('Financial report downloaded.');
+      await downloadCSV(csv, `Munyaka_Billing_Report_${new Date().toISOString().slice(0, 10)}.csv`);
+      showSuccess('Billing report exported.');
     } catch (err) {
-      console.error('[OwnerDashboard] export error:', err);
-      showError('Could not export the report. Please try again.');
+      console.error('[OwnerDashboard] export billing error:', err);
+      showError('Could not export the billing report. Please try again.');
     }
-  }, [license, seats, financials, auditRows]);
+  }, [license, seats, billingRows]);
 
-  /**
-   * Build & download a receipt for the most recent paid transaction.
-   * Uses the real `payer_name`, `invoice_title`, `payment_for`,
-   * `billing_period`, `mpesa_receipt_number` and `payment_method` fields.
-   */
-  const handleDownloadLatestReceipt = useCallback(() => {
-    const latest = auditRows.find((r) => r.type === 'fee');
+  // ── Download Invoice ─────────────────────────────────────────────────────
+  const handleDownloadLatestInvoice = useCallback(() => {
+    const latest = billingRows.find((r) => r.status === 'paid') ?? billingRows[0];
     if (!latest) {
-      showError('No recent transactions available to download.');
+      showError('No platform billing records found to download.');
       return;
     }
+    const statusLabel = STATUS_PRESENTATION[latest.status].label;
     const body = [
       'MUNYAKA PRIMARY AND JUNIOR',
       'P.O. BOX 5239, ELDORET',
       'MOTTO: Knowledge Is Power',
       '',
-      'PAYMENT RECEIPT',
+      'PLATFORM INVOICE',
       '',
-      `Receipt No:    ${latest.ref}`,
-      `Date:          ${formatDateLong(latest.date)}`,
-      `Payer:         ${latest.label}`,
-      `Payment For:   ${latest.paymentFor || latest.category || 'School Fees'}`,
-      `Billing Period:${latest.billingPeriod ? ' ' + latest.billingPeriod : ''}`,
-      `Method:        ${titleCase(latest.method)}`,
-      `Category:      ${latest.category || '—'}`,
+      `Invoice No:    ${latest.reference}`,
+      `Date Issued:   ${formatDateLong(latest.date)}`,
+      `Service:       ${latest.serviceName}`,
+      `Type:          ${latest.typeLabel}`,
+      `Payment Method:${titleCase(latest.method)}`,
+      `Plan:          ${latest.planName}`,
+      `Validity:      ${latest.validityLabel}`,
       '',
-      `Amount Paid:   ${formatKES(latest.amount)}`,
+      `Amount:        ${formatKES(latest.amount)}`,
+      `Status:        ${statusLabel}`,
       '',
-      'Thank you for your payment.',
+      'This invoice covers platform subscription services.',
       '',
     ].join('\n');
     const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `Receipt_${latest.ref}.txt`;
+    link.download = `Invoice_${latest.reference}.txt`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     setTimeout(() => URL.revokeObjectURL(url), 2000);
-    showSuccess('Latest receipt downloaded.');
-  }, [auditRows]);
+    showSuccess('Invoice downloaded.');
+  }, [billingRows]);
 
   const sub = STATUS_CONFIG[license.status];
   const TierIcon = license.isEnterprise ? Crown : Sparkles;
@@ -992,7 +876,8 @@ const OwnerDashboard: React.FC = () => {
     ? 'from-indigo-600 via-violet-600 to-fuchsia-600'
     : 'from-blue-600 via-cyan-600 to-teal-500';
 
-  const hasFeeRows = auditRows.some((r) => r.type === 'fee');
+  const hasBillingRows = billingRows.length > 0;
+  const hasPaidRow = billingRows.some((r) => r.status === 'paid');
 
   return (
     <div className="space-y-8 pb-10">
@@ -1040,7 +925,7 @@ const OwnerDashboard: React.FC = () => {
           <Button
             variant="outline"
             size="sm"
-            onClick={handleExportReport}
+            onClick={handleExportBillingReport}
             className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
           >
             <FileText size={14} className="mr-1.5" />
@@ -1327,7 +1212,7 @@ const OwnerDashboard: React.FC = () => {
                 Revenue Collected (Last 6 Months)
               </CardTitle>
               <p className="text-xs text-slate-500 mt-0.5">
-                Monthly fee collection trend in KES — live from transaction records
+                Monthly fee collection trend in KES — live from student fee records
               </p>
             </div>
             <TrendingUp size={18} className="text-emerald-500" />
@@ -1385,41 +1270,42 @@ const OwnerDashboard: React.FC = () => {
         </Card>
       </div>
 
-      {/* ── 3. Recent Transactions & Payment Audit Log ─────────────────── */}
+      {/* ── 3. System Billing & Subscription Audit ───────────────────────── */}
       <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4">
           <div>
             <CardTitle className="text-base font-bold text-slate-800">
-              Recent Transactions &amp; Payment Audit
+              System Billing &amp; Subscription Audit
             </CardTitle>
             <p className="text-xs text-slate-500 mt-0.5">
-              M-Pesa receipts, fee collections, and system billing invoices
+              Platform subscription invoices, module add-ons, and system renewal receipts
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
-              onClick={handleDownloadLatestReceipt}
+              onClick={handleDownloadLatestInvoice}
               className="rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50"
-              disabled={!hasFeeRows || isTransactionsLoading}
+              disabled={!hasBillingRows || isBillingLoading}
             >
               <Download size={14} className="mr-1.5" />
-              Latest Receipt
+              Download Invoice
             </Button>
             <Button
               size="sm"
-              onClick={handleExportReport}
+              onClick={handleExportBillingReport}
               className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
+              disabled={!hasBillingRows || isBillingLoading}
             >
               <FileText size={14} className="mr-1.5" />
-              Export Financial Report
+              Export Billing Report
             </Button>
           </div>
         </CardHeader>
 
         <CardContent className="p-0">
-          {isTransactionsLoading ? (
+          {isBillingLoading ? (
             // Loading skeleton
             <div
               className="w-full overflow-auto"
@@ -1429,36 +1315,36 @@ const OwnerDashboard: React.FC = () => {
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Type</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer / Invoice</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Invoice / Service</th>
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Method</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Reference</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Reference / Receipt</th>
                     <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount (KES)</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <AuditRowSkeleton key={i} />
+                  {Array.from({ length: 4 }).map((_, i) => (
+                    <BillingRowSkeleton key={i} />
                   ))}
                 </tbody>
               </table>
             </div>
-          ) : auditRows.length === 0 ? (
+          ) : billingRows.length === 0 ? (
             // Empty state
-            <div className="flex flex-col items-center justify-center gap-2 py-14 text-center px-6" data-testid="audit-empty-state">
+            <div className="flex flex-col items-center justify-center gap-2 py-14 text-center px-6" data-testid="billing-empty-state">
               <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
                 <Receipt size={20} className="text-slate-400" />
               </div>
               <p className="text-sm font-semibold text-slate-600">
-                No recent transactions found.
+                No platform billing history found.
               </p>
               <p className="text-xs text-slate-400 max-w-sm">
-                Once fee payments and subscription invoices are recorded, they
-                will appear here for executive review.
+                Subscription invoices, add-ons, and license renewals will appear here
+                once the platform billing system records them.
               </p>
             </div>
           ) : (
-            // Live data table
+            // Live billing data table
             <div
               className="w-full overflow-auto"
               style={{ scrollbarWidth: 'thin', scrollbarColor: '#6366f1 #f1f5f9' }}
@@ -1467,20 +1353,20 @@ const OwnerDashboard: React.FC = () => {
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Type</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Payer / Invoice</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Invoice / Service</th>
                     <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Method</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Reference</th>
-                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Date</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Reference / Receipt</th>
                     <th className="px-6 py-3 text-right text-[10px] font-bold uppercase tracking-widest text-slate-400">Amount (KES)</th>
+                    <th className="px-6 py-3 text-left text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {auditRows.map((row) => {
+                  {billingRows.map((row) => {
                     const Icon = row.icon;
-                    const { presentation } = mapRowKind(row.rawType, row.category, row.method);
-                    const amountColor = row.type === 'invoice' ? 'text-indigo-600' : 'text-emerald-600';
+                    const status = STATUS_PRESENTATION[row.status];
                     return (
                       <tr key={row.key} className="hover:bg-slate-50/60 transition-colors">
+                        {/* TYPE */}
                         <td className="px-6 py-3.5">
                           <div className="flex items-center gap-2.5">
                             <div className={`w-9 h-9 rounded-lg ${row.iconBg} flex items-center justify-center shrink-0`}>
@@ -1488,43 +1374,53 @@ const OwnerDashboard: React.FC = () => {
                             </div>
                             <Badge
                               variant="outline"
-                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border-0 ${presentation.badgeBg} ${presentation.badgeText}`}
+                              className={`rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider border-0 ${row.iconBg} ${row.iconColor}`}
                             >
-                              {presentation.label}
+                              {row.typeLabel}
                             </Badge>
                           </div>
                         </td>
+
+                        {/* INVOICE / SERVICE */}
                         <td className="px-6 py-3.5">
-                          <p className="font-semibold text-slate-800 truncate max-w-[220px]">
-                            {row.label}
+                          <p className="font-semibold text-slate-800 truncate max-w-[200px]">
+                            {row.serviceName}
                           </p>
-                          <p className="text-[10px] text-slate-400 uppercase tracking-wider truncate max-w-[220px]">
-                            {row.subtext}
+                          <p className="text-[10px] text-slate-400 uppercase tracking-wider">
+                            {row.planName} · {row.validityLabel}
                           </p>
                         </td>
+
+                        {/* METHOD */}
                         <td className="px-6 py-3.5">
                           <span className="text-xs font-medium text-slate-600">
                             {titleCase(row.method)}
                           </span>
                         </td>
+
+                        {/* REFERENCE / RECEIPT */}
                         <td className="px-6 py-3.5">
                           <code className="text-[11px] font-mono text-slate-500 bg-slate-50 rounded-md px-1.5 py-0.5 inline-flex items-center gap-1">
                             <Hash size={10} className="text-slate-400" />
-                            {row.ref}
+                            {row.reference}
                           </code>
                         </td>
-                        <td className="px-6 py-3.5">
-                          <p className="text-xs font-medium text-slate-700">
-                            {formatDate(row.date)}
-                          </p>
-                          <p className="text-[10px] text-slate-400">
-                            {formatRelativeTime(row.date)}
-                          </p>
-                        </td>
+
+                        {/* AMOUNT */}
                         <td className="px-6 py-3.5 text-right">
-                          <span className={`font-black ${amountColor}`}>
-                            {formatKES(row.amount)}
+                          <span className="font-black text-indigo-600">
+                            {row.amount > 0 ? formatKES(row.amount) : '—'}
                           </span>
+                        </td>
+
+                        {/* STATUS */}
+                        <td className="px-6 py-3.5">
+                          <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 ${status.bg}`}>
+                            <span className={`w-1.5 h-1.5 rounded-full ${status.dot} ${row.status === 'pending' ? 'animate-pulse' : ''}`} />
+                            <span className={`text-[11px] font-bold ${status.text}`}>
+                              {status.label}
+                            </span>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -1537,14 +1433,15 @@ const OwnerDashboard: React.FC = () => {
 
         <div className="px-6 py-4 border-t border-slate-100 bg-slate-50/40 flex flex-wrap items-center justify-between gap-3">
           <p className="text-[11px] text-slate-500">
-            Showing the most recent {auditRows.length} payment event{auditRows.length === 1 ? '' : 's'}.
-            Full history is available in the Payment Management console.
+            Showing {billingRows.length} billing record{billingRows.length === 1 ? '' : 's'}.
+            Student fee collections are managed in the Fees &amp; Payments console.
           </p>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleExportReport}
+              onClick={handleExportBillingReport}
+              disabled={!hasBillingRows || isBillingLoading}
               className="rounded-lg text-slate-600 hover:text-slate-900"
             >
               <FileText size={13} className="mr-1" />
@@ -1553,12 +1450,12 @@ const OwnerDashboard: React.FC = () => {
             <Button
               variant="ghost"
               size="sm"
-              onClick={handleDownloadLatestReceipt}
-              disabled={!hasFeeRows || isTransactionsLoading}
+              onClick={handleDownloadLatestInvoice}
+              disabled={!hasBillingRows || isBillingLoading}
               className="rounded-lg text-slate-600 hover:text-slate-900"
             >
               <Receipt size={13} className="mr-1" />
-              Latest Receipt
+              Invoice
             </Button>
           </div>
         </div>

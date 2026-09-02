@@ -123,7 +123,7 @@ test("OWNER is redirected to Owner Dashboard and does NOT see admin operational 
   await expect(page.getByRole("heading", { name: /Owner Dashboard/i })).toBeVisible();
   await expect(page.getByText(/Subscription/i)).toBeVisible();
   await expect(page.getByText(/Executive Financial Summary/i)).toBeVisible();
-  await expect(page.getByText(/Recent Transactions/i)).toBeVisible();
+  await expect(page.getByText(/System Billing/i)).toBeVisible();
 
   // Operational sections (not in scope for owner) are absent
   await expect(page.getByText(/Total Students/i)).not.toBeVisible();
