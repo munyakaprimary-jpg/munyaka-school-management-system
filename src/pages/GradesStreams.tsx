@@ -12,7 +12,7 @@ import BackButton from '@/components/ui/BackButton';
 import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
-import { sortGrades } from '@/utils/gradeSort';
+import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
 import { notifyDataChanged } from '@/utils/storage';
 
 const STORAGE_KEY = 'munyaka_grades';
@@ -137,8 +137,11 @@ const GradesStreams = () => {
     };
   }, []);
 
-  // Sort grades logically (Pre-Primary → Primary → Junior School,
-  // then PP1 < PP2 < Grade 1 < Grade 2 ...)
+  // ── Strict grade ordering ───────────────────────────────────────────────
+  // Rendered in canonical sequence: PP1 → PP2 → Grade 1 → … → Grade 9.
+  // Any custom user-added grade not in GRADE_ORDER is pushed to the end
+  // and sorted alphabetically. The sortGrades() helper from
+  // @/utils/gradeSort enforces this via index lookup against GRADE_ORDER.
   const sortedGrades = useMemo(() => {
     return sortGrades(grades);
   }, [grades]);

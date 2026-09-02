@@ -5,8 +5,8 @@
 // Any grade not in the canonical list is pushed to the end alphabetically.
 // ─────────────────────────────────────────────────────────────────────────────
 
-export type GradeCategory = 'Pre-Primary' | 'Primary' | 'Junior School';
 
+export type GradeCategory = 'Pre-Primary' | 'Primary' | 'Junior School';
 export interface GradeRank {
   rank: number;
   category: GradeCategory;
@@ -14,8 +14,11 @@ export interface GradeRank {
 
 /**
  * Canonical grade ordering: PP1 → PP2 → Grade 1 → … → Grade 9.
+ *
  * All comparisons are done against this array's index to guarantee a
- * strict, predictable ascending sequence.
+ * strict, predictable ascending sequence. Grades not in this list
+ * (e.g. user-created "Special Class") are pushed to the end and
+ * sorted alphabetically among themselves.
  */
 export const GRADE_ORDER: string[] = [
   'PP1',
@@ -32,12 +35,19 @@ export const GRADE_ORDER: string[] = [
 ];
 
 /**
+ * Stable list of all canonical grade names in ascending order.
+ * Synonym for GRADE_ORDER — useful for dropdowns and defaults.
+ */
+export const CANONICAL_GRADE_NAMES_IN_ORDER: string[] = [...GRADE_ORDER];
+
+/**
  * Map of canonical grade names → { rank, category }.
- * Rank = index in GRADE_ORDER + 1 so Pre-Primary = 1-2, Primary = 3-8, Junior School = 9-11.
+ * Rank = index in GRADE_ORDER + 1 so Pre-Primary = 1-2, Primary = 3-8,
+ * Junior School = 9-11.
  */
 const CANONICAL_GRADE_RANKS: Record<string, GradeRank> = {
-  PP1:      { rank: 1,  category: 'Pre-Primary' },
-  PP2:      { rank: 2,  category: 'Pre-Primary' },
+  PP1:       { rank: 1,  category: 'Pre-Primary' },
+  PP2:       { rank: 2,  category: 'Pre-Primary' },
   'Grade 1': { rank: 3,  category: 'Primary' },
   'Grade 2': { rank: 4,  category: 'Primary' },
   'Grade 3': { rank: 5,  category: 'Primary' },
@@ -51,42 +61,37 @@ const CANONICAL_GRADE_RANKS: Record<string, GradeRank> = {
 
 /**
  * Normalise a raw grade name to one that matches a key in GRADE_ORDER.
- * "grade 5", "GRADE 5", "Grade 5 " → "Grade 5"
- * "pp1", "PP1"                   → "PP1"
- * "pp2"                           → "PP2"
- * Anything unrecognised            → original trimmed value
+ *
+ *   "grade 5", "GRADE 5", "Grade 5 " → "Grade 5"
+ *   "pp1", "PP1"                    → "PP1"
+ *   "pp2"                            → "PP2"
+ *   Anything unrecognised             → original trimmed value
  */
 function normalise(name: string): string {
   if (!name) return '';
-  const trimmed = name.trim();
-  const upper = trimmed.toUpperCase();
+  const t = name.trim();
+  const upper = t.toUpperCase();
 
-  // Match "Grade N" variants (any whitespace, any capitalisation)
-  const gradeMatch = trimmed.match(/^([A-Za-z]+\s*\d+)$/);
-  if (gradeMatch) {
-    const inner = gradeMatch[1];
-    const parts = inner.match(/^([A-Za-z]+)\s*(\d+)$/);
-    if (parts) {
-      const word = parts[1].charAt(0).toUpperCase() + parts[1].slice(1).toLowerCase();
-      return `${word} ${parts[2]}`; // "Grade 5", "grade 5" → "Grade 5"
-    }
-  }
-
-  // PP1 / PP2 normalisation
   if (upper === 'PP1') return 'PP1';
   if (upper === 'PP2') return 'PP2';
 
-  return trimmed;
+  // "Grade N" / "grade N" / "GRADE N" → "Grade N"
+  const match = t.match(/^([A-Za-z]+)\s*(\d+)$/);
+  if (match) {
+    const word = match[1].charAt(0).toUpperCase() + match[1].slice(1).toLowerCase();
+    return `${word} ${match[2]}`;
+  }
+
+  return t;
 }
 
 /**
- * Resolve a grade name to its numeric rank.
- * Returns `null` for unrecognised names.
+ * Resolve a grade name to its numeric rank (position in GRADE_ORDER + 1).
+ * Returns `null` for grades not in the canonical list.
  */
 export function getGradeRank(name: string): number | null {
   const key = normalise(name);
-  const match = CANONICAL_GRADE_RANKS[key];
-  return match ? match.rank : null;
+  return CANONICAL_GRADE_RANKS[key]?.rank ?? null;
 }
 
 /**
@@ -94,49 +99,53 @@ export function getGradeRank(name: string): number | null {
  */
 export function getGradeCategory(name: string): GradeCategory | null {
   const key = normalise(name);
-  const match = CANONICAL_GRADE_RANKS[key];
-  return match ? match.category : null;
+  return CANONICAL_GRADE_RANKS[key]?.category ?? null;
 }
 
 /**
  * Sort an array of grade-like objects using GRADE_ORDER index lookup.
  *
- *   sortGrades(grades)  // grades items have a .name property
+ *   sortGrades(grades)   // items have a .name property
  *
- * Canonical grades (PP1–Grade 9) appear in strict sequential order.
- * Any grade not in GRADE_ORDER is pushed to the end and sorted
- * alphabetically among themselves.
+ * Canonical grades (PP1–Grade 9) appear in strict GRADE_ORDER sequence.
+ * Grades not in GRADE_ORDER are pushed to the end and sorted
+ * alphabetically among themselves.  Returns a new array — the input
+ * is never mutated.
  *
- * Not mutated — returns a new sorted array.
+ * Algorithm:
+ *   1. Split input into [canonical grades] and [others]
+ *   2. Sort canonical by GRADE_ORDER index: aRank - bRank
+ *   3. Sort others alphabetically
+ *   4. Concatenate: canonical (first) + others (last)
  */
 export const sortGrades = <T extends { name: string }>(
   grades: T[],
 ): T[] => {
+  // Step 1 — partition
   const canonical = grades.filter((g) => GRADE_ORDER.includes(normalise(g.name)));
-  const others = grades.filter((g) => !GRADE_ORDER.includes(normalise(g.name)));
+  const others    = grades.filter((g) => !GRADE_ORDER.includes(normalise(g.name)));
 
+  // Step 2 — strict PP1 → Grade 9 sequence via index lookup
   const sortedCanonical = [...canonical].sort((a, b) => {
-    return GRADE_ORDER.indexOf(normalise(a.name)) - GRADE_ORDER.indexOf(normalise(b.name));
+    return GRADE_ORDER.indexOf(normalise(a.name))
+         - GRADE_ORDER.indexOf(normalise(b.name));
   });
 
+  // Step 3 — alphabetical fallback for unknown grades
   const sortedOthers = [...others].sort((a, b) =>
     a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }),
   );
 
+  // Step 4 — canonical first, then others
   return [...sortedCanonical, ...sortedOthers];
 };
 
 /**
- * Stable list of all canonical grade names in ascending order.
- * Useful for dropdown options and defaults.
- */
-export const CANONICAL_GRADE_NAMES_IN_ORDER: string[] = [...GRADE_ORDER];
-
-/**
  * Format a grade name into the canonical display form.
- * "grade 5"  → "Grade 5"
- * "pp1"      → "PP1"
- * "PP2"      → "PP2"
+ *
+ *   "grade 5" → "Grade 5"
+ *   "pp1"     → "PP1"
+ *   "PP2"     → "PP2"
  */
 export const formatGradeName = (name: string): string => {
   return normalise(name);
