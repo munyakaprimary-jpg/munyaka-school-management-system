@@ -288,15 +288,17 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             {!isCollapsed && (
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
+                  type="button"
                   onClick={() => navigate('/settings/profile')}
-                  className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors py-1 px-2 rounded-md hover:bg-gray-100"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors py-1.5 px-2 rounded-md hover:bg-gray-100"
                 >
                   <Settings className="w-4 h-4"/>
                   <span>Settings</span>
                 </button>
                 <button
+                  type="button"
                   onClick={handleLogout}
-                  className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1 px-2 rounded-md hover:bg-red-50"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4"/>
                   <span>Log Out</span>
