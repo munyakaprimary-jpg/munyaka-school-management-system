@@ -125,11 +125,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
-    // NOTE: 'admin' (System Administrator) and 'owner' (School Owner) are strictly separate.
-    // The Dashboard component renders the appropriate view based on exact role match.
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
@@ -137,10 +135,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Award, label: 'Exam Types', path: '/exam-types', roles: ['admin', 'head_teacher'] },
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
-    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin'], requiresPermission: 'manage_ict_systems' },
-    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'super_admin', 'owner'] },
-                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+    { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
+    { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
+                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'super_admin'] },
+            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -167,21 +165,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
-  // Used to enforce that OWNER/SUPER_ADMIN cannot access administrative routes like /fees.
-  // ADMIN/SUPER_ADMIN are NEVER in a BLOCKED_ROUTES list — they have operational access.
-  //
-  // IMPORTANT: 'admin' (System Administrator) and 'owner'/'super_admin' (School Owner)
-  // are strictly separate roles with different access patterns:
-  //   - admin = System Administrator = operational access (can access /fees, /students, etc.)
-  //   - owner / super_admin = School Owner = billing/executive access only
+  // Used to enforce that OWNER cannot access administrative routes like /fees.
+  // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
   const BLOCKED_ROUTES: Record<string, string[]> = {
-      '/fees': ['owner', 'super_admin', 'parent', 'student', 'teacher'],
-      '/system-management': ['owner', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
-      '/admin/control-center': ['owner', 'super_admin'], // operational route — owner/super_admin is billing-only
-      '/lan-config': ['owner', 'super_admin'],            // operational route — owner is billing-only
-      '/students': ['owner', 'super_admin'],              // operational — owner cannot manage learners
-      '/attendance': ['owner', 'super_admin'],            // operational — owner cannot take roll call
-      '/settings': ['owner', 'super_admin'],              // operational — owner has its own profile settings
+      '/fees': ['owner', 'parent', 'student', 'teacher'],
+      '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+      '/admin/control-center': ['owner'], // operational route — owner is billing-only
+      '/lan-config': ['owner'],            // operational route — owner is billing-only
+      '/students': ['owner'],              // operational — owner cannot manage learners
+      '/attendance': ['owner'],            // operational — owner cannot take roll call
+      '/settings': ['owner'],              // operational — owner has its own profile settings
     };
 
   const filteredMenu = menuItems.filter(item => {
@@ -192,21 +185,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Global items are visible to every authenticated user.
     if (item.global) return true;
 
-    // ADMIN (System Administrator) always sees every sidebar item (operational access).
-    // IMPORTANT: 'admin' and 'super_admin' are strictly separate roles.
-    if (roleLower === 'admin') {
+    // ADMIN (and legacy super_admin alias) always sees every sidebar item.
+    if (roleLower === 'admin' || roleLower === 'super_admin') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return true;
     }
 
-    // SUPER_ADMIN / OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
+    // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
     // Central Data, plus global items (Games Hub).
-    // super_admin is treated as an alias for owner (both billing-only).
-    if (roleLower === 'super_admin' || roleLower === 'owner') {
+    if (roleLower === 'owner') {
       if (item.requiresPermission) return canAccessSystemManagement();
-      // Only show items that include 'owner' or 'super_admin' in their roles
-      return item.roles.map(r => r.toLowerCase()).includes('owner') ||
-             item.roles.map(r => r.toLowerCase()).includes('super_admin');
+      return item.roles.map(r => r.toLowerCase()).includes('owner');
     }
 
     // Check if user has the required role
@@ -224,12 +213,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     return true;
   });
 
-  // ── Dashboard enforcement for the OWNER/SUPER_ADMIN role ──────────────────
+  // ── Dashboard enforcement for the OWNER role ───────────────────────────────
   // Guarantee that the owner always sees Dashboard as the first menu item,
   // regardless of the upstream filter result. This is a safety net so the
   // owner can never be locked out of their executive dashboard.
-  const ownerNormalized = (user?.role ?? '').toLowerCase() === 'owner' ||
-                          (user?.role ?? '').toLowerCase() === 'super_admin';
+  const ownerNormalized = (user?.role ?? '').toLowerCase() === 'owner';
   const dashboardAlreadyInMenu = filteredMenu.some(
     (i) => i.path === '/' || i.path === '/dashboard',
   );
@@ -239,20 +227,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       : filteredMenu;
 
   // Bottom Navigation Bar Quick Links - Filtered by user role.
-    // OWNER/SUPER_ADMIN is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
-    // OWNER/SUPER_ADMIN explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
+    // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
+    // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
     // Settings, Licensing, Promote — those are operational routes.
-    // ADMIN (System Administrator) has full operational access.
     const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'super_admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
       { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
       { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'super_admin', 'owner'] },
+      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
           { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
       { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {

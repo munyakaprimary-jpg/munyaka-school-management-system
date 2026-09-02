@@ -68,9 +68,7 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  // STRICT role mapping: 'system_admin' logs in as 'admin' (System Administrator),
-  // 'super_admin' logs in as 'owner' (School Owner). These are strictly separate roles.
-  userRole: 'admin' | 'owner';
+  userRole: 'owner' | 'super_admin';
   redirectPath: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   primaryColor: 'indigo' | 'amber';
@@ -84,8 +82,8 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'System Administrator',
-    userRole: 'admin',
-    redirectPath: '/dashboard',
+    userRole: 'super_admin',
+    redirectPath: '/system-management',
     icon: Settings2,
     primaryColor: 'indigo',
   },

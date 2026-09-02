@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
-import SystemAdminDashboard from '@/components/dashboards/SystemAdminDashboard';
 import {
   Users,
   UserCheck,
@@ -451,74 +450,124 @@ const TeacherDashboard: React.FC = () => {
   );
 };
 
+// ─── Role: Admin Dashboard ────────────────────────────────────────────────────
+
+const AdminDashboard: React.FC = () => {
+  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
+
+  const feesCollected = useMemo(() => {
+    const txRaw = localStorage.getItem('munyaka_transactions');
+    if (!txRaw) return 'KES 0';
+    try {
+      const list: any[] = JSON.parse(txRaw);
+      const total = list
+        .filter((t: any) => t?.status === 'paid' || t?.paidAt)
+        .reduce((s: number, t: any) => s + (Number(t?.amount) || 0), 0);
+      return `KES ${total.toLocaleString()}`;
+    } catch {
+      return 'KES 0';
+    }
+  }, [totalStudents]);
+
+  return (
+    <div className="space-y-8 pb-10">
+      {/* ── System Vitals Cards ── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={Users}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-500"
+          title="Total Students"
+          value={isLoading ? '—' : totalStudents.toString()}
+        />
+        <StatCard
+          icon={UserIcon}
+          iconBg="bg-indigo-50"
+          iconColor="text-indigo-500"
+          title="Total Teachers"
+          value={isLoading ? '—' : totalTeachers.toString()}
+        />
+        <StatCard
+          icon={UserCheck}
+          iconBg="bg-green-50"
+          iconColor="text-green-500"
+          title="Today's Attendance"
+          value={isLoading ? '—' : `${todayAttendanceRate}%`}
+        />
+        <StatCard
+          icon={GraduationCap}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-500"
+          title="Junior School"
+          value={isLoading ? '—' : Math.max(0, Math.floor(totalStudents * 0.25)).toString()}
+        />
+        <StatCard
+          icon={Activity}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-500"
+          title="System Status"
+          value="Live"
+        />
+        <StatCard
+          icon={DollarSign}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          title="Fees Collected"
+          value={isLoading ? '—' : feesCollected}
+        />
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 /**
  * Top-level Dashboard component.
  *
- * Reads the current user's role and renders the role-specific view using
- * STRICT string equality checks. 'admin' and 'owner'/'super_admin' are
- * treated as two strictly separate roles:
- *   • owner / super_admin  → Owner Dashboard (billing, subscriptions, executive)
- *   • admin                → System Admin Dashboard (students, staff, fees, ops)
- *   • teacher              → Teacher Dashboard (marks, attendance, timetable)
- *   • head_teacher         → System Admin Dashboard (operational admin)
- *   • bursar               → System Admin Dashboard (operational admin)
+ * Reads the current user's role and renders the role-specific view:
+ *   • teacher  → quick action tiles (Enter Marks, Mark Attendance, Timetable)
+ *                 + LAN sync status + notice feed
+ *   • admin     → system-wide statistics (total students, teachers,
+ *                 attendance, fees, etc.)
  *
- * IMPORTANT: 'admin' and 'owner' are NOT interchangeable. Each renders a
- * dedicated dashboard component, with NO fallback that defaults to Owner.
+ * The header title is dynamic:
+ *   • "Teacher's Dashboard" for the teacher role
+ *   • "Dashboard" for every other role
+ *
+ * No fallback "Limited Access" banner — non-teacher / non-admin users
+ * are not expected to land on this page (route guards handle them).
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const role = user?.role;
 
-  // STRICT role-based dispatch. Each branch uses exact string equality
-  // so 'admin' and 'owner' can never accidentally fall through to each other.
-
-  // Owner / super_admin — billing & executive dashboard
-  if (role === 'owner' || role === 'super_admin') {
+  // Owner sees the full Owner Dashboard; no wrapper header needed there
+  if (role === 'owner') {
     return <OwnerDashboard />;
   }
 
-  // System Administrator — operational admin dashboard
-  if (role === 'admin') {
-    return <SystemAdminDashboard />;
-  }
+  const title = role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
 
-  // Head Teacher and Bursar — operational admin-style dashboard
-  if (role === 'head_teacher' || role === 'bursar') {
-    return <SystemAdminDashboard />;
-  }
-
-  // Teacher — classroom-focused dashboard
-  if (role === 'teacher') {
-    return (
-      <div className="space-y-6">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-              Teacher's Dashboard
-            </h1>
-            <p className="text-muted-foreground mt-1">
-              Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
-            </p>
-          </div>
-          <LiveBadge label="TEACHER SYNC" />
+  return (
+    <div className="space-y-6">
+      {/* ── Dynamic Header ── */}
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+            {title}
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
+          </p>
         </div>
-        <TeacherDashboard />
+        <LiveBadge label={role === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
       </div>
-    );
-  }
 
-  // Fallback for unknown roles (e.g. parent, student) — render a generic
-  // dashboard with admin-style summary. Do NOT fall through to Owner.
-  if (role === 'parent' || role === 'student') {
-    return <SystemAdminDashboard />;
-  }
-
-  // Truly unknown role — render SystemAdminDashboard as the safe default.
-  // NEVER default to OwnerDashboard for unknown roles.
-  return <SystemAdminDashboard />;
+      {/* ── Role-Based View Switch ── */}
+      {role === 'teacher' ? <TeacherDashboard /> : <AdminDashboard />}
+    </div>
+  );
 };
 
 export default Dashboard;

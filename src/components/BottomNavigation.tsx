@@ -28,19 +28,17 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  // ADMIN (System Administrator) has full operational access.
-  // OWNER/SUPER_ADMIN is billing-only — gets Dashboard + Payments only.
-  // 'admin' and 'owner'/'super_admin' are strictly separate roles.
-  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'super_admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+  // ADMIN has unrestricted access to every navigation item
+  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
   { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
   { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'super_admin', 'owner'] },
-  { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'super_admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+  { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Wifi, label: 'LAN', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin', 'head_teacher'] },
-  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
 ];
 

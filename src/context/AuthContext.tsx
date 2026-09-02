@@ -13,7 +13,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 
-export type UserRole = 'owner' | 'super_admin' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -69,7 +69,7 @@ const DEFAULT_SYSTEM_ADMIN = {
     name: 'System Administrator',
     email: 'sysadmin@munyaka.sc.ke',
     phone: '+254 700 000 001',
-    role: 'admin' as UserRole,
+    role: 'super_admin' as UserRole,
     avatar: 'SA'
   }
 };
@@ -96,13 +96,12 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
       return 'owner';
     case 'super_admin':
       return 'super_admin';
-    case 'admin':
-    case 'support_admin':
-      return 'admin';
     case 'head_teacher':
       return 'head_teacher';
     case 'bursar':
       return 'bursar';
+    case 'support_admin':
+      return 'super_admin';
     case 'senior_teacher':
     case 'class_teacher':
     case 'subject_teacher':
