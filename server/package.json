@@ -2,15 +2,15 @@
   "name": "munyaka-lan-server",
   "version": "1.0.0",
   "type": "module",
-  "description": "LAN School Management System Backend Server",
+  "description": "LAN School Management System Backend Server - Pure JavaScript, no native compilation required",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
   "dependencies": {
-    "express": "^4.21.0",
-    "better-sqlite3": "^11.3.0",
-    "cors": "^2.8.5"
-  }
+      "express": "^4.21.0",
+      "sql.js": "^1.10.3",
+      "cors": "^2.8.5"
+    }
 }

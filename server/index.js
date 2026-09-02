@@ -1,9 +1,10 @@
 // LAN School Management System - Express Backend Server
+// Pure JavaScript implementation using sql.js (no native compilation required)
 // Run with: node server/index.js
-// Make sure to install dependencies: npm install express better-sqlite3 cors
+// First install: cd server && npm install
 
 import express from 'express';
-import Database from 'better-sqlite3';
+import initSqlJs from 'sql.js';
 import cors from 'cors';
 import os from 'os';
 import fs from 'fs';
@@ -27,17 +28,123 @@ if (!fs.existsSync(dataDir)) {
 // Initialize Express
 const app = express();
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
 
-// Initialize SQLite Database
-const db = new Database(DB_PATH);
+// ============================================
+// SQLite Database Setup using sql.js
+// ============================================
 
-// Enable foreign keys
-db.pragma('foreign_keys = ON');
+let db = null;
+let SQL = null;
 
-// Initialize database schema
+/**
+ * Load or initialize the SQL.js database
+ */
+const loadDatabase = async () => {
+  SQL = await initSqlJs();
+
+  // Try to load existing database
+  if (fs.existsSync(DB_PATH)) {
+    try {
+      const fileBuffer = fs.readFileSync(DB_PATH);
+      db = new SQL.Database(fileBuffer);
+      console.log('✓ Loaded existing database');
+    } catch (err) {
+      console.warn('Could not load existing database, creating new one:', err.message);
+      db = new SQL.Database();
+    }
+  } else {
+    db = new SQL.Database();
+    console.log('✓ Created new database');
+  }
+};
+
+/**
+ * Save database to disk
+ */
+const saveDatabase = () => {
+  try {
+    if (db) {
+      const data = db.export();
+      const buffer = Buffer.from(data);
+      fs.writeFileSync(DB_PATH, buffer);
+    }
+  } catch (err) {
+    console.error('Failed to save database:', err.message);
+  }
+};
+
+/**
+ * Execute a SELECT query and return all rows as objects
+ */
+const dbAll = (sql, params = []) => {
+  try {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const results = [];
+    while (stmt.step()) {
+      results.push(stmt.getAsObject());
+    }
+    stmt.free();
+    return results;
+  } catch (err) {
+    console.error('dbAll error:', err.message, '\nSQL:', sql);
+    return [];
+  }
+};
+
+/**
+ * Execute a SELECT query and return first row
+ */
+const dbGet = (sql, params = []) => {
+  try {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    const result = stmt.step() ? stmt.getAsObject() : null;
+    stmt.free();
+    return result;
+  } catch (err) {
+    console.error('dbGet error:', err.message, '\nSQL:', sql);
+    return null;
+  }
+};
+
+/**
+ * Execute an INSERT/UPDATE/DELETE query
+ * Returns { lastInsertRowid, changes }
+ */
+const dbRun = (sql, params = []) => {
+  try {
+    const stmt = db.prepare(sql);
+    stmt.bind(params);
+    stmt.step();
+    const changes = db.getRowsModified();
+    const lastInsertRowid = changes > 0 ? db.exec('SELECT last_insert_rowid() as id')[0]?.values[0][0] : null;
+    stmt.free();
+    return { lastInsertRowid, changes };
+  } catch (err) {
+    console.error('dbRun error:', err.message, '\nSQL:', sql, '\nParams:', JSON.stringify(params));
+    throw err;
+  }
+};
+
+/**
+ * Execute multiple SQL statements (for schema init)
+ */
+const dbExec = (sql) => {
+  try {
+    db.exec(sql);
+  } catch (err) {
+    console.error('dbExec error:', err.message);
+    throw err;
+  }
+};
+
+/**
+ * Initialize database schema
+ */
 const initDB = () => {
-  db.exec(`
+  const schema = `
     -- Users table
     CREATE TABLE IF NOT EXISTS users (
       id TEXT PRIMARY KEY,
@@ -161,38 +268,51 @@ const initDB = () => {
       created_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
 
-    -- Create indexes for better performance
+    -- Indexes for better performance
     CREATE INDEX IF NOT EXISTS idx_students_admission ON students(admission_no);
     CREATE INDEX IF NOT EXISTS idx_students_grade ON students(grade);
     CREATE INDEX IF NOT EXISTS idx_attendance_date ON attendance(date);
     CREATE INDEX IF NOT EXISTS idx_attendance_student ON attendance(student_id);
     CREATE INDEX IF NOT EXISTS idx_fees_student ON fees(student_id);
     CREATE INDEX IF NOT EXISTS idx_sync_queue_device ON sync_queue(device_id);
-  `);
+  `;
+
+  dbExec(schema);
 
   // Insert default admin user if not exists
-  const adminExists = db.prepare('SELECT id FROM users WHERE role = ?').get('admin');
+  const adminExists = dbGet('SELECT id FROM users WHERE role = ?', ['admin']);
   if (!adminExists) {
-    db.prepare(`
-      INSERT INTO users (id, name, email, phone, role, password)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(
-      'admin-001',
-      'School Administrator',
-      'admin@munyaka.local',
-      '+254 700 000 000',
-      'admin',
-      'admin123'
+    dbRun(
+      `INSERT INTO users (id, name, email, phone, role, password) VALUES (?, ?, ?, ?, ?, ?)`,
+      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', 'admin123']
     );
   }
+
+  saveDatabase();
 };
 
-initDB();
+// Periodic auto-save every 30 seconds
+setInterval(saveDatabase, 30000);
 
-// Helper function to generate UUID
+// Save on exit
+process.on('SIGINT', () => {
+  saveDatabase();
+  console.log('\n✓ Database saved. Server shutting down.');
+  process.exit(0);
+});
+
+process.on('SIGTERM', () => {
+  saveDatabase();
+  console.log('\n✓ Database saved. Server shutting down.');
+  process.exit(0);
+});
+
+// ============================================
+// Helper functions
+// ============================================
+
 const generateId = () => crypto.randomUUID();
 
-// Get local IP address
 const getLocalIP = () => {
   const interfaces = os.networkInterfaces();
   for (const name of Object.keys(interfaces)) {
@@ -205,7 +325,9 @@ const getLocalIP = () => {
   return '127.0.0.1';
 };
 
-// ============ STUDENTS API ============
+// ============================================
+// STUDENTS API
+// ============================================
 
 // Get all students
 app.get('/api/students', (req, res) => {
@@ -229,7 +351,7 @@ app.get('/api/students', (req, res) => {
     }
 
     query += ' ORDER BY last_name, first_name';
-    const students = db.prepare(query).all(...params);
+    const students = dbAll(query, params);
     res.json({ success: true, data: students });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -239,7 +361,7 @@ app.get('/api/students', (req, res) => {
 // Get single student
 app.get('/api/students/:id', (req, res) => {
   try {
-    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
+    const student = dbGet('SELECT * FROM students WHERE id = ?', [req.params.id]);
     if (!student) {
       return res.status(404).json({ success: false, error: 'Student not found' });
     }
@@ -258,12 +380,14 @@ app.post('/api/students', (req, res) => {
       date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address
     } = req.body;
 
-    db.prepare(`
-      INSERT INTO students (id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address);
+    dbRun(
+      `INSERT INTO students (id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address]
+    );
 
-    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(id);
+    saveDatabase();
+    const student = dbGet('SELECT * FROM students WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: student });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -275,19 +399,33 @@ app.put('/api/students/:id', (req, res) => {
   try {
     const { admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address, is_active } = req.body;
 
-    db.prepare(`
-      UPDATE students SET admission_no=?, first_name=?, middle_name=?, last_name=?, gender=?, date_of_birth=?, grade=?, stream=?, parent_name=?, parent_phone=?, parent_email=?, address=?, is_active=?, updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address, is_active, req.params.id);
+    dbRun(
+      `UPDATE students SET admission_no=?, first_name=?, middle_name=?, last_name=?, gender=?, date_of_birth=?, grade=?, stream=?, parent_name=?, parent_phone=?, parent_email=?, address=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address, is_active, req.params.id]
+    );
 
-    const student = db.prepare('SELECT * FROM students WHERE id = ?').get(req.params.id);
+    saveDatabase();
+    const student = dbGet('SELECT * FROM students WHERE id = ?', [req.params.id]);
     res.json({ success: true, data: student });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ TEACHERS API ============
+// Delete student
+app.delete('/api/students/:id', (req, res) => {
+  try {
+    dbRun('DELETE FROM students WHERE id = ?', [req.params.id]);
+    saveDatabase();
+    res.json({ success: true, message: 'Student deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// TEACHERS API
+// ============================================
 
 // Get all teachers
 app.get('/api/teachers', (req, res) => {
@@ -307,7 +445,7 @@ app.get('/api/teachers', (req, res) => {
     }
 
     query += ' ORDER BY last_name, first_name';
-    const teachers = db.prepare(query).all(...params);
+    const teachers = dbAll(query, params);
     res.json({ success: true, data: teachers });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -317,7 +455,7 @@ app.get('/api/teachers', (req, res) => {
 // Get single teacher
 app.get('/api/teachers/:id', (req, res) => {
   try {
-    const teacher = db.prepare('SELECT * FROM teachers WHERE id = ?').get(req.params.id);
+    const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [req.params.id]);
     if (!teacher) {
       return res.status(404).json({ success: false, error: 'Teacher not found' });
     }
@@ -336,12 +474,14 @@ app.post('/api/teachers', (req, res) => {
       id_number, subject_specialization, grade_assigned, stream_assigned
     } = req.body;
 
-    db.prepare(`
-      INSERT INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned);
+    dbRun(
+      `INSERT INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned]
+    );
 
-    const teacher = db.prepare('SELECT * FROM teachers WHERE id = ?').get(id);
+    saveDatabase();
+    const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: teacher });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -353,19 +493,33 @@ app.put('/api/teachers/:id', (req, res) => {
   try {
     const { staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active } = req.body;
 
-    db.prepare(`
-      UPDATE teachers SET staff_id=?, first_name=?, last_name=?, email=?, phone=?, gender=?, id_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id);
+    dbRun(
+      `UPDATE teachers SET staff_id=?, first_name=?, last_name=?, email=?, phone=?, gender=?, id_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id]
+    );
 
-    const teacher = db.prepare('SELECT * FROM teachers WHERE id = ?').get(req.params.id);
+    saveDatabase();
+    const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [req.params.id]);
     res.json({ success: true, data: teacher });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ ATTENDANCE API ============
+// Delete teacher
+app.delete('/api/teachers/:id', (req, res) => {
+  try {
+    dbRun('DELETE FROM teachers WHERE id = ?', [req.params.id]);
+    saveDatabase();
+    res.json({ success: true, message: 'Teacher deleted' });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// ATTENDANCE API
+// ============================================
 
 // Get attendance records
 app.get('/api/attendance', (req, res) => {
@@ -392,40 +546,43 @@ app.get('/api/attendance', (req, res) => {
     }
 
     query += ' ORDER BY date DESC, created_at DESC';
-    const attendance = db.prepare(query).all(...params);
+    const attendance = dbAll(query, params);
     res.json({ success: true, data: attendance });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Record attendance
+// Record attendance (single)
 app.post('/api/attendance', (req, res) => {
   try {
-    const id = generateId();
     const { student_id, teacher_id, type, date, status, remarks, marked_by, device_id } = req.body;
 
     // Check for duplicate
-    const existing = db.prepare(
-      'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?'
-    ).get(student_id, teacher_id, type, date);
+    const existing = dbGet(
+      'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?',
+      [student_id, teacher_id, type, date]
+    );
 
     if (existing) {
-      // Update existing record
-      db.prepare(`
-        UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced'
-        WHERE id=?
-      `).run(status, remarks, marked_by, device_id, existing.id);
-      const record = db.prepare('SELECT * FROM attendance WHERE id = ?').get(existing.id);
+      dbRun(
+        `UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced' WHERE id=?`,
+        [status, remarks, marked_by, device_id, existing.id]
+      );
+      saveDatabase();
+      const record = dbGet('SELECT * FROM attendance WHERE id = ?', [existing.id]);
       return res.json({ success: true, data: record, updated: true });
     }
 
-    db.prepare(`
-      INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id);
+    const id = generateId();
+    dbRun(
+      `INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id]
+    );
 
-    const record = db.prepare('SELECT * FROM attendance WHERE id = ?').get(id);
+    saveDatabase();
+    const record = dbGet('SELECT * FROM attendance WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: record });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -436,36 +593,39 @@ app.post('/api/attendance', (req, res) => {
 app.post('/api/attendance/bulk', (req, res) => {
   try {
     const { records } = req.body;
-    const insertStmt = db.prepare(`
-      INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `);
+    let processed = 0;
 
-    const insertMany = db.transaction((records) => {
-      for (const record of records) {
-        const existing = db.prepare(
-          'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?'
-        ).get(record.student_id, record.teacher_id, record.type, record.date);
+    for (const record of records) {
+      const existing = dbGet(
+        'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?',
+        [record.student_id, record.teacher_id, record.type, record.date]
+      );
 
-        if (existing) {
-          db.prepare(`
-            UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced'
-            WHERE id=?
-          `).run(record.status, record.remarks, record.marked_by, record.device_id, existing.id);
-        } else {
-          insertStmt.run(generateId(), record.student_id, record.teacher_id, record.type, record.date, record.status, record.remarks, record.marked_by, record.device_id);
-        }
+      if (existing) {
+        dbRun(
+          `UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced' WHERE id=?`,
+          [record.status, record.remarks, record.marked_by, record.device_id, existing.id]
+        );
+      } else {
+        dbRun(
+          `INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [generateId(), record.student_id, record.teacher_id, record.type, record.date, record.status, record.remarks, record.marked_by, record.device_id]
+        );
       }
-    });
+      processed++;
+    }
 
-    insertMany(records);
-    res.json({ success: true, count: records.length });
+    saveDatabase();
+    res.json({ success: true, count: processed });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ FEES API ============
+// ============================================
+// FEES API
+// ============================================
 
 // Get fee records
 app.get('/api/fees', (req, res) => {
@@ -492,7 +652,7 @@ app.get('/api/fees', (req, res) => {
     }
 
     query += ' ORDER BY due_date DESC';
-    const fees = db.prepare(query).all(...params);
+    const fees = dbAll(query, params);
     res.json({ success: true, data: fees });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -502,7 +662,7 @@ app.get('/api/fees', (req, res) => {
 // Get single fee
 app.get('/api/fees/:id', (req, res) => {
   try {
-    const fee = db.prepare('SELECT * FROM fees WHERE id = ?').get(req.params.id);
+    const fee = dbGet('SELECT * FROM fees WHERE id = ?', [req.params.id]);
     if (!fee) {
       return res.status(404).json({ success: false, error: 'Fee record not found' });
     }
@@ -518,12 +678,14 @@ app.post('/api/fees', (req, res) => {
     const id = generateId();
     const { student_id, description, amount, balance, term, year, due_date } = req.body;
 
-    db.prepare(`
-      INSERT INTO fees (id, student_id, description, amount, balance, term, year, due_date)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(id, student_id, description, amount, balance || amount, term, year, due_date);
+    dbRun(
+      `INSERT INTO fees (id, student_id, description, amount, balance, term, year, due_date)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, student_id, description, amount, balance || amount, term, year, due_date]
+    );
 
-    const fee = db.prepare('SELECT * FROM fees WHERE id = ?').get(id);
+    saveDatabase();
+    const fee = dbGet('SELECT * FROM fees WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: fee });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -533,27 +695,31 @@ app.post('/api/fees', (req, res) => {
 // Record payment
 app.post('/api/fees/:id/payment', (req, res) => {
   try {
-    const { amount, payment_date, payment_method, recorded_by } = req.body;
+    const { amount, payment_date, payment_method, recorded_by, student_id } = req.body;
     const receipt_no = `RCP-${Date.now()}`;
-
     const paymentId = generateId();
-    db.prepare(`
-      INSERT INTO fee_payments (id, fee_id, student_id, amount, payment_date, payment_method, receipt_no, recorded_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(paymentId, req.params.id, req.body.student_id, amount, payment_date, payment_method, receipt_no, recorded_by);
+
+    dbRun(
+      `INSERT INTO fee_payments (id, fee_id, student_id, amount, payment_date, payment_method, receipt_no, recorded_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [paymentId, req.params.id, student_id, amount, payment_date, payment_method, receipt_no, recorded_by]
+    );
 
     // Update fee balance
-    const fee = db.prepare('SELECT * FROM fees WHERE id = ?').get(req.params.id);
-    const newBalance = (fee.balance || 0) - amount;
-    const newStatus = newBalance <= 0 ? 'paid' : 'partial';
+    const fee = dbGet('SELECT * FROM fees WHERE id = ?', [req.params.id]);
+    if (fee) {
+      const newBalance = Math.max(0, (fee.balance || 0) - amount);
+      const newStatus = newBalance <= 0 ? 'paid' : 'partial';
 
-    db.prepare(`
-      UPDATE fees SET balance=?, status=?, updated_at=CURRENT_TIMESTAMP
-      WHERE id=?
-    `).run(Math.max(0, newBalance), newStatus, req.params.id);
+      dbRun(
+        `UPDATE fees SET balance=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+        [newBalance, newStatus, req.params.id]
+      );
+    }
 
-    const updatedFee = db.prepare('SELECT * FROM fees WHERE id = ?').get(req.params.id);
-    const payment = db.prepare('SELECT * FROM fee_payments WHERE id = ?').get(paymentId);
+    saveDatabase();
+    const updatedFee = dbGet('SELECT * FROM fees WHERE id = ?', [req.params.id]);
+    const payment = dbGet('SELECT * FROM fee_payments WHERE id = ?', [paymentId]);
 
     res.status(201).json({ success: true, data: { fee: updatedFee, payment } });
   } catch (error) {
@@ -561,7 +727,9 @@ app.post('/api/fees/:id/payment', (req, res) => {
   }
 });
 
-// ============ SYNC API ============
+// ============================================
+// DEVICES API
+// ============================================
 
 // Register device
 app.post('/api/devices/register', (req, res) => {
@@ -569,32 +737,39 @@ app.post('/api/devices/register', (req, res) => {
     const { device_id, device_name, device_type, ip_address } = req.body;
     const now = new Date().toISOString();
 
-    db.prepare(`
-      INSERT INTO connected_devices (id, device_id, device_name, device_type, last_seen, ip_address, status)
-      VALUES (?, ?, ?, ?, ?, ?, 'online')
-      ON CONFLICT(device_id) DO UPDATE SET
-        last_seen = excluded.last_seen,
-        ip_address = excluded.ip_address,
-        device_name = COALESCE(excluded.device_name, connected_devices.device_name),
-        status = 'online'
-    `).run(generateId(), device_id, device_name, device_type, now, ip_address);
+    // Check if device exists
+    const existing = dbGet('SELECT id FROM connected_devices WHERE device_id = ?', [device_id]);
 
+    if (existing) {
+      dbRun(
+        `UPDATE connected_devices SET last_seen=?, ip_address=?, device_name=COALESCE(?, device_name), status='online' WHERE device_id=?`,
+        [now, ip_address, device_name, device_id]
+      );
+    } else {
+      dbRun(
+        `INSERT INTO connected_devices (id, device_id, device_name, device_type, last_seen, ip_address, status)
+         VALUES (?, ?, ?, ?, ?, ?, 'online')`,
+        [generateId(), device_id, device_name, device_type, now, ip_address]
+      );
+    }
+
+    saveDatabase();
     res.json({ success: true, message: 'Device registered' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// Heartbeat to keep device alive
+// Heartbeat
 app.post('/api/devices/heartbeat', (req, res) => {
   try {
     const { device_id } = req.body;
     const now = new Date().toISOString();
 
-    db.prepare(`
-      UPDATE connected_devices SET last_seen = ?, status = 'online'
-      WHERE device_id = ?
-    `).run(now, device_id);
+    dbRun(
+      `UPDATE connected_devices SET last_seen=?, status='online' WHERE device_id=?`,
+      [now, device_id]
+    );
 
     res.json({ success: true });
   } catch (error) {
@@ -605,18 +780,9 @@ app.post('/api/devices/heartbeat', (req, res) => {
 // Get connected devices
 app.get('/api/devices', (req, res) => {
   try {
-    const devices = db.prepare(`
-      SELECT *, 
-        CASE 
-          WHEN datetime(last_seen) < datetime('now', '-5 minutes') THEN 'offline'
-          ELSE 'online'
-        END as current_status
-      FROM connected_devices
-      ORDER BY last_seen DESC
-    `).all();
-
-    // Update status based on last_seen
+    const devices = dbAll(`SELECT * FROM connected_devices ORDER BY last_seen DESC`);
     const now = new Date();
+
     const updatedDevices = devices.map(d => {
       const lastSeen = new Date(d.last_seen);
       const diffMinutes = (now - lastSeen) / (1000 * 60);
@@ -632,7 +798,11 @@ app.get('/api/devices', (req, res) => {
   }
 });
 
-// Sync offline queue
+// ============================================
+// SYNC API
+// ============================================
+
+// Sync offline records
 app.post('/api/sync', (req, res) => {
   try {
     const { device_id, records } = req.body;
@@ -644,23 +814,61 @@ app.post('/api/sync', (req, res) => {
 
       try {
         if (type === 'attendance') {
-          const existing = db.prepare(
-            'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?'
-          ).get(data.student_id, data.teacher_id, data.type, data.date);
+          const existing = dbGet(
+            'SELECT id FROM attendance WHERE student_id = ? AND teacher_id = ? AND type = ? AND date = ?',
+            [data.student_id, data.teacher_id, data.type, data.date]
+          );
 
           if (existing) {
-            db.prepare(`
-              UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced'
-              WHERE id=?
-            `).run(data.status, data.remarks, data.marked_by, device_id, existing.id);
+            dbRun(
+              `UPDATE attendance SET status=?, remarks=?, marked_by=?, device_id=?, sync_status='synced' WHERE id=?`,
+              [data.status, data.remarks, data.marked_by, device_id, existing.id]
+            );
             results.push({ id: existing.id, status: 'updated', originalId: data.id });
           } else {
             const id = data.id || generateId();
-            db.prepare(`
-              INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id, sync_status)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')
-            `).run(id, data.student_id, data.teacher_id, data.type, data.date, data.status, data.remarks, data.marked_by, device_id);
+            dbRun(
+              `INSERT INTO attendance (id, student_id, teacher_id, type, date, status, remarks, marked_by, device_id, sync_status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced')`,
+              [id, data.student_id, data.teacher_id, data.type, data.date, data.status, data.remarks, data.marked_by, device_id]
+            );
             results.push({ id, status: 'created', originalId: data.id });
+          }
+        } else if (type === 'fee') {
+          if (data.id) {
+            const existing = dbGet('SELECT id FROM fees WHERE id = ?', [data.id]);
+            if (existing) {
+              dbRun(
+                `UPDATE fees SET description=?, amount=?, balance=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+                [data.description, data.amount, data.balance, data.status, data.id]
+              );
+              results.push({ id: data.id, status: 'updated' });
+            } else {
+              dbRun(
+                `INSERT INTO fees (id, student_id, description, amount, balance, term, year, due_date, status)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [data.id, data.student_id, data.description, data.amount, data.balance, data.term, data.year, data.due_date, data.status]
+              );
+              results.push({ id: data.id, status: 'created' });
+            }
+          }
+        } else if (type === 'student') {
+          if (data.id) {
+            const existing = dbGet('SELECT id FROM students WHERE id = ?', [data.id]);
+            if (existing) {
+              dbRun(
+                `UPDATE students SET admission_no=?, first_name=?, middle_name=?, last_name=?, gender=?, grade=?, stream=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+                [data.admission_no, data.first_name, data.middle_name, data.last_name, data.gender, data.grade, data.stream, data.id]
+              );
+              results.push({ id: data.id, status: 'updated' });
+            } else {
+              dbRun(
+                `INSERT INTO students (id, admission_no, first_name, middle_name, last_name, gender, grade, stream)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+                [data.id, data.admission_no, data.first_name, data.middle_name, data.last_name, data.gender, data.grade, data.stream]
+              );
+              results.push({ id: data.id, status: 'created' });
+            }
           }
         }
       } catch (err) {
@@ -669,29 +877,32 @@ app.post('/api/sync', (req, res) => {
     }
 
     // Add to sync queue for audit
-    db.prepare(`
-      INSERT INTO sync_queue (id, device_id, data_type, data_json, synced_at)
-      VALUES (?, ?, 'bulk_sync', ?, ?)
-    `).run(generateId(), device_id, JSON.stringify(records), now);
+    dbRun(
+      `INSERT INTO sync_queue (id, device_id, data_type, data_json, synced_at) VALUES (?, ?, 'bulk_sync', ?, ?)`,
+      [generateId(), device_id, JSON.stringify(records), now]
+    );
 
+    saveDatabase();
     res.json({ success: true, results });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ DATABASE MANAGEMENT API ============
+// ============================================
+// DATABASE MANAGEMENT API
+// ============================================
 
 // Get database stats
 app.get('/api/stats', (req, res) => {
   try {
     const stats = {
-      students: db.prepare('SELECT COUNT(*) as count FROM students WHERE is_active = 1').get().count,
-      teachers: db.prepare('SELECT COUNT(*) as count FROM teachers WHERE is_active = 1').get().count,
-      attendance_today: db.prepare("SELECT COUNT(*) as count FROM attendance WHERE date = date('now')").get().count,
-      pending_fees: db.prepare("SELECT COUNT(*) as count FROM fees WHERE status IN ('pending', 'partial', 'overdue')").get().count,
-      connected_devices: db.prepare("SELECT COUNT(*) as count FROM connected_devices WHERE datetime(last_seen) > datetime('now', '-5 minutes')").get().count,
-      pending_sync: db.prepare("SELECT COUNT(*) as count FROM sync_queue WHERE synced_at IS NULL").get().count
+      students: dbGet('SELECT COUNT(*) as count FROM students WHERE is_active = 1')?.count || 0,
+      teachers: dbGet('SELECT COUNT(*) as count FROM teachers WHERE is_active = 1')?.count || 0,
+      attendance_today: dbGet(`SELECT COUNT(*) as count FROM attendance WHERE date = date('now')`)?.count || 0,
+      pending_fees: dbGet(`SELECT COUNT(*) as count FROM fees WHERE status IN ('pending', 'partial', 'overdue')`)?.count || 0,
+      connected_devices: dbGet(`SELECT COUNT(*) as count FROM connected_devices WHERE datetime(last_seen) > datetime('now', '-5 minutes')`)?.count || 0,
+      pending_sync: dbGet(`SELECT COUNT(*) as count FROM sync_queue WHERE synced_at IS NULL`)?.count || 0
     };
     res.json({ success: true, data: stats });
   } catch (error) {
@@ -699,17 +910,18 @@ app.get('/api/stats', (req, res) => {
   }
 });
 
-// Backup database
+// Backup database (JSON export)
 app.get('/api/backup', (req, res) => {
   try {
     const backup = {
       version: '1.0',
       timestamp: new Date().toISOString(),
-      students: db.prepare('SELECT * FROM students').all(),
-      teachers: db.prepare('SELECT * FROM teachers').all(),
-      attendance: db.prepare('SELECT * FROM attendance').all(),
-      fees: db.prepare('SELECT * FROM fees').all(),
-      fee_payments: db.prepare('SELECT * FROM fee_payments').all()
+      students: dbAll('SELECT * FROM students'),
+      teachers: dbAll('SELECT * FROM teachers'),
+      attendance: dbAll('SELECT * FROM attendance'),
+      fees: dbAll('SELECT * FROM fees'),
+      fee_payments: dbAll('SELECT * FROM fee_payments'),
+      users: dbAll('SELECT id, name, email, phone, role, staff_id, is_active FROM users')
     };
 
     const filename = `munyaka-backup-${new Date().toISOString().split('T')[0]}.json`;
@@ -721,43 +933,73 @@ app.get('/api/backup', (req, res) => {
   }
 });
 
+// Backup as SQLite file download
+app.get('/api/backup/db', (req, res) => {
+  try {
+    const data = db.export();
+    const filename = `munyaka-db-${new Date().toISOString().split('T')[0]}.sqlite`;
+    res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    res.setHeader('Content-Type', 'application/octet-stream');
+    res.send(Buffer.from(data));
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Restore from backup
 app.post('/api/backup/restore', (req, res) => {
   try {
-    const { students, teachers, attendance, fees, fee_payments } = req.body;
+    const { students, teachers, attendance, fees, fee_payments, users } = req.body;
 
-    const restore = db.transaction(() => {
-      if (students) {
-        for (const s of students) {
-          db.prepare(`
-            INSERT OR REPLACE INTO students (id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(s.id, s.admission_no, s.first_name, s.middle_name, s.last_name, s.gender, s.date_of_birth, s.grade, s.stream, s.parent_name, s.parent_phone, s.parent_email, s.address, s.is_active, s.created_at, new Date().toISOString());
+    if (students && Array.isArray(students)) {
+      for (const s of students) {
+        const existing = dbGet('SELECT id FROM students WHERE id = ?', [s.id]);
+        if (existing) {
+          dbRun(
+            `UPDATE students SET admission_no=?, first_name=?, middle_name=?, last_name=?, gender=?, date_of_birth=?, grade=?, stream=?, parent_name=?, parent_phone=?, parent_email=?, address=?, is_active=? WHERE id=?`,
+            [s.admission_no, s.first_name, s.middle_name, s.last_name, s.gender, s.date_of_birth, s.grade, s.stream, s.parent_name, s.parent_phone, s.parent_email, s.address, s.is_active, s.id]
+          );
+        } else {
+          dbRun(
+            `INSERT INTO students (id, admission_no, first_name, middle_name, last_name, gender, date_of_birth, grade, stream, parent_name, parent_phone, parent_email, address, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [s.id, s.admission_no, s.first_name, s.middle_name, s.last_name, s.gender, s.date_of_birth, s.grade, s.stream, s.parent_name, s.parent_phone, s.parent_email, s.address, s.is_active, s.created_at || new Date().toISOString()]
+          );
         }
       }
-      if (teachers) {
-        for (const t of teachers) {
-          db.prepare(`
-            INSERT OR REPLACE INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-          `).run(t.id, t.staff_id, t.first_name, t.last_name, t.email, t.phone, t.gender, t.id_number, t.subject_specialization, t.grade_assigned, t.stream_assigned, t.is_active, t.created_at, new Date().toISOString());
+    }
+
+    if (teachers && Array.isArray(teachers)) {
+      for (const t of teachers) {
+        const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [t.id]);
+        if (existing) {
+          dbRun(
+            `UPDATE teachers SET staff_id=?, first_name=?, last_name=?, email=?, phone=?, gender=?, id_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=? WHERE id=?`,
+            [t.staff_id, t.first_name, t.last_name, t.email, t.phone, t.gender, t.id_number, t.subject_specialization, t.grade_assigned, t.stream_assigned, t.is_active, t.id]
+          );
+        } else {
+          dbRun(
+            `INSERT INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [t.id, t.staff_id, t.first_name, t.last_name, t.email, t.phone, t.gender, t.id_number, t.subject_specialization, t.grade_assigned, t.stream_assigned, t.is_active, t.created_at || new Date().toISOString()]
+          );
         }
       }
-    });
+    }
 
-    restore();
+    saveDatabase();
     res.json({ success: true, message: 'Backup restored successfully' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ USER MANAGEMENT API ============
+// ============================================
+// USERS API
+// ============================================
 
 // Get all users
 app.get('/api/users', (req, res) => {
   try {
-    const users = db.prepare('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users ORDER BY role, name').all();
+    const users = dbAll('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users ORDER BY role, name');
     res.json({ success: true, data: users });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -770,12 +1012,13 @@ app.post('/api/users', (req, res) => {
     const id = generateId();
     const { name, email, phone, role, password, staff_id } = req.body;
 
-    db.prepare(`
-      INSERT INTO users (id, name, email, phone, role, password, staff_id)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `).run(id, name, email, phone, role, password, staff_id);
+    dbRun(
+      `INSERT INTO users (id, name, email, phone, role, password, staff_id) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      [id, name, email, phone, role, password, staff_id]
+    );
 
-    const user = db.prepare('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users WHERE id = ?').get(id);
+    saveDatabase();
+    const user = dbGet('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -788,18 +1031,19 @@ app.put('/api/users/:id', (req, res) => {
     const { name, email, phone, role, password, staff_id, is_active } = req.body;
 
     if (password) {
-      db.prepare(`
-        UPDATE users SET name=?, email=?, phone=?, role=?, password=?, staff_id=?, is_active=?, updated_at=CURRENT_TIMESTAMP
-        WHERE id=?
-      `).run(name, email, phone, role, password, staff_id, is_active, req.params.id);
+      dbRun(
+        `UPDATE users SET name=?, email=?, phone=?, role=?, password=?, staff_id=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+        [name, email, phone, role, password, staff_id, is_active, req.params.id]
+      );
     } else {
-      db.prepare(`
-        UPDATE users SET name=?, email=?, phone=?, role=?, staff_id=?, is_active=?, updated_at=CURRENT_TIMESTAMP
-        WHERE id=?
-      `).run(name, email, phone, role, staff_id, is_active, req.params.id);
+      dbRun(
+        `UPDATE users SET name=?, email=?, phone=?, role=?, staff_id=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+        [name, email, phone, role, staff_id, is_active, req.params.id]
+      );
     }
 
-    const user = db.prepare('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users WHERE id = ?').get(req.params.id);
+    saveDatabase();
+    const user = dbGet('SELECT id, name, email, phone, role, staff_id, is_active, created_at FROM users WHERE id = ?', [req.params.id]);
     res.json({ success: true, data: user });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
@@ -809,16 +1053,18 @@ app.put('/api/users/:id', (req, res) => {
 // Delete user
 app.delete('/api/users/:id', (req, res) => {
   try {
-    db.prepare('DELETE FROM users WHERE id = ?').run(req.params.id);
+    dbRun('DELETE FROM users WHERE id = ?', [req.params.id]);
+    saveDatabase();
     res.json({ success: true, message: 'User deleted' });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
 });
 
-// ============ SERVER INFO ============
+// ============================================
+// SERVER INFO
+// ============================================
 
-// Get server info (for Admin Dashboard)
 app.get('/api/server/info', (req, res) => {
   res.json({
     success: true,
@@ -828,6 +1074,7 @@ app.get('/api/server/info', (req, res) => {
       url: `http://${getLocalIP()}:${PORT}`,
       database: DB_PATH,
       version: '1.0.0',
+      engine: 'sql.js (pure JavaScript SQLite)',
       uptime: process.uptime(),
       timestamp: new Date().toISOString()
     }
@@ -836,23 +1083,33 @@ app.get('/api/server/info', (req, res) => {
 
 // Health check
 app.get('/api/health', (req, res) => {
-  res.json({ 
-    success: true, 
+  res.json({
+    success: true,
     status: 'healthy',
+    engine: 'sql.js',
     timestamp: new Date().toISOString()
   });
 });
 
-// Start server
-app.listen(PORT, () => {
-  const localIP = getLocalIP();
-  console.log(`
+// ============================================
+// START SERVER
+// ============================================
+
+const startServer = async () => {
+  try {
+    await loadDatabase();
+    initDB();
+
+    app.listen(PORT, '0.0.0.0', () => {
+      const localIP = getLocalIP();
+      console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           MUNYAKA LAN SCHOOL MANAGEMENT SERVER                ║
 ╠══════════════════════════════════════════════════════════════╣
 ║  Server running on: http://${localIP}:${PORT}                  
 ║  Local access:    http://localhost:${PORT}                     
 ║  Database:        ${DB_PATH}   
+║  Engine:          sql.js (Pure JavaScript SQLite - WASM)
 ╠══════════════════════════════════════════════════════════════╣
 ║  API Endpoints:                                                ║
 ║  • GET  /api/students     - List all students                 ║
@@ -866,10 +1123,18 @@ app.listen(PORT, () => {
 ║  • GET  /api/devices      - List connected devices            ║
 ║  • POST /api/sync         - Sync offline data                ║
 ║  • GET  /api/stats        - Database statistics              ║
-║  • GET  /api/backup       - Export database backup           ║
+║  • GET  /api/backup       - Export database backup (JSON)    ║
+║  • GET  /api/backup/db    - Export SQLite file               ║
 ║  • GET  /api/server/info   - Server connection info           ║
 ╚══════════════════════════════════════════════════════════════╝
-  `);
-});
+      `);
+    });
+  } catch (err) {
+    console.error('Failed to start server:', err);
+    process.exit(1);
+  }
+};
+
+startServer();
 
 export default app;
