@@ -120,7 +120,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Gamepad2, label: 'Games', path: '/games', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent'] },
+    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -141,15 +141,19 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       });
     }
 
-    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data.
+    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data,
+    // but always sees global items (e.g. Games Hub).
     if (roleLower === 'owner') {
       return menuItems.filter(item => {
+        if (item.global) return true;
         if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
       });
     }
 
     return menuItems.filter(item => {
+      // Global items are visible to every authenticated user.
+      if (item.global) return true;
       // Check if user has the required role
       if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
       // Check if item requires a specific permission
@@ -170,8 +174,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
     { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-    { icon: Gamepad2, label: 'Games', path: '/games', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent'] },
-  ].filter(item => user && item.roles.includes(user.role));
+    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+  ].filter(item => {
+    if (!user) return false;
+    if (item.global) return true;
+    return item.roles.includes(user.role);
+  });
 
   return (
     <div className="flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950">
