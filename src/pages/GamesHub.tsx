@@ -20,6 +20,8 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import SpeedMath from "@/components/games/SpeedMath";
 import MemoryMatch from "@/components/games/MemoryMatch";
+import WordScramble from "@/components/games/WordScramble";
+import SudokuMini from "@/components/games/SudokuMini";
 
 type Difficulty = "Easy" | "Medium" | "Hard";
 
@@ -143,7 +145,7 @@ const GamesHub = () => {
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-white/80">
                 <Sparkles size={12} className="text-cyan-300" /> Modes
               </div>
-              <p className="text-2xl font-black mt-0.5">3</p>
+              <p className="text-2xl font-black mt-0.5">4</p>
             </div>
           </div>
         </div>
@@ -156,6 +158,12 @@ const GamesHub = () => {
       )}
       {activeGame === "memory-match" && (
         <MemoryMatch onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "word-scramble" && (
+        <WordScramble onBack={() => setActiveGame(null)} />
+      )}
+      {activeGame === "sudoku-mini" && (
+        <SudokuMini onBack={() => setActiveGame(null)} />
       )}
 
       {/* Game Hub grid — shown when no game is active */}
@@ -251,6 +259,8 @@ const GamesHub = () => {
       {activeGame !== null &&
         activeGame !== "speed-math-blitz" &&
         activeGame !== "memory-match" &&
+        activeGame !== "word-scramble" &&
+        activeGame !== "sudoku-mini" &&
         selectedGame && (
           <section className="space-y-6">
             <Button
