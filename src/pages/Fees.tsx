@@ -14,6 +14,7 @@ import { TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/li
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
+import { notifyDataChanged } from '@/utils/storage';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';
@@ -210,6 +211,7 @@ const Fees = () => {
 
   useEffect(() => {
     localStorage.setItem('munyaka_transactions', JSON.stringify(transactionsList));
+    notifyDataChanged('munyaka_transactions');
   }, [transactionsList]);
 
   useEffect(() => {
@@ -522,6 +524,7 @@ const Fees = () => {
     setTransactionsList(nextList);
     try {
       localStorage.setItem('munyaka_transactions', JSON.stringify(nextList));
+      notifyDataChanged('munyaka_transactions');
     } catch (e) {
       console.error('Failed to persist transaction:', e);
     }
@@ -673,6 +676,7 @@ const Fees = () => {
       }, ...transactionsList];
       setTransactionsList(newTransactions);
       localStorage.setItem('munyaka_transactions', JSON.stringify(newTransactions));
+      notifyDataChanged('munyaka_transactions');
     }
 
     // Create audit log entry
