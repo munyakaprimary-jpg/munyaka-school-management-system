@@ -79,17 +79,6 @@ const todayISO = (): string => {
   return `${yyyy}-${mm}-${dd}`;
 };
 
-const formatExactDateTime = (iso: string): string => {
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return '—';
-  return d.toLocaleString(undefined, {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
@@ -293,36 +282,113 @@ const AdminDashboard: React.FC = () => {
     return result;
   }, [activityVersion]);
 
-  // ── Recent Alerts — derived from activity log, plus per-type exact text
+  // ── Toggle: show only today's alerts, or fall back to historical logs
+  const [showTodayOnly, setShowTodayOnly] = useState(true);
+
+  // ── Recent Alerts — derived from activity log, ordered by timestamp DESC
   const alerts = useMemo<AlertItem[]>(() => {
-    const recent = getRecentActivity(20);
-    return recent
-      .filter((e: ActivityLogEntry) =>
-        e.type === 'fee_payment' ||
-        e.type === 'student_registration' ||
-        e.type === 'attendance'
-      )
-      .slice(0, 8)
-      .map((e: ActivityLogEntry): AlertItem => {
-        let title = e.title;
-        if (e.type === 'fee_payment') {
-          const meta = e.metadata as { ref?: string; amount?: number } | undefined;
-          const ref = meta?.ref ?? 'AUTO-GEN';
-          const amount = meta?.amount ? `KES ${meta.amount.toLocaleString()}` : '';
-          title = `Fee payment: ${ref}${amount ? ` (${amount})` : ''}`;
-        } else if (e.type === 'student_registration') {
-          title = 'New student registered';
-        } else if (e.type === 'attendance') {
+    // getRecentActivity() already sorts newest-first (created_at DESC)
+    const recent = getRecentActivity(100);
+    const targetTypes = new Set<ActivityLogEntry['type']>([
+      'fee_payment',
+      'student_registration',
+      'attendance',
+    ]);
+
+    // Filter by type AND ensure timestamp is real & parseable
+    const realEntries = recent.filter((e: ActivityLogEntry) => {
+      if (!targetTypes.has(e.type)) return false;
+      const ts = new Date(e.timestamp);
+      return !isNaN(ts.getTime());
+    });
+
+    // Compare dates by local calendar day (not UTC)
+    const isSameLocalDay = (a: Date, b: Date) =>
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate();
+
+    const now = new Date();
+
+    // Split into "today" vs "previous" based on real timestamps
+    const todayEntries = realEntries.filter((e) =>
+      isSameLocalDay(new Date(e.timestamp), now)
+    );
+    const previousEntries = realEntries.filter(
+      (e) => !isSameLocalDay(new Date(e.timestamp), now)
+    );
+
+    // When "Today Only" is on, return today's only.
+    // When off, fall back to the most recent historical logs (top of list).
+    const source = showTodayOnly
+      ? todayEntries
+      : todayEntries.length > 0
+        ? todayEntries
+        : previousEntries;
+
+    return source.slice(0, 8).map((e: ActivityLogEntry): AlertItem => {
+      let title = e.title;
+      if (e.type === 'fee_payment') {
+        const meta = e.metadata as { ref?: string; amount?: number } | undefined;
+        const ref = meta?.ref ?? 'AUTO-GEN';
+        const amount = meta?.amount ? `KES ${meta.amount.toLocaleString()}` : '';
+        title = `Fee payment: ${ref}${amount ? ` (${amount})` : ''}`;
+      } else if (e.type === 'student_registration') {
+        title = 'New student registered';
+      } else if (e.type === 'attendance') {
+        const meta = e.metadata as { recordCount?: number; date?: string } | undefined;
+        // Only show the "X record(s) saved today" phrase when the
+        // record's date actually matches the current local date.
+        const recordDate = meta?.date ? new Date(meta.date) : null;
+        const recordIsToday = recordDate
+          ? isSameLocalDay(recordDate, now)
+          : isSameLocalDay(new Date(e.timestamp), now);
+
+        if (recordIsToday) {
+          const count = meta?.recordCount ?? 0;
+          title = `Attendance marked: ${count} record${count === 1 ? '' : 's'} saved today`;
+        } else {
           title = 'Attendance marked';
         }
-        return {
-          id: e.id,
-          type: e.type === 'fee_payment' ? 'fee' : e.type === 'student_registration' ? 'registration' : 'attendance',
-          title,
-          timestamp: e.timestamp,
-        };
+      }
+      return {
+        id: e.id,
+        type: e.type === 'fee_payment' ? 'fee' : e.type === 'student_registration' ? 'registration' : 'attendance',
+        title,
+        timestamp: e.timestamp,
+      };
+    });
+  }, [activityVersion, showTodayOnly]);
+
+  // ── Dynamic timestamp formatter: today → relative, prior days → "AUG 27, 12:00 AM"
+  const formatAlertTimestamp = useCallback((iso: string): string => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    const now = new Date();
+    const isToday =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+    if (isToday) {
+      // Today: "Just now" / "X min ago" / "12:45 PM"
+      const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+      if (diffSec < 30) return 'Just now';
+      if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
+      return d.toLocaleTimeString(undefined, {
+        hour: 'numeric',
+        minute: '2-digit',
       });
-  }, [activityVersion]);
+    }
+    // Prior days: "AUG 27, 12:00 AM"
+    const monthShort = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
+    const day = String(d.getDate()).padStart(2, '0');
+    const time = d.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+    });
+    return `${monthShort} ${day}, ${time}`;
+  }, []);
 
   // ── Class Participation — count active learners by grade
   const classRows = useMemo<ClassRow[]>(() => {
@@ -348,7 +414,7 @@ const AdminDashboard: React.FC = () => {
     logActivity({
       type: 'fee_payment',
       title: `Fee payment recorded`,
-      metadata: { ref: 'AUTO-GEN', amount },
+      metadata: { ref: 'AUTO-GEN', amount, date: new Date().toISOString().slice(0, 10) },
     });
   }, []);
 
@@ -356,13 +422,16 @@ const AdminDashboard: React.FC = () => {
     logActivity({
       type: 'student_registration',
       title: 'New student registered',
+      metadata: { date: new Date().toISOString().slice(0, 10) },
     });
   }, []);
 
   const simulateAttendance = useCallback(() => {
+    const today = new Date().toISOString().slice(0, 10);
     logActivity({
       type: 'attendance',
       title: 'Attendance marked',
+      metadata: { date: today, recordCount: 1 },
     });
   }, []);
 
@@ -466,13 +535,45 @@ const AdminDashboard: React.FC = () => {
             </Badge>
           </div>
 
+          {/* Filter toggle: Today vs All */}
+          <div className="flex items-center gap-2 mb-4">
+            <button
+              type="button"
+              onClick={() => setShowTodayOnly(true)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+                showTodayOnly
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              )}
+            >
+              Today Only
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowTodayOnly(false)}
+              className={cn(
+                'px-3 py-1.5 rounded-lg text-xs font-bold transition-colors',
+                !showTodayOnly
+                  ? 'bg-emerald-100 text-emerald-700'
+                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+              )}
+            >
+              All Activity
+            </button>
+          </div>
+
           {/* Alert timeline list */}
           <div className="space-y-3">
             {alerts.length === 0 ? (
               <div className="py-8 text-center">
-                <p className="text-sm text-slate-500">No recent activity yet.</p>
+                <p className="text-sm font-semibold text-slate-600">
+                  No system activities recorded today.
+                </p>
                 <p className="text-xs text-slate-400 mt-1">
-                  Use the simulation buttons below to generate test events.
+                  {showTodayOnly
+                    ? 'Toggle "All Activity" to see previous days.'
+                    : 'No historical activity found in the system log.'}
                 </p>
               </div>
             ) : (
@@ -489,7 +590,7 @@ const AdminDashboard: React.FC = () => {
                         {alert.title}
                       </p>
                       <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                        {formatExactDateTime(alert.timestamp)}
+                        {formatAlertTimestamp(alert.timestamp)}
                       </p>
                     </div>
                   </div>
