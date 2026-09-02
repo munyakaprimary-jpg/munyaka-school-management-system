@@ -16,13 +16,9 @@ import {
 } from 'recharts';
 import {
   TrendingUp,
-  DollarSign,
-  Wallet,
   Receipt,
-  AlertCircle,
   CreditCard,
   Calendar,
-  CheckCircle2,
   Clock,
   FileText,
   Download,
@@ -31,7 +27,6 @@ import {
   Smartphone,
   Building2,
   ArrowUpRight,
-  ArrowDownRight,
   Shield,
   Briefcase,
   GraduationCap,
@@ -44,8 +39,9 @@ import {
   Banknote,
   CircleDollarSign,
   Package,
-  FileCheck2,
-  AlertTriangle,
+  BadgeDollarSign,
+  RefreshCcw,
+  ShieldCheck,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -64,22 +60,6 @@ import { showSuccess, showError } from '@/utils/toast';
 // ─────────────────────────────────────────────────────────────────────────────
 
 type SubscriptionStatus = 'active' | 'due' | 'grace_period' | 'expired';
-
-interface FeeStructure {
-  year: string;
-  term: string;
-  gradeId: string;
-  amount: number;
-}
-
-interface StudentFeeRecord {
-  id: string;
-  student: string;
-  paid: number;
-  total: number;
-  balance: number;
-  status: string;
-}
 
 interface LicenseInfo {
   planName: string;
@@ -103,12 +83,23 @@ interface SeatMetrics {
   staffPercent: number;
 }
 
-interface FinancialMetrics {
-  totalExpected: number;
-  totalCollected: number;
-  outstanding: number;
-  transactionCount: number;
-  collectionRate: number;
+/**
+ * Platform billing metrics — derived from `getAllLicenses()` (the system
+ * `platform_billing` / `school_subscriptions` state). NO student fee data.
+ */
+interface PlatformBillingMetrics {
+  /** Sum of all paid platform invoices (KES) */
+  totalPaidToDate: number;
+  /** Number of paid invoices contributing to `totalPaidToDate` */
+  paidInvoiceCount: number;
+  /** Sum of pending / failed invoices (KES) */
+  outstandingPlatform: number;
+  /** Next renewal date as ISO string */
+  nextRenewalDate: string | null;
+  /** Days remaining until next renewal */
+  daysUntilRenewal: number;
+  /** Number of add-on purchases (non-subscription licenses) */
+  addonCount: number;
 }
 
 /**
@@ -145,8 +136,6 @@ interface BillingRow {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const STORAGE_KEYS = {
-  FEE_STRUCTURES:        'munyaka_fee_structures',
-  STUDENT_FEES:          'munyaka_student_fees',
   SUBSCRIPTION_SETTINGS: 'munyaka_subscription_settings',
   LEARNERS:              'school_learners_data',
   STAFF:                 'munyaka_staff_directory',
@@ -447,45 +436,69 @@ const computeSeatMetrics = (
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Dynamic Financial Metrics
+// Platform Billing Metrics
+// Derived from `getAllLicenses()` — NO student fee data.
 // ─────────────────────────────────────────────────────────────────────────────
 
-const computeFinancialMetrics = (): FinancialMetrics => {
-  const activeLearners = getActiveLearners();
-  const learnerCount = activeLearners.length;
+/**
+ * Compute aggregated platform billing metrics from license history.
+ * Reads: planName, payment.amount, paidAt, issuedAt, validityDays, type.
+ */
+const computePlatformBillingMetrics = (): PlatformBillingMetrics => {
+  const now = new Date();
+  let totalPaidToDate = 0;
+  let paidInvoiceCount = 0;
+  let outstandingPlatform = 0;
+  let addonCount = 0;
+  let earliestPendingRenewal: Date | null = null;
+  let nextRenewalDate: string | null = null;
+  let daysUntilRenewal = 0;
 
-  const feeStructures: FeeStructure[] = safeRead(STORAGE_KEYS.FEE_STRUCTURES, []);
-  const gradeFeeMap: Record<string, number> = {};
-  feeStructures.forEach((f) => {
-    const key = (f.gradeId || '').replace(/\s+/g, '').toLowerCase();
-    gradeFeeMap[key] = gradeFeeMap[key] ? Math.max(gradeFeeMap[key]!, f.amount) : f.amount;
-  });
+  try {
+    const allLicenses = getAllLicenses();
 
-  let totalExpected = 0;
-  activeLearners.forEach((l) => {
-    const gradeId = (l.grade || '').replace(/\s+/g, '').toLowerCase();
-    totalExpected += gradeFeeMap[gradeId] ?? 0;
-  });
+    allLicenses.forEach((l) => {
+      const amount = Number(l.payment?.amount) || 0;
+      const isAddon = (l.type || '').toLowerCase().includes('addon') ||
+        (l.type || '').toLowerCase().includes('module') ||
+        (l.planName || '').toLowerCase().includes('addon');
 
-  if (totalExpected === 0 && learnerCount > 0) {
-    const feeRecords: StudentFeeRecord[] = safeRead(STORAGE_KEYS.STUDENT_FEES, []);
-    const ledgerExpected = feeRecords.reduce((s, r) => s + (Number(r.total) || 0), 0);
-    const ledgerCollected = feeRecords.reduce((s, r) => s + (Number(r.paid) || 0), 0);
-    return {
-      totalExpected: ledgerExpected,
-      totalCollected: ledgerCollected,
-      outstanding: Math.max(0, ledgerExpected - ledgerCollected),
-      transactionCount: feeRecords.filter((r) => Number(r.paid) > 0).length,
-      collectionRate: ledgerExpected > 0 ? Math.round((ledgerCollected / ledgerExpected) * 100) : 0,
-    };
+      if (isAddon) {
+        addonCount += 1;
+      }
+
+      if (amount > 0) {
+        totalPaidToDate += amount;
+        paidInvoiceCount += 1;
+      } else {
+        // Unpaid / pending — add to outstanding
+        outstandingPlatform += Math.max(0, Number(l.payment?.amount) || 0);
+      }
+
+      // Determine next renewal: pick the soonest future paid license expiry
+      const expiresAt = safeDate(l.expiresAt);
+      if (expiresAt && expiresAt > now && amount > 0) {
+        if (!earliestPendingRenewal || expiresAt < earliestPendingRenewal) {
+          earliestPendingRenewal = expiresAt;
+        }
+      }
+    });
+
+    if (earliestPendingRenewal) {
+      nextRenewalDate = earliestPendingRenewal.toISOString();
+      daysUntilRenewal = Math.max(0, differenceInDays(earliestPendingRenewal, now));
+    }
+  } catch {
+    // Graceful fallback
   }
 
   return {
-    totalExpected,
-    totalCollected: 0,
-    outstanding: totalExpected,
-    transactionCount: 0,
-    collectionRate: 0,
+    totalPaidToDate,
+    paidInvoiceCount,
+    outstandingPlatform,
+    nextRenewalDate,
+    daysUntilRenewal,
+    addonCount,
   };
 };
 
@@ -632,7 +645,7 @@ const computeBillingTrend = (): BillingTrendEntry[] => {
 interface OwnerDashboardData {
   license: LicenseInfo;
   seats: SeatMetrics;
-  financials: FinancialMetrics;
+  platformBilling: PlatformBillingMetrics;
   billingRows: BillingRow[];
   billingTrend: BillingTrendEntry[];
   allLicensesCount: number;
@@ -690,7 +703,7 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
     [license, centralStudents, centralLoading, centralTeachers, tick],
   );
 
-  const financials = useMemo(() => computeFinancialMetrics(), [tick]);
+  const platformBilling = useMemo(() => computePlatformBillingMetrics(), [tick]);
 
   const billingRows = useMemo(() => {
     setIsBillingLoading(true);
@@ -715,7 +728,7 @@ const useOwnerDashboardData = (): OwnerDashboardData => {
   return {
     license,
     seats,
-    financials,
+    platformBilling,
     billingRows,
     billingTrend,
     allLicensesCount,
@@ -769,7 +782,8 @@ const BillingRowSkeleton: React.FC = () => (
  * Data sources:
  *   - Subscription: `getActiveLicense()` + subscription settings
  *   - Seats: `useCentralData` + `getActiveLearners()` / `getActiveTeachers()`
- *   - Financials: `munyaka_fee_structures` + `munyaka_student_fees`
+ *   - Platform Billing metrics: `getAllLicenses()` — paid platform invoices,
+ *     add-on counts, next renewal. NO student fee data.
  *   - Billing Trend chart: `getAllLicenses()` — platform subscription / add-on
  *     invoices, grouped by month. Shows SaaS expenses only — NO student fees.
  *   - Billing Table: `getAllLicenses()` — platform subscription invoices ONLY.
@@ -786,7 +800,7 @@ const OwnerDashboard: React.FC = () => {
   const {
     license,
     seats,
-    financials,
+    platformBilling,
     billingRows,
     billingTrend,
     allLicensesCount,
@@ -1093,94 +1107,103 @@ const OwnerDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* ── 2. Executive Financial Summary ──────────────────────────────── */}
+      {/* ── 2. Platform Billing & License Overview ───────────────────────── */}
       <div>
         <div className="flex items-center justify-between mb-4">
           <div>
             <h2 className="text-lg font-black text-slate-900">
-              Executive Financial Summary
+              Platform Billing &amp; License Overview
             </h2>
             <p className="text-xs text-slate-500 mt-0.5">
-              Live revenue, outstanding balances, and subscription health.
+              Active subscription tier, system billing status, and upcoming renewals.
             </p>
           </div>
           <Badge
             variant="outline"
-            className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-slate-100 text-slate-700 gap-1.5"
+            className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5"
           >
-            <DollarSign size={10} />
+            <BadgeDollarSign size={10} />
             KES · Kenyan Shilling
           </Badge>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Total Expected Revenue */}
+
+          {/* Card 1: Active Subscription Plan */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center">
-                  <Wallet size={18} className="text-blue-600" />
+                <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center">
+                  <Sparkles size={18} className="text-indigo-600" />
                 </div>
-                <ArrowUpRight size={14} className="text-blue-500" />
+                <ArrowUpRight size={14} className="text-indigo-500" />
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Expected Revenue
+                Active Subscription Plan
               </p>
               <p className="text-2xl font-black text-slate-900 mt-1 truncate">
-                {formatKES(financials.totalExpected)}
+                {license.planName.toUpperCase()}
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
-                Per-grade fees × {seats.studentsUsed} active learners
+                {license.billingInterval} Billing
               </p>
             </CardContent>
           </Card>
 
-          {/* Total Collected */}
+          {/* Card 2: Total Platform Billing Paid */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center">
-                  <CheckCircle2 size={18} className="text-emerald-600" />
+                  <BadgeDollarSign size={18} className="text-emerald-600" />
                 </div>
                 <ArrowUpRight size={14} className="text-emerald-500" />
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Total Collected
+                Total Platform Billing Paid
               </p>
               <p className="text-2xl font-black text-emerald-600 mt-1 truncate">
-                {formatKES(financials.totalCollected)}
+                {platformBilling.totalPaidToDate > 0
+                  ? formatKES(platformBilling.totalPaidToDate)
+                  : '—'}
               </p>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 rounded-full px-1.5 py-0.5">
-                  {financials.collectionRate}%
+                  {platformBilling.paidInvoiceCount}
                 </span>
-                <p className="text-[10px] text-slate-400">collection rate</p>
+                <p className="text-[10px] text-slate-400">
+                  {platformBilling.paidInvoiceCount === 1 ? 'invoice paid' : 'invoices paid'}
+                </p>
               </div>
             </CardContent>
           </Card>
 
-          {/* Outstanding Unpaid */}
+          {/* Card 3: Next Renewal */}
           <Card className="border-none shadow-sm rounded-2xl bg-white">
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center">
-                  <AlertCircle size={18} className="text-amber-600" />
+                  <RefreshCcw size={18} className="text-amber-600" />
                 </div>
-                <ArrowDownRight size={14} className="text-amber-500" />
+                <ArrowUpRight size={14} className="text-amber-500" />
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Outstanding Unpaid
+                Next Renewal
               </p>
-              <p className="text-2xl font-black text-amber-600 mt-1 truncate">
-                {formatKES(financials.outstanding)}
+              <p className="text-2xl font-black text-slate-900 mt-1 truncate">
+                {platformBilling.daysUntilRenewal > 0
+                  ? `${platformBilling.daysUntilRenewal} day${platformBilling.daysUntilRenewal === 1 ? '' : 's'}`
+                  : '—'}
               </p>
               <p className="text-[10px] text-slate-400 mt-1">
-                Expected − Collected
+                {platformBilling.nextRenewalDate
+                  ? `Renews ${formatDate(platformBilling.nextRenewalDate)}`
+                  : 'No upcoming renewals'}
               </p>
             </CardContent>
           </Card>
 
-          {/* Subscription Status */}
+          {/* Card 4: Account Standing */}
           <Card className={`border-none shadow-sm rounded-2xl bg-gradient-to-br ${
             license.status === 'active'
               ? 'from-emerald-50 to-teal-50'
@@ -1191,7 +1214,7 @@ const OwnerDashboard: React.FC = () => {
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-3">
                 <div className="w-10 h-10 rounded-xl bg-white/70 flex items-center justify-center">
-                  <CreditCard
+                  <ShieldCheck
                     size={18}
                     className={
                       license.status === 'active' ? 'text-emerald-600'
@@ -1203,20 +1226,21 @@ const OwnerDashboard: React.FC = () => {
                 <span className={`w-2.5 h-2.5 rounded-full ${sub.dot} animate-pulse`} />
               </div>
               <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Subscription
+                Account Standing
               </p>
               <p className={`text-2xl font-black mt-1 ${sub.text}`}>
                 {sub.label}
               </p>
               <p className="text-[10px] text-slate-500 mt-1">
                 {license.status === 'active' && license.daysRemaining > 0
-                  ? `Renews ${formatDate(license.nextBillingDate)}`
+                  ? `${license.daysRemaining} days remaining`
                   : license.status === 'expired'
                     ? 'Renew now to restore access'
                     : 'Action recommended'}
               </p>
             </CardContent>
           </Card>
+
         </div>
 
         {/* Platform billing trend chart */}
