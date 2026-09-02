@@ -433,6 +433,9 @@ export default function Students() {
     // academic-history log shows who performed the enrollment.
     const { user } = useAuth();
 
+    // Admin-only flag: controls visibility of sensitive management actions
+    const isAdmin = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'head_teacher';
+
   // Ensure default grade is in the list only on initial mount when formData.grade is empty
   useEffect(() => {
     if (!formData.grade && GRADES_LIST.length > 0) {
@@ -658,14 +661,18 @@ export default function Students() {
           <p className="text-sm font-medium text-slate-500">
             {filteredLearners.length} active learners
             {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
-            {' · '}
-            <Link
-              to="/learners/archive"
-              className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
-            >
-              <Archive size={13} />
-              View Transferred Archive
-            </Link>
+            {isAdmin && (
+              <>
+                {' · '}
+                <Link
+                  to="/learners/archive"
+                  className="inline-flex items-center gap-1 font-bold text-indigo-600 hover:text-indigo-800 underline underline-offset-2 transition-colors"
+                >
+                  <Archive size={13} />
+                  View Transferred Archive
+                </Link>
+              </>
+            )}
           </p>
         </div>
 
@@ -719,24 +726,28 @@ export default function Students() {
             Print
           </button>
 
-          <button
-                      type="button"
-                      onClick={() => setIsTransferInOpen(true)}
-                      className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
-                      title="Transfer In a learner from another school"
-                    >
-                      <ArrowRightLeft className="w-4 h-4" />
-                      Transfer In Learner
-                    </button>
-          
-                    <button
-                      type="button"
-                      onClick={handleOpenAdd}
-                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
-                    >
-                      <Plus className="w-4 h-4 stroke-[2.5]" />
-                      + Add Learner
-                    </button>
+          {isAdmin && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setIsTransferInOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
+                        title="Transfer In a learner from another school"
+                      >
+                        <ArrowRightLeft className="w-4 h-4" />
+                        Transfer In Learner
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleOpenAdd}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
+                      >
+                        <Plus className="w-4 h-4 stroke-[2.5]" />
+                        + Add Learner
+                      </button>
+                    </>
+                  )}
         </div>
       </div>
 
@@ -869,33 +880,37 @@ export default function Students() {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            type="button"
-                            onClick={() => handleOpenEdit(learner)}
-                            title="Edit learner"
-                            data-html2canvas-ignore="true"
-                            className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleTransfer(learner)}
-                            title="Transfer learner"
-                            data-html2canvas-ignore="true"
-                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
-                          >
-                            <UserPlus className="w-4 h-4" />
-                          </button>
-                          <button
-                                                      type="button"
-                                                      onClick={() => setLearnerToDelete(learner)}
-                                                      title="Delete learner"
-                                                      data-html2canvas-ignore="true"
-                                                      className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
-                                                    >
-                                                      <Trash2 className="w-4 h-4" />
-                                                    </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(learner)}
+                                title="Edit learner"
+                                data-html2canvas-ignore="true"
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                              >
+                                <Edit3 className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleTransfer(learner)}
+                                title="Transfer learner"
+                                data-html2canvas-ignore="true"
+                                className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                              >
+                                <UserPlus className="w-4 h-4" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setLearnerToDelete(learner)}
+                                title="Delete learner"
+                                data-html2canvas-ignore="true"
+                                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>
