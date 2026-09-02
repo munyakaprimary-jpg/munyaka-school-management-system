@@ -405,19 +405,21 @@ export default function AdminControlCenter() {
     }
   };
 
-  if (!['admin', 'owner', 'super_admin'].includes(user?.role || '')) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <Card className="max-w-md w-full">
-          <CardContent className="pt-6 text-center">
-            <Shield className="w-16 h-16 mx-auto text-amber-500 mb-4" />
-            <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Admin Access Required</h2>
-            <p className="text-slate-600 dark:text-slate-400">You need administrator privileges to access this page.</p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+  // OWNER is a BILLING-ONLY role and does NOT have access to the operational
+    // Admin Control Center. Only full admins (admin / super_admin) can reach this page.
+    if (!['admin', 'super_admin'].includes(user?.role || '')) {
+      return (
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <Card className="max-w-md w-full">
+            <CardContent className="pt-6 text-center">
+              <Shield className="w-16 h-16 mx-auto text-amber-500 mb-4" />
+              <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-2">Admin Access Required</h2>
+              <p className="text-slate-600 dark:text-slate-400">You need administrator privileges to access this page.</p>
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
 
   return (
     <div className="space-y-6 pb-20">

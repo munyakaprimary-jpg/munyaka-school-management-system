@@ -585,6 +585,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission> = {
   "/staff/attendance-monitor": PERMISSIONS.MANAGE_STAFF_ATTENDANCE,
   "/fees": PERMISSIONS.COLLECT_FEES,
   "/payment-management": PERMISSIONS.MANAGE_SUBSCRIPTION,
+  "/admin/control-center": PERMISSIONS.EDIT_SCHOOL_SETTINGS, // operational — owner excluded
   "/system-management": PERMISSIONS.MANAGE_ICT_SYSTEMS,
   "/communication": PERMISSIONS.PUBLISH_NOTICES,
   "/notices": PERMISSIONS.PUBLISH_NOTICES,

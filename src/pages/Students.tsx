@@ -433,8 +433,11 @@ export default function Students() {
     // academic-history log shows who performed the enrollment.
     const { user } = useAuth();
 
-    // Admin-only flag: controls visibility of sensitive management actions
-    const isAdmin = user?.role === 'owner' || user?.role === 'super_admin' || user?.role === 'head_teacher';
+    // Admin-only flag: controls visibility of sensitive management actions.
+    // NOTE: 'owner' is a BILLING-ONLY role — it must NOT be included here.
+    // The owner has no operational access to learner management, transfers,
+    // or archive.  Only super_admin (full admin) and head_teacher qualify.
+    const isAdmin = user?.role === 'super_admin' || user?.role === 'head_teacher';
 
   // Ensure default grade is in the list only on initial mount when formData.grade is empty
   useEffect(() => {

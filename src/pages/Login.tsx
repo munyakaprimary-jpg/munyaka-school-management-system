@@ -47,6 +47,17 @@ const hasCustomAdminPassword = (): boolean => {
 };
 
 // ─── Admin role configs ─────────────────────────────────────────────────────
+//
+// NOTE: Owner and Super Admin are TWO DISTINCT entities in this app:
+//   - owner        → BILLING-ONLY role.   Lands on Owner Dashboard. Only sees
+//                    subscription / payment / financial-health widgets.
+//                    No access to learners, attendance, settings, etc.
+//   - super_admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
+//                    systems, system settings, etc.  No special billing privs.
+//
+// The owner and super_admin happen to share the same ADMIN PIN override flow
+// so they can both authenticate when the lock screen is active, but they have
+// entirely separate permission matrices.
 
 type AdminRole = 'system_admin' | 'super_admin';
 
@@ -78,13 +89,13 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   },
   super_admin: {
     id: 'super_admin',
-    label: 'Super Admin (Owner)',
-    description: 'Exclusive access to Payment & Subscriptions module',
-    fullDescription: 'Dedicated access to payment module, subscriptions, and financial gateway management.',
+    label: 'School Owner',
+    description: 'Billing & Subscription Console — Owner Dashboard',
+    fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
     email: 'munyakaprimary@gmail.com',
     userName: 'School Owner',
     userRole: 'owner',
-    redirectPath: '/payment-management',
+    redirectPath: '/dashboard',
     icon: Crown,
     primaryColor: 'amber',
   },

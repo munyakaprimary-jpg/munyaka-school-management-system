@@ -137,8 +137,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
-            { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'owner', 'super_admin'] },
-        { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'super_admin'] },
+            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -168,9 +168,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   // Used to enforce that OWNER cannot access administrative routes like /fees.
   // ADMIN is NEVER in a BLOCKED_ROUTES list — it is always allowed.
   const BLOCKED_ROUTES: Record<string, string[]> = {
-    '/fees': ['owner', 'parent', 'student', 'teacher'],
-    '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
-  };
+      '/fees': ['owner', 'parent', 'student', 'teacher'],
+      '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
+      '/admin/control-center': ['owner'], // operational route — owner is billing-only
+      '/lan-config': ['owner'],            // operational route — owner is billing-only
+      '/students': ['owner'],              // operational — owner cannot manage learners
+      '/attendance': ['owner'],            // operational — owner cannot take roll call
+      '/settings': ['owner'],              // operational — owner has its own profile settings
+    };
 
   const filteredMenu = menuItems.filter(item => {
     if (!user) return false;
@@ -221,25 +226,27 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
       : filteredMenu;
 
-  // Bottom Navigation Bar Quick Links - Filtered by user role
-  // ADMIN has full access to all bottom-nav items.
-  const bottomQuickNav = [
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-    { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'owner', 'head_teacher', 'teacher'] },
-    { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-    { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
-        { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin', 'owner'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-    { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-    { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-  ].filter(item => {
-    if (!user) return false;
-    if (item.global) return true;
-    return item.roles.includes(user.role);
-  });
+  // Bottom Navigation Bar Quick Links - Filtered by user role.
+    // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
+    // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
+    // Settings, Licensing, Promote — those are operational routes.
+    const bottomQuickNav = [
+      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
+      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+          { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
+      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+      { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
+      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+      { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+      { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+    ].filter(item => {
+      if (!user) return false;
+      if (item.global) return true;
+      return item.roles.includes(user.role);
+    });
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
