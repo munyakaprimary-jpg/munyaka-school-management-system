@@ -322,7 +322,10 @@ const getLocalIP = () => {
       }
     }
   }
-  return '127.0.0.1';
+  // No external interface found — return a placeholder. The server still
+  // binds to 0.0.0.0 so any device that can route to this host will work,
+  // but we surface a clear hint to the operator.
+  return '0.0.0.0';
 };
 
 // ============================================
