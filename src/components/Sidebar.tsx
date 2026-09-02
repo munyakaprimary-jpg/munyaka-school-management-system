@@ -91,6 +91,11 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => setShowBottomNav(true), [location.pathname]);
 
+  const handleLogout = async () => {
+    await logout();
+    navigate('/login');
+  };
+
   const menuItems = [
     // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
@@ -281,16 +286,21 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               {!isCollapsed && <div className="overflow-hidden flex-1"><Link to="/profile" onClick={() => setIsOpen(false)}><p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p></Link><p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p></div>}
             </div>
             {!isCollapsed && (
-              <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700">
-                <Link
-                  to="/settings/profile"
-                  onClick={() => setIsOpen(false)}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl h-9 px-3 text-xs font-bold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Profile Settings"
+              <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => navigate('/settings/profile')}
+                  className="flex items-center gap-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors py-1 px-2 rounded-md hover:bg-gray-100"
                 >
-                  <Settings size={14} /> Settings
-                </Link>
-                <Button variant="ghost" size="sm" onClick={logout} className="flex-1 justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"><LogOut size={14} /> Log Out</Button>
+                  <Settings className="w-4 h-4"/>
+                  <span>Settings</span>
+                </button>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1 px-2 rounded-md hover:bg-red-50"
+                >
+                  <LogOut className="w-4 h-4"/>
+                  <span>Log Out</span>
+                </button>
               </div>
             )}
           </div>
