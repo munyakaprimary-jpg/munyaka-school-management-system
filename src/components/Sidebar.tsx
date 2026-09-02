@@ -42,6 +42,7 @@ import {
   Laptop,
   Monitor,
   UserCog,
+  User,
   Keyboard,
   Target,
   Database,
@@ -103,6 +104,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'owner'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
+    { icon: User, label: 'Profile Settings', path: '/settings/profile', roles: ['admin', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Bell, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -149,19 +151,40 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     }
 
     // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-    // Central Data, plus global items (Games Hub).
+    // Central Data + Profile Settings, plus global items (Games Hub).
     if (roleLower === 'owner') {
       const roleFiltered = menuItems.filter(item => {
         if (item.global) return true;
         if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
       });
-      // Ensure Dashboard is always prepended (it may not pass the role filter
-      // if roles[] is ever misconfigured for this item).
-      if (dashboardItem && !roleFiltered.includes(dashboardItem)) {
-        return [dashboardItem, ...roleFiltered];
-      }
-      return roleFiltered;
+      // Ensure Dashboard is always present.
+      const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
+        ? [dashboardItem, ...roleFiltered]
+        : roleFiltered;
+      // Enforce the explicit owner render order:
+      //   1. Dashboard
+      //   2. Payment & Subscriptions
+      //   3. Games Hub (global)
+      //   4. Central Data & APK
+      //   5. Profile Settings
+      const order = [
+        '/',                       // Dashboard
+        '/payment-management',     // Payment & Subscriptions
+        '/games',                  // Games Hub (global)
+        '/central-data',           // Central Data & APK
+        '/settings/profile',       // Profile Settings
+      ];
+      const ordered: typeof withDashboard = [];
+      order.forEach(p => {
+        const found = withDashboard.find((i: any) => i.path === p);
+        if (found) ordered.push(found);
+      });
+      // Append anything that wasn't in the explicit order (defensive).
+      withDashboard.forEach((i: any) => {
+        if (!ordered.includes(i)) ordered.push(i);
+      });
+      return ordered;
     }
 
     return menuItems.filter(item => {
@@ -256,6 +279,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">{user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}</div>
               </Link>
               {!isCollapsed && <div className="overflow-hidden flex-1"><Link to="/profile" onClick={() => setIsOpen(false)}><p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p></Link><p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p></div>}
+              {!isCollapsed && (
+                <Link
+                  to="/settings/profile"
+                  onClick={() => setIsOpen(false)}
+                  className="inline-flex items-center justify-center w-8 h-8 rounded-xl bg-slate-100 dark:bg-slate-700 text-slate-500 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-colors shrink-0"
+                  title="Profile Settings"
+                >
+                  <Settings size={15} />
+                </Link>
+              )}
             </div>
             {!isCollapsed && <div className="flex gap-2 pt-1 border-t border-slate-200/50 dark:border-slate-700"><Button variant="ghost" size="sm" onClick={logout} className="w-full justify-center gap-2 rounded-xl h-9 text-xs font-bold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30"><LogOut size={14} /> Log Out</Button></div>}
           </div>
