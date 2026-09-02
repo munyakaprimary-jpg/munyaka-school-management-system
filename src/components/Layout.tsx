@@ -210,6 +210,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       return canAccessSystemManagement();
     }
     return true;
+  }).map((item) => {
+    // Route the admin Dashboard sidebar item to the dedicated /admin-dashboard
+    // page so admins get the full system console instead of the generic
+    // /dashboard router. Other roles keep the /dashboard route.
+    if (item.path === '/dashboard' && user) {
+      const roleLower = (user.role ?? '').toLowerCase();
+      if (roleLower === 'admin' || roleLower === 'super_admin') {
+        return { ...item, path: '/admin-dashboard' };
+      }
+    }
+    return item;
   });
 
   // ── Dashboard enforcement for the OWNER role ───────────────────────────────
@@ -245,6 +256,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       if (!user) return false;
       if (item.global) return true;
       return item.roles.includes(user.role);
+    }).map((item) => {
+      // Route admin Dashboard to /admin-dashboard
+      if (item.path === '/dashboard' && user) {
+        const roleLower = (user.role ?? '').toLowerCase();
+        if (roleLower === 'admin' || roleLower === 'super_admin') {
+          return { ...item, path: '/admin-dashboard' };
+        }
+      }
+      return item;
     });
 
   return (
