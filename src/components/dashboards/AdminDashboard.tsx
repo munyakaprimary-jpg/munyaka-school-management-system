@@ -58,7 +58,9 @@ interface AlertItem {
 
 interface ClassRow {
   name: string;
-  enrolled: number;
+  boys: number;
+  girls: number;
+  total: number;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -70,6 +72,43 @@ const safeParseRecord = <T,>(raw: string | null): T | null => {
   } catch {
     return null;
   }
+};
+
+// Strict ascending grade sort: PP1, PP2, Grade 1 → Grade 9
+const GRADE_SORT_ORDER: Record<string, number> = {
+  'pp1': 0, 'pp 1': 0, 'pre-primary 1': 0, 'baby class': 0,
+  'pp2': 1, 'pp 2': 1, 'pre-primary 2': 1, 'nursery': 1,
+  'grade 1': 2, 'g1': 2, 'std 1': 2, 'class 1': 2, 'one': 2,
+  'grade 2': 3, 'g2': 3, 'std 2': 3, 'class 2': 3, 'two': 3,
+  'grade 3': 4, 'g3': 4, 'std 3': 4, 'class 3': 4, 'three': 4,
+  'grade 4': 5, 'g4': 5, 'std 4': 5, 'class 4': 5, 'four': 5,
+  'grade 5': 6, 'g5': 6, 'std 5': 6, 'class 5': 6, 'five': 6,
+  'grade 6': 7, 'g6': 7, 'std 6': 7, 'class 6': 7, 'six': 7,
+  'grade 7': 8, 'g7': 8, 'std 7': 8, 'class 7': 8, 'seven': 8,
+  'grade 8': 9, 'g8': 9, 'std 8': 9, 'class 8': 9, 'eight': 9,
+  'grade 9': 10, 'g9': 10, 'std 9': 10, 'class 9': 10, 'nine': 10,
+};
+
+const gradeSortKey = (raw: string): number => {
+  const key = (raw || '').toLowerCase().trim();
+  if (key in GRADE_SORT_ORDER) return GRADE_SORT_ORDER[key];
+  // Fall back to numeric extraction for unknown grade labels
+  const m = key.match(/(\d+)/);
+  if (m) return 100 + parseInt(m[1], 10);
+  return Number.MAX_SAFE_INTEGER;
+};
+
+const sortGradesAscending = (names: string[]): string[] =>
+  [...names].sort((a, b) => gradeSortKey(a) - gradeSortKey(b));
+
+// Normalize gender values from any of the supported variants
+const isBoy = (g: any): boolean => {
+  const v = String(g || '').toLowerCase().trim();
+  return v === 'boy' || v === 'male' || v === 'm';
+};
+const isGirl = (g: any): boolean => {
+  const v = String(g || '').toLowerCase().trim();
+  return v === 'girl' || v === 'female' || v === 'f';
 };
 
 const safeRead = <T,>(key: string, fallback: T): T => {
@@ -526,21 +565,27 @@ const AdminDashboard: React.FC = () => {
     return `${monthShort} ${day}, ${time}`;
   }, []);
 
-  // ── Class Participation — count active learners by grade
-  const classRows = useMemo<ClassRow[]>(() => {
+  // ── Class Participation — boys / girls / total per grade, sorted PP1 → Grade 9
+  const classRows = useMemo<ClassRow[] => {
     const learners = safeRead<any[]>('school_learners_data', []);
     const grades = safeRead<any[]>('munyaka_grades', []);
-    const gradeNames: string[] = grades.length > 0
+
+    // Collect all grade names from DB; fall back to the full canonical list
+    const rawNames: string[] = grades.length > 0
       ? grades.map((g: any) => g.name).filter(Boolean)
-      : ['Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+      : ['PP1', 'PP2', 'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5', 'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9'];
+
+    const gradeNames = sortGradesAscending([...new Set(rawNames)]);
 
     return gradeNames.map((g) => {
-      const enrolled = learners.filter((l: any) => {
+      const inGrade = learners.filter((l: any) => {
         if (!l) return false;
         if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
         return (l.grade || '').toLowerCase() === g.toLowerCase();
-      }).length;
-      return { name: g, enrolled };
+      });
+      const boys   = inGrade.filter((l) => isBoy(l.gender)).length;
+      const girls = inGrade.filter((l) => isGirl(l.gender)).length;
+      return { name: g, boys, girls, total: boys + girls };
     });
   }, [activityVersion]);
 
@@ -774,7 +819,7 @@ const AdminDashboard: React.FC = () => {
           <div className="mb-4">
             <h2 className="text-lg font-black text-slate-900">Current School Enrollment</h2>
             <p className="text-xs text-slate-500 mt-1">
-              Active enrollment count by class
+              Active enrollment count by class — boys, girls, and totals
             </p>
           </div>
 
@@ -786,14 +831,20 @@ const AdminDashboard: React.FC = () => {
                     CLASS NAME
                   </th>
                   <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
-                    ENROLLMENT
+                    BOYS
+                  </th>
+                  <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    GIRLS
+                  </th>
+                  <th className="text-right px-4 py-3 text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    TOTAL
                   </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {classRows.length === 0 ? (
                   <tr>
-                    <td colSpan={2} className="px-4 py-6 text-center text-sm text-slate-400">
+                    <td colSpan={4} className="px-4 py-6 text-center text-sm text-slate-400">
                       No classes configured yet.
                     </td>
                   </tr>
@@ -803,10 +854,14 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-4 py-3 text-sm font-semibold text-slate-700">
                         {row.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right">
-                        <span className="font-semibold text-slate-700">
-                          {row.enrolled} Registered
-                        </span>
+                      <td className="px-4 py-3 text-sm text-right text-slate-600">
+                        {row.boys}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right text-slate-600">
+                        {row.girls}
+                      </td>
+                      <td className="px-4 py-3 text-sm text-right font-semibold text-slate-800">
+                        {row.total}
                       </td>
                     </tr>
                   ))
@@ -816,12 +871,16 @@ const AdminDashboard: React.FC = () => {
                 <tfoot>
                   <tr className="bg-slate-100 border-t-2 border-slate-200">
                     <td className="px-4 py-3 text-sm font-black text-slate-800">
-                      Total Enrollment
+                      Total
                     </td>
-                    <td className="px-4 py-3 text-sm text-right">
-                      <span className="font-black text-slate-900">
-                        {classRows.reduce((sum, r) => sum + r.enrolled, 0)} Total Registered
-                      </span>
+                    <td className="px-4 py-3 text-sm text-right font-black text-slate-900">
+                      {classRows.reduce((sum, r) => sum + r.boys, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-black text-slate-900">
+                      {classRows.reduce((sum, r) => sum + r.girls, 0)}
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right font-black text-slate-900">
+                      {classRows.reduce((sum, r) => sum + r.total, 0)}
                     </td>
                   </tr>
                 </tfoot>
