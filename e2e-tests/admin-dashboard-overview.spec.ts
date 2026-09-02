@@ -7,10 +7,10 @@ import { test, expect } from "@playwright/test";
  * munyaka_transactions, munyaka_attendance_records, munyaka_grades)
  * so the cards display real numbers instead of zeros.
  *
- * Sign-in path: the System Administrator tab uses the password
- * "ownerpass2026", which resolves to user.role === "super_admin".
- * This is the FULL ADMIN role (distinct from the owner/billing role).
- */
+ * Sign-in path: the School Administrator tab uses the password
+  * "ownerpass2026", which resolves to user.role === "admin".
+  * This is the FULL ADMIN role (distinct from the owner/billing role).
+  */
 
 const ADMIN_PASSWORD = "ownerpass2026";
 
@@ -67,20 +67,20 @@ const signInAsAdmin = async (page: import("@playwright/test").Page) => {
   });
   await page.goto("/login");
 
-  // Click the "System Administrator" tab (super_admin role — full admin, NOT owner)
-  const sysadminTab = page.getByRole("tab", { name: /System Administrator/i });
-  await expect(sysadminTab).toBeVisible();
-  await sysadminTab.click();
-
-  const sysadminCard = page.getByRole("button", { name: /System Administrator/i });
-  await sysadminCard.click();
+  // Click the "School Administrator" tab (admin role — full admin, NOT owner)
+    const adminTab = page.getByRole("tab", { name: /School Administrator/i });
+    await expect(adminTab).toBeVisible();
+    await adminTab.click();
+  
+    const adminCard = page.getByRole("button", { name: /School Administrator/i });
+    await adminCard.click();
 
   const passwordInput = page.getByPlaceholder(/Enter your password/i);
   await passwordInput.fill(ADMIN_PASSWORD);
   await page.getByRole("button", { name: /^Sign In$/i }).click();
 
-  // super_admin lands on /dashboard after sign-in
-  await page.waitForURL("**/dashboard", { timeout: 10_000 });
+  // admin lands on /dashboard after sign-in
+    await page.waitForURL("**/dashboard", { timeout: 10_000 });
 };
 
 test("ADMIN sees Dashboard Overview with all required sections", async ({ page }) => {

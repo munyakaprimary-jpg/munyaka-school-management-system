@@ -13,7 +13,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 
-export type UserRole = 'owner' | 'super_admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'owner' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
 interface User {
   id: string;
@@ -66,10 +66,10 @@ const DEFAULT_SYSTEM_ADMIN = {
   password: 'sysadmin2026',
   user: {
     id: 'admin-002',
-    name: 'System Administrator',
+    name: 'School Administrator',
     email: 'sysadmin@munyaka.sc.ke',
     phone: '+254 700 000 001',
-    role: 'super_admin' as UserRole,
+    role: 'admin' as UserRole,
     avatar: 'SA'
   }
 };
@@ -94,14 +94,13 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
     case 'owner':
       return 'owner';
-    case 'super_admin':
-      return 'super_admin';
+    case 'support_admin':
+    case 'admin':
+      return 'admin';
     case 'head_teacher':
       return 'head_teacher';
     case 'bursar':
       return 'bursar';
-    case 'support_admin':
-      return 'super_admin';
     case 'senior_teacher':
     case 'class_teacher':
     case 'subject_teacher':
@@ -255,7 +254,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // success when the entered value matches it — exactly mirroring
       // the Login page's own dual-mode check so a saved-or-default
       // flow works the same way in both directions.
-      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'super_admin';
+      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = pass.trim();

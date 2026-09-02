@@ -13,13 +13,11 @@
  *  ROLE TAXONOMY
  *  ───────────────────────────────────────────────────────────────────────────
  *  admin        → SCHOOL ADMINISTRATOR. Full unrestricted access to every
- *                  module, widget, route, sidebar entry, and operational
- *                  control surface in the school system.  Super-set of
- *                  HEADTEACHER + BURSAR + ICT + the old super_admin.
- *
- *                  NOTE: super_admin and admin are merged.  Both identifiers
- *                  resolve to the admin role at runtime.  The canonical
- *                  identifier stored in auth is "admin".
+  *                  module, widget, route, sidebar entry, and operational
+  *                  control surface in the school system.  Super-set of
+  *                  HEADTEACHER + BURSAR + ICT.
+  *
+  *                  NOTE: The canonical identifier stored in auth is "admin".
  *
  *  owner        → PLATFORM BILLING OWNER. Completely separate from admin.
  *                  Has NO operational access. Can see subscription/billing
@@ -63,9 +61,8 @@ export const ROLES = {
 
 export type Role = (typeof ROLES)[keyof typeof ROLES];
 
-/** Maps legacy "super_admin" identifier → canonical "admin" at runtime.
- *  The canonical identifier stored in auth is always "admin".
- *  Callers can pass either "admin" or "super_admin" and get admin behaviour. */
+/** Maps alternative identifiers → canonical role at runtime.
+ *  The canonical identifier stored in auth is always "admin". */
 export const normalizeAdmin = (role?: string | null): Role | null => {
   if (!role) return null;
   const r = role.toLowerCase();
@@ -76,11 +73,11 @@ export const normalizeAdmin = (role?: string | null): Role | null => {
   return null;
 };
 
-/** True when role is the school administrator (admin / super_admin merged). */
+/** True when role is the school administrator. */
 export const isAdmin = (role?: string | null): boolean => {
   if (!role) return false;
   const r = role.toLowerCase();
-  return r === "admin" || r === "super_admin";
+  return r === "admin";
 };
 
 /** True when role is the platform billing owner. Completely separate from
@@ -111,24 +108,23 @@ export const FULL_DASHBOARD_ROLES: ReadonlyArray<Role> = [
  *  Dashboard Overview.
  *
  *  Accepted inputs (case-insensitive, normalised):
- *    • admin        ✓
- *    • super_admin  ✓ (legacy alias for admin)
- *    • head_teacher ✓
- *    • dev          ✓
- *
- *  Every other role (teacher, bursar, ict_teacher, parent, student,
- *  owner, …) returns `false` and must be routed to a scoped dashboard
- *  instead. */
-export function hasFullDashboardAccess(
-  role?: string | null
-): boolean {
-  if (!role) return false;
-  const r = role.toLowerCase();
-  if (r === "admin" || r === "super_admin") return true;
-  if (r === "head_teacher" || r === "headteacher") return true;
-  if (r === "dev") return true;
-  return false;
-}
+  *    • admin        ✓
+  *    • head_teacher ✓
+  *    • dev          ✓
+  *
+  *  Every other role (teacher, bursar, ict_teacher, parent, student,
+  *  owner, …) returns `false` and must be routed to a scoped dashboard
+  *  instead. */
+ export function hasFullDashboardAccess(
+   role?: string | null
+ ): boolean {
+   if (!role) return false;
+   const r = role.toLowerCase();
+   if (r === "admin" || r === "super_admin") return true;
+   if (r === "head_teacher" || r === "headteacher") return true;
+   if (r === "dev") return true;
+   return false;
+ }
 
 /** True for users who should see a class-level, restricted dashboard.
  *  Currently: any teaching staff (teacher / ict_teacher / head_teacher)

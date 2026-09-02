@@ -28,8 +28,8 @@ const Communication = () => {
   const [body, setBody] = useState("");
   const { addNotification } = useNotifications(); // Get the addNotification function
 
-  // STRICT ACCESS CONTROL: Only super_admin can access the Dyad communication interface
-  if (user?.role !== 'super_admin') {
+  // STRICT ACCESS CONTROL: Only admin can access the Dyad communication interface
+  if (user?.role !== 'admin') {
     return <Navigate to="/" replace />;
   }
 

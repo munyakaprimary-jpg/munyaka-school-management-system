@@ -147,8 +147,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     // The remaining items are then filtered by role below.
     const dashboardItem = menuItems.find(item => item.path === '/');
 
-    // ADMIN (and legacy super_admin alias) always sees every sidebar item.
-        if (roleLower === 'admin' || roleLower === 'super_admin') {
+    // ADMIN always sees every sidebar item.
+            if (roleLower === 'admin') {
           return menuItems.filter(item => {
             if (item.requiresPermission) return canAccessSystemManagement();
             return true;

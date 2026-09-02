@@ -547,6 +547,35 @@ const Dashboard: React.FC = () => {
     return <OwnerDashboard />;
   }
 
+  // Admin sees the Admin Dashboard (operational full admin)
+  if (role === 'admin') {
+    return (
+      <div className="space-y-6">
+        {/* ── Admin Header ── */}
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="flex flex-wrap items-center gap-2 mb-2">
+              <Badge
+                variant="outline"
+                className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5"
+              >
+                Admin Console
+              </Badge>
+              <LiveBadge label="LIVE SYNC" />
+            </div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              Admin Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Full system access. Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'Administrator'}</span>
+            </p>
+          </div>
+        </div>
+        <AdminDashboard />
+      </div>
+    );
+  }
+
   const title = role === 'teacher' ? "Teacher's Dashboard" : "Dashboard";
 
   return (

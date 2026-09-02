@@ -137,7 +137,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
-                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin', 'super_admin'] },
+                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
             { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
@@ -185,8 +185,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Global items are visible to every authenticated user.
     if (item.global) return true;
 
-    // ADMIN (and legacy super_admin alias) always sees every sidebar item.
-    if (roleLower === 'admin' || roleLower === 'super_admin') {
+    // ADMIN always sees every sidebar item.
+        if (roleLower === 'admin') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return true;
     }

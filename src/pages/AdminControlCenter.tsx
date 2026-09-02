@@ -405,9 +405,9 @@ export default function AdminControlCenter() {
     }
   };
 
-  // OWNER is a BILLING-ONLY role and does NOT have access to the operational
-    // Admin Control Center. Only full admins (admin / super_admin) can reach this page.
-    if (!['admin', 'super_admin'].includes(user?.role || '')) {
+// OWNER is a BILLING-ONLY role and does NOT have access to the operational
+    // Admin Control Center. Only full admins (admin) can reach this page.
+    if (user?.role !== 'admin') {
       return (
         <div className="flex items-center justify-center min-h-[60vh]">
           <Card className="max-w-md w-full">

@@ -11,8 +11,8 @@ interface ProtectedRouteProps {
   /**
    * Optional permission required to access the route. If specified, the
    * user must have this permission in addition to being authenticated.
-   * ADMIN (and the legacy super_admin alias) bypass all permission checks
-   * via the hasPermission() short-circuit. OWNER has no operational access
+   * ADMIN bypasses all permission checks via the hasPermission() short-circuit.
+   * OWNER has no operational access
    * and is blocked by the blockedRoles list on operational routes.
    */
   requiredPermission?: string;

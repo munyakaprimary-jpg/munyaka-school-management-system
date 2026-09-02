@@ -716,14 +716,14 @@ export const INITIAL_SEED_DATA = {
         payment_subscriptions: { read: true, create: true, edit: true, delete: true },
         staff_mgmt: { read: true, create: true, edit: true, delete: true }
       },
-      super_admin: {
-        sys_config: { read: true, create: true, edit: true, delete: true },
-        academic_grading: { read: true, create: true, edit: true, delete: true },
-        student_records: { read: true, create: true, edit: true, delete: true },
-        finance_fees: { read: true, create: true, edit: true, delete: true },
-        payment_subscriptions: { read: false, create: false, edit: false, delete: false },
-        staff_mgmt: { read: true, create: true, edit: true, delete: true }
-      },
+      admin: {
+              sys_config: { read: true, create: true, edit: true, delete: true },
+              academic_grading: { read: true, create: true, edit: true, delete: true },
+              student_records: { read: true, create: true, edit: true, delete: true },
+              finance_fees: { read: true, create: true, edit: true, delete: true },
+              payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+              staff_mgmt: { read: true, create: true, edit: true, delete: true }
+            },
       head_teacher: {
         sys_config: { read: true, create: true, edit: true, delete: false },
         academic_grading: { read: true, create: true, edit: true, delete: false },

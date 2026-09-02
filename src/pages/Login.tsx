@@ -52,14 +52,14 @@ const hasCustomAdminPassword = (): boolean => {
 //   - owner        → BILLING-ONLY role.   Lands on Owner Dashboard. Only sees
 //                    subscription / payment / financial-health widgets.
 //                    No access to learners, attendance, settings, etc.
-//   - super_admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
+//   - admin  → OPERATIONAL FULL ADMIN role.  Manages users, RBAC, ICT
 //                    systems, system settings, etc.  No special billing privs.
 //
-// The owner and super_admin happen to share the same ADMIN PIN override flow
+// The owner and admin share the same ADMIN PIN override flow
 // so they can both authenticate when the lock screen is active, but they have
 // entirely separate permission matrices.
 
-type AdminRole = 'system_admin' | 'super_admin';
+type AdminRole = 'admin' | 'owner';
 
 interface RoleConfig {
   id: AdminRole;
@@ -68,27 +68,27 @@ interface RoleConfig {
   fullDescription: string;
   email: string;
   userName: string;
-  userRole: 'owner' | 'super_admin';
+  userRole: 'owner' | 'admin';
   redirectPath: string;
   icon: React.ComponentType<{ size?: number; className?: string }>;
   primaryColor: 'indigo' | 'amber';
 }
 
 const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
-  system_admin: {
-    id: 'system_admin',
-    label: 'System Administrator',
+  admin: {
+    id: 'admin',
+    label: 'School Administrator',
     description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
     email: 'sysadmin@munyaka.sc.ke',
-    userName: 'System Administrator',
-    userRole: 'super_admin',
+    userName: 'School Administrator',
+    userRole: 'admin',
     redirectPath: '/system-management',
     icon: Settings2,
     primaryColor: 'indigo',
   },
-  super_admin: {
-    id: 'super_admin',
+  owner: {
+    id: 'owner',
     label: 'School Owner',
     description: 'Billing & Subscription Console — Owner Dashboard',
     fullDescription: 'Dedicated access to subscriptions, payment management, financial health, and seat utilization. No access to operational routes (learners, attendance, settings).',
@@ -263,13 +263,13 @@ const Login: React.FC = () => {
     }
 
     const success = await login(config.email, entered);
-        if (success) {
-          const adminSession = {
-            role: selectedAdminRole,
-            roleLabel: config.label,
-            roleIcon: selectedAdminRole === 'super_admin' ? 'crown' : 'settings',
-            timestamp: Date.now(),
-          };
+            if (success) {
+              const adminSession = {
+                role: selectedAdminRole,
+                roleLabel: config.label,
+                roleIcon: selectedAdminRole === 'owner' ? 'crown' : 'settings',
+                timestamp: Date.now(),
+              };
           localStorage.setItem('munyaka_admin_session', JSON.stringify(adminSession));
           showSuccess(`Welcome, ${config.userName}!`);
           // Send every authenticated user straight to the main dashboard,
@@ -357,22 +357,22 @@ const Login: React.FC = () => {
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
             <TabsList className="grid w-full grid-cols-3 h-12 rounded-2xl bg-slate-100 p-1 gap-1">
-              <TabsTrigger
-                value="admin"
-                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-              >
-                <Settings2 size={14} className="mr-1.5 shrink-0" />
-                <span className="hidden sm:inline">System Admin</span>
-                <span className="sm:hidden">Admin</span>
-              </TabsTrigger>
-              <TabsTrigger
-                value="super"
-                className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
-              >
-                <Crown size={14} className="mr-1.5 shrink-0" />
-                <span className="hidden sm:inline">Super Admin</span>
-                <span className="sm:hidden">Owner</span>
-              </TabsTrigger>
+                          <TabsTrigger
+                            value="admin"
+                            className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-indigo-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                          >
+                            <Settings2 size={14} className="mr-1.5 shrink-0" />
+                            <span className="hidden sm:inline">Admin</span>
+                            <span className="sm:hidden">Admin</span>
+                          </TabsTrigger>
+                          <TabsTrigger
+                            value="super"
+                            className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-amber-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
+                          >
+                            <Crown size={14} className="mr-1.5 shrink-0" />
+                            <span className="hidden sm:inline">Owner</span>
+                            <span className="sm:hidden">Owner</span>
+                          </TabsTrigger>
               <TabsTrigger
                 value="staff"
                 className="rounded-xl text-xs font-black uppercase tracking-wider data-[state=active]:bg-white data-[state=active]:text-emerald-700 data-[state=active]:shadow-sm text-slate-500 transition-all"
@@ -382,33 +382,33 @@ const Login: React.FC = () => {
               </TabsTrigger>
             </TabsList>
 
-            {/* ── SYSTEM ADMIN TAB ── */}
-            <TabsContent value="admin" className="mt-4 space-y-4">
-              {!selectedAdminRole ? (
-                <>
-                  {adminAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={20} className="shrink-0" />
-                      <span>{adminAuthError}</span>
-                    </div>
-                  )}
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                    Choose Your Role
-                  </p>
-                  <RoleCard
-                    role={ROLE_CONFIGS.system_admin}
-                    onClick={() => handleRoleSelect('system_admin')}
-                    bgColor="bg-indigo-50"
-                    textColor="text-indigo-700"
-                    borderColor="border-indigo-200"
-                    featureIcons={[
-                      { Icon: Users, label: 'Users' },
-                      { Icon: Settings2, label: 'Settings' },
-                      { Icon: Shield, label: 'RBAC' },
-                    ]}
-                    hasCustomPassword={hasCustomAdminPassword()}
-                  />
-                </>
+            {/* ── ADMIN TAB ── */}
+                        <TabsContent value="admin" className="mt-4 space-y-4">
+                          {!selectedAdminRole ? (
+                            <>
+                              {adminAuthError && (
+                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
+                                  <ShieldAlert size={20} className="shrink-0" />
+                                  <span>{adminAuthError}</span>
+                                </div>
+                              )}
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
+                                Choose Your Role
+                              </p>
+                              <RoleCard
+                                role={ROLE_CONFIGS.admin}
+                                onClick={() => handleRoleSelect('admin')}
+                                bgColor="bg-indigo-50"
+                                textColor="text-indigo-700"
+                                borderColor="border-indigo-200"
+                                featureIcons={[
+                                  { Icon: Users, label: 'Users' },
+                                  { Icon: Settings2, label: 'Settings' },
+                                  { Icon: Shield, label: 'RBAC' },
+                                ]}
+                                hasCustomPassword={hasCustomAdminPassword()}
+                              />
+                            </>
               ) : (
                 <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
                   <CardContent className="p-6 md:p-8 space-y-6">
@@ -487,33 +487,33 @@ const Login: React.FC = () => {
               )}
             </TabsContent>
 
-            {/* ── SUPER ADMIN TAB ── */}
-            <TabsContent value="super" className="mt-4 space-y-4">
-              {!selectedAdminRole ? (
-                <>
-                  {adminAuthError && (
-                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
-                      <ShieldAlert size={20} className="shrink-0" />
-                      <span>{adminAuthError}</span>
-                    </div>
-                  )}
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                    Choose Your Role
-                  </p>
-                  <RoleCard
-                    role={ROLE_CONFIGS.super_admin}
-                    onClick={() => handleRoleSelect('super_admin')}
-                    bgColor="bg-amber-50"
-                    textColor="text-amber-700"
-                    borderColor="border-amber-200"
-                    featureIcons={[
-                      { Icon: CreditCard, label: 'Payments' },
-                      { Icon: Crown, label: 'Owner' },
-                      { Icon: Shield, label: 'Billing' },
-                    ]}
-                    hasCustomPassword={hasCustomAdminPassword()}
-                  />
-                </>
+            {/* ── OWNER TAB ── */}
+                        <TabsContent value="super" className="mt-4 space-y-4">
+                          {!selectedAdminRole ? (
+                            <>
+                              {adminAuthError && (
+                                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-sm font-bold animate-in slide-in-from-top-2">
+                                  <ShieldAlert size={20} className="shrink-0" />
+                                  <span>{adminAuthError}</span>
+                                </div>
+                              )}
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
+                                Choose Your Role
+                              </p>
+                              <RoleCard
+                                role={ROLE_CONFIGS.owner}
+                                onClick={() => handleRoleSelect('owner')}
+                                bgColor="bg-amber-50"
+                                textColor="text-amber-700"
+                                borderColor="border-amber-200"
+                                featureIcons={[
+                                  { Icon: CreditCard, label: 'Payments' },
+                                  { Icon: Crown, label: 'Owner' },
+                                  { Icon: Shield, label: 'Billing' },
+                                ]}
+                                hasCustomPassword={hasCustomAdminPassword()}
+                              />
+                            </>
               ) : (
                 <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
                   <CardContent className="p-6 md:p-8 space-y-6">
