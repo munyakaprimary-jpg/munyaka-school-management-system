@@ -11,6 +11,7 @@ import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
 import { Plus, Trash2, AlertTriangle } from 'lucide-react';
 import { showSuccess } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 
 interface ExamType {
   id: string;
@@ -46,6 +47,7 @@ const ExamTypes = () => {
 
   useEffect(() => {
     localStorage.setItem('munyaka_exam_types', JSON.stringify(examTypes));
+    notifyDataChanged('munyaka_exam_types');
   }, [examTypes]);
 
   const handleAddExamType = (e: React.FormEvent) => {

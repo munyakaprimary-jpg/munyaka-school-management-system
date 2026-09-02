@@ -41,6 +41,7 @@ import {
   ArrowLeft
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { supabase } from '@/lib/supabase';
@@ -557,6 +558,7 @@ const Settings = () => {
         auditLogs
       };
       localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
+      notifyDataChanged('munyaka_system_settings_v3');
       persistGeofenceConfig(geofenceConfig);
 
       setHasUnsavedChanges(false);

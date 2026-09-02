@@ -47,6 +47,7 @@ import {
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { downloadCSV, downloadFile } from '@/utils/downloadHelper';
 import { 
   ChemicalItem, 
@@ -118,10 +119,10 @@ const ScienceLab = () => {
   });
 
   // Persistence
-  useEffect(() => { localStorage.setItem('munyaka_science_chemicals', JSON.stringify(chemicals)); }, [chemicals]);
-  useEffect(() => { localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment)); }, [equipment]);
-  useEffect(() => { localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings)); }, [bookings]);
-  useEffect(() => { localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages)); }, [breakages]);
+  useEffect(() => { localStorage.setItem('munyaka_science_chemicals', JSON.stringify(chemicals)); notifyDataChanged('munyaka_science_chemicals'); }, [chemicals]);
+  useEffect(() => { localStorage.setItem('munyaka_science_equipment', JSON.stringify(equipment)); notifyDataChanged('munyaka_science_equipment'); }, [equipment]);
+  useEffect(() => { localStorage.setItem('munyaka_science_bookings', JSON.stringify(bookings)); notifyDataChanged('munyaka_science_bookings'); }, [bookings]);
+  useEffect(() => { localStorage.setItem('munyaka_science_breakages', JSON.stringify(breakages)); notifyDataChanged('munyaka_science_breakages'); }, [breakages]);
 
   // Load from localStorage on mount
   useEffect(() => {

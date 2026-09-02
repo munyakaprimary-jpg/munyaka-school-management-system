@@ -47,6 +47,7 @@ import {
   AlertCircle as AlertCircleIcon
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 import AddICTAssetModal from '@/components/ict/AddICTAssetModal';
 import { ICTAsset, ICTCategory, ICTStatus } from '@/types/ict';
@@ -144,6 +145,8 @@ const ICTLabManagement = () => {
   useEffect(() => {
     localStorage.setItem('munyaka_ict_assets', JSON.stringify(assets));
     localStorage.setItem('munyaka_ict_logs', JSON.stringify(logs));
+    notifyDataChanged('munyaka_ict_assets');
+    notifyDataChanged('munyaka_ict_logs');
   }, [assets, logs]);
 
   // --- Derived Data ---

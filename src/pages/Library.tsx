@@ -14,6 +14,7 @@ import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { BookHistoryModal } from '@/components/library/BookHistoryModal';
 import { RegisterBookModal } from '@/components/library/RegisterBookModal';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 
 const DEFAULT_BORROW_LOGS: BorrowLog[] = [
@@ -88,10 +89,12 @@ const Library = () => {
   // Sync to Local Storage
   useEffect(() => {
     localStorage.setItem('munyaka_library_books', JSON.stringify(books));
+    notifyDataChanged('munyaka_library_books');
   }, [books]);
 
   useEffect(() => {
     localStorage.setItem('munyaka_library_history', JSON.stringify(historyLogs));
+    notifyDataChanged('munyaka_library_history');
   }, [historyLogs]);
 
   // Derived Filtered Books

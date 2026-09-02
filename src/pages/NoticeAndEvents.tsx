@@ -49,6 +49,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { showSuccess } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { format, isToday, isSameDay, addDays } from 'date-fns';
 import { Notice, SchoolEvent } from '@/types/notice';
 import { useAuth } from '@/context/AuthContext';
@@ -270,6 +271,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   useEffect(() => {
     localStorage.setItem('munyaka_notices_v2', JSON.stringify(notices));
+    notifyDataChanged('munyaka_notices_v2');
   }, [notices]);
 
   const formatTime12h = (time24: string): string => {
@@ -284,6 +286,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   useEffect(() => {
     localStorage.setItem('munyaka_events_v2', JSON.stringify(events));
+    notifyDataChanged('munyaka_events_v2');
   }, [events]);
 
   const handlePublishNotice = async (e: React.FormEvent) => {

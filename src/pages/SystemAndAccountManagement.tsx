@@ -35,6 +35,7 @@ import {
   Plus
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
 
 // --- Types ---
@@ -136,15 +137,15 @@ const SystemAndAccountManagement = () => {
 
   // --- Persist to localStorage on changes ---
   useEffect(() => {
-    try { localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(users)); } catch { /* ignore */ }
+    try { localStorage.setItem(SYSTEM_USERS_KEY, JSON.stringify(users)); notifyDataChanged('munyaka_system_users'); } catch { /* ignore */ }
   }, [users]);
 
   useEffect(() => {
-    try { localStorage.setItem(SYSTEM_DEVICES_KEY, JSON.stringify(devices)); } catch { /* ignore */ }
+    try { localStorage.setItem(SYSTEM_DEVICES_KEY, JSON.stringify(devices)); notifyDataChanged('munyaka_network_devices'); } catch { /* ignore */ }
   }, [devices]);
 
   useEffect(() => {
-    try { localStorage.setItem(LAB_RESERVATIONS_KEY, JSON.stringify(reservations)); } catch { /* ignore */ }
+    try { localStorage.setItem(LAB_RESERVATIONS_KEY, JSON.stringify(reservations)); notifyDataChanged('munyaka_lab_reservations'); } catch { /* ignore */ }
   }, [reservations]);
 
   const [userSearch, setUserSearch] = useState("");

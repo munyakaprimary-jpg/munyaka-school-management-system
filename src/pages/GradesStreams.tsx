@@ -13,6 +13,7 @@ import { Layers, Plus, Users, User, Trash2, Lock, AlertCircle, Loader2 } from 'l
 import { showSuccess, showError } from '@/utils/toast';
 import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 import { sortGrades } from '@/utils/gradeSort';
+import { notifyDataChanged } from '@/utils/storage';
 
 const STORAGE_KEY = 'munyaka_grades';
 const SCHOOL_INFO_KEY = 'munyaka_school_info';
@@ -85,6 +86,7 @@ const GradesStreams = () => {
     if (grades.length > 0) {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(grades));
+        notifyDataChanged('munyaka_grades');
       } catch (e) {
         // localStorage quota exceeded — best-effort, fall through silently
       }

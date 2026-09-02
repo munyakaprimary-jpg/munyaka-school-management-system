@@ -13,6 +13,7 @@ import Modal from "@/components/ui/Modal";
 import BackButton from "@/components/ui/BackButton";
 import { Search, Package, Box, RefreshCw, UserCheck, Clock, Calendar, Plus, Trash2, Save, X, ArrowUpRight, ArrowDownLeft, LayoutGrid, Loader2 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
 import { supabase } from '@/lib/supabase';
@@ -72,10 +73,12 @@ const Inventory = () => {
   // Persist to Local Storage on change
   useEffect(() => {
     localStorage.setItem('munyaka_inventory', JSON.stringify(assets));
+    notifyDataChanged('munyaka_inventory');
   }, [assets]);
 
   useEffect(() => {
     localStorage.setItem('munyaka_asset_logs', JSON.stringify(assetLogs));
+    notifyDataChanged('munyaka_asset_logs');
   }, [assetLogs]);
 
   // Sync Stock Function with Supabase DB & Fallback
@@ -97,6 +100,7 @@ const Inventory = () => {
         }));
         setAssets(mappedAssets);
         localStorage.setItem('munyaka_inventory', JSON.stringify(mappedAssets));
+        notifyDataChanged('munyaka_inventory');
         showSuccess(`Stock synced live from database (${mappedAssets.length} assets).`);
       } else {
         const saved = localStorage.getItem('munyaka_inventory');

@@ -220,6 +220,28 @@ export function clearAllStorage(): void {
   }
 }
 
+/**
+ * Drop-in replacement for localStorage.setItem that automatically fires
+ * `notifyDataChanged` after every successful write. Call this from any
+ * mutation site instead of calling `localStorage.setItem` directly.
+ *
+ * Usage:
+ *   import { lsSet } from '@/utils/storage';
+ *   lsSet('my_key', myObject);
+ */
+export function lsSet(key: string, value: unknown): boolean {
+  const ls = safeLocalStorage();
+  if (!ls) return false;
+  try {
+    ls.setItem(key, JSON.stringify(value));
+    notifyDataChanged(key);
+    return true;
+  } catch (err) {
+    console.error(`[storage] lsSet failed for key "${key}":`, err);
+    return false;
+  }
+}
+
 // ─── Change notification (cross-component sync) ─────────────────────────────
 
 /**

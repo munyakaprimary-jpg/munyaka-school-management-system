@@ -58,6 +58,7 @@ import {
   X,
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
+import { lsSet } from '@/utils/storage';
 import { useAuth } from '@/context/AuthContext';
 import { cn } from '@/lib/utils';
 import { Navigate } from 'react-router-dom';
@@ -495,7 +496,7 @@ const PaymentManagement = () => {
               Boolean(tx) && !LEGACY_IDS.has(tx.id)
             );
             if (realOnly.length !== parsed.length) {
-              localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(realOnly));
+              lsSet(PAYMENTS_HISTORY_KEY, realOnly);
               setPaymentsHistory(realOnly);
             }
           }
@@ -507,7 +508,7 @@ const PaymentManagement = () => {
   // ── Persist payments history to localStorage whenever it changes ──
   useEffect(() => {
     try {
-      localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(paymentsHistory));
+      lsSet(PAYMENTS_HISTORY_KEY, paymentsHistory);
     } catch { /* ignore */ }
   }, [paymentsHistory]);
 
@@ -627,7 +628,7 @@ const PaymentManagement = () => {
     setPaymentsHistory(prev => {
       const next = [payment, ...prev];
       try {
-        localStorage.setItem(PAYMENTS_HISTORY_KEY, JSON.stringify(next));
+        lsSet(PAYMENTS_HISTORY_KEY, next);
       } catch { /* ignore */ }
       return next;
     });
@@ -674,7 +675,7 @@ const PaymentManagement = () => {
       tier: configForm.tier,
     };
 
-    localStorage.setItem(SUBSCRIPTION_CONFIG_KEY, JSON.stringify(configToSave));
+    lsSet(SUBSCRIPTION_CONFIG_KEY, configToSave);
 
     const updatedSubscriptions = subscriptions.map((s, idx) =>
       idx === 0
@@ -692,9 +693,9 @@ const PaymentManagement = () => {
     );
 
     setSubscriptions(updatedSubscriptions);
-    localStorage.setItem(
+    lsSet(
       STORAGE_KEY,
-      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+      { gateways, subscriptions: updatedSubscriptions }
     );
     setHasUnsavedChanges(false);
     setIsSaving(false);
@@ -731,9 +732,9 @@ const PaymentManagement = () => {
         : s
     );
     setSubscriptions(updatedSubscriptions);
-    localStorage.setItem(
+    lsSet(
       STORAGE_KEY,
-      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+      { gateways, subscriptions: updatedSubscriptions }
     );
 
     const entry: LocalPaymentEntry = {
@@ -747,7 +748,7 @@ const PaymentManagement = () => {
     };
     const next = [entry, ...localPayments];
     setLocalPayments(next);
-    localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
+    lsSet('munyaka_local_payments', next);
 
     // Push to dynamic invoice history so it appears immediately in the table
     const modeLabel = lpForm.mode === 'mpesa' ? 'M-Pesa'
@@ -780,12 +781,12 @@ const PaymentManagement = () => {
 
     setLpForm(f => {
       const cleared = { ...f, amount: '', reference: '', note: '' };
-      localStorage.setItem('lp_form_snapshot', JSON.stringify({
+      lsSet('lp_form_snapshot', {
         mode: cleared.mode,
         amount: cleared.amount,
         currency: cleared.currency,
         note: cleared.note,
-      }));
+      });
       return cleared;
     });
     window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));
@@ -840,12 +841,12 @@ const PaymentManagement = () => {
 
     // Persist updated licenses
     const LICENSE_STORAGE_KEY = 'munyaka_licenses';
-    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+    lsSet(LICENSE_STORAGE_KEY, updatedLicenses);
 
     // Also remove any tied monthly payment records for this activation key
     const updatedPayments = monthlyPayments.filter(p => p.activationCode !== licenseToDelete.activationKey);
     setMonthlyPayments(updatedPayments);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+    lsSet('munyaka_monthly_payments', updatedPayments);
 
     // Clear the deleted key from the selection so the floating bar disappears
     // immediately if it was the only selected row.
@@ -915,7 +916,7 @@ const PaymentManagement = () => {
 
   const persistMpForm = (snapshot: any) => {
     try {
-      localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(snapshot));
+      lsSet(MP_FORM_SNAPSHOT_KEY, snapshot);
     } catch { /* storage may be unavailable in private mode */ }
   };
 
@@ -962,9 +963,9 @@ const PaymentManagement = () => {
         : s
     );
     setSubscriptions(updatedSubscriptions);
-    localStorage.setItem(
+    lsSet(
       STORAGE_KEY,
-      JSON.stringify({ gateways, subscriptions: updatedSubscriptions })
+      { gateways, subscriptions: updatedSubscriptions }
     );
     setHasUnsavedChanges(false);
 
@@ -985,7 +986,7 @@ const PaymentManagement = () => {
     };
     const nextPayments = [record, ...monthlyPayments];
     setMonthlyPayments(nextPayments);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(nextPayments));
+    lsSet('munyaka_monthly_payments', nextPayments);
 
     setLicenses(getAllLicenses());
     setLastGeneratedCode(issued.activationKey);
@@ -1052,7 +1053,7 @@ const PaymentManagement = () => {
       deviceId: mpForm.deviceId,
     };
     try {
-      localStorage.setItem(MP_FORM_SNAPSHOT_KEY, JSON.stringify(finalSnapshot));
+      lsSet(MP_FORM_SNAPSHOT_KEY, finalSnapshot);
     } catch { /* storage may be unavailable in private mode */ }
 
     setMpForm(f => ({ ...f, transactionRef: '', subscriptionId: '' }));
@@ -1096,7 +1097,7 @@ const PaymentManagement = () => {
       p.id === id ? { ...p, codeStatus: 'redeemed' as const } : p
     );
     setMonthlyPayments(next);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+    lsSet('munyaka_monthly_payments', next);
     showSuccess('Code marked as redeemed.');
   };
 
@@ -1264,7 +1265,7 @@ const PaymentManagement = () => {
 
     // Persist updated licenses
     const LICENSE_STORAGE_KEY = 'munyaka_licenses';
-    localStorage.setItem(LICENSE_STORAGE_KEY, JSON.stringify(updatedLicenses));
+    lsSet(LICENSE_STORAGE_KEY, updatedLicenses);
 
     // Also remove any tied monthly payment records for deleted activation keys
     const deletedKeys = new Set(
@@ -1272,7 +1273,7 @@ const PaymentManagement = () => {
     );
     const updatedPayments = monthlyPayments.filter(p => !deletedKeys.has(p.activationCode));
     setMonthlyPayments(updatedPayments);
-    localStorage.setItem('munyaka_monthly_payments', JSON.stringify(updatedPayments));
+    lsSet('munyaka_monthly_payments', updatedPayments);
 
     // Clear selection
     setSelectedLicenseIds(new Set());
@@ -2260,7 +2261,7 @@ const PaymentManagement = () => {
                                     if (!confirm('Delete this payment log entry?')) return;
                                     const next = localPayments.filter(p => p.id !== lp.id);
                                     setLocalPayments(next);
-                                    localStorage.setItem('munyaka_local_payments', JSON.stringify(next));
+                                    lsSet('munyaka_local_payments', next);
                                     showSuccess('Entry deleted.');
                                   }}
                                 >
@@ -2493,7 +2494,7 @@ const PaymentManagement = () => {
             };
             const next = [record, ...monthlyPayments];
             setMonthlyPayments(next);
-            localStorage.setItem('munyaka_monthly_payments', JSON.stringify(next));
+            lsSet('munyaka_monthly_payments', next);
           }
 
           window.dispatchEvent(new Event(SUBSCRIPTION_UPDATED_EVENT));

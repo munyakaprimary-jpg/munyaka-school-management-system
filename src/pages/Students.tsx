@@ -20,6 +20,7 @@ import { Learner } from '@/types/learners';
 import { showSuccess } from '@/utils/toast';
 import { logDeletionAudit } from '@/services/deletionAuditLog';
 import { useAuth } from '@/context/AuthContext';
+import { notifyDataChanged } from '@/utils/storage';
 import {
   readGradesAndStreams,
   getStreamsForGrade,
@@ -116,6 +117,7 @@ export default function Students() {
   useEffect(() => {
     try {
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
+      notifyDataChanged('school_learners_data');
     } catch (e) {
       console.error('Error saving learners to localStorage', e);
     }

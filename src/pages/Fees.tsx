@@ -207,6 +207,7 @@ const Fees = () => {
   // Persist data to localStorage
   useEffect(() => {
     localStorage.setItem('munyaka_fee_structures', JSON.stringify(feeStructures));
+    notifyDataChanged('munyaka_fee_structures');
   }, [feeStructures]);
 
   useEffect(() => {
@@ -216,6 +217,7 @@ const Fees = () => {
 
   useEffect(() => {
     localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(auditLogs));
+    notifyDataChanged('munyaka_fee_audit_logs');
   }, [auditLogs]);
 
   // Listen for fee update events from EditFeeModal and refresh state

@@ -33,6 +33,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
+import { notifyDataChanged } from '@/utils/storage';
 
 // ─── Storage keys ───────────────────────────────────────────────────────────────
 
@@ -65,6 +66,7 @@ const loadBillingContact = (): BillingContact => {
 
 const saveBillingContact = (contact: BillingContact) => {
   localStorage.setItem(BILLING_CONTACT_KEY, JSON.stringify(contact));
+  notifyDataChanged('munyaka_billing_contact');
 };
 
 const loadNotificationPrefs = (): NotificationPrefs => {
@@ -83,6 +85,7 @@ const loadNotificationPrefs = (): NotificationPrefs => {
 
 const saveNotificationPrefs = (prefs: NotificationPrefs) => {
   localStorage.setItem(NOTIFICATION_PREFS_KEY, JSON.stringify(prefs));
+  notifyDataChanged('munyaka_notification_prefs');
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -156,6 +159,7 @@ const ProfileSettings: React.FC = () => {
         'munyaka_school_profile',
         JSON.stringify({ ...existing, name: schoolName }),
       );
+      notifyDataChanged('munyaka_school_profile');
     } catch { /* ignore */ }
     setIsSaving(false);
     showSuccess('Profile updated successfully.');
