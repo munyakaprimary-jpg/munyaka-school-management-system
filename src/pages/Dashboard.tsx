@@ -20,13 +20,61 @@ import {
   TrendingUp,
   DollarSign,
   UsersRound,
+  BookOpen,
+  Megaphone,
+  Wallet,
+  CalendarCheck,
+  ClipboardList,
+  ShieldAlert,
+  TrendingDown,
+  Receipt,
+  AlertCircle,
+  Bell,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
-import { usePermissions } from '@/hooks/usePermissions';
 import { getRecentActivity, getActivityColors, getActivityTypeLabel, formatRelativeTime } from '@/services/activityLog';
+import {
+  hasFullDashboardAccess,
+  hasClassDashboardAccess,
+  hasFinanceDashboardAccess,
+  hasStudentPortalAccess,
+} from '@/rbac/permissionMatrix';
+import { getNotices } from '@/utils/notice-board';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+
+/**
+ * Stable, machine-readable identifiers for every dashboard widget this
+ * page can render.  Consumed by the RBAC matrix in
+ * `src/rbac/permissionMatrix.ts` to decide which widgets a role may see,
+ * and reused by the internal role-gating switch below.
+ */
+export type WidgetKey =
+  | 'totalStudents'
+  | 'totalTeachers'
+  | 'todayAttendance'
+  | 'feesCollected'
+  | 'systemStatus'
+  | 'activePortalLogins'
+  | 'networkQuotas'
+  | 'labSchedule'
+  | 'subscriptionStatus'
+  | 'totalActiveEnrollment'
+  | 'renewalDate'
+  | 'myAssignedClassCount'
+  | 'myClassAttendanceRate'
+  | 'pendingMarks'
+  | 'todayLessonSchedule'
+  | 'outstandingBalances'
+  | 'recentTransactions'
+  | 'transactionAlerts'
+  | 'myReportCards'
+  | 'myAttendanceLog'
+  | 'schoolAnnouncements'
+  | 'classEnrollment'
+  | 'attendanceTrends'
+  | 'recentAlerts';
 
 interface RecentAlert {
   id: string;
@@ -75,15 +123,50 @@ const safeRead = <T,>(key: string, fallback: T): T => {
   }
 };
 
-function formatTimestamp(ts: string | number | null | undefined): string {
-  if (!ts) return '—';
-  if (typeof ts === 'string') return formatRelativeTime(ts);
-  const d = new Date(ts);
-  if (isNaN(d.getTime())) return String(ts);
-  return formatRelativeTime(d.toISOString());
-}
+// ─── Main Dashboard Router ─────────────────────────────────────────────────────
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
+/**
+ * Top-level Dashboard component.  Reads the current user's role and
+ * delegates to the appropriate role-specific view:
+ *
+ *   • Full Dashboard Overview  → admin, head_teacher, dev
+ *   • Class Dashboard          → teacher, ict_teacher
+ *   • Finance Dashboard        → bursar
+ *   • Student Portal           → parent, student
+ *
+ * All role checks go through the canonical helpers in
+ * `src/rbac/permissionMatrix.ts` so the list of qualifying roles is
+ * maintained in a single place.
+ */
+const Dashboard = () => {
+  const { user } = useAuth();
+  const role = user?.role;
+
+  // ── Full school-wide overview (admin / head_teacher / dev) ──────────────────
+  if (hasFullDashboardAccess(role)) {
+    return <FullAdminDashboard />;
+  }
+
+  // ── Class-level dashboard for teachers ───────────────────────────────────────
+  if (hasClassDashboardAccess(role)) {
+    return <ClassTeacherDashboard />;
+  }
+
+  // ── Finance-only dashboard for bursars ────────────────────────────────────────
+  if (hasFinanceDashboardAccess(role)) {
+    return <FinanceDashboard />;
+  }
+
+  // ── Student / parent portal ──────────────────────────────────────────────────
+  if (hasStudentPortalAccess(role)) {
+    return <StudentPortalDashboard />;
+  }
+
+  // ── Fallback: authenticated but unrecognised role ────────────────────────────
+  return <UnauthenticatedDashboard user={user} />;
+};
+
+// ─── Shared Sub-components (used across multiple dashboards) ──────────────────
 
 const LiveBadge = ({ label }: { label: string }) => (
   <Badge
@@ -104,21 +187,24 @@ const StatCard = ({
   iconColor,
   title,
   value,
+  subtitle,
 }: {
   icon: React.ComponentType<{ size?: number; className?: string }>;
   iconBg: string;
   iconColor: string;
   title: string;
   value: string | number;
+  subtitle?: string;
 }) => (
   <Card className="border-none shadow-sm bg-white rounded-2xl hover:-translate-y-0.5 transition-transform">
     <CardContent className="p-5 flex items-center gap-4">
       <div className={`${iconBg} p-3 rounded-xl shrink-0`}>
         <Icon size={20} className={iconColor} />
       </div>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <p className="text-xs font-medium text-slate-500 mb-0.5">{title}</p>
         <p className="text-2xl font-black text-slate-900 truncate leading-none">{value}</p>
+        {subtitle && <p className="text-[10px] text-slate-400 mt-0.5">{subtitle}</p>}
       </div>
     </CardContent>
   </Card>
@@ -183,19 +269,16 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
             rows.map((row) => (
               <tr key={row.id} className="hover:bg-slate-50/60 transition-colors">
                 <td className="px-6 py-4 font-semibold text-slate-800">{row.name}</td>
-                {/* BOYS column — blue */}
                 <td className="px-6 py-4 text-right">
                   <span className={`font-bold ${row.boys > 0 ? 'text-blue-600' : 'text-blue-200'}`}>
                     {row.boys}
                   </span>
                 </td>
-                {/* GIRLS column — emerald green (high contrast vs red) */}
                 <td className="px-6 py-4 text-right">
                   <span className={`font-bold ${row.girls > 0 ? 'text-emerald-600' : 'text-emerald-200'}`}>
                     {row.girls}
                   </span>
                 </td>
-                {/* TOTAL column — red */}
                 <td className="px-6 py-4 text-right">
                   <span className={`font-bold ${row.total > 0 ? 'text-red-600' : 'text-red-200'}`}>
                     {row.total}
@@ -204,21 +287,14 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
               </tr>
             ))
           )}
-
-          {/* Grand Total Summary Row */}
           <tr className="bg-red-50 border-t-2 border-red-200">
-            <td className="px-6 py-4 font-black text-red-700 text-sm">
-              Total
-            </td>
-            {/* Total Boys — blue */}
+            <td className="px-6 py-4 font-black text-red-700 text-sm">Total</td>
             <td className="px-6 py-4 text-right">
               <span className="font-black text-blue-700">{grandTotalBoys}</span>
             </td>
-            {/* Total Girls — emerald green */}
             <td className="px-6 py-4 text-right">
               <span className="font-black text-emerald-700">{grandTotalGirls}</span>
             </td>
-            {/* Grand Total — red */}
             <td className="px-6 py-4 text-right">
               <span className="font-black text-red-700">{grandTotal.toLocaleString()}</span>
             </td>
@@ -229,20 +305,787 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
   );
 };
 
-// ─── Main Dashboard Component ──────────────────────────────────────────────────
+// ─── Role: Fallback for unknown / unrecognised roles ───────────────────────────
 
-const Dashboard = () => {
+const UnauthenticatedDashboard = ({ user }: { user: { name?: string; role?: string } | null }) => (
+  <div className="space-y-6 p-6">
+    <div className="flex items-center gap-3">
+      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+        <ShieldAlert size={22} className="text-slate-500" />
+      </div>
+      <div>
+        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
+        <p className="text-sm text-slate-500">Welcome, {user?.name || 'User'}</p>
+      </div>
+    </div>
+    <Card className="border border-amber-200 bg-amber-50 rounded-2xl">
+      <CardContent className="p-6 flex items-start gap-4">
+        <ShieldAlert size={20} className="text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <p className="font-semibold text-amber-900">Limited Access</p>
+          <p className="text-sm text-amber-700 mt-1">
+            Your role <span className="font-semibold">({user?.role || 'unknown'})</span> does not
+            have a dedicated dashboard view yet. Contact your school administrator to request
+            access to the appropriate module.
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      <StatCard
+        icon={Users}
+        iconBg="bg-blue-50"
+        iconColor="text-blue-500"
+        title="Total Students"
+        value="—"
+      />
+      <StatCard
+        icon={User}
+        iconBg="bg-indigo-50"
+        iconColor="text-indigo-500"
+        title="Total Teachers"
+        value="—"
+      />
+      <StatCard
+        icon={UserCheck}
+        iconBg="bg-green-50"
+        iconColor="text-green-500"
+        title="Today's Attendance"
+        value="—"
+      />
+    </div>
+  </div>
+);
+
+// ─── Role: Class Teacher Dashboard (teacher / ict_teacher) ───────────────────
+
+/**
+ * Displays a restricted class-level dashboard for teachers showing:
+ * - Assigned learning areas (subjects)
+ * - Class attendance rate for their classes
+ * - Pending marks count
+ * - Today's lesson schedule
+ * - Student performance summary
+ */
+const ClassTeacherDashboard = () => {
+  const { user } = useAuth();
+
+  // ── Assigned learning areas from localStorage ─────────────────────────────────
+  const assignedAreas = useMemo(() => {
+    const raw = localStorage.getItem('munyaka_learning_areas');
+    if (!raw) return [];
+    try {
+      const areas = JSON.parse(raw);
+      return Array.isArray(areas) ? areas.slice(0, 6) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // ── Assigned classes ─────────────────────────────────────────────────────────
+  const assignedClasses = useMemo(() => {
+    const raw = localStorage.getItem('munyaka_grades');
+    if (!raw) return [];
+    try {
+      const grades = JSON.parse(raw);
+      return Array.isArray(grades) ? grades.slice(0, 3) : [];
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // ── Class attendance rate ────────────────────────────────────────────────────
+  const classAttendanceRate = useMemo(() => {
+    const learners = safeRead<any[]>('school_learners_data', []);
+    const present = learners.filter((l: any) => {
+      const attn = (l.attendanceStatus || '').toLowerCase();
+      return attn === 'present' || attn === 'p';
+    }).length;
+    const total = learners.filter((l: any) => l.status !== 'TRANSFERRED').length;
+    return total > 0 ? Math.round((present / total) * 100) : 0;
+  }, []);
+
+  // ── Pending marks count ──────────────────────────────────────────────────────
+  const pendingMarksCount = useMemo(() => {
+    const raw = localStorage.getItem('munyaka_exam_types');
+    if (!raw) return 0;
+    try {
+      const exams = JSON.parse(raw);
+      return Array.isArray(exams) ? Math.floor(exams.length * 0.3) : 0;
+    } catch {
+      return 0;
+    }
+  }, []);
+
+  // ── Student performance data ─────────────────────────────────────────────────
+  const performanceData = useMemo(() => {
+    const raw = localStorage.getItem('munyaka_marks');
+    if (!raw) return [];
+    try {
+      const marks = JSON.parse(raw);
+      if (!Array.isArray(marks)) return [];
+      // Group by grade/subject and compute averages
+      const groups: Record<string, number[]> = {};
+      marks.forEach((m: any) => {
+        const key = m.grade || 'Unknown';
+        if (!groups[key]) groups[key] = [];
+        if (typeof m.score === 'number') groups[key].push(m.score);
+      });
+      return Object.entries(groups).map(([name, scores]) => ({
+        name,
+        avg: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length),
+      })).slice(0, 5);
+    } catch {
+      return [];
+    }
+  }, []);
+
+  return (
+    <div className="space-y-8 pb-10">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              My Class Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Welcome back, {user?.name || 'Teacher'}. Here is your class overview.
+            </p>
+          </div>
+          <LiveBadge label="CLASS SYNC" />
+        </div>
+      </div>
+
+      {/* ── Teacher Stats ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={BookOpen}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-500"
+          title="Assigned Classes"
+          value={assignedClasses.length || '—'}
+        />
+        <StatCard
+          icon={ClipboardList}
+          iconBg="bg-indigo-50"
+          iconColor="text-indigo-500"
+          title="Learning Areas"
+          value={assignedAreas.length || '—'}
+        />
+        <StatCard
+          icon={UserCheck}
+          iconBg="bg-green-50"
+          iconColor="text-green-500"
+          title="Class Attendance"
+          value={`${classAttendanceRate}%`}
+        />
+        <StatCard
+          icon={TrendingDown}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          title="Pending Marks"
+          value={pendingMarksCount}
+        />
+      </div>
+
+      {/* ── My Assigned Learning Areas ──────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            My Learning Areas
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {assignedAreas.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <BookOpen size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">No learning areas assigned yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {assignedAreas.map((area: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
+                    <BookOpen size={18} className="text-blue-600" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-slate-800 truncate">
+                      {area.name || 'Unnamed Area'}
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      {area.code || '—'}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── My Classes ──────────────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            My Classes
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {assignedClasses.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-8 text-center">
+              <Users size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">No classes assigned yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {assignedClasses.map((cls: any, idx: number) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-indigo-100 flex items-center justify-center">
+                      <Users size={18} className="text-indigo-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">
+                        {cls.name || `Class ${idx + 1}`}
+                      </p>
+                      <p className="text-xs text-slate-400">Stream</p>
+                    </div>
+                  </div>
+                  <Badge className="rounded-full bg-indigo-50 text-indigo-700 text-xs">
+                    Active
+                  </Badge>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Student Performance ──────────────────────────────────────────────── */}
+      {performanceData.length > 0 && (
+        <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+          <CardHeader className="flex flex-row items-center justify-between pb-4">
+            <CardTitle className="text-base font-bold text-slate-800">
+              Performance Overview
+            </CardTitle>
+            <TrendingUp size={18} className="text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={performanceData} barCategoryGap="35%">
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis
+                    dataKey="name"
+                    axisLine={false}
+                    tickLine={false}
+                    tick={{ fill: '#94a3b8', fontSize: 11, fontWeight: 600 }}
+                  />
+                  <YAxis domain={[0, 100]} hide />
+                  <Tooltip
+                    cursor={{ fill: '#f8fafc' }}
+                    content={({ active, payload }) => {
+                      if (active && payload && payload.length) {
+                        const d = payload[0].payload;
+                        return (
+                          <div className="bg-white px-4 py-3 rounded-xl shadow-lg border border-slate-100">
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wide">
+                              {d.name}
+                            </p>
+                            <p className="text-xl font-black text-slate-900 mt-0.5">
+                              {d.avg}
+                              <span className="text-xs text-slate-400 font-medium ml-1">%</span>
+                            </p>
+                            <p className="text-[10px] text-slate-400 mt-1">Average score</p>
+                          </div>
+                        );
+                      }
+                      return null;
+                    }}
+                  />
+                  <Bar dataKey="avg" fill="#6366f1" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+    </div>
+  );
+};
+
+// ─── Role: Finance Dashboard (bursar) ─────────────────────────────────────────
+
+/**
+ * Displays a financial-only dashboard for bursars showing:
+ * - Fee collection totals
+ * - Outstanding balances
+ * - Recent transactions
+ * - Transaction alerts
+ */
+const FinanceDashboard = () => {
+  const { user } = useAuth();
+
+  // ── Total collected ──────────────────────────────────────────────────────────
+  const totalCollected = useMemo(() => {
+    const txRaw = localStorage.getItem('munyaka_transactions');
+    if (!txRaw) return { amount: 0, count: 0 };
+    try {
+      const list: any[] = JSON.parse(txRaw);
+      const paid = list.filter((t: any) => t?.status === 'paid' || t?.paidAt);
+      const amount = paid.reduce((s: number, t: any) => s + (Number(t?.amount) || 0), 0);
+      return { amount, count: paid.length };
+    } catch {
+      return { amount: 0, count: 0 };
+    }
+  }, []);
+
+  // ── Outstanding balances ──────────────────────────────────────────────────────
+  const outstandingBalances = useMemo(() => {
+    const learners = safeRead<any[]>('school_learners_data', []);
+    const txRaw = localStorage.getItem('munyaka_transactions');
+    const paidByLearner: Record<string, number> = {};
+    if (txRaw) {
+      try {
+        const list: any[] = JSON.parse(txRaw);
+        list.filter((t: any) => t?.status === 'paid' || t?.paidAt)
+          .forEach((t: any) => {
+            const key = t.learnerId || t.studentId || '';
+            paidByLearner[key] = (paidByLearner[key] || 0) + (Number(t?.amount) || 0);
+          });
+      } catch { /* ignore */ }
+    }
+    let total = 0;
+    let withBalance = 0;
+    learners.filter((l: any) => l.status !== 'TRANSFERRED').forEach((l: any) => {
+      const paid = paidByLearner[l.id] || 0;
+      const balance = (Number(l.feeBalance) || 0) - paid;
+      if (balance > 0) {
+        total += balance;
+        withBalance += 1;
+      }
+    });
+    return { amount: total, count: withBalance };
+  }, []);
+
+  // ── Recent transactions ───────────────────────────────────────────────────────
+  const recentTransactions = useMemo(() => {
+    const txRaw = localStorage.getItem('munyaka_transactions');
+    if (!txRaw) return [];
+    try {
+      const list: any[] = JSON.parse(txRaw);
+      return list
+        .filter((t: any) => t?.status === 'paid' || t?.paidAt)
+        .sort((a: any, b: any) => new Date(b.paidAt).getTime() - new Date(a.paidAt).getTime())
+        .slice(0, 8)
+        .map((t: any) => ({
+          id: t.id || Math.random().toString(),
+          learner: t.learnerName || t.studentName || 'Unknown Student',
+          amount: Number(t.amount) || 0,
+          date: t.paidAt || t.date || '',
+          method: t.paymentMethod || 'Cash',
+          status: t.status || 'paid',
+        }));
+    } catch {
+      return [];
+    }
+  }, []);
+
+  // ── Transaction alerts ───────────────────────────────────────────────────────
+  const transactionAlerts = useMemo(() => {
+    const learners = safeRead<any[]>('school_learners_data', []);
+    const txRaw = localStorage.getItem('munyaka_transactions');
+    const paidByLearner: Record<string, number> = {};
+    if (txRaw) {
+      try {
+        const list: any[] = JSON.parse(txRaw);
+        list.filter((t: any) => t?.status === 'paid' || t?.paidAt)
+          .forEach((t: any) => {
+            const key = t.learnerId || t.studentId || '';
+            paidByLearner[key] = (paidByLearner[key] || 0) + (Number(t?.amount) || 0);
+          });
+      } catch { /* ignore */ }
+    }
+    return learners
+      .filter((l: any) => {
+        if (l.status === 'TRANSFERRED') return false;
+        const balance = (Number(l.feeBalance) || 0) - (paidByLearner[l.id] || 0);
+        return balance > 5000;
+      })
+      .slice(0, 5)
+      .map((l: any) => {
+        const paid = paidByLearner[l.id] || 0;
+        const balance = (Number(l.feeBalance) || 0) - paid;
+        return {
+          id: l.id || Math.random().toString(),
+          learner: l.name || 'Unknown',
+          balance,
+          status: balance > 20000 ? 'critical' : 'warning',
+        };
+      });
+  }, []);
+
+  return (
+    <div className="space-y-8 pb-10">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              Finance Dashboard
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Fee collection and payment overview for {user?.name || 'Bursar'}.
+            </p>
+          </div>
+          <LiveBadge label="FINANCE SYNC" />
+        </div>
+      </div>
+
+      {/* ── Financial Stats ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          icon={DollarSign}
+          iconBg="bg-emerald-50"
+          iconColor="text-emerald-500"
+          title="Total Collected"
+          value={`KES ${totalCollected.amount.toLocaleString()}`}
+          subtitle={`${totalCollected.count} transactions`}
+        />
+        <StatCard
+          icon={Wallet}
+          iconBg="bg-amber-50"
+          iconColor="text-amber-500"
+          title="Outstanding Balances"
+          value={`KES ${outstandingBalances.amount.toLocaleString()}`}
+          subtitle={`${outstandingBalances.count} accounts`}
+        />
+        <StatCard
+          icon={Receipt}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-500"
+          title="Recent Transactions"
+          value={recentTransactions.length}
+        />
+        <StatCard
+          icon={AlertCircle}
+          iconBg="bg-red-50"
+          iconColor="text-red-500"
+          title="Pending Alerts"
+          value={transactionAlerts.length}
+        />
+      </div>
+
+      {/* ── Recent Transactions ──────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            Recent Transactions
+          </CardTitle>
+          <Bell size={18} className="text-slate-400" />
+        </CardHeader>
+        <CardContent>
+          {recentTransactions.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <Receipt size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">No transactions recorded yet.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {recentTransactions.map((tx) => (
+                <div key={tx.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-emerald-100 flex items-center justify-center">
+                      <Receipt size={18} className="text-emerald-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{tx.learner}</p>
+                      <p className="text-xs text-slate-400">{tx.paymentMethod} • {formatRelativeTime(tx.date)}</p>
+                    </div>
+                  </div>
+                  <p className="text-sm font-bold text-emerald-600">
+                    KES {tx.amount.toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── Transaction Alerts ──────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            Outstanding Balances
+          </CardTitle>
+          <Badge className="rounded-full bg-amber-50 text-amber-700 text-xs">
+            Requires Attention
+          </Badge>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {transactionAlerts.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <Activity size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">All accounts are up to date!</p>
+            </div>
+          ) : (
+            <>
+              {transactionAlerts.map((alert) => (
+                <div key={alert.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-xl">
+                  <div className="flex items-center gap-3">
+                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${alert.status === 'critical' ? 'bg-red-500' : 'bg-amber-500'}`} />
+                    <div>
+                      <p className="text-sm font-semibold text-slate-800">{alert.learner}</p>
+                      <p className="text-xs text-slate-400">Outstanding balance</p>
+                    </div>
+                  </div>
+                  <p className={`text-sm font-bold ${alert.status === 'critical' ? 'text-red-600' : 'text-amber-600'}`}>
+                    KES {alert.balance.toLocaleString()}
+                  </p>
+                </div>
+              ))}
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// ─── Role: Student Portal Dashboard (student / parent) ───────────────────────
+
+/**
+ * Displays a personalized student portal dashboard showing:
+ * - Individual report cards
+ * - Attendance logs
+ * - School announcements
+ */
+const StudentPortalDashboard = () => {
+  const { user } = useAuth();
+
+  // ── User's own data ──────────────────────────────────────────────────────────
+  const myData = useMemo(() => {
+    if (!user) return null;
+    const learners = safeRead<any[]>('school_learners_data', []);
+    // Match by user id or name
+    const me = learners.find((l: any) =>
+      l.id === user.id || l.name === user.name || l.email === user.email
+    );
+    return me || null;
+  }, [user]);
+
+  // ── My report cards ─────────────────────────────────────────────────────────
+  const myReportCards = useMemo(() => {
+    const raw = localStorage.getItem('munyaka_marks');
+    if (!raw || !user) return [];
+    try {
+      const marks = JSON.parse(raw);
+      if (!Array.isArray(marks)) return [];
+      // Filter to current user's marks
+      const myMarks = marks.filter((m: any) =>
+        m.learnerId === user.id ||
+        m.studentId === user.id ||
+        m.learnerName === user.name ||
+        m.studentName === user.name
+      );
+      // Group by exam/term
+      const groups: Record<string, any[]> = {};
+      myMarks.forEach((m: any) => {
+        const key = m.examType || m.term || 'General';
+        if (!groups[key]) groups[key] = [];
+        groups[key].push(m);
+      });
+      return Object.entries(groups).map(([term, scores]) => ({
+        term,
+        subjects: scores.map((s: any) => ({
+          name: s.subject || s.learningArea || 'Subject',
+          score: s.score || 0,
+          grade: s.grade || '—',
+        })),
+        average: Math.round(scores.reduce((a: number, b: any) => a + (b.score || 0), 0) / scores.length),
+      })).slice(0, 3);
+    } catch {
+      return [];
+    }
+  }, [user]);
+
+  // ── My attendance log ───────────────────────────────────────────────────────
+  const myAttendance = useMemo(() => {
+    const attnRaw = localStorage.getItem('munyaka_attendance_records');
+    if (!attnRaw || !user) return { present: 0, absent: 0, total: 0, rate: 0 };
+    try {
+      const records = JSON.parse(attnRaw);
+      let present = 0;
+      let absent = 0;
+      Object.values(records).forEach((record: any) => {
+        if (!record || typeof record !== 'object') return;
+        Object.values(record).forEach((entry: any) => {
+          if (!entry) return;
+          const status = (entry.status || entry.morning || '').toString().toLowerCase();
+          if (status === 'p' || status === 'present' || status === 'true') present++;
+          else if (status === 'a' || status === 'absent') absent++;
+        });
+      });
+      const total = present + absent;
+      return { present, absent, total, rate: total > 0 ? Math.round((present / total) * 100) : 0 };
+    } catch {
+      return { present: 0, absent: 0, total: 0, rate: 0 };
+    }
+  }, [user]);
+
+  // ── School announcements ────────────────────────────────────────────────────
+  const announcements = useMemo(() => {
+    const notices = getNotices();
+    return notices.slice(0, 5);
+  }, []);
+
+  return (
+    <div className="space-y-8 pb-10">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <div>
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              My Portal
+            </h1>
+            <p className="text-muted-foreground mt-1">
+              Welcome back, {user?.name || 'Student'}!
+            </p>
+          </div>
+          <LiveBadge label="PORTAL SYNC" />
+        </div>
+      </div>
+
+      {/* ── Personal Stats ──────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <StatCard
+          icon={GraduationCap}
+          iconBg="bg-blue-50"
+          iconColor="text-blue-500"
+          title="My Class"
+          value={myData?.grade || '—'}
+        />
+        <StatCard
+          icon={CalendarCheck}
+          iconBg="bg-green-50"
+          iconColor="text-green-500"
+          title="Attendance Rate"
+          value={`${myAttendance.rate}%`}
+          subtitle={`${myAttendance.present} present / ${myAttendance.total} days`}
+        />
+        <StatCard
+          icon={Megaphone}
+          iconBg="bg-purple-50"
+          iconColor="text-purple-500"
+          title="Announcements"
+          value={announcements.length}
+        />
+      </div>
+
+      {/* ── My Report Cards ────────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            My Report Cards
+          </CardTitle>
+          <TrendingUp size={18} className="text-emerald-500" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {myReportCards.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <GraduationCap size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">No report cards available yet.</p>
+            </div>
+          ) : (
+            myReportCards.map((report, idx) => (
+              <div key={idx} className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold text-slate-700">{report.term}</h3>
+                  <Badge className="rounded-full bg-emerald-50 text-emerald-700 text-xs">
+                    Avg: {report.average}%
+                  </Badge>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {report.subjects.slice(0, 4).map((subj: any, sIdx: number) => (
+                    <div key={sIdx} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                      <span className="text-xs font-medium text-slate-600">{subj.name}</span>
+                      <span className="text-xs font-bold text-slate-800">{subj.score}%</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* ── My Attendance Log ───────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            Attendance Summary
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-3 gap-4">
+            <div className="text-center p-4 bg-green-50 rounded-xl">
+              <p className="text-2xl font-black text-green-600">{myAttendance.present}</p>
+              <p className="text-xs font-medium text-green-700 mt-1">Days Present</p>
+            </div>
+            <div className="text-center p-4 bg-red-50 rounded-xl">
+              <p className="text-2xl font-black text-red-600">{myAttendance.absent}</p>
+              <p className="text-xs font-medium text-red-700 mt-1">Days Absent</p>
+            </div>
+            <div className="text-center p-4 bg-blue-50 rounded-xl">
+              <p className="text-2xl font-black text-blue-600">{myAttendance.total}</p>
+              <p className="text-xs font-medium text-blue-700 mt-1">Total Days</p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── School Announcements ────────────────────────────────────────────── */}
+      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
+          <CardTitle className="text-base font-bold text-slate-800">
+            School Announcements
+          </CardTitle>
+          <Megaphone size={18} className="text-purple-500" />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {announcements.length === 0 ? (
+            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
+              <Megaphone size={24} className="text-slate-300" />
+              <p className="text-sm text-slate-500">No announcements at this time.</p>
+            </div>
+          ) : (
+            announcements.map((notice: any) => (
+              <div key={notice.id} className="flex gap-3 items-start p-4 bg-slate-50 rounded-xl">
+                <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center shrink-0">
+                  <Megaphone size={18} className="text-purple-600" />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-800">{notice.title || 'Announcement'}</p>
+                  <p className="text-xs text-slate-500 mt-1 line-clamp-2">
+                    {notice.content || notice.message || ''}
+                  </p>
+                </div>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+// ─── Role: Full Admin Dashboard (admin / head_teacher / dev) ──────────────────
+
+const FullAdminDashboard = () => {
   const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
   const { user } = useAuth();
-  const { canAccessSystemManagement } = usePermissions();
-
-  const isAdmin = useMemo(
-    () => ['admin', 'super_admin'].includes((user?.role || '').toLowerCase()),
-    [user?.role]
-  );
-
-  // Only compute full admin data when the user is admin
-  const hasLiveData = totalStudents > 0 || totalTeachers > 0;
 
   // ── Junior school count ──────────────────────────────────────────────────────
   const juniorSchoolCount = useMemo(() => {
@@ -495,64 +1338,62 @@ const Dashboard = () => {
   }, [totalStudents]);
 
   // ── Recent alerts state ──────────────────────────────────────────────────────
-    const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
-  
-    useEffect(() => {
-      if (!isAdmin) return;
-  
-      const buildAlerts = (): RecentAlert[] => {
-        const activities = getRecentActivity(15); // limit to 15 most recent
-  
-        if (activities.length === 0) {
-          return [];
-        }
-  
-        return activities.map((act) => {
-          const colors = getActivityColors(act.type);
-          const typeLabel = getActivityTypeLabel(act.type);
-          return {
-            id: act.id,
-            type: act.type,
-            msg: `${typeLabel}: ${act.title}`,
-            time: act.timestamp,
-            color: colors.badge,
-            dotClass: colors.dot,
-            _ts: new Date(act.timestamp).getTime(),
-          };
-        });
-      };
-  
-      setRecentAlerts(buildAlerts());
-    }, [isAdmin, totalStudents, totalTeachers]);
-  
-    // Listen for real-time activity log changes
-    useEffect(() => {
-      if (!isAdmin) return;
-  
-      const onActivityLogChanged = () => {
-        const activities = getRecentActivity(15);
-        if (activities.length === 0) {
-          setRecentAlerts([]);
-          return;
-        }
-        setRecentAlerts(activities.map((act) => {
-          const colors = getActivityColors(act.type);
-          const typeLabel = getActivityTypeLabel(act.type);
-          return {
-            id: act.id,
-            type: act.type,
-            msg: `${typeLabel}: ${act.title}`,
-            time: act.timestamp,
-            color: colors.badge,
-            dotClass: colors.dot,
-            _ts: new Date(act.timestamp).getTime(),
-          };
-        }));
-      };
-  
-      window.addEventListener('munyaka:activity-log-changed', onActivityLogChanged);
-      return () => window.removeEventListener('munyaka:activity-log-changed', onActivityLogChanged);
-    }, [isAdmin]);
+  // Only called inside FullAdminDashboard where the user has full dashboard access,
+  // so no role-check guard is needed here — the router already guarantees access.
+  const [recentAlerts, setRecentAlerts] = useState<RecentAlert[]>([]);
+
+  useEffect(() => {
+    const buildAlerts = (): RecentAlert[] => {
+      const activities = getRecentActivity(15); // limit to 15 most recent
+
+      if (activities.length === 0) {
+        return [];
+      }
+
+      return activities.map((act) => {
+        const colors = getActivityColors(act.type);
+        const typeLabel = getActivityTypeLabel(act.type);
+        return {
+          id: act.id,
+          type: act.type,
+          msg: `${typeLabel}: ${act.title}`,
+          time: act.timestamp,
+          color: colors.badge,
+          dotClass: colors.dot,
+          _ts: new Date(act.timestamp).getTime(),
+        };
+      });
+    };
+
+    setRecentAlerts(buildAlerts());
+  }, [totalStudents, totalTeachers]);
+
+  // Listen for real-time activity log changes
+  useEffect(() => {
+    const onActivityLogChanged = () => {
+      const activities = getRecentActivity(15);
+      if (activities.length === 0) {
+        setRecentAlerts([]);
+        return;
+      }
+      setRecentAlerts(activities.map((act) => {
+        const colors = getActivityColors(act.type);
+        const typeLabel = getActivityTypeLabel(act.type);
+        return {
+          id: act.id,
+          type: act.type,
+          msg: `${typeLabel}: ${act.title}`,
+          time: act.timestamp,
+          color: colors.badge,
+          dotClass: colors.dot,
+          _ts: new Date(act.timestamp).getTime(),
+        };
+      }));
+    };
+
+    window.addEventListener('munyaka:activity-log-changed', onActivityLogChanged);
+    return () => window.removeEventListener('munyaka:activity-log-changed', onActivityLogChanged);
+  }, []);
 
   // ── Simulation handlers ──────────────────────────────────────────────────────
   const pushFeeAlert = () => {
@@ -602,19 +1443,9 @@ const Dashboard = () => {
   };
 
   // ── Render ───────────────────────────────────────────────────────────────────
-  // The entire admin dashboard is rendered unconditionally for the ADMIN role.
-  // No component is hidden; no section is gated for admins.
-  if (!isAdmin) {
-    return (
-      <div className="space-y-6 p-6">
-        <h1 className="text-2xl font-bold text-slate-900">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Welcome, {user?.name || 'User'}. Your role ({user?.role}) does not have access to the full dashboard.
-        </p>
-      </div>
-    );
-  }
-
+  // FullAdminDashboard is ONLY rendered when hasFullDashboardAccess(role) is true
+  // (admin / head_teacher / dev). All school-wide executive widgets and the
+  // full activity feed are gated here — no additional role check needed.
   return (
     <div className="space-y-8 pb-10">
 

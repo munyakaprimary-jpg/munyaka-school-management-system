@@ -90,6 +90,83 @@ export const isOwner = (role?: string | null): boolean => {
   return role.toLowerCase() === "owner";
 };
 
+/** Roles that hold PRIMARY ADMINISTRATIVE authority over the school. These
+ *  are the only roles that may see the full, school-wide Dashboard
+ *  Overview (system-wide student counts, staff totals, fee collection
+ *  metrics, and global activity feeds / alerts).
+ *
+ *  Centralised here so every guard site (Dashboard router, ProtectedRoute,
+ *  Sidebar, usePermissions, etc.) agrees on the same list.  Changing this
+ *  constant automatically updates every check. */
+export const FULL_DASHBOARD_ROLES: ReadonlyArray<Role> = [
+  ROLES.ADMIN,
+  ROLES.HEAD_TEACHER,
+  // The 'dev' identifier is reserved for system developers / engineers
+  // who need unrestricted visibility during deployment or support work.
+  "dev" as Role,
+];
+
+/** True ONLY for users holding primary administrative authority over the
+ *  school.  This is the single source of truth used to gate the full
+ *  Dashboard Overview.
+ *
+ *  Accepted inputs (case-insensitive, normalised):
+ *    • admin        ✓
+ *    • super_admin  ✓ (legacy alias for admin)
+ *    • head_teacher ✓
+ *    • dev          ✓
+ *
+ *  Every other role (teacher, bursar, ict_teacher, parent, student,
+ *  owner, …) returns `false` and must be routed to a scoped dashboard
+ *  instead. */
+export function hasFullDashboardAccess(
+  role?: string | null
+): boolean {
+  if (!role) return false;
+  const r = role.toLowerCase();
+  if (r === "admin" || r === "super_admin") return true;
+  if (r === "head_teacher" || r === "headteacher") return true;
+  if (r === "dev") return true;
+  return false;
+}
+
+/** True for users who should see a class-level, restricted dashboard.
+ *  Currently: any teaching staff (teacher / ict_teacher / head_teacher)
+ *  who does NOT already qualify for the full dashboard.  Head teachers
+ *  see the full view via `hasFullDashboardAccess`; this helper is for
+ *  the narrower "classroom scope" group. */
+export function hasClassDashboardAccess(
+  role?: string | null
+): boolean {
+  if (hasFullDashboardAccess(role)) return false;
+  if (!role) return false;
+  const r = resolveRole(role);
+  if (!r) return false;
+  return r === ROLES.TEACHER || r === ROLES.ICT_TEACHER;
+}
+
+/** True for users who should see a finance-only dashboard. */
+export function hasFinanceDashboardAccess(
+  role?: string | null
+): boolean {
+  if (hasFullDashboardAccess(role)) return false;
+  if (!role) return false;
+  const r = resolveRole(role);
+  if (!r) return false;
+  return r === ROLES.BURSAR;
+}
+
+/** True for users who should see a personalised student-portal dashboard
+ *  (their own report cards, attendance logs, and school announcements). */
+export function hasStudentPortalAccess(
+  role?: string | null
+): boolean {
+  if (!role) return false;
+  const r = resolveRole(role);
+  if (!r) return false;
+  return r === ROLES.STUDENT || r === ROLES.PARENT;
+}
+
 /* ──────────────────────────────────────────────────────────────────────────
  *  2.  SEMANTIC PERMISSION KEYS
  * ──────────────────────────────────────────────────────────────────────── */

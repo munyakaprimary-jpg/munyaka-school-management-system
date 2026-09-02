@@ -18,6 +18,10 @@ import {
   roleHas,
   canAccessPath,
   permissionsForRole,
+  hasFullDashboardAccess,
+  hasClassDashboardAccess,
+  hasFinanceDashboardAccess,
+  hasStudentPortalAccess,
   PERMISSIONS,
 } from '@/rbac/permissionMatrix';
 
@@ -81,6 +85,12 @@ export function usePermissions() {
   const canCollectFees = (): boolean => hasPermission(PERMISSIONS.COLLECT_FEES);
   const canManageSubscription = (): boolean => hasPermission(PERMISSIONS.MANAGE_SUBSCRIPTION);
 
+  /* ── dashboard scope flags (role-based dashboard router) ── */
+  const hasFullAccess = (): boolean => hasFullDashboardAccess(role);
+  const hasClassAccess = (): boolean => hasClassDashboardAccess(role);
+  const hasFinanceAccess = (): boolean => hasFinanceDashboardAccess(role);
+  const hasStudentPortal = (): boolean => hasStudentPortalAccess(role);
+
   /* ── legacy delegation helpers (admin always passes) ── */
   const grantIctPermission = (uid: string): void => {
     try {
@@ -119,6 +129,12 @@ export function usePermissions() {
     canManageStaff,
     canCollectFees,
     canManageSubscription,
+
+    // dashboard scope flags
+    hasFullAccess,
+    hasClassAccess,
+    hasFinanceAccess,
+    hasStudentPortal,
 
     // legacy
     grantIctPermission,
