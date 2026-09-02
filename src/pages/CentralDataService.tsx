@@ -6,8 +6,10 @@ import { Download, Upload, Database, RefreshCw, CheckCircle, FileCode, HardDrive
 import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
+import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
 
 export default function CentralDataService() {
+  const centralStats = useCentralData();
   const [stats, setStats] = useState({
     studentsCount: 0,
     staffCount: 0,
@@ -25,14 +27,14 @@ export default function CentralDataService() {
 
   const loadStats = () => {
     try {
-      const students = JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]');
-      const staff = JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]');
+      const students = getActiveLearners();
+      const staff = getActiveTeachers();
       const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}');
       const fees = JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}');
 
       setStats({
-        studentsCount: Array.isArray(students) ? students.length : 0,
-        staffCount: Array.isArray(staff) ? staff.length : 0,
+        studentsCount: students.length,
+        staffCount: staff.length,
         attendanceCount: Object.keys(attendance).length,
         feesCount: Object.keys(fees).length,
         lastExportDate: localStorage.getItem('munyaka_last_export_date') || 'Never'
@@ -42,9 +44,10 @@ export default function CentralDataService() {
     }
   };
 
+  // Sync stats from central data hook + refresh on every change
   useEffect(() => {
     loadStats();
-  }, []);
+  }, [centralStats.totalStudents, centralStats.totalTeachers]);
 
   // ====== UNIFIED EXPORT: Central database as initialSeedData.ts ======
   const handleExportDatabase = async () => {
@@ -181,6 +184,7 @@ export default function CentralDataService() {
       }
 
       showSuccess("Central database successfully restored and loaded!");
+      notifyDataChanged('school_learners_data');
       loadStats();
       setImportJsonText('');
     } catch (e) {

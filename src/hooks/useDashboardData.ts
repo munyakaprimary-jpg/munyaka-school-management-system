@@ -170,20 +170,19 @@ const computeStats = (): DashboardStats => {
       return isTeacherRecord(t);
     }).length;
 
-    // ── 3. Today's attendance % ─────────────────────────────────────────────
-    // Reads the modern flat attendance log first, then walks the per-grade
-    // v2 records (`munyaka_attendance_v2_<gradeId>`) and counts each P-marked
-    // student against totalStudents.
+    // ── 3. Today's attendance % — deduplicated by studentId, capped at 100% ─
     const flatAttendance = safeParse<AttendanceLog[]>(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) ?? [];
-    let presentToday = 0;
+    const presentStudentIds = new Set<string>();
 
     if (Array.isArray(flatAttendance) && flatAttendance.length > 0) {
-      presentToday = flatAttendance.filter((a) => {
-        if (!a) return false;
-        if (a.date !== todayStr) return false;
-        if (!matchesActiveSchool(a, activeSchoolId)) return false;
-        return a.status === 'present' || a.status === 'late';
-      }).length;
+      flatAttendance.forEach((a) => {
+        if (!a) return;
+        if (a.date !== todayStr) return;
+        if (!matchesActiveSchool(a, activeSchoolId)) return;
+        if (a.status === 'present' || a.status === 'late') {
+          if (a.studentId) presentStudentIds.add(a.studentId);
+        }
+      });
     } else {
       // Walk all v2 per-grade registers
       Object.keys(localStorage).forEach((key) => {
@@ -195,18 +194,23 @@ const computeStats = (): DashboardStats => {
           if (!record) return;
           Object.values(record).forEach((entry: any) => {
             if (!entry || typeof entry !== 'object') return;
-            // entry may carry its own date; if so, only count today's
             if (entry.date && entry.date !== todayStr) return;
             const morning = entry.morning?.status || entry.morning;
             const afternoon = entry.afternoon?.status || entry.afternoon;
-            if (morning === 'P' || afternoon === 'P') presentToday += 1;
+            if (morning === 'P' || afternoon === 'P') {
+              if (entry.studentId) presentStudentIds.add(entry.studentId);
+            }
           });
         } catch { /* ignore individual records */ }
       });
     }
 
+    // Deduplicated count — each student counted at most once
+    const uniquePresentStudents = presentStudentIds.size;
+
+    // Capped at 100% — prevents over-100% when presentToday > totalStudents
     const todayAttendanceRate = totalStudents > 0
-      ? Math.round((presentToday / totalStudents) * 100)
+      ? Math.min(100, Math.round((uniquePresentStudents / totalStudents) * 100))
       : 0;
 
     return {

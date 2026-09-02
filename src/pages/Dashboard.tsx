@@ -21,7 +21,7 @@ import {
   DollarSign,
   UsersRound,
 } from 'lucide-react';
-import { useDashboardData } from '@/hooks/useDashboardData';
+import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
 import { getRecentActivity, getActivityColors, getActivityTypeLabel, formatRelativeTime } from '@/services/activityLog';
@@ -232,7 +232,7 @@ const ClassParticipationTable = ({ rows }: { rows: ClassRow[] }) => {
 // ─── Main Dashboard Component ──────────────────────────────────────────────────
 
 const Dashboard = () => {
-  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useDashboardData();
+  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
   const { user } = useAuth();
   const { canAccessSystemManagement } = usePermissions();
 
