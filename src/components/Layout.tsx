@@ -43,7 +43,8 @@ import {
   Target,
   Database,
   CreditCard,
-  Archive
+  Archive,
+  Gamepad2
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -121,6 +122,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const menuItems = [
     // ── ADMIN has unrestricted access to every section ──
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
@@ -169,13 +171,17 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const role = user.role ?? '';
     const roleLower = role.toLowerCase();
 
+    // Global items are visible to every authenticated user.
+    if (item.global) return true;
+
     // ADMIN (and legacy super_admin alias) always sees every sidebar item.
     if (roleLower === 'admin' || roleLower === 'super_admin') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return true;
     }
 
-    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data.
+    // OWNER is billing-only — gets only Payment & Subscriptions + Central Data,
+    // but always sees global items (e.g. Games Hub).
     if (roleLower === 'owner') {
       if (item.requiresPermission) return canAccessSystemManagement();
       return item.roles.map(r => r.toLowerCase()).includes('owner');
@@ -208,7 +214,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
     { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-  ].filter(item => user && item.roles.includes(user.role));
+    { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+  ].filter(item => {
+    if (!user) return false;
+    if (item.global) return true;
+    return item.roles.includes(user.role);
+  });
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>
