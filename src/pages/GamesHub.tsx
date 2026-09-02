@@ -245,7 +245,7 @@ const GamesHub = () => {
             })}
           </div>
         </section>
-      ) : null}
+      )}
 
       {/* "Coming soon" placeholder for games not yet implemented */}
       {activeGame !== null &&
