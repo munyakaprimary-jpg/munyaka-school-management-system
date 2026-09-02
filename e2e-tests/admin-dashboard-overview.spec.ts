@@ -100,7 +100,7 @@ test("ADMIN sees Dashboard Overview with all required sections", async ({ page }
   await expect(page.getByTestId("simulate-attendance-button")).toBeVisible();
 
   // Class participation table
-  await expect(page.getByText(/Factual Class Participation/i)).toBeVisible();
+  await expect(page.getByText(/Current School Enrollment/i)).toBeVisible();
   await expect(page.getByText(/CLASS NAME/i)).toBeVisible();
   await expect(page.getByText(/ENROLLMENT/i)).toBeVisible();
 });
@@ -142,6 +142,6 @@ test("OWNER is redirected to Owner Dashboard and does NOT see admin overview sec
   await expect(page.getByText(/Subscription/i)).toBeVisible();
 
   // Admin overview sections (not in scope for owner) are absent
-  await expect(page.getByText(/Factual Class Participation/i)).not.toBeVisible();
+  await expect(page.getByText(/Current School Enrollment/i)).not.toBeVisible();
   await expect(page.getByText(/Junior School/i)).not.toBeVisible();
 });

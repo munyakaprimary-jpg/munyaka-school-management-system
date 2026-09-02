@@ -768,11 +768,11 @@ const AdminDashboard: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* ── Factual Class Participation ── */}
+      {/* ── Current School Enrollment ── */}
       <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl">
         <CardContent className="p-6">
           <div className="mb-4">
-            <h2 className="text-lg font-black text-slate-900">Factual Class Participation</h2>
+            <h2 className="text-lg font-black text-slate-900">Current School Enrollment</h2>
             <p className="text-xs text-slate-500 mt-1">
               Active enrollment count by class
             </p>
@@ -812,6 +812,20 @@ const AdminDashboard: React.FC = () => {
                   ))
                 )}
               </tbody>
+              {classRows.length > 0 && (
+                <tfoot>
+                  <tr className="bg-slate-100 border-t-2 border-slate-200">
+                    <td className="px-4 py-3 text-sm font-black text-slate-800">
+                      Total Enrollment
+                    </td>
+                    <td className="px-4 py-3 text-sm text-right">
+                      <span className="font-black text-slate-900">
+                        {classRows.reduce((sum, r) => sum + r.enrolled, 0)} Total Registered
+                      </span>
+                    </td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         </CardContent>
