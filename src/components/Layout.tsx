@@ -125,7 +125,12 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    // For the `admin` role the link points to /admin-dashboard, which
+    // is a strictly admin-only route (see App.tsx) and the
+    // Dashboard component still routes to the AdminDashboardComponent
+    // for that role. This keeps admin and owner strictly separate.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
@@ -171,6 +176,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       '/fees': ['owner', 'parent', 'student', 'teacher'],
       '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
       '/admin/control-center': ['owner'], // operational route — owner is billing-only
+      '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
       '/lan-config': ['owner'],            // operational route — owner is billing-only
       '/students': ['owner'],              // operational — owner cannot manage learners
       '/attendance': ['owner'],            // operational — owner cannot take roll call

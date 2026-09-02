@@ -98,7 +98,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
   const menuItems = [
     // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    // For the `admin` role the link points to /admin-dashboard, which
+    // is a strictly admin-only route (see App.tsx) and the
+    // Dashboard component still routes to the AdminDashboardComponent
+    // for that role. This keeps admin and owner strictly separate.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },

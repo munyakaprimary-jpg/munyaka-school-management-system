@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
+import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
 import type { LucideIcon } from 'lucide-react';
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
@@ -26,10 +27,7 @@ export type WidgetKey =
 import {
   Users,
   UserCheck,
-  User as UserIcon,
   GraduationCap,
-  Activity,
-  DollarSign,
   Megaphone,
   PenLine,
   ClipboardCheck,
@@ -42,7 +40,6 @@ import {
   AlertTriangle,
   RefreshCw,
 } from 'lucide-react';
-import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
 import { useLanSync } from '@/hooks/useLanSync';
@@ -469,93 +466,28 @@ const TeacherDashboard: React.FC = () => {
   );
 };
 
-// ─── Role: Admin Dashboard ────────────────────────────────────────────────────
-
-const AdminDashboard: React.FC = () => {
-  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
-
-  const feesCollected = useMemo(() => {
-    const txRaw = localStorage.getItem('munyaka_transactions');
-    if (!txRaw) return 'KES 0';
-    try {
-      const list: any[] = JSON.parse(txRaw);
-      const total = list
-        .filter((t: any) => t?.status === 'paid' || t?.paidAt)
-        .reduce((s: number, t: any) => s + (Number(t?.amount) || 0), 0);
-      return `KES ${total.toLocaleString()}`;
-    } catch {
-      return 'KES 0';
-    }
-  }, [totalStudents]);
-
-  return (
-    <div className="space-y-8 pb-10">
-      {/* ── System Vitals Cards ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          icon={Users}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          title="Total Students"
-          value={isLoading ? '—' : totalStudents.toString()}
-        />
-        <StatCard
-          icon={UserIcon}
-          iconBg="bg-indigo-50"
-          iconColor="text-indigo-500"
-          title="Total Teachers"
-          value={isLoading ? '—' : totalTeachers.toString()}
-        />
-        <StatCard
-          icon={UserCheck}
-          iconBg="bg-green-50"
-          iconColor="text-green-500"
-          title="Today's Attendance"
-          value={isLoading ? '—' : `${todayAttendanceRate}%`}
-        />
-        <StatCard
-          icon={GraduationCap}
-          iconBg="bg-purple-50"
-          iconColor="text-purple-500"
-          title="Junior School"
-          value={isLoading ? '—' : Math.max(0, Math.floor(totalStudents * 0.25)).toString()}
-        />
-        <StatCard
-          icon={Activity}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-500"
-          title="System Status"
-          value="Live"
-        />
-        <StatCard
-          icon={DollarSign}
-          iconBg="bg-amber-50"
-          iconColor="text-amber-500"
-          title="Fees Collected"
-          value={isLoading ? '—' : feesCollected}
-        />
-      </div>
-    </div>
-  );
-};
-
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 
 /**
  * Top-level Dashboard component.
  *
  * Reads the current user's role and renders the role-specific view:
+ *   • owner    → OwnerDashboard (subscription / billing / licensing)
+ *   • admin    → AdminDashboardComponent (operational system overview,
+ *                 LAN status, management cards, notices)
  *   • teacher  → quick action tiles (Enter Marks, Mark Attendance, Timetable)
  *                 + LAN sync status + notice feed
- *   • admin     → system-wide statistics (total students, teachers,
- *                 attendance, fees, etc.)
+ *
+ * The 'admin' and 'owner' roles are STRICTLY SEPARATED. The admin role
+ * never sees the OwnerDashboard, and the owner role never sees the
+ * AdminDashboardComponent. Each component is a self-contained module
+ * under src/components/dashboards/.
  *
  * The header title is dynamic:
+ *   • "Owner Dashboard" for the owner role
+ *   • "Admin Dashboard" for the admin role
  *   • "Teacher's Dashboard" for the teacher role
  *   • "Dashboard" for every other role
- *
- * No fallback "Limited Access" banner — non-teacher / non-admin users
- * are not expected to land on this page (route guards handle them).
  */
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
@@ -566,7 +498,7 @@ const Dashboard: React.FC = () => {
     return <OwnerDashboard />;
   }
 
-  // Admin sees the Admin Dashboard (operational full admin)
+  // Admin sees the dedicated Admin Dashboard (operational full admin)
   if (role === 'admin') {
     return (
       <div className="space-y-6">
@@ -590,7 +522,7 @@ const Dashboard: React.FC = () => {
             </p>
           </div>
         </div>
-        <AdminDashboard />
+        <AdminDashboardComponent />
       </div>
     );
   }
@@ -612,8 +544,8 @@ const Dashboard: React.FC = () => {
         <LiveBadge label={role === 'teacher' ? 'TEACHER SYNC' : 'LIVE SYNC'} />
       </div>
 
-      {/* ── Role-Based View Switch ── */}
-      {role === 'teacher' ? <TeacherDashboard /> : <AdminDashboard />}
+      {/* ── Teacher-only view ── */}
+      {role === 'teacher' && <TeacherDashboard />}
     </div>
   );
 };
