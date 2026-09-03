@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck, Sparkles } from 'lucide-react';
+import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
@@ -27,6 +27,7 @@ interface UnlinkedStaffEntry {
   role: string;
   tscNumber?: string;
   source: 'directory' | 'mock';
+  autoKey: string; // Auto-generated PR- key reference
 }
 
 const StaffPreRegistration = () => {
@@ -34,184 +35,225 @@ const StaffPreRegistration = () => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
     return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
   });
-  
+
+  // Unified directory staff list — read directly from `munyaka_staff_directory`
+  // (the same key Staff.tsx writes to). Falls back to STAFF seed data.
+  const [directoryStaff, setDirectoryStaff] = useState<any[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
   const [generatingKeyFor, setGeneratingKeyFor] = useState<string | null>(null);
-  
+
   // Auth state for deletion
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // ── Load unlinked directory staff (those without pre-registration entries) ──
-  const unlinkedStaff = useMemo<UnlinkedStaffEntry[]>(() => {
+  // ── Re-read directory staff from localStorage on changes ──
+  const refreshDirectory = useCallback(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      setDirectoryStaff(saved ? JSON.parse(saved) : []);
+    } catch {
+      setDirectoryStaff([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    // Initial read on mount
+    refreshDirectory();
+
+    // Listen for staff-directory and data-changed events for live sync
+    const handleDirectoryChange = () => {
+      refreshDirectory();
+      // Also re-read the pre-registration ledger so both views stay in sync
+      try {
+        const saved = localStorage.getItem('munyaka_staff_prereg');
+        if (saved) setStaffList(JSON.parse(saved));
+      } catch { /* ignore */ }
+    };
+    const handleStaffChanged = () => handleDirectoryChange();
+
+    window.addEventListener('munyaka:staff-directory-changed', handleDirectoryChange);
+    window.addEventListener('staff-changed', handleStaffChanged);
+    window.addEventListener('munyaka:data-changed', handleDirectoryChange);
+
+    return () => {
+      window.removeEventListener('munyaka:staff-directory-changed', handleDirectoryChange);
+      window.removeEventListener('staff-changed', handleStaffChanged);
+      window.removeEventListener('munyaka:data-changed', handleDirectoryChange);
+    };
+  }, [refreshDirectory]);
+
+  // ── Build unified ledger entries from BOTH the directory and the ledger ──
+  // Staff with a PR- entry in the ledger render as "Pre-Registered / Active".
+  // Directory staff without a ledger entry are auto-rendered with status
+  // "Pre-Registered" and an auto-generated PR- key reference.
+  const ledgerEntries = useMemo(() => {
+    type Entry =
+      | { type: 'pre-registered'; data: PreRegisteredStaff }
+      | { type: 'auto-linked'; data: UnlinkedStaffEntry };
+
     const preRegNatIds = new Set(staffList.map(s => s.nationalId));
     const preRegEmails = new Set(staffList.map(s => s.email.toLowerCase()));
-    const entries: UnlinkedStaffEntry[] = [];
 
-    // From localStorage directory
-    const saved = localStorage.getItem('munyaka_staff_directory');
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        parsed.forEach((s: any) => {
-          const natId = s.id_no || s.nationalId;
-          const email = (s.email || '').toLowerCase();
-          if (!preRegNatIds.has(natId) && !preRegEmails.has(email)) {
-            entries.push({
-              id: s.id || natId,
-              nationalId: natId,
-              name: s.full_name || s.name || '',
-              email: s.email || '',
-              phone: s.phone || '',
-              role: s.role || 'Staff',
-              tscNumber: s.tsc_no || s.tscNumber,
-              source: 'directory',
-            });
-          }
-        });
-      } catch { /* ignore */ }
-    }
-
-    // From mock data (seed staff not yet in ledger)
-    STAFF.forEach(s => {
+    // Build the auto-linked list from BOTH the localStorage directory and the
+    // seed STAFF data so seeded personnel like James Ndiki appear too.
+    const sourceStaff: UnlinkedStaffEntry[] = [];
+    directoryStaff.forEach((s: any) => {
+      const natId = s.id_no || s.nationalId;
       const email = (s.email || '').toLowerCase();
-      if (!preRegNatIds.has(s.id_no) && !preRegEmails.has(email)) {
-        entries.push({
-          id: s.id,
-          nationalId: s.id_no,
-          name: s.name || '',
-          email: s.email || '',
-          phone: s.phone || '',
-          role: s.role || 'Staff',
-          tscNumber: s.tsc_no,
-          source: 'mock',
-        });
+      sourceStaff.push({
+        id: s.id || natId,
+        nationalId: natId,
+        name: s.full_name || s.name || '',
+        email: s.email || '',
+        phone: s.phone || '',
+        role: s.role || 'Staff',
+        tscNumber: s.tsc_no || s.tscNumber,
+        source: 'directory',
+        autoKey: `PR-${s.id || natId}`,
+      });
+    });
+
+    // Seed mock staff (covers personnel like James Ndiki who exist in STAFF)
+    STAFF.forEach(s => {
+      sourceStaff.push({
+        id: s.id,
+        nationalId: s.id_no,
+        name: s.name || '',
+        email: s.email || '',
+        phone: s.phone || '',
+        role: s.role || 'Staff',
+        tscNumber: s.tsc_no,
+        source: 'mock',
+        autoKey: `PR-${s.id}`,
+      });
+    });
+
+    // Deduplicate by nationalId (prefer directory over mock)
+    const deduped = new Map<string, UnlinkedStaffEntry>();
+    sourceStaff.forEach(entry => {
+      if (!deduped.has(entry.nationalId)) deduped.set(entry.nationalId, entry);
+    });
+
+    const entries: Entry[] = [];
+
+    // 1. Existing pre-registration ledger entries
+    staffList.forEach(data => entries.push({ type: 'pre-registered', data }));
+
+    // 2. Directory/mock staff without a ledger entry → auto-render as Pre-Registered
+    deduped.forEach(data => {
+      const emailLower = (data.email || '').toLowerCase();
+      if (!preRegNatIds.has(data.nationalId) && !preRegEmails.has(emailLower)) {
+        entries.push({ type: 'auto-linked', data });
       }
     });
 
     return entries;
-  }, [staffList]);
+  }, [staffList, directoryStaff]);
 
-  // ── Combined ledger view: pre-registered + unlinked staff ──
-  type LedgerEntry =
-    | { type: 'pre-registered'; data: PreRegisteredStaff }
-    | { type: 'unlinked'; data: UnlinkedStaffEntry };
-
-  const allLedgerEntries = useMemo<LedgerEntry[]>(() => {
-    const preRegEntries: LedgerEntry[] = staffList.map(data => ({ type: 'pre-registered', data }));
-    const unlinkedEntries: LedgerEntry[] = unlinkedStaff.map(data => ({ type: 'unlinked', data }));
-    return [...preRegEntries, ...unlinkedEntries];
-  }, [staffList, unlinkedStaff]);
-
-  const filteredLedger = useMemo(() => {
-    return allLedgerEntries.filter(entry => {
-      const isPreReg = entry.type === 'pre-registered';
-      const name = isPreReg
-        ? (entry.data as PreRegisteredStaff).fullName
-        : (entry.data as UnlinkedStaffEntry).name;
-      const natId = isPreReg
-        ? (entry.data as PreRegisteredStaff).nationalId
-        : (entry.data as UnlinkedStaffEntry).nationalId;
-      const email = isPreReg
-        ? (entry.data as PreRegisteredStaff).email
-        : (entry.data as UnlinkedStaffEntry).email;
-      const role = isPreReg
-        ? (entry.data as PreRegisteredStaff).systemRole
-        : (entry.data as UnlinkedStaffEntry).role;
-
-      const matchesSearch =
-        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        natId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        email.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesRole = roleFilter === 'all' ||
-        (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
-
-      const matchesStatus = statusFilter === 'all' ||
-        (statusFilter === 'Pre-Registered' && !isPreReg) ||
-        (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
-        (statusFilter === 'Unlinked' && !isPreReg);
-
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [allLedgerEntries, searchTerm, roleFilter, statusFilter]);
-
-  // ── Generate Key / Invite for unlinked staff ──
-  const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
-    setGeneratingKeyFor(entry.id);
-    await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
-
-    const accessCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
-    const newPreReg: PreRegisteredStaff = {
-      id: `PR-${Date.now()}`,
-      staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
-      fullName: entry.name,
-      nationalId: entry.nationalId,
-      tscNumber: entry.tscNumber,
-      email: entry.email,
-      phone: entry.phone,
-      systemRole: 'subject_teacher' as any,
-      department: 'School Administration',
-      assignedSubjects: [],
-      tempAccessCode: accessCode,
-      status: 'Pre-Registered',
-      datePreRegistered: new Date().toISOString().split('T')[0],
+  // ── Filter the unified ledger entries by search/role/status ──
+    const filteredLedger = useMemo(() => {
+      return ledgerEntries.filter(entry => {
+        const isPreReg = entry.type === 'pre-registered';
+        const name = isPreReg
+          ? (entry.data as PreRegisteredStaff).fullName
+          : (entry.data as UnlinkedStaffEntry).name;
+        const natId = isPreReg
+          ? (entry.data as PreRegisteredStaff).nationalId
+          : (entry.data as UnlinkedStaffEntry).nationalId;
+        const email = isPreReg
+          ? (entry.data as PreRegisteredStaff).email
+          : (entry.data as UnlinkedStaffEntry).email;
+  
+        const matchesSearch =
+          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          natId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          email.toLowerCase().includes(searchTerm.toLowerCase());
+  
+        const matchesRole = roleFilter === 'all' ||
+          (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
+  
+        const matchesStatus = statusFilter === 'all' ||
+          (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
+          (statusFilter === 'Pre-Registered' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Pre-Registered') ||
+          (statusFilter === 'Unlinked' && !isPreReg) ||
+          (statusFilter === 'Suspended' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Suspended');
+  
+        return matchesSearch && matchesRole && matchesStatus;
+      });
+    }, [ledgerEntries, searchTerm, roleFilter, statusFilter]);
+  
+    // ── Generate Key / Invite for unlinked directory staff ──
+    const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
+      setGeneratingKeyFor(entry.id);
+      await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
+  
+      const accessCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
+      const newPreReg: PreRegisteredStaff = {
+        id: `PR-${Date.now()}`,
+        staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
+        fullName: entry.name,
+        nationalId: entry.nationalId,
+        tscNumber: entry.tscNumber,
+        email: entry.email,
+        phone: entry.phone,
+        systemRole: 'subject_teacher',
+        department: 'School Administration',
+        assignedSubjects: [],
+        tempAccessCode: accessCode,
+        status: 'Pre-Registered',
+        datePreRegistered: new Date().toISOString().split('T')[0],
+      };
+  
+      const updatedList = [newPreReg, ...staffList];
+      setStaffList(updatedList);
+      localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+      notifyDataChanged('munyaka_staff_prereg');
+      setGeneratingKeyFor(null);
+      showSuccess(`Access key generated for "${entry.name}"! Invite dispatched.`);
     };
-
-    const updatedList = [newPreReg, ...staffList];
-    setStaffList(updatedList);
-    localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-    notifyDataChanged('munyaka_staff_prereg');
-    setGeneratingKeyFor(null);
-    showSuccess(`Access key generated for "${entry.name}"! Invite dispatched.`);
-  };
-
-  const filteredStaff = useMemo(() => {
-    return staffList.filter(s => {
-      const matchesSearch = s.fullName.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           s.nationalId.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           s.tempAccessCode.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                           s.email.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesRole = roleFilter === "all" || s.systemRole === roleFilter;
-      const matchesStatus = statusFilter === "all" || s.status === statusFilter;
-      return matchesSearch && matchesRole && matchesStatus;
-    });
-  }, [staffList, searchTerm, roleFilter, statusFilter]);
-
-  const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
-    const newStaff: PreRegisteredStaff = {
-      id: `PR-${Date.now()}`,
-      staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
-      fullName: staffData.fullName || "",
-      nationalId: staffData.nationalId || "",
-      tscNumber: staffData.tscNumber,
-      email: staffData.email || "",
-      phone: staffData.phone || "",
-      systemRole: staffData.systemRole || "subject_teacher",
-      department: (staffData as any).department || "",
-      assignedGrade: staffData.assignedGrade,
-      assignedStream: staffData.assignedStream,
-      assignedSubjects: staffData.assignedSubjects || [],
-      tempAccessCode: staffData.tempAccessCode || "",
-      status: "Pre-Registered" as AccessStatus,
-      datePreRegistered: new Date().toISOString().split('T')[0],
+  
+    const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
+      const newStaff: PreRegisteredStaff = {
+        id: `PR-${Date.now()}`,
+        staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
+        fullName: staffData.fullName || "",
+        nationalId: staffData.nationalId || "",
+        tscNumber: staffData.tscNumber,
+        email: staffData.email || "",
+        phone: staffData.phone || "",
+        systemRole: staffData.systemRole || "subject_teacher",
+        department: (staffData as any).department || "",
+        assignedGrade: staffData.assignedGrade,
+        assignedStream: staffData.assignedStream,
+        assignedSubjects: staffData.assignedSubjects || [],
+        tempAccessCode: staffData.tempAccessCode || "",
+        status: "Pre-Registered" as AccessStatus,
+        datePreRegistered: new Date().toISOString().split('T')[0],
+      };
+  
+      const updatedList = [newStaff, ...staffList];
+      setStaffList(updatedList);
+      localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+      notifyDataChanged('munyaka_staff_prereg');
+      setIsAddModalOpen(false);
+      showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
     };
-
-    const updatedList = [newStaff, ...staffList];
-    setStaffList(updatedList);
-    localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-    notifyDataChanged('munyaka_staff_prereg');
-    setIsAddModalOpen(false);
-    showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
-  };
 
   const requestDelete = (staff: PreRegisteredStaff) => {
     setDeleteTarget({ id: staff.id, name: staff.fullName });
@@ -253,47 +295,63 @@ const StaffPreRegistration = () => {
   };
 
   const handleExportCSV = () => {
-    if (filteredStaff.length === 0) {
-      showSuccess("No records found for the current filters.");
-      return;
-    }
-
-    setIsExporting(true);
-    
-    setTimeout(() => {
-      const headers = ["Staff Ref ID", "Full Name", "National ID", "Email", "Role", "Access Key", "Status"];
-      const rows = filteredStaff.map(s => [
-        s.id,
-        s.fullName,
-        s.nationalId,
-        s.email,
-        s.systemRole,
-        s.tempAccessCode,
-        s.status
-      ]);
-
-      const csvContent = [
-        "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        "P.O. BOX 5239-30100,ELDORET",
-        "MOTTO: KNOWLEDGE POWER",
-        "",
-        headers.join(","),
-        ...rows.map(r => r.join(","))
-      ].join("\n");
-
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.setAttribute("href", url);
-      link.setAttribute("download", `staff_access_master_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      setIsExporting(false);
-      showSuccess(`Exported ${filteredStaff.length} staff records to CSV`);
-    }, 800);
-  };
+      if (filteredLedger.length === 0) {
+        showSuccess("No records found for the current filters.");
+        return;
+      }
+  
+      setIsExporting(true);
+  
+      setTimeout(() => {
+        const headers = ["Staff Ref ID", "Full Name", "National ID", "Email", "Role / System Role", "Access Key", "Status"];
+        const rows = filteredLedger.map(entry => {
+          if (entry.type === 'pre-registered') {
+            const s = entry.data as PreRegisteredStaff;
+            return [
+              s.id,
+              s.fullName,
+              s.nationalId,
+              s.email,
+              s.systemRole,
+              s.tempAccessCode,
+              s.status
+            ];
+          } else {
+            const s = entry.data as UnlinkedStaffEntry;
+            return [
+              s.autoKey,
+              s.name,
+              s.nationalId,
+              s.email,
+              s.role,
+              s.autoKey + ' (auto-generated)',
+              'Pre-Registered'
+            ];
+          }
+        });
+  
+        const csvContent = [
+          "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
+          "P.O. BOX 5239-30100,ELDORET",
+          "MOTTO: KNOWLEDGE POWER",
+          "",
+          headers.join(","),
+          ...rows.map(r => r.join(","))
+        ].join("\n");
+  
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.setAttribute("href", url);
+        link.setAttribute("download", `staff_access_master_${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+  
+        setIsExporting(false);
+        showSuccess(`Exported ${filteredLedger.length} staff records to CSV`);
+      }, 800);
+    };
 
   const clearFilters = () => {
     setSearchTerm("");
@@ -420,7 +478,7 @@ const StaffPreRegistration = () => {
                                   return (
                                     <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
                                       <td className="px-8 py-5">
-                                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{staff.fullName}</p>
+                                        <p className="font-bold text-slate-900">{staff.fullName}</p>
                                         <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
                                       </td>
                                       <td className="px-8 py-5">
@@ -469,10 +527,10 @@ const StaffPreRegistration = () => {
                                   );
                                 }
               
-                                // Unlinked directory staff member
+                                // Auto-linked directory staff (no ledger entry yet)
                                 const unlinked = entry.data;
                                 return (
-                                  <tr key={`unlinked-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
+                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
                                     <td className="px-8 py-5">
                                       <p className="font-bold text-slate-900">{unlinked.name}</p>
                                       <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {unlinked.nationalId}</p>
@@ -490,12 +548,12 @@ const StaffPreRegistration = () => {
                                     </td>
                                     <td className="px-8 py-5 text-center">
                                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
-                                        <Key size={12} /> No Key
+                                        <Key size={12} /> {unlinked.autoKey}
                                       </span>
                                     </td>
                                     <td className="px-8 py-5 text-center">
                                       <Badge className="rounded-xl border-none font-bold text-xs px-3 py-1 bg-rose-50 text-rose-700">
-                                        Pending Activation
+                                        Pre-Registered
                                       </Badge>
                                     </td>
                                     <td className="px-8 py-5 text-right">
@@ -524,8 +582,8 @@ const StaffPreRegistration = () => {
                                 <tr>
                                   <td colSpan={6} className="px-8 py-20 text-center">
                                     <div className="flex flex-col items-center gap-3">
-                                      <Search size={32} className="text-slate-200" />
-                                      <p className="text-slate-500 font-bold">No records match the current criteria.</p>
+                                      <Users size={32} className="text-slate-200" />
+                                      <p className="text-slate-500 font-bold">No personnel records match the current filters.</p>
                                     </div>
                                   </td>
                                 </tr>

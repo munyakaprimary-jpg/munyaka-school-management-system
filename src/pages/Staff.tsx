@@ -298,55 +298,39 @@ const Staff = () => {
             createdAt: new Date().toISOString(),
           });
     
-          // 2. Auto-generate a Pre-Registered access key entry for the new staff member
-                const preRegId = `PR-${Date.now()}`;
-                const accessCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
-                const newPreReg: PreRegEntry = {
-                  id: preRegId,
-                  staffId: `T${String(Date.now() % 1000).padStart(3, '0')}`,
-                  fullName: formData.full_name,
-                  nationalId: nationalId,
-                  tscNumber: formData.tsc_number || undefined,
-                  email: formData.email,
-                  phone: formData.phone,
-                  systemRole: 'subject_teacher',
-                  department: 'School Administration',
-                  assignedSubjects: [],
-                  tempAccessCode: accessCode,
-                  status: 'Pre-Registered',
-                  datePreRegistered: new Date().toISOString().split('T')[0],
-                };
-          
-                // Persist to pre-registration ledger
-                const existingPreReg: PreRegEntry[] = JSON.parse(
-                  localStorage.getItem('munyaka_staff_prereg') || '[]'
-                );
-                const updatedPreReg = [newPreReg, ...existingPreReg];
-                localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedPreReg));
-                notifyDataChanged('munyaka_staff_prereg');
-
-      // 3. Update local UI state right away (optimistic)
-      setStaffDirectory(prev => [
-        ...prev,
-        {
-          id: staffId,
-          id_no: nationalId,
-          tsc_no: formData.tsc_number,
-          full_name: formData.full_name,
-          role: formData.role.toUpperCase(),
-          subjects: [],
-          phone: formData.phone,
-          email: formData.email,
-          status: 'Pre-Registered',
-          joined: new Date().toISOString(),
-          department: 'School Administration',
-        },
-      ]);
-
-      // 4. Notify other components (e.g. the Staff page list)
-      window.dispatchEvent(new Event('staff-changed'));
-
-      // 5. Try to push to the backend silently — swallow any error
+          // 2. Update local UI state right away (optimistic)
+          setStaffDirectory(prev => [
+            ...prev,
+            {
+              id: staffId,
+              id_no: nationalId,
+              tsc_no: formData.tsc_number,
+              full_name: formData.full_name,
+              role: formData.role.toUpperCase(),
+              subjects: [],
+              phone: formData.phone,
+              email: formData.email,
+              status: 'Pre-Registered',
+              joined: new Date().toISOString(),
+              department: 'School Administration',
+            },
+          ]);
+    
+          // 3. Persist the unified staff directory to munyaka_staff_directory so the
+          //    Access Master Ledger can read directly from the same source of truth.
+          setStaffDirectory(current => {
+            try {
+              localStorage.setItem('munyaka_staff_directory', JSON.stringify(current));
+            } catch { /* localStorage may be full — best-effort */ }
+            return current;
+          });
+    
+          // 4. Notify other components (Staff page list AND Access Master Ledger)
+          window.dispatchEvent(new Event('staff-changed'));
+          window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
+          notifyDataChanged('munyaka_staff_directory');
+    
+          // 5. Try to push to the backend silently — swallow any error
       const baseUrl = getApiBaseUrl();
       try {
         const controller = new AbortController();
@@ -367,21 +351,27 @@ const Staff = () => {
       }
 
     } else if (editingStaff) {
-      // ── Edit mode: local-first with optional silent backend sync ──────────────
-      const updatedRecord = {
-        ...editingStaff,
-        full_name: formData.full_name,
-        role: formData.role.toUpperCase(),
-        phone: formData.phone,
-        email: formData.email,
-        tsc_no: formData.tsc_number || undefined,
-      };
-
-      // 1. Update local UI state immediately
-      setStaffDirectory(prev =>
-        prev.map(s => (s.id === editingStaff.id ? updatedRecord : s))
-      );
-      window.dispatchEvent(new Event('staff-changed'));
+          // ── Edit mode: local-first with optional silent backend sync ──────────────
+          const updatedRecord = {
+            ...editingStaff,
+            full_name: formData.full_name,
+            role: formData.role.toUpperCase(),
+            phone: formData.phone,
+            email: formData.email,
+            tsc_no: formData.tsc_number || undefined,
+          };
+    
+          // 1. Update local UI state immediately
+          setStaffDirectory(prev => {
+            const updated = prev.map(s => (s.id === editingStaff.id ? updatedRecord : s));
+            try {
+              localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
+            } catch { /* best-effort */ }
+            return updated;
+          });
+          window.dispatchEvent(new Event('staff-changed'));
+          window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
+          notifyDataChanged('munyaka_staff_directory');
 
       // 2. Try to push to the backend silently
       const baseUrl = getApiBaseUrl();
