@@ -10,15 +10,15 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import BackButton from '@/components/ui/BackButton';
 import Modal from '@/components/ui/Modal';
-import { 
-  Laptop, 
-  Search, 
-  Plus, 
-  Wrench, 
-  Monitor, 
-  Smartphone, 
-  Projector, 
-  Wifi, 
+import {
+  Laptop,
+  Search,
+  Plus,
+  Wrench,
+  Monitor,
+  Smartphone,
+  Projector,
+  Wifi,
   Trash2,
   CheckCircle2,
   Clock,
@@ -44,8 +44,19 @@ import {
   HardDrive,
   Lock,
   Loader2,
-  AlertCircle as AlertCircleIcon
+  AlertCircle as AlertCircleIcon,
+  ShieldCheck,
+  UserPlus,
+  Key,
+  Users,
+  Cpu,
+  Activity,
+  Globe,
+  Ban,
+  RefreshCw,
+  UserCog
 } from 'lucide-react';
+import { Progress } from "@/components/ui/progress";
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { cn } from '@/lib/utils';
@@ -111,6 +122,49 @@ const ICTLabManagement = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+
+  // --- System Management: Portal Logins State ---
+  const [sysUsers, setSysUsers] = useState<SystemUser[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_system_users');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem('munyaka_system_users', JSON.stringify(DEFAULT_SYSTEM_USERS));
+    return DEFAULT_SYSTEM_USERS;
+  });
+  const [userSearch, setUserSearch] = useState("");
+  const [roleFilter, setRoleFilter] = useState("all");
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
+
+  // --- System Management: Network Devices State ---
+  const [networkDevices, setNetworkDevices] = useState<NetworkDevice[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_system_devices');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem('munyaka_system_devices', JSON.stringify(DEFAULT_NETWORK_DEVICES));
+    return DEFAULT_NETWORK_DEVICES;
+  });
+
+  // --- System Management: Lab Reservations State ---
+  const [reservations, setReservations] = useState<LabReservation[]>(() => {
+    try {
+      const saved = localStorage.getItem('munyaka_lab_reservations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    localStorage.setItem('munyaka_lab_reservations', JSON.stringify(DEFAULT_LAB_RESERVATIONS));
+    return DEFAULT_LAB_RESERVATIONS;
+  });
+  const [isReserveOpen, setIsReserveOpen] = useState(false);
   
   const [isAddAssetOpen, setIsAddAssetOpen] = useState(false);
   const [isLogModalOpen, setIsLogModalOpen] = useState(false);
