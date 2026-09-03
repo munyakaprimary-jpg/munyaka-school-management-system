@@ -808,12 +808,21 @@ const ICTLabManagement = () => {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex w-fit">
+        <TabsList className="bg-white p-1 rounded-2xl shadow-sm border h-14 mb-8 flex w-fit overflow-x-auto">
           <TabsTrigger value="inventory" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <LayoutGrid size={16} /> Asset Inventory
           </TabsTrigger>
           <TabsTrigger value="logs" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
             <ClipboardList size={16} /> Issues & Returns
+          </TabsTrigger>
+          <TabsTrigger value="logins" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
+            <ShieldCheck size={16} /> Portal Logins
+          </TabsTrigger>
+          <TabsTrigger value="network" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
+            <Wifi size={16} /> Network & Quotas
+          </TabsTrigger>
+          <TabsTrigger value="lab" className="rounded-xl px-8 h-full font-bold text-xs gap-2">
+            <Monitor size={16} /> Lab Schedules
           </TabsTrigger>
         </TabsList>
 
