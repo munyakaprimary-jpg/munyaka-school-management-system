@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useGradesStreamsConfig } from '@/services/gradesStreamsConfig';
+import { readGradesAndStreams } from '@/services/gradesStreamsConfig';
 
 export interface TimeSlot {
   id: string;
@@ -90,13 +90,16 @@ const getDefaultEntries = (timeSlots: TimeSlot[]): TimetableEntry[] =>
   timeSlots.map(makeEntryForSlot);
 
 export function useTimetable() {
-  const { grades: configGrades, streams: configStreams } = useGradesStreamsConfig();
+  const config = readGradesAndStreams();
+  const configGrades = config.grades;
+  const configStreamsMap = config.gradeStreamMap;
 
   // Generate grades list dynamically from Grades & Streams menu
   const grades = (() => {
     const list: { id: string; name: string }[] = [];
     configGrades.forEach(g => {
-      const streamsForGrade = configStreams[g] || [];
+      const matchKey = g.toLowerCase().replace(/[^a-z0-9]/g, '');
+      const streamsForGrade = configStreamsMap[matchKey] || [];
       if (streamsForGrade.length > 0) {
         streamsForGrade.forEach(s => {
           const name = `${g} - ${s}`;
