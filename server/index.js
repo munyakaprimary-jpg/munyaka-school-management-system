@@ -558,6 +558,15 @@ app.post('/api/teachers', (req, res) => {
     const cleanPhone = phone && phone.trim() !== '' ? phone.trim() : null;
     const cleanTsc = tsc_number && tsc_number.trim() !== '' ? tsc_number.trim() : null;
 
+    // If email already exists in teachers table, set cleanEmail to null to prevent UNIQUE constraint failure
+    let finalEmail = cleanEmail;
+    if (finalEmail) {
+      const existing = dbGet('SELECT id FROM teachers WHERE email = ?', [finalEmail]);
+      if (existing) {
+        finalEmail = null;
+      }
+    }
+
     dbRun(
       `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -568,7 +577,7 @@ app.post('/api/teachers', (req, res) => {
         firstName,
         lastName,
         finalRole,
-        cleanEmail,
+        finalEmail,
         cleanPhone,
         gender || null,
         finalIdNumber,
@@ -583,7 +592,7 @@ app.post('/api/teachers', (req, res) => {
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: teacher });
   } catch (err) {
-    console.error('POST /api/teachers error:', err.message);
+    console.error('POST /api/teachers error details:', err);
     res.status(500).json({ error: err.message });
   }
 });
