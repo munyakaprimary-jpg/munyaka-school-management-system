@@ -36,7 +36,7 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
-import { pb } from '@/lib/pocketbase';
+import { api } from '@/lib/api';
 
 interface StaffMember {
   id: string;
@@ -89,33 +89,31 @@ const Staff = () => {
   });
   const [formError, setFormError] = useState('');
 
-  // Load staff directory from PocketBase
+  // Load staff directory from local API
   const fetchStaffList = useCallback(async () => {
     setIsLoading(true);
     try {
-      const records = await pb.collection('staff').getFullList({
-        sort: '-created',
-        fields: 'id,id_no,tsc_no,full_name,role,subjects,phone,email,status,joined,department'
-      });
-      
-      const staffList: StaffMember[] = records.map(r => ({
+      const res = await api.get<{ success?: boolean; data: any[] }>('/api/teachers');
+      const records = Array.isArray(res) ? res : (res.data || []);
+
+      const staffList: StaffMember[] = records.map((r: any) => ({
         id: r.id,
-        id_no: r.id_no,
-        tsc_no: r.tsc_no,
-        full_name: r.full_name,
-        role: r.role,
+        id_no: r.id_number || r.id_no || r.staff_id || '',
+        tsc_no: r.tsc_number || r.tsc_no,
+        full_name: r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+        role: r.role || 'TEACHER',
         subjects: r.subjects || [],
-        phone: r.phone,
-        email: r.email,
+        phone: r.phone || '',
+        email: r.email || '',
         status: r.status || 'Active',
-        joined: r.joined,
+        joined: r.joined || r.created_at || '',
         department: r.department || 'School Administration'
       }));
-      
+
       return staffList;
     } catch (err: any) {
-      console.error('Failed to fetch staff from PocketBase:', err);
-      showError('Failed to load staff directory');
+      console.error('Failed to fetch staff from local API:', err);
+      showError(err?.message || 'Failed to load staff directory');
       return [];
     } finally {
       setIsLoading(false);
@@ -240,24 +238,24 @@ const Staff = () => {
 
     try {
       if (modalMode === 'add') {
-        // Add new staff to PocketBase
+        // Add new staff via local API
         const newStaff = {
           full_name: formData.full_name,
           role: formData.role.toUpperCase(),
           phone: formData.phone,
           email: formData.email,
           tsc_number: formData.tsc_number || undefined,
-          subjects: [],
-          status: 'Active',
-          joined: new Date().toLocaleDateString('en-US', { month: 'short', year: 'numeric' }),
-          department: 'School Administration',
-          id_no: `ID-${Date.now()}`
+          id_number: `ID-${Date.now()}`,
+          gender: undefined,
+          subject_specialization: undefined,
+          grade_assigned: undefined,
+          stream_assigned: undefined
         };
 
-        await pb.collection('staff').create(newStaff);
+        await api.post('/api/teachers', newStaff);
         showSuccess(`Staff member "${formData.full_name}" added successfully!`);
       } else if (editingStaff) {
-        // Update existing staff in PocketBase
+        // Update existing staff via local API
         const updatedData = {
           full_name: formData.full_name,
           role: formData.role.toUpperCase(),
@@ -266,7 +264,7 @@ const Staff = () => {
           tsc_number: formData.tsc_number || undefined
         };
 
-        await pb.collection('staff').update(editingStaff.id, updatedData);
+        await api.put(`/api/teachers/${editingStaff.id}`, updatedData);
         showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
       }
 
