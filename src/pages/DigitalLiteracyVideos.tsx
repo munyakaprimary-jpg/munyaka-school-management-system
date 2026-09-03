@@ -30,10 +30,7 @@ import {
 } from "@/components/ui/dialog";
 import BackButton from "@/components/ui/BackButton";
 import SafeVideoPlayer from "@/components/media/SafeVideoPlayer";
-import {
-  classifyVideoUrl,
-  sanitiseVideoUrl,
-} from "@/components/media/videoSources";
+import { buildSourcesFromUrl } from "@/components/media/videoSources";
 import {
   BookOpen,
   Clock,
@@ -105,33 +102,27 @@ const videoResources: VideoResource[] = [
       "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4",
   },
   {
-      id: "5",
-      title: "Using Search Engines Effectively",
-      description:
-        "Tips and tricks for finding the information you need quickly and accurately.",
-      duration: "4:50",
-      category: "Productivity",
-      thumbnail:
-        "https://images.unsplash.com/photo-1544391492-51b39030093a?auto=format&fit=crop&q=80&w=800",
-      // Was: https://www.w3schools.com/html/movie.mp4 — that URL 404s and
-      // was the root cause of the "Identifying Misinformation" type errors.
-      // Replaced with a real, CORS-friendly sample asset.
-      videoUrl:
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4",
-    },
-    {
-      id: "6",
-      title: "Identifying Misinformation",
-      description:
-        "Learn how to distinguish between credible sources and fake news online.",
-      duration: "9:10",
-      category: "Critical Thinking",
-      thumbnail:
-        "https://images.unsplash.com/photo-1504711423350-71130003030a?auto=format&fit=crop&q=80&w=800",
-      // Real sample asset (H.264/AAC, no CORS preflight, byte-range enabled).
-      videoUrl:
-        "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4",
-    },
+    id: "5",
+    title: "Using Search Engines Effectively",
+    description:
+      "Tips and tricks for finding the information you need quickly and accurately.",
+    duration: "4:50",
+    category: "Productivity",
+    thumbnail:
+      "https://images.unsplash.com/photo-1544391492-51b39030093a?auto=format&fit=crop&q=80&w=800",
+    videoUrl: "https://www.w3schools.com/html/movie.mp4",
+  },
+  {
+    id: "6",
+    title: "Identifying Misinformation",
+    description:
+      "Learn how to distinguish between credible sources and fake news online.",
+    duration: "9:10",
+    category: "Critical Thinking",
+    thumbnail:
+      "https://images.unsplash.com/photo-1504711423350-71130003030a?auto=format&fit=crop&q=80&w=800",
+    videoUrl: "https://www.w3schools.com/html/movie.mp4",
+  },
   {
     id: "7",
     title: "Keeping Your Devices Healthy",
@@ -217,21 +208,10 @@ const DigitalLiteracyVideos = () => {
     setActiveCategory("All");
   }, [setSearchQuery, setActiveCategory]);
 
-  // Classify the selected video's URL once per selection. This returns
-    // a VideoSource[] that already knows whether the URL is a direct file
-    // or an embed link, plus the embedUrl we pass to <SafeVideoPlayer>.
-    //
-    // We run the URL through sanitiseVideoUrl() first so any whitespace,
-    // malformed scheme, or relative path coming from the data layer
-    // becomes a clean absolute URL — or "" if it's unrecoverable.
-    const videoClassification = useMemo(() => {
-      const cleaned = sanitiseVideoUrl(selectedVideo?.videoUrl ?? "");
-      return classifyVideoUrl(cleaned);
-    }, [selectedVideo?.videoUrl]);
-  
-    const sources = videoClassification.sources;
-    const embedUrl = videoClassification.embedUrl;
-    const embedType = videoClassification.embedType;
+  const sources = useMemo(
+    () => buildSourcesFromUrl(selectedVideo?.videoUrl ?? ""),
+    [selectedVideo?.videoUrl],
+  );
 
   const visibleVideos: Array<VideoResource | YouTubeVideo> =
     sourceTab === "library" ? filteredLibrary : youtubeResults;
@@ -491,15 +471,14 @@ const DigitalLiteracyVideos = () => {
           <div className="relative aspect-video bg-black">
             {selectedVideo && (
               <SafeVideoPlayer
-                              sources={sources}
-                              embedUrl={embedUrl}
-                              embedType={embedType}
-                              poster={selectedVideo.thumbnail}
-                              title={selectedVideo.title}
-                              autoPlay
-                              muted
-                              loop={false}
-                            />
+                sources={sources}
+                youtubeId={selectedVideo.youtubeId}
+                poster={selectedVideo.thumbnail}
+                title={selectedVideo.title}
+                autoPlay
+                muted
+                loop={false}
+              />
             )}
           </div>
 
