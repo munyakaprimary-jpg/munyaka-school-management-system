@@ -331,7 +331,8 @@ const Attendance = () => {
   const activeSession = isSelectedDateToday ? getActiveSession(currentTime) : null;
 
   // ── Live student records ────────────────────────────────────────────────
-  const [liveStudents, setLiveStudents] = useState<Learner[]>([]);
+    const [liveStudents, setLiveStudents] = useState<Learner[]>([]);
+    const [allStudents, setAllStudents] = useState<Learner[]>([]);
 
   // Normalize grade comparison: handles case differences and extracts numeric portion
   const normalizeGrade = (grade: string | null | undefined): string => {
@@ -413,38 +414,54 @@ const Attendance = () => {
       }
 
       if (!parsedData) {
-        setLiveStudents([]);
-        return;
-      }
-
-      // Filter to active students matching the selected grade+stream
-      // Using case-insensitive and normalized comparison
-      const filtered = parsedData
-        .filter(s => {
-          if (!s) return false;
-          // Skip inactive students
-          if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
-          // Match grade (check both grade and class fields)
-          const studentGrade = s.grade || s.class || '';
-          if (!matchGrade(studentGrade, filters.grade)) return false;
-          // Match stream with case-insensitive comparison
-          if (!matchStream(s.stream, filters.stream)) return false;
-          return true;
-        })
-        .map(s => ({
-          id: String(s.id),
-          name: s.name || 'Unknown',
-          assessment: s.admNo || s.id || '',
-          grade: s.grade || s.class || '',
-          stream: s.stream || '',
-          gender: (s.gender || 'M') as 'M' | 'F',
-        }));
-      setLiveStudents(filtered);
-    } catch (e) {
-      console.error('[Attendance] Error loading live students:', e);
-      setLiveStudents([]);
-    }
-  }, [filters.grade, filters.stream]);
+              setLiveStudents([]);
+              setAllStudents([]);
+              return;
+            }
+      
+            // Normalize all students from storage for downstream use
+            const normalized: Learner[] = parsedData
+              .filter(s => !!s)
+              .map(s => ({
+                id: String(s.id),
+                name: s.name || 'Unknown',
+                assessment: s.admNo || s.id || '',
+                grade: s.grade || s.class || '',
+                stream: s.stream || '',
+                gender: (s.gender || 'M') as 'M' | 'F',
+              }));
+      
+            setAllStudents(normalized);
+      
+            // Filter to active students matching the selected grade+stream
+            // Using case-insensitive and normalized comparison
+            const filtered = parsedData
+              .filter(s => {
+                if (!s) return false;
+                // Skip inactive students
+                if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
+                // Match grade (check both grade and class fields)
+                const studentGrade = s.grade || s.class || '';
+                if (!matchGrade(studentGrade, filters.grade)) return false;
+                // Match stream with case-insensitive comparison
+                if (!matchStream(s.stream, filters.stream)) return false;
+                return true;
+              })
+              .map(s => ({
+                id: String(s.id),
+                name: s.name || 'Unknown',
+                assessment: s.admNo || s.id || '',
+                grade: s.grade || s.class || '',
+                stream: s.stream || '',
+                gender: (s.gender || 'M') as 'M' | 'F',
+              }));
+            setLiveStudents(filtered);
+          } catch (e) {
+            console.error('[Attendance] Error loading live students:', e);
+            setLiveStudents([]);
+            setAllStudents([]);
+          }
+        }, [filters.grade, filters.stream]);
 
   useEffect(() => {
     loadLiveStudents();
@@ -510,14 +527,128 @@ const Attendance = () => {
     }
   }, [filters.grade, filters.stream, filters.date]);
 
-  const filteredLearners = useMemo(() => {
-    if (!searchTerm.trim()) return liveStudents;
-    const term = searchTerm.toLowerCase();
-    return liveStudents.filter(
-      s => s.name.toLowerCase().includes(term) ||
-           s.assessment.toLowerCase().includes(term)
-    );
-  }, [liveStudents, searchTerm]);
+  // ============================================
+    // Dynamic stream options — derived from the full
+    // student roster so the dropdown only shows
+    // streams that actually exist for the selected
+    // Grade. Includes school-settings fallback
+    // streams when the roster is sparse.
+    // ============================================
+    const SETTINGS_STORAGE_KEYS = [
+      'munyaka_school_settings',
+      'school_settings',
+      'munyaka_settings',
+      'schoolStreams',
+      'streams_config',
+    ];
+  
+    // Default stream list — used as fallback when neither roster nor settings
+    // provide a stream for the selected grade.
+    const DEFAULT_STREAM_FALLBACK = [
+      'YELLOW', 'BLUE', 'GREEN', 'RED',
+      'ALPHA', 'BETA',
+      'MERCURY', 'VENUS', 'JUPITER', 'NEPTUNE',
+    ];
+  
+    const availableStreams = useMemo(() => {
+      const fromRoster = Array.from(
+        new Set(
+          allStudents
+            .filter(s => matchGrade(s.grade, filters.grade))
+            .map(s => String(s.stream || '').toUpperCase().trim())
+            .filter(Boolean)
+        )
+      );
+  
+      // Try to pull an additional stream list from school settings
+      let fromSettings: string[] = [];
+      if (typeof window !== 'undefined') {
+        for (const key of SETTINGS_STORAGE_KEYS) {
+          try {
+            const raw = localStorage.getItem(key);
+            if (!raw) continue;
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              // Could be a flat array of stream strings
+              fromSettings = parsed
+                .filter(v => typeof v === 'string')
+                .map(v => v.toUpperCase().trim())
+                .filter(Boolean);
+              if (fromSettings.length > 0) break;
+            } else if (parsed && typeof parsed === 'object') {
+              // Look for common keys mapping grade → streams
+              const gradeMap: any = (parsed as any).gradeStreams
+                || (parsed as any).streams
+                || (parsed as any).grade_streams
+                || (parsed as any);
+              if (gradeMap && typeof gradeMap === 'object') {
+                // Direct match on grade
+                const direct = (gradeMap as any)[filters.grade];
+                if (Array.isArray(direct)) {
+                  fromSettings = direct.map((v: any) => String(v).toUpperCase().trim()).filter(Boolean);
+                  if (fromSettings.length > 0) break;
+                }
+                // Numeric match (e.g., "6" → "Grade 6")
+                const numeric = normalizeGrade(filters.grade);
+                if (numeric && Array.isArray((gradeMap as any)[numeric])) {
+                  fromSettings = ((gradeMap as any)[numeric] as any[])
+                    .map((v: any) => String(v).toUpperCase().trim())
+                    .filter(Boolean);
+                  if (fromSettings.length > 0) break;
+                }
+                // Iterate to find a matching grade key (loose match)
+                for (const k of Object.keys(gradeMap)) {
+                  if (matchGrade(k, filters.grade)) {
+                    const v = (gradeMap as any)[k];
+                    if (Array.isArray(v)) {
+                      fromSettings = v.map((x: any) => String(x).toUpperCase().trim()).filter(Boolean);
+                      if (fromSettings.length > 0) break;
+                    }
+                  }
+                }
+                if (fromSettings.length > 0) break;
+              }
+            }
+          } catch {
+            // ignore parse errors and try next key
+            continue;
+          }
+        }
+      }
+  
+      const merged = Array.from(new Set([...fromRoster, ...fromSettings]));
+      // If still empty, fall back to defaults so the dropdown isn't disabled
+      return merged.length > 0 ? merged : DEFAULT_STREAM_FALLBACK;
+    }, [allStudents, filters.grade]);
+  
+    // Whether the Stream dropdown should be disabled
+    const isStreamDisabled = !filters.grade || availableStreams.length === 0;
+  
+    // Reset the Stream selection when the Grade changes and the current
+    // stream is not in the new available list. This avoids stale
+    // selections like keeping "YELLOW" after switching from Grade 6 to Grade 7.
+    useEffect(() => {
+      if (!filters.grade) {
+        if (filters.stream) setFilters(prev => ({ ...prev, stream: '' }));
+        return;
+      }
+      const normCurrent = String(filters.stream || '').toLowerCase().trim();
+      const isCurrentInList = availableStreams.some(
+        s => String(s).toLowerCase().trim() === normCurrent
+      );
+      if (!isCurrentInList) {
+        setFilters(prev => ({ ...prev, stream: availableStreams[0] || '' }));
+      }
+    }, [filters.grade, availableStreams]);
+  
+    const filteredLearners = useMemo(() => {
+      if (!searchTerm.trim()) return liveStudents;
+      const term = searchTerm.toLowerCase();
+      return liveStudents.filter(
+        s => s.name.toLowerCase().includes(term) ||
+             s.assessment.toLowerCase().includes(term)
+      );
+    }, [liveStudents, searchTerm]);
 
   const isSessionFullyMarked = (session: SessionType): boolean => {
     if (filteredLearners.length === 0) return false;
@@ -1137,53 +1268,68 @@ const Attendance = () => {
           </div>
 
           {/* Grade Dropdown */}
-          <div className="md:col-span-3 space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-              Grade
-            </label>
-            <Select value={filters.grade} onValueChange={(val) => setFilters({...filters, grade: val})}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
-                <SelectValue placeholder="Select Grade" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="PP1">PP1</SelectItem>
-                <SelectItem value="PP2">PP2</SelectItem>
-                <SelectItem value="Grade 1">Grade 1</SelectItem>
-                <SelectItem value="Grade 2">Grade 2</SelectItem>
-                <SelectItem value="Grade 3">Grade 3</SelectItem>
-                <SelectItem value="Grade 4">Grade 4</SelectItem>
-                <SelectItem value="Grade 5">Grade 5</SelectItem>
-                <SelectItem value="Grade 6">Grade 6</SelectItem>
-                <SelectItem value="Grade 7">Grade 7</SelectItem>
-                <SelectItem value="Grade 8">Grade 8</SelectItem>
-                <SelectItem value="Grade 9">Grade 9</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          {/* Stream Dropdown */}
-          <div className="md:col-span-2 space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
-              Stream
-            </label>
-            <Select value={filters.stream} onValueChange={(val) => setFilters({...filters, stream: val})}>
-              <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
-                <SelectValue placeholder="Select Stream" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="YELLOW">YELLOW</SelectItem>
-                <SelectItem value="BLUE">BLUE</SelectItem>
-                <SelectItem value="GREEN">GREEN</SelectItem>
-                <SelectItem value="RED">RED</SelectItem>
-                <SelectItem value="ALPHA">ALPHA</SelectItem>
-                <SelectItem value="BETA">BETA</SelectItem>
-                <SelectItem value="MERCURY">MERCURY</SelectItem>
-                <SelectItem value="VENUS">VENUS</SelectItem>
-                <SelectItem value="JUPITER">JUPITER</SelectItem>
-                <SelectItem value="NEPTUNE">NEPTUNE</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+                    <div className="md:col-span-3 space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                        Grade
+                      </label>
+                      <Select
+                        value={filters.grade}
+                        onValueChange={(val) => setFilters(prev => ({ ...prev, grade: val, stream: '' }))}
+                      >
+                        <SelectTrigger className="h-11 rounded-xl bg-slate-50 border-slate-200 font-bold text-slate-700">
+                          <SelectValue placeholder="Select Grade" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="PP1">PP1</SelectItem>
+                          <SelectItem value="PP2">PP2</SelectItem>
+                          <SelectItem value="Grade 1">Grade 1</SelectItem>
+                          <SelectItem value="Grade 2">Grade 2</SelectItem>
+                          <SelectItem value="Grade 3">Grade 3</SelectItem>
+                          <SelectItem value="Grade 4">Grade 4</SelectItem>
+                          <SelectItem value="Grade 5">Grade 5</SelectItem>
+                          <SelectItem value="Grade 6">Grade 6</SelectItem>
+                          <SelectItem value="Grade 7">Grade 7</SelectItem>
+                          <SelectItem value="Grade 8">Grade 8</SelectItem>
+                          <SelectItem value="Grade 9">Grade 9</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+          
+                    {/* Stream Dropdown — dynamically filtered by selected Grade */}
+                    <div className="md:col-span-2 space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                        Stream
+                      </label>
+                      <Select
+                        value={filters.stream}
+                        onValueChange={(val) => setFilters(prev => ({ ...prev, stream: val }))}
+                        disabled={isStreamDisabled}
+                      >
+                        <SelectTrigger
+                          className={cn(
+                            "h-11 rounded-xl border-slate-200 font-bold text-slate-700",
+                            isStreamDisabled
+                              ? "bg-slate-100 opacity-60 cursor-not-allowed"
+                              : "bg-slate-50"
+                          )}
+                        >
+                          <SelectValue placeholder={isStreamDisabled ? "No streams available" : "Select Stream"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {availableStreams.length > 0 ? (
+                            availableStreams.map(stream => (
+                              <SelectItem key={stream} value={stream}>
+                                {stream}
+                              </SelectItem>
+                            ))
+                          ) : (
+                            <SelectItem value="__none__" disabled>
+                              No streams configured
+                            </SelectItem>
+                          )}
+                        </SelectContent>
+                      </Select>
+                    </div>
 
           {/* Global bulk action buttons */}
           <div className="md:col-span-4 space-y-1.5">
