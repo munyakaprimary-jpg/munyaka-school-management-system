@@ -53,7 +53,6 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
-import { usePermissions } from '@/hooks/usePermissions';
 import { useLanSync } from '@/hooks/useLanSync';
 
 const Layout = ({ children }: { children: React.ReactNode }) => {
@@ -65,7 +64,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
-    const { canAccessSystemManagement } = usePermissions();
     const { connectionStatus, isConnected } = useLanSync();
     const location = useLocation();
     const navigate = useNavigate();

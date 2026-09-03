@@ -153,7 +153,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
               if (isAdminRole) {
                 return menuItems.filter(item => {
-                  if (item.requiresPermission) return canAccessSystemManagement();
                   // Exclude items that are strictly owner-only (roles = ['owner'] only).
                   const itemRoles = item.roles ?? [];
                   if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
@@ -165,13 +164,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                   return item;
                 });
               }
-  
+
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
             // Profile Settings, plus global items (Games Hub).
       if (roleLower === 'owner') {
         const roleFiltered = menuItems.filter(item => {
           if (item.global) return true;
-          if (item.requiresPermission) return canAccessSystemManagement();
           return item.roles.map(r => r.toLowerCase()).includes('owner');
         });
         // Ensure Dashboard is always present.
@@ -200,13 +198,12 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         });
         return ordered;
       }
-  
+
       // For teacher role, show "Teacher's Dashboard" label
       if (roleLower === 'teacher') {
         return menuItems.filter(item => {
           if (item.global) return true;
           if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-          if (item.requiresPermission) return canAccessSystemManagement();
           return true;
         }).map(item => {
           if (item.path === '/') {
@@ -215,7 +212,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           return item;
         });
       }
-  
+
       return menuItems.filter(item => {
         // Global items are visible to every authenticated user.
         if (item.global) return true;
@@ -225,13 +222,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         const roleMatches = itemRoles.includes(roleLower) ||
           (roleLower === 'super_admin' && itemRoles.includes('admin'));
         if (!roleMatches) return false;
-        // Check if item requires a specific permission
-        if (item.requiresPermission) {
-          return canAccessSystemManagement();
-        }
         return true;
       });
-    }, [user?.role, canAccessSystemManagement]);
+    }, [user?.role]);
 
   // OWNER is BILLING-ONLY: gets Dashboard, Payments, Profile Settings,
     //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
