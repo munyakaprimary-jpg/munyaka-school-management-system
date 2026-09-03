@@ -26,15 +26,6 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
-import {
-  buildLearnerMenuFilters,
-  applyLearnerFilter,
-} from '@/data/mockLearnerMenu';
-import type {
-  LearnerMenuData,
-  LearnerMenuItem,
-} from '@/types/learnerMenu';
-import LearnerManagementMenu from '@/components/students/LearnerManagementMenu';
 
 interface LearnerRowCompat {
   id: string;
@@ -221,11 +212,6 @@ export default function Students() {
     }
   }, [searchTerm, gradeFilter, streamFilter]);
 
-  // ── Dynamic Learner Management Menu ───────────────────────────────────────
-  // menuFilterId drives which category is selected in the side-rail menu.
-  // 'all' shows every learner; the sidebar filter row uses this to derive
-  // its active state and count badges dynamically from the live learners array.
-  const [menuFilterId, setMenuFilterId] = useState('all');
 
   // 7. Compute the list of streams available for the currently selected grade.
     // All streams are sourced exclusively from the live Grades & Streams configuration
@@ -665,76 +651,11 @@ export default function Students() {
     };
 
   const isAnyExportInProgress =
-    allLearnersExport.isDownloading || currentViewExport.isDownloading;
-
-  // ── Dynamic Learner Management Menu data ─────────────────────────────────
-  // Adapt the raw LearnerRowCompat[] (the existing learners state) into the
-  // LearnerMenuItem[] shape that LearnerManagementMenu expects. Every field
-  // is pulled from the live learners array so the menu never goes stale.
-  const menuLearners = useMemo((): LearnerMenuItem[] => {
-    return learners.map((l) => ({
-      id: l.id,
-      admNo: l.admNo,
-      fullName: l.name,
-      grade: l.grade,
-      stream: l.stream,
-      status: l.status ?? 'Active',
-      // attendanceStatus is derived from the learner's most recent attendance
-      // record in the application. Here we normalise a missing entry to
-      // 'Unmarked' so the badge always renders deterministically.
-      attendanceStatus:
-        (l as any).attendanceStatus ?? 'Unmarked',
-      avatarUrl: (l as any).avatarUrl ?? null,
-      guardian: l.guardian,
-      phone: l.phone,
-      birthCertificateNo: l.birthCertificateNo,
-    }));
-  }, [learners]);
-
-  // Filters are rebuilt from the live dataset on every change so all
-  // counters (total, active, absent, etc.) are always accurate.
-  const menuFilters = useMemo(
-    () => buildLearnerMenuFilters(menuLearners, menuFilterId),
-    [menuLearners, menuFilterId],
-  );
-
-  // Derive the LearnerMenuData shape consumed by LearnerManagementMenu.
-  // Loading and error flags can be wired to a real fetch hook here; for
-  // now the page always runs in its existing localStorage-driven mode.
-  const menuData = useMemo((): LearnerMenuData => {
-    return {
-      learners: applyLearnerFilter(menuLearners, menuFilterId),
-      filters: menuFilters,
-      activeFilterId: menuFilterId,
-      isLoading: false,
-      error: null,
-    };
-  }, [menuLearners, menuFilters, menuFilterId]);
-
-  // When the user clicks a learner in the side-rail menu, navigate to their
-  // profile page — the same behaviour as clicking the name in the table.
-  const handleMenuLearnerClick = (learner: LearnerMenuItem) => {
-    navigate(`/students/${learner.id}`);
-  };
+      allLearnersExport.isDownloading || currentViewExport.isDownloading;
 
   return (
     <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
-      <div className="max-w-7xl mx-auto flex flex-col xl:flex-row gap-6">
-        {/* Dynamic Learner Management Menu — left rail on wide screens */}
-        <div className="xl:w-72 xl:shrink-0">
-          <div className="xl:sticky xl:top-6 bg-white border border-slate-200/80 rounded-2xl shadow-xs p-4">
-            <LearnerManagementMenu
-              data={menuData}
-              rowLimit={5}
-              searchTerm={searchTerm}
-              onFilterChange={setMenuFilterId}
-              onLearnerClick={handleMenuLearnerClick}
-            />
-          </div>
-        </div>
-
-        {/* Main content column — header, filters bar, table, modals */}
-        <div className="flex-1 min-w-0">
+      <div className="max-w-7xl mx-auto">
 
       {/* 2. Top Header & Action Controls */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
