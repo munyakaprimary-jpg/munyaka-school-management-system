@@ -38,6 +38,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import ErrorBoundary from "@/components/media/VideoPlayerErrorBoundary";
 import {
   AlertCircle,
   ExternalLink,
@@ -223,14 +224,19 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   onEmbedError,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const [stage, setStage] = useState<Stage>("probing");
-  const [isLoading, setIsLoading] = useState(true);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [failure, setFailure] = useState<FailureInfo | null>(null);
-  const [decoded, setDecoded] = useState(false);
-
-  const inWebView = useMemo(isNativeWebView, []);
+    const iframeRef = useRef<HTMLIFrameElement | null>(null);
+    // Tracks whether the component is still mounted. All setState calls
+    // in async callbacks and post-event handlers MUST be gated on this.
+    // Without it, closing the modal while a video is loading causes
+    // "setState on unmounted component" crashes in React 18 strict mode.
+    const isMountedRef = useRef(true);
+    const [stage, setStage] = useState<Stage>("probing");
+    const [isLoading, setIsLoading] = useState(true);
+    const [isPlaying, setIsPlaying] = useState(false);
+    const [failure, setFailure] = useState<FailureInfo | null>(null);
+    const [decoded, setDecoded] = useState(false);
+  
+    const inWebView = useMemo(isNativeWebView, []);
 
   // First source becomes the active one. Direct embed URLs always
   // bypass the native stage and go straight to the iframe.
@@ -280,21 +286,24 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   // ──────────────────────────────────────────────────────────────────
 
   const transitionToNative = useCallback(() => {
-    if (!playableSource) {
-      // No playable direct source — go to embed or external.
-      if (embedUrl) setStage("embed");
-      else setStage("external");
-      setIsLoading(false);
-      return;
-    }
-    setStage("native");
-    setIsLoading(true);
-  }, [playableSource, embedUrl]);
+      if (!isMountedRef.current) return;
+      if (!playableSource) {
+        // No playable direct source — go to embed or external.
+        if (embedUrl) setStage("embed");
+        else setStage("external");
+        setIsLoading(false);
+        return;
+      }
+      setStage("native");
+      setIsLoading(true);
+    }, [playableSource, embedUrl]);
 
   const handleNativeError = useCallback(
-    (rawErr: MediaError | null) => {
-      const src = playableSource;
-      const { reason, message } = decodeMediaError(rawErr, src?.url ?? "");
+      (rawErr: MediaError | null) => {
+        // Guard: never call setState after unmount.
+        if (!isMountedRef.current) return;
+        const src = playableSource;
+        const { reason, message } = decodeMediaError(rawErr, src?.url ?? "");
 
       // ALWAYS log the full error object so devs can diagnose it.
       // MediaError objects don't serialise well — we extract the
@@ -334,30 +343,32 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   );
 
   const handleEmbedError = useCallback(() => {
-    console.error("[SafeVideoPlayer] Embed iframe failed to load", {
-      embedUrl,
-      embedType,
-    });
-    onEmbedError?.();
-    setStage("external");
-    setIsLoading(false);
-    setFailure({
-      embedUrl,
-      reason: `The ${embedType} embed could not be loaded.`,
-      message:
-        "The embedded video could not be loaded. The video may be private, age-restricted, or temporarily unavailable.",
-    });
-  }, [embedUrl, embedType, onEmbedError]);
+      if (!isMountedRef.current) return;
+      console.error("[SafeVideoPlayer] Embed iframe failed to load", {
+        embedUrl,
+        embedType,
+      });
+      onEmbedError?.();
+      setStage("external");
+      setIsLoading(false);
+      setFailure({
+        embedUrl,
+        reason: `The ${embedType} embed could not be loaded.`,
+        message:
+          "The embedded video could not be loaded. The video may be private, age-restricted, or temporarily unavailable.",
+      });
+    }, [embedUrl, embedType, onEmbedError]);
 
   const handleRetry = useCallback(() => {
-    setStage("probing");
-    setFailure(null);
-    setIsLoading(true);
-    setDecoded(false);
-    setIsPlaying(false);
-    const v = videoRef.current;
-    if (v) v.load();
-  }, []);
+      if (!isMountedRef.current) return;
+      setStage("probing");
+      setFailure(null);
+      setIsLoading(true);
+      setDecoded(false);
+      setIsPlaying(false);
+      const v = videoRef.current;
+      if (v) v.load();
+    }, []);
 
   const openExternal = useCallback(() => {
     const url =
@@ -376,12 +387,16 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   // ──────────────────────────────────────────────────────────────────
 
   useEffect(() => {
-    let cancelled = false;
-    setStage("probing");
-    setIsLoading(true);
-    setFailure(null);
-    setDecoded(false);
-    setIsPlaying(false);
+      // Reset mounted flag — the cleanup function sets this false on
+      // unmount, but for effect re-runs (URL changed) we need to allow
+      // setState again.
+      isMountedRef.current = true;
+      let cancelled = false;
+      setStage("probing");
+      setIsLoading(true);
+      setFailure(null);
+      setDecoded(false);
+      setIsPlaying(false);
 
     const targetUrl = playableSource?.url ?? embedUrl;
 
@@ -428,7 +443,7 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
     // For direct videos, probe the URL first so we can show a real
     // HTTP error instead of "Unknown playback error".
     probeUrl(targetUrl).then((ok) => {
-      if (cancelled) return;
+      if (cancelled || !isMountedRef.current) return;
       if (ok) {
         transitionToNative();
       } else {
@@ -456,6 +471,7 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
 
     return () => {
       cancelled = true;
+      isMountedRef.current = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sources[0]?.url, embedUrl]);
@@ -465,15 +481,35 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   // ──────────────────────────────────────────────────────────────────
 
   return (
-    <div
-      className={cn(
-        "relative w-full h-full bg-black overflow-hidden",
-        className,
-      )}
-      data-testid="safe-video-player"
-      data-stage={stage}
-      data-embed-type={embedType}
-    >
+      <ErrorBoundary
+        className={className}
+        fallback={(err) => (
+          <div
+            className={cn(
+              "relative w-full h-full bg-black overflow-hidden flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-slate-900 via-slate-950 to-black",
+              className,
+            )}
+            role="alert"
+          >
+            <div className="w-16 h-16 rounded-full bg-rose-500/15 text-rose-400 flex items-center justify-center mb-4 ring-1 ring-rose-500/20">
+              <AlertCircle size={28} />
+            </div>
+            <h3 className="text-white font-black text-lg">Video Player Crashed</h3>
+            <p className="text-slate-400 text-sm max-w-md mt-1">
+              {err.message || "An unexpected error occurred while rendering the video player."}
+            </p>
+          </div>
+        )}
+      >
+      <div
+        className={cn(
+          "relative w-full h-full bg-black overflow-hidden",
+          className,
+        )}
+        data-testid="safe-video-player"
+        data-stage={stage}
+        data-embed-type={embedType}
+      >
       {/* ── Probing overlay ───────────────────────────────────────── */}
       {stage === "probing" && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
@@ -511,33 +547,32 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
           className="w-full h-full object-contain bg-black"
           title={title}
           onLoadedMetadata={() => {
-            setIsLoading(false);
-            setDecoded(true);
-            const v = videoRef.current;
-            if (!v) return;
-            v.play().catch((e: unknown) => {
-              const msg = e instanceof Error ? e.message : String(e);
-              console.warn("[SafeVideoPlayer] Autoplay rejected", msg);
-              // Don't treat autoplay rejection as a hard failure —
-              // the user can still tap play in the controls.
-            });
-          }}
-          onError={(e) => {
-            // e.currentTarget is the <video> element. e.currentTarget.error
-            // is the MediaError object, which is null when the failure is
-            // purely a network / CORS issue (e.g. w3schools.com without
-            // an ACAO header).
-            const target = e.currentTarget as HTMLVideoElement;
-            handleNativeError(target.error ?? null);
-          }}
-          onStalled={() => setIsLoading(true)}
-          onPlaying={() => {
-            setIsPlaying(true);
-            setIsLoading(false);
-          }}
-          onPause={() => setIsPlaying(false)}
-          onCanPlay={() => setIsLoading(false)}
-          onWaiting={() => setIsLoading(true)}
+                      if (!isMountedRef.current) return;
+                      setIsLoading(false);
+                      setDecoded(true);
+                      const v = videoRef.current;
+                      if (!v) return;
+                      v.play().catch((e: unknown) => {
+                        if (!isMountedRef.current) return;
+                        const msg = e instanceof Error ? e.message : String(e);
+                        console.warn("[SafeVideoPlayer] Autoplay rejected", msg);
+                        // Don't treat autoplay rejection as a hard failure —
+                        // the user can still tap play in the controls.
+                      });
+                    }}
+                    onError={(e) => {
+                      // e.currentTarget CAN be null when the <video> element has been
+                      // removed from the DOM (e.g. modal closed mid-load). Guard first
+                      // so we never read target.error from undefined.
+                      const target = e.currentTarget as HTMLVideoElement | null;
+                      if (!isMountedRef.current || !target) return;
+                      handleNativeError(target.error ?? null);
+                    }}
+                    onStalled={() => { if (isMountedRef.current) setIsLoading(true); }}
+                    onPlaying={() => { if (isMountedRef.current) { setIsPlaying(true); setIsLoading(false); } }}
+                    onPause={() => { if (isMountedRef.current) setIsPlaying(false); }}
+                    onCanPlay={() => { if (isMountedRef.current) setIsLoading(false); }}
+                    onWaiting={() => { if (isMountedRef.current) setIsLoading(true); }}
         >
           <source
             src={playableSource.url}
@@ -667,7 +702,8 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
         </div>
       )}
     </div>
-  );
-};
-
-export default SafeVideoPlayer;
+        </ErrorBoundary>
+      );
+    };
+    
+    export default SafeVideoPlayer;
