@@ -32,11 +32,6 @@ import {
 } from '@/services/activityLog';
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
-import {
-  readGradesAndStreams,
-  getStreamsForGrade,
-  GradesStreamsConfig,
-} from '@/services/gradesStreamsConfig';
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 
@@ -304,135 +299,24 @@ const AdminDashboard: React.FC = () => {
     return () => window.removeEventListener('munyaka:activity-log-changed', handler);
   }, []);
 
-  // ── Grade & Stream filter state (admin data scope) ────────────────────────
-  const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
-    readGradesAndStreams()
-  );
-
-  useEffect(() => {
-    const refresh = () => setGradesConfig(readGradesAndStreams());
-    const handleStorage = (e: StorageEvent) => {
-      if (!e.key || e.key.includes('grades') || e.key.includes('streams')) refresh();
-    };
-    const handleCustom = () => refresh();
-    window.addEventListener('storage', handleStorage);
-    window.addEventListener('munyaka_grades_updated', handleCustom);
-    return () => {
-      window.removeEventListener('storage', handleStorage);
-      window.removeEventListener('munyaka_grades_updated', handleCustom);
-    };
-  }, []);
-
-  const [gradeFilter, setGradeFilter] = useState('All');
-  const [streamFilter, setStreamFilter] = useState('All');
-
-  const availableStreams = useMemo((): string[] => {
-    if (gradeFilter === 'All' || !gradeFilter) {
-      return gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b));
-    }
-    return getStreamsForGrade(gradeFilter, gradesConfig);
-  }, [gradeFilter, gradesConfig]);
-
-  useEffect(() => {
-    if (streamFilter !== 'All' && !availableStreams.includes(streamFilter)) {
-      setStreamFilter('All');
-    }
-  }, [availableStreams, streamFilter]);
-
-  const isAllGrades = !gradeFilter || gradeFilter === 'All';
-  const isAllStreams = !streamFilter || streamFilter === 'All';
-
   // ── System Vitals ────────────────────────────────────────────────────────
-    const vitals = useMemo<SystemVitals>(() => {
-      const learners = safeRead<any[]>('school_learners_data', []);
-      const isActive = (l: any) => {
-        if (!l) return false;
-        if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
-        return true;
-      };
-      // Scope learners by grade & stream (when filters are active)
-      const scopedLearners = learners.filter((l: any) => {
-        if (!isActive(l)) return false;
-        if (!isAllGrades && l.grade !== gradeFilter) return false;
-        if (!isAllStreams && l.stream !== streamFilter) return false;
-        return true;
-      });
-      const scopedTotal = scopedLearners.length;
-  
-      // Junior-school scoped count
-      const juniorCount = scopedLearners.filter((l: any) => {
-        const g = (l.grade || '').toLowerCase();
-        return g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9') || g.includes('junior');
-      }).length;
-  
-      // Today's attendance rate, scoped to grade/stream
-      let scopedAttendanceRate = 0;
-      if (scopedTotal > 0) {
-        const todayStr = new Date().toISOString().slice(0, 10);
-        const presentSet = new Set<string>();
-        const notePresent = (dateStr: string, studentId: string) => {
-          if (dateStr === todayStr && studentId) presentSet.add(studentId);
-        };
-        try {
-          const raw = localStorage.getItem('school_attendance_logs');
-          if (raw) {
-            const logs = JSON.parse(raw);
-            if (Array.isArray(logs)) {
-              for (const l of logs) {
-                if (l?.date === todayStr && (l.status === 'present' || l.status === 'late')) {
-                  notePresent(l.date, l.studentId);
-                }
-              }
-            }
-          }
-        } catch {}
-        try {
-          const raw = localStorage.getItem('munyaka_attendance_records');
-          if (raw) {
-            const records = JSON.parse(raw);
-            if (records && typeof records === 'object') {
-              for (const [, record] of Object.entries(records as Record<string, any>)) {
-                if (!record) continue;
-                if (record.date !== todayStr) continue;
-                if (record.morning?.status === 'P' || record.afternoon?.status === 'P') {
-                  notePresent(record.date, record.studentId);
-                }
-              }
-            }
-          }
-        } catch {}
-        try {
-          for (const key of Object.keys(localStorage)) {
-            if (!key.startsWith('munyaka_attendance_v2_')) continue;
-            const raw = localStorage.getItem(key);
-            if (!raw) continue;
-            const record = safeParseRecord<Record<string, any>>(raw);
-            if (!record) continue;
-            for (const [, entry] of Object.entries(record)) {
-              if (!entry || typeof entry !== 'object') continue;
-              if (entry.date !== todayStr) continue;
-              if (entry.morning?.status === 'P' || entry.afternoon?.status === 'P') {
-                notePresent(entry.date, entry.studentId);
-              }
-            }
-          }
-        } catch {}
-  
-        // Intersect present students with scoped learners
-        const scopedIds = new Set<string>(scopedLearners.map((l: any) => l.id));
-        let scopedPresent = 0;
-        presentSet.forEach((id) => { if (scopedIds.has(id)) scopedPresent++; });
-        scopedAttendanceRate = Math.round((scopedPresent / scopedTotal) * 100);
-      }
-  
-      return {
-        totalStudents: isLoading ? 0 : (isAllGrades && isAllStreams ? totalStudents : scopedTotal),
-        totalTeachers: isLoading ? 0 : totalTeachers,
-        todayAttendanceRate: isLoading ? 0 : (isAllGrades && isAllStreams ? todayAttendanceRate : scopedAttendanceRate),
-        juniorSchoolCount: juniorCount,
-        systemStatus: 'Live',
-      };
-    }, [isLoading, totalStudents, totalTeachers, todayAttendanceRate, activityVersion, gradeFilter, streamFilter, isAllGrades, isAllStreams]);
+  const vitals = useMemo<SystemVitals>(() => {
+    const learners = safeRead<any[]>('school_learners_data', []);
+    const juniorCount = learners.filter((l: any) => {
+      if (!l) return false;
+      if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
+      const g = (l.grade || '').toLowerCase();
+      return g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9') || g.includes('junior');
+    }).length;
+
+    return {
+      totalStudents: isLoading ? 0 : totalStudents,
+      totalTeachers: isLoading ? 0 : totalTeachers,
+      todayAttendanceRate: isLoading ? 0 : todayAttendanceRate,
+      juniorSchoolCount: juniorCount,
+      systemStatus: 'Live',
+    };
+  }, [isLoading, totalStudents, totalTeachers, todayAttendanceRate, activityVersion]);
 
   // ── Weekly attendance — last 7 days, fully driven by real DB-style data
   //   No mock percentages. If a day has no records, the bar shows 0% and
@@ -751,64 +635,6 @@ const AdminDashboard: React.FC = () => {
         <p className="text-sm text-slate-500 mt-1">
           System vitals for Munyaka Primary and Junior School.
         </p>
-      </div>
-
-      {/* ── Grade & Stream filter controls (admin scope) ── */}
-      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs flex flex-col md:flex-row items-center gap-4">
-        <div className="flex items-center gap-2 shrink-0">
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Scope:
-          </span>
-          {!(isAllGrades && isAllStreams) && (
-            <Badge
-              variant="outline"
-              className="rounded-full px-2 py-0.5 text-[10px] font-black bg-indigo-50 text-indigo-700 border-indigo-200"
-            >
-              Filtered View
-            </Badge>
-          )}
-        </div>
-        <div className="flex items-center gap-3 w-full md:w-auto flex-wrap">
-          {/* Grade filter */}
-          <select
-            value={gradeFilter}
-            onChange={(e) => { setGradeFilter(e.target.value); setStreamFilter('All'); }}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer"
-          >
-            <option value="All">All Grades</option>
-            {gradesConfig.grades.map((g) => (
-              <option key={g} value={g}>{g}</option>
-            ))}
-          </select>
-
-          {/* Stream filter */}
-          <select
-            value={streamFilter}
-            onChange={(e) => setStreamFilter(e.target.value)}
-            disabled={!gradeFilter || gradeFilter === 'All'}
-            className="px-3.5 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 cursor-pointer disabled:opacity-50"
-          >
-            <option value="All">All Streams</option>
-            {availableStreams.length === 0 ? (
-              <option value="__none__" disabled>No streams</option>
-            ) : (
-              availableStreams.map((s) => (
-                <option key={s} value={s}>{s}</option>
-              ))
-            )}
-          </select>
-
-          {/* Clear filters button */}
-          {!(isAllGrades && isAllStreams) && (
-            <button
-              type="button"
-              onClick={() => { setGradeFilter('All'); setStreamFilter('All'); }}
-              className="px-3 py-2 text-xs font-bold text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-xl transition-colors"
-            >
-              Clear filters
-            </button>
-          )}
-        </div>
       </div>
 
       {/* ── Live Sync Banner ── */}

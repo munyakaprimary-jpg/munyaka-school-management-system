@@ -11,7 +11,6 @@ import {
   LearnerMenuItem,
 } from "@/types/learnerMenu";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
 
 /* -------------------------------------------------------------------------- */
 /*  Shared styling tokens                                                     */
@@ -120,9 +119,9 @@ function EmptyState({ filterLabel, searchTerm }: EmptyStateProps) {
       <p className="text-sm font-bold text-slate-800">No learners found</p>
       <p className="text-xs text-slate-500 mt-1 max-w-xs">
         {hasSearch
-          ? `No results for "${searchTerm}"${filterLabel ? ` in ${filterLabel}` : ""}.`
+          ? `No results for “${searchTerm}”${filterLabel ? ` in ${filterLabel}` : ""}.`
           : filterLabel
-            ? `There are no learners in the "${filterLabel}" category right now.`
+            ? `There are no learners in the “${filterLabel}” category right now.`
             : "Add a learner to get started — your roster is currently empty."}
       </p>
     </div>
@@ -141,7 +140,7 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
         {onRetry ? <WifiOff size={26} /> : <AlertCircle size={26} />}
       </div>
       <p className="text-sm font-bold text-rose-800">
-        Couldn't load the learner menu
+        Couldn’t load the learner menu
       </p>
       <p className="text-xs text-rose-700/80 mt-1 max-w-xs">{message}</p>
       {onRetry && (
@@ -291,22 +290,6 @@ export interface LearnerManagementMenuProps {
   onRetry?: () => void;
   /** Optional className for the outer container. */
   className?: string;
-  /**
-   * When true, renders in "admin" mode — shows an expanded roster view
-   * with all learner rows (not just rowLimit) and a full roster header.
-   * Defaults to false (original embedded side-rail mode).
-   */
-  adminMode?: boolean;
-  /**
-   * Current grade filter scope (used in adminMode to scope attendance counts).
-   * Pass "All" or empty to use the entire school roster.
-   */
-  gradeFilter?: string;
-  /**
-   * Current stream filter scope (used in adminMode to scope attendance counts).
-   * Pass "All" or empty to use all streams within the selected grade.
-   */
-  streamFilter?: string;
 }
 
 /**
@@ -317,10 +300,6 @@ export interface LearnerManagementMenuProps {
  * counts or hardcoded rows in the JSX. Loading, empty, and error states
  * are all derived from the `isLoading` / `error` props and from the
  * presence of data in the active filter.
- *
- * When `adminMode` is true, the component renders an expanded view
- * suitable for the Admin Dashboard's "School Roster" section, showing
- * all learner rows with grade/stream-scoped attendance counts.
  */
 export default function LearnerManagementMenu({
   data,
@@ -330,49 +309,17 @@ export default function LearnerManagementMenu({
   onLearnerClick,
   onRetry,
   className,
-  adminMode = false,
-  gradeFilter = "All",
-  streamFilter = "All",
 }: LearnerManagementMenuProps) {
-  const navigate = useNavigate();
-  const isAllGrades = !gradeFilter || gradeFilter === "All";
-  const isAllStreams = !streamFilter || streamFilter === "All";
-
-  // ── Scope attendance counts to selected grade/stream ────────────────────
-  // When grade/stream filters are active, only count learners that match.
-  // Used in adminMode to show scoped metrics.
-  const scopedLearners = React.useMemo(() => {
-    if (isAllGrades && isAllStreams) return data.learners;
-    return data.learners.filter((l) => {
-      const matchGrade = isAllGrades || l.grade === gradeFilter;
-      const matchStream = isAllStreams || l.stream === streamFilter;
-      return matchGrade && matchStream;
-    });
-  }, [data.learners, gradeFilter, streamFilter, isAllGrades, isAllStreams]);
-
-  const scopedCounts = React.useMemo(() => {
-    const present = scopedLearners.filter(
-      (l) => l.attendanceStatus === "Present" || l.attendanceStatus === "Late",
-    ).length;
-    const absent = scopedLearners.filter(
-      (l) => l.attendanceStatus === "Absent",
-    ).length;
-    const unmarked = scopedLearners.filter(
-      (l) => l.attendanceStatus === "Unmarked",
-    ).length;
-    return { present, absent, unmarked, total: scopedLearners.length };
-  }, [scopedLearners]);
-
   // ── Loading state ─────────────────────────────────────────────────────
   if (data.isLoading) {
     return (
       <aside className={cn("space-y-4", className)} aria-busy="true">
         <div className="px-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            {adminMode ? "School Roster" : "Learner Menu"}
+            Learner Menu
           </p>
           <h2 className="text-base font-black text-slate-900 mt-0.5">
-            {adminMode ? "Filters & Roster" : "Filters & Roster"}
+            Filters & Roster
           </h2>
         </div>
         <LearnerMenuSkeleton />
@@ -386,10 +333,10 @@ export default function LearnerManagementMenu({
       <aside className={cn("space-y-4", className)}>
         <div className="px-2">
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            {adminMode ? "School Roster" : "Learner Menu"}
+            Learner Menu
           </p>
           <h2 className="text-base font-black text-slate-900 mt-0.5">
-            {adminMode ? "Filters & Roster" : "Filters & Roster"}
+            Filters & Roster
           </h2>
         </div>
         <ErrorState message={data.error} onRetry={onRetry} />
@@ -401,55 +348,9 @@ export default function LearnerManagementMenu({
   // We derive the active filter's label from the filters array so the
   // empty state copy always matches whatever the user has selected.
   const activeFilter = data.filters.find((f) => f.isActive);
-  const previewLearners = adminMode
-    ? scopedLearners
-    : data.learners.slice(0, rowLimit);
+  const previewLearners = data.learners.slice(0, rowLimit);
   const hasLearners = previewLearners.length > 0;
   const totalForActiveFilter = activeFilter?.count ?? 0;
-
-  // ── Admin mode: compute scoped filter list ───────────────────────────────
-  // Rebuild filters scoped to the selected grade/stream.
-  const scopedFilters = React.useMemo(() => {
-    if (!adminMode) return data.filters;
-    return data.filters.map((f) => {
-      switch (f.id) {
-        case "all":
-          return { ...f, count: scopedCounts.total };
-        case "present":
-          return { ...f, count: scopedCounts.present };
-        case "absent":
-          return { ...f, count: scopedCounts.absent };
-        case "unmarked":
-          return { ...f, count: scopedCounts.unmarked };
-        default:
-          return f;
-      }
-    });
-  }, [adminMode, data.filters, scopedCounts]);
-
-  // In admin mode, also compute the active filter ID from scoped learners
-  const adminActiveFilterId = React.useMemo(() => {
-    if (!adminMode) return activeFilter?.id ?? "all";
-    switch (activeFilter?.id) {
-      case "present":
-        return scopedCounts.present > 0 ? "present" : "all";
-      case "absent":
-        return scopedCounts.absent > 0 ? "absent" : "all";
-      case "unmarked":
-        return scopedCounts.unmarked > 0 ? "unmarked" : "all";
-      default:
-        return "all";
-    }
-  }, [adminMode, activeFilter, scopedCounts]);
-
-  // ── Handle learner click: navigate to profile ───────────────────────────
-  const handleLearnerClick = (learner: LearnerMenuItem) => {
-    if (onLearnerClick) {
-      onLearnerClick(learner);
-    } else {
-      navigate(`/students/${learner.id}`);
-    }
-  };
 
   return (
     <aside className={cn("space-y-5", className)}>
@@ -457,56 +358,20 @@ export default function LearnerManagementMenu({
       <div className="px-2 flex items-center justify-between">
         <div>
           <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            {adminMode ? "School Roster" : "Learner Menu"}
+            Learner Menu
           </p>
           <h2 className="text-base font-black text-slate-900 mt-0.5">
-            {adminMode ? "Filters & Roster" : "Filters & Roster"}
+            Filters & Roster
           </h2>
         </div>
         <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-          {adminMode
-            ? scopedCounts.total > 0
-              ? scopedCounts.total === scopedLearners.length
-                ? `${scopedCounts.total} total`
-                : `${scopedCounts.total} scoped`
-              : `${data.learners.length} total`
-            : `${data.learners.length} total`}
+          {data.learners.length} total
         </span>
       </div>
 
-      {/* Admin mode: attendance summary metric cards */}
-      {adminMode && scopedCounts.total > 0 && (
-        <div className="grid grid-cols-3 gap-2">
-          <div className="flex flex-col items-center p-3 rounded-xl bg-emerald-50 border border-emerald-200">
-            <span className="text-lg font-black text-emerald-700">
-              {scopedCounts.present}
-            </span>
-            <span className="text-[10px] font-semibold text-emerald-600 uppercase tracking-wider">
-              Present
-            </span>
-          </div>
-          <div className="flex flex-col items-center p-3 rounded-xl bg-rose-50 border border-rose-200">
-            <span className="text-lg font-black text-rose-700">
-              {scopedCounts.absent}
-            </span>
-            <span className="text-[10px] font-semibold text-rose-600 uppercase tracking-wider">
-              Absent
-            </span>
-          </div>
-          <div className="flex flex-col items-center p-3 rounded-xl bg-slate-50 border border-slate-200">
-            <span className="text-lg font-black text-slate-600">
-              {scopedCounts.unmarked}
-            </span>
-            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-              Unmarked
-            </span>
-          </div>
-        </div>
-      )}
-
-      {/* Filter list — entirely driven by `data.filters` (scoped in admin mode) */}
+      {/* Filter list — entirely driven by `data.filters` */}
       <div className="space-y-2" role="listbox" aria-label="Learner filters">
-        {scopedFilters.map((filter) => (
+        {data.filters.map((filter) => (
           <FilterRow
             key={filter.id}
             filter={filter}
@@ -521,15 +386,9 @@ export default function LearnerManagementMenu({
       {/* Preview header */}
       <div className="px-2 flex items-center justify-between">
         <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {adminMode
-            ? scopedCounts.total > 0
-              ? `${scopedCounts.total} learner${scopedCounts.total === 1 ? "" : "s"} in ${
-                  isAllGrades ? "all classes" : gradeFilter
-                }${isAllStreams ? "" : ` · ${streamFilter}`}`
-              : "No learners"
-            : activeFilter?.label ?? "Preview"}
+          {activeFilter?.label ?? "Preview"}
         </p>
-        {activeFilter && totalForActiveFilter > rowLimit && !adminMode && (
+        {activeFilter && totalForActiveFilter > rowLimit && (
           <span className="text-[10px] font-bold text-slate-400 tabular-nums">
             showing {rowLimit} of {totalForActiveFilter}
           </span>
@@ -538,12 +397,12 @@ export default function LearnerManagementMenu({
 
       {/* Preview list — empty state when nothing matches */}
       {hasLearners ? (
-        <div className={cn("space-y-2", adminMode ? "max-h-96 overflow-y-auto" : "")}>
+        <div className="space-y-2">
           {previewLearners.map((learner) => (
             <LearnerRow
               key={learner.id}
               learner={learner}
-              onClick={handleLearnerClick}
+              onClick={onLearnerClick}
             />
           ))}
         </div>
@@ -555,7 +414,7 @@ export default function LearnerManagementMenu({
       )}
 
       {/* Footer hint when there are more rows than we display */}
-      {hasLearners && totalForActiveFilter > rowLimit && !adminMode && (
+      {hasLearners && totalForActiveFilter > rowLimit && (
         <div className="px-2 pt-1">
           <p className="text-[10px] font-medium text-slate-400 inline-flex items-center gap-1.5">
             <Search size={11} />

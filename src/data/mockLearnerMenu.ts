@@ -18,7 +18,6 @@ import {
   UserCog,
   GraduationCap,
   Archive,
-  Circle,
 } from "lucide-react";
 
 /**
@@ -190,9 +189,6 @@ export function buildLearnerMenuFilters(
     (l) => l.attendanceStatus === "Present" || l.attendanceStatus === "Late",
   ).length;
   const absent = learners.filter((l) => l.attendanceStatus === "Absent").length;
-  const unmarked = learners.filter(
-    (l) => l.attendanceStatus === "Unmarked",
-  ).length;
   const suspended = learners.filter((l) => l.status === "Suspended").length;
   const graduated = learners.filter((l) => l.status === "Graduated").length;
   const transferred = learners.filter(
@@ -235,15 +231,6 @@ export function buildLearnerMenuFilters(
       isActive: activeFilterId === "absent",
       accent: "rose",
       hint: "Need follow-up",
-    },
-    {
-      id: "unmarked",
-      label: "Unmarked",
-      count: unmarked,
-      icon: Circle,
-      isActive: activeFilterId === "unmarked",
-      accent: "slate",
-      hint: "Roll call not taken",
     },
     {
       id: "suspended",
@@ -295,9 +282,7 @@ export function applyLearnerFilter(
           l.attendanceStatus === "Present" || l.attendanceStatus === "Late",
       );
     case "absent":
-          return learners.filter((l) => l.attendanceStatus === "Absent");
-        case "unmarked":
-          return learners.filter((l) => l.attendanceStatus === "Unmarked");
+      return learners.filter((l) => l.attendanceStatus === "Absent");
     case "suspended":
       return learners.filter((l) => l.status === "Suspended");
     case "graduated":
