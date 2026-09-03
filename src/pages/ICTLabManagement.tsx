@@ -765,8 +765,8 @@ const ICTLabManagement = () => {
         <div className="flex items-center gap-3">
           <BackButton fallback="/" />
           <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">ICT Lab Management</h1>
-            <p className="text-muted-foreground font-medium">Unified tracking for digital literacy devices and infrastructure.</p>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">ICT Lab & Devices</h1>
+            <p className="text-muted-foreground font-medium">Unified hub for assets, system access, network quotas, and lab schedules.</p>
           </div>
         </div>
         <div className="flex flex-wrap gap-2">

@@ -1001,11 +1001,11 @@ const Settings = () => {
                     {session.role === 'admin' && (
                       <Button
                         variant="outline"
-                        onClick={() => navigate('/system-management')}
+                        onClick={() => navigate('/ict-lab')}
                         className="rounded-xl border-indigo-200 text-indigo-600 hover:bg-indigo-50 font-bold h-10 px-3 gap-1.5 text-sm shrink-0"
                       >
                         <Settings2 size={16} />
-                        <span className="hidden sm:inline">System Mgmt</span>
+                        <span className="hidden sm:inline">ICT Lab & Devices</span>
                       </Button>
                     )}
 
