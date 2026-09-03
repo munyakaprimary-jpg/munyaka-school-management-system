@@ -4,15 +4,17 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import Modal from '@/components/ui/Modal';
-import { 
-  Image as ImageIcon, 
-  FileText, 
-  Music, 
-  Video, 
-  Download, 
-  Maximize2 
+import {
+  Image as ImageIcon,
+  FileText,
+  Music,
+  Video,
+  Download,
+  Maximize2
 } from 'lucide-react';
 import { Artifact, getGradeBadgeClass } from '@/types/portfolio';
+import SafeVideoPlayer from '@/components/media/SafeVideoPlayer';
+import { buildSourcesFromUrl } from '@/components/media/videoSources';
 
 interface ArtifactViewerModalProps {
   artifact: Artifact | null;
@@ -109,12 +111,16 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
               className="w-full h-auto max-h-[400px] object-contain rounded-lg" 
             />
           ) : artifact.fileUrl && artifact.type === 'Video' ? (
-            <video 
-              src={artifact.fileUrl} 
-              controls 
-              autoPlay 
-              className="w-full h-auto max-h-[400px] rounded-lg" 
-            />
+                      // Use SafeVideoPlayer instead of bare <video> so we get
+                      // automatic MP4 → YouTube → "open externally" fallbacks
+                      // and proper cross-platform (iOS/Android WebView) support.
+                      <SafeVideoPlayer
+                        sources={buildSourcesFromUrl(artifact.fileUrl)}
+                        title={artifact.title}
+                        autoPlay
+                        muted
+                        className="rounded-lg"
+                      />
           ) : artifact.fileUrl && artifact.type === 'Audio' ? (
             <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
               <div className="w-16 h-16 rounded-full bg-indigo-600/30 flex items-center justify-center">
