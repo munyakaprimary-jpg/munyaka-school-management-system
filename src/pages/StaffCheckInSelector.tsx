@@ -505,8 +505,8 @@ const StaffCheckInSelector = () => {
                                 ) : (
                                   filteredStaff.map((staff) => {
                                                                       const isSelected = staff.id === selectedStaffId;
-                                                                      const name = staff.name || staff.full_name || 'Unknown';
-                                                                      const role = staff.role || staff.designation || '';
+                                                                      const name = String(staff.name || staff.full_name || 'Unknown');
+                                                                      const role = String(staff.role || staff.designation || '');
                                                                       const isTeacher = role.toLowerCase().includes('teacher') || role.toLowerCase().includes('tutor');
             
                                     return (
@@ -569,30 +569,30 @@ const StaffCheckInSelector = () => {
                           </div>
 
               {/* Selected Staff Preview Card */}
-                            {selectedStaff && (
-                              <div className={`animate-in slide-in-from-top-2 duration-300 ${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
-                                <div className="flex items-center gap-3">
-                                  <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
-                                    {selectedStaff.name
-                                      .split(' ')
-                                      .map(n => n[0])
-                                      .join('')
-                                      .substring(0, 2)
-                                      .toUpperCase()}
-                                  </div>
-                                  <div className="flex-1 min-w-0">
-                                    <p className={`font-black text-sm truncate ${tc.previewName}`}>{getStaffLabel(selectedStaff)}</p>
-                                    <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
-                                      {selectedStaff.role || selectedStaff.designation || 'Staff Member'}
-                                    </p>
-                                  </div>
-                                  <UserCheck className={tc.labelIcon} size={18} />
-                                </div>
-                                {selectedStaff.subjects && selectedStaff.subjects.length > 0 && (
-                                  <div className={`flex items-start gap-2 pt-2 border-t ${theme === 'light' ? 'border-blue-200' : theme === 'sunset' ? 'border-rose-500/20' : 'border-indigo-500/20'}`}>
-                                    <BookOpen size={12} className={`${tc.labelIcon} mt-0.5 shrink-0`} />
-                                    <div className="flex flex-wrap gap-1.5">
-                                      {selectedStaff.subjects.slice(0, 3).map((subj, i) => (
+                                          {selectedStaff && (
+                                            <div className={`animate-in slide-in-from-top-2 duration-300 ${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
+                                              <div className="flex items-center gap-3">
+                                                <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
+                                                  {(selectedStaff.name || selectedStaff.full_name || '')
+                                                    .split(' ')
+                                                    .map(n => n[0])
+                                                    .join('')
+                                                    .substring(0, 2)
+                                                    .toUpperCase()}
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                  <p className={`font-black text-sm truncate ${tc.previewName}`}>{getStaffLabel(selectedStaff)}</p>
+                                                  <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
+                                                    {selectedStaff.role || selectedStaff.designation || 'Staff Member'}
+                                                  </p>
+                                                </div>
+                                                <UserCheck className={tc.labelIcon} size={18} />
+                                              </div>
+                                              {selectedStaff.subjects && selectedStaff.subjects.length > 0 && (
+                                                <div className={`flex items-start gap-2 pt-2 border-t ${theme === 'light' ? 'border-blue-200' : theme === 'sunset' ? 'border-rose-500/20' : 'border-indigo-500/20'}`}>
+                                                  <BookOpen size={12} className={`${tc.labelIcon} mt-0.5 shrink-0`} />
+                                                  <div className="flex flex-wrap gap-1.5">
+                                                    {selectedStaff.subjects.slice(0, 3).map((subj, i) => (
                                         <span
                                           key={i}
                                           className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${tc.subjectPill}`}
