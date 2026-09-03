@@ -241,7 +241,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-      { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
       { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
