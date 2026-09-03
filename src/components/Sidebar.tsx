@@ -97,13 +97,10 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   };
 
   const menuItems = [
-    // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
-    // For the `admin` role the link points to /admin-dashboard, which
-    // is a strictly admin-only route (see App.tsx) and the
-    // Dashboard component still routes to the AdminDashboardComponent
-    // for that role. This keeps admin and owner strictly separate.
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
-    { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
+    // ── Dashboard — position #1 for ALL roles; the Dashboard component
+    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
+    // based on the user's session role.  Only one Dashboard entry exists.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
@@ -156,11 +153,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       // always sees every sidebar item.
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
               if (isAdminRole) {
-            return menuItems.filter(item => {
-              if (item.requiresPermission) return canAccessSystemManagement();
-              return true;
-            });
-          }
+                return menuItems.filter(item => {
+                  if (item.requiresPermission) return canAccessSystemManagement();
+                  return true;
+                }).map(item => {
+                  if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
+                  return item;
+                });
+              }
   
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
             // LAN Server Config + Profile Settings, plus global items (Games Hub).

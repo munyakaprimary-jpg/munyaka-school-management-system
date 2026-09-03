@@ -125,13 +125,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   }, [location.pathname]);
 
   const menuItems = [
-    // ── Dashboard — position #1 for ALL roles; router delegates to their view ──
-    // For the `admin` role the link points to /admin-dashboard, which
-    // is a strictly admin-only route (see App.tsx) and the
-    // Dashboard component still routes to the AdminDashboardComponent
-    // for that role. This keeps admin and owner strictly separate.
-    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
-    { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
+    // ── Dashboard — position #1 for ALL roles; the Dashboard component
+    // internally routes to OwnerDashboard / AdminDashboard / TeacherDashboard
+    // based on the user's session role.  Only one Dashboard entry exists.
+    { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
     { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
@@ -235,6 +232,13 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       ? [menuItems.find((i) => i.path === '/dashboard')!, ...filteredMenu]
       : filteredMenu;
 
+  // Relabel Dashboard for admin users — the Dashboard component internally
+  // routes to AdminDashboard, but the sidebar label should reflect that.
+  const isAdminRole = (user?.role ?? '').toLowerCase() === 'admin' || (user?.role ?? '').toLowerCase() === 'super_admin';
+  const navMenu = isAdminRole
+    ? finalMenu.map(item => item.path === '/dashboard' ? { ...item, label: 'Admin Dashboard' } : item)
+    : finalMenu;
+
   // Bottom Navigation Bar Quick Links - Filtered by user role.
     // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
     // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
@@ -313,7 +317,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
         {/* Navigation List */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {finalMenu.map((item) => {
+          {navMenu.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link 
