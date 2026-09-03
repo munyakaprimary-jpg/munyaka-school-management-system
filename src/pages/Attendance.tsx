@@ -1809,11 +1809,10 @@ const Attendance = () => {
           </div>
         )}
       </Card>
+    )}
 
-      )}
-            
-            {/* ============================================
-                5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
+      {/* ============================================
+          5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
                 ============================================ */}
       {lockAuthOpen && (
         <div
