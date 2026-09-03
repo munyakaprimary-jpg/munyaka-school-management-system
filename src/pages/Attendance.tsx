@@ -477,6 +477,39 @@ const Attendance = () => {
     averageRate: liveStreamData.averageRate,
   };
 
+  // ── Dynamic section title & subtitle for the oversight view ────────────
+  const selectedGradeLabel = ovGrade !== 'all' ? ovGrade : null;
+  const selectedStreamLabel = ovStream !== 'all' ? ovStream : null;
+
+  const sectionTitle = (() => {
+    if (selectedGradeLabel && selectedStreamLabel) {
+      return `Roll Call Completion — ${selectedGradeLabel} ${selectedStreamLabel}`;
+    }
+    if (selectedGradeLabel) {
+      return `Roll Call Completion — ${selectedGradeLabel} (All Streams)`;
+    }
+    if (selectedStreamLabel) {
+      return `Roll Call Completion — All ${selectedStreamLabel} Streams`;
+    }
+    return 'Roll Call Completion — All Streams';
+  })();
+
+  const sectionSubtitle = (() => {
+    const dateFormatted = new Date(filters.date + 'T00:00:00').toLocaleDateString(undefined, {
+      weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+    });
+    if (selectedGradeLabel && selectedStreamLabel) {
+      return `Live overview for ${selectedGradeLabel} ${selectedStreamLabel} attendance submissions for ${dateFormatted}.`;
+    }
+    if (selectedGradeLabel) {
+      return `Live overview for ${selectedGradeLabel} attendance submissions for ${dateFormatted}.`;
+    }
+    if (selectedStreamLabel) {
+      return `Live overview for all ${selectedStreamLabel} streams across all grades — ${dateFormatted}.`;
+    }
+    return `Live overview of morning and afternoon attendance submissions across every class — ${dateFormatted}.`;
+  })();
+
   // Per-session lock handlers
   const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
     setLockAction(action);
@@ -1383,10 +1416,10 @@ const Attendance = () => {
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    Roll Call Completion — All Streams
+                    {sectionTitle}
                   </h2>
                   <p className="text-xs text-slate-500 font-medium">
-                    Live overview of morning and afternoon attendance submission across every class.
+                    {sectionSubtitle}
                   </p>
                 </div>
               </div>
