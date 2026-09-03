@@ -31,7 +31,7 @@ import {
   type ActivityLogEntry,
 } from '@/services/activityLog';
 import { cn } from '@/lib/utils';
-import { CANONICAL_GRADE_NAMES_IN_ORDER } from '@/utils/gradeSort';
+import { CANONICAL_GRADE_NAMES_IN_ORDER, formatGradeName } from '@/utils/gradeSort';
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 
@@ -529,9 +529,12 @@ const AdminDashboard: React.FC = () => {
     return `${monthShort} ${day}, ${time}`;
   }, []);
 
-  // ── School Enrollment — active learners grouped by grade (PP1 → Grade 9), with gender breakdown
+  // ── School Enrollment — render every canonical grade in strict ascending order,
+  //    with gender breakdown. Classes with 0 registered learners still appear
+  //    as rows (Boys=0, Girls=0, Total=0).
   const classRows = useMemo<ClassRow[]>(() => {
     const learners = safeRead<any[]>('school_learners_data', []);
+
     const isActive = (l: any) => {
       if (!l) return false;
       if (l.status && l.status !== 'Active' && l.status !== 'active') return false;
@@ -546,25 +549,29 @@ const AdminDashboard: React.FC = () => {
       return g === 'female' || g === 'girl';
     };
 
-    // Use canonical grade order (PP1 → Grade 9); unrecognised grades go at the end
-    const allGrades = new Set<string>();
+    // Build a lookup: canonical grade name → raw grade variants in DB.
+    // This lets us match "PP 1", "PP1 ", "Grade PP1", etc. → "PP1".
+    const variantsByCanonical: Record<string, Set<string>> = {};
+    CANONICAL_GRADE_NAMES_IN_ORDER.forEach((g) => { variantsByCanonical[g] = new Set(); });
+
     learners.forEach((l: any) => {
       if (!isActive(l)) return;
-      const g = (l.grade || '').trim();
-      if (g) allGrades.add(g);
+      const raw = (l.grade || '').trim();
+      if (!raw) return;
+      const canonical = formatGradeName(raw);
+      if (variantsByCanonical[canonical]) {
+        variantsByCanonical[canonical].add(raw);
+      }
     });
 
-    const canonical = CANONICAL_GRADE_NAMES_IN_ORDER.filter((g) => allGrades.has(g));
-    const others = [...allGrades].filter(
-      (g) => !CANONICAL_GRADE_NAMES_IN_ORDER.includes(g)
-    ).sort();
-
-    const orderedGrades = [...canonical, ...others];
-
-    return orderedGrades.map((grade) => {
-      const classLearners = learners.filter((l: any) =>
-        isActive(l) && (l.grade || '').trim() === grade
-      );
+    // Render in strict canonical sequence — never skip empty classes.
+    return CANONICAL_GRADE_NAMES_IN_ORDER.map((grade) => {
+      const variants = variantsByCanonical[grade];
+      const classLearners = learners.filter((l: any) => {
+        if (!isActive(l)) return false;
+        const raw = (l.grade || '').trim();
+        return variants.has(raw);
+      });
       const boys = classLearners.filter(isBoy).length;
       const girls = classLearners.filter(isGirl).length;
       return { name: grade, boys, girls, total: boys + girls };
@@ -836,37 +843,35 @@ const AdminDashboard: React.FC = () => {
                       <td className="px-4 py-3 text-sm font-semibold text-slate-700">
                         {row.name}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-slate-600">
+                      <td className="px-4 py-3 text-sm text-right font-bold text-blue-600">
                         {row.boys}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-medium text-slate-600">
+                      <td className="px-4 py-3 text-sm text-right font-bold text-purple-600">
                         {row.girls}
                       </td>
-                      <td className="px-4 py-3 text-sm text-right font-bold text-slate-800">
+                      <td className="px-4 py-3 text-sm text-right font-black text-red-600">
                         {row.total}
                       </td>
                     </tr>
                   ))
                 )}
               </tbody>
-              {classRows.length > 0 && (
-                <tfoot>
-                  <tr className="bg-emerald-50 border-t-2 border-emerald-200">
-                    <td className="px-4 py-3 text-sm font-black text-emerald-800">
+              <tfoot>
+                  <tr className="bg-slate-100 border-t-2 border-slate-200">
+                    <td className="px-4 py-3 text-sm font-black text-slate-800">
                       Total
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-700">
+                    <td className="px-4 py-3 text-sm text-right font-black text-blue-700">
                       {classRows.reduce((sum, r) => sum + r.boys, 0)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-700">
+                    <td className="px-4 py-3 text-sm text-right font-black text-purple-700">
                       {classRows.reduce((sum, r) => sum + r.girls, 0)}
                     </td>
-                    <td className="px-4 py-3 text-sm text-right font-black text-emerald-800">
+                    <td className="px-4 py-3 text-sm text-right font-black text-red-600">
                       {classRows.reduce((sum, r) => sum + r.total, 0)}
                     </td>
                   </tr>
                 </tfoot>
-              )}
             </table>
           </div>
         </CardContent>
