@@ -9,17 +9,20 @@ import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { 
-  Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
+import {
+  Download, Printer, Save, Loader2, Calendar, CheckCircle2,
   XCircle, Clock, ShieldCheck, UserCheck, Users, AlertCircle,
-  FileDown, Search, Sun, Moon, Lock, Unlock, Info, 
-  LockKeyhole, ShieldAlert, Shield
+  Search, Sun, Moon, Lock, Unlock, Info,
+  LockKeyhole, ShieldAlert, Shield, BarChart3, TrendingUp,
+  ClipboardList, Eye, Edit3, Layers, Sparkles, Activity
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
+import { logActivity } from '@/services/activityLog';
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
 type SessionType = 'morning' | 'afternoon';
+type ViewMode = 'marking' | 'oversight';
 
 interface Learner {
   id: number;
@@ -104,23 +107,41 @@ const MOCK_LEARNERS: Learner[] = [
   { id: 15, name: "DAVID MAINA", assessment: "MPS/2025/094", gender: "M", grade: "Grade 6", stream: "YELLOW" },
 ];
 
+// Mock class-level roll call data for the admin oversight view.
+// In a real implementation this would aggregate from useStudentAttendance() and useStudents().
+interface StreamRollCallSummary {
+  grade: string;
+  stream: string;
+  totalLearners: number;
+  morningCompleted: boolean;
+  afternoonCompleted: boolean;
+  morningPresent: number;
+  afternoonPresent: number;
+  rate: number;
+}
+
+const MOCK_STREAM_SUMMARIES: StreamRollCallSummary[] = [
+  { grade: 'PP1', stream: 'ALPHA', totalLearners: 24, morningCompleted: true, afternoonCompleted: false, morningPresent: 22, afternoonPresent: 0, rate: 92 },
+  { grade: 'PP2', stream: 'BETA', totalLearners: 26, morningCompleted: true, afternoonCompleted: true, morningPresent: 24, afternoonPresent: 25, rate: 94 },
+  { grade: 'Grade 1', stream: 'RED', totalLearners: 28, morningCompleted: true, afternoonCompleted: true, morningPresent: 27, afternoonPresent: 26, rate: 95 },
+  { grade: 'Grade 2', stream: 'BLUE', totalLearners: 30, morningCompleted: false, afternoonCompleted: false, morningPresent: 0, afternoonPresent: 0, rate: 0 },
+  { grade: 'Grade 3', stream: 'GREEN', totalLearners: 32, morningCompleted: true, afternoonCompleted: false, morningPresent: 30, afternoonPresent: 0, rate: 94 },
+  { grade: 'Grade 4', stream: 'YELLOW', totalLearners: 30, morningCompleted: true, afternoonCompleted: true, morningPresent: 28, afternoonPresent: 27, rate: 92 },
+  { grade: 'Grade 5', stream: 'MERCURY', totalLearners: 27, morningCompleted: true, afternoonCompleted: true, morningPresent: 26, afternoonPresent: 25, rate: 95 },
+  { grade: 'Grade 6', stream: 'YELLOW', totalLearners: 15, morningCompleted: true, afternoonCompleted: true, morningPresent: 14, afternoonPresent: 13, rate: 90 },
+  { grade: 'Grade 7', stream: 'VENUS', totalLearners: 26, morningCompleted: false, afternoonCompleted: false, morningPresent: 0, afternoonPresent: 0, rate: 0 },
+  { grade: 'Grade 8', stream: 'JUPITER', totalLearners: 25, morningCompleted: true, afternoonCompleted: false, morningPresent: 23, afternoonPresent: 0, rate: 92 },
+  { grade: 'Grade 9', stream: 'NEPTUNE', totalLearners: 22, morningCompleted: true, afternoonCompleted: true, morningPresent: 21, afternoonPresent: 20, rate: 93 },
+];
+
 /**
  * ============================================
  * Session window utilities
  * ============================================
  */
 
-/**
- * Convert a time window into a single number of minutes since midnight
- * so the windows can be compared in O(1) time.
- */
 const toMinutes = (hours: number, minutes: number): number => hours * 60 + minutes;
 
-/**
- * Build a human-readable 12-hour clock label for the system clock,
- * e.g. "2:34 PM" or "7:05 AM". We render this in the session header
- * so teachers can see the live time of day alongside the window.
- */
 const format12h = (date: Date): string => {
   const hours24 = date.getHours();
   const minutes = date.getMinutes();
@@ -130,11 +151,6 @@ const format12h = (date: Date): string => {
   return `${hours12}:${mm} ${ampm}`;
 };
 
-/**
- * Determine which session — if any — is currently "live" given a
- * specific Date object. A session is live when the current time-of-day
- * falls within the session's [start, end] window.
- */
 const getActiveSession = (date: Date): SessionType | null => {
   const nowMinutes = toMinutes(date.getHours(), date.getMinutes());
   const morning = SESSION_WINDOWS.morning;
@@ -149,18 +165,9 @@ const getActiveSession = (date: Date): SessionType | null => {
   return null;
 };
 
-/**
- * Compose the per-class/stream/date/session storage key for the lock
- * state. The session segment is included so the Morning and Afternoon
- * sessions can be locked/unlocked independently.
- */
 const buildLockKey = (grade: string, stream: string, date: string, session: SessionType): string =>
   `${grade}__${stream}__${date}__${session}`;
 
-/**
- * Read the master map of session locks from localStorage. Returns an
- * empty object on any failure so the rest of the page still renders.
- */
 const readLocksMap = (): Record<string, SessionLock> => {
   if (typeof window === 'undefined') return {};
   try {
@@ -175,11 +182,6 @@ const readLocksMap = (): Record<string, SessionLock> => {
   }
 };
 
-/**
- * Persist the full lock map back to localStorage. We write the entire
- * map at once so a single setter governs all keys and there is no risk
- * of partial writes leaving a stale entry in the localStorage cache.
- */
 const writeLocksMap = (next: Record<string, SessionLock>): void => {
   if (typeof window === 'undefined') return;
   try {
@@ -190,12 +192,6 @@ const writeLocksMap = (next: Record<string, SessionLock>): void => {
   }
 };
 
-/**
- * Format a "locked at" ISO timestamp as a human-readable string like
- * "Aug 28, 2026 at 8:32 AM". Returns "Just now" for very recent
- * timestamps, since the auto-lock usually happens seconds before the
- * teacher looks at the page.
- */
 const formatLockedAt = (iso: string | undefined): string => {
   if (!iso) return '—';
   const d = new Date(iso);
@@ -215,11 +211,29 @@ const Attendance = () => {
   // ── Auth & Role ────────────────────────────────────────────
   const { user } = useAuth();
   const userRole = user?.role ?? '';
-  const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin';
+  const userId = user?.id ?? '';
+  const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin' || userRole.toLowerCase() === 'owner';
+  const isTeacherRole = userRole.toLowerCase() === 'teacher';
+
+  // ============================================
+  // Role-adaptive view state
+  // ============================================
+  // Admins default to the oversight dashboard (roll call completion
+  // metrics, class-wide summaries, aggregate stats). Teachers default
+  // directly to the interactive marking register for their assigned
+  // streams. Admins can flip into the marking view via the prominent
+  // "Manual Register Override" / "Edit Attendance" button.
+  const [viewMode, setViewMode] = useState<ViewMode>(() => {
+    if (isTeacherRole) return 'marking';
+    return 'oversight';
+  });
 
   // Filters state
   const [filters, setFilters] = useState<Filters>({
-    date: '2026-08-28',
+    date: (() => {
+      const t = new Date();
+      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+    })(),
     grade: 'Grade 6',
     stream: 'YELLOW',
   });
@@ -229,24 +243,13 @@ const Attendance = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
-  // ============================================
   // Per-session lock state
-  // ============================================
-  // `locksMap` is the master persisted map of
-  // {compositeKey (grade__stream__date__session) -> SessionLock}.
-  // The morning and afternoon sessions each have their own lock
-  // entry, so they can be locked and unlocked independently.
   const [locksMap, setLocksMap] = useState<Record<string, SessionLock>>(() => readLocksMap());
 
-  // Whenever the lock map changes, mirror it to localStorage so the
-  // lock state survives a page refresh.
   useEffect(() => {
     writeLocksMap(locksMap);
   }, [locksMap]);
 
-  // Compute the current session locks by looking up the composite keys
-  // in the master map. If the entry doesn't exist the session is
-  // considered unlocked.
   const morningLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'morning');
   const afternoonLockKey = buildLockKey(filters.grade, filters.stream, filters.date, 'afternoon');
 
@@ -261,9 +264,7 @@ const Attendance = () => {
   const isMorningLocked = morningLock.locked;
   const isAfternoonLocked = afternoonLock.locked;
 
-  // ============================================
   // Lock / unlock confirmation modal state
-  // ============================================
   const [lockAuthOpen, setLockAuthOpen] = useState<boolean>(false);
   const [lockAction, setLockAction] = useState<'lock' | 'unlock' | null>(null);
   const [lockTargetSession, setLockTargetSession] = useState<SessionType | null>(null);
@@ -272,16 +273,10 @@ const Attendance = () => {
   const [isAdminAuthVerifying, setIsAdminAuthVerifying] = useState<boolean>(false);
   const [lockReason, setLockReason] = useState<string>('');
 
-  // ============================================
   // Time-window state
-  // ============================================
-  // `currentTime` ticks every minute so the live clock and active-session
-  // indicator stay in sync with the wall clock.
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
-  // Local override that lets a teacher (or admin) "open" a session that
-  // would otherwise be locked outside its time window. Persisted to
-  // localStorage so the override survives page reloads.
+  // Admin override persisted to localStorage so it survives page reloads.
   const [adminBypass, setAdminBypass] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
     return localStorage.getItem(ATTENDANCE_ADMIN_BYPASS_KEY) === 'true';
@@ -289,8 +284,6 @@ const Attendance = () => {
 
   useEffect(() => {
     const id = setInterval(() => setCurrentTime(new Date()), 60_000);
-    // Run an immediate tick on mount to avoid waiting a minute for the
-    // first render to reflect the right time.
     setCurrentTime(new Date());
     return () => clearInterval(id);
   }, []);
@@ -307,8 +300,6 @@ const Attendance = () => {
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
-    // Only persist adminBypass for admin roles — for teachers/staff
-    // the override is force-disabled.
     if (!isAdminRole) {
       localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, 'false');
       return;
@@ -317,14 +308,9 @@ const Attendance = () => {
     notifyDataChanged('munyaka_attendance_admin_bypass');
   }, [adminBypass, isAdminRole]);
 
-  // ====== Unified file-download state for CSV export ======
+  // Unified file-download state for CSV export
   const csvExport = useFileDownload();
 
-  /**
-   * Selected-date helper: turn the YYYY-MM-DD string from the date
-   * input into a Date object that represents that day in the local
-   * timezone (avoiding UTC rollover bugs).
-   */
   const selectedDateObj = useMemo(() => {
     const [y, m, d] = filters.date.split('-').map(Number);
     if (!y || !m || !d) return new Date();
@@ -340,23 +326,6 @@ const Attendance = () => {
     );
   }, [selectedDateObj]);
 
-  /**
-   * ============================================
-   * Per-session accessibility logic
-   * ============================================
-   *
-   * A session is "editable" when ALL of the following are true:
-   *   1. The session is NOT locked.
-   *   2. Either the admin override is on, OR
-   *      the selected date is today AND the live clock falls inside
-   *      the session's time window.
-   *
-   * For dates in the past, the session is "read-only" unless the
-   * admin override is enabled. For dates in the future, the session
-   * is also locked. The session lock always wins — even if admin
-   * override is on, a locked session cannot be edited (but the
-   * admin can unlock it from the "Unlock Session" button).
-   */
   const isSessionEditable = (session: SessionType): boolean => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     if (sessionLock.locked) return false;
@@ -391,22 +360,15 @@ const Attendance = () => {
     }
   }, [filters.grade, filters.stream, filters.date]);
 
-  // Filtered students by search
   const filteredLearners = useMemo(() => {
     if (!searchTerm.trim()) return MOCK_LEARNERS;
     const term = searchTerm.toLowerCase();
     return MOCK_LEARNERS.filter(
-      s => s.name.toLowerCase().includes(term) || 
+      s => s.name.toLowerCase().includes(term) ||
            s.assessment.toLowerCase().includes(term)
     );
   }, [searchTerm]);
 
-  /**
-   * Per-session "all learners fully marked" check. Returns true when
-   * every filtered learner has a non-empty status for the given
-   * session — this is the trigger for auto-locking when the teacher
-   * saves attendance with no gaps left in the register.
-   */
   const isSessionFullyMarked = (session: SessionType): boolean => {
     if (filteredLearners.length === 0) return false;
     return filteredLearners.every(s => {
@@ -442,7 +404,6 @@ const Attendance = () => {
       if (record.afternoon?.status === 'E') excusedAfternoon++;
     });
 
-    // Combined totals
     const present = presentMorning + presentAfternoon;
     const absent = absentMorning + absentAfternoon;
     const late = lateMorning + lateAfternoon;
@@ -450,12 +411,12 @@ const Attendance = () => {
     const totalMarks = present + absent + late + excused;
     const rate = totalMarks > 0 ? Math.round((present / totalMarks) * 100) : 0;
 
-    return { 
-      total, 
-      present, 
-      absent, 
-      late, 
-      excused, 
+    return {
+      total,
+      present,
+      absent,
+      late,
+      excused,
       rate,
       presentMorning,
       absentMorning,
@@ -469,14 +430,30 @@ const Attendance = () => {
   }, [filteredLearners, attendance]);
 
   // ============================================
-  // Per-session lock handlers
+  // Aggregate oversight metrics (admin only)
   // ============================================
+  const oversightMetrics = useMemo(() => {
+    const totalLearners = MOCK_STREAM_SUMMARIES.reduce((sum, s) => sum + s.totalLearners, 0);
+    const streamsTotal = MOCK_STREAM_SUMMARIES.length;
+    const morningCompletedStreams = MOCK_STREAM_SUMMARIES.filter(s => s.morningCompleted).length;
+    const afternoonCompletedStreams = MOCK_STREAM_SUMMARIES.filter(s => s.afternoonCompleted).length;
+    const fullyCompletedStreams = MOCK_STREAM_SUMMARIES.filter(
+      s => s.morningCompleted && s.afternoonCompleted
+    ).length;
+    const averageRate = Math.round(
+      MOCK_STREAM_SUMMARIES.reduce((sum, s) => sum + s.rate, 0) / Math.max(streamsTotal, 1)
+    );
+    return {
+      totalLearners,
+      streamsTotal,
+      morningCompletedStreams,
+      afternoonCompletedStreams,
+      fullyCompletedStreams,
+      averageRate,
+    };
+  }, []);
 
-  /**
-   * Open the admin auth modal in either "lock" or "unlock" mode for
-   * a specific session. Clearing the form state here guarantees a
-   * fresh modal every time.
-   */
+  // Per-session lock handlers
   const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
     setLockAction(action);
     setLockTargetSession(session);
@@ -486,10 +463,6 @@ const Attendance = () => {
     setLockAuthOpen(true);
   };
 
-  /**
-   * Close the auth modal and wipe any sensitive fields from state so
-   * the password doesn't linger in memory after the modal closes.
-   */
   const closeLockAuthModal = () => {
     setLockAuthOpen(false);
     setAdminAuthPassword('');
@@ -500,16 +473,11 @@ const Attendance = () => {
     setLockTargetSession(null);
   };
 
-  /**
-   * Build a `SessionLock` for the given session, persist it to the
-   * master map, and return the lock object so the caller can show
-   * the locked-at timestamp in a toast.
-   */
   const buildAndPersistLock = (session: SessionType, opts: { reason: string }): SessionLock => {
     const next: SessionLock = {
       locked: true,
       lockedAt: new Date().toISOString(),
-      lockedBy: 'Class Teacher',
+      lockedBy: isAdminRole ? 'Administrator' : 'Class Teacher',
       reason: opts.reason.trim() || 'Auto-locked after saving attendance',
     };
     const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
@@ -517,11 +485,6 @@ const Attendance = () => {
     return next;
   };
 
-  /**
-   * Apply a session lock directly (bypassing the admin password
-   * modal). Used internally by the auto-lock path triggered when
-   * the teacher saves attendance with a fully-marked register.
-   */
   const applySessionLock = (session: SessionType) => {
     const lock = buildAndPersistLock(session, { reason: 'Auto-locked after saving attendance' });
     const sessionLabel = SESSION_WINDOWS[session].label;
@@ -530,15 +493,6 @@ const Attendance = () => {
     );
   };
 
-  /**
-   * Verify the supplied admin password against the value in
-   * `localStorage.munyaka_admin_pass` (with a hardcoded default
-   * fallback) and then either lock or unlock the targeted session.
-   *
-   * Locking persists a `SessionLock` with the current timestamp and
-   * an optional reason string. Unlocking simply clears the lock
-   * entry from the master map.
-   */
   const handleConfirmLockAction = async () => {
     if (!lockAction || !lockTargetSession) return;
     if (!adminAuthPassword.trim()) {
@@ -549,8 +503,6 @@ const Attendance = () => {
     setIsAdminAuthVerifying(true);
     setAdminAuthError('');
 
-    // Simulate a quick auth round-trip so the spinner is visible
-    // even when the password check is instant.
     await new Promise(resolve => setTimeout(resolve, 500));
 
     const storedPass = (typeof window !== 'undefined'
@@ -586,7 +538,6 @@ const Attendance = () => {
 
   // Toggle individual student session status
   const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
-    // Guard: silently ignore the click if the targeted session is locked.
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     if (sessionLock.locked) {
       showError(
@@ -594,7 +545,6 @@ const Attendance = () => {
       );
       return;
     }
-    // Guard: silently ignore the click if the session is time-locked.
     if (!isSessionEditable(session)) {
       showError(
         `The ${SESSION_WINDOWS[session].label} session is outside its recording window. Enable admin override to edit past or future sessions.`
@@ -605,8 +555,7 @@ const Attendance = () => {
     setAttendance(prev => {
       const currentRecord = prev[studentId] || {};
       const currentSession = currentRecord[session];
-      
-      // Click the active button again to deselect (clear status)
+
       if (currentSession?.status === status) {
         const { [session]: _, ...rest } = currentRecord;
         const updated = { ...prev };
@@ -659,14 +608,9 @@ const Attendance = () => {
   };
 
   /**
-   * Save attendance to localStorage AND trigger the auto-lock:
-   *   1. Persist the attendance matrix to localStorage.
-   *   2. For each session that is fully marked, auto-lock it (no
-   *      admin password required — this is a teacher-driven action).
-   *   3. Show a confirmation toast.
-   *
-   * Sessions that are not yet fully marked are left in their current
-   * state (locked or unlocked) so the teacher can come back to them.
+   * Save attendance to localStorage, write an audit log entry capturing
+   * the active session user ID and role, then trigger the auto-lock
+   * for any fully-marked session.
    */
   const handleSaveAttendance = async () => {
     if (filteredLearners.length === 0) {
@@ -676,7 +620,6 @@ const Attendance = () => {
     setIsSaving(true);
     try {
       const storageKey = `munyaka_attendance_v2_${filters.grade}_${filters.stream}_${filters.date}`;
-      // Persist as {studentId: {morning: {...}, afternoon: {...}}}
       localStorage.setItem(storageKey, JSON.stringify(attendance));
       notifyDataChanged(storageKey);
 
@@ -693,15 +636,48 @@ const Attendance = () => {
       localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
       notifyDataChanged('munyaka_attendance_records');
 
+      // ============================================
+      // AUDIT TRAIL: log every save action with the
+      // active session user ID and role for proper
+      // auditing. The dashboard "Recent Alerts" feed
+      // surfaces this entry in real time.
+      // ============================================
+      const presentCount = metrics.present;
+      const absentCount = metrics.absent;
+      const lateCount = metrics.late;
+      const excusedCount = metrics.excused;
+      const auditTitle = isAdminRole
+        ? 'Administrator saved attendance register'
+        : 'Teacher saved attendance register';
+
+      logActivity({
+        type: 'attendance',
+        title: auditTitle,
+        metadata: {
+          action: 'save_attendance',
+          userId: userId || 'unknown',
+          userName: user?.name || 'Unknown user',
+          userRole: userRole || 'unknown',
+          grade: filters.grade,
+          stream: filters.stream,
+          date: filters.date,
+          totalLearners: filteredLearners.length,
+          present: presentCount,
+          absent: absentCount,
+          late: lateCount,
+          excused: excusedCount,
+          sessionsLockedMorning: isMorningFullyMarked,
+          sessionsLockedAfternoon: isAfternoonFullyMarked,
+          overrideUsed: adminBypass,
+        },
+      });
+
       setIsSaving(false);
 
-      // ============================================
-      // AUTO-LOCK: After saving, if every learner has a status
-      // for a given session, that session is auto-locked to prevent
-      // any further changes. The teacher can still unlock via
-      // the "Unlock Session" button (which requires an admin
-      // password).
-      // ============================================
+      // AUTO-LOCK: After saving, if every learner has a status for a
+      // given session, that session is auto-locked to prevent further
+      // changes. Teachers can still unlock via the "Unlock Session"
+      // button (which requires an admin password).
       const sessionsLocked: SessionType[] = [];
       if (isMorningFullyMarked && !isMorningLocked) {
         applySessionLock('morning');
@@ -712,20 +688,16 @@ const Attendance = () => {
         sessionsLocked.push('afternoon');
       }
 
-      // Build the save confirmation message
       let msg = 'Attendance saved successfully.';
       if (sessionsLocked.length === 2) {
         msg = 'Attendance saved and both sessions successfully locked.';
       } else if (sessionsLocked.length === 1) {
         msg = `Attendance saved and ${sessionsLocked[0]} session successfully locked.`;
       } else if (isMorningFullyMarked && isMorningLocked && isAfternoonFullyMarked && isAfternoonLocked) {
-        // Both sessions were already locked (re-save case)
         msg = 'Attendance updated. Both sessions remain locked.';
       } else if (!isMorningFullyMarked && !isAfternoonFullyMarked) {
-        // No session is fully marked yet
         msg = 'Attendance saved. Complete all learners to auto-lock sessions.';
       } else {
-        // One session is fully marked, the other is not
         const pending = !isMorningFullyMarked ? 'morning' : 'afternoon';
         const locked = isMorningFullyMarked ? 'morning' : 'afternoon';
         msg = `Attendance saved. ${locked.charAt(0).toUpperCase() + locked.slice(1)} session auto-locked. Complete ${pending} to lock it too.`;
@@ -744,7 +716,7 @@ const Attendance = () => {
     }
   };
 
-  // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
+  // Unified CSV export — works for both admin and teacher
   const handleExportCSV = async () => {
     if (filteredLearners.length === 0) {
       showError('No students available to export.');
@@ -752,10 +724,12 @@ const Attendance = () => {
     }
 
     const currentDateStr = filters.date;
+    const roleTag = isAdminRole ? 'ADMINISTRATOR OVERSIGHT' : 'TEACHER REGISTER';
     const row1 = 'MUNYAKA PRIMARY AND JUNIOR SCHOOL';
     const row2 = 'P.O. BOX 5239-30100, ELDORET';
     const row3 = 'MOTTO: KNOWLEDGE POWER';
     const row4 = `ATTENDANCE REGISTER - ${filters.grade.toUpperCase()} ${filters.stream.toUpperCase()} - DATE: ${currentDateStr}`;
+    const row5 = `EXPORTED BY: ${user?.name ?? 'Unknown'} (${userRole || 'unknown'}) — ${roleTag}`;
 
     const headers = ['#', 'Learner Name', 'Admission/ID', 'Gender', 'Morning Status', 'Morning Time', 'Afternoon Status', 'Afternoon Time'];
 
@@ -781,7 +755,6 @@ const Attendance = () => {
       ];
     });
 
-    // Summary rows
     const summaryRows = [
       ['', '', '', 'Morning Present', metrics.presentMorning, '', 'Afternoon Present', metrics.presentAfternoon],
       ['', '', '', 'Morning Absent', metrics.absentMorning, '', 'Afternoon Absent', metrics.absentAfternoon],
@@ -795,6 +768,7 @@ const Attendance = () => {
       row2,
       row3,
       row4,
+      row5,
       '',
       headers.join(','),
       ...rows.map(r => r.join(',')),
@@ -814,13 +788,6 @@ const Attendance = () => {
   // ============================================
   // Render helpers
   // ============================================
-
-  /**
-   * The session column header with the LIVE / LOCKED / SEALED badge
-   * and a "Locked at" timestamp when the session is auto-locked.
-   * Extracted to a small component so both the Morning and Afternoon
-   * columns render consistently.
-   */
   const SessionHeader: React.FC<{ session: SessionType; label: string }> = ({ session, label }) => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     const isEditable = session === 'morning' ? isMorningEditable : isAfternoonEditable;
@@ -856,11 +823,6 @@ const Attendance = () => {
     );
   };
 
-  // Determine which session label to show in the bulk-actions section.
-  // When admin override is on, we show "All Sessions" so the teacher
-  // knows bulk actions are not session-locked. Otherwise we lock the
-  // bulk actions to whichever session is currently live (or fallback
-  // to the morning label if no session is currently live).
   const bulkSessionLabel = adminBypass
     ? 'All Sessions'
     : (activeSession === 'afternoon'
@@ -873,7 +835,7 @@ const Attendance = () => {
 
   return (
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
-      
+
       {/* ============================================
           1. HEADER SECTION
           ============================================ */}
@@ -884,11 +846,47 @@ const Attendance = () => {
           </div>
           <div>
             <h1 className="text-3xl font-black tracking-tight text-slate-900">Attendance</h1>
-            <p className="text-sm text-slate-500 font-medium">Mark daily attendance for each class.</p>
+            <p className="text-sm text-slate-500 font-medium">
+              {isTeacherRole
+                ? 'Mark daily attendance for each class.'
+                : viewMode === 'marking'
+                  ? 'Manual register override — editing attendance.'
+                  : 'Class-wide attendance oversight and roll call completion.'}
+            </p>
           </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Admin: prominent Manual Register Override / Edit Attendance toggle */}
+          {isAdminRole && (
+            <Button
+              onClick={() => setViewMode(viewMode === 'marking' ? 'oversight' : 'marking')}
+              className={cn(
+                "rounded-xl gap-2 text-sm font-bold h-11 px-5 shadow-lg gap-2 transition-all",
+                viewMode === 'marking'
+                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white shadow-indigo-100"
+              )}
+              title={
+                viewMode === 'marking'
+                  ? 'Return to oversight dashboard'
+                  : 'Open the interactive register to enter or correct attendance'
+              }
+            >
+              {viewMode === 'marking' ? (
+                <>
+                  <Eye size={16} />
+                  Back to Oversight
+                </>
+              ) : (
+                <>
+                  <Edit3 size={16} />
+                  Manual Register Override
+                </>
+              )}
+            </Button>
+          )}
+          {/* Shared tools — always visible to admins and teachers */}
           <Button
             variant="outline"
             onClick={handleExportCSV}
@@ -896,7 +894,7 @@ const Attendance = () => {
             className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
           >
             {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-            CSV
+            CSV Export
           </Button>
           <Button
             variant="outline"
@@ -906,28 +904,32 @@ const Attendance = () => {
             <Printer size={16} />
             Print
           </Button>
-          <Button
-            onClick={handleSaveAttendance}
-            disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
-            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
-            title={
-              (isMorningLocked && isAfternoonLocked)
-                ? 'Both sessions are already locked. Unlock a session to make changes.'
-                : 'Save attendance and auto-lock any fully-marked sessions.'
-            }
-          >
-            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-            Save Attendance
-          </Button>
+          {/* Save button is only visible inside the marking register */}
+          {viewMode === 'marking' && (
+            <Button
+              onClick={handleSaveAttendance}
+              disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
+              className="rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-emerald-100 disabled:opacity-50"
+              title={
+                (isMorningLocked && isAfternoonLocked)
+                  ? 'Both sessions are already locked. Unlock a session to make changes.'
+                  : 'Save attendance and auto-lock any fully-marked sessions.'
+              }
+            >
+              {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+              Save Attendance
+            </Button>
+          )}
         </div>
       </div>
 
       {/* ============================================
-          2. FILTERS & GLOBAL ACTIONS
+          2. FILTERS & GLOBAL ACTIONS (only in marking mode)
           ============================================ */}
+      {viewMode === 'marking' && (
       <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-          
+
           {/* Date Picker */}
           <div className="md:col-span-3 space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
@@ -1042,16 +1044,12 @@ const Attendance = () => {
           </div>
         </div>
       </Card>
+      )}
 
       {/* ============================================
           2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
-          ============================================
-          Shows a single banner when one or both sessions are
-          auto-locked after a save. We display the per-session
-          "locked at" timestamp in the banner so the teacher
-          knows exactly when the register was sealed.
-      */}
-      {(isMorningLocked || isAfternoonLocked) && (
+          ============================================ */}
+      {viewMode === 'marking' && (isMorningLocked || isAfternoonLocked) && (
         <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5 min-w-0">
             <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
@@ -1082,7 +1080,6 @@ const Attendance = () => {
               </p>
             </div>
           </div>
-          {/* Quick unlock shortcuts: one button per locked session */}
           <div className="flex flex-wrap items-center gap-2 shrink-0">
             {isMorningLocked && (
               <Button
@@ -1109,10 +1106,10 @@ const Attendance = () => {
       {/* ============================================
                 2b. TIME WINDOW BANNER + ADMIN OVERRIDE (RBAC-gated)
                 ============================================ */}
+      {viewMode === 'marking' && (
             <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
               <CardContent className="p-4 sm:p-5">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  {/* Left: Live clock + active session indicator */}
                   <div className="flex items-center gap-3 flex-1 min-w-0">
                     <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
                       <Clock size={20} />
@@ -1137,12 +1134,10 @@ const Attendance = () => {
                       </p>
                     </div>
                   </div>
-      
-                  {/* Right: Admin-only override toggle OR read-only badge for teachers */}
+
                   <div className="flex items-center gap-2">
                     {isAdminRole ? (
                       <>
-                        {/* Admin: show info tooltip + override toggle */}
                         <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
                           <Info size={14} className="text-slate-400" />
                           <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 max-w-[200px] leading-tight">
@@ -1187,7 +1182,6 @@ const Attendance = () => {
                         </label>
                       </>
                     ) : (
-                      /* Teacher/Staff: show read-only badge */
                       <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-100 border border-slate-200">
                         <Lock size={14} className="text-slate-400" />
                         <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
@@ -1199,13 +1193,283 @@ const Attendance = () => {
                 </div>
               </CardContent>
             </Card>
+      )}
 
       {/* ============================================
-          3. SUMMARY METRICS CARDS (Combined totals)
+          3a. SUMMARY METRICS CARDS — Overshight aggregate (admin)
           ============================================ */}
+      {viewMode === 'oversight' && isAdminRole && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <Card className="border-none shadow-sm rounded-2xl bg-indigo-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Total Learners</p>
+                  <h3 className="text-3xl font-black text-indigo-700 mt-1">{oversightMetrics.totalLearners}</h3>
+                  <p className="text-[10px] font-bold text-indigo-600 mt-1">across all streams</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <Users size={22} />
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-2xl bg-emerald-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Streams Complete</p>
+                  <h3 className="text-3xl font-black text-emerald-700 mt-1">
+                    {oversightMetrics.fullyCompletedStreams}
+                    <span className="text-base text-emerald-600/80">/{oversightMetrics.streamsTotal}</span>
+                  </h3>
+                  <p className="text-[10px] font-bold text-emerald-600 mt-1">morning + afternoon sealed</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <ClipboardList size={22} />
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-2xl bg-amber-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-amber-600">Roll Call Pending</p>
+                  <h3 className="text-3xl font-black text-amber-700 mt-1">
+                    {oversightMetrics.streamsTotal - oversightMetrics.fullyCompletedStreams}
+                  </h3>
+                  <p className="text-[10px] font-bold text-amber-600 mt-1">streams awaiting teachers</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
+                  <AlertCircle size={22} />
+                </div>
+              </div>
+            </Card>
+            <Card className="border-none shadow-sm rounded-2xl bg-purple-50 p-5">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-purple-600">Avg Attendance</p>
+                  <h3 className="text-3xl font-black text-purple-700 mt-1">{oversightMetrics.averageRate}%</h3>
+                  <p className="text-[10px] font-bold text-purple-600 mt-1">school-wide rate</p>
+                </div>
+                <div className="w-12 h-12 rounded-xl bg-purple-100 text-purple-600 flex items-center justify-center">
+                  <TrendingUp size={22} />
+                </div>
+              </div>
+            </Card>
+          </div>
+
+          {/* ============================================
+              3b. ROLL CALL COMPLETION TABLE (per stream)
+              ============================================ */}
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600">
+                  <BarChart3 size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                    Roll Call Completion — All Streams
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Live overview of morning and afternoon attendance submission across every class.
+                  </p>
+                </div>
+              </div>
+              <Badge variant="outline" className="rounded-xl bg-indigo-50 text-indigo-700 border-indigo-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
+                <Sparkles size={12} className="mr-1" />
+                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
+              </Badge>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm text-left border-collapse min-w-[800px]">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-200">
+                    <th className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500">Class / Stream</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Learners</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Roll</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-amber-600 text-center">Morning Present</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Roll</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-indigo-600 text-center">Afternoon Present</th>
+                    <th className="px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center">Rate</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {MOCK_STREAM_SUMMARIES.map((s) => (
+                    <tr key={`${s.grade}-${s.stream}`} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center font-bold text-xs shrink-0">
+                            <Layers size={16} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-900 text-sm">{s.grade}</p>
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">{s.stream}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-4 text-center font-bold text-slate-700">{s.totalLearners}</td>
+                      <td className="px-4 py-4 text-center">
+                        {s.morningCompleted ? (
+                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
+                            <CheckCircle2 size={11} className="mr-1" /> Submitted
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
+                            <Clock size={11} className="mr-1" /> Pending
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-center font-bold text-slate-700">
+                        {s.morningCompleted ? `${s.morningPresent}/${s.totalLearners}` : '—'}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        {s.afternoonCompleted ? (
+                          <Badge variant="outline" className="rounded-lg bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest">
+                            <CheckCircle2 size={11} className="mr-1" /> Submitted
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="rounded-lg bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest">
+                            <Clock size={11} className="mr-1" /> Pending
+                          </Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-4 text-center font-bold text-slate-700">
+                        {s.afternoonCompleted ? `${s.afternoonPresent}/${s.totalLearners}` : '—'}
+                      </td>
+                      <td className="px-4 py-4 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-20 bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                            <div
+                              className={cn(
+                                "h-full rounded-full transition-all",
+                                s.rate >= 90 ? "bg-emerald-500" : s.rate >= 70 ? "bg-amber-500" : "bg-rose-500"
+                              )}
+                              style={{ width: `${s.rate}%` }}
+                            />
+                          </div>
+                          <span className={cn(
+                            "text-xs font-black tabular-nums",
+                            s.rate >= 90 ? "text-emerald-700" : s.rate >= 70 ? "text-amber-700" : "text-rose-700"
+                          )}>
+                            {s.rate}%
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
+              <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
+                <Activity size={12} className="text-indigo-500" />
+                Showing <span className="text-slate-900 font-black">{MOCK_STREAM_SUMMARIES.length}</span> streams across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
+              </p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
+                Updated {format12h(currentTime)} • Auto-syncs every minute
+              </p>
+            </div>
+          </Card>
+
+          {/* ============================================
+              3c. AGGREGATE ATTENDANCE STATISTICS ACROSS GRADES
+              ============================================ */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2.5 rounded-xl bg-purple-100 text-purple-600">
+                  <Layers size={22} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Grade-Level Summary</h2>
+                  <p className="text-xs text-slate-500 font-medium">Average attendance rate per grade level today.</p>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {MOCK_STREAM_SUMMARIES.slice(0, 6).map((s) => (
+                  <div key={`grade-${s.grade}-${s.stream}`} className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-slate-700">{s.grade} <span className="text-slate-400 font-medium">— {s.stream}</span></span>
+                      <span className="font-black text-slate-900 tabular-nums">{s.rate}%</span>
+                    </div>
+                    <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                      <div
+                        className={cn(
+                          "h-full rounded-full transition-all duration-500",
+                          s.rate >= 90 ? "bg-gradient-to-r from-emerald-500 to-emerald-600" : s.rate >= 70 ? "bg-gradient-to-r from-amber-500 to-amber-600" : "bg-gradient-to-r from-rose-500 to-rose-600"
+                        )}
+                        style={{ width: `${s.rate}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="p-2.5 rounded-xl bg-amber-100 text-amber-600">
+                  <Clock size={22} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-black text-slate-900 tracking-tight">Session Completion</h2>
+                  <p className="text-xs text-slate-500 font-medium">Morning vs afternoon roll call coverage today.</p>
+                </div>
+              </div>
+              <div className="space-y-5">
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="font-black uppercase tracking-widest text-amber-700">Morning</span>
+                    <span className="font-black text-slate-900 tabular-nums">
+                      {oversightMetrics.morningCompletedStreams}/{oversightMetrics.streamsTotal}
+                    </span>
+                  </div>
+                  <div className="w-full bg-amber-100 h-3 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-700"
+                      style={{ width: `${(oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-500 mt-1">
+                    {Math.round((oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted
+                  </p>
+                </div>
+                <div>
+                  <div className="flex items-center justify-between text-xs mb-2">
+                    <span className="font-black uppercase tracking-widest text-indigo-700">Afternoon</span>
+                    <span className="font-black text-slate-900 tabular-nums">
+                      {oversightMetrics.afternoonCompletedStreams}/{oversightMetrics.streamsTotal}
+                    </span>
+                  </div>
+                  <div className="w-full bg-indigo-100 h-3 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700"
+                      style={{ width: `${(oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100}%` }}
+                    />
+                  </div>
+                  <p className="text-[11px] font-bold text-slate-500 mt-1">
+                    {Math.round((oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted
+                  </p>
+                </div>
+                <div className="pt-3 border-t border-slate-100 flex items-center gap-3 text-xs text-slate-600 font-medium">
+                  <Info size={14} className="text-indigo-500 shrink-0" />
+                  <p>
+                    Use <span className="font-black text-indigo-700">Manual Register Override</span> to correct any submitted register.
+                  </p>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </>
+      )}
+
+      {/* ============================================
+          3b. SUMMARY METRICS CARDS (marking mode)
+          ============================================ */}
+      {viewMode === 'marking' && (
       <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-        
-        {/* Total Card */}
+
         <Card className="border-none shadow-sm rounded-2xl bg-slate-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -1219,7 +1483,6 @@ const Attendance = () => {
           </div>
         </Card>
 
-        {/* Present Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-emerald-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -1233,7 +1496,6 @@ const Attendance = () => {
           </div>
         </Card>
 
-        {/* Absent Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-rose-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -1247,7 +1509,6 @@ const Attendance = () => {
           </div>
         </Card>
 
-        {/* Late Card */}
         <Card className="border-none shadow-sm rounded-2xl bg-amber-50 p-5">
           <div className="flex items-center justify-between">
             <div>
@@ -1261,7 +1522,6 @@ const Attendance = () => {
           </div>
         </Card>
 
-        {/* Rate Card with Progress Bar */}
         <Card className="border-none shadow-sm rounded-2xl bg-indigo-50 p-5">
           <div>
             <div className="flex items-center justify-between mb-2">
@@ -1274,8 +1534,8 @@ const Attendance = () => {
               </div>
             </div>
             <div className="w-full bg-indigo-200 h-2 rounded-full overflow-hidden">
-              <div 
-                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500 ease-out" 
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 transition-all duration-500 ease-out"
                 style={{ width: `${metrics.rate}%` }}
               />
             </div>
@@ -1283,16 +1543,17 @@ const Attendance = () => {
           </div>
         </Card>
       </div>
+      )}
 
       {/* ============================================
           4. STUDENT ATTENDANCE TABLE (Morning & Afternoon)
           ============================================ */}
+      {viewMode === 'marking' && (
       <Card className={cn(
         "border-none shadow-sm rounded-[2rem] bg-white overflow-hidden transition-all",
         (isMorningLocked || isAfternoonLocked) && "ring-2 ring-rose-200/60"
       )}>
-        
-        {/* Section header */}
+
         <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className={cn(
@@ -1325,7 +1586,6 @@ const Attendance = () => {
             </div>
           </div>
 
-          {/* Search box */}
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
             <Input
@@ -1337,14 +1597,12 @@ const Attendance = () => {
           </div>
         </div>
 
-        {/* Structured Table with Morning/Afternoon sub-rows */}
         <div className="overflow-x-auto">
           <table className="w-full text-sm text-left border-collapse min-w-[900px]">
             <thead>
-              {/* Group header */}
               <tr className="bg-slate-100/80 border-b border-slate-200">
-                <th 
-                  rowSpan={2} 
+                <th
+                  rowSpan={2}
                   className="px-6 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 border-r border-slate-200 align-bottom min-w-[260px]"
                 >
                   Learners
@@ -1356,32 +1614,15 @@ const Attendance = () => {
                   <SessionHeader session="afternoon" label="Afternoon Session" />
                 </th>
               </tr>
-              {/* Sub-header row with status column names */}
               <tr className="bg-slate-50 border-b border-slate-200">
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Present
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Absent
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Late
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Excused
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Present
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Absent
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">
-                  Late
-                </th>
-                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center min-w-[80px]">
-                  Excused
-                </th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">Present</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">Absent</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">Late</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center border-r border-slate-200 min-w-[80px]">Excused</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-emerald-600 text-center border-r border-slate-200 min-w-[80px]">Present</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-rose-600 text-center border-r border-slate-200 min-w-[80px]">Absent</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-amber-600 text-center border-r border-slate-200 min-w-[80px]">Late</th>
+                <th className="px-2 py-3 font-black text-[9px] uppercase tracking-widest text-sky-600 text-center min-w-[80px]">Excused</th>
               </tr>
             </thead>
             <tbody className={cn("divide-y divide-slate-100", (isMorningLocked && isAfternoonLocked) && "opacity-95")}>
@@ -1392,7 +1633,6 @@ const Attendance = () => {
                   const afternoonStatus = record.afternoon?.status;
                   return (
                     <tr key={learner.id} className="hover:bg-slate-50/50 transition-colors">
-                      {/* Learners column: index, name, ID, gender */}
                       <td className="px-6 py-4 border-r border-slate-100 min-w-[260px]">
                         <div className="flex items-center gap-3">
                           <div className="w-9 h-9 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center font-bold text-xs shrink-0">
@@ -1405,12 +1645,12 @@ const Attendance = () => {
                                 {learner.assessment}
                               </p>
                               <span className="text-slate-300">•</span>
-                              <Badge 
-                                variant="outline" 
+                              <Badge
+                                variant="outline"
                                 className={cn(
                                   "rounded-md font-black text-[9px] uppercase tracking-widest px-1.5 py-0 leading-tight",
-                                  learner.gender === 'M' 
-                                    ? "bg-blue-50 text-blue-700 border-blue-200" 
+                                  learner.gender === 'M'
+                                    ? "bg-blue-50 text-blue-700 border-blue-200"
                                     : "bg-pink-50 text-pink-700 border-pink-200"
                                 )}
                               >
@@ -1421,7 +1661,6 @@ const Attendance = () => {
                         </div>
                       </td>
 
-                      {/* Morning session — Present */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="P"
@@ -1437,7 +1676,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Morning session — Absent */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="A"
@@ -1453,7 +1691,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Morning session — Late */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="L"
@@ -1469,7 +1706,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Morning session — Excused */}
                       <td className="px-2 py-3 border-r border-slate-200 text-center">
                         <SessionStatusButton
                           status="E"
@@ -1485,7 +1721,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Afternoon session — Present */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="P"
@@ -1501,7 +1736,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Afternoon session — Absent */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="A"
@@ -1517,7 +1751,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Afternoon session — Late */}
                       <td className="px-2 py-3 border-r border-slate-100 text-center">
                         <SessionStatusButton
                           status="L"
@@ -1533,7 +1766,6 @@ const Attendance = () => {
                         />
                       </td>
 
-                      {/* Afternoon session — Excused */}
                       <td className="px-2 py-3 text-center">
                         <SessionStatusButton
                           status="E"
@@ -1570,7 +1802,6 @@ const Attendance = () => {
           </table>
         </div>
 
-        {/* Footer summary */}
         {filteredLearners.length > 0 && (
           <div className={cn(
             "px-6 sm:px-8 py-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-2",
@@ -1589,6 +1820,7 @@ const Attendance = () => {
           </div>
         )}
       </Card>
+      )}
 
       {/* ============================================
           5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
@@ -1597,12 +1829,10 @@ const Attendance = () => {
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
           onClick={(e) => {
-            // Close on backdrop click
             if (e.target === e.currentTarget) closeLockAuthModal();
           }}
         >
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-            {/* Header */}
             <div className={cn(
               "p-6 border-b",
               lockAction === 'lock' ? "bg-rose-50 border-rose-100" : "bg-amber-50 border-amber-100"
@@ -1629,9 +1859,7 @@ const Attendance = () => {
               </div>
             </div>
 
-            {/* Body */}
             <div className="p-6 space-y-4">
-              {/* Context card showing the register that will be locked/unlocked */}
               <div className="p-3 rounded-2xl border border-slate-200 bg-slate-50 space-y-1">
                 <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Target Register</p>
                 <p className="text-sm font-bold text-slate-900">
@@ -1658,9 +1886,6 @@ const Attendance = () => {
                 </div>
               )}
 
-              {/* Optional reason field — only shown when locking, since
-                  we want a short justification that gets stored in the
-                  persistent lock entry for audit purposes. */}
               {lockAction === 'lock' && (
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -1675,7 +1900,6 @@ const Attendance = () => {
                 </div>
               )}
 
-              {/* Admin password field */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Admin Password / PIN
@@ -1703,7 +1927,6 @@ const Attendance = () => {
               </div>
             </div>
 
-            {/* Footer */}
             <div className={cn(
               "p-5 border-t flex gap-2 justify-end",
               lockAction === 'lock' ? "bg-rose-50/30 border-rose-100" : "bg-amber-50/30 border-amber-100"
@@ -1721,8 +1944,8 @@ const Attendance = () => {
                 disabled={isAdminAuthVerifying}
                 className={cn(
                   "rounded-xl font-bold h-11 px-6 text-white shadow-lg gap-2",
-                  lockAction === 'lock' 
-                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-100" 
+                  lockAction === 'lock'
+                    ? "bg-rose-600 hover:bg-rose-700 shadow-rose-100"
                     : "bg-amber-600 hover:bg-amber-700 shadow-amber-100"
                 )}
               >
@@ -1759,21 +1982,20 @@ interface SessionStatusButtonProps {
   inactiveClass: string;
 }
 
-const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({ 
-  status, 
-  session, 
-  studentId, 
-  currentStatus, 
+const SessionStatusButton: React.FC<SessionStatusButtonProps> = ({
+  status,
+  session,
+  studentId,
+  currentStatus,
   isEditable,
   isLocked,
   onSetStatus,
-  activeClass, 
-  inactiveClass 
+  activeClass,
+  inactiveClass
 }) => {
   const isActive = currentStatus === status;
   const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' };
-  
-  // Build a contextual tooltip that explains why the button is disabled
+
   const disabledReason = isLocked
     ? `${labels[status]} (${session}) — session is locked. Tap "Unlock Session" to make corrections.`
     : !isEditable
