@@ -15,7 +15,7 @@ import {
   Search, Sun, Moon, Lock, Unlock, Info,
   LockKeyhole, ShieldAlert, Shield, BarChart3, TrendingUp,
   ClipboardList, Eye, Edit3, Layers, Sparkles, Activity,
-  RefreshCw
+  RefreshCw, ChevronLeft, ChevronRight
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
@@ -200,6 +200,35 @@ const Attendance = () => {
   const [ovStream, setOvStream] = useState<string>('all');
   const [ovSearch, setOvSearch] = useState<string>('');
 
+  // ── Historical date selection for oversight view ──────────────
+  const getTodayDateStr = (): string => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  };
+  const [ovDate, setOvDate] = useState<string>(getTodayDateStr);
+
+  // Whether the selected oversight date is today
+  const isOversightToday = useMemo(() => {
+    return ovDate === getTodayDateStr();
+  }, [ovDate]);
+
+  // Navigate one day back
+  const ovGoToPrevDay = () => {
+    const d = new Date(ovDate + 'T00:00:00');
+    d.setDate(d.getDate() - 1);
+    setOvDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  };
+
+  // Navigate one day forward
+  const ovGoToNextDay = () => {
+    const d = new Date(ovDate + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    setOvDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+  };
+
+  // Jump back to today
+  const ovGoToToday = () => setOvDate(getTodayDateStr());
+
   // Attendance state — keyed by student id, then session type
   const [attendance, setAttendance] = useState<Record<string, StudentAttendance>>({});
   const [searchTerm, setSearchTerm] = useState("");
@@ -363,7 +392,7 @@ const Attendance = () => {
 
   // ── Live stream attendance summaries (admin oversight) ─────────────────
   const liveStreamData = useLiveStreamAttendance(
-    filters.date,
+    ovDate,
     ovGrade,
     ovStream,
     ovSearch,
@@ -495,9 +524,22 @@ const Attendance = () => {
   })();
 
   const sectionSubtitle = (() => {
-    const dateFormatted = new Date(filters.date + 'T00:00:00').toLocaleDateString(undefined, {
+    const dateFormatted = new Date(ovDate + 'T00:00:00').toLocaleDateString(undefined, {
       weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
     });
+    const isHistorical = !isOversightToday;
+    if (isHistorical) {
+      if (selectedGradeLabel && selectedStreamLabel) {
+        return `Historical view of ${selectedGradeLabel} ${selectedStreamLabel} attendance submissions for ${dateFormatted}.`;
+      }
+      if (selectedGradeLabel) {
+        return `Historical view of ${selectedGradeLabel} attendance submissions for ${dateFormatted}.`;
+      }
+      if (selectedStreamLabel) {
+        return `Historical view of all ${selectedStreamLabel} streams across all grades for ${dateFormatted}.`;
+      }
+      return `Historical view of morning and afternoon attendance submissions for ${dateFormatted}.`;
+    }
     if (selectedGradeLabel && selectedStreamLabel) {
       return `Live overview for ${selectedGradeLabel} ${selectedStreamLabel} attendance submissions for ${dateFormatted}.`;
     }
@@ -1398,6 +1440,7 @@ const Attendance = () => {
                       setOvGrade('all');
                       setOvStream('all');
                       setOvSearch('');
+                      setOvDate(getTodayDateStr());
                     }}
                     variant="outline"
                     className="w-full h-11 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm gap-2 focus:ring-2 focus:ring-indigo-100"
@@ -1409,12 +1452,12 @@ const Attendance = () => {
               </div>
             </div>
 
-            <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600 shrink-0">
                   <BarChart3 size={22} />
                 </div>
-                <div>
+                <div className="min-w-0">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">
                     {sectionTitle}
                   </h2>
@@ -1423,11 +1466,112 @@ const Attendance = () => {
                   </p>
                 </div>
               </div>
-              <Badge variant="outline" className="rounded-xl bg-indigo-50 text-indigo-700 border-indigo-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
-                <Sparkles size={12} className="mr-1" />
-                {new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}
-              </Badge>
+              {/* Date navigation controls */}
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {isOversightToday ? (
+                  <Badge variant="outline" className="rounded-xl bg-emerald-50 text-emerald-700 border-emerald-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
+                    <Sparkles size={12} className="mr-1" />
+                    Today — Live
+                  </Badge>
+                ) : (
+                  <Badge variant="outline" className="rounded-xl bg-amber-50 text-amber-700 border-amber-200 font-black text-[10px] uppercase tracking-widest px-2.5 py-1">
+                    <Lock size={12} className="mr-1" />
+                    Historical View
+                  </Badge>
+                )}
+                <div className="flex items-center gap-1.5 p-1 rounded-xl bg-slate-50 border border-slate-200">
+                  <Button
+                    onClick={ovGoToPrevDay}
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0 rounded-lg hover:bg-white text-slate-600"
+                    title="Previous day"
+                    aria-label="Previous day"
+                  >
+                    <ChevronLeft size={16} />
+                  </Button>
+                  <div className="relative">
+                    <input
+                      type="date"
+                      value={ovDate}
+                      onChange={(e) => setOvDate(e.target.value)}
+                      className="h-9 px-3 pr-9 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500 tabular-nums"
+                      aria-label="Select date for roll call review"
+                    />
+                    <Calendar className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
+                  </div>
+                  <Button
+                    onClick={ovGoToNextDay}
+                    variant="ghost"
+                    size="sm"
+                    className="h-9 w-9 p-0 rounded-lg hover:bg-white text-slate-600"
+                    title="Next day"
+                    aria-label="Next day"
+                  >
+                    <ChevronRight size={16} />
+                  </Button>
+                </div>
+                <Button
+                  onClick={ovGoToToday}
+                  disabled={isOversightToday}
+                  variant="outline"
+                  size="sm"
+                  className="h-9 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-[10px] uppercase tracking-widest px-3 disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  Today
+                </Button>
+              </div>
             </div>
+
+            {/* Historical Read-Only banner shown when viewing a past date */}
+            {!isOversightToday && (
+              <div className={cn(
+                "mx-6 sm:mx-8 mt-5 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border",
+                adminBypass
+                  ? "bg-emerald-50 border-emerald-200"
+                  : "bg-amber-50 border-amber-200"
+              )}>
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center shrink-0",
+                    adminBypass ? "bg-emerald-100 text-emerald-600" : "bg-amber-100 text-amber-600"
+                  )}>
+                    {adminBypass ? <Unlock size={18} /> : <Lock size={18} />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className={cn(
+                      "text-sm font-black tracking-tight",
+                      adminBypass ? "text-emerald-900" : "text-amber-900"
+                    )}>
+                      {adminBypass
+                        ? 'Historical Edit Mode Active'
+                        : 'Historical View — Read-Only'}
+                    </p>
+                    <p className={cn(
+                      "text-[11px] font-medium",
+                      adminBypass ? "text-emerald-700" : "text-amber-700"
+                    )}>
+                      {adminBypass
+                        ? 'Admin Override is enabled. Register rows below are editable for corrections.'
+                        : 'You are viewing a past date. Register rows are read-only. Use Manual Register Override to make corrections.'}
+                    </p>
+                  </div>
+                </div>
+                {isAdminRole && !adminBypass && (
+                  <Button
+                    onClick={() => {
+                      setViewMode('marking');
+                      setAdminBypass(true);
+                      setFilters(prev => ({ ...prev, date: ovDate }));
+                    }}
+                    className="rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-bold text-xs h-9 px-4 gap-1.5 shadow-sm whitespace-nowrap"
+                  >
+                    <Edit3 size={14} />
+                    Manual Register Override
+                  </Button>
+                )}
+              </div>
+            )}
 
             <div className="overflow-x-auto">
               <table className="w-full text-sm text-left border-collapse min-w-[800px]">
