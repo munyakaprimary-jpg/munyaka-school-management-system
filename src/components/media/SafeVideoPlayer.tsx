@@ -3,29 +3,32 @@
 /**
  * SafeVideoPlayer
  * ---------------
- * A cross-platform (iOS Safari, Android Chrome, Capacitor/Cordova WebView,
- * desktop browsers) video player that never leaves the user staring at
- * "Unable to Play Video".
+ * Cross-platform video player that:
+ *   - Renders an <iframe> for embed URLs (YouTube / Vimeo / Google Drive)
+ *   - Renders a native <video controls playsInline> for direct MP4/WebM
+ *   - Logs every error event with its full code + message to the
+ *     developer console
+ *   - Always offers an "Open in Browser" fallback so the user is never
+ *     stranded with a broken player
  *
- * It tries, in order:
- *   1. HTML5 <video> with multiple <source> candidates (MP4 H.264/AAC first
- *      because that is the only combination with 100% native playback on iOS,
- *      Android, and modern desktop browsers).
- *   2. YouTube iframe embed (only if a youtubeId is provided) — works on
- *      every platform including restricted WebViews because it falls back to
- *      the system browser when the WebView blocks autoplay.
- *   3. A "Open externally" action that hands the URL off to the OS browser /
- *      native player via window.open or a Capacitor Browser plugin call.
+ * Error-detection strategy:
+ *   1. The <video> element's onError fires for any failure. The browser
+ *      populates e.target.error with { code, message } — we log both
+ *      and convert the code to a human-readable reason.
+ *   2. When the URL is unreachable (404, DNS failure, blocked by CORS),
+ *      the browser's MediaError often has code === 4
+ *      (MEDIA_ERR_SRC_NOT_SUPPORTED) and an empty message. To get a
+ *      real diagnosis we proactively HEAD-probe the URL before
+ *      mounting the video — if the response isn't 200/206 we show a
+ *      diagnostic instead of an opaque "Unknown playback error".
  *
- * Error handling covers:
- *   - MEDIA_ERR_NETWORK        (network / CORS preflight failed)
- *   - MEDIA_ERR_DECODE         (codec not supported — e.g. WebM on iOS Safari)
- *   - MEDIA_ERR_SRC_NOT_SUPPORTED (mime / 404 / cross-origin blocked)
- *   - stalled / suspend events  (slow networks)
- *   - abort / emptied           (interrupted loads)
- *
- * The component is intentionally dependency-free so it works in any
- * Capacitor / React Native WebView / PWA build without extra installs.
+ *   IMPORTANT: this component does NOT set crossOrigin on the video
+ *   element. Setting crossOrigin="anonymous" triggers a CORS preflight
+ *   against the video host, and if the host doesn't return
+ *   Access-Control-Allow-Origin (most static file hosts don't), the
+ *   browser refuses to load the file at all. crossOrigin is only
+ *   needed for canvas / Web Audio use cases, which this player does
+ *   not have.
  */
 
 import React, {
@@ -45,91 +48,170 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import {
+  type VideoSource,
+  type EmbedType,
+  isKnownPlaceholderUrl,
+} from "@/components/media/videoSources";
 
-export interface VideoSource {
-  /** Direct URL to a video file (.mp4, .webm, .m3u8, .ogg, etc.) */
-  url: string;
-  /** MIME type hint, e.g. "video/mp4", "video/webm", "application/x-mpegURL" */
-  mime?: string;
-  /** Optional codec string for very strict browsers, e.g. 'avc1.42E01E, mp4a.40.2' */
-  codecs?: string;
-  /** Set true for HLS streams that require native (Safari / Android Chrome) playback */
-  isHls?: boolean;
-}
+// ────────────────────────────────────────────────────────────────────
+// Public types
+// ────────────────────────────────────────────────────────────────────
+
+export type {
+  VideoSource,
+  EmbedType,
+  VideoUrlClassification,
+} from "@/components/media/videoSources";
 
 export interface SafeVideoPlayerProps {
-  /** Primary list of sources to attempt. Order = preference order. */
+  /** Ordered list of video sources. The player uses sources[0] for the
+   *  primary <video> element. */
   sources: VideoSource[];
-  /** Optional YouTube fallback id (e.g. "dQw4w9WgXcQ"). */
-  youtubeId?: string;
-  /** Poster image displayed before / during buffering. */
+  /** URL of the embed iframe (YouTube / Vimeo / Google Drive). When
+   *  present, the player renders an <iframe> instead of a <video>. */
+  embedUrl?: string;
+  /** Embed platform — purely informational; controls which allow string
+   *  we pass to the iframe. */
+  embedType?: EmbedType;
+  /** Poster image shown before / during buffering of a direct video. */
   poster?: string;
-  /** Accessible title for screen readers and the iframe. */
+  /** Accessible title for the player. */
   title?: string;
   /** Auto-play once metadata is loaded. Defaults to true. */
   autoPlay?: boolean;
   /** Show native controls. Defaults to true. */
   controls?: boolean;
-  /** Force muted playback — required for autoplay on most mobile browsers. */
+  /** Force muted playback (required for autoplay on most mobile browsers). */
   muted?: boolean;
   /** Loop the video. */
   loop?: boolean;
-  /** Optional className for the outer wrapper. */
+  /** Outer wrapper className. */
   className?: string;
-  /**
-   * Optional callback invoked with a short string describing why the
-   * native <video> path failed. Useful for telemetry.
-   */
-  onNativeError?: (reason: string) => void;
+  /** Optional callback when the native player errors out. Useful for
+   *  telemetry. */
+  onNativeError?: (reason: string, code?: number) => void;
+  /** Optional callback when the iframe fails to load. */
+  onEmbedError?: () => void;
 }
 
-type PlaybackStage = "native" | "youtube" | "external";
+// ────────────────────────────────────────────────────────────────────
+// Player stages
+// ────────────────────────────────────────────────────────────────────
+
+type Stage = "probing" | "native" | "embed" | "external";
 
 interface FailureInfo {
-  source: VideoSource;
+  source?: VideoSource;
+  embedUrl?: string;
+  /** Numeric MediaError code (1..4) or undefined for non-<video> errors. */
   code?: number;
+  /** Human-readable, developer-facing reason (logged to console). */
   reason: string;
+  /** Short, user-facing message shown in the error card. */
+  message: string;
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Constants
+// ────────────────────────────────────────────────────────────────────
 
 const FALLBACK_EXTERNAL_LABEL = "Open in Browser";
 
-/**
- * Try to detect HLS support natively. Safari (and most iOS WebViews)
- * can play .m3u8 directly. Desktop Chrome / Firefox / Edge need hls.js —
- * which we intentionally avoid as a dependency; we let the browser
- * degrade gracefully to the YouTube / external fallback instead.
- */
-const supportsNativeHls = (): boolean => {
-  if (typeof document === "undefined") return false;
-  const v = document.createElement("video");
-  return Boolean(
-    v.canPlayType &&
-      // Safari returns 'maybe' or 'probably' for application/x-mpegURL
-      v.canPlayType('application/vnd.apple.mpegurl'),
-  );
-};
-
-/**
- * Detect whether we're inside a Capacitor / Cordova WebView. In that
- * environment <video> can sometimes refuse to play due to plugin
- * interception, and `window.open` may not work — so we show a clearer
- * "Open externally" affordance.
- */
+/** Detect a Capacitor / Cordova WebView (so we can show a contextual hint). */
 const isNativeWebView = (): boolean => {
   if (typeof navigator === "undefined") return false;
-  // @ts-expect-error — injected by Capacitor / Cordova at runtime
+  // @ts-expect-error injected by Capacitor at runtime
   const cap = (window as any).Capacitor;
   if (cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) {
     return true;
   }
-  // Cordova sets device on window
-  // @ts-expect-error
+  // @ts-expect-error injected by Cordova at runtime
   return Boolean((window as any).cordova);
 };
 
+/** Detect native HLS support (Safari / iOS WebViews). */
+const supportsNativeHls = (): boolean => {
+  if (typeof document === "undefined") return false;
+  const v = document.createElement("video");
+  return Boolean(
+    v.canPlayType && v.canPlayType('application/vnd.apple.mpegurl'),
+  );
+};
+
+/**
+ * Decode a MediaError code into a human-readable reason and a user-facing
+ * message. The browser sometimes leaves MediaError.message empty (notably
+ * for MEDIA_ERR_SRC_NOT_SUPPORTED and CORS-blocked loads), so we have to
+ * map the code by hand.
+ */
+function decodeMediaError(
+  err: MediaError | null,
+  url: string,
+): { reason: string; message: string } {
+  if (!err) {
+    return {
+      reason: "No MediaError object was attached to the <video> onError event. "
+        + "This typically means the video file failed to load entirely "
+        + "(404, DNS failure, or blocked by CORS without an "
+        + "Access-Control-Allow-Origin header).",
+      message:
+        "The video file could not be loaded. The link may be broken, "
+        + "the file may no longer exist on the server, or your network "
+        + "is blocking the request.",
+    };
+  }
+
+  // MediaError.message is empty for codes 2-4 in every shipping browser.
+  // Code is the only reliable signal we have.
+  switch (err.code) {
+    case 1: // MEDIA_ERR_ABORTED
+      return {
+        reason: `MEDIA_ERR_ABORTED (1) for ${url}: playback was aborted by the user or a script.`,
+        message: "Playback was interrupted.",
+      };
+    case 2: // MEDIA_ERR_NETWORK
+      return {
+        reason: `MEDIA_ERR_NETWORK (2) for ${url}: a network error prevented the file from downloading. `
+          + "Usually a CORS preflight failure or a server that doesn't support byte-range requests.",
+        message:
+          "A network error prevented the video from loading. "
+          + "This is usually a CORS policy or a slow/blocked connection.",
+      };
+    case 3: // MEDIA_ERR_DECODE
+      return {
+        reason: `MEDIA_ERR_DECODE (3) for ${url}: the file downloaded fine but cannot be decoded. `
+          + "Most often a codec the device doesn't support (HEVC/H.265 on iOS, VP9 on old Safari, etc.).",
+        message:
+          "The video file uses a codec that this device cannot decode. "
+          + "Re-encode it as H.264 baseline + AAC audio for universal playback.",
+      };
+    case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
+      return {
+        reason: `MEDIA_ERR_SRC_NOT_SUPPORTED (4) for ${url}: the file type isn't supported, the server returned 404, `
+          + "or the response is blocked by CORS. The most common cause in production is "
+          + "adding crossOrigin=\"anonymous\" to <video> when the host doesn't return "
+          + "Access-Control-Allow-Origin headers.",
+        message:
+          "This video format is not supported on this device, or the server blocked the request. "
+          + "Try opening it in your browser.",
+      };
+    default:
+      return {
+        reason: `Unknown MediaError code ${err.code} for ${url}: ${err.message || "(no message)"}`,
+        message: "An unknown playback error occurred.",
+      };
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Component
+// ────────────────────────────────────────────────────────────────────
+
 const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   sources,
-  youtubeId,
+  embedUrl,
+  embedType = "direct",
   poster,
   title = "Video",
   autoPlay = true,
@@ -138,166 +220,249 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
   loop = false,
   className,
   onNativeError,
+  onEmbedError,
 }) => {
   const videoRef = useRef<HTMLVideoElement | null>(null);
-  const [stage, setStage] = useState<PlaybackStage>("native");
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const [stage, setStage] = useState<Stage>("probing");
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [failure, setFailure] = useState<FailureInfo | null>(null);
   const [decoded, setDecoded] = useState(false);
 
-  // Pick the sources in priority order, dropping HLS on browsers that
-  // can't handle it natively so we fail fast and move to the next stage.
-  const playableSources = useMemo(() => {
-    const nativeHls = supportsNativeHls();
-    return sources.filter((s) => {
-      if (s.isHls) return nativeHls;
-      return true;
-    });
-  }, [sources]);
-
-  const hasYoutube = Boolean(youtubeId);
   const inWebView = useMemo(isNativeWebView, []);
 
-  const advanceToNextStage = useCallback(
-    (info: FailureInfo) => {
-      // 1) Try the next source for native playback
-      if (currentIndex < playableSources.length - 1) {
-        setCurrentIndex((i) => i + 1);
-        setIsLoading(true);
-        setFailure(null);
-        return;
-      }
-      // 2) Then fall back to YouTube embed
-      if (stage === "native" && hasYoutube) {
-        setStage("youtube");
+  // First source becomes the active one. Direct embed URLs always
+  // bypass the native stage and go straight to the iframe.
+  const activeSource = sources[0];
+  const isDirectVideo = embedType === "direct" && activeSource;
+
+  // Filter out HLS sources on browsers that can't play them natively so
+  // we fail fast and the user sees the embed/external fallback sooner.
+  const playableSource = useMemo(() => {
+    if (!activeSource) return undefined;
+    if (activeSource.isHls && !supportsNativeHls()) return undefined;
+    return activeSource;
+  }, [activeSource]);
+
+  // ──────────────────────────────────────────────────────────────────
+  // Network probe — pre-flight HEAD request to surface real HTTP
+  // statuses (404, 403, 5xx) before the <video> element wastes time
+  // trying to load an unreachable URL.
+  // ──────────────────────────────────────────────────────────────────
+
+  const probeUrl = useCallback(async (url: string): Promise<boolean> => {
+    try {
+      // We use Range: bytes=0-0 — every compliant video host supports
+      // this and it avoids downloading the entire file just to check
+      // reachability.
+      const res = await fetch(url, {
+        method: "GET",
+        headers: { Range: "bytes=0-0" },
+        mode: "cors",
+      });
+      // 200 = full file; 206 = partial content (range honoured). Both
+      // mean the resource exists and is reachable.
+      return res.ok || res.status === 206;
+    } catch (e) {
+      console.warn(
+        "[SafeVideoPlayer] Network probe failed for",
+        url,
+        "→",
+        e instanceof Error ? e.message : String(e),
+      );
+      return false;
+    }
+  }, []);
+
+  // ──────────────────────────────────────────────────────────────────
+  // Stage transitions
+  // ──────────────────────────────────────────────────────────────────
+
+  const transitionToNative = useCallback(() => {
+    if (!playableSource) {
+      // No playable direct source — go to embed or external.
+      if (embedUrl) setStage("embed");
+      else setStage("external");
+      setIsLoading(false);
+      return;
+    }
+    setStage("native");
+    setIsLoading(true);
+  }, [playableSource, embedUrl]);
+
+  const handleNativeError = useCallback(
+    (rawErr: MediaError | null) => {
+      const src = playableSource;
+      const { reason, message } = decodeMediaError(rawErr, src?.url ?? "");
+
+      // ALWAYS log the full error object so devs can diagnose it.
+      // MediaError objects don't serialise well — we extract the
+      // useful fields ourselves.
+      console.error("[SafeVideoPlayer] Native <video> error", {
+        url: src?.url,
+        mediaError: rawErr
+          ? {
+              code: rawErr.code,
+              message: rawErr.message,
+              // 1=ABORTED, 2=NETWORK, 3=DECODE, 4=SRC_NOT_SUPPORTED
+              codeMeaning: [
+                "MEDIA_ERR_ABORTED",
+                "MEDIA_ERR_NETWORK",
+                "MEDIA_ERR_DECODE",
+                "MEDIA_ERR_SRC_NOT_SUPPORTED",
+              ][rawErr.code - 1] ?? `code(${rawErr.code})`,
+            }
+          : null,
+        reason,
+      });
+      onNativeError?.(reason, rawErr?.code);
+
+      // If an embed URL was provided as a fallback, prefer it.
+      if (embedUrl) {
+        setStage("embed");
         setIsLoading(false);
         setFailure(null);
         return;
       }
-      // 3) Finally, show the "open externally" card
+
       setStage("external");
       setIsLoading(false);
-      setFailure(info);
-      onNativeError?.(info.reason);
+      setFailure({ source: src, code: rawErr?.code, reason, message });
     },
-    [currentIndex, playableSources.length, stage, hasYoutube, onNativeError],
+    [playableSource, embedUrl, onNativeError],
   );
 
-  const handleError = useCallback(() => {
-    const v = videoRef.current;
-    const err = v?.error;
-    const src = playableSources[currentIndex];
-
-    let reason = "Unknown playback error.";
-    if (err) {
-      switch (err.code) {
-        case 1: // MEDIA_ERR_ABORTED
-          reason = "Playback was aborted.";
-          break;
-        case 2: // MEDIA_ERR_NETWORK
-          reason =
-            "A network error prevented the video from loading. This is usually a CORS or connectivity issue.";
-          break;
-        case 3: // MEDIA_ERR_DECODE
-          reason =
-            "The video could not be decoded. The file may use a codec this device does not support.";
-          break;
-        case 4: // MEDIA_ERR_SRC_NOT_SUPPORTED
-          reason =
-            "The video format is not supported on this device, or the server returned an incompatible response (CORS / MIME / 404).";
-          break;
-        default:
-          reason = err.message || reason;
-      }
-    }
-
-    advanceToNextStage({ source: src, code: err?.code, reason });
-  }, [advanceToNextStage, playableSources, currentIndex]);
-
-  const handleLoadedMetadata = useCallback(() => {
-    setIsLoading(false);
-    setDecoded(true);
-    // Some WebViews (Android Capacitor <6) block autoplay unless the user
-    // has interacted. If that happens we silently fall back to the
-    // YouTube stage rather than show a broken state.
-    const v = videoRef.current;
-    if (!v) return;
-    v.play().catch((e: unknown) => {
-      const msg = e instanceof Error ? e.message : String(e);
-      advanceToNextStage({
-        source: playableSources[currentIndex],
-        reason: `Autoplay rejected: ${msg}`,
-      });
+  const handleEmbedError = useCallback(() => {
+    console.error("[SafeVideoPlayer] Embed iframe failed to load", {
+      embedUrl,
+      embedType,
     });
-  }, [advanceToNextStage, playableSources, currentIndex]);
-
-  const handleStalled = useCallback(() => {
-    // Stalled alone is not fatal — only flag loading.
-    setIsLoading(true);
-  }, []);
-
-  const handlePlaying = useCallback(() => {
-    setIsPlaying(true);
+    onEmbedError?.();
+    setStage("external");
     setIsLoading(false);
-  }, []);
-
-  const handlePause = useCallback(() => {
-    setIsPlaying(false);
-  }, []);
+    setFailure({
+      embedUrl,
+      reason: `The ${embedType} embed could not be loaded.`,
+      message:
+        "The embedded video could not be loaded. The video may be private, age-restricted, or temporarily unavailable.",
+    });
+  }, [embedUrl, embedType, onEmbedError]);
 
   const handleRetry = useCallback(() => {
-    setStage("native");
-    setCurrentIndex(0);
+    setStage("probing");
     setFailure(null);
     setIsLoading(true);
     setDecoded(false);
-    // Force the <video> element to remount by reloading its source
+    setIsPlaying(false);
     const v = videoRef.current;
-    if (v) {
-      v.load();
-    }
+    if (v) v.load();
   }, []);
 
   const openExternal = useCallback(() => {
     const url =
-      failure?.source.url ??
-      playableSources[0]?.url ??
-      (youtubeId ? `https://www.youtube.com/watch?v=${youtubeId}` : "");
+      failure?.source?.url ??
+      failure?.embedUrl ??
+      embedUrl ??
+      activeSource?.url ??
+      "";
     if (!url) return;
-    // window.open works in regular browsers and most WebViews that have
-    // a configured whitelist. In a Capacitor app you may want to swap
-    // this for `import { Browser } from '@capacitor/browser' && Browser.open({url})`.
+    console.info("[SafeVideoPlayer] Opening external fallback URL", url);
     window.open(url, "_blank", "noopener,noreferrer");
-  }, [failure, playableSources, youtubeId]);
+  }, [failure, embedUrl, activeSource]);
 
-  // Reset state when sources change (e.g. user picks a new video)
-  useEffect(() => {
-    handleRetry();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sources[0]?.url, sources[1]?.url]);
+  // ──────────────────────────────────────────────────────────────────
+  // Lifecycle: probe the URL, then mount the appropriate player
+  // ──────────────────────────────────────────────────────────────────
 
-  // If we have no playable sources at all, skip the native stage
   useEffect(() => {
-    if (playableSources.length === 0 && stage === "native") {
-      if (hasYoutube) {
-        setStage("youtube");
-      } else {
+    let cancelled = false;
+    setStage("probing");
+    setIsLoading(true);
+    setFailure(null);
+    setDecoded(false);
+    setIsPlaying(false);
+
+    const targetUrl = playableSource?.url ?? embedUrl;
+
+    if (!targetUrl) {
+      // No URL at all.
+      setStage("external");
+      setIsLoading(false);
+      setFailure({
+        reason: "SafeVideoPlayer received no URL.",
+        message: "No video URL was provided.",
+      });
+      return;
+    }
+
+    // Known placeholder URLs (e.g. w3schools/html/movie.mp4 which 404s)
+    // short-circuit straight to the error card with a clear hint.
+    if (isDirectVideo && isKnownPlaceholderUrl(targetUrl)) {
+      console.warn(
+        "[SafeVideoPlayer] Known placeholder URL detected, skipping probe:",
+        targetUrl,
+      );
+      if (!cancelled) {
         setStage("external");
+        setIsLoading(false);
         setFailure({
-          source: { url: "" },
-          reason: "No playable video sources were provided for this device.",
+          source: playableSource,
+          reason: `Placeholder URL detected: ${targetUrl}`,
+          message:
+            "This video uses a placeholder URL that no longer resolves. "
+            + "Replace it with a real, accessible video file.",
         });
       }
+      return;
     }
-  }, [playableSources, stage, hasYoutube]);
 
-  // ────────────────────────────────────────────────────────────────
+    // For embeds we don't need to probe — the iframe will surface its
+    // own errors via onLoad (success) / onError (block).
+    if (!isDirectVideo) {
+      if (!cancelled) setStage("embed");
+      setIsLoading(false);
+      return;
+    }
+
+    // For direct videos, probe the URL first so we can show a real
+    // HTTP error instead of "Unknown playback error".
+    probeUrl(targetUrl).then((ok) => {
+      if (cancelled) return;
+      if (ok) {
+        transitionToNative();
+      } else {
+        const reason = `Network probe failed for ${targetUrl}: HTTP response was not 200/206. `
+          + "The file may have moved (404), the server may be down, "
+          + "or the request was blocked by CORS without an "
+          + "Access-Control-Allow-Origin header.";
+        console.error("[SafeVideoPlayer]", reason);
+        if (embedUrl) {
+          setStage("embed");
+          setIsLoading(false);
+          return;
+        }
+        setStage("external");
+        setIsLoading(false);
+        setFailure({
+          source: playableSource,
+          reason,
+          message:
+            "The video file could not be reached. "
+            + "The link may be broken or the server may be temporarily down.",
+        });
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sources[0]?.url, embedUrl]);
+
+  // ──────────────────────────────────────────────────────────────────
   // Render
-  // ────────────────────────────────────────────────────────────────
-
-  const currentSource = playableSources[currentIndex];
+  // ──────────────────────────────────────────────────────────────────
 
   return (
     <div
@@ -307,68 +472,113 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
       )}
       data-testid="safe-video-player"
       data-stage={stage}
+      data-embed-type={embedType}
     >
-      {/* ── STAGE 1: native <video> ─────────────────────────────── */}
-      {stage === "native" && currentSource && (
+      {/* ── Probing overlay ───────────────────────────────────────── */}
+      {stage === "probing" && (
+        <div className="absolute inset-0 flex items-center justify-center bg-black/60 backdrop-blur-[2px]">
+          <div className="flex flex-col items-center gap-3 text-white/90">
+            <Loader2 size={36} className="animate-spin" />
+            <span className="text-xs font-semibold uppercase tracking-widest">
+              Connecting…
+            </span>
+          </div>
+        </div>
+      )}
+
+      {/* ── STAGE: native <video> ─────────────────────────────────── */}
+      {stage === "native" && playableSource && (
+        // NOTE: no crossOrigin attribute. Adding crossOrigin="anonymous"
+        // triggers a CORS preflight that most static file hosts don't
+        // pass, causing MEDIA_ERR_SRC_NOT_SUPPORTED on otherwise valid
+        // videos. Only add it if you intend to draw video frames to a
+        // canvas or pipe audio through Web Audio.
         <video
-          key={`${currentSource.url}-${currentIndex}`}
+          key={playableSource.url}
           ref={videoRef}
           controls={controls}
           autoPlay={autoPlay}
           muted={muted}
           loop={loop}
           playsInline
-          // `playsInline` alone isn't enough on iOS — set the webkit
-          // attribute too, and force the airplay attribute to off so
-          // we don't fight AirPlay routing inside a WebView modal.
-          {...({ "webkit-playsinline": "true", "x5-playsinline": "true" } as Record<
-            string,
-            string
-          >)}
+          // iOS WebViews need the legacy webkit attribute too.
+          {...({
+            "webkit-playsinline": "true",
+            "x5-playsinline": "true",
+          } as Record<string, string>)}
           poster={poster}
           preload="metadata"
-          crossOrigin="anonymous"
           className="w-full h-full object-contain bg-black"
           title={title}
-          onLoadedMetadata={handleLoadedMetadata}
-          onError={handleError}
-          onStalled={handleStalled}
-          onPlaying={handlePlaying}
-          onPause={handlePause}
+          onLoadedMetadata={() => {
+            setIsLoading(false);
+            setDecoded(true);
+            const v = videoRef.current;
+            if (!v) return;
+            v.play().catch((e: unknown) => {
+              const msg = e instanceof Error ? e.message : String(e);
+              console.warn("[SafeVideoPlayer] Autoplay rejected", msg);
+              // Don't treat autoplay rejection as a hard failure —
+              // the user can still tap play in the controls.
+            });
+          }}
+          onError={(e) => {
+            // e.currentTarget is the <video> element. e.currentTarget.error
+            // is the MediaError object, which is null when the failure is
+            // purely a network / CORS issue (e.g. w3schools.com without
+            // an ACAO header).
+            const target = e.currentTarget as HTMLVideoElement;
+            handleNativeError(target.error ?? null);
+          }}
+          onStalled={() => setIsLoading(true)}
+          onPlaying={() => {
+            setIsPlaying(true);
+            setIsLoading(false);
+          }}
+          onPause={() => setIsPlaying(false)}
           onCanPlay={() => setIsLoading(false)}
           onWaiting={() => setIsLoading(true)}
         >
-          {/* The <source> element picks the first one the browser
-              claims it can play. Listing MP4 (H.264/AAC) first is the
-              universal safe choice. */}
           <source
-            src={currentSource.url}
-            type={currentSource.mime ?? "video/mp4"}
+            src={playableSource.url}
+            type={playableSource.mime ?? "video/mp4"}
           />
-          {currentSource.codecs && (
+          {playableSource.codecs && (
             <source
-              src={currentSource.url}
-              type={`${currentSource.mime ?? "video/mp4"}; codecs="${currentSource.codecs}"`}
+              src={playableSource.url}
+              type={`${playableSource.mime ?? "video/mp4"}; codecs="${playableSource.codecs}"`}
             />
           )}
-          {/* Fallback message for browsers that understand <video> but
-              cannot play this file (rare, but covers very old engines). */}
-          Your browser cannot play this video.
+          Your browser does not support the video tag.
         </video>
       )}
 
-      {/* ── STAGE 2: YouTube embed ───────────────────────────────── */}
-      {stage === "youtube" && youtubeId && (
+      {/* ── STAGE: embed iframe (YouTube / Vimeo / Drive) ─────────── */}
+      {stage === "embed" && embedUrl && (
         <iframe
+          key={embedUrl}
+          ref={iframeRef}
           className="w-full h-full"
-          src={`https://www.youtube.com/embed/${youtubeId}?autoplay=1&modestbranding=1&rel=0`}
+          src={embedUrl}
           title={title}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+          // `sandbox` is intentionally permissive here: most embeds
+          // require same-origin access to function (fullscreen API,
+          // postMessage, etc.). The iframe is loaded from a trusted
+          // platform domain.
+          allow={
+            embedType === "youtube"
+              ? "accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+              : "autoplay; fullscreen; picture-in-picture"
+          }
           allowFullScreen
+          // Some browsers don't fire onError on blocked iframes, but
+          // we still wire the handler so we can flip to the external
+          // fallback if the platform returns an error document.
+          onError={handleEmbedError}
         />
       )}
 
-      {/* ── STAGE 3: external / "open in browser" card ───────────── */}
+      {/* ── STAGE: external / "open in browser" card ──────────────── */}
       {stage === "external" && (
         <div
           className="absolute inset-0 flex flex-col items-center justify-center text-center p-8 bg-gradient-to-br from-slate-900 via-slate-950 to-black"
@@ -382,12 +592,10 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
             Unable to Play Video
           </h3>
           <p className="text-slate-400 text-sm sm:text-base max-w-md mt-2 leading-relaxed">
-            {failure?.reason ??
-              "This video can't be played in the in-app player on this device."}
+            {failure?.message ?? "This video can't be played in the in-app player on this device."}
           </p>
 
-          {/* Show a friendly diagnosis pill so users (and support staff)
-              know what's actually wrong. */}
+          {/* Friendly diagnosis pill — helps users + support staff */}
           {failure?.code !== undefined && (
             <div className="mt-4 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-300 text-xs font-medium">
               <Wifi size={14} className="text-amber-400" />
@@ -397,35 +605,23 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
                 : failure.code === 3
                   ? "Codec"
                   : failure.code === 4
-                    ? "Format / CORS"
+                    ? "Format / CORS / 404"
                     : "Playback"}
             </div>
           )}
 
           <div className="flex flex-wrap justify-center gap-3 mt-7">
-            {failure?.source.url && (
+            {/* The "Open in Browser" button — always present when there's
+                a URL to open. window.open works in regular browsers and
+                most WebViews; in a Capacitor app swap for
+                `import { Browser } from '@capacitor/browser'`. */}
+            {(failure?.source?.url || failure?.embedUrl || embedUrl || activeSource?.url) && (
               <Button
                 onClick={openExternal}
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl h-12 px-6 gap-2 shadow-lg shadow-indigo-600/20"
               >
                 <ExternalLink size={18} />
                 {FALLBACK_EXTERNAL_LABEL}
-              </Button>
-            )}
-            {hasYoutube && stage === "external" && (
-              // Stage is already 'external' here, so we cannot go to
-              // YouTube. This branch is only kept for safety; in
-              // practice YouTube would have been tried first.
-              <Button
-                onClick={() => {
-                  setStage("youtube");
-                  setFailure(null);
-                }}
-                variant="outline"
-                className="border-white/20 text-white hover:bg-white/10 rounded-xl h-12 px-6 gap-2"
-              >
-                <Play size={18} fill="currentColor" />
-                Watch on Web Player
               </Button>
             )}
             <Button
@@ -450,7 +646,7 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* ── Loading overlay (native stage only) ──────────────────── */}
+      {/* ── Loading overlay ───────────────────────────────────────── */}
       {stage === "native" && isLoading && !decoded && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[2px]">
           <div className="flex flex-col items-center gap-3 text-white/90">
@@ -462,10 +658,7 @@ const SafeVideoPlayer: React.FC<SafeVideoPlayerProps> = ({
         </div>
       )}
 
-      {/* Subtle "tap to play" hint on devices where autoplay is blocked.
-          We don't render our own play button because the native <video>
-          already exposes one in its control bar, but we surface a quiet
-          overlay on iOS Safari where controls are sometimes hidden. */}
+      {/* Tap-to-play hint when autoplay was blocked */}
       {stage === "native" && decoded && !isPlaying && autoPlay && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
           <div className="w-16 h-16 rounded-full bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center">

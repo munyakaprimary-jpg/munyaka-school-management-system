@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import { Artifact, getGradeBadgeClass } from '@/types/portfolio';
 import SafeVideoPlayer from '@/components/media/SafeVideoPlayer';
-import { buildSourcesFromUrl } from '@/components/media/videoSources';
+import { classifyVideoUrl, sanitiseVideoUrl } from '@/components/media/videoSources';
 
 interface ArtifactViewerModalProps {
   artifact: Artifact | null;
@@ -110,17 +110,25 @@ export const ArtifactViewerModal: React.FC<ArtifactViewerModalProps> = ({
               alt={artifact.title} 
               className="w-full h-auto max-h-[400px] object-contain rounded-lg" 
             />
-          ) : artifact.fileUrl && artifact.type === 'Video' ? (
-                      // Use SafeVideoPlayer instead of bare <video> so we get
-                      // automatic MP4 → YouTube → "open externally" fallbacks
-                      // and proper cross-platform (iOS/Android WebView) support.
-                      <SafeVideoPlayer
-                        sources={buildSourcesFromUrl(artifact.fileUrl)}
-                        title={artifact.title}
-                        autoPlay
-                        muted
-                        className="rounded-lg"
-                      />
+          ) : artifact.fileUrl && artifact.type === 'Video' ? (() => {
+                                // Sanitise → classify → render the right player type.
+                                // This lets portfolio videos be either direct MP4
+                                // uploads OR YouTube/Vimeo/Drive share links.
+                                const cleaned = sanitiseVideoUrl(artifact.fileUrl);
+                                const classification = classifyVideoUrl(cleaned);
+                                return (
+                                  <SafeVideoPlayer
+                                    sources={classification.sources}
+                                    embedUrl={classification.embedUrl}
+                                    embedType={classification.embedType}
+                                    title={artifact.title}
+                                    poster={artifact.fileUrl.startsWith('http') ? artifact.fileUrl : undefined}
+                                    autoPlay
+                                    muted
+                                    className="rounded-lg"
+                                  />
+                                );
+                              })()
           ) : artifact.fileUrl && artifact.type === 'Audio' ? (
             <div className="p-8 w-full flex flex-col items-center gap-4 text-white">
               <div className="w-16 h-16 rounded-full bg-indigo-600/30 flex items-center justify-center">
