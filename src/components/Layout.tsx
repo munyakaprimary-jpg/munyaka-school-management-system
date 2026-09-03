@@ -144,7 +144,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['admin', 'owner'] },
                 { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'owner'] },
     { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -178,8 +178,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       '/system-management': ['owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'],
       '/admin/control-center': ['owner'], // operational route — owner is billing-only
       '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
-      '/lan-config': ['owner'],            // operational route — owner is billing-only
-      '/students': ['owner'],              // operational — owner cannot manage learners
+            '/students': ['owner'],              // operational — owner cannot manage learners
       '/attendance': ['owner'],            // operational — owner cannot take roll call
       '/settings': ['owner'],              // operational — owner has its own profile settings
     };
