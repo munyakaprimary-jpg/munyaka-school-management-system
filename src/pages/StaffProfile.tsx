@@ -1,30 +1,115 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  Mail, 
-  Phone, 
+import {
+  Mail,
+  Phone,
   Calendar,
   Briefcase,
   GraduationCap,
   FileText,
-  ShieldCheck
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
+import { useParams } from 'react-router-dom';
 import { STAFF } from '@/lib/mock-data';
 
+// Unified staff member shape — compatible with both the directory (full_name)
+// and the mock data (name).
+interface StaffMemberProfile {
+  id: string;
+  id_no: string;
+  tsc_no?: string;
+  full_name: string;
+  name?: string;
+  role: string;
+  subjects: string[];
+  phone: string;
+  email: string;
+  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  joined: string;
+  department: string;
+}
+
+// Return the display name regardless of which key the record uses.
+const getDisplayName = (m: StaffMemberProfile) => m.full_name || m.name || 'Unknown';
+const getDisplayId = (m: StaffMemberProfile) => m.id_no || m.id || '';
+
 const StaffProfile = () => {
-  const member = STAFF[0]; 
+  const { id } = useParams<{ id: string }>();
+  const [member, setMember] = useState<StaffMemberProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    setLoading(true);
+
+    // 1. Try to resolve the staff member from the in-memory directory stored
+    //    in localStorage.  Staff.tsx persists the unified master list here
+    //    (key: munyaka_staff_directory) whenever staff are added or edited.
+    const saved = localStorage.getItem('munyaka_staff_directory');
+    if (saved) {
+      try {
+        const parsed: StaffMemberProfile[] = JSON.parse(saved);
+        const found = parsed.find(
+          s => s.id === id || s.id_no === id
+        );
+        if (found) {
+          setMember(found);
+          setLoading(false);
+          return;
+        }
+      } catch {
+        // Corrupt localStorage — fall through to seed data
+      }
+    }
+
+    // 2. Fall back to the static mock seed.  Map the mock shape to the
+    //    unified shape so the rest of the component can use full_name.
+    const mapped = STAFF.find(s => s.id === id || s.id_no === id);
+    if (mapped) {
+      setMember({
+        ...mapped,
+        full_name: mapped.name || '',
+      } as StaffMemberProfile);
+    }
+
+    setLoading(false);
+  }, [id]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
+          <p className="text-sm font-medium">Loading profile…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!member) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
+        <BackButton to="/staff" />
+        <div className="flex flex-col items-center gap-3 text-slate-400">
+          <AlertCircle size={48} />
+          <p className="text-lg font-bold text-slate-600">Staff member not found</p>
+          <p className="text-sm text-slate-400">No record matches ID <code className="bg-slate-100 px-2 py-0.5 rounded text-indigo-600">{id}</code>.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center gap-3">
         <BackButton to="/staff" />
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{member.name}</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-slate-900">{getDisplayName(member)}</h1>
           <p className="text-muted-foreground">Personnel record and academic assignments.</p>
         </div>
       </div>
@@ -32,17 +117,17 @@ const StaffProfile = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10">
-            <div className="w-24 h-24 rounded-3xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl shadow-indigo-100">
-              {member.name.split(' ').map(n => n[0]).join('')}
-            </div>
-            <h2 className="text-xl font-bold text-slate-900">{member.name}</h2>
-            <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">{member.role}</p>
-            <div className="flex justify-center gap-2 mb-8">
-              <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-slate-100 text-slate-500"}>
-                {member.status}
-              </Badge>
-              <Badge variant="outline" className="border-slate-200">ID: {member.id_no}</Badge>
-            </div>
+                      <div className="w-24 h-24 rounded-3xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl shadow-indigo-100">
+                        {getDisplayName(member).split(' ').map(n => n[0]).join('')}
+                      </div>
+                      <h2 className="text-xl font-bold text-slate-900">{getDisplayName(member)}</h2>
+                      <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">{member.role}</p>
+                      <div className="flex justify-center gap-2 mb-8">
+                        <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-slate-100 text-slate-500"}>
+                          {member.status}
+                        </Badge>
+                        <Badge variant="outline" className="border-slate-200">ID: {getDisplayId(member)}</Badge>
+                      </div>
             <div className="space-y-4 text-left border-t pt-8">
               <div className="flex items-center gap-3 text-sm text-slate-600">
                 <Calendar size={16} className="text-slate-400" />
