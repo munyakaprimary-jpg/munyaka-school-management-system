@@ -537,14 +537,13 @@ app.post('/api/teachers', (req, res) => {
     } = req.body;
 
     // Handle full_name: either use it directly or combine first_name + last_name
-    let firstName = req_first_name || '';
-    let lastName = req_last_name || '';
+    let firstName = req_first_name || 'Staff';
+    let lastName = req_last_name || 'Member';
 
-    if (full_name && !firstName && !lastName) {
-      // Split full_name into first and last name
+    if (full_name) {
       const nameParts = full_name.trim().split(/\s+/);
-      firstName = nameParts[0] || '';
-      lastName = nameParts.slice(1).join(' ') || '';
+      if (nameParts.length > 0) firstName = nameParts[0];
+      if (nameParts.length > 1) lastName = nameParts.slice(1).join(' ');
     }
 
     // Generate staff_id if not provided
@@ -557,7 +556,22 @@ app.post('/api/teachers', (req, res) => {
     dbRun(
       `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, finalStaffId, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, finalRole, email, phone, gender, finalIdNumber, tsc_number, subject_specialization, grade_assigned, stream_assigned]
+      [
+        id,
+        finalStaffId,
+        full_name || `${firstName} ${lastName}`.trim(),
+        firstName,
+        lastName,
+        finalRole,
+        email || null,
+        phone || null,
+        gender || null,
+        finalIdNumber,
+        tsc_number || null,
+        subject_specialization || null,
+        grade_assigned || null,
+        stream_assigned || null
+      ]
     );
 
     saveDatabase();
