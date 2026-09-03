@@ -580,23 +580,69 @@ export default function Students() {
     };
 
     if (editingLearnerId) {
-      setLearners((prev) =>
-        prev.map((item) =>
-          item.id === editingLearnerId
-            ? { ...item, ...normalizedEntry }
-            : item
-        )
-      );
-    } else {
-      const newLearner: LearnerRowCompat = {
-        id: Date.now().toString(),
-        ...normalizedEntry,
+          setLearners((prev) =>
+            prev.map((item) =>
+              item.id === editingLearnerId
+                ? { ...item, ...normalizedEntry }
+                : item
+            )
+          );
+          showSuccess(`${normalizedEntry.name || 'Learner'} updated successfully.`);
+        } else {
+          const newLearner: LearnerRowCompat = {
+            id: `L-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            ...normalizedEntry,
+            status: normalizedEntry.status ?? 'Active',
+          };
+    
+          // ── Offline Local Storage Persistence ─────────────────────────────
+          // Save the new record to ALL relevant storage keys so the registration
+          // survives even if the consumer page reads from a different key.
+          // This is the primary persistence target used by the Attendance
+          // page and the bulk of the school app.
+          const OFFLINE_KEYS = [
+            'school_learners_data',
+            'students',
+            'learners',
+            'pupils',
+            'school_students',
+            'registered_students',
+          ];
+    
+          for (const key of OFFLINE_KEYS) {
+            try {
+              const existingRaw = localStorage.getItem(key);
+              let existing: LearnerRowCompat[] = [];
+              if (existingRaw) {
+                const parsed = JSON.parse(existingRaw);
+                if (Array.isArray(parsed)) {
+                  existing = parsed;
+                }
+              }
+              // Defensive de-dupe: don't double-insert if the row is already there
+              if (!existing.some((l) => l.id === newLearner.id)) {
+                const updated = [newLearner, ...existing];
+                localStorage.setItem(key, JSON.stringify(updated));
+              }
+            } catch (e) {
+              console.error(`[Students] Failed to persist to ${key}:`, e);
+            }
+          }
+    
+          // Notify all listeners (any module that subscribes to data changes)
+          OFFLINE_KEYS.forEach((key) => notifyDataChanged(key));
+    
+          // Update the active React state immediately so the table re-renders
+          // without requiring a page reload.
+          setLearners((prev) => [newLearner, ...prev]);
+    
+          showSuccess(
+            `${newLearner.name} has been registered under ${newLearner.grade} ${newLearner.stream}. Saved offline.`
+          );
+        }
+    
+        setIsModalOpen(false);
       };
-      setLearners((prev) => [newLearner, ...prev]);
-    }
-
-    setIsModalOpen(false);
-  };
 
   // Close & Reset Modal Handler
   const handleCloseModal = () => {
@@ -814,29 +860,33 @@ export default function Students() {
           </button>
 
           {isAdmin && (
-                    <>
-                      <button
-                        type="button"
-                        onClick={() => setIsTransferInOpen(true)}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
-                        title="Transfer In a learner from another school"
-                      >
-                        <ArrowRightLeft className="w-4 h-4" />
-                        Transfer In Learner
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleOpenAdd}
-                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
-                      >
-                        <Plus className="w-4 h-4 stroke-[2.5]" />
-                        + Add Learner
-                      </button>
-                    </>
-                  )}
-        </div>
-      </div>
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsTransferInOpen(true)}
+                                  className="flex items-center gap-2 px-4 py-2.5 bg-white border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-50 text-indigo-700 font-semibold text-sm rounded-xl shadow-2xs transition-all active:scale-95"
+                                  title="Transfer In a learner from another school"
+                                >
+                                  <ArrowRightLeft className="w-4 h-4" />
+                                  Transfer In Learner
+                                </button>
+                              </>
+                            )}
+          
+                    {/* + Add Learner — visible to admins and teachers.
+                        Admins can pick any grade/stream; teachers see only their
+                        assigned teaching load. */}
+                    <button
+                      type="button"
+                      onClick={handleOpenAdd}
+                      data-testid="add-learner-button"
+                      className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl shadow-md transition-all active:scale-95"
+                    >
+                      <Plus className="w-4 h-4 stroke-[2.5]" />
+                      + Add Learner
+                    </button>
+                  </div>
+                </div>
 
       {/* 3. Filters Bar (Dynamic Grades & Streams from LocalStorage) */}
       <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs mb-6 flex flex-col md:flex-row items-center gap-4">
@@ -1023,27 +1073,32 @@ export default function Students() {
         </div>
       </div>
 
-      {/* 5. RegisterModal — Add / Edit Learner (Dynamic Grades & Streams) */}
-      <RegisterModal
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
-        fullName={formData.name}
-        setFullName={(v) => setFormData(prev => ({ ...prev, name: v }))}
-        assessmentNo={formData.admNo}
-        setAssessmentNo={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
-        birthCertificateNo={formData.birthCertificateNo}
-        setBirthCertificateNo={(v) => setFormData(prev => ({ ...prev, birthCertificateNo: v }))}
-        regGrade={formData.grade}
-        setRegGrade={(v) => setFormData(prev => ({ ...prev, grade: v }))}
-        regStream={formData.stream}
-        setRegStream={(v) => setFormData(prev => ({ ...prev, stream: v }))}
-        guardianName={formData.guardian}
-        setGuardianName={(v) => setFormData(prev => ({ ...prev, guardian: v }))}
-        phone={formData.phone}
-        setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
-        formError={formError}
-        onRegister={validateAndSave as unknown as (e?: React.FormEvent) => void}
-      />
+      {/* 5. RegisterModal — Add / Edit Learner (Dynamic Grades & Streams, Teacher Restrictions) */}
+            <RegisterModal
+              isOpen={isModalOpen}
+              onClose={handleCloseModal}
+              fullName={formData.name}
+              setFullName={(v) => setFormData(prev => ({ ...prev, name: v }))}
+              assessmentNo={formData.admNo}
+              setAssessmentNo={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
+              birthCertificateNo={formData.birthCertificateNo}
+              setBirthCertificateNo={(v) => setFormData(prev => ({ ...prev, birthCertificateNo: v }))}
+              regGrade={formData.grade}
+              setRegGrade={(v) => setFormData(prev => ({ ...prev, grade: v }))}
+              regStream={formData.stream}
+              setRegStream={(v) => setFormData(prev => ({ ...prev, stream: v }))}
+              guardianName={formData.guardian}
+              setGuardianName={(v) => setFormData(prev => ({ ...prev, guardian: v }))}
+              phone={formData.phone}
+              setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
+              gender={formData.gender}
+              setGender={(v) => setFormData(prev => ({ ...prev, gender: v }))}
+              formError={formError}
+              onRegister={validateAndSave as unknown as (e?: React.FormEvent) => void}
+              currentUserId={user?.id}
+              currentUserEmail={user?.email}
+              isCurrentUserAdmin={isAdmin}
+            />
 
       {/* ── Transfer Workflow Modal ─────────────────────────────────────── */}
       {/* The modal is mounted only when a valid learner has been selected
