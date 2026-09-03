@@ -39,6 +39,7 @@ interface SystemVitals {
   totalStudents: number;
   totalTeachers: number;
   todayAttendanceRate: number;
+  primarySchoolCount: number;
   juniorSchoolCount: number;
   systemStatus: 'Live';
 }
@@ -313,6 +314,7 @@ const AdminDashboard: React.FC = () => {
       totalStudents: isLoading ? 0 : totalStudents,
       totalTeachers: isLoading ? 0 : totalTeachers,
       todayAttendanceRate: isLoading ? 0 : todayAttendanceRate,
+      primarySchoolCount: isLoading ? 0 : Math.max(0, totalStudents - juniorCount),
       juniorSchoolCount: juniorCount,
       systemStatus: 'Live',
     };
@@ -641,44 +643,44 @@ const AdminDashboard: React.FC = () => {
       <LiveSyncBanner />
 
       {/* ── Summary Metric Cards ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', width: '100%' }}>
-        {/* Card 1: Total Students */}
-        <VitalCard
-          icon={<Users size={20} className="text-blue-600" />}
-          iconBg="bg-blue-50"
-          title="Total Students"
-          value={vitals.totalStudents.toLocaleString()}
-        />
-        {/* Card 2: Total Teachers */}
-        <VitalCard
-          icon={<User size={20} className="text-purple-600" />}
-          iconBg="bg-purple-50"
-          title="Total Teachers"
-          value={vitals.totalTeachers.toLocaleString()}
-        />
-        {/* Card 3: Today's Attendance */}
-        <VitalCard
-          icon={<UserCheck size={20} className="text-emerald-600" />}
-          iconBg="bg-emerald-50"
-          title="Today's Attendance"
-          value={`${vitals.todayAttendanceRate}%`}
-        />
-      </div>
+      <div className="space-y-4 w-full">
+        {/* Row 1: Overall Vitals */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <VitalCard
+            icon={<Users size={20} className="text-blue-600" />}
+            iconBg="bg-blue-50"
+            title="Total Students"
+            value={vitals.totalStudents.toLocaleString()}
+          />
+          <VitalCard
+            icon={<User size={20} className="text-purple-600" />}
+            iconBg="bg-purple-50"
+            title="Total Teachers"
+            value={vitals.totalTeachers.toLocaleString()}
+          />
+          <VitalCard
+            icon={<UserCheck size={20} className="text-emerald-600" />}
+            iconBg="bg-emerald-50"
+            title="Today's Attendance"
+            value={`${vitals.todayAttendanceRate}%`}
+          />
+        </div>
 
-      {/* ── Additional System Vitals ── */}
-      <div className="space-y-3">
-        <VitalCard
-          icon={<GraduationCap size={20} className="text-purple-600" />}
-          iconBg="bg-purple-50"
-          title="Junior School"
-          value={vitals.juniorSchoolCount.toLocaleString()}
-        />
-        <VitalCard
-          icon={<Activity size={20} className="text-emerald-600" />}
-          iconBg="bg-emerald-50"
-          title="System Status"
-          value={vitals.systemStatus}
-        />
+        {/* Row 2: School Level Breakdown */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <VitalCard
+            icon={<GraduationCap size={20} className="text-amber-600" />}
+            iconBg="bg-amber-50"
+            title="Primary School"
+            value={vitals.primarySchoolCount.toLocaleString()}
+          />
+          <VitalCard
+            icon={<GraduationCap size={20} className="text-indigo-600" />}
+            iconBg="bg-indigo-50"
+            title="Junior School"
+            value={vitals.juniorSchoolCount.toLocaleString()}
+          />
+        </div>
       </div>
 
       {/* ── Attendance Trends (Weekly) ── */}
