@@ -1042,6 +1042,297 @@ const ICTLabManagement = () => {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* --- TAB 4: PORTAL LOGINS --- */}
+        <TabsContent value="logins" className="space-y-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[
+              { label: 'Total Users', value: userStats.total, icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+              { label: 'Active Teachers', value: userStats.teachers, icon: UserPlus, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              { label: 'Active Students', value: userStats.students, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+              { label: 'Suspended', value: userStats.suspended, icon: Ban, color: 'text-rose-600', bg: 'bg-rose-50' },
+            ].map((s, i) => (
+              <Card key={i} className="border-none shadow-sm rounded-[2rem] bg-white p-6">
+                <div className="flex items-center gap-4">
+                  <div className={cn("p-3 rounded-2xl", s.bg)}>
+                    <s.icon className={s.color} size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">{s.label}</p>
+                    <h3 className="text-2xl font-black text-slate-900 leading-none mt-1">{s.value}</h3>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+            <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+              <div className="flex flex-1 gap-4 w-full">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                  <Input
+                    placeholder="Search by name or email..."
+                    className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium"
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                  />
+                </div>
+                <Select value={roleFilter} onValueChange={setRoleFilter}>
+                  <SelectTrigger className="w-[180px] h-12 rounded-2xl bg-slate-50 border-none font-bold">
+                    <SelectValue placeholder="All Roles" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Roles</SelectItem>
+                    <SelectItem value="Admin">Administrators</SelectItem>
+                    <SelectItem value="Teacher">Teachers</SelectItem>
+                    <SelectItem value="Student">Students</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
+                onClick={() => setIsAddUserOpen(true)}
+              >
+                <UserPlus size={18} /> Add User Account
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[800px]">
+                  <thead className="text-slate-500 border-b bg-slate-50/50">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">User Identity</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Role</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Username / Email</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Last Login</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {filteredSysUsers.map((user) => (
+                      <tr key={user.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-5">
+                          <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{user.name}</p>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">ID: {user.id}</p>
+                        </td>
+                        <td className="px-8 py-5">
+                          <Badge variant="outline" className="rounded-lg border-slate-200 text-slate-600 font-bold px-2.5 py-0.5">{user.role}</Badge>
+                        </td>
+                        <td className="px-8 py-5 font-medium text-slate-600">{user.username}</td>
+                        <td className="px-8 py-5 font-medium text-slate-400 italic">{user.lastLogin}</td>
+                        <td className="px-8 py-5 text-center">
+                          <Badge className={cn("rounded-xl border-none font-bold text-[10px] uppercase px-3 py-1",
+                            user.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600")}>
+                            {user.status}
+                          </Badge>
+                        </td>
+                        <td className="px-8 py-5 text-right">
+                          <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-xl h-9 px-3 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
+                              onClick={() => handleResetPassword(user.name)}
+                            >
+                              <Key size={14} /> Reset
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className={cn("rounded-xl h-9 w-9", user.status === 'Active' ? "text-rose-500 hover:bg-rose-50" : "text-emerald-600 hover:bg-emerald-50")}
+                              onClick={() => handleToggleUserStatus(user.id)}
+                            >
+                              {user.status === 'Active' ? <Ban size={16} /> : <CheckCircle2 size={16} />}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- TAB 5: NETWORK & QUOTAS --- */}
+        <TabsContent value="network" className="space-y-8">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card className="border-none shadow-sm rounded-3xl bg-indigo-600 text-white p-8 relative overflow-hidden">
+              <div className="absolute right-[-10px] top-[-10px] opacity-10"><Wifi size={120} /></div>
+              <p className="text-xs font-black uppercase tracking-widest text-indigo-200">Daily Bandwidth Used</p>
+              <h3 className="text-4xl font-black mt-2">{networkStats.bandwidth}</h3>
+              <p className="text-xs font-medium text-indigo-200 mt-4 flex items-center gap-1"><HardDrive size={12} /> Safaricom Fiber Connection</p>
+            </Card>
+            <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Active Devices</p>
+              <h3 className="text-4xl font-black text-slate-900 mt-2">{networkStats.active}</h3>
+              <p className="text-xs font-bold text-emerald-600 mt-4 flex items-center gap-1"><Activity size={12} /> Real-time Monitoring</p>
+            </Card>
+            <Card className="border-none shadow-sm rounded-3xl bg-white p-8">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400">Avg. Daily Quota</p>
+              <h3 className="text-4xl font-black text-slate-900 mt-2">{networkStats.quotaAvg}</h3>
+              <p className="text-xs font-bold text-slate-400 mt-4 flex items-center gap-1"><ShieldCheck size={12} /> Security Policies Active</p>
+            </Card>
+          </div>
+
+          <div className="flex justify-between items-center bg-white p-5 rounded-[2rem] shadow-sm border-none">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-slate-50 text-indigo-600 rounded-2xl"><Globe size={24} /></div>
+              <div>
+                <h4 className="font-bold text-slate-900">Network Access Control</h4>
+                <p className="text-xs text-slate-400">Manage individual device quotas and connection status.</p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" className="rounded-xl border-slate-200 font-bold gap-2 text-rose-600 hover:bg-rose-50"><Ban size={16} /> Revoke Guest Access</Button>
+              <Button variant="outline" className="rounded-xl border-slate-200 font-bold gap-2"><RefreshCw size={16} /> Reset All Quotas</Button>
+            </div>
+          </div>
+
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[900px]">
+                  <thead className="text-slate-500 border-b bg-slate-50/50">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">MAC Address</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Owner & Role</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Data Usage (Current vs Quota)</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {networkDevices.map((dev) => {
+                      const usagePct = (dev.used / dev.quota) * 100;
+                      return (
+                        <tr key={dev.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-8 py-6">
+                            <p className="font-mono font-bold text-slate-700">{dev.mac}</p>
+                          </td>
+                          <td className="px-8 py-6">
+                            <p className="font-bold text-slate-900">{dev.owner}</p>
+                            <p className="text-xs font-medium text-slate-400">{dev.role}</p>
+                          </td>
+                          <td className="px-8 py-6">
+                            <div className="space-y-1.5 max-w-[200px]">
+                              <div className="flex justify-between text-[10px] font-black uppercase text-slate-400">
+                                <span>{dev.used.toFixed(1)} GB / {dev.quota.toFixed(1)} GB</span>
+                                <span className={cn(usagePct > 90 ? "text-rose-600" : "text-indigo-600")}>{Math.round(usagePct)}%</span>
+                              </div>
+                              <Progress value={usagePct} className={cn("h-1.5", usagePct > 90 && "[&>div]:bg-rose-500")} />
+                            </div>
+                          </td>
+                          <td className="px-8 py-6 text-center">
+                            <Badge className={cn("rounded-full h-2.5 w-2.5 p-0 border-none", dev.status === 'Online' ? "bg-emerald-500 animate-pulse" : "bg-slate-300")} title={dev.status} />
+                            <span className="text-[10px] font-bold text-slate-400 uppercase ml-2">{dev.status}</span>
+                          </td>
+                          <td className="px-8 py-6 text-right">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="rounded-xl h-9 px-4 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
+                              onClick={() => handleAdjustQuota(dev.owner)}
+                            >
+                              Adjust Quota
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {/* --- TAB 6: LAB SCHEDULES --- */}
+        <TabsContent value="lab" className="space-y-8">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl"><Calendar size={24} /></div>
+              <div>
+                <h4 className="font-bold text-slate-900 text-lg">ICT Lab Reservations</h4>
+                <p className="text-sm text-slate-400 font-medium">Coordinate shared digital classroom resources.</p>
+              </div>
+            </div>
+            <Button
+              className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
+              onClick={() => setIsReserveOpen(true)}
+            >
+              <Plus size={20} /> Reserve Lab Slot
+            </Button>
+          </div>
+
+          <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
+            <CardContent className="p-0">
+              <div className="overflow-x-auto custom-scrollbar">
+                <table className="w-full text-sm text-left min-w-[800px]">
+                  <thead className="text-slate-500 border-b bg-slate-50/50">
+                    <tr>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Day & Time Slot</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Class / Subject</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Teacher in Charge</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Location</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {reservations.map((res) => (
+                      <tr key={res.id} className="hover:bg-slate-50/50 transition-colors group">
+                        <td className="px-8 py-6">
+                          <p className="font-bold text-slate-900">{res.day}</p>
+                          <div className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mt-1">
+                            <Clock size={12} /> {res.time}
+                          </div>
+                        </td>
+                        <td className="px-8 py-6">
+                          <p className="font-bold text-slate-800">{res.grade}</p>
+                          <p className="text-xs font-medium text-indigo-500">{res.subject}</p>
+                        </td>
+                        <td className="px-8 py-6">
+                          <div className="flex items-center gap-2 font-bold text-slate-600">
+                            <div className="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] text-slate-500">
+                              {res.teacher.split(' ').map(n => n[0]).join('')}
+                            </div>
+                            {res.teacher}
+                          </div>
+                        </td>
+                        <td className="px-8 py-6 font-bold text-slate-500">{res.room}</td>
+                        <td className="px-8 py-6 text-center">
+                          <Badge className={cn("rounded-lg border-none font-bold text-[10px] uppercase px-3 py-1",
+                            res.status === 'Completed' ? "bg-slate-100 text-slate-500" :
+                            res.status === 'In Session' ? "bg-amber-50 text-amber-700 animate-pulse" : "bg-indigo-50 text-indigo-700")}>
+                            {res.status}
+                          </Badge>
+                        </td>
+                        <td className="px-8 py-6 text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="rounded-xl h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-rose-50"
+                            onClick={() => handleCancelBooking(res.id)}
+                            disabled={res.status === 'Completed'}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
 
       {/* --- Modals --- */}
