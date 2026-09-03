@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
-import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit, Database, RefreshCw } from 'lucide-react';
+import { CreditCard, ArrowUpRight, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Edit, Database } from 'lucide-react';
 import { GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
@@ -673,9 +673,8 @@ const Fees = () => {
       notifyDataChanged('munyaka_fee_audit_logs');
     } catch (e) { console.error('Failed to persist audit log:', e); }
 
-    // 4) Notify any other listeners (balance cards, dashboards) that the
-    //    fee/transaction state has changed.
-    window.dispatchEvent(new Event('munyaka_fees_updated'));
+    // 4) The `notifyDataChanged` calls above already fire `munyaka:data-changed`
+    //    which this page's listener picks up — no manual dispatch needed.
 
     // 5) Build a lightweight student record for the receipt
     const receiptFee = calculatedFees.find(f => f.id === tx.studentId);
@@ -787,9 +786,6 @@ const Fees = () => {
     setAuditLogs(newAuditLogs);
     localStorage.setItem('munyaka_fee_audit_logs', JSON.stringify(newAuditLogs));
     notifyDataChanged('munyaka_fee_audit_logs');
-
-    // Dispatch update event for multi-component reactivity
-    window.dispatchEvent(new Event('munyaka_fees_updated'));
 
     showSuccess(`Fee record updated for ${studentName}. Status updated to ${status}.`);
   };
