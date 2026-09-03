@@ -184,15 +184,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       if (!user) return false;
       const role = user.role ?? '';
       const roleLower = role.toLowerCase();
-  
+
       // Global items are visible to every authenticated user.
       if (item.global) return true;
-  
+
       // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
       // EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
           if (isAdminRole) {
-        if (item.requiresPermission) return canAccessSystemManagement();
         // Exclude items that are strictly owner-only (roles = ['owner'] only).
         const itemRoles = item.roles ?? [];
         if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
@@ -200,26 +199,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         }
         return true;
       }
-  
+
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
                   // plus global items (Games Hub).
       if (roleLower === 'owner') {
-        if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
       }
-  
+
       // Check if user has the required role
       if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-  
+
       // Route-level denylist guard
       const blocked = BLOCKED_ROUTES[item.path];
       if (blocked && blocked.includes(role)) return false;
-  
-      // Check if item requires a specific permission
-      if (item.requiresPermission) {
-        // ICT_TEACHER and ICT_TECHNICIAN checked via permission hook
-        return canAccessSystemManagement();
-      }
+
       return true;
     });
 
