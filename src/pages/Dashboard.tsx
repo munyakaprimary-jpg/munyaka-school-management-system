@@ -345,38 +345,224 @@ const isCurrentPeriod = (startTime: string, endTime: string): boolean => {
   return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 };
 
-// ─── My Daily Schedule Card ────────────────────────────────────────────────────
-interface PeriodEntry {
-  period: number;
-  time: string;
-  grade: string;
+// ─── ClassScheduleItem Interface ────────────────────────────────────────────────
+/**
+ * Data model for a single period in the teacher's daily schedule.
+ * Used by MyDailyScheduleCard to render dynamic lesson/break rows.
+ */
+export interface ClassScheduleItem {
+  /** Unique identifier for this schedule entry */
+  id: string | number;
+  /** Sequential period number (1-based) */
+  periodNumber: number;
+  /** Learning area / subject name (empty string for breaks) */
   subject: string;
-  isCurrent: boolean;
-  status: 'upcoming' | 'active' | 'completed';
+  /** Assigned grade & stream for this lesson (null for breaks/special periods) */
+  grade: string | null;
+  /** Period start time in HH:MM format */
+  startTime: string;
+  /** Period end time in HH:MM format */
+  endTime: string;
+  /** True when the current time falls within this period */
+  isLive?: boolean;
+  /** True when this is a break, lunch, assembly, etc. (non-instructional) */
+  isBreak?: boolean;
+  /** Optional custom category label (e.g., "Games / PE", "Assembly") */
+  category?: string | null;
 }
 
-const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onViewTimetable }) => {
-  const todayKey = getTodayKey();
-  const todayLabel = new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'short', day: 'numeric' });
+// ─── Break Categories Registry ─────────────────────────────────────────────────
+const BREAK_CATEGORIES = new Set([
+  'Break', 'Lunch Break', 'Games / PE', 'Assembly', 'Pastoral / Clubs',
+]);
 
-  // Mock teacher's assigned lessons for today (in real app, this would come from teacher timetable)
-  const todaySchedule: PeriodEntry[] = useMemo(() => {
-    const lessons = [
-      { period: 1, time: '08:00 - 08:30', grade: 'Grade 4 Blue', subject: 'Mathematics', isCurrent: false },
-      { period: 2, time: '08:30 - 09:10', grade: 'Grade 4 Blue', subject: 'English', isCurrent: false },
-      { period: 3, time: '09:10 - 09:50', grade: 'Grade 5 Green', subject: 'Agriculture', isCurrent: false },
-      { period: 4, time: '09:50 - 10:30', grade: 'Grade 5 Green', subject: 'Science', isCurrent: true },
-      { period: 5, time: '10:30 - 11:00', grade: 'Break', subject: '', isCurrent: false, status: 'break' },
-      { period: 6, time: '11:00 - 11:40', grade: 'Grade 4 Blue', subject: 'Social Studies', isCurrent: false },
-      { period: 7, time: '11:40 - 12:20', grade: 'Grade 4 Blue', subject: 'Creative Arts', isCurrent: false },
-      { period: 8, time: '12:20 - 13:00', grade: 'Lunch Break', subject: '', isCurrent: false, status: 'break' },
-    ];
-    
-    return lessons.map((l) => ({
-      ...l,
-      status: l.isCurrent ? 'active' as const : l.status as 'upcoming' | 'completed' | 'break' || 'upcoming' as const,
-    }));
-  }, []);
+// ─── Sample Mock Dataset ────────────────────────────────────────────────────────
+/**
+ * Realistic test data for the daily schedule until a backend API
+ * is wired up. Replace with live data from useTeacherTimetable() hook.
+ */
+const SAMPLE_MOCK_SCHEDULE: ClassScheduleItem[] = [
+  { id: 'p1', periodNumber: 1, subject: 'Mathematics', grade: 'Grade 4 Blue', startTime: '08:00', endTime: '08:30', isLive: false },
+  { id: 'p2', periodNumber: 2, subject: 'English', grade: 'Grade 4 Blue', startTime: '08:30', endTime: '09:10', isLive: false },
+  { id: 'p3', periodNumber: 3, subject: 'Agriculture', grade: 'Grade 5 Green', startTime: '09:10', endTime: '09:50', isLive: false },
+  { id: 'p4', periodNumber: 4, subject: 'Science', grade: 'Grade 5 Green', startTime: '09:50', endTime: '10:30', isLive: true },
+  { id: 'p5', periodNumber: 5, subject: '', grade: null, startTime: '10:30', endTime: '11:00', isBreak: true, category: 'Break' },
+  { id: 'p6', periodNumber: 6, subject: 'Social Studies', grade: 'Grade 4 Blue', startTime: '11:00', endTime: '11:40', isLive: false },
+  { id: 'p7', periodNumber: 7, subject: 'Creative Arts', grade: 'Grade 4 Blue', startTime: '11:40', endTime: '12:20', isLive: false },
+  { id: 'p8', periodNumber: 8, subject: '', grade: null, startTime: '12:20', endTime: '13:00', isBreak: true, category: 'Lunch Break' },
+  { id: 'p9', periodNumber: 9, subject: 'Kiswahili', grade: 'Grade 4 Blue', startTime: '13:00', endTime: '13:40', isLive: false },
+  { id: 'p10', periodNumber: 10, subject: 'Religious Education', grade: 'Grade 4 Blue', startTime: '13:40', endTime: '14:20', isLive: false },
+];
+
+// ─── Data Pipeline Helper ──────────────────────────────────────────────────────
+/**
+ * Loads the teacher's daily schedule from localStorage timetable data.
+ * Falls back to SAMPLE_MOCK_SCHEDULE when no live data is available.
+ *
+ * In production, replace this with a call to useTeacherTimetable() or
+ * a fetch() against the backend API endpoint.
+ */
+const getTeacherDailySchedule = (teacherGradeId?: string): ClassScheduleItem[] => {
+  const todayKey = getTodayKey();
+  const GRADES_KEY = 'school-timetable-grades';
+  const TIMETABLE_KEY = 'school-timetable-data';
+
+  try {
+    const gradesRaw = localStorage.getItem(GRADES_KEY);
+    const timetableRaw = localStorage.getItem(TIMETABLE_KEY);
+
+    if (gradesRaw && timetableRaw) {
+      const grades = JSON.parse(gradesRaw) as { id: string; name: string }[];
+      const timetables = JSON.parse(timetableRaw) as Record<string, { timeSlots: any[]; entries: any[] }>;
+
+      // Find the grade to display (use first grade or teacherGradeId if provided)
+      const targetGrade = teacherGradeId
+        ? grades.find((g) => g.id === teacherGradeId)
+        : grades[0];
+
+      if (!targetGrade || !timetables[targetGrade.id]) {
+        return SAMPLE_MOCK_SCHEDULE;
+      }
+
+      const { timeSlots, entries } = timetables[targetGrade.id];
+
+      // Map timetable rows to ClassScheduleItem[]
+      const schedule: ClassScheduleItem[] = timeSlots.map((slot: any, slotIndex: number) => {
+        const dayEntry = entries[slotIndex]?.[todayKey];
+        const subject = dayEntry?.subject || slot.category || '';
+        const isBreak = !dayEntry || BREAK_CATEGORIES.has(subject);
+
+        return {
+          id: slot.id || `slot-${slotIndex}`,
+          periodNumber: slotIndex + 1,
+          subject: isBreak ? '' : subject,
+          grade: isBreak ? null : (targetGrade.name || null),
+          startTime: slot.startTime,
+          endTime: slot.endTime,
+          isLive: isCurrentPeriod(slot.startTime, slot.endTime),
+          isBreak,
+          category: slot.category || (isBreak ? subject : null),
+        };
+      });
+
+      // Sort by start time and return
+      return schedule.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    }
+  } catch (err) {
+    console.warn('[getTeacherDailySchedule] Failed to load from localStorage, using mock data:', err);
+  }
+
+  // Fallback: compute live status for mock data and return
+  return SAMPLE_MOCK_SCHEDULE.map((item) => ({
+    ...item,
+    isLive: isCurrentPeriod(item.startTime, item.endTime),
+  }));
+};
+
+// ─── Empty State Component ─────────────────────────────────────────────────────
+const EmptyScheduleState: React.FC = () => (
+  <div className="flex flex-col items-center justify-center gap-3 py-10 text-center">
+    <div className="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">
+      <CalendarClock size={24} className="text-slate-400" />
+    </div>
+    <div>
+      <p className="text-sm font-semibold text-slate-700">No classes scheduled for today</p>
+      <p className="text-xs text-slate-400 mt-1 max-w-xs">
+        Your timetable for today is empty. Check the weekly view for full schedule details.
+      </p>
+    </div>
+  </div>
+);
+
+// ─── Schedule Row Component ─────────────────────────────────────────────────────
+interface ScheduleRowProps {
+  item: ClassScheduleItem;
+  onClick?: () => void;
+}
+
+const ScheduleRow: React.FC<ScheduleRowProps> = ({ item }) => {
+  const timeRange = `${item.startTime} – ${item.endTime}`;
+
+  // A period is "completed" if its end time has passed today
+  const now = new Date();
+  const [endH, endM] = item.endTime.split(':').map(Number);
+  const isCompleted = !item.isLive && !item.isBreak && (now.getHours() * 60 + now.getMinutes() >= endH * 60 + endM);
+
+  // Determine display name (subject or category for breaks)
+  const displayName = item.isBreak ? (item.category || 'Break') : item.subject;
+
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+        item.isLive
+          ? 'bg-emerald-50 border border-emerald-200'
+          : item.isBreak
+          ? 'bg-amber-50/50 border border-amber-100'
+          : isCompleted
+          ? 'bg-slate-50 opacity-60 border border-transparent'
+          : 'bg-white border border-slate-100 hover:border-slate-200'
+      }`}
+    >
+      {/* Period number / status indicator */}
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs shrink-0 ${
+        item.isLive
+          ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200'
+          : item.isBreak
+          ? 'bg-amber-200 text-amber-700'
+          : isCompleted
+          ? 'bg-slate-200 text-slate-500'
+          : 'bg-indigo-100 text-indigo-600'
+      }`}>
+        {isCompleted ? (
+          <CheckCircle2 size={14} />
+        ) : item.isBreak ? (
+          <span className="text-[10px]">☕</span>
+        ) : (
+          item.periodNumber
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-sm font-bold truncate ${
+            item.isLive ? 'text-emerald-700' : item.isBreak ? 'text-amber-700' : 'text-slate-800'
+          }`}>
+            {displayName}
+          </p>
+          {item.isLive && (
+            <Badge
+              variant="outline"
+              className="rounded-full px-2 py-0 text-[9px] font-black bg-emerald-100 text-emerald-700 border-emerald-200"
+            >
+              LIVE
+            </Badge>
+          )}
+        </div>
+        <p className="text-xs text-slate-500 truncate">
+          {item.grade ? `${item.grade} • ` : ''}{timeRange}
+        </p>
+      </div>
+    </div>
+  );
+};
+
+// ─── My Daily Schedule Card ────────────────────────────────────────────────────
+const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onViewTimetable }) => {
+  const todayLabel = new Date().toLocaleDateString('en-KE', {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  });
+
+  // Dynamic schedule data — loaded from localStorage or mock fallback
+  const scheduleItems: ClassScheduleItem[] = useMemo(
+    () => getTeacherDailySchedule(),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [] // Re-compute on mount; timetable changes trigger full page refresh
+  );
+
+  const isEmpty = !scheduleItems || scheduleItems.length === 0;
 
   return (
     <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
@@ -387,7 +573,9 @@ const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onView
               <CalendarClock size={18} className="text-indigo-600" />
             </div>
             <div>
-              <CardTitle className="text-base font-bold text-slate-800">Today's Classes & Learning Areas</CardTitle>
+              <CardTitle className="text-base font-bold text-slate-800">
+                Today's Classes & Learning Areas
+              </CardTitle>
               <p className="text-xs text-slate-500">{todayLabel}</p>
             </div>
           </div>
@@ -402,50 +590,19 @@ const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onView
           </Button>
         </div>
       </CardHeader>
+
       <CardContent className="pt-0">
-        <div className="space-y-2">
-          {todaySchedule.map((entry) => (
-            <div
-              key={entry.period}
-              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                entry.status === 'active'
-                  ? 'bg-emerald-50 border border-emerald-200'
-                  : entry.status === 'completed'
-                  ? 'bg-slate-50 opacity-60'
-                  : entry.status === 'break'
-                  ? 'bg-amber-50/50'
-                  : 'bg-white border border-slate-100 hover:border-slate-200'
-              }`}
-            >
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
-                entry.status === 'active'
-                  ? 'bg-emerald-500 text-white'
-                  : entry.status === 'completed'
-                  ? 'bg-slate-200 text-slate-500'
-                  : entry.status === 'break'
-                  ? 'bg-amber-200 text-amber-700'
-                  : 'bg-indigo-100 text-indigo-600'
-              }`}>
-                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : entry.period}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm font-bold truncate ${entry.status === 'active' ? 'text-emerald-700' : 'text-slate-800'}`}>
-                    {entry.subject || entry.grade}
-                  </p>
-                  {entry.status === 'active' && (
-                    <Badge variant="outline" className="rounded-full px-2 py-0 text-[9px] font-black bg-emerald-100 text-emerald-700 border-emerald-200">
-                      LIVE
-                    </Badge>
-                  )}
-                </div>
-                <p className="text-xs text-slate-500 truncate">
-                  {entry.subject ? `${entry.grade}` : ''} • {entry.time}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
+        {/* Empty state */}
+        {isEmpty ? (
+          <EmptyScheduleState />
+        ) : (
+          /* Dynamic schedule list */
+          <div className="space-y-2">
+            {scheduleItems.map((item) => (
+              <ScheduleRow key={item.id} item={item} />
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
