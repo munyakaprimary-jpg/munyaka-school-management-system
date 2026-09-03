@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
+import { useAuth } from '@/context/AuthContext';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
@@ -211,6 +212,11 @@ const formatLockedAt = (iso: string | undefined): string => {
 };
 
 const Attendance = () => {
+  // ── Auth & Role ────────────────────────────────────────────
+  const { user } = useAuth();
+  const userRole = user?.role ?? '';
+  const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin';
+
   // Filters state
   const [filters, setFilters] = useState<Filters>({
     date: '2026-08-28',
@@ -289,11 +295,27 @@ const Attendance = () => {
     return () => clearInterval(id);
   }, []);
 
+  // RBAC guard: if a non-admin (teacher/staff) is currently viewing
+  // the page, force adminBypass off and prevent it from being toggled
+  // on. This ensures stale localStorage state from a previous admin
+  // session can never elevate a teacher's permissions.
+  useEffect(() => {
+    if (!isAdminRole && adminBypass) {
+      setAdminBypass(false);
+    }
+  }, [isAdminRole, adminBypass]);
+
   useEffect(() => {
     if (typeof window === 'undefined') return;
+    // Only persist adminBypass for admin roles — for teachers/staff
+    // the override is force-disabled.
+    if (!isAdminRole) {
+      localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, 'false');
+      return;
+    }
     localStorage.setItem(ATTENDANCE_ADMIN_BYPASS_KEY, adminBypass ? 'true' : 'false');
     notifyDataChanged('munyaka_attendance_admin_bypass');
-  }, [adminBypass]);
+  }, [adminBypass, isAdminRole]);
 
   // ====== Unified file-download state for CSV export ======
   const csvExport = useFileDownload();
@@ -1085,85 +1107,98 @@ const Attendance = () => {
       )}
 
       {/* ============================================
-          2b. TIME WINDOW BANNER + ADMIN OVERRIDE
-          ============================================ */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-        <CardContent className="p-4 sm:p-5">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            {/* Left: Live clock + active session indicator */}
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
-                <Clock size={20} />
-              </div>
-              <div className="min-w-0">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Live System Clock
-                </p>
-                <p className="text-xl font-black font-mono text-slate-900 tracking-tight tabular-nums">
-                  {format12h(currentTime)}
-                </p>
-                <p className="text-[11px] font-bold text-slate-500 mt-0.5">
-                  {activeSession === 'morning' ? (
-                    <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
-                  ) : activeSession === 'afternoon' ? (
-                    <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
-                  ) : activeSession === null && isSelectedDateToday ? (
-                    <span className="text-rose-600">⏰ No session is currently active. Morning begins at 6:00 AM.</span>
-                  ) : (
-                    <span className="text-slate-500">📅 Viewing {selectedDateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })} — sessions are read-only unless admin override is enabled.</span>
-                  )}
-                </p>
-              </div>
-            </div>
-
-            {/* Right: Admin override toggle + info */}
-            <div className="flex items-center gap-2">
-              <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
-                <Info size={14} className="text-slate-400" />
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 max-w-[200px] leading-tight">
-                  Time windows enforce recording schedule
-                </p>
-              </div>
-              <label
-                htmlFor="admin-bypass-toggle"
-                className={cn(
-                  "flex items-center gap-2.5 px-4 h-11 rounded-2xl border-2 cursor-pointer transition-all select-none",
-                  adminBypass
-                    ? "bg-emerald-50 border-emerald-300 text-emerald-700"
-                    : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
-                )}
-                title="Override time windows to edit past or future sessions"
-              >
-                {adminBypass ? <Unlock size={16} /> : <Lock size={16} />}
-                <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
-                  Admin Override
-                </span>
-                <span
-                  className={cn(
-                    "relative inline-flex w-9 h-5 rounded-full transition-colors",
-                    adminBypass ? "bg-emerald-500" : "bg-slate-300"
-                  )}
-                >
-                  <span
-                    className={cn(
-                      "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform",
-                      adminBypass && "translate-x-4"
+                2b. TIME WINDOW BANNER + ADMIN OVERRIDE (RBAC-gated)
+                ============================================ */}
+            <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+              <CardContent className="p-4 sm:p-5">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                  {/* Left: Live clock + active session indicator */}
+                  <div className="flex items-center gap-3 flex-1 min-w-0">
+                    <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-lg shadow-indigo-200">
+                      <Clock size={20} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                        Live System Clock
+                      </p>
+                      <p className="text-xl font-black font-mono text-slate-900 tracking-tight tabular-nums">
+                        {format12h(currentTime)}
+                      </p>
+                      <p className="text-[11px] font-bold text-slate-500 mt-0.5">
+                        {activeSession === 'morning' ? (
+                          <span className="text-amber-700">🌅 Morning session is live now (6:00 AM – 11:59 AM)</span>
+                        ) : activeSession === 'afternoon' ? (
+                          <span className="text-indigo-700">🌇 Afternoon session is live now (12:00 PM – 6:00 PM)</span>
+                        ) : activeSession === null && isSelectedDateToday ? (
+                          <span className="text-rose-600">⏰ No session is currently active. Morning begins at 6:00 AM.</span>
+                        ) : (
+                          <span className="text-slate-500">📅 Viewing {selectedDateObj.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' })}</span>
+                        )}
+                      </p>
+                    </div>
+                  </div>
+      
+                  {/* Right: Admin-only override toggle OR read-only badge for teachers */}
+                  <div className="flex items-center gap-2">
+                    {isAdminRole ? (
+                      <>
+                        {/* Admin: show info tooltip + override toggle */}
+                        <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
+                          <Info size={14} className="text-slate-400" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 max-w-[200px] leading-tight">
+                            Time windows enforce recording schedule
+                          </p>
+                        </div>
+                        <label
+                          htmlFor="admin-bypass-toggle"
+                          className={cn(
+                            "flex items-center gap-2.5 px-4 h-11 rounded-2xl border-2 cursor-pointer transition-all select-none",
+                            adminBypass
+                              ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                              : "bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100"
+                          )}
+                          title="Override time windows to edit past or future sessions"
+                        >
+                          {adminBypass ? <Unlock size={16} /> : <Lock size={16} />}
+                          <span className="text-xs font-black uppercase tracking-widest whitespace-nowrap">
+                            Admin Override
+                          </span>
+                          <span
+                            className={cn(
+                              "relative inline-flex w-9 h-5 rounded-full transition-colors",
+                              adminBypass ? "bg-emerald-500" : "bg-slate-300"
+                            )}
+                          >
+                            <span
+                              className={cn(
+                                "absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform",
+                                adminBypass && "translate-x-4"
+                              )}
+                            />
+                          </span>
+                          <input
+                            id="admin-bypass-toggle"
+                            type="checkbox"
+                            className="sr-only"
+                            checked={adminBypass}
+                            onChange={(e) => setAdminBypass(e.target.checked)}
+                            aria-label="Admin override of session time windows"
+                          />
+                        </label>
+                      </>
+                    ) : (
+                      /* Teacher/Staff: show read-only badge */
+                      <div className="flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-100 border border-slate-200">
+                        <Lock size={14} className="text-slate-400" />
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest whitespace-nowrap">
+                          Read-Only (Past Session)
+                        </span>
+                      </div>
                     )}
-                  />
-                </span>
-                <input
-                  id="admin-bypass-toggle"
-                  type="checkbox"
-                  className="sr-only"
-                  checked={adminBypass}
-                  onChange={(e) => setAdminBypass(e.target.checked)}
-                  aria-label="Admin override of session time windows"
-                />
-              </label>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
       {/* ============================================
           3. SUMMARY METRICS CARDS (Combined totals)
