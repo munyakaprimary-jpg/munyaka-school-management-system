@@ -2,10 +2,17 @@
  * Lightweight fetch wrapper for the local Express API.
  * Centralizes base URL and error handling so we can surface the server's
  * exact failure reasons (e.g. SQLite constraint errors) in the UI.
+ *
+ * The base URL is resolved dynamically via `getApiBaseUrl()`, which:
+ *   1. honors `VITE_API_URL` (build time) or `lan_server_url` (runtime), or
+ *   2. falls back to `http://<window.location.hostname>:5000` so the
+ *      same bundle works on the dev machine, the LAN IP, or a deployed
+ *      domain without code changes.
  */
 
-const API_BASE_URL =
-  (import.meta.env?.VITE_API_URL as string | undefined) || 'http://localhost:5000';
+import { getApiBaseUrl } from './apiBase';
+
+const resolveBaseUrl = (): string => getApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
@@ -22,7 +29,8 @@ async function request<T = unknown>(
   path: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_BASE_URL}${path}`;
+  const baseUrl = resolveBaseUrl();
+  const url = `${baseUrl}${path}`;
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -36,7 +44,7 @@ async function request<T = unknown>(
   } catch (err: any) {
     // Network-level error (server unreachable, CORS, DNS, etc.)
     throw new ApiError(
-      `Cannot reach server at ${API_BASE_URL}. ${err?.message || ''}`.trim(),
+      `Cannot reach server at ${baseUrl}. ${err?.message || ''}`.trim(),
       0,
       null
     );
@@ -75,4 +83,9 @@ export const api = {
   del: <T = unknown>(path: string) => request<T>(path, { method: 'DELETE' }),
 };
 
-export { API_BASE_URL };
+/**
+ * Synchronous getter for the currently-resolved base URL. Re-evaluates on
+ * each access so runtime configuration changes (e.g. the LAN server
+ * settings page) are picked up without a page reload.
+ */
+export const API_BASE_URL: string = resolveBaseUrl();

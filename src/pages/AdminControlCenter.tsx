@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import {
   Server,
   Monitor,
@@ -88,7 +89,7 @@ interface User {
 }
 
 const LAN_SERVER_KEY = 'lan_server_url';
-const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || 'http://localhost:5000';
+const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl();
 
 /**
  * Detect the machine's external LAN IPv4 address via a WebRTC ICE
@@ -150,7 +151,7 @@ const resolveLanUrl = (
   serverUrl: string,
   clientLanIP: string | null
 ): { url: string; isLoopback: boolean; resolved: boolean } => {
-  if (!serverUrl) return { url: 'http://localhost:5000', isLoopback: false, resolved: false };
+  if (!serverUrl) return { url: getApiBaseUrl(), isLoopback: false, resolved: false };
 
   const isLoopback =
     serverUrl.includes('127.') ||

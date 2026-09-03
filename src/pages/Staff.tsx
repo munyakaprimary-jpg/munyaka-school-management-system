@@ -37,7 +37,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
 import { api } from '@/lib/api';
-import { getLocalStaff, type StaffRecord } from './StaffRegistration';
+import { getApiBaseUrl } from '@/lib/apiBase';
+import { getLocalStaff, addLocalStaff, type StaffRecord } from './StaffRegistration';
 
 interface StaffMember {
   id: string;
@@ -270,52 +271,118 @@ const Staff = () => {
     setIsSaving(true);
     setFormError('');
 
-    try {
-      if (modalMode === 'add') {
-        // Add new staff via local API
-        const newStaff = {
+    if (modalMode === 'add') {
+      // ── Add mode: local-first with optional silent backend sync ───────────────
+      const staffId = `staff-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      const newStaffPayload = {
+        id: staffId,
+        full_name: formData.full_name,
+        role: formData.role.toUpperCase(),
+        phone: formData.phone,
+        email: formData.email,
+        tsc_number: formData.tsc_number || undefined,
+        id_number: `ID-${Date.now()}`,
+      };
+
+      // 1. Always persist to local storage first so the UI updates immediately
+      addLocalStaff({
+        id: staffId,
+        fullName: formData.full_name,
+        role: formData.role.toUpperCase(),
+        phone: formData.phone,
+        email: formData.email,
+        tscNumber: formData.tsc_number,
+        createdAt: new Date().toISOString(),
+      });
+
+      // 2. Update local UI state right away (optimistic)
+      setStaffDirectory(prev => [
+        ...prev,
+        {
+          id: staffId,
+          id_no: `ID-${staffId.slice(-6)}`,
+          tsc_no: formData.tsc_number,
           full_name: formData.full_name,
           role: formData.role.toUpperCase(),
+          subjects: [],
           phone: formData.phone,
           email: formData.email,
-          tsc_number: formData.tsc_number || undefined,
-          id_number: `ID-${Date.now()}`
-        };
+          status: 'Active',
+          joined: new Date().toISOString(),
+          department: 'School Administration',
+        },
+      ]);
 
-        await api.post('/api/teachers', newStaff);
-        showSuccess(`Staff member "${formData.full_name}" added successfully!`);
-      } else if (editingStaff) {
-        // Update existing staff via local API
-        const updatedData = {
-          full_name: formData.full_name,
-          role: formData.role.toUpperCase(),
-          phone: formData.phone,
-          email: formData.email,
-          tsc_number: formData.tsc_number || undefined
-        };
+      // 3. Notify other components (e.g. the Staff page list)
+      window.dispatchEvent(new Event('staff-changed'));
 
-        await api.put(`/api/teachers/${editingStaff.id}`, updatedData);
-        showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
+      // 4. Try to push to the backend silently — swallow any error
+      const baseUrl = getApiBaseUrl();
+      try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(`${baseUrl}/api/teachers`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(newStaffPayload),
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeoutId);
+        if (response.ok) {
+          showSuccess(`Staff member "${formData.full_name}" added successfully!`);
+        }
+        // If fetch fails (non-OK or network error), swallow it — local save already done
+      } catch {
+        // Silent offline fallback — no error UI, no toast, record is already saved locally
       }
 
-      // Trigger refresh across all components
+    } else if (editingStaff) {
+      // ── Edit mode: local-first with optional silent backend sync ──────────────
+      const updatedRecord = {
+        ...editingStaff,
+        full_name: formData.full_name,
+        role: formData.role.toUpperCase(),
+        phone: formData.phone,
+        email: formData.email,
+        tsc_no: formData.tsc_number || undefined,
+      };
+
+      // 1. Update local UI state immediately
+      setStaffDirectory(prev =>
+        prev.map(s => (s.id === editingStaff.id ? updatedRecord : s))
+      );
       window.dispatchEvent(new Event('staff-changed'));
-      
-      setIsModalOpen(false);
-      setEditingStaff(null);
-      setFormData({
-        full_name: '',
-        role: '',
-        phone: '',
-        email: '',
-        tsc_number: ''
-      });
-    } catch (err: any) {
-      console.error('Failed to save staff:', err);
-      setFormError(err.message || 'Failed to save staff member');
-    } finally {
-      setIsSaving(false);
+
+      // 2. Try to push to the backend silently
+      const baseUrl = getApiBaseUrl();
+      try {
+        const controller = new AbortController();
+        const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(`${baseUrl}/api/teachers/${editingStaff.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            full_name: formData.full_name,
+            role: formData.role.toUpperCase(),
+            phone: formData.phone,
+            email: formData.email,
+            tsc_number: formData.tsc_number || undefined,
+          }),
+          signal: controller.signal,
+        });
+        window.clearTimeout(timeoutId);
+        if (response.ok) {
+          showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
+        }
+      } catch {
+        // Silent offline fallback
+      }
     }
+
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+    setIsSaving(false);
   };
 
   const handleCloseModal = () => {
