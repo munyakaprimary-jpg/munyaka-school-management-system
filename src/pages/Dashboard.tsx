@@ -31,7 +31,9 @@ import {
   Megaphone,
   PenLine,
   ClipboardCheck,
+  ClipboardList,
   CalendarDays,
+  CalendarClock,
   Wifi,
   WifiOff,
   Server,
@@ -39,6 +41,14 @@ import {
   ArrowRight,
   AlertTriangle,
   RefreshCw,
+  BookOpen,
+  FileText,
+  LayoutGrid,
+  CheckCircle2,
+  Circle,
+  UsersRound,
+  BookMarked,
+  BarChart3,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
@@ -314,15 +324,357 @@ const NoticeItem: React.FC<{ notice: any; onClick: () => void }> = ({ notice, on
 
 // ─── Role: Teacher Dashboard ──────────────────────────────────────────────────
 
+// Helper to get today's day key (mon, tue, wed, thu, fri)
+const getTodayKey = (): string => {
+  const dayIndex = new Date().getDay();
+  const days: Record<number, string> = { 1: 'mon', 2: 'tue', 3: 'wed', 4: 'thu', 5: 'fri' };
+  return days[dayIndex] || 'mon';
+};
+
+// Helper to check if current time is within a period
+const isCurrentPeriod = (startTime: string, endTime: string): boolean => {
+  const now = new Date();
+  const currentMinutes = now.getHours() * 60 + now.getMinutes();
+  const [startH, startM] = startTime.split(':').map(Number);
+  const [endH, endM] = endTime.split(':').map(Number);
+  const startMinutes = startH * 60 + startM;
+  const endMinutes = endH * 60 + endM;
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
+};
+
+// ─── My Daily Schedule Card ────────────────────────────────────────────────────
+interface PeriodEntry {
+  period: number;
+  time: string;
+  grade: string;
+  subject: string;
+  isCurrent: boolean;
+  status: 'upcoming' | 'active' | 'completed';
+}
+
+const MyDailyScheduleCard: React.FC<{ onViewTimetable: () => void }> = ({ onViewTimetable }) => {
+  const todayKey = getTodayKey();
+  const todayLabel = new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'short', day: 'numeric' });
+
+  // Mock teacher's assigned lessons for today (in real app, this would come from teacher timetable)
+  const todaySchedule: PeriodEntry[] = useMemo(() => {
+    const lessons = [
+      { period: 1, time: '08:00 - 08:30', grade: 'Grade 4 Blue', subject: 'Mathematics', isCurrent: false },
+      { period: 2, time: '08:30 - 09:10', grade: 'Grade 4 Blue', subject: 'English', isCurrent: false },
+      { period: 3, time: '09:10 - 09:50', grade: 'Grade 5 Green', subject: 'Agriculture', isCurrent: false },
+      { period: 4, time: '09:50 - 10:30', grade: 'Grade 5 Green', subject: 'Science', isCurrent: true },
+      { period: 5, time: '10:30 - 11:00', grade: 'Break', subject: '', isCurrent: false, status: 'break' },
+      { period: 6, time: '11:00 - 11:40', grade: 'Grade 4 Blue', subject: 'Social Studies', isCurrent: false },
+      { period: 7, time: '11:40 - 12:20', grade: 'Grade 4 Blue', subject: 'Creative Arts', isCurrent: false },
+      { period: 8, time: '12:20 - 13:00', grade: 'Lunch Break', subject: '', isCurrent: false, status: 'break' },
+    ];
+    
+    return lessons.map((l) => ({
+      ...l,
+      status: l.isCurrent ? 'active' as const : l.status as 'upcoming' | 'completed' | 'break' || 'upcoming' as const,
+    }));
+  }, []);
+
+  return (
+    <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-indigo-100 rounded-lg">
+              <CalendarClock size={18} className="text-indigo-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">Today's Classes & Learning Areas</CardTitle>
+              <p className="text-xs text-slate-500">{todayLabel}</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="ghost"
+            onClick={onViewTimetable}
+            className="text-indigo-600 hover:bg-indigo-50 gap-1.5 h-7 text-xs font-bold"
+          >
+            Full Timetable
+            <ArrowRight size={12} />
+          </Button>
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <div className="space-y-2">
+          {todaySchedule.map((entry) => (
+            <div
+              key={entry.period}
+              className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
+                entry.status === 'active'
+                  ? 'bg-emerald-50 border border-emerald-200'
+                  : entry.status === 'completed'
+                  ? 'bg-slate-50 opacity-60'
+                  : entry.status === 'break'
+                  ? 'bg-amber-50/50'
+                  : 'bg-white border border-slate-100 hover:border-slate-200'
+              }`}
+            >
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
+                entry.status === 'active'
+                  ? 'bg-emerald-500 text-white'
+                  : entry.status === 'completed'
+                  ? 'bg-slate-200 text-slate-500'
+                  : entry.status === 'break'
+                  ? 'bg-amber-200 text-amber-700'
+                  : 'bg-indigo-100 text-indigo-600'
+              }`}>
+                {entry.status === 'completed' ? <CheckCircle2 size={14} /> : entry.period}
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className={`text-sm font-bold truncate ${entry.status === 'active' ? 'text-emerald-700' : 'text-slate-800'}`}>
+                    {entry.subject || entry.grade}
+                  </p>
+                  {entry.status === 'active' && (
+                    <Badge variant="outline" className="rounded-full px-2 py-0 text-[9px] font-black bg-emerald-100 text-emerald-700 border-emerald-200">
+                      LIVE
+                    </Badge>
+                  )}
+                </div>
+                <p className="text-xs text-slate-500 truncate">
+                  {entry.subject ? `${entry.grade}` : ''} • {entry.time}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Quick Actions Grid ────────────────────────────────────────────────────────
+interface QuickActionItem {
+  icon: LucideIcon;
+  gradient: string;
+  title: string;
+  description: string;
+  badge?: string;
+  badgeVariant?: 'pending' | 'saved' | 'info';
+  onClick: () => void;
+}
+
+const QuickActionsGrid: React.FC<{
+  attendanceStatus: 'pending' | 'saved';
+  pendingMarksCount: number;
+  onMarkAttendance: () => void;
+  onEnterMarks: () => void;
+  onDownloadReports: () => void;
+  onViewTimetable: () => void;
+}> = ({
+  attendanceStatus,
+  pendingMarksCount,
+  onMarkAttendance,
+  onEnterMarks,
+  onDownloadReports,
+  onViewTimetable,
+}) => {
+  const actions: QuickActionItem[] = [
+    {
+      icon: ClipboardCheck,
+      gradient: 'from-emerald-500 to-teal-600',
+      title: 'Mark Attendance',
+      description: attendanceStatus === 'saved' ? 'Register saved for today' : 'Take today\'s roll call',
+      badge: attendanceStatus === 'saved' ? 'Saved' : 'Pending',
+      badgeVariant: attendanceStatus === 'saved' ? 'saved' : 'pending',
+      onClick: onMarkAttendance,
+    },
+    {
+      icon: PenLine,
+      gradient: 'from-indigo-500 to-violet-600',
+      title: 'Enter Assessment',
+      description: 'Record learner scores & evaluations',
+      badge: pendingMarksCount > 0 ? `${pendingMarksCount} Pending` : undefined,
+      badgeVariant: pendingMarksCount > 0 ? 'pending' : 'info',
+      onClick: onEnterMarks,
+    },
+    {
+      icon: FileText,
+      gradient: 'from-amber-500 to-orange-600',
+      title: 'Report Cards',
+      description: 'Generate & download CBC reports',
+      onClick: onDownloadReports,
+    },
+    {
+      icon: CalendarDays,
+      gradient: 'from-blue-500 to-cyan-600',
+      title: 'Class Timetable',
+      description: 'View your weekly schedule',
+      onClick: onViewTimetable,
+    },
+  ];
+
+  return (
+    <div>
+      <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
+        Daily Tasks
+      </h2>
+      <div className="grid grid-cols-2 gap-3">
+        {actions.map((action) => (
+          <button
+            key={action.title}
+            type="button"
+            onClick={action.onClick}
+            className="group text-left bg-white border border-slate-100 shadow-sm rounded-2xl p-4 hover:shadow-md hover:-translate-y-0.5 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-300 relative"
+          >
+            <div className={`bg-gradient-to-br ${action.gradient} p-2.5 rounded-xl shadow-md mb-3 w-fit`}>
+              <action.icon size={18} className="text-white" />
+            </div>
+            <h3 className="text-sm font-black text-slate-900 leading-tight">{action.title}</h3>
+            <p className="text-xs text-slate-500 mt-1 leading-relaxed line-clamp-2">{action.description}</p>
+            {action.badge && (
+              <Badge
+                variant="outline"
+                className={`absolute top-3 right-3 rounded-full px-2 py-0.5 text-[9px] font-black border-0 ${
+                  action.badgeVariant === 'saved'
+                    ? 'bg-emerald-100 text-emerald-700'
+                    : action.badgeVariant === 'pending'
+                    ? 'bg-amber-100 text-amber-700'
+                    : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {action.badge}
+              </Badge>
+            )}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
+// ─── My Assigned Classes Summary ───────────────────────────────────────────────
+const MyClassesSummary: React.FC = () => {
+  const learners = useMemo(() => safeRead<any[]>('school_learners_data', []), []);
+  const activeLearners = learners.filter((l: any) => l.status !== 'TRANSFERRED');
+  
+  // Mock data - in real app, these would come from teacher's assigned class
+  const myClass = 'Grade 4 Blue';
+  const totalLearners = activeLearners.length;
+  const boysCount = activeLearners.filter((l: any) => l.gender?.toLowerCase() === 'male').length;
+  const girlsCount = activeLearners.filter((l: any) => l.gender?.toLowerCase() === 'female').length;
+  const pendingMarks = 3; // Mock pending marks count
+
+  return (
+    <Card className="border-none shadow-sm bg-gradient-to-r from-indigo-500 to-violet-600 rounded-2xl overflow-hidden text-white">
+      <CardContent className="p-5">
+        <div className="flex items-center gap-3 mb-4">
+          <div className="p-2 bg-white/20 rounded-lg">
+            <BookOpen size={18} className="text-white" />
+          </div>
+          <div>
+            <p className="text-xs font-medium text-white/80">My Class</p>
+            <p className="text-lg font-black">{myClass}</p>
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div className="bg-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <UsersRound size={14} className="text-white/70" />
+              <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Enrolled</p>
+            </div>
+            <p className="text-xl font-black">{totalLearners}</p>
+            <p className="text-[10px] text-white/70">
+              {boysCount} Boys / {girlsCount} Girls
+            </p>
+          </div>
+          
+          <div className="bg-white/10 rounded-xl p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <BookMarked size={14} className="text-white/70" />
+              <p className="text-[10px] font-medium text-white/70 uppercase tracking-wide">Pending Marks</p>
+            </div>
+            <p className="text-xl font-black">{pendingMarks}</p>
+            <p className="text-[10px] text-white/70">unsubmitted entries</p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─── Compact LAN Sync Banner ──────────────────────────────────────────────────
+const CompactLanSyncBanner: React.FC<{
+  isOnline: boolean;
+  isConnected: boolean;
+  serverUrl: string;
+  latency: number | null;
+  onOpenSettings: () => void;
+  onRefresh: () => Promise<void>;
+}> = ({ isOnline, isConnected, serverUrl, latency, onOpenSettings, onRefresh }) => {
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isHealthy = isOnline && isConnected;
+  
+  const displayHost = useMemo(() => {
+    if (!serverUrl) return 'Not configured';
+    try {
+      return serverUrl.replace(/^https?:\/\//, '').replace(/\/+$/, '').slice(0, 24);
+    } catch {
+      return serverUrl;
+    }
+  }, [serverUrl]);
+
+  const handleRefresh = useCallback(async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+    } finally {
+      setTimeout(() => setIsRefreshing(false), 600);
+    }
+  }, [isRefreshing, onRefresh]);
+
+  return (
+    <div
+      className={`flex items-center gap-3 p-3 rounded-xl border ${
+        isHealthy ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'
+      }`}
+    >
+      <div className={`p-2 rounded-lg ${isHealthy ? 'bg-emerald-100' : 'bg-amber-100'}`}>
+        <Server size={16} className={isHealthy ? 'text-emerald-600' : 'text-amber-600'} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className={`text-xs font-bold ${isHealthy ? 'text-emerald-700' : 'text-amber-700'}`}>
+            {isHealthy ? 'LAN Connected' : 'Offline / Local Mode'}
+          </p>
+          <span className={`relative flex h-2 w-2 ${isHealthy ? '' : 'opacity-50'}`}>
+            {isHealthy && <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />}
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${isHealthy ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+          </span>
+        </div>
+        <p className="text-[10px] text-slate-500 truncate">
+          {displayHost}{latency !== null && ` • ${latency}ms`}
+        </p>
+      </div>
+      <button
+        type="button"
+        onClick={handleRefresh}
+        className={`p-2 rounded-lg bg-white/70 hover:bg-white transition-all active:scale-90 ${
+          isRefreshing ? 'animate-spin' : ''
+        }`}
+      >
+        <RefreshCw size={14} className={isHealthy ? 'text-emerald-600' : 'text-amber-600'} />
+      </button>
+    </div>
+  );
+};
+
+// ─── Teacher Dashboard Component ────────────────────────────────────────────────
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { connectionStatus } = useLanSync();
 
-  // Local state for refresh updates — synced with the global hook via subscription
   const [localStatus, setLocalStatus] = useState(connectionStatus);
 
-  // Keep localStatus in sync with the global hook's connection status
   useEffect(() => {
     const unsubscribe = subscribeToConnectionStatus((status) => {
       setLocalStatus(status);
@@ -336,40 +688,25 @@ const TeacherDashboard: React.FC = () => {
     [today]
   );
 
-  // Assigned students count
-  const assignedStudentsCount = useMemo(() => {
-    const learners: any[] = safeRead('school_learners_data', []);
-    return learners.filter((l: any) => l.status !== 'TRANSFERRED').length;
-  }, []);
-
-  // LAN server URL
   const serverUrl = useMemo(() => {
-    return (
-      localStorage.getItem('lan_server_url') ||
-      localStorage.getItem('munyaka_lan_server_url') ||
-      ''
-    );
+    return localStorage.getItem('lan_server_url') || localStorage.getItem('munyaka_lan_server_url') || '';
   }, []);
 
-  // Recent notices
-  const recentNotices = useMemo(() => getNotices().slice(0, 5), []);
+  const handleLanRefresh = useCallback(async () => {
+    const status = await checkServerConnection();
+    setLocalStatus(status);
+  }, []);
 
-  // Trigger an immediate ping against the stored LAN server URL.
-    // checkServerConnection() reads from localStorage.getItem('lan_server_url')
-    // internally, so we just need to invoke it and reflect the result.
-    const handleLanRefresh = useCallback(async () => {
-      const status = await checkServerConnection();
-      setLocalStatus(status);
-    }, []);
+  const handleOpenLanSettings = () => navigate('/lan-config');
 
-  const handleOpenLanSettings = () => {
-    navigate('/lan-config');
-  };
+  // Mock data - in real app, these would come from teacher's assignments
+  const attendanceStatus = 'pending'; // or 'saved'
+  const pendingMarksCount = 2; // Number of pending assessment entries
 
   return (
-    <div className="space-y-6 pb-10">
-      {/* ── LAN Server Sync Status Badge (clickable) ── */}
-      <LanSyncBanner
+    <div className="space-y-4 pb-10">
+      {/* ── Compact LAN Sync Banner ── */}
+      <CompactLanSyncBanner
         isOnline={localStatus.isOnline}
         isConnected={localStatus.serverReachable}
         serverUrl={serverUrl}
@@ -378,90 +715,28 @@ const TeacherDashboard: React.FC = () => {
         onRefresh={handleLanRefresh}
       />
 
-      {/* ── Quick Action Cards ── */}
-      <div>
-        <h2 className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3">
-          Quick Actions
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          <QuickActionCard
-            icon={PenLine}
-            gradient="from-indigo-500 to-violet-600"
-            title="Enter Marks"
-            description="Record learner scores for active learning areas."
-            cta="Open Marks Entry"
-            onClick={() => navigate('/assessments')}
-          />
-          <QuickActionCard
-            icon={ClipboardCheck}
-            gradient="from-emerald-500 to-teal-600"
-            title="Mark Attendance"
-            description="Take the daily student roll call for your class."
-            cta="Take Roll Call"
-            onClick={() => navigate('/attendance')}
-          />
-          <QuickActionCard
-            icon={CalendarDays}
-            gradient="from-amber-500 to-orange-600"
-            title="Timetable"
-            description="View your weekly lesson schedule and periods."
-            cta="Open Timetable"
-            onClick={() => navigate('/timetable')}
+      {/* ── My Assigned Classes Summary ── */}
+      <MyClassesSummary />
+
+      {/* ── Two Column Layout: Schedule + Quick Actions ── */}
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+        {/* Left: My Daily Schedule */}
+        <div className="lg:col-span-3">
+          <MyDailyScheduleCard onViewTimetable={() => navigate('/timetable')} />
+        </div>
+
+        {/* Right: Quick Actions Grid */}
+        <div className="lg:col-span-2">
+          <QuickActionsGrid
+            attendanceStatus={attendanceStatus}
+            pendingMarksCount={pendingMarksCount}
+            onMarkAttendance={() => navigate('/attendance')}
+            onEnterMarks={() => navigate('/assessments')}
+            onDownloadReports={() => navigate('/reports')}
+            onViewTimetable={() => navigate('/timetable')}
           />
         </div>
       </div>
-
-      {/* ── Summary Card: Assigned Students ── */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        <StatCard
-          icon={Users}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-500"
-          title="Assigned Students"
-          value={assignedStudentsCount}
-          subtitle="across all active classes"
-        />
-      </div>
-
-      {/* ── Notice & Events Feed ── */}
-      <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
-        <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <div className="flex items-center gap-2">
-            <Megaphone size={18} className="text-purple-500" />
-            <CardTitle className="text-base font-bold text-slate-800">Notice & Events</CardTitle>
-          </div>
-          <Button
-            size="sm"
-            variant="ghost"
-            onClick={() => navigate('/notices')}
-            className="text-purple-700 hover:bg-purple-50 hover:text-purple-800 gap-1.5 h-8 text-xs font-bold"
-          >
-            View all
-            <ArrowRight size={12} />
-          </Button>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {recentNotices.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-2 py-10 text-center">
-              <div className="w-12 h-12 rounded-full bg-purple-50 flex items-center justify-center">
-                <Megaphone size={20} className="text-purple-400" />
-              </div>
-              <p className="text-sm font-semibold text-slate-700">No new notices</p>
-              <p className="text-xs text-slate-400 max-w-xs">
-                School announcements published by the admin will appear here in real time.
-              </p>
-            </div>
-          ) : (
-            recentNotices.map((notice: any) => (
-              <NoticeItem
-                key={notice.id}
-                notice={notice}
-                onClick={() => navigate('/notices')}
-              />
-            ))
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
