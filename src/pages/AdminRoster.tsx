@@ -17,6 +17,7 @@ import type {
 import {
   readGradesAndStreams,
   getStreamsForGrade,
+  GradesStreamsConfig,
 } from "@/services/gradesStreamsConfig";
 import { logDeletionAudit } from "@/services/deletionAuditLog";
 import { showSuccess } from "@/utils/toast";
@@ -50,6 +51,13 @@ const GRADES_KEYS = [
 ];
 
 const normalizeStreamName = (name: string): string => {
+  if (!name) return "";
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
+};
+
+const normalizeGradeName = (name: string): string => {
   if (!name) return "";
   const trimmed = name.trim();
   if (!trimmed) return "";
