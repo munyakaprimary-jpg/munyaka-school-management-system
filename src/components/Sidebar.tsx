@@ -55,7 +55,6 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
-import { usePermissions } from '@/hooks/usePermissions';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -66,7 +65,6 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   
   const { user, logout } = useAuth();
-  const { canAccessSystemManagement } = usePermissions();
   const location = useLocation();
   const navigate = useNavigate();
 
