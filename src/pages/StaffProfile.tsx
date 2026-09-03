@@ -89,8 +89,18 @@ const getEmergencyContact = (m: any) =>
 const getDocuments = (m: any): Array<{ label: string; status: string; date: string }> => {
   const docs = m?.documents || m?.compliance_docs || null;
   if (Array.isArray(docs) && docs.length > 0) return docs;
-  // No documents on file — return a single placeholder so the card still
-  // renders something rather than going blank.
+  return [];
+};
+const getTeachingLoad = (m: any): Array<{ subject: string; grade: string; stream: string }> => {
+  const load = m?.teaching_load;
+  if (Array.isArray(load) && load.length > 0) return load;
+  // Fall back to legacy flat fields for older records.
+  const subjects = m?.subjects || [];
+  if (subjects.length > 0) {
+    const grade = m?.assignedGrade || m?.assigned_grade || '';
+    const stream = m?.assignedStream || m?.assigned_stream || '';
+    return subjects.map((s: string) => ({ subject: s, grade, stream }));
+  }
   return [];
 };
 
@@ -133,10 +143,15 @@ const StaffProfile = () => {
     const [pwSaving, setPwSaving] = useState(false);
     
       // ── Teaching Load editing ─────────────────────────────────────────
+      // Structured teaching_load: array of { subject, grade, stream } objects.
+      // Example:
+      //   [
+      //     { subject: "Mathematics", grade: "Grade 7", stream: "Blue" },
+      //     { subject: "Agriculture & Nutrition", grade: "Grade 8", stream: "Green" },
+      //   ]
+      type TeachingLoadEntry = { subject: string; grade: string; stream: string };
       const [editLoadOpen, setEditLoadOpen] = useState(false);
-      const [editSubjects, setEditSubjects] = useState<string[]>([]);
-      const [editGrade, setEditGrade] = useState('');
-      const [editStream, setEditStream] = useState('');
+      const [editLoad, setEditLoad] = useState<TeachingLoadEntry[]>([]);
       const [editSaving, setEditSaving] = useState(false);
   
     // ── Admin: generate & set temporary password ─────────────────────
@@ -234,101 +249,152 @@ const StaffProfile = () => {
             };
           
             // ── Teaching Load: open modal pre-filled with current values ──────
-            const handleOpenEditLoad = () => {
-              setEditSubjects(getSubjects(member));
-              setEditGrade(getAssignedGrade(member) || '');
-              setEditStream(getAssignedStream(member) || '');
-              setEditLoadOpen(true);
-            };
-          
-            // Toggle a subject checkbox in the edit form.
-            const toggleEditSubject = (subject: string) => {
-              setEditSubjects(prev =>
-                prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
-              );
-            };
-          
-            // Save the teaching load: write to localStorage + update local state.
-            const handleSaveLoad = async () => {
-              if (!member) return;
-              setEditSaving(true);
-          
-              const updatedRecord = {
-                ...member,
-                subjects: editSubjects,
-                assignedGrade: editGrade || undefined,
-                assignedStream: editStream || undefined,
-                assigned_grade: editGrade || undefined,
-                assigned_stream: editStream || undefined,
-                // Keep the legacy `class` object in sync for any consumers.
-                class: editGrade || editStream
-                  ? { grade: editGrade || undefined, stream: editStream || undefined }
-                  : undefined,
+              const handleOpenEditLoad = () => {
+                // Prefer the structured teaching_load array; fall back to legacy flat fields
+                // so existing records with only subjects/assignedGrade still open correctly.
+                const existing: TeachingLoadEntry[] = (member as any).teaching_load || [];
+                if (existing.length > 0) {
+                  setEditLoad(existing);
+                } else {
+                  const subjects = getSubjects(member);
+                  const grade = getAssignedGrade(member) || '';
+                  const stream = getAssignedStream(member) || '';
+                  setEditLoad(
+                    subjects.length > 0
+                      ? subjects.map(s => ({ subject: s, grade, stream }))
+                      : grade || stream
+                        ? [{ subject: '', grade, stream }]
+                        : []
+                  );
+                }
+                setEditLoadOpen(true);
               };
           
-              // Persist to every localStorage key the resolver reads from, so the
-              // updated record is visible on subsequent visits regardless of which
-              // source the resolver picks first.
-              const unifiedKeys = [
-                'munyaka_staff_directory',
-                'teachers',
-                'staff',
-                'staff_list',
-                'staffDirectory',
-                'staffList',
-              ];
-          
-              let persisted = 0;
-              for (const key of unifiedKeys) {
-                try {
-                  const raw = localStorage.getItem(key);
-                  if (!raw) continue;
-                  const parsed = JSON.parse(raw);
-                  const list = Array.isArray(parsed) ? parsed : (parsed?.data ?? []);
-                  if (!Array.isArray(list)) continue;
-                  const idx = list.findIndex((s: any) =>
-                    s.id === member.id ||
-                    s.id_no === member.id ||
-                    s.id_no === member.id_no ||
-                    s.staff_id === member.staff_id
-                  );
-                  if (idx >= 0) {
-                    list[idx] = { ...list[idx], ...updatedRecord };
-                    localStorage.setItem(key, JSON.stringify(list));
-                    persisted++;
+            // Toggle a subject checkbox in the edit form (legacy — kept for safety, no
+              // longer used by the structured editor).
+              // eslint-disable-next-line @typescript-eslint/no-unused-vars
+              const toggleEditSubject = (_subject: string) => { /* deprecated */ };
+            
+              // Add a new row to the structured teaching load editor.
+              const addLoadRow = () => {
+                setEditLoad(prev => [...prev, { subject: '', grade: '', stream: '' }]);
+              };
+            
+              // Update one field of one row.
+              const updateLoadRow = (
+                index: number,
+                field: keyof TeachingLoadEntry,
+                value: string
+              ) => {
+                setEditLoad(prev =>
+                  prev.map((row, i) => (i === index ? { ...row, [field]: value } : row))
+                );
+              };
+            
+              // Remove a row from the structured teaching load editor.
+              const removeLoadRow = (index: number) => {
+                setEditLoad(prev => prev.filter((_, i) => i !== index));
+              };
+            
+              // Save the teaching load: write structured array to localStorage +
+              // update local state. Also keep the legacy `subjects` flat array in
+              // sync so any consumer reading the old shape still sees the values.
+              const handleSaveLoad = async () => {
+                if (!member) return;
+                setEditSaving(true);
+            
+                // Drop rows where every field is empty (user opened, added, never filled).
+                const cleanLoad: TeachingLoadEntry[] = editLoad.filter(
+                  r => r.subject.trim() || r.grade.trim() || r.stream.trim()
+                );
+            
+                // Aggregate subjects (for legacy consumers & the chip list display).
+                const subjects = Array.from(
+                  new Set(cleanLoad.map(r => r.subject).filter(Boolean))
+                );
+            
+                // The "primary" assigned class is the first row that has grade/stream.
+                const primaryRow = cleanLoad.find(r => r.grade || r.stream) || cleanLoad[0];
+                const grade = primaryRow?.grade || '';
+                const stream = primaryRow?.stream || '';
+            
+                const updatedRecord = {
+                  ...member,
+                  teaching_load: cleanLoad,
+                  subjects,
+                  assignedGrade: grade || undefined,
+                  assignedStream: stream || undefined,
+                  assigned_grade: grade || undefined,
+                  assigned_stream: stream || undefined,
+                  class: grade || stream
+                    ? { grade: grade || undefined, stream: stream || undefined }
+                    : undefined,
+                };
+            
+                // Persist to every localStorage key the resolver reads from, so the
+                // updated record is visible on subsequent visits regardless of which
+                // source the resolver picks first.
+                const unifiedKeys = [
+                  'munyaka_staff_directory',
+                  'teachers',
+                  'staff',
+                  'staff_list',
+                  'staffDirectory',
+                  'staffList',
+                ];
+            
+                let persisted = 0;
+                for (const key of unifiedKeys) {
+                  try {
+                    const raw = localStorage.getItem(key);
+                    if (!raw) continue;
+                    const parsed = JSON.parse(raw);
+                    const list = Array.isArray(parsed) ? parsed : (parsed?.data ?? []);
+                    if (!Array.isArray(list)) continue;
+                    const idx = list.findIndex((s: any) =>
+                      s.id === member.id ||
+                      s.id_no === member.id ||
+                      s.id_no === member.id_no ||
+                      s.staff_id === member.staff_id
+                    );
+                    if (idx >= 0) {
+                      list[idx] = { ...list[idx], ...updatedRecord };
+                      localStorage.setItem(key, JSON.stringify(list));
+                      persisted++;
+                    }
+                  } catch {
+                    /* skip corrupt entry */
                   }
-                } catch {
-                  /* skip corrupt entry */
                 }
-              }
-          
-              // Update component state immediately so the UI reflects the change.
-              setMember(prev => prev ? ({
-                ...prev,
-                subjects: editSubjects,
-                assignedGrade: editGrade || undefined,
-                assignedStream: editStream || undefined,
-                assigned_grade: editGrade || undefined,
-                assigned_stream: editStream || undefined,
-                class: editGrade || editStream
-                  ? { grade: editGrade || undefined, stream: editStream || undefined }
-                  : undefined,
-              } as StaffMemberProfile) : prev);
-          
-              // Notify other listeners (Staff directory page, dashboards, etc.).
-              try {
-                window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
-                window.dispatchEvent(new Event('staff-changed'));
-              } catch { /* SSR safety */ }
-          
-              showSuccess(
-                persisted > 0
-                  ? 'Teaching load updated successfully.'
-                  : 'Teaching load updated (local state only — record not found in storage).'
-              );
-              setEditSaving(false);
-              setEditLoadOpen(false);
-            };
+            
+                // Update component state immediately so the UI reflects the change.
+                setMember(prev => prev ? ({
+                  ...prev,
+                  teaching_load: cleanLoad,
+                  subjects,
+                  assignedGrade: grade || undefined,
+                  assignedStream: stream || undefined,
+                  assigned_grade: grade || undefined,
+                  assigned_stream: stream || undefined,
+                  class: grade || stream
+                    ? { grade: grade || undefined, stream: stream || undefined }
+                    : undefined,
+                } as any) : prev);
+            
+                // Notify other listeners (Staff directory page, dashboards, etc.).
+                try {
+                  window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
+                  window.dispatchEvent(new Event('staff-changed'));
+                } catch { /* SSR safety */ }
+            
+                showSuccess(
+                  persisted > 0
+                    ? 'Teaching load updated successfully.'
+                    : 'Teaching load updated (local state only — record not found in storage).'
+                );
+                setEditSaving(false);
+                setEditLoadOpen(false);
+              };
           
             // Available subjects / grades / streams for the editor.
             const SUBJECT_OPTIONS = [
@@ -787,117 +853,143 @@ const StaffProfile = () => {
                                                                           </div>
                                       
                                                                           <div className="p-6 space-y-6">
-                                                                            {/* ── Subject checkboxes ──────────────────────────── */}
-                                                                            <div className="space-y-2">
-                                                                              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
-                                                                                Learning Areas / Subjects
-                                                                              </Label>
-                                                                              <p className="text-xs text-slate-500">
-                                                                                Tick every subject this teacher is assigned to teach.
-                                                                              </p>
-                                                                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
-                                                                                {SUBJECT_OPTIONS.map(subject => {
-                                                                                  const checked = editSubjects.includes(subject);
-                                                                                  return (
-                                                                                    <label
-                                                                                      key={subject}
-                                                                                      className={
-                                                                                        'flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer text-sm font-medium transition-colors ' +
-                                                                                        (checked
-                                                                                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
-                                                                                          : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100')
-                                                                                      }
-                                                                                    >
-                                                                                      <input
-                                                                                        type="checkbox"
-                                                                                        checked={checked}
-                                                                                        onChange={() => toggleEditSubject(subject)}
-                                                                                        className="accent-indigo-600"
-                                                                                      />
-                                                                                      <span className="truncate">{subject}</span>
-                                                                                    </label>
-                                                                                  );
-                                                                                })}
-                                                                              </div>
-                                                                              <div className="flex items-center gap-2 pt-2">
-                                                                                <span className="text-xs text-slate-500 font-medium">
-                                                                                  Selected: {editSubjects.length}
-                                                                                </span>
-                                                                                {editSubjects.length > 0 && (
-                                                                                  <div className="flex flex-wrap gap-1.5">
-                                                                                    {editSubjects.map(s => (
-                                                                                      <Badge
-                                                                                        key={`chip-${s}`}
-                                                                                        className="bg-white text-slate-700 border-none shadow-sm gap-1"
-                                                                                      >
-                                                                                        {s}
-                                                                                        <button
-                                                                                          type="button"
-                                                                                          onClick={() => toggleEditSubject(s)}
-                                                                                          className="text-slate-400 hover:text-red-500"
-                                                                                        >
-                                                                                          <XIcon size={11} />
-                                                                                        </button>
-                                                                                      </Badge>
-                                                                                    ))}
-                                                                                  </div>
-                                                                                )}
-                                                                              </div>
-                                                                            </div>
-                                      
-                                                                            {/* ── Grade / Stream selectors ────────────────────── */}
-                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                                              <div className="space-y-2">
-                                                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
-                                                                                  Assigned Grade
-                                                                                </Label>
-                                                                                <select
-                                                                                  value={editGrade}
-                                                                                  onChange={(e) => setEditGrade(e.target.value)}
-                                                                                  className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                                                                                >
-                                                                                  <option value="">— Not assigned —</option>
-                                                                                  {GRADE_OPTIONS.map(g => (
-                                                                                    <option key={g} value={g}>{g}</option>
-                                                                                  ))}
-                                                                                </select>
-                                                                              </div>
-                                                                              <div className="space-y-2">
-                                                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
-                                                                                  Assigned Stream
-                                                                                </Label>
-                                                                                <select
-                                                                                  value={editStream}
-                                                                                  onChange={(e) => setEditStream(e.target.value)}
-                                                                                  className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                                                                                >
-                                                                                  <option value="">— Not assigned —</option>
-                                                                                  {STREAM_OPTIONS.map(s => (
-                                                                                    <option key={s} value={s}>{s}</option>
-                                                                                  ))}
-                                                                                </select>
-                                                                              </div>
-                                                                            </div>
-                                      
-                                                                            {/* Preview */}
-                                                                            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
-                                                                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
-                                                                                Preview
-                                                                              </p>
-                                                                              <p className="text-sm text-slate-700">
-                                                                                <span className="font-bold">Class:</span>{' '}
-                                                                                {editGrade || editStream
-                                                                                  ? `${editGrade || 'Any Grade'}${editStream ? ` · ${editStream}` : ''}`
-                                                                                  : 'Not yet assigned'}
-                                                                              </p>
-                                                                              <p className="text-sm text-slate-700 mt-1">
-                                                                                <span className="font-bold">Subjects:</span>{' '}
-                                                                                {editSubjects.length > 0
-                                                                                  ? editSubjects.join(', ')
-                                                                                  : 'None selected'}
-                                                                              </p>
-                                                                            </div>
-                                                                          </div>
+                                                                                                                                                      {/* ── Subject + Grade + Stream per-row editor ──────── */}
+                                                                                                                                                      <div className="space-y-3">
+                                                                                                                                                        <div className="flex items-center justify-between">
+                                                                                                                                                          <div>
+                                                                                                                                                            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                                                                                                                                              Subject Assignments
+                                                                                                                                                            </Label>
+                                                                                                                                                            <p className="text-xs text-slate-500 mt-0.5">
+                                                                                                                                                              Add one row per subject · grade · stream combination taught by this staff member.
+                                                                                                                                                            </p>
+                                                                                                                                                          </div>
+                                                                                                                                                          <Badge className="bg-indigo-50 text-indigo-600 border-none font-bold text-xs">
+                                                                                                                                                            {editLoad.length} assignment{editLoad.length !== 1 ? 's' : ''}
+                                                                                                                                                          </Badge>
+                                                                                                                                                        </div>
+                                                                          
+                                                                                                                                                        {editLoad.length === 0 && (
+                                                                                                                                                          <div className="rounded-2xl bg-slate-50 border border-dashed border-slate-200 p-8 text-center">
+                                                                                                                                                            <p className="text-sm text-slate-400 font-medium">
+                                                                                                                                                              No assignments yet. Click "Add Assignment" to get started.
+                                                                                                                                                            </p>
+                                                                                                                                                          </div>
+                                                                                                                                                        )}
+                                                                          
+                                                                                                                                                        {editLoad.map((row, idx) => (
+                                                                                                                                                          <div
+                                                                                                                                                            key={`load-row-${idx}`}
+                                                                                                                                                            className="flex items-start gap-2 p-3 rounded-2xl bg-slate-50 border border-slate-100 group hover:border-indigo-100 transition-colors"
+                                                                                                                                                          >
+                                                                                                                                                            {/* Row number */}
+                                                                                                                                                            <span className="flex items-center justify-center w-6 h-6 rounded-full bg-slate-200 text-slate-500 text-xs font-black shrink-0 mt-3">
+                                                                                                                                                              {idx + 1}
+                                                                                                                                                            </span>
+                                                                          
+                                                                                                                                                            {/* Subject select */}
+                                                                                                                                                            <div className="flex-1 min-w-0 space-y-1">
+                                                                                                                                                              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                                                                                                                                                Subject
+                                                                                                                                                              </Label>
+                                                                                                                                                              <select
+                                                                                                                                                                value={row.subject}
+                                                                                                                                                                onChange={(e) => updateLoadRow(idx, 'subject', e.target.value)}
+                                                                                                                                                                className="w-full h-10 rounded-xl bg-white border border-slate-200 font-medium px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                                                                                                                                              >
+                                                                                                                                                                <option value="">Select subject…</option>
+                                                                                                                                                                {SUBJECT_OPTIONS.map(s => (
+                                                                                                                                                                  <option key={s} value={s}>{s}</option>
+                                                                                                                                                                ))}
+                                                                                                                                                              </select>
+                                                                                                                                                            </div>
+                                                                          
+                                                                                                                                                            {/* Grade select */}
+                                                                                                                                                            <div className="w-32 space-y-1 shrink-0">
+                                                                                                                                                              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                                                                                                                                                Grade
+                                                                                                                                                              </Label>
+                                                                                                                                                              <select
+                                                                                                                                                                value={row.grade}
+                                                                                                                                                                onChange={(e) => updateLoadRow(idx, 'grade', e.target.value)}
+                                                                                                                                                                className="w-full h-10 rounded-xl bg-white border border-slate-200 font-medium px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                                                                                                                                              >
+                                                                                                                                                                <option value="">— Any —</option>
+                                                                                                                                                                {GRADE_OPTIONS.map(g => (
+                                                                                                                                                                  <option key={g} value={g}>{g}</option>
+                                                                                                                                                                ))}
+                                                                                                                                                              </select>
+                                                                                                                                                            </div>
+                                                                          
+                                                                                                                                                            {/* Stream select */}
+                                                                                                                                                            <div className="w-28 space-y-1 shrink-0">
+                                                                                                                                                              <Label className="text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                                                                                                                                                                Stream
+                                                                                                                                                              </Label>
+                                                                                                                                                              <select
+                                                                                                                                                                value={row.stream}
+                                                                                                                                                                onChange={(e) => updateLoadRow(idx, 'stream', e.target.value)}
+                                                                                                                                                                className="w-full h-10 rounded-xl bg-white border border-slate-200 font-medium px-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                                                                                                                                              >
+                                                                                                                                                                <option value="">— Any —</option>
+                                                                                                                                                                {STREAM_OPTIONS.map(s => (
+                                                                                                                                                                  <option key={s} value={s}>{s}</option>
+                                                                                                                                                                ))}
+                                                                                                                                                              </select>
+                                                                                                                                                            </div>
+                                                                          
+                                                                                                                                                            {/* Delete row */}
+                                                                                                                                                            <button
+                                                                                                                                                              type="button"
+                                                                                                                                                              onClick={() => removeLoadRow(idx)}
+                                                                                                                                                              className="mt-6 w-9 h-9 rounded-xl flex items-center justify-center text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0"
+                                                                                                                                                              title="Remove this assignment"
+                                                                                                                                                            >
+                                                                                                                                                              <XIcon size={16} />
+                                                                                                                                                            </button>
+                                                                                                                                                          </div>
+                                                                                                                                                        ))}
+                                                                          
+                                                                                                                                                        {/* Add row button */}
+                                                                                                                                                        <button
+                                                                                                                                                          type="button"
+                                                                                                                                                          onClick={addLoadRow}
+                                                                                                                                                          className="w-full h-11 rounded-xl border-2 border-dashed border-slate-200 text-slate-500 text-sm font-bold hover:border-indigo-300 hover:text-indigo-600 hover:bg-indigo-50 transition-colors flex items-center justify-center gap-2"
+                                                                                                                                                        >
+                                                                                                                                                          <Plus size={16} /> Add Assignment
+                                                                                                                                                        </button>
+                                                                                                                                                      </div>
+                                                                          
+                                                                                                                                                      {/* Live summary strip */}
+                                                                                                                                                      {editLoad.length > 0 && (
+                                                                                                                                                        <div className="rounded-2xl bg-indigo-50 border border-indigo-100 p-4 space-y-2">
+                                                                                                                                                          <p className="text-[10px] font-black uppercase text-indigo-400 tracking-widest">
+                                                                                                                                                            Live Summary
+                                                                                                                                                          </p>
+                                                                                                                                                          {(() => {
+                                                                                                                                                            const subjects = Array.from(new Set(editLoad.map(r => r.subject).filter(Boolean)));
+                                                                                                                                                            const classes = Array.from(new Set(
+                                                                                                                                                              editLoad
+                                                                                                                                                                .filter(r => r.grade || r.stream)
+                                                                                                                                                                .map(r => [r.grade, r.stream].filter(Boolean).join(' '))
+                                                                                                                                                                .filter(Boolean)
+                                                                                                                                                            ));
+                                                                                                                                                            return (
+                                                                                                                                                              <>
+                                                                                                                                                                <p className="text-sm text-slate-700">
+                                                                                                                                                                  <span className="font-bold">Subjects:</span>{' '}
+                                                                                                                                                                  {subjects.length > 0 ? subjects.join(', ') : 'None'}
+                                                                                                                                                                </p>
+                                                                                                                                                                <p className="text-sm text-slate-700">
+                                                                                                                                                                  <span className="font-bold">Classes:</span>{' '}
+                                                                                                                                                                  {classes.length > 0 ? classes.join(' · ') : 'None assigned'}
+                                                                                                                                                                </p>
+                                                                                                                                                              </>
+                                                                                                                                                            );
+                                                                                                                                                          })()}
+                                                                                                                                                        </div>
+                                                                                                                                                      )}
+                                                                                                                                                    </div>
                                       
                                                                           <div className="p-6 border-t flex gap-3 sticky bottom-0 bg-white">
                                                                             <Button
@@ -940,40 +1032,45 @@ const StaffProfile = () => {
                           </Button>
                         </CardHeader>
             <CardContent className="p-0">
-              <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                                  <div className="flex items-center gap-3 mb-4 text-indigo-600">
-                                    <Briefcase size={20} />
-                                    <h4 className="font-bold">Primary Learning Areas</h4>
+                          <div className="p-8 space-y-4">
+                            {getTeachingLoad(member).length > 0 ? (
+                              getTeachingLoad(member).map((entry, i) => (
+                                <div
+                                  key={`load-${i}`}
+                                  className="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+                                >
+                                  <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl shrink-0">
+                                    <Briefcase size={16} />
                                   </div>
-                                  {getSubjects(member).length > 0 ? (
-                                    <div className="flex flex-wrap gap-2">
-                                      {getSubjects(member).map((s, i) => (
-                                        <Badge key={`${s}-${i}`} className="bg-white text-slate-700 border-none shadow-sm">{s}</Badge>
-                                      ))}
-                                    </div>
-                                  ) : (
-                                    <p className="text-sm text-slate-400 font-medium italic">No learning areas assigned yet.</p>
-                                  )}
-                                </div>
-                <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                                  <div className="flex items-center gap-3 mb-4 text-emerald-600">
-                                    <GraduationCap size={20} />
-                                    <h4 className="font-bold">Assigned Class</h4>
+                                  <div className="flex-1 min-w-0">
+                                    <p className="text-sm font-bold text-slate-900">{entry.subject || 'Unnamed subject'}</p>
+                                    <p className="text-xs text-slate-500 mt-0.5">
+                                      {[entry.grade || 'Any Grade', entry.stream || 'Any Stream'].filter(Boolean).join(' · ') || 'No class assigned'}
+                                    </p>
                                   </div>
-                                  {getAssignedClass(member) ? (
-                                    <>
-                                      <p className="text-sm font-bold text-slate-900">{getAssignedClass(member)}</p>
-                                      <p className="text-xs text-slate-500 mt-1">
-                                        Total Learners: {getLearnerCount(member) ?? 'N/A'}
-                                      </p>
-                                    </>
-                                  ) : (
-                                    <p className="text-sm text-slate-400 font-medium italic">Not yet assigned to a class.</p>
-                                  )}
+                                  <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold text-xs shrink-0 rounded-xl">
+                                    {entry.grade || '—'}
+                                  </Badge>
                                 </div>
+                              ))
+                            ) : (
+                              <div className="flex flex-col items-center gap-3 py-8 text-center">
+                                <div className="p-4 bg-slate-50 rounded-full">
+                                  <Briefcase size={24} className="text-slate-300" />
+                                </div>
+                                <p className="text-sm text-slate-400 font-medium italic">No teaching load assigned yet.</p>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-indigo-600 font-bold gap-1.5"
+                                  onClick={handleOpenEditLoad}
+                                >
+                                  <Plus size={14} /> Assign Subjects
+                                </Button>
                               </div>
-                            </CardContent>
+                            )}
+                          </div>
+                        </CardContent>
                           </Card>
                 
                           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
