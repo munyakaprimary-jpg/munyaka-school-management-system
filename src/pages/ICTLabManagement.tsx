@@ -107,6 +107,59 @@ const INITIAL_LOGS: ICTLog[] = [
   { id: "ISS-103", assetId: "2", assetTag: "ICT-TB-05", deviceName: "Samsung Galaxy Tab A8", category: "Tablets", borrower: "Grade 4 Blue", description: "CBC Practical", dateIssued: "2024-05-22", expectedReturn: "2024-05-23", status: "Overdue", quantityIssued: 30, quantityReturned: 0 },
 ];
 
+// --- System Management: Portal Users ---
+interface SystemUser {
+  id: string;
+  name: string;
+  role: 'Teacher' | 'Student' | 'Admin' | 'Lab Tech';
+  username: string;
+  lastLogin: string;
+  status: 'Active' | 'Disabled';
+}
+
+const DEFAULT_SYSTEM_USERS: SystemUser[] = [
+  { id: "USR-001", name: "Grace Njeri", role: "Admin", username: "grace.njeri@munyaka.sc.ke", lastLogin: "10 mins ago", status: "Active" },
+  { id: "USR-042", name: "John Kamau", role: "Teacher", username: "john.kamau", lastLogin: "2 hours ago", status: "Active" },
+  { id: "USR-108", name: "Brian Kiptoo", role: "Student", username: "A827361", lastLogin: "Yesterday", status: "Active" },
+  { id: "USR-005", name: "Peter Omondi", role: "Lab Tech", username: "peter.tech", lastLogin: "Just now", status: "Disabled" },
+];
+
+// --- System Management: Network Devices ---
+interface NetworkDevice {
+  id: string;
+  mac: string;
+  owner: string;
+  role: string;
+  quota: number;
+  used: number;
+  status: 'Online' | 'Offline';
+}
+
+const DEFAULT_NETWORK_DEVICES: NetworkDevice[] = [
+  { id: "DEV-1", mac: "00:1A:2B:3C:4D:5E", owner: "ICT Lab Main", role: "Infrastructure", quota: 50, used: 32.4, status: "Online" },
+  { id: "DEV-2", mac: "A1:B2:C3:D4:E5:F6", owner: "Jane Mwangi", role: "Teacher", quota: 2.0, used: 1.1, status: "Online" },
+  { id: "DEV-3", mac: "11:22:33:44:55:66", owner: "Staff Room Guest", role: "Guest", quota: 0.5, used: 0.45, status: "Online" },
+  { id: "DEV-4", mac: "99:88:77:66:55:44", owner: "Tablets Cart A", role: "Student", quota: 10, used: 2.5, status: "Offline" },
+];
+
+// --- System Management: Lab Reservations ---
+interface LabReservation {
+  id: string;
+  day: string;
+  time: string;
+  grade: string;
+  subject: string;
+  teacher: string;
+  room: string;
+  status: 'Upcoming' | 'In Session' | 'Completed';
+}
+
+const DEFAULT_LAB_RESERVATIONS: LabReservation[] = [
+  { id: "RES-01", day: "Monday", time: "08:00 AM - 09:30 AM", grade: "Grade 7 Alpha", subject: "Digital Literacy", teacher: "Mr. Omondi", room: "Main Lab", status: "Completed" },
+  { id: "RES-02", day: "Wednesday", time: "11:00 AM - 12:30 PM", grade: "Grade 4 Blue", subject: "Creative Arts", teacher: "Ms. Mwangi", room: "Main Lab", status: "In Session" },
+  { id: "RES-03", day: "Friday", time: "02:00 PM - 03:30 PM", grade: "Grade 8 Beta", subject: "Pre-Tech", teacher: "Mr. Kamau", room: "Mini Lab", status: "Upcoming" },
+];
+
 const ICTLabManagement = () => {
   // --- States ---
   const [activeTab, setActiveTab] = useState("inventory");
