@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useGradesStreamsConfig } from '@/services/gradesStreamsConfig';
 
 export interface TimeSlot {
   id: string;
@@ -49,7 +50,6 @@ const getCategoryColor = (category: string | null): { bg: string; text: string; 
 
 const DAYS = ['mon', 'tue', 'wed', 'thu', 'fri'];
 const STORAGE_KEY = 'school-timetable-data';
-const GRADES_KEY = 'school-timetable-grades';
 
 const SUBJECT_COLORS = [
   'bg-indigo-100 text-indigo-700 border border-indigo-200',
@@ -62,12 +62,6 @@ const SUBJECT_COLORS = [
   'bg-teal-100 text-teal-700 border border-teal-200',
   'bg-orange-100 text-orange-700 border border-orange-200',
   'bg-sky-100 text-sky-700 border border-sky-200',
-];
-
-const DEFAULT_GRADES = [
-  { id: 'grade4', name: 'Grade 4 - Blue' },
-  { id: 'grade5', name: 'Grade 5 - Green' },
-  { id: 'grade6', name: 'Grade 6 - Alpha' },
 ];
 
 const getDefaultTimeSlots = (): TimeSlot[] => [
@@ -96,23 +90,41 @@ const getDefaultEntries = (timeSlots: TimeSlot[]): TimetableEntry[] =>
   timeSlots.map(makeEntryForSlot);
 
 export function useTimetable() {
-  const [grades, setGrades] = useState<{ id: string; name: string }[]>(() => {
-    if (typeof window === 'undefined') return DEFAULT_GRADES;
-    const stored = localStorage.getItem(GRADES_KEY);
-    if (stored) return JSON.parse(stored);
-    localStorage.setItem(GRADES_KEY, JSON.stringify(DEFAULT_GRADES));
-    return DEFAULT_GRADES;
-  });
+  const { grades: configGrades, streams: configStreams } = useGradesStreamsConfig();
 
-  const [selectedGrade, setSelectedGrade] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'grade4';
-    const stored = localStorage.getItem(GRADES_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      return parsed[0]?.id || 'grade4';
+  // Generate grades list dynamically from Grades & Streams menu
+  const grades = (() => {
+    const list: { id: string; name: string }[] = [];
+    configGrades.forEach(g => {
+      const streamsForGrade = configStreams[g] || [];
+      if (streamsForGrade.length > 0) {
+        streamsForGrade.forEach(s => {
+          const name = `${g} - ${s}`;
+          const id = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
+          list.push({ id, name });
+        });
+      } else {
+        const id = g.toLowerCase().replace(/[^a-z0-9]/g, '-');
+        list.push({ id, name: g });
+      }
+    });
+    if (list.length === 0) {
+      return [
+        { id: 'grade-4-blue', name: 'Grade 4 - Blue' },
+        { id: 'grade-5-blue', name: 'Grade 5 - Blue' },
+      ];
     }
-    return 'grade4';
-  });
+    return list;
+  })();
+
+  const [selectedGrade, setSelectedGrade] = useState<string>(() => grades[0]?.id || 'grade-4-blue');
+
+  // Ensure selectedGrade is valid when grades change
+  useEffect(() => {
+    if (!grades.some(g => g.id === selectedGrade) && grades.length > 0) {
+      setSelectedGrade(grades[0].id);
+    }
+  }, [grades, selectedGrade]);
 
   const [timetables, setTimetables] = useState<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(() => {
     if (typeof window === 'undefined') return {};
@@ -277,31 +289,12 @@ export function useTimetable() {
 
   // Grade Management
   const addGrade = useCallback((id: string, name: string) => {
-    const newGrade = { id, name };
-    setGrades(prev => {
-      const updated = [...prev, newGrade];
-      localStorage.setItem(GRADES_KEY, JSON.stringify(updated));
-      return updated;
-    });
-    initializeGradeTimetable(id);
-  }, [initializeGradeTimetable]);
+    // Handled in Grades & Streams menu
+  }, []);
 
   const deleteGrade = useCallback((gradeId: string) => {
-    setGrades(prev => {
-      const updated = prev.filter(g => g.id !== gradeId);
-      localStorage.setItem(GRADES_KEY, JSON.stringify(updated));
-      return updated;
-    });
-    setTimetables(prev => {
-      const updated = { ...prev };
-      delete updated[gradeId];
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      return updated;
-    });
-    if (selectedGrade === gradeId && grades.length > 1) {
-      setSelectedGrade(grades.find(g => g.id !== gradeId)?.id || 'grade4');
-    }
-  }, [selectedGrade, grades]);
+    // Handled in Grades & Streams menu
+  }, []);
 
   return {
     grades: currentGrades,
