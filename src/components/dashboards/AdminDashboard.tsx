@@ -453,6 +453,38 @@ const AdminDashboard: React.FC = () => {
   // ── Toggle: show only today's alerts, or fall back to historical logs
   const [showTodayOnly, setShowTodayOnly] = useState(true);
 
+  // ── Exact timestamp formatter: "Sep 3, 2026 at 15:59:48" format
+  const formatExactTimestamp = useCallback((iso: string): string => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    // Format: "Sep 3, 2026 at 15:59:48"
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const day = d.getDate();
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month} ${day}, ${year} at ${hours}:${minutes}:${seconds}`;
+  }, []);
+
+  // ── Relative time formatter: "2 minutes ago" / "1 hour ago" etc.
+  const formatRelativeTimestamp = useCallback((iso: string): string => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    const now = new Date();
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 30) return 'Just now';
+    if (diffSec < 60) return `${diffSec} seconds ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay === 1) return 'Yesterday';
+    if (diffDay < 7) return `${diffDay} days ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  }, []);
+
   // ── Recent Alerts — derived from activity log, ordered by timestamp DESC
   const alerts = useMemo<AlertItem[]>(() => {
     // getRecentActivity() already sorts newest-first (created_at DESC)
@@ -529,38 +561,6 @@ const AdminDashboard: React.FC = () => {
       };
     });
   }, [activityVersion, showTodayOnly, formatExactTimestamp, formatRelativeTimestamp]);
-
-  // ── Exact timestamp formatter: "Sep 3, 2026 at 15:59:48" format
-  const formatExactTimestamp = useCallback((iso: string): string => {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    // Format: "Sep 3, 2026 at 15:59:48"
-    const month = d.toLocaleString('en-US', { month: 'short' });
-    const day = d.getDate();
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const seconds = String(d.getSeconds()).padStart(2, '0');
-    return `${month} ${day}, ${year} at ${hours}:${minutes}:${seconds}`;
-  }, []);
-
-  // ── Relative time formatter: "2 minutes ago" / "1 hour ago" etc.
-  const formatRelativeTimestamp = useCallback((iso: string): string => {
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '—';
-    const now = new Date();
-    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diffSec < 30) return 'Just now';
-    if (diffSec < 60) return `${diffSec} seconds ago`;
-    const diffMin = Math.floor(diffSec / 60);
-    if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
-    const diffDay = Math.floor(diffHour / 24);
-    if (diffDay === 1) return 'Yesterday';
-    if (diffDay < 7) return `${diffDay} days ago`;
-    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }, []);
 
   // ── School Enrollment — render every canonical grade in strict ascending order,
     //    with gender breakdown. Classes with 0 registered learners still appear
