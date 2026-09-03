@@ -37,8 +37,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Wifi, label: 'LAN', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'owner'] },
   { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
-  // Note: "Licenses" tab removed — licensing/subscription management is handled within
-  // the Payment & Subscriptions module (/payment-management) for the owner role.
+  { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin', 'head_teacher'] },
   { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
 ];
