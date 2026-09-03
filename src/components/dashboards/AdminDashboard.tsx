@@ -641,25 +641,31 @@ const AdminDashboard: React.FC = () => {
       <LiveSyncBanner />
 
       {/* ── Summary Metric Cards ── */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <VitalCard
-          icon={<Users size={20} className="text-blue-600" />}
-          iconBg="bg-blue-50"
-          title="Total Students"
-          value={vitals.totalStudents.toLocaleString()}
-        />
-        <VitalCard
-          icon={<User size={20} className="text-purple-600" />}
-          iconBg="bg-purple-50"
-          title="Total Teachers"
-          value={vitals.totalTeachers.toLocaleString()}
-        />
-        <VitalCard
-          icon={<UserCheck size={20} className="text-emerald-600" />}
-          iconBg="bg-emerald-50"
-          title="Today's Attendance"
-          value={`${vitals.todayAttendanceRate}%`}
-        />
+      <div className="flex flex-col md:flex-row gap-4 w-full">
+        <div className="w-full md:w-1/3 flex-1">
+          <VitalCard
+            icon={<Users size={20} className="text-blue-600" />}
+            iconBg="bg-blue-50"
+            title="Total Students"
+            value={vitals.totalStudents.toLocaleString()}
+          />
+        </div>
+        <div className="w-full md:w-1/3 flex-1">
+          <VitalCard
+            icon={<User size={20} className="text-purple-600" />}
+            iconBg="bg-purple-50"
+            title="Total Teachers"
+            value={vitals.totalTeachers.toLocaleString()}
+          />
+        </div>
+        <div className="w-full md:w-1/3 flex-1">
+          <VitalCard
+            icon={<UserCheck size={20} className="text-emerald-600" />}
+            iconBg="bg-emerald-50"
+            title="Today's Attendance"
+            value={`${vitals.todayAttendanceRate}%`}
+          />
+        </div>
       </div>
 
       {/* ── Additional System Vitals ── */}
