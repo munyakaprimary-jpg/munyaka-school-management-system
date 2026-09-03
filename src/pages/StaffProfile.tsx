@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import BackButton from '@/components/ui/BackButton';
 import {
   Mail,
@@ -13,16 +15,24 @@ import {
   GraduationCap,
   FileText,
   ShieldCheck,
-  AlertCircle
+  AlertCircle,
+  KeyRound,
+  Eye,
+  EyeOff,
+  Copy,
+  Check
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { STAFF } from '@/lib/mock-data';
+import { useAuth } from '@/context/AuthContext';
+import { showSuccess, showError } from '@/utils/toast';
 
 // Unified staff member shape — compatible with both the directory (full_name)
 // and the mock data (name).
 interface StaffMemberProfile {
   id: string;
   id_no: string;
+  staff_id?: string;
   tsc_no?: string;
   tsc_number?: string;
   designation?: string;
@@ -77,8 +87,135 @@ const getDocuments = (m: any): Array<{ label: string; status: string; date: stri
 
 const StaffProfile = () => {
   const { id } = useParams<{ id: string }>();
+  const { user } = useAuth();
   const [member, setMember] = useState<StaffMemberProfile | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // ── View-mode detection ───────────────────────────────────────────
+  // isSelfView  : the signed-in user is the staff member on this page.
+  // isAdminView : an admin/owner is viewing somebody else's profile.
+  const memberEmail = (member?.email || '').trim().toLowerCase();
+  const userEmail = (user?.email || '').trim().toLowerCase();
+  const memberStaffId = (member?.staff_id || '').trim().toLowerCase();
+  const userStaffId = (user?.staff_id || '').trim().toLowerCase();
+  const memberId = (member?.id || '').trim();
+
+  const isSelfView = !!user && !!member && (
+    (userEmail && memberEmail && userEmail === memberEmail) ||
+    (userStaffId && memberStaffId && userStaffId === memberStaffId) ||
+    (user.id && memberId && user.id === memberId)
+  );
+
+  const isAdminView = !!user && (
+    user.role === 'admin' || user.role === 'owner'
+  ) && !isSelfView;
+
+  // ── Modal / dialog state ─────────────────────────────────────────
+  const [adminResetOpen, setAdminResetOpen] = useState(false);
+  const [selfChangeOpen, setSelfChangeOpen] = useState(false);
+  const [generatedTemp, setGeneratedTemp] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const [oldPassword, setOldPassword] = useState('');
+    const [newPassword, setNewPassword] = useState('');
+    const [confirmPassword, setConfirmPassword] = useState('');
+    const [showPw, setShowPw] = useState(false);
+    const [pwError, setPwError] = useState('');
+    const [pwSaving, setPwSaving] = useState(false);
+  
+    // ── Admin: generate & set temporary password ─────────────────────
+    const handleAdminReset = () => {
+      const temp = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
+  
+      // Update the users storage with the new temp password.
+      const usersJson = localStorage.getItem('munyaka_users');
+      if (usersJson) {
+        const users = JSON.parse(usersJson);
+        const emailKey = (member?.email || '').trim().toLowerCase();
+        const staffIdKey = (member?.staff_id || '').trim().toLowerCase();
+  
+        const target = users[emailKey] || users[staffIdKey];
+        if (target) {
+          target.password = temp;
+          if (!target.alternativePasswords) target.alternativePasswords = [];
+          if (!target.alternativePasswords.includes(temp)) {
+            target.alternativePasswords.push(temp);
+          }
+          localStorage.setItem('munyaka_users', JSON.stringify(users));
+        }
+      }
+  
+      setGeneratedTemp(temp);
+      showSuccess('Temporary password generated and saved.');
+    };
+  
+    const handleCopyTemp = () => {
+      if (!generatedTemp) return;
+      navigator.clipboard.writeText(generatedTemp).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+      });
+    };
+  
+    // ── Self: change own password ────────────────────────────────────
+    const handleSelfChangePassword = async () => {
+      setPwError('');
+  
+      if (!oldPassword.trim()) {
+        setPwError('Please enter your current password.');
+        return;
+      }
+      if (!newPassword.trim()) {
+        setPwError('Please enter a new password.');
+        return;
+      }
+      if (newPassword.length < 4) {
+        setPwError('New password must be at least 4 characters.');
+        return;
+      }
+      if (newPassword !== confirmPassword) {
+        setPwError('New password and confirmation do not match.');
+        return;
+      }
+  
+      setPwSaving(true);
+      // Update in users storage directly.
+      const usersJson = localStorage.getItem('munyaka_users');
+      if (usersJson) {
+        const users = JSON.parse(usersJson);
+        const emailKey = (member?.email || '').trim().toLowerCase();
+        const staffIdKey = (member?.staff_id || '').trim().toLowerCase();
+        const target = users[emailKey] || users[staffIdKey];
+  
+        if (target) {
+          const isValid =
+            target.password === oldPassword ||
+            (target.alternativePasswords || []).includes(oldPassword);
+  
+          if (!isValid) {
+            setPwError('Current password is incorrect.');
+            setPwSaving(false);
+            return;
+          }
+  
+          target.password = newPassword;
+          if (!target.alternativePasswords) target.alternativePasswords = [];
+          if (!target.alternativePasswords.includes(newPassword)) {
+            target.alternativePasswords.push(newPassword);
+          }
+          localStorage.setItem('munyaka_users', JSON.stringify(users));
+          showSuccess('Password changed successfully.');
+          setSelfChangeOpen(false);
+          setOldPassword('');
+          setNewPassword('');
+          setConfirmPassword('');
+          setPwError('');
+        } else {
+          showError('Account record not found. Please contact your administrator.');
+        }
+      }
+      setPwSaving(false);
+    };
 
   useEffect(() => {
       setLoading(true);
@@ -257,17 +394,243 @@ const StaffProfile = () => {
                     </Card>
 
           <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 overflow-hidden relative">
-                      <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-                        <ShieldCheck size={140} />
-                      </div>
-                      <CardTitle className="text-lg mb-4">Account Security</CardTitle>
-                      <p className="text-sm text-indigo-200 mb-6">
-                        {getRole(member)} account · manage credentials and access.
-                      </p>
-                      <Button className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl">
-                        Reset Credentials
-                      </Button>
-                    </Card>
+                                <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
+                                  <ShieldCheck size={140} />
+                                </div>
+                                <CardTitle className="text-lg mb-4">Account Security</CardTitle>
+                                <p className="text-sm text-indigo-200 mb-6">
+                                  {getRole(member)} account · manage credentials and access.
+                                </p>
+          
+                                {/* ── Admin viewing another staff member → Reset Credentials ── */}
+                                {isAdminView && (
+                                  <Button
+                                    onClick={() => {
+                                      setGeneratedTemp(null);
+                                      setCopied(false);
+                                      setAdminResetOpen(true);
+                                    }}
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl gap-2 font-bold"
+                                  >
+                                    <KeyRound size={15} /> Reset Credentials
+                                  </Button>
+                                )}
+          
+                                {/* ── Staff viewing their own profile → Change Password ── */}
+                                {isSelfView && (
+                                  <Button
+                                    onClick={() => {
+                                      setOldPassword('');
+                                      setNewPassword('');
+                                      setConfirmPassword('');
+                                      setPwError('');
+                                      setShowPw(false);
+                                      setSelfChangeOpen(true);
+                                    }}
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl gap-2 font-bold"
+                                  >
+                                    <KeyRound size={15} /> Change Password
+                                  </Button>
+                                )}
+          
+                                {/* ── No recognised session → default admin view ── */}
+                                {!isAdminView && !isSelfView && (
+                                  <Button
+                                    onClick={() => {
+                                      setGeneratedTemp(null);
+                                      setCopied(false);
+                                      setAdminResetOpen(true);
+                                    }}
+                                    className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl gap-2 font-bold"
+                                  >
+                                    <KeyRound size={15} /> Reset Credentials
+                                  </Button>
+                                )}
+                              </Card>
+          
+                              {/* ── Admin Reset Credentials Modal ─────────────────────────────── */}
+                              {adminResetOpen && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+                                  <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in zoom-in-95">
+                                    <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                                          <KeyRound size={18} />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900">
+                                          Reset Credentials
+                                        </h3>
+                                      </div>
+                                      <button
+                                        onClick={() => setAdminResetOpen(false)}
+                                        className="p-1 text-slate-400 hover:text-slate-600"
+                                        type="button"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                    <div className="p-6 space-y-4">
+                                      <p className="text-sm text-slate-600">
+                                        Generate a new temporary password for{' '}
+                                        <span className="font-bold text-slate-900">
+                                          {getDisplayName(member)}
+                                        </span>
+                                        ? The user will need to use this temporary password
+                                        the next time they sign in.
+                                      </p>
+          
+                                      {!generatedTemp ? (
+                                        <div className="flex gap-3 pt-2">
+                                          <Button
+                                            variant="ghost"
+                                            className="flex-1 rounded-xl h-11 font-bold"
+                                            onClick={() => setAdminResetOpen(false)}
+                                          >
+                                            Cancel
+                                          </Button>
+                                          <Button
+                                            className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+                                            onClick={handleAdminReset}
+                                          >
+                                            <KeyRound size={15} /> Generate Password
+                                          </Button>
+                                        </div>
+                                      ) : (
+                                        <div className="space-y-3 pt-2">
+                                          <div className="space-y-2">
+                                            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                              New Temporary Password
+                                            </Label>
+                                            <div className="flex items-center gap-2">
+                                              <Input
+                                                readOnly
+                                                value={generatedTemp}
+                                                className="rounded-xl h-11 bg-slate-50 border-none font-mono font-bold tracking-wider text-indigo-600"
+                                              />
+                                              <Button
+                                                variant="outline"
+                                                size="icon"
+                                                onClick={handleCopyTemp}
+                                                className="h-11 w-11 rounded-xl shrink-0"
+                                                title="Copy to clipboard"
+                                              >
+                                                {copied ? <Check size={15} className="text-emerald-600" /> : <Copy size={15} />}
+                                              </Button>
+                                            </div>
+                                            <p className="text-xs text-amber-600 font-medium pt-1">
+                                              ⚠ Share this password securely. It will not be shown again.
+                                            </p>
+                                          </div>
+                                          <Button
+                                            className="w-full rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold"
+                                            onClick={() => setAdminResetOpen(false)}
+                                          >
+                                            Done
+                                          </Button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
+          
+                              {/* ── Self Change Password Modal ────────────────────────────────── */}
+                              {selfChangeOpen && (
+                                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+                                  <div className="bg-white rounded-2xl shadow-xl max-w-md w-full overflow-hidden animate-in zoom-in-95">
+                                    <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                                      <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                                          <KeyRound size={18} />
+                                        </div>
+                                        <h3 className="text-lg font-bold text-slate-900">
+                                          Change Password
+                                        </h3>
+                                      </div>
+                                      <button
+                                        onClick={() => setSelfChangeOpen(false)}
+                                        className="p-1 text-slate-400 hover:text-slate-600"
+                                        type="button"
+                                      >
+                                        ×
+                                      </button>
+                                    </div>
+                                    <div className="p-6 space-y-4">
+                                      {pwError && (
+                                        <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold">
+                                          <AlertCircle size={14} /> {pwError}
+                                        </div>
+                                      )}
+          
+                                      <div className="space-y-2">
+                                        <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                          Current Password
+                                        </Label>
+                                        <div className="relative">
+                                          <Input
+                                            type={showPw ? 'text' : 'password'}
+                                            value={oldPassword}
+                                            onChange={(e) => setOldPassword(e.target.value)}
+                                            placeholder="Enter your current password"
+                                            className="rounded-xl h-12 bg-slate-50 border-none font-bold pr-12"
+                                          />
+                                          <button
+                                            type="button"
+                                            onClick={() => setShowPw(s => !s)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                          >
+                                            {showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+                                          </button>
+                                        </div>
+                                      </div>
+          
+                                      <div className="space-y-2">
+                                        <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                          New Password
+                                        </Label>
+                                        <Input
+                                          type={showPw ? 'text' : 'password'}
+                                          value={newPassword}
+                                          onChange={(e) => setNewPassword(e.target.value)}
+                                          placeholder="At least 4 characters"
+                                          className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                                        />
+                                      </div>
+          
+                                      <div className="space-y-2">
+                                        <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                          Confirm New Password
+                                        </Label>
+                                        <Input
+                                          type={showPw ? 'text' : 'password'}
+                                          value={confirmPassword}
+                                          onChange={(e) => setConfirmPassword(e.target.value)}
+                                          placeholder="Re-enter new password"
+                                          className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                                        />
+                                      </div>
+          
+                                      <div className="flex gap-3 pt-2">
+                                        <Button
+                                          variant="ghost"
+                                          className="flex-1 rounded-xl h-11 font-bold"
+                                          onClick={() => setSelfChangeOpen(false)}
+                                          disabled={pwSaving}
+                                        >
+                                          Cancel
+                                        </Button>
+                                        <Button
+                                          className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+                                          onClick={handleSelfChangePassword}
+                                          disabled={pwSaving}
+                                        >
+                                          {pwSaving ? 'Saving…' : 'Save Password'}
+                                        </Button>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              )}
         </div>
 
         <div className="lg:col-span-2 space-y-8">
