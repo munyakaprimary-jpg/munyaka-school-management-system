@@ -45,6 +45,9 @@ import type { PreRegisteredStaff as PreRegEntry } from '@/types/staff-access';
 interface StaffMember {
   id: string;
   id_no: string;
+  staff_id?: string;
+  ref?: string;
+  access_key?: string;
   tsc_no?: string;
   full_name: string;
   role: string;
@@ -176,18 +179,21 @@ const Staff = () => {
     preRegLedger.forEach((p: any) => {
       if (!directoryMap.has(p.nationalId)) {
         combined.push({
-          id: p.id,
-          id_no: p.nationalId,
-          tsc_no: p.tscNumber,
-          full_name: p.fullName,
-          role: p.systemRole.replace('_', ' ').toUpperCase(),
-          subjects: p.assignedSubjects || [p.department || 'General'],
-          phone: p.phone,
-          email: p.email,
-          status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
-          joined: p.datePreRegistered,
-          department: p.department || 'School Administration'
-        });
+                  id: p.id,
+                  id_no: p.nationalId,
+                  staff_id: p.staffId,
+                  ref: p.id,
+                  access_key: p.tempAccessCode,
+                  tsc_no: p.tscNumber,
+                  full_name: p.fullName,
+                  role: p.systemRole.replace('_', ' ').toUpperCase(),
+                  subjects: p.assignedSubjects || [p.department || 'General'],
+                  phone: p.phone,
+                  email: p.email,
+                  status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
+                  joined: p.datePreRegistered,
+                  department: p.department || 'School Administration'
+                });
       }
     });
 

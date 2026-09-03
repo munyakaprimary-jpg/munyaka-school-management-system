@@ -45,40 +45,89 @@ const StaffProfile = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(true);
-
-    // 1. Try to resolve the staff member from the in-memory directory stored
-    //    in localStorage.  Staff.tsx persists the unified master list here
-    //    (key: munyaka_staff_directory) whenever staff are added or edited.
-    const saved = localStorage.getItem('munyaka_staff_directory');
-    if (saved) {
-      try {
-        const parsed: StaffMemberProfile[] = JSON.parse(saved);
-        const found = parsed.find(
-          s => s.id === id || s.id_no === id
-        );
-        if (found) {
-          setMember(found);
-          setLoading(false);
-          return;
+      setLoading(true);
+  
+      // Strip any PR- prefix from the URL param — the unified directory uses
+      // primary IDs, not the auto-generated reference key.
+      const targetId = (id || '').replace(/^PR-/, '');
+  
+      // Generic matcher — accepts the record if ANY of the standard ID fields
+      // (primary id, ref, staff_id, access_key, id_no, tsc_no, nationalId,
+      // tempAccessCode, or autoKey) match the target.
+      const matches = (s: any) =>
+        s.id === id ||
+        s.id === targetId ||
+        s.ref === id ||
+        s.staff_id === id ||
+        s.staff_id === targetId ||
+        s.access_key === id ||
+        s.id_no === id ||
+        s.id_no === targetId ||
+        s.nationalId === id ||
+        s.nationalId === targetId ||
+        s.tsc_no === id ||
+        s.tempAccessCode === id ||
+        s.autoKey === id;
+  
+      // 1. Resolve from the in-memory directory written by Staff.tsx
+      //    (key: munyaka_staff_directory).
+      const saved = localStorage.getItem('munyaka_staff_directory');
+      if (saved) {
+        try {
+          const parsed: any[] = JSON.parse(saved);
+          const found = parsed.find(matches);
+          if (found) {
+            setMember(found as StaffMemberProfile);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Corrupt localStorage — fall through
         }
-      } catch {
-        // Corrupt localStorage — fall through to seed data
       }
-    }
-
-    // 2. Fall back to the static mock seed.  Map the mock shape to the
-    //    unified shape so the rest of the component can use full_name.
-    const mapped = STAFF.find(s => s.id === id || s.id_no === id);
-    if (mapped) {
-      setMember({
-        ...mapped,
-        full_name: mapped.name || '',
-      } as StaffMemberProfile);
-    }
-
-    setLoading(false);
-  }, [id]);
+  
+      // 2. Resolve from the pre-registration ledger (key: munyaka_staff_prereg).
+      //    Pre-reg entries store nationalId / tempAccessCode as their IDs.
+      const preReg = localStorage.getItem('munyaka_staff_prereg');
+      if (preReg) {
+        try {
+          const parsed: any[] = JSON.parse(preReg);
+          const found = parsed.find(matches);
+          if (found) {
+            setMember({
+              id: found.id,
+              id_no: found.nationalId || '',
+              tsc_no: found.tscNumber,
+              full_name: found.fullName || found.name || '',
+              role: (found.systemRole || found.role || '').replace(/_/g, ' ').toUpperCase(),
+              subjects: found.assignedSubjects || [found.department || 'General'],
+              phone: found.phone || '',
+              email: found.email || '',
+              status: found.status === 'Active' ? 'Active' : 'Pre-Registered',
+              joined: found.datePreRegistered || '',
+              department: found.department || 'School Administration',
+            } as StaffMemberProfile);
+            setLoading(false);
+            return;
+          }
+        } catch {
+          // Corrupt localStorage — fall through
+        }
+      }
+  
+      // 3. Last fall back to the static mock seed. Map mock → unified shape.
+      const mapped = STAFF.find(matches);
+      if (mapped) {
+        setMember({
+          ...mapped,
+          full_name: mapped.name || '',
+        } as StaffMemberProfile);
+        setLoading(false);
+        return;
+      }
+  
+      setLoading(false);
+    }, [id]);
 
   if (loading) {
     return (
