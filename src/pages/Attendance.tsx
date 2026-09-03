@@ -333,34 +333,109 @@ const Attendance = () => {
   // ── Live student records ────────────────────────────────────────────────
   const [liveStudents, setLiveStudents] = useState<Learner[]>([]);
 
+  // Normalize grade comparison: handles case differences and extracts numeric portion
+  const normalizeGrade = (grade: string | null | undefined): string => {
+    if (!grade) return '';
+    // Extract numeric portion (e.g., "Grade 6" -> "6", "grade 6" -> "6")
+    const numericMatch = String(grade).replace(/\D/g, '');
+    return numericMatch || String(grade).toLowerCase().trim();
+  };
+
+  // Normalize stream comparison: case-insensitive, trimmed
+  const normalizeStream = (stream: string | null | undefined): string => {
+    return String(stream || '').toLowerCase().trim();
+  };
+
+  // Helper to match grade with flexible comparison
+  const matchGrade = (studentGrade: string | undefined, selectedGrade: string): boolean => {
+    if (!studentGrade && !selectedGrade) return true;
+    if (!studentGrade || !selectedGrade) return false;
+    const normStudent = normalizeGrade(studentGrade);
+    const normSelected = normalizeGrade(selectedGrade);
+    // Direct lowercase match
+    if (normStudent === normSelected) return true;
+    // Numeric-only match (e.g., "6" matches "Grade 6")
+    if (normStudent === normSelected && /^\d+$/.test(normStudent)) return true;
+    // Check if numeric portions match
+    const studentNumeric = normalizeGrade(studentGrade);
+    const selectedNumeric = normalizeGrade(selectedGrade);
+    if (studentNumeric && selectedNumeric && studentNumeric === selectedNumeric) return true;
+    return false;
+  };
+
+  // Helper to match stream with case-insensitive comparison
+  const matchStream = (studentStream: string | undefined, selectedStream: string): boolean => {
+    if (!studentStream && !selectedStream) return true;
+    if (!studentStream || !selectedStream) return false;
+    return normalizeStream(studentStream) === normalizeStream(selectedStream);
+  };
+
   const loadLiveStudents = useCallback(() => {
+    // Define possible storage keys for offline/local storage fallback
+    const storageKeys = [
+      'school_learners_data',
+      'students',
+      'learners',
+      'pupils',
+      'school_students',
+      'registered_students',
+    ];
+
     try {
-      const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      if (!raw) { setLiveStudents([]); return; }
-      const parsed = JSON.parse(raw) as Array<{
+      let raw: string | null = null;
+      let parsedData: Array<{
         id: string;
         name?: string;
         grade?: string;
         stream?: string;
+        class?: string; // Alternative to grade
         status?: string;
         admNo?: string;
         gender?: string;
-      }>;
-      if (!Array.isArray(parsed)) { setLiveStudents([]); return; }
+      }> | null = null;
+
+      // Try each storage key until we find data
+      for (const key of storageKeys) {
+        try {
+          const data = localStorage.getItem(key);
+          if (data) {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              raw = data;
+              parsedData = parsed;
+              break;
+            }
+          }
+        } catch {
+          // Continue to next key if parsing fails
+          continue;
+        }
+      }
+
+      if (!parsedData) {
+        setLiveStudents([]);
+        return;
+      }
+
       // Filter to active students matching the selected grade+stream
-      const filtered = parsed
+      // Using case-insensitive and normalized comparison
+      const filtered = parsedData
         .filter(s => {
           if (!s) return false;
+          // Skip inactive students
           if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
-          if (s.grade !== filters.grade) return false;
-          if (s.stream !== filters.stream) return false;
+          // Match grade (check both grade and class fields)
+          const studentGrade = s.grade || s.class || '';
+          if (!matchGrade(studentGrade, filters.grade)) return false;
+          // Match stream with case-insensitive comparison
+          if (!matchStream(s.stream, filters.stream)) return false;
           return true;
         })
         .map(s => ({
           id: String(s.id),
           name: s.name || 'Unknown',
           assessment: s.admNo || s.id || '',
-          grade: s.grade || '',
+          grade: s.grade || s.class || '',
           stream: s.stream || '',
           gender: (s.gender || 'M') as 'M' | 'F',
         }));
@@ -374,11 +449,27 @@ const Attendance = () => {
   useEffect(() => {
     loadLiveStudents();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === STUDENTS_STORAGE_KEY) loadLiveStudents();
+      const storageKeys = [
+        'school_learners_data',
+        'students',
+        'learners',
+        'pupils',
+        'school_students',
+        'registered_students',
+      ];
+      if (e.key && storageKeys.includes(e.key)) loadLiveStudents();
     };
     const onCustom = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (detail?.key === STUDENTS_STORAGE_KEY) loadLiveStudents();
+      const storageKeys = [
+        'school_learners_data',
+        'students',
+        'learners',
+        'pupils',
+        'school_students',
+        'registered_students',
+      ];
+      if (detail?.key && storageKeys.includes(detail.key)) loadLiveStudents();
     };
     window.addEventListener('storage', onStorage);
     window.addEventListener('munyaka:data-changed', onCustom as EventListener);
@@ -2095,20 +2186,55 @@ const Attendance = () => {
                   );
                 })
               ) : (
-                <tr>
-                  <td colSpan={9} className="px-8 py-20 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="p-4 bg-slate-50 rounded-full text-slate-300">
-                        <Search size={32} />
-                      </div>
-                      <p className="text-slate-800 font-bold">No learners match your search.</p>
-                      <p className="text-xs text-slate-400 max-w-sm">
-                        Try a different name or admission number above.
-                      </p>
-                    </div>
-                  </td>
-                </tr>
-              )}
+                              <tr>
+                                <td colSpan={9} className="px-8 py-16 text-center">
+                                  <div className="flex flex-col items-center gap-4">
+                                    <div className="p-5 bg-gradient-to-br from-amber-50 to-amber-100 rounded-full text-amber-500 shadow-inner">
+                                      <Users size={36} />
+                                    </div>
+                                    <div className="space-y-1.5 max-w-md">
+                                      {searchTerm.trim() ? (
+                                        <>
+                                          <p className="text-slate-900 font-black text-base">
+                                            No learners match "{searchTerm}"
+                                          </p>
+                                          <p className="text-xs text-slate-500 font-medium">
+                                            Try searching with a different name or admission number. {liveStudents.length === 0 && `No students are registered for ${filters.grade} ${filters.stream}.`}
+                                          </p>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <p className="text-slate-900 font-black text-base">
+                                            No learners registered under {filters.grade} {filters.stream}
+                                          </p>
+                                          <p className="text-xs text-slate-500 font-medium">
+                                            There are currently no active students assigned to this class and stream. Add learners to start marking attendance.
+                                          </p>
+                                        </>
+                                      )}
+                                    </div>
+                                    {liveStudents.length === 0 && (
+                                      <a
+                                        href="/registration"
+                                        className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs h-10 px-5 shadow-lg shadow-indigo-100 transition-colors"
+                                      >
+                                        <Sparkles size={14} />
+                                        Add Learners
+                                      </a>
+                                    )}
+                                    {searchTerm.trim() && liveStudents.length > 0 && (
+                                      <button
+                                        onClick={() => setSearchTerm('')}
+                                        className="inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs h-10 px-5 transition-colors"
+                                      >
+                                        <RefreshCw size={14} />
+                                        Clear Search
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
             </tbody>
           </table>
         </div>
