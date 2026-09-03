@@ -32,6 +32,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
   const [category, setCategory] = useState<string>(NONE_VALUE);
   const [customCategory, setCustomCategory] = useState('');
   const [error, setError] = useState('');
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     if (open) {
@@ -39,6 +40,15 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editingSlot, open]);
+
+  // When the user clicks Edit on a slot (which lives near the bottom of the
+  // scrollable list), scroll the modal content back to the top so the
+  // populated edit form is actually visible.
+  useEffect(() => {
+    if (editingSlot && scrollRef.current) {
+      scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [editingSlot]);
 
   const resetForm = () => {
     if (editingSlot) {
@@ -139,7 +149,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
           </button>
         </div>
 
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Add/Edit Form */}
           <div className="bg-slate-50 rounded-2xl p-5 space-y-4">
             <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide">
