@@ -146,15 +146,15 @@ interface VitalCardProps {
 
 const VitalCard: React.FC<VitalCardProps> = ({ icon, iconBg, title, value, subtitle }) => (
   <Card className="border border-slate-100 shadow-sm bg-white rounded-2xl">
-    <CardContent className="p-3 sm:p-4 flex flex-row items-center gap-3">
-      <div className={cn(iconBg, 'w-9 h-9 rounded-xl shrink-0 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4')}>
+    <CardContent className="p-2 sm:p-4 flex flex-col sm:flex-row items-center gap-1.5 sm:gap-3">
+      <div className={cn(iconBg, 'w-7 h-7 sm:w-10 sm:h-10 p-1.5 rounded-xl shrink-0 flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4')}>
         {icon}
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-semibold tracking-wider text-gray-500 uppercase">
+        <p className="text-[10px] sm:text-xs font-semibold uppercase tracking-tight text-gray-500">
           {title}
         </p>
-        <p className="text-xl font-bold sm:text-2xl text-slate-900 leading-tight">
+        <p className="text-lg sm:text-2xl font-bold text-slate-900 leading-tight">
           {value}
         </p>
         {subtitle && <p className="text-[11px] text-slate-400 mt-0.5">{subtitle}</p>}
@@ -723,7 +723,7 @@ const AdminDashboard: React.FC = () => {
       {/* ── Summary Metric Cards ── */}
       <div className="space-y-4 w-full">
         {/* Row 1: Overall Vitals */}
-        <div className="grid grid-cols-3 md:grid-cols-3 gap-2 sm:gap-4">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full">
           <VitalCard
             icon={<Users size={20} className="text-blue-600" />}
             iconBg="bg-blue-50"
