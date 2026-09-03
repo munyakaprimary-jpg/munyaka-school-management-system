@@ -641,31 +641,28 @@ const AdminDashboard: React.FC = () => {
       <LiveSyncBanner />
 
       {/* ── Summary Metric Cards ── */}
-      <div className="flex flex-col md:flex-row gap-4 w-full">
-        <div className="w-full md:w-1/3 flex-1">
-          <VitalCard
-            icon={<Users size={20} className="text-blue-600" />}
-            iconBg="bg-blue-50"
-            title="Total Students"
-            value={vitals.totalStudents.toLocaleString()}
-          />
-        </div>
-        <div className="w-full md:w-1/3 flex-1">
-          <VitalCard
-            icon={<User size={20} className="text-purple-600" />}
-            iconBg="bg-purple-50"
-            title="Total Teachers"
-            value={vitals.totalTeachers.toLocaleString()}
-          />
-        </div>
-        <div className="w-full md:w-1/3 flex-1">
-          <VitalCard
-            icon={<UserCheck size={20} className="text-emerald-600" />}
-            iconBg="bg-emerald-50"
-            title="Today's Attendance"
-            value={`${vitals.todayAttendanceRate}%`}
-          />
-        </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', width: '100%' }}>
+        {/* Card 1: Total Students */}
+        <VitalCard
+          icon={<Users size={20} className="text-blue-600" />}
+          iconBg="bg-blue-50"
+          title="Total Students"
+          value={vitals.totalStudents.toLocaleString()}
+        />
+        {/* Card 2: Total Teachers */}
+        <VitalCard
+          icon={<User size={20} className="text-purple-600" />}
+          iconBg="bg-purple-50"
+          title="Total Teachers"
+          value={vitals.totalTeachers.toLocaleString()}
+        />
+        {/* Card 3: Today's Attendance */}
+        <VitalCard
+          icon={<UserCheck size={20} className="text-emerald-600" />}
+          iconBg="bg-emerald-50"
+          title="Today's Attendance"
+          value={`${vitals.todayAttendanceRate}%`}
+        />
       </div>
 
       {/* ── Additional System Vitals ── */}
