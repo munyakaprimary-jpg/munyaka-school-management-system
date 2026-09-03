@@ -2,16 +2,23 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Clock, ChevronRight, UserCheck, BookOpen, FlaskConical, MapPin, User, Moon, Sun, Sparkles } from 'lucide-react';
+import {
+  Clock, ChevronRight, UserCheck, BookOpen, FlaskConical,
+  MapPin, User, Moon, Sun, Sparkles, Search, X, Briefcase,
+} from 'lucide-react';
 import { Card } from '@/components/ui/card';
 
 interface DirectoryStaff {
   id: string;
-  id_no: string;
+  staff_id?: string;
+  id_no?: string;
   tsc_no?: string;
+  tscNo?: string;
   name: string;
+  full_name?: string;
   role: string;
-  subjects: string[];
+  designation?: string;
+  subjects?: string[];
   email: string;
   phone: string;
   status: string;
@@ -26,7 +33,13 @@ const StaffCheckInSelector = () => {
   const [staffDirectory, setStaffDirectory] = useState<DirectoryStaff[]>([]);
   const [theme, setTheme] = useState<ThemeMode>('dark');
 
-  // Live clock state - stores current Date object
+  // ── Searchable combobox state ─────────────────────────────────────────────
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // ── Live clock state ──────────────────────────────────────────────────────
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
 
   // Live clock interval reference for cleanup
@@ -46,6 +59,17 @@ const StaffCheckInSelector = () => {
         clockIntervalRef.current = null;
       }
     };
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   // Format time as HH:MM:SS AM/PM
@@ -76,40 +100,112 @@ const StaffCheckInSelector = () => {
     return `${weekday}, ${month} ${day}, ${year}`;
   }, [currentTime]);
 
-  // Load staff from localStorage with fallback to mock data
+  // Load staff from multiple localStorage keys for full coverage
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          setStaffDirectory(parsed);
-          return;
+    const loadFromKeys = () => {
+      const keys = [
+        'munyaka_staff_directory',
+        'munyaka_staff',
+        'munyaka_staff_prereg',
+        'munyaka_users',
+        'staff',
+        'staff_list',
+        'staffDirectory',
+        'staffList',
+        'teachers',
+      ];
+
+      for (const key of keys) {
+        try {
+          const raw = localStorage.getItem(key);
+          if (!raw) continue;
+          const parsed = JSON.parse(raw);
+          const arr = Array.isArray(parsed) ? parsed : [];
+          if (arr.length > 0) {
+            setStaffDirectory(arr);
+            return;
+          }
+        } catch {
+          continue;
         }
       }
-    } catch (e) {
-      console.error("Error loading staff directory:", e);
-    }
 
-    import('../data/initialSeedData').then((module) => {
-      if (module?.INITIAL_SEED_DATA?.staff && Array.isArray(module.INITIAL_SEED_DATA.staff)) {
-        setStaffDirectory(module.INITIAL_SEED_DATA.staff);
-      }
-    }).catch(() => {
-      // Silent fallback - empty directory
-    });
+      // Fallback to seed data
+      import('../data/initialSeedData').then((module) => {
+        if (module?.INITIAL_SEED_DATA?.staff && Array.isArray(module.INITIAL_SEED_DATA.staff)) {
+          setStaffDirectory(module.INITIAL_SEED_DATA.staff);
+        }
+      }).catch(() => {});
+    };
+
+    loadFromKeys();
   }, []);
+
+  // ── Flexible search filter ─────────────────────────────────────────────────
+  // Matches Name, TSC Number, Role/Title, or Staff ID
+  const filteredStaff = useMemo(() => {
+    const active = staffDirectory.filter(
+      s => s.status === 'Active' || s.status === 'Pre-Registered'
+    );
+
+    if (!searchQuery.trim()) return active;
+
+    const q = searchQuery.toLowerCase().trim();
+    return active.filter(staff => {
+      const nameMatch = (staff.name || staff.full_name || '').toLowerCase().includes(q);
+      const tscMatch = (staff.tsc_no || staff.tscNo || '').toLowerCase().includes(q);
+      const roleMatch = (staff.role || staff.designation || '').toLowerCase().includes(q);
+      const idMatch = (staff.id || staff.staff_id || staff.id_no || '').toLowerCase().includes(q);
+      return nameMatch || tscMatch || roleMatch || idMatch;
+    });
+  }, [staffDirectory, searchQuery]);
+
+  // ── Dynamic subtitle label for dropdown items ─────────────────────────────────
+  // Teaching staff: "James Ndiki — TSC: 327775"
+  // Non-teaching staff with TSC: "Mary Wanjiku — TSC: 327775"
+  // Non-teaching staff (no TSC): "John Omondi — Bursar" or "John Omondi — ID: STF-004"
+  const getStaffLabel = (staff: DirectoryStaff): string => {
+    const name = staff.name || staff.full_name || 'Unknown';
+    const tsc = staff.tsc_no || staff.tscNo;
+    const role = staff.role || staff.designation || '';
+    const id = staff.id || staff.staff_id || staff.id_no;
+
+    if (tsc) {
+      return `${name} — TSC: ${tsc}`;
+    }
+    if (role) {
+      return `${name} — ${role}`;
+    }
+    if (id) {
+      return `${name} — ID: ${id}`;
+    }
+    return name;
+  };
 
   const selectedStaff = useMemo(() => {
     return staffDirectory.find(s => s.id === selectedStaffId);
   }, [selectedStaffId, staffDirectory]);
 
+  const handleSelectStaff = (staff: DirectoryStaff) => {
+    setSelectedStaffId(staff.id);
+    setSearchQuery('');
+    setIsDropdownOpen(false);
+    searchInputRef.current?.blur();
+  };
+
+  const handleClearSelection = () => {
+    setSelectedStaffId('');
+    setSearchQuery('');
+    setIsDropdownOpen(false);
+  };
+
   const handleProceed = () => {
     if (!selectedStaff) return;
+    const staffId = selectedStaff.id || selectedStaff.staff_id || '';
     const params = new URLSearchParams({
-      staffId: selectedStaff.id,
-      name: selectedStaff.name,
-      role: selectedStaff.role || '',
+      staffId,
+      name: selectedStaff.name || selectedStaff.full_name || '',
+      role: selectedStaff.role || selectedStaff.designation || '',
     });
     navigate(`/staff-checkin?${params.toString()}`);
   };
@@ -333,71 +429,182 @@ const StaffCheckInSelector = () => {
               </div>
             </div>
 
-            {/* Teacher Selection Dropdown */}
-            <div className="space-y-3">
-              <label htmlFor="teacher-select" className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${tc.label}`}>
-                <User size={14} className={tc.labelIcon} />
-                Select Teacher
-              </label>
-
-              <div className="relative">
-                <select
-                  id="teacher-select"
-                  value={selectedStaffId}
-                  onChange={(e) => setSelectedStaffId(e.target.value)}
-                  className={`w-full appearance-none ${tc.selectBg} border font-bold text-sm rounded-2xl px-4 py-4 pr-10 focus:outline-none focus:ring-2 ${tc.selectRing} transition-all cursor-pointer hover:border-opacity-60 shadow-inner`}
-                >
-                  <option value="" className={tc.optionBg}>
-                    -- Choose your name --
-                  </option>
-                  {staffDirectory
-                    .filter(s => s.status === 'Active' || s.status === 'Pre-Registered')
-                    .map((staff) => (
-                      <option key={staff.id} value={staff.id} className={tc.optionBg}>
-                        {staff.name} {staff.role ? `(${staff.role})` : ''}
-                      </option>
-                    ))}
-                </select>
-                <ChevronRight className={`absolute right-4 top-1/2 -translate-y-1/2 rotate-90 ${tc.chevron} pointer-events-none`} size={18} />
-              </div>
+            {/* Searchable Staff Combobox */}
+                        <div className="space-y-3">
+                          <label className={`text-xs font-black uppercase tracking-widest flex items-center gap-2 ${tc.label}`}>
+                            <User size={14} className={tc.labelIcon} />
+                            Select Staff Member
+                          </label>
+            
+                          <div className="relative" ref={dropdownRef}>
+                            {/* Trigger button / input */}
+                            <div
+                              className={`relative ${tc.selectBg} border rounded-2xl transition-all cursor-text ${isDropdownOpen ? `ring-2 ${tc.selectRing} border-opacity-80` : 'hover:border-opacity-60'}`}
+                              onClick={() => {
+                                setIsDropdownOpen(true);
+                                setTimeout(() => searchInputRef.current?.focus(), 50);
+                              }}
+                            >
+                              {/* Search icon */}
+                              <Search
+                                size={16}
+                                className={`absolute left-4 top-1/2 -translate-y-1/2 ${tc.chevron} pointer-events-none`}
+                              />
+            
+                              {/* Search / display input */}
+                              <input
+                                ref={searchInputRef}
+                                type="text"
+                                placeholder={
+                                  selectedStaff
+                                    ? getStaffLabel(selectedStaff)
+                                    : '-- Search by name, TSC no., role, or ID --'
+                                }
+                                value={isDropdownOpen ? searchQuery : (selectedStaff ? getStaffLabel(selectedStaff) : '')}
+                                onChange={(e) => {
+                                  setSearchQuery(e.target.value);
+                                  if (!isDropdownOpen) setIsDropdownOpen(true);
+                                }}
+                                onFocus={() => setIsDropdownOpen(true)}
+                                className={`w-full bg-transparent font-bold text-sm rounded-2xl px-4 py-4 pl-10 pr-20 focus:outline-none transition-all placeholder:text-slate-600 placeholder:font-medium ${isDropdownOpen && !selectedStaffId ? '' : 'cursor-pointer'}`}
+                              />
+            
+                              {/* Clear button */}
+                              {selectedStaffId && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleClearSelection();
+                                  }}
+                                  className={`absolute right-10 top-1/2 -translate-y-1/2 p-1 rounded-lg hover:bg-slate-700/50 transition-colors ${tc.chevron}`}
+                                  title="Clear selection"
+                                >
+                                  <X size={14} />
+                                </button>
+                              )}
+            
+                              {/* Chevron indicator */}
+                              <div className={`absolute right-4 top-1/2 -translate-y-1/2 transition-transform ${tc.chevron} ${isDropdownOpen ? 'rotate-180' : ''}`}>
+                                <ChevronRight size={18} className="rotate-90" />
+                              </div>
+                            </div>
+            
+                            {/* Dropdown panel */}
+                            {isDropdownOpen && (
+                              <div className={`absolute z-50 w-full mt-2 ${tc.optionBg} border rounded-2xl shadow-2xl max-h-72 overflow-y-auto animate-in fade-in slide-in-from-top-1 duration-150`}>
+                                {filteredStaff.length === 0 ? (
+                                  <div className="px-4 py-6 text-center">
+                                    <p className="text-slate-400 text-xs font-bold">
+                                      No staff found for "{searchQuery}"
+                                    </p>
+                                    <p className="text-slate-500 text-[10px] mt-1">
+                                      Try a different name, TSC number, role, or staff ID
+                                    </p>
+                                  </div>
+                                ) : (
+                                  filteredStaff.map((staff) => {
+                                                                      const isSelected = staff.id === selectedStaffId;
+                                                                      const name = staff.name || staff.full_name || 'Unknown';
+                                                                      const role = staff.role || staff.designation || '';
+                                                                      const isTeacher = role.toLowerCase().includes('teacher') || role.toLowerCase().includes('tutor');
+            
+                                    return (
+                                      <button
+                                        key={staff.id}
+                                        type="button"
+                                        onClick={() => handleSelectStaff(staff)}
+                                        className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors ${
+                                          isSelected
+                                            ? 'bg-indigo-600/20'
+                                            : 'hover:bg-indigo-500/10'
+                                        } border-b border-slate-700/30 last:border-b-0`}
+                                      >
+                                        {/* Avatar */}
+                                        <div className={`w-9 h-9 rounded-lg ${tc.avatarGradient} flex items-center justify-center text-white font-black text-xs shrink-0 shadow`}>
+                                          {(name).split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
+                                        </div>
+            
+                                        {/* Name + dynamic subtitle */}
+                                        <div className="flex-1 min-w-0">
+                                          <p className={`font-bold text-sm truncate ${tc.previewName}`}>{name}</p>
+                                          <p className={`text-[10px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
+                                            {isTeacher ? (
+                                              <>
+                                                <BookOpen size={10} className="shrink-0" />
+                                                {role || 'Teacher'}
+                                              </>
+                                            ) : role ? (
+                                              <>
+                                                <Briefcase size={10} className="shrink-0" />
+                                                {role}
+                                              </>
+                                            ) : (
+                                              <span className="text-slate-500">Staff Member</span>
+                                            )}
+                                            {/* Sub-ID badge */}
+                                            {(staff.tsc_no || staff.tscNo) && (
+                                              <span className="ml-1 px-1.5 py-0.5 bg-amber-500/20 text-amber-400 rounded text-[9px] font-black">
+                                                TSC: {staff.tsc_no || staff.tscNo}
+                                              </span>
+                                            )}
+                                            {(staff.id || staff.staff_id) && !staff.tsc_no && !staff.tscNo && (
+                                              <span className="ml-1 text-slate-500 text-[9px]">
+                                                ID: {staff.id || staff.staff_id}
+                                              </span>
+                                            )}
+                                          </p>
+                                        </div>
+            
+                                        {/* Selected checkmark */}
+                                        {isSelected && (
+                                          <UserCheck size={16} className="text-indigo-400 shrink-0" />
+                                        )}
+                                      </button>
+                                    );
+                                  })
+                                )}
+                              </div>
+                            )}
+                          </div>
 
               {/* Selected Staff Preview Card */}
-              {selectedStaff && (
-                <div className={`animate-in slide-in-from-top-2 duration-300 ${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
-                  <div className="flex items-center gap-3">
-                    <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
-                      {selectedStaff.name
-                        .split(' ')
-                        .map(n => n[0])
-                        .join('')
-                        .substring(0, 2)
-                        .toUpperCase()}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className={`font-black text-sm truncate ${tc.previewName}`}>{selectedStaff.name}</p>
-                      <p className={`text-[11px] font-bold uppercase tracking-wider truncate ${tc.previewRole}`}>
-                        {selectedStaff.role || 'Staff Member'}
-                      </p>
-                    </div>
-                    <UserCheck className={tc.labelIcon} size={18} />
-                  </div>
-                  {selectedStaff.subjects && selectedStaff.subjects.length > 0 && (
-                    <div className={`flex items-start gap-2 pt-2 border-t ${theme === 'light' ? 'border-blue-200' : theme === 'sunset' ? 'border-rose-500/20' : 'border-indigo-500/20'}`}>
-                      <BookOpen size={12} className={`${tc.labelIcon} mt-0.5 shrink-0`} />
-                      <div className="flex flex-wrap gap-1.5">
-                        {selectedStaff.subjects.slice(0, 3).map((subj, i) => (
-                          <span
-                            key={i}
-                            className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${tc.subjectPill}`}
-                          >
-                            {subj}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
+                            {selectedStaff && (
+                              <div className={`animate-in slide-in-from-top-2 duration-300 ${tc.previewBg} border rounded-2xl p-4 space-y-2 ${tc.previewShadow}`}>
+                                <div className="flex items-center gap-3">
+                                  <div className={`w-12 h-12 rounded-xl ${tc.avatarGradient} flex items-center justify-center text-white font-black text-sm shadow-lg`}>
+                                    {selectedStaff.name
+                                      .split(' ')
+                                      .map(n => n[0])
+                                      .join('')
+                                      .substring(0, 2)
+                                      .toUpperCase()}
+                                  </div>
+                                  <div className="flex-1 min-w-0">
+                                    <p className={`font-black text-sm truncate ${tc.previewName}`}>{getStaffLabel(selectedStaff)}</p>
+                                    <p className={`text-[11px] font-bold uppercase tracking-wider truncate flex items-center gap-1.5 ${tc.previewRole}`}>
+                                      {selectedStaff.role || selectedStaff.designation || 'Staff Member'}
+                                    </p>
+                                  </div>
+                                  <UserCheck className={tc.labelIcon} size={18} />
+                                </div>
+                                {selectedStaff.subjects && selectedStaff.subjects.length > 0 && (
+                                  <div className={`flex items-start gap-2 pt-2 border-t ${theme === 'light' ? 'border-blue-200' : theme === 'sunset' ? 'border-rose-500/20' : 'border-indigo-500/20'}`}>
+                                    <BookOpen size={12} className={`${tc.labelIcon} mt-0.5 shrink-0`} />
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {selectedStaff.subjects.slice(0, 3).map((subj, i) => (
+                                        <span
+                                          key={i}
+                                          className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${tc.subjectPill}`}
+                                        >
+                                          {subj}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
             </div>
 
             {/* Proceed Button - Primary Action */}
