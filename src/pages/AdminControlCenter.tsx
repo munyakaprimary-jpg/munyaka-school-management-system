@@ -406,7 +406,7 @@ export default function AdminControlCenter() {
   };
 
   // Only admin (and super_admin) users can access this page.
-  if (user?.role !== 'admin' && user?.role !== 'super_admin') {
+  if (user?.role !== 'admin' && (user?.role as string) !== 'super_admin') {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
         <Card className="max-w-md w-full">

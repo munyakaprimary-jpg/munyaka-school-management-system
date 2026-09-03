@@ -119,7 +119,7 @@ export default function LANServerConfig() {
   const [serverUrl, setServerUrl] = useState<string>(() => {
     return localStorage.getItem(LAN_SERVER_KEY) || DEFAULT_LAN_URL;
   });
-  const [status, setStatus] = useState<ConnectionStatus>('unknown');
+  const [status, setStatus] = useState<ConnectionStatus | string>('unknown');
   const [serverProcess, setServerProcess] = useState<ServerProcessStatus>('offline');
   const [latency, setLatency] = useState<number | null>(null);
   const [lastChecked, setLastChecked] = useState<string | null>(null);

@@ -500,7 +500,7 @@ const DigitalLiteracyVideos = () => {
                   variant="outline"
                   className="text-slate-400 border-white/10 font-bold text-[10px]"
                 >
-                  {selectedVideo?.channelTitle}
+                  {('channelTitle' in selectedVideo ? selectedVideo.channelTitle : '')}
                 </Badge>
               )}
             </div>

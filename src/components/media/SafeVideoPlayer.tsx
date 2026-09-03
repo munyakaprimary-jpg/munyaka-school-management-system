@@ -117,13 +117,11 @@ const supportsNativeHls = (): boolean => {
  */
 const isNativeWebView = (): boolean => {
   if (typeof navigator === "undefined") return false;
-  // @ts-expect-error — injected by Capacitor / Cordova at runtime
   const cap = (window as any).Capacitor;
   if (cap && typeof cap.isNativePlatform === "function" && cap.isNativePlatform()) {
     return true;
   }
   // Cordova sets device on window
-  // @ts-expect-error
   return Boolean((window as any).cordova);
 };
 
