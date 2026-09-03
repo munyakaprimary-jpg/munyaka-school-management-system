@@ -17,10 +17,7 @@ import {
   User,
   GraduationCap,
   Activity,
-  Megaphone,
   DollarSign,
-  UserPlus,
-  ClipboardCheck,
   TrendingUp,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
@@ -108,15 +105,6 @@ const safeRead = <T,>(key: string, fallback: T): T => {
     return fallback;
   }
 };
-
-const todayISO = (): string => {
-  const today = new Date();
-  const yyyy = today.getFullYear();
-  const mm = String(today.getMonth() + 1).padStart(2, '0');
-  const dd = String(today.getDate()).padStart(2, '0');
-  return `${yyyy}-${mm}-${dd}`;
-};
-
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
 
