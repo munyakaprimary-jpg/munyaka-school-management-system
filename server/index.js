@@ -549,6 +549,7 @@ app.post('/api/teachers', (req, res) => {
 
     // Generate staff_id if not provided
     const finalStaffId = staff_id || `STF-${Date.now()}`;
+    const finalIdNumber = id_number || `ID-${Date.now()}`;
 
     // Default role to TEACHER if not specified
     const finalRole = role || 'TEACHER';
@@ -556,7 +557,7 @@ app.post('/api/teachers', (req, res) => {
     dbRun(
       `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, finalStaffId, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, finalRole, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned]
+      [id, finalStaffId, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, finalRole, email, phone, gender, finalIdNumber, tsc_number, subject_specialization, grade_assigned, stream_assigned]
     );
 
     saveDatabase();

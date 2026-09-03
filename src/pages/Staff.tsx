@@ -245,11 +245,7 @@ const Staff = () => {
           phone: formData.phone,
           email: formData.email,
           tsc_number: formData.tsc_number || undefined,
-          id_number: `ID-${Date.now()}`,
-          gender: undefined,
-          subject_specialization: undefined,
-          grade_assigned: undefined,
-          stream_assigned: undefined
+          id_number: `ID-${Date.now()}`
         };
 
         await api.post('/api/teachers', newStaff);
