@@ -1624,6 +1624,51 @@ const ICTLabManagement = () => {
           </div>
         </div>
       </Modal>
+
+      {/* Add User Account Modal */}
+      <Modal
+        isOpen={isAddUserOpen}
+        onClose={() => setIsAddUserOpen(false)}
+        title="Provision New User Account"
+        description="Configure system access rights and initial security credentials."
+        footer={<div className="flex gap-2 justify-end w-full"><Button variant="ghost" onClick={() => setIsAddUserOpen(false)} className="rounded-xl font-bold h-12 px-6">Cancel</Button><Button onClick={handleAddUser} className="rounded-xl bg-indigo-600 text-white font-bold h-12 px-8">Create User Account</Button></div>}
+      >
+        <form onSubmit={handleAddUser} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Full Name</Label><Input name="fullName" placeholder="e.g. Samuel Kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">System Role</Label>
+              <Select defaultValue="Teacher" name="role"><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Teacher">Teacher</SelectItem><SelectItem value="Admin">Administrator</SelectItem><SelectItem value="Lab Tech">Lab Technician</SelectItem></SelectContent></Select>
+            </div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Username / Email</Label><Input name="username" placeholder="e.g. sam.kamau" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Temporary Password</Label><div className="flex gap-2"><Input value="MUNYAKA_TEMP_2024" readOnly className="rounded-xl h-12 bg-slate-100 border-none font-black text-indigo-600 text-center" /><Button type="button" variant="outline" className="h-12 w-12 rounded-xl border-slate-200"><RefreshCw size={16} /></Button></div></div>
+        </form>
+      </Modal>
+
+      {/* Reserve Lab Slot Modal */}
+      <Modal
+        isOpen={isReserveOpen}
+        onClose={() => setIsReserveOpen(false)}
+        title="ICT Lab Slot Reservation"
+        description="Schedule dedicated lab time for class activities or digital assessments."
+        footer={<div className="flex gap-2 justify-end w-full"><Button variant="ghost" onClick={() => setIsReserveOpen(false)} className="rounded-xl font-bold h-12 px-6">Cancel</Button><Button onClick={() => {setIsReserveOpen(false); showSuccess("Lab slot reserved.");}} className="rounded-xl bg-indigo-600 text-white font-bold h-12 px-8">Confirm Reservation</Button></div>}
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Select Day</Label>
+              <Select defaultValue="Monday"><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Monday">Monday</SelectItem><SelectItem value="Tuesday">Tuesday</SelectItem><SelectItem value="Wednesday">Wednesday</SelectItem><SelectItem value="Thursday">Thursday</SelectItem><SelectItem value="Friday">Friday</SelectItem></SelectContent></Select>
+            </div>
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Target Lab</Label>
+              <Select defaultValue="Main Lab"><SelectTrigger className="h-12 rounded-xl bg-slate-50 border-none font-bold"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="Main Lab">Main ICT Lab</SelectItem><SelectItem value="Mini Lab">Junior School Wing</SelectItem></SelectContent></Select>
+            </div>
+          </div>
+          <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Time Interval</Label><Input placeholder="e.g. 09:40 AM - 10:30 AM" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Grade Level</Label><Input placeholder="e.g. Grade 5" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+            <div className="space-y-1.5"><Label className="text-xs font-black uppercase text-slate-400">Subject / Purpose</Label><Input placeholder="e.g. Mathematics" className="rounded-xl h-12 bg-slate-50 border-none font-bold" /></div>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
