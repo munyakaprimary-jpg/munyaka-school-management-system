@@ -46,7 +46,7 @@ const DEFAULT_LAN_URL = 'http://10.28.160.196:5000';
 
 type ConnectionStatus = 'connected' | 'offline' | 'testing' | 'starting' | 'stopping';
 type ServerProcessStatus = 'online' | 'offline' | 'starting' | 'stopping' | 'error';
-type ErrorType = 'port_in_use' | 'firewall' | 'timeout' | 'unauthorized' | 'server_error' | null;
+type ErrorType = 'port_in_use' | 'firewall' | 'timeout' | 'unauthorized' | 'server_error' | 'backend_not_running' | null;
 
 interface ServerStats {
   students: number;
@@ -96,12 +96,18 @@ const describeError = (type: ErrorType): { title: string; message: string } => {
           'The server refused the start command — you may not have admin privileges. Try running the server application as administrator.',
       };
     case 'server_error':
-      return {
-        title: 'Server Error',
-        message:
-          'The server encountered an error while starting. Check the server logs for details and retry.',
-      };
-    default:
+          return {
+            title: 'Server Error',
+            message:
+              'The server encountered an error while starting. Check the server logs for details and retry.',
+          };
+        case 'backend_not_running':
+          return {
+            title: 'Backend Binary Not Running',
+            message:
+              "Local Node.js backend binary not detected on port 5000. Run 'npm run server' in terminal to start the LAN server, then retry.",
+          };
+        default:
       return {
         title: 'Connection Failed',
         message: 'An unexpected error occurred. Please try again.',
@@ -145,7 +151,7 @@ export default function LANServerConfig() {
 
   const pingHealth = async (
     url: string
-  ): Promise<{ ok: boolean; latency: number | null; stats: ServerStats | null }> => {
+  ): Promise<{ ok: boolean; latency: number | null; stats: ServerStats | null; notRunning?: boolean }> => {
     const normalized = normalizeUrl(url);
     const start = Date.now();
     try {
@@ -183,7 +189,8 @@ export default function LANServerConfig() {
 
       return { ok: true, latency: ms, stats };
     } catch {
-      return { ok: false, latency: null, stats: null };
+      // Fetch threw — the backend binary is not running.
+      return { ok: false, latency: null, stats: null, notRunning: true };
     }
   };
 
@@ -202,104 +209,84 @@ export default function LANServerConfig() {
       setServerProcess('offline');
       setStatus('offline');
       setLatency(null);
+      // The backend binary is not reachable — surface the helpful tip.
+      if (result.notRunning) {
+        setActiveError('backend_not_running');
+      }
     }
   };
 
   // ── Server Lifecycle Helpers ──────────────────────────────────────────────
-
-  /**
-   * Sends POST /api/server/start to the backend LAN server.
-   * The backend must implement this endpoint to spawn/start the Node process.
-   * Expected success: 200 OK  { status: "started" }
-   * Expected errors:
-   *   409 → port_in_use (EADDRINUSE)
-   *   403 → unauthorized
-   *   500 → server_error / timeout
-   */
-  const startServer = useCallback(async (): Promise<{ ok: boolean; errorType?: ErrorType }> => {
-    const normalized = normalizeUrl(serverUrl);
-    try {
-      const res = await fetch(`${normalized}/api/server/start`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        signal: AbortSignal.timeout(10000),
-      });
-
-      if (res.ok) {
-        return { ok: true };
-      }
-
-      // Parse structured error body if available
-      let errorType: ErrorType = 'server_error';
+  
+    /**
+     * Probes the backend LAN server with a lightweight health check.
+     * Returns 'ok' if the server is reachable, 'not_running' if the fetch
+     * throws (process not started), or 'error' for any other failure.
+     * This is the ONLY network call needed — the browser SPA cannot spawn
+     * or kill OS processes; the toggle controls local connection state only.
+     */
+    const probeBackend = useCallback(async (): Promise<
+      'ok' | 'not_running' | 'error'
+    > => {
+      const normalized = normalizeUrl(serverUrl);
       try {
-        const body = await res.json();
-        if (body.code === 'EADDRINUSE' || body.error?.includes('port')) {
-          errorType = 'port_in_use';
-        } else if (body.code === 'EACCES' || res.status === 403) {
-          errorType = 'unauthorized';
-        } else if (res.status >= 500) {
-          errorType = 'server_error';
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const res = await fetch(`${normalized}/api/health`, {
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+        return res.ok ? 'ok' : 'error';
+      } catch {
+        // Network error means the Node.js backend binary is not running.
+        return 'not_running';
+      }
+    }, [serverUrl]);
+  
+    /**
+     * Handles the toggle switch — purely local state management.
+     * The toggle does NOT start/stop OS processes (impossible in a browser).
+     * ON: probes the backend; if reachable → 'online', if not → error banner.
+     * OFF: clears all local connection state to 'offline'.
+     */
+    const handleToggleServer = async (checked: boolean) => {
+      setActiveError(null);
+      setIsToggling(true);
+  
+      if (checked) {
+        // ── Toggle ON: start local state simulation ─────────────────────────
+        setServerProcess('starting');
+        const probe = await probeBackend();
+  
+        if (probe === 'ok') {
+          // Backend is reachable — mark as online and calculate real latency.
+          const start = Date.now();
+          await pingHealth(serverUrl);
+          const ms = Date.now() - start;
+          setLatency(ms);
+          setServerProcess('online');
+          setStatus('connected');
+          showSuccess('Server online — connected successfully');
+          setTimeout(() => testConnectionSilent(serverUrl), 1000);
+        } else {
+          // Backend binary not reachable.
+          setServerProcess('offline');
+          setStatus('offline');
+          setActiveError('backend_not_running');
         }
-      } catch { /* use default */ }
-
-      return { ok: false, errorType };
-    } catch (err: any) {
-      if (err.name === 'AbortError' || err.message?.includes('timeout')) {
-        return { ok: false, errorType: 'timeout' };
-      }
-      // Network-level failure: server unreachable
-      return { ok: false, errorType: 'server_error' };
-    }
-  }, [serverUrl]);
-
-  /**
-   * Sends POST /api/server/stop to the backend LAN server.
-   * Expected success: 200 OK { status: "stopped" }
-   */
-  const stopServer = useCallback(async (): Promise<{ ok: boolean }> => {
-    const normalized = normalizeUrl(serverUrl);
-    try {
-      const res = await fetch(`${normalized}/api/server/stop`, {
-        method: 'POST',
-        signal: AbortSignal.timeout(8000),
-      });
-      return { ok: res.ok };
-    } catch {
-      // Even on network error, treat as stopped (fire-and-forget)
-      return { ok: true };
-    }
-  }, [serverUrl]);
-
-  const handleToggleServer = async (checked: boolean) => {
-    setActiveError(null);
-    setIsToggling(true);
-
-    if (checked) {
-      // START
-      setServerProcess('starting');
-      const result = await startServer();
-      if (result.ok) {
-        setServerProcess('online');
-        showSuccess('Server started successfully');
-        // Re-test connection after brief settle period
-        setTimeout(() => testConnectionSilent(serverUrl), 1500);
       } else {
+        // ── Toggle OFF: stop local state simulation ─────────────────────────
+        setServerProcess('stopping');
         setServerProcess('offline');
-        setActiveError(result.errorType ?? 'server_error');
+        setStatus('offline');
+        setLatency(null);
+        setStats(null);
+        setActiveError(null);
+        showSuccess('Server disconnected');
       }
-    } else {
-      // STOP
-      setServerProcess('stopping');
-      await stopServer();
-      setServerProcess('offline');
-      setStatus('offline');
-      setLatency(null);
-      setStats(null);
-      showSuccess('Server stopped');
-    }
-
-    setIsToggling(false);
-  };
+  
+      setIsToggling(false);
+    };
 
   // ── Connection Controls ────────────────────────────────────────────────────
 
@@ -322,17 +309,22 @@ export default function LANServerConfig() {
     setLastChecked(new Date().toISOString());
 
     if (result.ok) {
-      setLatency(result.latency ?? null);
-      setServerProcess('online');
-      setStatus('connected');
-      if (result.stats) setStats(result.stats);
-      showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
-    } else {
-      setServerProcess('offline');
-      setStatus('offline');
-      setLatency(null);
-      showError(`Could not reach ${normalized}. Working offline.`);
-    }
+          setLatency(result.latency ?? null);
+          setServerProcess('online');
+          setStatus('connected');
+          if (result.stats) setStats(result.stats);
+          showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
+        } else {
+          setServerProcess('offline');
+          setStatus('offline');
+          setLatency(null);
+          if (result.notRunning) {
+            setActiveError('backend_not_running');
+            showError(`Backend binary not detected on port 5000. Run 'npm run server' to start it.`);
+          } else {
+            showError(`Could not reach ${normalized}. Working offline.`);
+          }
+        }
 
     setIsSaving(false);
     setIsTesting(false);
