@@ -140,9 +140,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: UserCog, label: 'System Management', path: '/system-management', roles: ['admin', 'ICT_TEACHER', 'ICT_TECHNICIAN'], requiresPermission: 'manage_ict_systems' },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-                { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
-            { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'owner'] },
-    { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
+                    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
+        { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: ClipboardCheck, label: 'Student Attendance', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
@@ -204,7 +203,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       }
   
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-            // LAN Server Config, plus global items (Games Hub).
+                  // plus global items (Games Hub).
       if (roleLower === 'owner') {
         if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
@@ -247,8 +246,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 
   // Bottom Navigation Bar Quick Links - Filtered by user role.
     // OWNER is BILLING-ONLY — gets Dashboard + Payments only (plus global Games Hub).
-    // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
-    // Settings, Licensing, Promote — those are operational routes.
+        // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
+        // Settings, Promote — those are operational routes. LAN Config is now nested
+        // inside the Admin Control Center for elevated roles only.
     const bottomQuickNav = [
       { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },

@@ -168,7 +168,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
               }
   
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-            // LAN Server Config + Profile Settings, plus global items (Games Hub).
+            // Profile Settings, plus global items (Games Hub).
       if (roleLower === 'owner') {
         const roleFiltered = menuItems.filter(item => {
           if (item.global) return true;
@@ -182,16 +182,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         // Enforce the explicit owner render order:
                 //   1. Dashboard
                 //   2. Payment & Subscriptions
-                //   3. LAN Server Config
-                //   4. Games Hub (global)
-                //   5. Profile Settings
-                const order = [
-                  '/',                       // Dashboard
-                  '/payment-management',     // Payment & Subscriptions
-                  '/lan-config',             // LAN Server Config
-                  '/games',                  // Games Hub (global)
-                  '/settings/profile',       // Profile Settings
-                ];
+                //   3. Games Hub (global)
+                                //   4. Profile Settings
+                                const order = [
+                                  '/',                       // Dashboard
+                                  '/payment-management',     // Payment & Subscriptions
+                                  '/games',                  // Games Hub (global)
+                                  '/settings/profile',       // Profile Settings
+                                ];
         const ordered: typeof withDashboard = [];
         order.forEach(p => {
           const found = withDashboard.find((i: any) => i.path === p);
@@ -236,7 +234,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       });
     }, [user?.role, canAccessSystemManagement]);
 
-  // OWNER is BILLING-ONLY: gets Dashboard, Payments, LAN Server Config, Profile Settings,
+  // OWNER is BILLING-ONLY: gets Dashboard, Payments, Profile Settings,
     //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
       //   Settings, Promote, Central Data) are NOT in scope for the owner role.
     const bottomQuickNav = [
