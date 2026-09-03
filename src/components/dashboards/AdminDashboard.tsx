@@ -35,6 +35,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
 import { useToast } from '@/hooks/use-toast';
+import DailyAttendanceSummary from './DailyAttendanceSummary';
 
 // Demo mode — set to false in production
 const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
