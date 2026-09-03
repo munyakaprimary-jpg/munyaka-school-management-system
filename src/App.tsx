@@ -129,7 +129,7 @@ const App = () => (
                 <Route path="/library" element={<ProtectedRoute><AppUnlock><Layout><Library /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/inventory" element={<ProtectedRoute><AppUnlock><Layout><Inventory /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/fees" element={<ProtectedRoute blockedRoles={['owner', 'parent', 'student', 'teacher']}><AppUnlock><Layout><Fees /></Layout></AppUnlock></ProtectedRoute>} />
-                <Route path="/central-data" element={<ProtectedRoute><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
+                <Route path="/central-data" element={<ProtectedRoute blockedRoles={['owner']}><AppUnlock><Layout><CentralDataService /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/reports" element={<ProtectedRoute><AppUnlock><Layout><ReportCards /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/settings" element={<ProtectedRoute><AppUnlock><Layout><Settings /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/profile" element={<ProtectedRoute><AppUnlock><Layout><AdminProfile /></Layout></AppUnlock></ProtectedRoute>} />

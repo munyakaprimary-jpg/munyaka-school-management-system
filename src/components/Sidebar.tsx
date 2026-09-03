@@ -105,7 +105,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
@@ -163,7 +163,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           }
   
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-      // Central Data + Profile Settings, plus global items (Games Hub).
+            // LAN Server Config + Profile Settings, plus global items (Games Hub).
       if (roleLower === 'owner') {
         const roleFiltered = menuItems.filter(item => {
           if (item.global) return true;
@@ -175,18 +175,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           ? [dashboardItem, ...roleFiltered]
           : roleFiltered;
         // Enforce the explicit owner render order:
-        //   1. Dashboard
-        //   2. Payment & Subscriptions
-        //   3. Central Data & APK
-        //   4. Games Hub (global)
-        //   5. Profile Settings
-        const order = [
-          '/',                       // Dashboard
-          '/payment-management',     // Payment & Subscriptions
-          '/central-data',           // Central Data & APK
-          '/games',                  // Games Hub (global)
-          '/settings/profile',       // Profile Settings
-        ];
+                //   1. Dashboard
+                //   2. Payment & Subscriptions
+                //   3. LAN Server Config
+                //   4. Games Hub (global)
+                //   5. Profile Settings
+                const order = [
+                  '/',                       // Dashboard
+                  '/payment-management',     // Payment & Subscriptions
+                  '/lan-config',             // LAN Server Config
+                  '/games',                  // Games Hub (global)
+                  '/settings/profile',       // Profile Settings
+                ];
         const ordered: typeof withDashboard = [];
         order.forEach(p => {
           const found = withDashboard.find((i: any) => i.path === p);
@@ -231,9 +231,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       });
     }, [user?.role, canAccessSystemManagement]);
 
-  // OWNER is BILLING-ONLY: gets Dashboard, Payments, Central Data, Profile Settings,
-  //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
-    //   Settings, Promote) are NOT in scope for the owner role.
+  // OWNER is BILLING-ONLY: gets Dashboard, Payments, LAN Server Config, Profile Settings,
+    //   and the global Games Hub.  Operational routes (Roll Call, Learners, Fees,
+      //   Settings, Promote, Central Data) are NOT in scope for the owner role.
     const bottomQuickNav = [
       { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
@@ -242,7 +242,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
       { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {

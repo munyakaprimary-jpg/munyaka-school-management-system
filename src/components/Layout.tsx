@@ -133,7 +133,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: LayoutDashboard, label: 'Admin Dashboard', path: '/admin-dashboard', roles: ['admin'] },
     { icon: Gamepad2, label: 'Games Hub', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Archive, label: 'Transferred Archive', path: '/learners/archive', roles: ['admin', 'head_teacher'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
@@ -180,8 +180,9 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
             '/students': ['owner'],              // operational — owner cannot manage learners
       '/attendance': ['owner'],            // operational — owner cannot take roll call
-      '/settings': ['owner'],              // operational — owner has its own profile settings
-    };
+            '/settings': ['owner'],              // operational — owner has its own profile settings
+            '/central-data': ['owner'],          // operational — owner cannot access central data service
+          };
 
   const filteredMenu = menuItems.filter(item => {
       if (!user) return false;
@@ -199,7 +200,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       }
   
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
-      // Central Data, plus global items (Games Hub).
+            // LAN Server Config, plus global items (Games Hub).
       if (roleLower === 'owner') {
         if (item.requiresPermission) return canAccessSystemManagement();
         return item.roles.map(r => r.toLowerCase()).includes('owner');
@@ -246,7 +247,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
           { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
       { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
+      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {
