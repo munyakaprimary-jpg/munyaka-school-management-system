@@ -45,10 +45,13 @@ import {
   FileText,
   LayoutGrid,
   CheckCircle2,
+  XCircle,
   Circle,
   UsersRound,
   BookMarked,
   BarChart3,
+  TrendingUp,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
@@ -667,6 +670,274 @@ const CompactLanSyncBanner: React.FC<{
   );
 };
 
+// ─── Class Attendance Widget ─────────────────────────────────────────────────
+interface AttendanceStats {
+  present: number;
+  absent: number;
+  excused: number;
+  late: number;
+  total: number;
+  unmarked: number;
+  percentage: number;
+}
+
+const getTodayDate = (): string => {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, '0');
+  const dd = String(today.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+};
+
+const getAttendanceForClass = (grade: string, stream: string): AttendanceStats => {
+  const todayStr = getTodayDate();
+  const stats: AttendanceStats = { present: 0, absent: 0, excused: 0, late: 0, total: 0, unmarked: 0, percentage: 0 };
+
+  // Get learners for this class
+  const learners: any[] = safeRead('school_learners_data', []);
+  const classLearners = learners.filter((l: any) =>
+    l.grade === grade && l.stream === stream && l.status !== 'TRANSFERRED'
+  );
+  stats.total = classLearners.length;
+
+  // Try legacy flat attendance log
+  const legacyKey = 'school_attendance_logs';
+  const legacyData: any[] = safeRead(legacyKey, []);
+  const legacyToday = legacyData.filter((a: any) => a.date === todayStr);
+
+  // Try v2 attendance rosters
+  const rosterKey = 'school_attendance_rosters';
+  const rosterData: any[] = safeRead(rosterKey, []);
+  const rosterToday = rosterData.filter((r: any) => {
+    if (r.grade !== grade || r.stream !== stream) return false;
+    if (!r.records) return false;
+    return Object.values(r.records).some((entry: any) => {
+      if (!entry || typeof entry !== 'object') return false;
+      const entryDate = entry.date || (entry.morning?.date) || (entry.afternoon?.date);
+      if (entryDate && entryDate !== todayStr) return false;
+      const morningStatus = entry.morning?.status || entry.morning;
+      const afternoonStatus = entry.afternoon?.status || entry.afternoon;
+      return morningStatus || afternoonStatus;
+    });
+  });
+
+  // Count from legacy
+  legacyToday.forEach((a: any) => {
+    const learner = classLearners.find((l: any) => l.id === a.studentId);
+    if (!learner) return;
+    if (a.status === 'present' || a.status === 'late') stats.present++;
+    else if (a.status === 'absent') stats.absent++;
+    else if (a.status === 'excused') stats.excused++;
+  });
+
+  // Count from v2 roster
+  rosterToday.forEach((r: any) => {
+    if (!r.records) return;
+    Object.values(r.records).forEach((entry: any) => {
+      if (!entry || typeof entry !== 'object') return;
+      const morningStatus = entry.morning?.status || entry.morning;
+      const afternoonStatus = entry.afternoon?.status || entry.afternoon;
+      const status = morningStatus || afternoonStatus || '';
+      if (status === 'P' || status === 'present') stats.present++;
+      else if (status === 'A' || status === 'absent') stats.absent++;
+      else if (status === 'E' || status === 'excused') stats.excused++;
+      else if (status === 'L' || status === 'late') stats.late++;
+    });
+  });
+
+  // Deduplicate by studentId
+  const marked = new Set<string>();
+  legacyToday.forEach((a: any) => { if (classLearners.some((l: any) => l.id === a.studentId)) marked.add(a.studentId); });
+  rosterToday.forEach((r: any) => {
+    if (r.records) {
+      Object.entries(r.records).forEach(([studentId, entry]: [string, any]) => {
+        if (classLearners.some((l: any) => l.id === studentId)) {
+          const morningStatus = entry?.morning?.status || entry?.morning;
+          const afternoonStatus = entry?.afternoon?.status || entry?.afternoon;
+          if (morningStatus || afternoonStatus) marked.add(studentId);
+        }
+      });
+    }
+  });
+
+  stats.unmarked = Math.max(0, stats.total - marked.size);
+  stats.percentage = stats.total > 0 ? Math.round((marked.size / stats.total) * 100) : 0;
+  return stats;
+};
+
+const StatBadge: React.FC<{
+  label: string;
+  value: number;
+  icon: React.ElementType;
+  bg: string;
+  text: string;
+  border: string;
+  iconBg: string;
+}> = ({ label, value, icon: Icon, bg, text, border, iconBg }) => (
+  <div className={`flex items-center gap-2 p-3 rounded-xl ${bg} border ${border}`}>
+    <div className={`p-1.5 rounded-lg ${iconBg}`}>
+      <Icon size={14} className={text} />
+    </div>
+    <div>
+      <p className={`text-lg font-black ${text} leading-none`}>{value}</p>
+      <p className="text-[10px] font-medium text-slate-500 mt-0.5">{label}</p>
+    </div>
+  </div>
+);
+
+const ClassAttendanceWidget: React.FC<{ onTakeAttendance: () => void }> = ({ onTakeAttendance }) => {
+  const todayStr = getTodayDate();
+  const todayLabel = new Date().toLocaleDateString('en-KE', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+
+  // Mock teacher's assigned class — in real app, this comes from teacher profile
+  const myClassGrade = 'Grade 4';
+  const myClassStream = 'Blue';
+
+  const attendance = useMemo(
+    () => getAttendanceForClass(myClassGrade, myClassStream),
+    [myClassGrade, myClassStream]
+  );
+
+  const isComplete = attendance.unmarked === 0 && attendance.total > 0;
+  const hasStarted = attendance.present > 0 || attendance.absent > 0 || attendance.excused > 0 || attendance.late > 0;
+  const markedCount = attendance.present + attendance.absent + attendance.excused + attendance.late;
+
+  return (
+    <Card className="border-none shadow-sm bg-white rounded-2xl overflow-hidden">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-2 bg-blue-100 rounded-lg">
+              <ClipboardCheck size={18} className="text-blue-600" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-bold text-slate-800">Today's Class Attendance</CardTitle>
+              <p className="text-xs text-slate-500">{todayLabel}</p>
+            </div>
+          </div>
+          <Badge className="rounded-full px-3 py-1 text-[10px] font-black bg-indigo-100 text-indigo-700 border-indigo-200">
+            {myClassGrade} {myClassStream}
+          </Badge>
+        </div>
+      </CardHeader>
+
+      <CardContent className="pt-0 space-y-4">
+        {/* Warning banner if not yet started */}
+        {!hasStarted && attendance.total > 0 && (
+          <div className="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="p-1.5 bg-amber-100 rounded-lg">
+              <AlertCircle size={16} className="text-amber-600" />
+            </div>
+            <p className="text-xs font-semibold text-amber-700">
+              Roll call for today has not been submitted yet.
+            </p>
+          </div>
+        )}
+
+        {/* Stat Badges */}
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <StatBadge
+            label="Present"
+            value={attendance.present}
+            icon={CheckCircle2}
+            bg="bg-emerald-50"
+            text="text-emerald-700"
+            border="border-emerald-200"
+            iconBg="bg-emerald-100"
+          />
+          <StatBadge
+            label="Absent"
+            value={attendance.absent}
+            icon={XCircle}
+            bg="bg-red-50"
+            text="text-red-700"
+            border="border-red-200"
+            iconBg="bg-red-100"
+          />
+          <StatBadge
+            label="Excused / Sick"
+            value={attendance.excused}
+            icon={AlertTriangle}
+            bg="bg-amber-50"
+            text="text-amber-700"
+            border="border-amber-200"
+            iconBg="bg-amber-100"
+          />
+          <StatBadge
+            label="Unmarked"
+            value={attendance.unmarked}
+            icon={Circle}
+            bg="bg-slate-50"
+            text="text-slate-600"
+            border="border-slate-200"
+            iconBg="bg-slate-100"
+          />
+        </div>
+
+        {/* Progress Bar */}
+        {attendance.total > 0 && (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <p className="text-xs font-semibold text-slate-600">
+                {markedCount}/{attendance.total} Learners Marked
+              </p>
+              <p className="text-xs font-black text-indigo-600">{attendance.percentage}%</p>
+            </div>
+            <div className="w-full bg-slate-100 rounded-full h-2">
+              <div
+                className="bg-gradient-to-r from-indigo-500 to-violet-500 h-2 rounded-full transition-all duration-500"
+                style={{ width: `${attendance.percentage}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Total learners info */}
+        {attendance.total === 0 && (
+          <div className="flex flex-col items-center justify-center gap-2 py-6 text-center">
+            <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center">
+              <Users size={18} className="text-slate-400" />
+            </div>
+            <p className="text-sm font-semibold text-slate-600">No learners enrolled in this class</p>
+            <p className="text-xs text-slate-400">Assign learners to {myClassGrade} {myClassStream} to begin tracking attendance.</p>
+          </div>
+        )}
+
+        {/* Action Button */}
+        {attendance.total > 0 && (
+          <Button
+            onClick={onTakeAttendance}
+            className={`w-full font-bold gap-2 rounded-xl h-10 ${
+              isComplete
+                ? 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : hasStarted
+                ? 'bg-indigo-600 hover:bg-indigo-700 text-white'
+                : 'bg-amber-500 hover:bg-amber-600 text-white'
+            }`}
+          >
+            {isComplete ? (
+              <>
+                <CheckCircle2 size={16} />
+                Update Register
+              </>
+            ) : hasStarted ? (
+              <>
+                <ClipboardList size={16} />
+                Update Attendance
+              </>
+            ) : (
+              <>
+                <ClipboardCheck size={16} />
+                Take Today's Attendance
+              </>
+            )}
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
 // ─── Teacher Dashboard Component ────────────────────────────────────────────────
 const TeacherDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -717,6 +988,9 @@ const TeacherDashboard: React.FC = () => {
 
       {/* ── My Assigned Classes Summary ── */}
       <MyClassesSummary />
+
+      {/* ── Class Attendance Widget (Today's Roll Call) ── */}
+      <ClassAttendanceWidget onTakeAttendance={() => navigate('/attendance')} />
 
       {/* ── Two Column Layout: Schedule + Quick Actions ── */}
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
