@@ -26,7 +26,6 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
-import LearnerManagementMenu from '@/components/students/LearnerManagementMenu';
 import {
   buildLearnerMenuFilters,
   applyLearnerFilter,
@@ -35,6 +34,7 @@ import type {
   LearnerMenuData,
   LearnerMenuItem,
 } from '@/types/learnerMenu';
+import LearnerManagementMenu from '@/components/students/LearnerManagementMenu';
 
 interface LearnerRowCompat {
   id: string;
@@ -50,12 +50,6 @@ interface LearnerRowCompat {
 }
 
 const DEFAULT_LEARNERS: LearnerRowCompat[] = INITIAL_SEED_DATA.students as LearnerRowCompat[];
-
-// ── Dynamic Learner Management Menu ───────────────────────────────────────
-// menuFilterId drives which category is selected in the side-rail menu.
-// 'all' shows every learner; the sidebar filter row uses this to derive
-// its active state and count badges dynamically from the live learners array.
-const [menuFilterId, setMenuFilterId] = useState('all');
 
 // Key for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';
@@ -226,6 +220,12 @@ export default function Students() {
       console.error('Error saving filter state to localStorage', e);
     }
   }, [searchTerm, gradeFilter, streamFilter]);
+
+  // ── Dynamic Learner Management Menu ───────────────────────────────────────
+  // menuFilterId drives which category is selected in the side-rail menu.
+  // 'all' shows every learner; the sidebar filter row uses this to derive
+  // its active state and count badges dynamically from the live learners array.
+  const [menuFilterId, setMenuFilterId] = useState('all');
 
   // 7. Compute the list of streams available for the currently selected grade.
     // All streams are sourced exclusively from the live Grades & Streams configuration
