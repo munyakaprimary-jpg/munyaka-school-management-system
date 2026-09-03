@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Wifi,
   WifiOff,
@@ -9,24 +9,44 @@ import {
   Loader2,
   RefreshCw,
   AlertCircle,
+  AlertTriangle,
   Activity,
   Clock,
   Database,
   Smartphone,
-  ShieldCheck
+  ShieldCheck,
+  Zap,
+  ZapOff,
+  Settings2,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
+import {
+  Alert,
+  AlertTitle,
+  AlertDescription,
+} from '@/components/ui/alert';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
 
 const LAN_SERVER_KEY = 'lan_server_url';
 const DEFAULT_LAN_URL = 'http://10.28.160.196:5000';
 
-type ConnectionStatus = 'connected' | 'offline' | 'testing' | 'unknown';
+type ConnectionStatus = 'connected' | 'offline' | 'testing' | 'starting' | 'stopping';
+type ServerProcessStatus = 'online' | 'offline' | 'starting' | 'stopping' | 'error';
+type ErrorType = 'port_in_use' | 'firewall' | 'timeout' | 'unauthorized' | 'server_error' | null;
 
 interface ServerStats {
   students: number;
@@ -46,8 +66,47 @@ const normalizeUrl = (input: string): string => {
   if (!url.includes(':5000') && !url.match(/:\d{2,5}/)) {
     url = `${url}:5000`;
   }
-  // strip trailing slash
   return url.replace(/\/+$/, '');
+};
+
+const describeError = (type: ErrorType): { title: string; message: string } => {
+  switch (type) {
+    case 'port_in_use':
+      return {
+        title: 'Port Already in Use',
+        message:
+          'The selected port is already occupied by another process. Click "Change Port" to pick a different port, or stop the conflicting application.',
+      };
+    case 'firewall':
+      return {
+        title: 'Firewall Blocked',
+        message:
+          'The firewall prevented the server from binding to the port. Ensure your antivirus or firewall allows the application on the configured port.',
+      };
+    case 'timeout':
+      return {
+        title: 'Server Did Not Start',
+        message:
+          'The server failed to respond after starting. This may indicate a port conflict or insufficient permissions. Try changing the port.',
+      };
+    case 'unauthorized':
+      return {
+        title: 'Unauthorized',
+        message:
+          'The server refused the start command — you may not have admin privileges. Try running the server application as administrator.',
+      };
+    case 'server_error':
+      return {
+        title: 'Server Error',
+        message:
+          'The server encountered an error while starting. Check the server logs for details and retry.',
+      };
+    default:
+      return {
+        title: 'Connection Failed',
+        message: 'An unexpected error occurred. Please try again.',
+      };
+  }
 };
 
 export default function LANServerConfig() {
@@ -55,11 +114,17 @@ export default function LANServerConfig() {
     return localStorage.getItem(LAN_SERVER_KEY) || DEFAULT_LAN_URL;
   });
   const [status, setStatus] = useState<ConnectionStatus>('unknown');
+  const [serverProcess, setServerProcess] = useState<ServerProcessStatus>('offline');
   const [latency, setLatency] = useState<number | null>(null);
   const [lastChecked, setLastChecked] = useState<string | null>(null);
   const [stats, setStats] = useState<ServerStats | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+  const [activeError, setActiveError] = useState<ErrorType>(null);
+  const [showPortDialog, setShowPortDialog] = useState(false);
+  const [pendingPort, setPendingPort] = useState('');
+  const [portInput, setPortInput] = useState('5000');
 
   // Load saved URL on mount
   useEffect(() => {
@@ -67,115 +132,215 @@ export default function LANServerConfig() {
     if (saved) setServerUrl(saved);
   }, []);
 
-  // Auto-test on mount
+  // Extract port from URL
+  const extractPort = (url: string): string => {
+    const m = url.match(/:(\d+)/);
+    return m ? m[1] : '5000';
+  };
+
+  // Auto-test connection on mount
   useEffect(() => {
     testConnectionSilent(serverUrl);
   }, []);
 
-  // Ping the dedicated health endpoint and parse { status: "ok" }.
-    // On success, flip status to 'connected' (Online) and persist the URL.
-    const pingHealth = async (url: string): Promise<{
-      ok: boolean;
-      latency: number | null;
-      stats: ServerStats | null;
-    }> => {
-      const normalized = normalizeUrl(url);
-      const start = Date.now();
+  const pingHealth = async (
+    url: string
+  ): Promise<{ ok: boolean; latency: number | null; stats: ServerStats | null }> => {
+    const normalized = normalizeUrl(url);
+    const start = Date.now();
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      const res = await fetch(`${normalized}/api/health`, {
+        method: 'GET',
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      const ms = Date.now() - start;
+
+      if (!res.ok) return { ok: false, latency: null, stats: null };
+
+      let payload: any = null;
+      try { payload = await res.json(); } catch { /* non-JSON ok */ }
+
+      const isOnline =
+        !!payload &&
+        (payload.status === 'ok' ||
+          payload.status === 'healthy' ||
+          payload.success === true);
+
+      if (!isOnline) return { ok: false, latency: ms, stats: null };
+
+      let stats: ServerStats | null = null;
       try {
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 5000);
-  
-        const res = await fetch(`${normalized}/api/health`, {
-          method: 'GET',
-          signal: controller.signal
-        });
-        clearTimeout(timeoutId);
-        const ms = Date.now() - start;
-  
-        if (!res.ok) {
-          return { ok: false, latency: null, stats: null };
+        const statsRes = await fetch(`${normalized}/api/stats`);
+        if (statsRes.ok) {
+          const data = await statsRes.json();
+          if (data?.data) stats = data.data;
         }
-  
-        let payload: any = null;
-        try { payload = await res.json(); } catch { /* non-JSON ok */ }
-  
-        // Treat any of these as "Online": explicit status:"ok", status:"healthy",
-        // or simply a 2xx response from the health endpoint.
-        const isOnline =
-          !!payload &&
-          (payload.status === 'ok' ||
-            payload.status === 'healthy' ||
-            payload.success === true);
-  
-        if (!isOnline) {
-          return { ok: false, latency: ms, stats: null };
+      } catch { /* best-effort */ }
+
+      return { ok: true, latency: ms, stats };
+    } catch {
+      return { ok: false, latency: null, stats: null };
+    }
+  };
+
+  const testConnectionSilent = async (url: string) => {
+    if (!url) return;
+    setActiveError(null);
+    setStatus('testing');
+    const result = await pingHealth(url);
+    setLastChecked(new Date().toISOString());
+    if (result.ok) {
+      setLatency(result.latency ?? null);
+      setServerProcess('online');
+      setStatus('connected');
+      if (result.stats) setStats(result.stats);
+    } else {
+      setServerProcess('offline');
+      setStatus('offline');
+      setLatency(null);
+    }
+  };
+
+  // ── Server Lifecycle Helpers ──────────────────────────────────────────────
+
+  /**
+   * Sends POST /api/server/start to the backend LAN server.
+   * The backend must implement this endpoint to spawn/start the Node process.
+   * Expected success: 200 OK  { status: "started" }
+   * Expected errors:
+   *   409 → port_in_use (EADDRINUSE)
+   *   403 → unauthorized
+   *   500 → server_error / timeout
+   */
+  const startServer = useCallback(async (): Promise<{ ok: boolean; errorType?: ErrorType }> => {
+    const normalized = normalizeUrl(serverUrl);
+    try {
+      const res = await fetch(`${normalized}/api/server/start`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: AbortSignal.timeout(10000),
+      });
+
+      if (res.ok) {
+        return { ok: true };
+      }
+
+      // Parse structured error body if available
+      let errorType: ErrorType = 'server_error';
+      try {
+        const body = await res.json();
+        if (body.code === 'EADDRINUSE' || body.error?.includes('port')) {
+          errorType = 'port_in_use';
+        } else if (body.code === 'EACCES' || res.status === 403) {
+          errorType = 'unauthorized';
+        } else if (res.status >= 500) {
+          errorType = 'server_error';
         }
-  
-        // Optionally pull fresh stats so the Live Server Snapshot stays live
-        let stats: ServerStats | null = null;
-        try {
-          const statsRes = await fetch(`${normalized}/api/stats`);
-          if (statsRes.ok) {
-            const data = await statsRes.json();
-            if (data?.data) stats = data.data;
-          }
-        } catch { /* stats fetch is best-effort */ }
-  
-        return { ok: true, latency: ms, stats };
-      } catch {
-        return { ok: false, latency: null, stats: null };
+      } catch { /* use default */ }
+
+      return { ok: false, errorType };
+    } catch (err: any) {
+      if (err.name === 'AbortError' || err.message?.includes('timeout')) {
+        return { ok: false, errorType: 'timeout' };
       }
-    };
-  
-    const testConnectionSilent = async (url: string) => {
-      if (!url) return;
-      setStatus('testing');
-      const result = await pingHealth(url);
-      setLastChecked(new Date().toISOString());
+      // Network-level failure: server unreachable
+      return { ok: false, errorType: 'server_error' };
+    }
+  }, [serverUrl]);
+
+  /**
+   * Sends POST /api/server/stop to the backend LAN server.
+   * Expected success: 200 OK { status: "stopped" }
+   */
+  const stopServer = useCallback(async (): Promise<{ ok: boolean }> => {
+    const normalized = normalizeUrl(serverUrl);
+    try {
+      const res = await fetch(`${normalized}/api/server/stop`, {
+        method: 'POST',
+        signal: AbortSignal.timeout(8000),
+      });
+      return { ok: res.ok };
+    } catch {
+      // Even on network error, treat as stopped (fire-and-forget)
+      return { ok: true };
+    }
+  }, [serverUrl]);
+
+  const handleToggleServer = async (checked: boolean) => {
+    setActiveError(null);
+    setIsToggling(true);
+
+    if (checked) {
+      // START
+      setServerProcess('starting');
+      const result = await startServer();
       if (result.ok) {
-        setLatency(result.latency);
-        setStatus('connected');
-        if (result.stats) setStats(result.stats);
+        setServerProcess('online');
+        showSuccess('Server started successfully');
+        // Re-test connection after brief settle period
+        setTimeout(() => testConnectionSilent(serverUrl), 1500);
       } else {
-        setStatus('offline');
-        setLatency(null);
+        setServerProcess('offline');
+        setActiveError(result.errorType ?? 'server_error');
       }
-    };
-  
-    const handleSaveAndTest = async () => {
-      if (!serverUrl.trim()) {
-        showError('Please enter a LAN Server Address');
-        return;
-      }
-  
-      setIsSaving(true);
-      const normalized = normalizeUrl(serverUrl);
-      localStorage.setItem(LAN_SERVER_KEY, normalized);
-      setServerUrl(normalized);
-      showSuccess(`LAN Server Address saved: ${normalized}`);
-  
-      setIsTesting(true);
-      setStatus('testing');
-      const result = await pingHealth(normalized);
-      setLastChecked(new Date().toISOString());
-  
-      if (result.ok) {
-        setLatency(result.latency);
-        setStatus('connected');
-        if (result.stats) setStats(result.stats);
-        showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
-      } else {
-        setStatus('offline');
-        setLatency(null);
-        showError(`Could not reach ${normalized}. Working offline.`);
-      }
-  
-      setIsSaving(false);
-      setIsTesting(false);
-    };
+    } else {
+      // STOP
+      setServerProcess('stopping');
+      await stopServer();
+      setServerProcess('offline');
+      setStatus('offline');
+      setLatency(null);
+      setStats(null);
+      showSuccess('Server stopped');
+    }
+
+    setIsToggling(false);
+  };
+
+  // ── Connection Controls ────────────────────────────────────────────────────
+
+  const handleSaveAndTest = async () => {
+    if (!serverUrl.trim()) {
+      showError('Please enter a LAN Server Address');
+      return;
+    }
+
+    setIsSaving(true);
+    setActiveError(null);
+    const normalized = normalizeUrl(serverUrl);
+    localStorage.setItem(LAN_SERVER_KEY, normalized);
+    setServerUrl(normalized);
+    showSuccess(`LAN Server Address saved: ${normalized}`);
+
+    setIsTesting(true);
+    setStatus('testing');
+    const result = await pingHealth(normalized);
+    setLastChecked(new Date().toISOString());
+
+    if (result.ok) {
+      setLatency(result.latency ?? null);
+      setServerProcess('online');
+      setStatus('connected');
+      if (result.stats) setStats(result.stats);
+      showSuccess(`Online — connected to ${normalized} (${result.latency}ms)`);
+    } else {
+      setServerProcess('offline');
+      setStatus('offline');
+      setLatency(null);
+      showError(`Could not reach ${normalized}. Working offline.`);
+    }
+
+    setIsSaving(false);
+    setIsTesting(false);
+  };
 
   const handleTestOnly = async () => {
     setIsTesting(true);
+    setActiveError(null);
     await testConnectionSilent(serverUrl);
     setIsTesting(false);
   };
@@ -183,9 +348,38 @@ export default function LANServerConfig() {
   const handleReset = () => {
     setServerUrl(DEFAULT_LAN_URL);
     localStorage.setItem(LAN_SERVER_KEY, DEFAULT_LAN_URL);
+    setServerProcess('offline');
+    setStatus('offline');
+    setLatency(null);
+    setStats(null);
+    setActiveError(null);
     showSuccess(`Reset to default: ${DEFAULT_LAN_URL}`);
     testConnectionSilent(DEFAULT_LAN_URL);
   };
+
+  const handleChangePort = () => {
+    const port = parseInt(portInput, 10);
+    if (!portInput || isNaN(port) || port < 1024 || port > 65535) {
+      showError('Enter a valid port between 1024 and 65535');
+      return;
+    }
+    const hostPart = serverUrl.replace(/:\d+$/, '').replace(/\/+$/, '');
+    const newUrl = `${hostPart}:${port}`;
+    setShowPortDialog(false);
+    setPortInput('');
+    setServerUrl(newUrl);
+    localStorage.setItem(LAN_SERVER_KEY, newUrl);
+    showSuccess(`Port updated to ${port}. Saving & testing...`);
+    setIsSaving(true);
+    setStatus('testing');
+    setActiveError(null);
+    testConnectionSilent(newUrl).finally(() => setIsSaving(false));
+  };
+
+  const currentPort = extractPort(serverUrl);
+  const isServerActive = serverProcess === 'online';
+  const isBusy = serverProcess === 'starting' || serverProcess === 'stopping';
+  const err = activeError ? describeError(activeError) : null;
 
   return (
     <div className="space-y-6 pb-20">
@@ -211,36 +405,17 @@ export default function LANServerConfig() {
           <div
             className={cn(
               "flex items-center gap-2 px-4 py-2 rounded-2xl backdrop-blur-sm font-bold text-sm",
-              status === 'connected' && "bg-emerald-500/30 text-emerald-100 ring-2 ring-emerald-300/50",
-              status === 'offline' && "bg-red-500/30 text-red-100 ring-2 ring-red-300/50",
-              status === 'testing' && "bg-amber-500/30 text-amber-100 ring-2 ring-amber-300/50",
-              status === 'unknown' && "bg-white/10 text-white/70 ring-2 ring-white/20"
+              serverProcess === 'online' && "bg-emerald-500/30 text-emerald-100 ring-2 ring-emerald-300/50",
+              serverProcess === 'offline' && "bg-red-500/30 text-red-100 ring-2 ring-red-300/50",
+              serverProcess === 'starting' && "bg-amber-500/30 text-amber-100 ring-2 ring-amber-300/50",
+              serverProcess === 'stopping' && "bg-amber-500/30 text-amber-100 ring-2 ring-amber-300/50",
+              serverProcess === 'error' && "bg-red-500/30 text-red-100 ring-2 ring-red-300/50"
             )}
           >
-            {status === 'connected' && (
-              <>
-                <CheckCircle2 className="w-5 h-5" />
-                <span>Connected</span>
-              </>
-            )}
-            {status === 'offline' && (
-              <>
-                <XCircle className="w-5 h-5" />
-                <span>Offline</span>
-              </>
-            )}
-            {status === 'testing' && (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" />
-                <span>Testing...</span>
-              </>
-            )}
-            {status === 'unknown' && (
-              <>
-                <AlertCircle className="w-5 h-5" />
-                <span>Not Tested</span>
-              </>
-            )}
+            {serverProcess === 'online' && <><CheckCircle2 className="w-5 h-5" /><span>Online (Active)</span></>}
+            {serverProcess === 'offline' && <><XCircle className="w-5 h-5" /><span>Offline</span></>}
+            {(serverProcess === 'starting' || serverProcess === 'stopping') && <><Loader2 className="w-5 h-5 animate-spin" /><span>{serverProcess === 'starting' ? 'Starting...' : 'Stopping...'}</span></>}
+            {serverProcess === 'error' && <><AlertCircle className="w-5 h-5" /><span>Error</span></>}
           </div>
         </div>
 
@@ -266,6 +441,135 @@ export default function LANServerConfig() {
           </div>
         </div>
       </div>
+
+      {/* Error Alert Banner */}
+      {err && (
+        <Alert
+          variant="destructive"
+          className="rounded-2xl border-red-200 bg-red-50 dark:bg-red-950/20"
+        >
+          <AlertTriangle className="w-5 h-5" />
+          <AlertTitle className="font-black">{err.title}</AlertTitle>
+          <AlertDescription className="mt-1 text-sm">
+            {err.message}
+          </AlertDescription>
+          <div className="flex items-center gap-2 mt-3 flex-wrap">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl border-red-200 text-red-600 hover:bg-red-100 font-bold text-xs"
+              onClick={() => setShowPortDialog(true)}
+            >
+              <Settings2 className="w-3 h-3 mr-1.5" />
+              Change Port
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 rounded-xl border-red-200 text-red-600 hover:bg-red-100 font-bold text-xs"
+              onClick={() => {
+                setActiveError(null);
+                handleToggleServer(true);
+              }}
+            >
+              <RefreshCw className="w-3 h-3 mr-1.5" />
+              Retry
+            </Button>
+          </div>
+        </Alert>
+      )}
+
+      {/* Server Lifecycle Card */}
+      <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
+        <CardHeader className="bg-gradient-to-r from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 border-b pb-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              {isServerActive ? (
+                <Zap className="w-5 h-5 text-emerald-600" />
+              ) : (
+                <ZapOff className="w-5 h-5 text-slate-400" />
+              )}
+              <CardTitle className="text-lg">Server Process Control</CardTitle>
+            </div>
+
+            {/* Toggle Switch */}
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-500 dark:text-slate-400">
+                {isServerActive ? 'Running' : 'Stopped'}
+              </span>
+              <Switch
+                checked={isServerActive}
+                disabled={isBusy}
+                onCheckedChange={handleToggleServer}
+                className={cn(
+                  "data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300",
+                  isBusy && "opacity-50 cursor-not-allowed"
+                )}
+              />
+            </div>
+          </div>
+          <CardDescription className="mt-1">
+            {isServerActive
+              ? 'The local server is running. Toggle OFF to shut it down safely.'
+              : 'Toggle ON to start the local server on the configured host and port.'}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          {/* Status row */}
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Status</p>
+              <div className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-black",
+                isServerActive ? "bg-emerald-100 text-emerald-700" :
+                serverProcess === 'starting' ? "bg-amber-100 text-amber-700" :
+                serverProcess === 'stopping' ? "bg-amber-100 text-amber-700" :
+                "bg-slate-100 text-slate-600"
+              )}>
+                {isServerActive && <><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block" />Active</>}
+                {serverProcess === 'starting' && <><Loader2 className="w-3 h-3 animate-spin" />Starting</>}
+                {serverProcess === 'stopping' && <><Loader2 className="w-3 h-3 animate-spin" />Stopping</>}
+                {!isServerActive && serverProcess === 'offline' && <><span className="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block" />Offline</>}
+              </div>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Host IP</p>
+              <p className="text-sm font-mono font-black truncate">
+                {normalizeUrl(serverUrl).replace(/:\d+$/, '').replace('http://', '')}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl p-3 text-center">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1">Port</p>
+              <p className="text-sm font-mono font-black">{currentPort}</p>
+            </div>
+          </div>
+
+          {/* Quick action buttons */}
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => { setPortInput(currentPort); setShowPortDialog(true); }}
+              className="rounded-xl font-bold text-xs h-9"
+            >
+              <Settings2 className="w-3 h-3 mr-1.5" />
+              Change Port
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={handleTestOnly}
+              disabled={isTesting}
+              className="rounded-xl font-bold text-xs h-9"
+            >
+              <RefreshCw className={cn("w-3 h-3 mr-1.5", isTesting && "animate-spin")} />
+              Re-test Connection
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Connection Settings Card */}
       <Card className="border-0 shadow-lg rounded-3xl overflow-hidden">
@@ -302,15 +606,9 @@ export default function LANServerConfig() {
               className="flex-1 h-14 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 font-bold text-base shadow-lg shadow-blue-200"
             >
               {isSaving || isTesting ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  {isSaving ? 'Saving...' : 'Testing...'}
-                </>
+                <><Loader2 className="w-5 h-5 mr-2 animate-spin" />{isSaving ? 'Saving...' : 'Testing...'}</>
               ) : (
-                <>
-                  <Save className="w-5 h-5 mr-2" />
-                  Save & Test Connection
-                </>
+                <><Save className="w-5 h-5 mr-2" />Save & Test Connection</>
               )}
             </Button>
             <Button
@@ -394,6 +692,54 @@ export default function LANServerConfig() {
       <div className="text-center text-xs text-slate-400 py-2">
         Settings are saved to <span className="font-mono font-bold">localStorage['lan_server_url']</span> and used by the global sync layer.
       </div>
+
+      {/* Change Port Dialog */}
+      <Dialog open={showPortDialog} onOpenChange={setShowPortDialog}>
+        <DialogContent className="rounded-3xl">
+          <DialogHeader>
+            <DialogTitle>Change Server Port</DialogTitle>
+            <DialogDescription>
+              The current port is <strong className="font-mono">{currentPort}</strong>. Enter a new port number between 1024 and 65535, then save.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label htmlFor="port-input" className="text-xs font-black uppercase tracking-widest text-slate-500">
+                New Port Number
+              </Label>
+              <Input
+                id="port-input"
+                type="number"
+                min={1024}
+                max={65535}
+                value={portInput}
+                onChange={(e) => setPortInput(e.target.value)}
+                placeholder={currentPort}
+                className="h-12 rounded-xl font-mono text-sm mt-1"
+              />
+              <p className="text-xs text-slate-500 mt-2">
+                Common ports: 5000, 3000, 8080, 8000. Avoid ports below 1024 (reserved).
+              </p>
+            </div>
+          </div>
+          <DialogFooter className="gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setShowPortDialog(false)}
+              className="rounded-xl"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleChangePort}
+              className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold"
+            >
+              <Settings2 className="w-4 h-4 mr-2" />
+              Apply & Test
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
