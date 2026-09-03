@@ -203,12 +203,15 @@ const initDB = () => {
     CREATE TABLE IF NOT EXISTS teachers (
       id TEXT PRIMARY KEY,
       staff_id TEXT UNIQUE NOT NULL,
+      full_name TEXT,
       first_name TEXT NOT NULL,
       last_name TEXT NOT NULL,
+      role TEXT DEFAULT 'TEACHER',
       email TEXT UNIQUE,
       phone TEXT,
       gender TEXT,
       id_number TEXT,
+      tsc_number TEXT,
       subject_specialization TEXT,
       grade_assigned TEXT,
       stream_assigned TEXT,
@@ -298,6 +301,31 @@ const initDB = () => {
   `;
 
   dbExec(schema);
+
+  // Fallback: Add missing columns to teachers table for older database files
+  const migrateTeachersTable = () => {
+    try {
+      // Check if full_name column exists, if not add it
+      const tableInfo = dbAll("PRAGMA table_info(teachers)");
+      const columnNames = tableInfo.map(col => col.name);
+
+      if (!columnNames.includes('full_name')) {
+        dbRun("ALTER TABLE teachers ADD COLUMN full_name TEXT");
+        console.log('  → Added full_name column to teachers table');
+      }
+      if (!columnNames.includes('role')) {
+        dbRun("ALTER TABLE teachers ADD COLUMN role TEXT DEFAULT 'TEACHER'");
+        console.log('  → Added role column to teachers table');
+      }
+      if (!columnNames.includes('tsc_number')) {
+        dbRun("ALTER TABLE teachers ADD COLUMN tsc_number TEXT");
+        console.log('  → Added tsc_number column to teachers table');
+      }
+    } catch (err) {
+      console.warn('Migration note:', err.message);
+    }
+  };
+  migrateTeachersTable();
 
   // Insert default admin user if not exists
   const adminExists = dbGet('SELECT id FROM users WHERE role = ?', ['admin']);
@@ -493,39 +521,82 @@ app.post('/api/teachers', (req, res) => {
   try {
     const id = generateId();
     const {
-      staff_id, first_name, last_name, email, phone, gender,
-      id_number, subject_specialization, grade_assigned, stream_assigned
+      staff_id,
+      full_name,
+      first_name: req_first_name,
+      last_name: req_last_name,
+      role,
+      email,
+      phone,
+      gender,
+      id_number,
+      tsc_number,
+      subject_specialization,
+      grade_assigned,
+      stream_assigned
     } = req.body;
 
+    // Handle full_name: either use it directly or combine first_name + last_name
+    let firstName = req_first_name || '';
+    let lastName = req_last_name || '';
+
+    if (full_name && !firstName && !lastName) {
+      // Split full_name into first and last name
+      const nameParts = full_name.trim().split(/\s+/);
+      firstName = nameParts[0] || '';
+      lastName = nameParts.slice(1).join(' ') || '';
+    }
+
+    // Generate staff_id if not provided
+    const finalStaffId = staff_id || `STF-${Date.now()}`;
+
+    // Default role to TEACHER if not specified
+    const finalRole = role || 'TEACHER';
+
     dbRun(
-      `INSERT INTO teachers (id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [id, staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned]
+      `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [id, finalStaffId, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, finalRole, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned]
     );
 
     saveDatabase();
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [id]);
     res.status(201).json({ success: true, data: teacher });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    console.error('POST /api/teachers error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
 // Update teacher
 app.put('/api/teachers/:id', (req, res) => {
   try {
-    const { staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active } = req.body;
+    const {
+      staff_id, full_name, first_name, last_name, role,
+      email, phone, gender, id_number, tsc_number,
+      subject_specialization, grade_assigned, stream_assigned, is_active
+    } = req.body;
+
+    // Handle full_name: split into first/last if provided and they aren't
+    let firstName = first_name || '';
+    let lastName = last_name || '';
+    if (full_name && !firstName && !lastName) {
+      const nameParts = full_name.trim().split(/\s+/);
+      firstName = nameParts[0] || '';
+      lastName = nameParts.slice(1).join(' ') || '';
+    }
 
     dbRun(
-      `UPDATE teachers SET staff_id=?, first_name=?, last_name=?, email=?, phone=?, gender=?, id_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-      [staff_id, first_name, last_name, email, phone, gender, id_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id]
+      `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [staff_id, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, role || 'TEACHER', email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id]
     );
 
     saveDatabase();
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [req.params.id]);
     res.json({ success: true, data: teacher });
-  } catch (error) {
-    res.status(500).json({ success: false, error: error.message });
+  } catch (err) {
+    console.error('PUT /api/teachers/:id error:', err.message);
+    res.status(500).json({ error: err.message });
   }
 });
 
