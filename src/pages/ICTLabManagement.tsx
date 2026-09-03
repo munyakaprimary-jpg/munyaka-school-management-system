@@ -252,9 +252,75 @@ const ICTLabManagement = () => {
   useEffect(() => {
     localStorage.setItem('munyaka_ict_assets', JSON.stringify(assets));
     localStorage.setItem('munyaka_ict_logs', JSON.stringify(logs));
+    localStorage.setItem('munyaka_system_users', JSON.stringify(sysUsers));
+    localStorage.setItem('munyaka_system_devices', JSON.stringify(networkDevices));
+    localStorage.setItem('munyaka_lab_reservations', JSON.stringify(reservations));
     notifyDataChanged('munyaka_ict_assets');
     notifyDataChanged('munyaka_ict_logs');
-  }, [assets, logs]);
+    notifyDataChanged('munyaka_system_users');
+    notifyDataChanged('munyaka_system_devices');
+    notifyDataChanged('munyaka_lab_reservations');
+  }, [assets, logs, sysUsers, networkDevices, reservations]);
+
+  // --- System Management Handlers ---
+  const handleToggleUserStatus = (id: string) => {
+    setSysUsers(prev => prev.map(u => u.id === id ? { ...u, status: u.status === 'Active' ? 'Disabled' : 'Active' } : u));
+    showSuccess("User account status updated.");
+  };
+
+  const handleResetPassword = (name: string) => {
+    showSuccess(`Temporary password generated and sent to ${name}.`);
+  };
+
+  const handleAdjustQuota = (owner: string) => {
+    showSuccess(`Quota adjustment interface opened for ${owner}.`);
+  };
+
+  const handleCancelBooking = (id: string) => {
+    setReservations(prev => prev.filter(r => r.id !== id));
+    showSuccess("Lab reservation cancelled.");
+  };
+
+  const handleAddUser = (e: React.FormEvent) => {
+    e.preventDefault();
+    const form = e.target as HTMLFormElement;
+    const nameInput = form.querySelector<HTMLInputElement>('input[name="fullName"]');
+    const roleInput = form.querySelector<HTMLSelectElement>('select[name="role"]');
+    const usernameInput = form.querySelector<HTMLInputElement>('input[name="username"]');
+    const newUser: SystemUser = {
+      id: `USR-${Math.floor(Math.random() * 900) + 100}`,
+      name: nameInput?.value || "New User Account",
+      role: (roleInput?.value || "Teacher") as SystemUser['role'],
+      username: usernameInput?.value || "new.user",
+      lastLogin: "Never",
+      status: "Active"
+    };
+    setSysUsers(prev => [newUser, ...prev]);
+    setIsAddUserOpen(false);
+    showSuccess("User account provisioned successfully.");
+  };
+
+  // --- Derived Stats for System Management ---
+  const userStats = {
+    total: sysUsers.length,
+    teachers: sysUsers.filter(u => u.role === 'Teacher').length,
+    students: sysUsers.filter(u => u.role === 'Student').length,
+    suspended: sysUsers.filter(u => u.status === 'Disabled').length
+  };
+
+  const networkStats = {
+    bandwidth: "142.5 GB",
+    active: networkDevices.filter(d => d.status === 'Online').length,
+    quotaAvg: "2.5 GB"
+  };
+
+  const filteredSysUsers = useMemo(() => {
+    return sysUsers.filter(u => {
+      const matchesSearch = u.name.toLowerCase().includes(userSearch.toLowerCase()) || u.username.toLowerCase().includes(userSearch.toLowerCase());
+      const matchesRole = roleFilter === "all" || u.role === roleFilter;
+      return matchesSearch && matchesRole;
+    });
+  }, [sysUsers, userSearch, roleFilter]);
 
   // --- Derived Data ---
   const filteredAssets = useMemo(() => {
