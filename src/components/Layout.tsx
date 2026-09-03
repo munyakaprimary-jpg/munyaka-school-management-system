@@ -161,6 +161,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
+    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher'] },
   ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
@@ -250,13 +251,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+      { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher'] },
     ].filter(item => {
-          if (!user) return false;
-          if (item.global) return true;
-          const roleLower = user.role?.toLowerCase() ?? '';
-          // Treat super_admin as admin for bottom-nav role matching
-          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
-          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
+      if (!user) return false;
+      if (item.global) return true;
+      const roleLower = user.role?.toLowerCase() ?? '';
+      // Treat super_admin as admin for bottom-nav role matching
+      const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
+      return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
         });
 
   return (
@@ -430,8 +432,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     >
                       {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
                     </button>
-                    {/* LAN Server Connection Indicator */}
-                    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold">
+                    {/* LAN Server Connection Indicator - Clickable link to LAN Config */}
+                    <Link
+                      to="/lan-config"
+                      className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                    >
                       {isConnected ? (
                         <>
                           <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -443,7 +448,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                           <span className="text-slate-400">Offline</span>
                         </>
                       )}
-                    </div>
+                    </Link>
                   </div>
                 </header>
 
