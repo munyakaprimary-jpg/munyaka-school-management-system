@@ -1264,67 +1264,68 @@ const Attendance = () => {
       </Card>
 
       {/* ============================================
-          2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
-          ============================================
-          Shows a single banner when one or both sessions are
-          auto-locked after a save. We display the per-session
-          "locked at" timestamp in the banner so the teacher
-          knows exactly when the register was sealed.
-      */}
-      {(isMorningLocked || isAfternoonLocked) && (
-        <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
-              <LockKeyhole size={24} className="text-white animate-pulse" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
-                  {isMorningLocked && isAfternoonLocked
-                    ? 'Both Sessions Sealed'
-                    : isMorningLocked
-                    ? 'Morning Sealed'
-                    : 'Afternoon Sealed'}
-                </span>
-                <span className="text-xs font-medium text-rose-100 truncate">
-                  {isMorningLocked && isAfternoonLocked
-                    ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
-                    : isMorningLocked
-                    ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
-                    : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
-                </span>
+                2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
+                ============================================
+                Shows a single banner when one or both sessions are
+                auto-locked after a save. We display the per-session
+                "locked at" timestamp in the banner so the teacher
+                knows exactly when the register was sealed.
+            */}
+      
+            {(isMorningLocked || isAfternoonLocked) && (
+              <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex items-center gap-3.5 min-w-0">
+                  <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
+                    <LockKeyhole size={24} className="text-white animate-pulse" />
+                  </div>
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
+                      {isMorningLocked && isAfternoonLocked
+                        ? 'Both Sessions Sealed'
+                        : isMorningLocked
+                        ? 'Morning Sealed'
+                        : 'Afternoon Sealed'}
+                    </span>
+                    <span className="text-xs font-medium text-rose-100 truncate">
+                      {isMorningLocked && isAfternoonLocked
+                        ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
+                        : isMorningLocked
+                        ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
+                        : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
+                    </span>
+                  </div>
+                  <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
+                    Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
+                    {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
+                      <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
+                    )}
+                  </p>
+                </div>
+                {/* Quick unlock shortcuts: one button per locked session */}
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  {isMorningLocked && (
+                    <Button
+                      onClick={() => openLockAuthModal('unlock', 'morning')}
+                      className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+                    >
+                      <Unlock size={14} />
+                      Unlock Morning
+                    </Button>
+                  )}
+                  {isAfternoonLocked && (
+                    <Button
+                      onClick={() => openLockAuthModal('unlock', 'afternoon')}
+                      className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+                    >
+                      <Unlock size={14} />
+                      Unlock Afternoon
+                    </Button>
+                  )}
+                </div>
               </div>
-              <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
-                Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
-                {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
-                  <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
-                )}
-              </p>
-            </div>
-          </div>
-          {/* Quick unlock shortcuts: one button per locked session */}
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {isMorningLocked && (
-              <Button
-                onClick={() => openLockAuthModal('unlock', 'morning')}
-                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-              >
-                <Unlock size={14} />
-                Unlock Morning
-              </Button>
             )}
-            {isAfternoonLocked && (
-              <Button
-                onClick={() => openLockAuthModal('unlock', 'afternoon')}
-                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-              >
-                <Unlock size={14} />
-                Unlock Afternoon
-              </Button>
-            )}
-          </div>
-        </div>
-      )}
 
       {/* ============================================
                 2b. TIME WINDOW BANNER + ADMIN OVERRIDE (RBAC-gated)
