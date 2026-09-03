@@ -640,8 +640,8 @@ const AdminDashboard: React.FC = () => {
       {/* ── Live Sync Banner ── */}
       <LiveSyncBanner />
 
-      {/* ── System Vitals ── */}
-      <div className="space-y-3">
+      {/* ── Summary Metric Cards ── */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <VitalCard
           icon={<Users size={20} className="text-blue-600" />}
           iconBg="bg-blue-50"
@@ -660,6 +660,10 @@ const AdminDashboard: React.FC = () => {
           title="Today's Attendance"
           value={`${vitals.todayAttendanceRate}%`}
         />
+      </div>
+
+      {/* ── Additional System Vitals ── */}
+      <div className="space-y-3">
         <VitalCard
           icon={<GraduationCap size={20} className="text-purple-600" />}
           iconBg="bg-purple-50"
