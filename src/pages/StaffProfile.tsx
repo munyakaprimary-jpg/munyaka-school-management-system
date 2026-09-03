@@ -50,6 +50,30 @@ const getDepartment = (m: StaffMemberProfile) => m.department || 'General Staff'
 const getStatus = (m: StaffMemberProfile) => m.status || 'Active';
 const getSubjects = (m: StaffMemberProfile) => m.subjects || [];
 const getTscNo = (m: StaffMemberProfile) => m.tsc_no || m.tsc_number || 'N/A';
+const getQualifications = (m: any) =>
+  m?.qualifications || m?.qualification || m?.credentials || 'Not Provided';
+const getAssignedGrade = (m: any) =>
+  m?.assignedGrade || m?.assigned_grade || m?.class?.grade || null;
+const getAssignedStream = (m: any) =>
+  m?.assignedStream || m?.assigned_stream || m?.class?.stream || null;
+const getAssignedClass = (m: any) => {
+  const g = getAssignedGrade(m);
+  const s = getAssignedStream(m);
+  if (g && s) return `${g} - ${s}`;
+  if (g) return g;
+  return null;
+};
+const getLearnerCount = (m: any) =>
+  m?.learnerCount ?? m?.studentCount ?? m?.total_learners ?? null;
+const getEmergencyContact = (m: any) =>
+  m?.emergency_contact?.phone || m?.emergencyContact?.phone || m?.emergency_phone || null;
+const getDocuments = (m: any): Array<{ label: string; status: string; date: string }> => {
+  const docs = m?.documents || m?.compliance_docs || null;
+  if (Array.isArray(docs) && docs.length > 0) return docs;
+  // No documents on file — return a single placeholder so the card still
+  // renders something rather than going blank.
+  return [];
+};
 
 const StaffProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -64,85 +88,104 @@ const StaffProfile = () => {
       const targetId = (id || '').replace(/^PR-/, '');
   
       // Generic matcher — accepts the record if ANY of the standard ID fields
-      // (primary id, ref, staff_id, access_key, id_no, tsc_no, nationalId,
-      // tempAccessCode, or autoKey) match the target.
-      const matches = (s: any) =>
-        s.id === id ||
-        s.id === targetId ||
-        s.ref === id ||
-        s.staff_id === id ||
-        s.staff_id === targetId ||
-        s.access_key === id ||
-        s.id_no === id ||
-        s.id_no === targetId ||
-        s.nationalId === id ||
-        s.nationalId === targetId ||
-        s.tsc_no === id ||
-        s.tempAccessCode === id ||
-        s.autoKey === id;
-  
-      // 1. Resolve from the in-memory directory written by Staff.tsx
-      //    (key: munyaka_staff_directory).
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      if (saved) {
-        try {
-          const parsed: any[] = JSON.parse(saved);
-          const found = parsed.find(matches);
-          if (found) {
-            setMember(found as StaffMemberProfile);
+            // (primary id, ref, staff_id, access_key, id_no, tsc_no, tsc_number,
+            // nationalId, tempAccessCode, or autoKey) match the target.
+            const matches = (s: any) =>
+              s.id === id ||
+              s.id === targetId ||
+              s.ref === id ||
+              s.staff_id === id ||
+              s.staff_id === targetId ||
+              s.access_key === id ||
+              s.id_no === id ||
+              s.id_no === targetId ||
+              s.nationalId === id ||
+              s.nationalId === targetId ||
+              s.tsc_no === id ||
+              s.tsc_number === id ||
+              s.tempAccessCode === id ||
+              s.autoKey === id;
+      
+            // Read & parse a localStorage entry safely. Returns [] on miss/error.
+            const readKey = (key: string): any[] => {
+              try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return [];
+                const parsed = JSON.parse(raw);
+                // Some sources store as { success, data }, some as bare arrays.
+                const list = Array.isArray(parsed) ? parsed : (parsed?.data ?? []);
+                return Array.isArray(list) ? list : [];
+              } catch {
+                return [];
+              }
+            };
+      
+            // ── Unified source list: every place a staff record could live. ──
+            // 1. munyaka_staff_directory — unified directory (Staff.tsx writes here)
+            // 2. teachers             — generic key
+            // 3. staff                — generic key
+            // 4. staff_list           — generic key
+            // 5. staffDirectory       — generic camelCase key
+            // 6. staffList            — generic camelCase key
+            // 7. munyaka_staff_prereg — pre-registration ledger
+            const sourceKeys = [
+              'munyaka_staff_directory',
+              'teachers',
+              'staff',
+              'staff_list',
+              'staffDirectory',
+              'staffList',
+              'munyaka_staff_prereg',
+            ];
+      
+            let found: any | undefined;
+      
+            for (const key of sourceKeys) {
+              const list = readKey(key);
+              if (!list.length) continue;
+      
+              // Match in this source.
+              found = list.find(matches);
+      
+              // If a record was found in the pre-reg ledger (which uses a different
+              // shape), normalize it into the unified StaffMemberProfile shape so
+              // the rest of the component renders consistent data.
+              if (found && key === 'munyaka_staff_prereg') {
+                found = {
+                  id: found.id,
+                  id_no: found.nationalId || '',
+                  tsc_no: found.tscNumber,
+                  tsc_number: found.tscNumber,
+                  designation: found.systemRole || found.role || '',
+                  full_name: found.fullName || found.name || '',
+                  name: found.fullName || found.name || '',
+                  role: (found.systemRole || found.role || '').replace(/_/g, ' ').toUpperCase() || 'Teacher',
+                  subjects: found.assignedSubjects || [found.department || 'General'],
+                  phone: found.phone || '',
+                  email: found.email || '',
+                  status: found.status || 'Pre-Registered',
+                  joined: found.datePreRegistered || found.created_at || '',
+                  department: found.department || 'School Administration',
+                };
+              }
+      
+              if (found) break;
+            }
+      
+            // If no local record matched, try the static mock seed.
+            if (!found) {
+              const mapped = STAFF.find(matches);
+              if (mapped) {
+                found = { ...mapped, full_name: mapped.name || '' };
+              }
+            }
+      
+            if (found) {
+              setMember(found as StaffMemberProfile);
+            }
+      
             setLoading(false);
-            return;
-          }
-        } catch {
-          // Corrupt localStorage — fall through
-        }
-      }
-  
-      // 2. Resolve from the pre-registration ledger (key: munyaka_staff_prereg).
-      //    Pre-reg entries store nationalId / tempAccessCode as their IDs.
-      const preReg = localStorage.getItem('munyaka_staff_prereg');
-      if (preReg) {
-        try {
-          const parsed: any[] = JSON.parse(preReg);
-          const found = parsed.find(matches);
-          if (found) {
-            setMember({
-              id: found.id,
-              id_no: found.nationalId || '',
-              tsc_no: found.tscNumber,
-              tsc_number: found.tscNumber,
-              designation: found.systemRole || found.role || '',
-              full_name: found.fullName || found.name || '',
-              name: found.fullName || found.name || '',
-              role: (found.systemRole || found.role || '').replace(/_/g, ' ').toUpperCase() || 'Teacher',
-              subjects: found.assignedSubjects || [found.department || 'General'],
-              phone: found.phone || '',
-              email: found.email || '',
-              status: found.status || 'Pre-Registered',
-              joined: found.datePreRegistered || found.created_at || '',
-              department: found.department || 'School Administration',
-            } as StaffMemberProfile);
-            setLoading(false);
-            return;
-          }
-        } catch {
-          // Corrupt localStorage — fall through
-        }
-      }
-  
-      // 3. Last fall back to the static mock seed. Map mock → unified shape.
-      const mapped = STAFF.find(matches);
-      if (mapped) {
-        setMember({
-          ...mapped,
-          full_name: mapped.name || '',
-        } as StaffMemberProfile);
-        setLoading(false);
-        return;
-      }
-  
-      setLoading(false);
-    }, [id]);
+          }, [id]);
 
   if (loading) {
     return (
@@ -214,15 +257,17 @@ const StaffProfile = () => {
                     </Card>
 
           <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 overflow-hidden relative">
-            <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
-              <ShieldCheck size={140} />
-            </div>
-            <CardTitle className="text-lg mb-4">Account Security</CardTitle>
-            <p className="text-sm text-indigo-200 mb-6">User has administrative access to assessment records.</p>
-            <Button className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl">
-              Reset Credentials
-            </Button>
-          </Card>
+                      <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
+                        <ShieldCheck size={140} />
+                      </div>
+                      <CardTitle className="text-lg mb-4">Account Security</CardTitle>
+                      <p className="text-sm text-indigo-200 mb-6">
+                        {getRole(member)} account · manage credentials and access.
+                      </p>
+                      <Button className="w-full bg-white/10 hover:bg-white/20 text-white border-none rounded-xl">
+                        Reset Credentials
+                      </Button>
+                    </Card>
         </div>
 
         <div className="lg:col-span-2 space-y-8">
@@ -249,42 +294,68 @@ const StaffProfile = () => {
                                   )}
                                 </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-3 mb-4 text-emerald-600">
-                    <GraduationCap size={20} />
-                    <h4 className="font-bold">Assigned Class</h4>
-                  </div>
-                  <p className="text-sm font-bold text-slate-900">Grade 4 - Blue Stream</p>
-                  <p className="text-xs text-slate-500 mt-1">Total Learners: 42</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
-            <CardHeader className="px-8 pt-8 border-b pb-4">
-              <CardTitle className="text-lg">Compliance & Documents</CardTitle>
-            </CardHeader>
-            <CardContent className="p-8 space-y-4">
-              {[
-                { label: "Teaching Certificate (TSC)", status: "Verified", date: "Jan 2024" },
-                { label: "Certificate of Good Conduct", status: "Verified", date: "Mar 2024" },
-                { label: "Degree/Diploma Transcripts", status: "Verified", date: "Aug 2020" },
-              ].map((doc, i) => (
-                <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 group hover:bg-slate-100 transition-colors">
-                  <div className="flex items-center gap-3">
-                    <FileText size={18} className="text-slate-400" />
-                    <div>
-                      <p className="text-sm font-bold text-slate-700">{doc.label}</p>
-                      <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{doc.date}</p>
-                    </div>
-                  </div>
-                  <Badge className="bg-emerald-50 text-emerald-600 border-none">
-                    {doc.status}
-                  </Badge>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
+                                  <div className="flex items-center gap-3 mb-4 text-emerald-600">
+                                    <GraduationCap size={20} />
+                                    <h4 className="font-bold">Assigned Class</h4>
+                                  </div>
+                                  {getAssignedClass(member) ? (
+                                    <>
+                                      <p className="text-sm font-bold text-slate-900">{getAssignedClass(member)}</p>
+                                      <p className="text-xs text-slate-500 mt-1">
+                                        Total Learners: {getLearnerCount(member) ?? 'N/A'}
+                                      </p>
+                                    </>
+                                  ) : (
+                                    <p className="text-sm text-slate-400 font-medium italic">Not yet assigned to a class.</p>
+                                  )}
+                                </div>
+                              </div>
+                            </CardContent>
+                          </Card>
+                
+                          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                            <CardHeader className="px-8 pt-8 border-b pb-4">
+                              <CardTitle className="text-lg">Compliance & Documents</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8 space-y-4">
+                              {getDocuments(member).length > 0 ? (
+                                getDocuments(member).map((doc, i) => (
+                                  <div key={i} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 group hover:bg-slate-100 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                      <FileText size={18} className="text-slate-400" />
+                                      <div>
+                                        <p className="text-sm font-bold text-slate-700">{doc.label}</p>
+                                        <p className="text-[10px] text-slate-400 uppercase font-black tracking-widest">{doc.date}</p>
+                                      </div>
+                                    </div>
+                                    <Badge className="bg-emerald-50 text-emerald-600 border-none">
+                                      {doc.status}
+                                    </Badge>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-sm text-slate-400 font-medium italic">No compliance documents on file.</p>
+                              )}
+                            </CardContent>
+                          </Card>
+                
+                          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                            <CardHeader className="px-8 pt-8 border-b pb-4">
+                              <CardTitle className="text-lg">Qualifications</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                              <p className="text-sm text-slate-700 whitespace-pre-line">{getQualifications(member)}</p>
+                            </CardContent>
+                          </Card>
+                
+                          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+                            <CardHeader className="px-8 pt-8 border-b pb-4">
+                              <CardTitle className="text-lg">Emergency Contact</CardTitle>
+                            </CardHeader>
+                            <CardContent className="p-8">
+                              <p className="text-sm text-slate-700">{getEmergencyContact(member) ?? 'Not Provided'}</p>
+                            </CardContent>
+                          </Card>
         </div>
       </div>
     </div>
