@@ -32,10 +32,6 @@ import {
 } from '@/services/activityLog';
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
-import TeacherRosterMenu from '@/components/dashboards/TeacherRosterMenu';
-import { useTeacherRoster } from '@/hooks/useTeacherRoster';
-import { useNavigate } from 'react-router-dom';
-import type { LearnerMenuItem } from '@/types/learnerMenu';
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 
@@ -130,36 +126,6 @@ const LiveSyncBanner: React.FC = () => (
     </p>
   </div>
 );
-
-interface RosterStatTileProps {
-  label: string;
-  value: number;
-  hint: string;
-  accent: 'indigo' | 'emerald' | 'amber' | 'rose' | 'violet';
-}
-
-const ACCENT_CONFIG: Record<RosterStatTileProps['accent'], { bg: string; text: string; border: string }> = {
-  indigo: { bg: 'bg-indigo-50', text: 'text-indigo-700', border: 'border-indigo-200' },
-  emerald: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200' },
-  amber: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-amber-200' },
-  rose: { bg: 'bg-rose-50', text: 'text-rose-700', border: 'border-rose-200' },
-  violet: { bg: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200' },
-};
-
-const RosterStatTile: React.FC<RosterStatTileProps> = ({ label, value, hint, accent }) => {
-  const cfg = ACCENT_CONFIG[accent];
-  return (
-    <div className={cn('rounded-2xl border bg-white p-4', cfg.border)}>
-      <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-        {label}
-      </p>
-      <p className="text-3xl font-black text-slate-900 leading-none mt-1 tabular-nums">
-        {value}
-      </p>
-      <p className={cn('text-[10px] font-semibold mt-1', cfg.text)}>{hint}</p>
-    </div>
-  );
-};
 
 interface VitalCardProps {
   icon: React.ReactNode;
@@ -322,30 +288,7 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const navigate = useNavigate();
   const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
-
-  // ── Filters & Roster (relocated from Learner Menu) ────────────────────────
-  // Drives the new TeacherRosterMenu panel — all counters (Total Enrolled,
-  // Present Today, Absent Today, Suspended) are recomputed on every data
-  // change so they always reflect the live learner + attendance state.
-  const {
-    learners: rosterLearners,
-    filters: rosterFilters,
-    activeFilterId: rosterActiveFilterId,
-    counts: rosterCounts,
-    isLoading: rosterIsLoading,
-    error: rosterError,
-    setActiveFilterId: setRosterActiveFilterId,
-    refresh: refreshRoster,
-  } = useTeacherRoster({ initialFilterId: 'all' });
-
-  const handleRosterLearnerClick = useCallback(
-    (learner: LearnerMenuItem) => {
-      navigate(`/students/${learner.id}`);
-    },
-    [navigate]
-  );
 
   // Local state for re-rendering alerts when the activity log changes
   const [activityVersion, setActivityVersion] = useState(0);
@@ -693,66 +636,6 @@ const AdminDashboard: React.FC = () => {
           System vitals for Munyaka Primary and Junior School.
         </p>
       </div>
-
-      {/* ── Filters & Roster (relocated from Learner Menu) ── */}
-      <Card
-        className="border border-indigo-100/80 shadow-sm bg-gradient-to-br from-white via-indigo-50/20 to-white rounded-2xl"
-        data-teacher-roster-card="true"
-      >
-        <CardContent className="p-5 sm:p-6">
-          <div className="flex flex-col lg:flex-row gap-6">
-            {/* Roster menu — full-width on mobile, side-rail on desktop */}
-            <div className="lg:w-80 lg:shrink-0">
-              <TeacherRosterMenu
-                data={{
-                  learners: rosterLearners,
-                  filters: rosterFilters,
-                  activeFilterId: rosterActiveFilterId,
-                  isLoading: rosterIsLoading,
-                  error: rosterError,
-                  counts: rosterCounts,
-                }}
-                rowLimit={5}
-                onFilterChange={setRosterActiveFilterId}
-                onLearnerClick={handleRosterLearnerClick}
-                onRetry={refreshRoster}
-              />
-            </div>
-
-            {/* Adjacent stat tiles — extra context the admin needs at a glance */}
-            <div className="flex-1 min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <RosterStatTile
-                label="Total Enrolled"
-                value={rosterCounts.totalEnrolled}
-                hint="Active + Suspended + Graduated"
-                accent="indigo"
-              />
-              <RosterStatTile
-                label="Active Roster"
-                value={rosterCounts.active}
-                hint="Currently on the active list"
-                accent="emerald"
-              />
-              <RosterStatTile
-                label="Present Today"
-                value={rosterCounts.present}
-                hint={
-                  rosterCounts.late > 0
-                    ? `${rosterCounts.late} marked late`
-                    : 'Checked in for roll call'
-                }
-                accent="emerald"
-              />
-              <RosterStatTile
-                label="Absent Today"
-                value={rosterCounts.absent}
-                hint="Need follow-up"
-                accent="rose"
-              />
-            </div>
-          </div>
-        </CardContent>
-      </Card>
 
       {/* ── Live Sync Banner ── */}
       <LiveSyncBanner />
