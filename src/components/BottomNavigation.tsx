@@ -33,7 +33,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
   { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
   { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin', 'owner'] },
+  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
   { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Wifi, label: 'LAN', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher', 'owner'] },
   { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
