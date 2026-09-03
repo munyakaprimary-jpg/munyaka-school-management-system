@@ -12,9 +12,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { 
   Download, Printer, Save, Loader2, Calendar, CheckCircle2, 
   XCircle, Clock, ShieldCheck, UserCheck, Users, AlertCircle,
-    FileDown, Search, Sun, Moon, Lock, Unlock, Info,
-    LockKeyhole, ShieldAlert, Shield, Edit3, BarChart3, Eye
-  } from "lucide-react";
+  FileDown, Search, Sun, Moon, Lock, Unlock, Info, 
+  LockKeyhole, ShieldAlert, Shield
+} from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
 
@@ -216,14 +216,6 @@ const Attendance = () => {
   const { user } = useAuth();
   const userRole = user?.role ?? '';
   const isAdminRole = userRole.toLowerCase() === 'admin' || userRole.toLowerCase() === 'super_admin';
-  const isTeacherRole = userRole.toLowerCase() === 'teacher';
-
-  // ── Admin View Mode ───────────────────────────────────────
-  // 'overview'  = Admin oversight dashboard (default for admin role)
-  // 'marking'   = Direct register marking interface (teacher default + admin "Manual Register Override")
-  const [adminViewMode, setAdminViewMode] = useState<'overview' | 'marking'>(
-    isTeacherRole ? 'marking' : 'overview'
-  );
 
   // Filters state
   const [filters, setFilters] = useState<Filters>({
@@ -883,269 +875,57 @@ const Attendance = () => {
     <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
       
       {/* ============================================
-                1. HEADER SECTION
-                ============================================ */}
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
-              <div className="flex items-center gap-3">
-                <div className={cn(
-                  "w-12 h-12 rounded-2xl flex items-center justify-center shadow-lg",
-                  isAdminRole && adminViewMode === 'overview'
-                    ? "bg-amber-500 text-white shadow-amber-100"
-                    : "bg-indigo-600 text-white shadow-indigo-100"
-                )}>
-                  {isAdminRole && adminViewMode === 'overview' ? <BarChart3 size={24} /> : <Calendar size={24} />}
-                </div>
-                <div>
-                  <h1 className="text-3xl font-black tracking-tight text-slate-900">
-                    {isAdminRole && adminViewMode === 'overview' ? 'Attendance Overview' : 'Attendance'}
-                  </h1>
-                  <p className="text-sm text-slate-500 font-medium">
-                    {isAdminRole && adminViewMode === 'overview'
-                      ? 'Class-wide attendance summaries and roll call status.'
-                      : 'Mark daily attendance for each class.'}
-                  </p>
-                </div>
-              </div>
-      
-              <div className="flex flex-wrap items-center gap-2">
-                {/* CSV & Print — always visible */}
-                <Button
-                  variant="outline"
-                  onClick={handleExportCSV}
-                  disabled={csvExport.isDownloading}
-                  className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
-                >
-                  {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
-                  CSV
-                </Button>
-                <Button
-                  variant="outline"
-                  onClick={handlePrint}
-                  className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
-                >
-                  <Printer size={16} />
-                  Print
-                </Button>
-      
-                {/* Admin: Manual Register Override toggle — only shown when in overview mode */}
-                {isAdminRole && adminViewMode === 'overview' && (
-                  <Button
-                    onClick={() => setAdminViewMode('marking')}
-                    className="rounded-xl bg-amber-500 hover:bg-amber-600 text-white gap-2 text-sm font-bold h-11 px-4 shadow-lg shadow-amber-100 transition-all active:scale-95"
-                  >
-                    <Edit3 size={16} />
-                    Manual Register Override
-                  </Button>
-                )}
-      
-                {/* Admin: Back to Overview button — shown when in marking mode */}
-                {isAdminRole && adminViewMode === 'marking' && (
-                  <Button
-                    variant="outline"
-                    onClick={() => setAdminViewMode('overview')}
-                    className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
-                  >
-                    <Eye size={16} />
-                    Back to Overview
-                  </Button>
-                )}
-      
-                {/* Save Attendance — always shown for teachers; only shown for admins in marking mode */}
-                {(isTeacherRole || (isAdminRole && adminViewMode === 'marking')) && (
-                  <Button
-                    onClick={handleSaveAttendance}
-                    disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
-                    className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
-                    title={
-                      (isMorningLocked && isAfternoonLocked)
-                        ? 'Both sessions are already locked. Unlock a session to make changes.'
-                        : 'Save attendance and auto-lock any fully-marked sessions.'
-                    }
-                  >
-                    {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
-                    Save Attendance
-                  </Button>
-                )}
-              </div>
-            </div>
+          1. HEADER SECTION
+          ============================================ */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+        <div className="flex items-center gap-3">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+            <Calendar size={24} />
+          </div>
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900">Attendance</h1>
+            <p className="text-sm text-slate-500 font-medium">Mark daily attendance for each class.</p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+            disabled={csvExport.isDownloading}
+            className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
+          >
+            {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} />}
+            CSV
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handlePrint}
+            className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
+          >
+            <Printer size={16} />
+            Print
+          </Button>
+          <Button
+            onClick={handleSaveAttendance}
+            disabled={isSaving || (isMorningLocked && isAfternoonLocked)}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-sm font-bold h-11 px-5 shadow-lg shadow-indigo-100 disabled:opacity-50"
+            title={
+              (isMorningLocked && isAfternoonLocked)
+                ? 'Both sessions are already locked. Unlock a session to make changes.'
+                : 'Save attendance and auto-lock any fully-marked sessions.'
+            }
+          >
+            {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
+            Save Attendance
+          </Button>
+        </div>
+      </div>
 
       {/* ============================================
-                2. ADMIN OVERSIGHT DASHBOARD (shown by default for admin)
-                ============================================ */}
-            {isAdminRole && adminViewMode === 'overview' && (
-              <div className="space-y-4">
-                {/* Quick date navigation */}
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-600 flex items-center justify-center">
-                        <Calendar size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Selected Date</p>
-                        <p className="text-base font-black text-slate-900">
-                          {new Date(filters.date + 'T00:00:00').toLocaleDateString(undefined, {
-                            weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const d = new Date(filters.date + 'T00:00:00');
-                          d.setDate(d.getDate() - 1);
-                          setFilters({ ...filters, date: d.toISOString().split('T')[0] });
-                        }}
-                        className="h-10 rounded-xl text-sm font-bold"
-                      >
-                        ← Prev Day
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setFilters({ ...filters, date: new Date().toISOString().split('T')[0] })}
-                        className="h-10 rounded-xl text-sm font-bold"
-                      >
-                        Today
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const d = new Date(filters.date + 'T00:00:00');
-                          d.setDate(d.getDate() + 1);
-                          setFilters({ ...filters, date: d.toISOString().split('T')[0] });
-                        }}
-                        className="h-10 rounded-xl text-sm font-bold"
-                      >
-                        Next Day →
-                      </Button>
-                    </div>
-                  </div>
-                </Card>
-      
-                {/* Stream roll-call status grid */}
-                <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
-                  <div className="flex items-center gap-3 mb-5">
-                    <div className="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
-                      <CheckCircle2 size={20} />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-black text-slate-900">Roll Call Status — {filters.date}</h3>
-                      <p className="text-xs text-slate-500 font-medium">Attendance completion status per stream for all grades.</p>
-                    </div>
-                  </div>
-                  {/* Grade tabs */}
-                  <div className="flex flex-wrap gap-2 mb-5">
-                    {['Grade 6', 'Grade 5', 'Grade 4', 'Grade 7', 'Grade 8'].map((grade) => (
-                      <button
-                        key={grade}
-                        onClick={() => setFilters({ ...filters, grade })}
-                        className={cn(
-                          "px-4 py-2 rounded-xl text-xs font-black transition-all",
-                          filters.grade === grade
-                            ? "bg-indigo-600 text-white shadow-md"
-                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                        )}
-                      >
-                        {grade}
-                      </button>
-                    ))}
-                  </div>
-      
-                  {/* Stream status cards */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {['YELLOW', 'BLUE', 'GREEN', 'RED', 'ALPHA', 'BETA'].map((stream) => {
-                      // Simulate some streams as "saved" and others as "pending" for demo
-                      const isSaved = ['YELLOW', 'BLUE'].includes(stream);
-                      const isFullyLocked = isSaved;
-                      return (
-                        <button
-                          key={stream}
-                          onClick={() => {
-                            setFilters({ ...filters, stream });
-                            setAdminViewMode('marking');
-                          }}
-                          className={cn(
-                            "flex items-center justify-between p-4 rounded-2xl border-2 text-left transition-all active:scale-95 hover:shadow-md",
-                            isSaved
-                              ? "bg-emerald-50 border-emerald-200"
-                              : "bg-slate-50 border-slate-200 hover:border-indigo-300"
-                          )}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div className={cn(
-                              "w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm",
-                              isSaved ? "bg-emerald-200 text-emerald-800" : "bg-slate-200 text-slate-600"
-                            )}>
-                              {stream.slice(0, 2)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-black text-slate-900">{filters.grade} — {stream}</p>
-                              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-                                {isSaved ? 'Saved & Sealed' : 'Not Yet Marked'}
-                              </p>
-                            </div>
-                          </div>
-                          <div className="flex flex-col items-end gap-1">
-                            {isSaved ? (
-                              <div className="flex items-center gap-1">
-                                <Lock size={12} className="text-emerald-600" />
-                                <span className="text-[10px] font-black text-emerald-600 uppercase">Sealed</span>
-                              </div>
-                            ) : (
-                              <div className="flex items-center gap-1">
-                                <AlertCircle size={12} className="text-slate-400" />
-                                <span className="text-[10px] font-bold text-slate-400">Pending</span>
-                              </div>
-                            )}
-                            {isSaved && (
-                              <div className="flex items-center gap-0.5">
-                                <span className="text-[9px] font-bold text-emerald-600">0</span>
-                                <span className="text-[9px] text-emerald-500"> absent</span>
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
-                </Card>
-      
-                {/* Aggregate statistics summary */}
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  <Card className="border-none shadow-sm rounded-2xl bg-white p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Learners</p>
-                    <h3 className="text-3xl font-black text-slate-900 mt-1">48</h3>
-                    <p className="text-[10px] font-bold text-slate-500 mt-1">across all streams</p>
-                  </Card>
-                  <Card className="border-none shadow-sm rounded-2xl bg-emerald-50 p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600">Present Today</p>
-                    <h3 className="text-3xl font-black text-emerald-700 mt-1">44</h3>
-                    <p className="text-[10px] font-bold text-emerald-600 mt-1">91.7% attendance rate</p>
-                  </Card>
-                  <Card className="border-none shadow-sm rounded-2xl bg-rose-50 p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-rose-600">Absent Today</p>
-                    <h3 className="text-3xl font-black text-rose-700 mt-1">4</h3>
-                    <p className="text-[10px] font-bold text-rose-600 mt-1">across all streams</p>
-                  </Card>
-                  <Card className="border-none shadow-sm rounded-2xl bg-indigo-50 p-5">
-                    <p className="text-[10px] font-black uppercase tracking-widest text-indigo-600">Streams Marked</p>
-                    <h3 className="text-3xl font-black text-indigo-700 mt-1">2 / 6</h3>
-                    <p className="text-[10px] font-bold text-indigo-600 mt-1">roll call completion</p>
-                  </Card>
-                </div>
-              </div>
-            )}
-      
-            {/* ============================================
-                2. FILTERS & GLOBAL ACTIONS (shown in marking mode or for teachers)
-                ============================================ */}
-            {(isTeacherRole || (isAdminRole && adminViewMode === 'marking')) && (
-            <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
+          2. FILTERS & GLOBAL ACTIONS
+          ============================================ */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-5">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
           
           {/* Date Picker */}
@@ -1810,11 +1590,9 @@ const Attendance = () => {
         )}
       </Card>
 
-      )}
-            
-            {/* ============================================
-                5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
-                ============================================ */}
+      {/* ============================================
+          5. ADMIN AUTHORIZATION MODAL (LOCK / UNLOCK)
+          ============================================ */}
       {lockAuthOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
