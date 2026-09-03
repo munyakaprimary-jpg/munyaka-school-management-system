@@ -240,18 +240,19 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // OWNER explicitly does NOT see: Learners, Roll Call, Fees, Server (control center),
     // Settings, Licensing, Promote — those are operational routes.
     const bottomQuickNav = [
-      { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-      { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-      { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-      { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
-          { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
-      { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-      { icon: Key, label: 'Licensing', path: '/central-data', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-      { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    ].filter(item => {
+          { icon: LayoutDashboard, label: 'Dashboard', path: '/dashboard', roles: ['admin', 'owner', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+          { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
+          { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
+          { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
+          { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
+              { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
+          { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+          // "Licensing" tab removed — licensing/subscription is owned by the Payment
+          // & Subscriptions module (/payment-management) on the owner side.
+          { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+          { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+          { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+        ].filter(item => {
           if (!user) return false;
           if (item.global) return true;
           const roleLower = user.role?.toLowerCase() ?? '';
