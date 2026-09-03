@@ -23,6 +23,7 @@ import {
   ClipboardCheck,
   TrendingUp,
   Loader2,
+  Clock,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
@@ -60,7 +61,9 @@ interface AlertItem {
   id: string;
   type: 'fee' | 'registration' | 'attendance';
   title: string;
-  timestamp: string;
+  timestamp: string;      // ISO string for exact timestamp
+  exactTime: string;     // Formatted exact time string
+  relativeTime: string;  // Relative time string for tooltip
 }
 
 interface ClassRow {
@@ -521,38 +524,42 @@ const AdminDashboard: React.FC = () => {
         type: e.type === 'fee_payment' ? 'fee' : e.type === 'student_registration' ? 'registration' : 'attendance',
         title,
         timestamp: e.timestamp,
+        exactTime: formatExactTimestamp(e.timestamp),
+        relativeTime: formatRelativeTimestamp(e.timestamp),
       };
     });
-  }, [activityVersion, showTodayOnly]);
+  }, [activityVersion, showTodayOnly, formatExactTimestamp, formatRelativeTimestamp]);
 
-  // ── Dynamic timestamp formatter: today → relative, prior days → "AUG 27, 12:00 AM"
-  const formatAlertTimestamp = useCallback((iso: string): string => {
+  // ── Exact timestamp formatter: "Sep 3, 2026 at 15:59:48" format
+  const formatExactTimestamp = useCallback((iso: string): string => {
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '—';
+    // Format: "Sep 3, 2026 at 15:59:48"
+    const month = d.toLocaleString('en-US', { month: 'short' });
+    const day = d.getDate();
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    const seconds = String(d.getSeconds()).padStart(2, '0');
+    return `${month} ${day}, ${year} at ${hours}:${minutes}:${seconds}`;
+  }, []);
+
+  // ── Relative time formatter: "2 minutes ago" / "1 hour ago" etc.
+  const formatRelativeTimestamp = useCallback((iso: string): string => {
     const d = new Date(iso);
     if (isNaN(d.getTime())) return '—';
     const now = new Date();
-    const isToday =
-      d.getFullYear() === now.getFullYear() &&
-      d.getMonth() === now.getMonth() &&
-      d.getDate() === now.getDate();
-    if (isToday) {
-      // Today: "Just now" / "X min ago" / "12:45 PM"
-      const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
-      if (diffSec < 30) return 'Just now';
-      if (diffSec < 3600) return `${Math.floor(diffSec / 60)} min ago`;
-      return d.toLocaleTimeString(undefined, {
-        hour: 'numeric',
-        minute: '2-digit',
-      });
-    }
-    // Prior days: "AUG 27, 12:00 AM"
-    const monthShort = d.toLocaleString('en-US', { month: 'short' }).toUpperCase();
-    const day = String(d.getDate()).padStart(2, '0');
-    const time = d.toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-    return `${monthShort} ${day}, ${time}`;
+    const diffSec = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diffSec < 30) return 'Just now';
+    if (diffSec < 60) return `${diffSec} seconds ago`;
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin} minute${diffMin !== 1 ? 's' : ''} ago`;
+    const diffHour = Math.floor(diffMin / 60);
+    if (diffHour < 24) return `${diffHour} hour${diffHour !== 1 ? 's' : ''} ago`;
+    const diffDay = Math.floor(diffHour / 24);
+    if (diffDay === 1) return 'Yesterday';
+    if (diffDay < 7) return `${diffDay} days ago`;
+    return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
   }, []);
 
   // ── School Enrollment — render every canonical grade in strict ascending order,
@@ -852,15 +859,27 @@ const AdminDashboard: React.FC = () => {
                   alert.type === 'registration' ? 'bg-emerald-500' :
                   'bg-purple-500';
                 return (
-                  <div key={alert.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/60">
+                  <div key={alert.id} className="flex items-start gap-3 p-3 rounded-xl bg-slate-50/60 hover:bg-slate-100/60 transition-colors group">
                     <span className={cn(dotColor, 'h-2.5 w-2.5 rounded-full shrink-0 mt-2')} />
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-slate-800">
                         {alert.title}
                       </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5 font-mono">
-                        {formatAlertTimestamp(alert.timestamp)}
-                      </p>
+                      {/* Exact timestamp displayed secondary to title */}
+                      <div className="flex items-center gap-2 mt-1">
+                        <p className="text-[11px] text-slate-400 font-mono tabular-nums">
+                          {alert.exactTime}
+                        </p>
+                        {/* Hover tooltip with relative time */}
+                        <div className="relative">
+                          <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-200 absolute bottom-full left-0 mb-1.5 px-2 py-1 bg-slate-800 text-white text-[10px] font-medium rounded-lg whitespace-nowrap shadow-lg pointer-events-none z-10">
+                            <span className="text-slate-300">Relative: </span>
+                            {alert.relativeTime}
+                            <div className="absolute top-full left-4 border-4 border-transparent border-t-slate-800"></div>
+                          </div>
+                          <Clock size={11} className="text-slate-300 group-hover:text-slate-500 transition-colors" />
+                        </div>
+                      </div>
                     </div>
                   </div>
                 );
