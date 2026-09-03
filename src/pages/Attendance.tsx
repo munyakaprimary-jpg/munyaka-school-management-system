@@ -1325,8 +1325,7 @@ const Attendance = () => {
                   )}
                 </div>
               </div>
-            </div>
-          )}
+            )}
 
       {/* ============================================
                 2b. TIME WINDOW BANNER + ADMIN OVERRIDE (RBAC-gated)
