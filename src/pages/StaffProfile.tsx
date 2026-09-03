@@ -20,7 +20,10 @@ import {
   Eye,
   EyeOff,
   Copy,
-  Check
+  Check,
+  Plus,
+  X as XIcon,
+  Loader2
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
 import { STAFF } from '@/lib/mock-data';
@@ -47,6 +50,12 @@ interface StaffMemberProfile {
   created_at?: string;
   joined_date?: string;
   department: string;
+  assignedGrade?: string;
+  assignedStream?: string;
+  learnerCount?: number;
+  qualifications?: string;
+  documents?: Array<{ label: string; status: string; date: string }>;
+  emergency_contact?: { phone?: string };
 }
 
 // Return the display name regardless of which key the record uses.
@@ -122,6 +131,13 @@ const StaffProfile = () => {
     const [showPw, setShowPw] = useState(false);
     const [pwError, setPwError] = useState('');
     const [pwSaving, setPwSaving] = useState(false);
+    
+      // ── Teaching Load editing ─────────────────────────────────────────
+      const [editLoadOpen, setEditLoadOpen] = useState(false);
+      const [editSubjects, setEditSubjects] = useState<string[]>([]);
+      const [editGrade, setEditGrade] = useState('');
+      const [editStream, setEditStream] = useState('');
+      const [editSaving, setEditSaving] = useState(false);
   
     // ── Admin: generate & set temporary password ─────────────────────
     const handleAdminReset = () => {
@@ -212,10 +228,121 @@ const StaffProfile = () => {
           setPwError('');
         } else {
           showError('Account record not found. Please contact your administrator.');
-        }
-      }
-      setPwSaving(false);
-    };
+                }
+              }
+              setPwSaving(false);
+            };
+          
+            // ── Teaching Load: open modal pre-filled with current values ──────
+            const handleOpenEditLoad = () => {
+              setEditSubjects(getSubjects(member));
+              setEditGrade(getAssignedGrade(member) || '');
+              setEditStream(getAssignedStream(member) || '');
+              setEditLoadOpen(true);
+            };
+          
+            // Toggle a subject checkbox in the edit form.
+            const toggleEditSubject = (subject: string) => {
+              setEditSubjects(prev =>
+                prev.includes(subject) ? prev.filter(s => s !== subject) : [...prev, subject]
+              );
+            };
+          
+            // Save the teaching load: write to localStorage + update local state.
+            const handleSaveLoad = async () => {
+              if (!member) return;
+              setEditSaving(true);
+          
+              const updatedRecord = {
+                ...member,
+                subjects: editSubjects,
+                assignedGrade: editGrade || undefined,
+                assignedStream: editStream || undefined,
+                assigned_grade: editGrade || undefined,
+                assigned_stream: editStream || undefined,
+                // Keep the legacy `class` object in sync for any consumers.
+                class: editGrade || editStream
+                  ? { grade: editGrade || undefined, stream: editStream || undefined }
+                  : undefined,
+              };
+          
+              // Persist to every localStorage key the resolver reads from, so the
+              // updated record is visible on subsequent visits regardless of which
+              // source the resolver picks first.
+              const unifiedKeys = [
+                'munyaka_staff_directory',
+                'teachers',
+                'staff',
+                'staff_list',
+                'staffDirectory',
+                'staffList',
+              ];
+          
+              let persisted = 0;
+              for (const key of unifiedKeys) {
+                try {
+                  const raw = localStorage.getItem(key);
+                  if (!raw) continue;
+                  const parsed = JSON.parse(raw);
+                  const list = Array.isArray(parsed) ? parsed : (parsed?.data ?? []);
+                  if (!Array.isArray(list)) continue;
+                  const idx = list.findIndex((s: any) =>
+                    s.id === member.id ||
+                    s.id_no === member.id ||
+                    s.id_no === member.id_no ||
+                    s.staff_id === member.staff_id
+                  );
+                  if (idx >= 0) {
+                    list[idx] = { ...list[idx], ...updatedRecord };
+                    localStorage.setItem(key, JSON.stringify(list));
+                    persisted++;
+                  }
+                } catch {
+                  /* skip corrupt entry */
+                }
+              }
+          
+              // Update component state immediately so the UI reflects the change.
+              setMember(prev => prev ? ({
+                ...prev,
+                subjects: editSubjects,
+                assignedGrade: editGrade || undefined,
+                assignedStream: editStream || undefined,
+                assigned_grade: editGrade || undefined,
+                assigned_stream: editStream || undefined,
+                class: editGrade || editStream
+                  ? { grade: editGrade || undefined, stream: editStream || undefined }
+                  : undefined,
+              } as StaffMemberProfile) : prev);
+          
+              // Notify other listeners (Staff directory page, dashboards, etc.).
+              try {
+                window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
+                window.dispatchEvent(new Event('staff-changed'));
+              } catch { /* SSR safety */ }
+          
+              showSuccess(
+                persisted > 0
+                  ? 'Teaching load updated successfully.'
+                  : 'Teaching load updated (local state only — record not found in storage).'
+              );
+              setEditSaving(false);
+              setEditLoadOpen(false);
+            };
+          
+            // Available subjects / grades / streams for the editor.
+            const SUBJECT_OPTIONS = [
+              'Mathematics', 'English', 'Kiswahili', 'Science & Tech',
+              'Social Studies', 'Religious Education', 'Creative Arts',
+              'Physical Education', 'Agriculture & Nutrition', 'Pre-Technical',
+              'Computer Science', 'French', 'Indigenous Languages',
+            ];
+            const GRADE_OPTIONS = [
+              'PP1', 'PP2',
+              'Grade 1', 'Grade 2', 'Grade 3', 'Grade 4', 'Grade 5',
+              'Grade 6', 'Grade 7', 'Grade 8', 'Grade 9',
+            ];
+            const STREAM_OPTIONS = ['Red', 'Blue', 'Green', 'Yellow', 'Alpha', 'Beta'];
 
   useEffect(() => {
       setLoading(true);
@@ -611,34 +738,207 @@ const StaffProfile = () => {
                                       </div>
           
                                       <div className="flex gap-3 pt-2">
-                                        <Button
-                                          variant="ghost"
-                                          className="flex-1 rounded-xl h-11 font-bold"
-                                          onClick={() => setSelfChangeOpen(false)}
-                                          disabled={pwSaving}
-                                        >
-                                          Cancel
-                                        </Button>
-                                        <Button
-                                          className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
-                                          onClick={handleSelfChangePassword}
-                                          disabled={pwSaving}
-                                        >
-                                          {pwSaving ? 'Saving…' : 'Save Password'}
-                                        </Button>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                              )}
+                                                                              <Button
+                                                                                variant="ghost"
+                                                                                className="flex-1 rounded-xl h-11 font-bold"
+                                                                                onClick={() => setSelfChangeOpen(false)}
+                                                                                disabled={pwSaving}
+                                                                              >
+                                                                                Cancel
+                                                                              </Button>
+                                                                              <Button
+                                                                                className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+                                                                                onClick={handleSelfChangePassword}
+                                                                                disabled={pwSaving}
+                                                                              >
+                                                                                {pwSaving ? 'Saving…' : 'Save Password'}
+                                                                              </Button>
+                                                                            </div>
+                                                                          </div>
+                                                                        </div>
+                                                                      </div>
+                                                                    )}
+                                      
+                                                                    {/* ── Edit Teaching Load Modal ─────────────────────────────── */}
+                                                                    {editLoadOpen && (
+                                                                      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
+                                                                        <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
+                                                                          <div className="p-6 border-b flex justify-between items-center bg-slate-50 sticky top-0 z-10">
+                                                                            <div className="flex items-center gap-3">
+                                                                              <div className="p-2 bg-indigo-50 rounded-xl text-indigo-600">
+                                                                                <Briefcase size={18} />
+                                                                              </div>
+                                                                              <div>
+                                                                                <h3 className="text-lg font-bold text-slate-900">
+                                                                                  Edit Teaching Load
+                                                                                </h3>
+                                                                                <p className="text-xs text-slate-500 font-medium">
+                                                                                  {getDisplayName(member)}
+                                                                                </p>
+                                                                              </div>
+                                                                            </div>
+                                                                            <button
+                                                                              onClick={() => setEditLoadOpen(false)}
+                                                                              className="p-1 text-slate-400 hover:text-slate-600"
+                                                                              type="button"
+                                                                            >
+                                                                              <XIcon size={20} />
+                                                                            </button>
+                                                                          </div>
+                                      
+                                                                          <div className="p-6 space-y-6">
+                                                                            {/* ── Subject checkboxes ──────────────────────────── */}
+                                                                            <div className="space-y-2">
+                                                                              <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                                                                Learning Areas / Subjects
+                                                                              </Label>
+                                                                              <p className="text-xs text-slate-500">
+                                                                                Tick every subject this teacher is assigned to teach.
+                                                                              </p>
+                                                                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 pt-2">
+                                                                                {SUBJECT_OPTIONS.map(subject => {
+                                                                                  const checked = editSubjects.includes(subject);
+                                                                                  return (
+                                                                                    <label
+                                                                                      key={subject}
+                                                                                      className={
+                                                                                        'flex items-center gap-2 px-3 py-2 rounded-xl border cursor-pointer text-sm font-medium transition-colors ' +
+                                                                                        (checked
+                                                                                          ? 'bg-indigo-50 border-indigo-200 text-indigo-700'
+                                                                                          : 'bg-slate-50 border-slate-100 text-slate-600 hover:bg-slate-100')
+                                                                                      }
+                                                                                    >
+                                                                                      <input
+                                                                                        type="checkbox"
+                                                                                        checked={checked}
+                                                                                        onChange={() => toggleEditSubject(subject)}
+                                                                                        className="accent-indigo-600"
+                                                                                      />
+                                                                                      <span className="truncate">{subject}</span>
+                                                                                    </label>
+                                                                                  );
+                                                                                })}
+                                                                              </div>
+                                                                              <div className="flex items-center gap-2 pt-2">
+                                                                                <span className="text-xs text-slate-500 font-medium">
+                                                                                  Selected: {editSubjects.length}
+                                                                                </span>
+                                                                                {editSubjects.length > 0 && (
+                                                                                  <div className="flex flex-wrap gap-1.5">
+                                                                                    {editSubjects.map(s => (
+                                                                                      <Badge
+                                                                                        key={`chip-${s}`}
+                                                                                        className="bg-white text-slate-700 border-none shadow-sm gap-1"
+                                                                                      >
+                                                                                        {s}
+                                                                                        <button
+                                                                                          type="button"
+                                                                                          onClick={() => toggleEditSubject(s)}
+                                                                                          className="text-slate-400 hover:text-red-500"
+                                                                                        >
+                                                                                          <XIcon size={11} />
+                                                                                        </button>
+                                                                                      </Badge>
+                                                                                    ))}
+                                                                                  </div>
+                                                                                )}
+                                                                              </div>
+                                                                            </div>
+                                      
+                                                                            {/* ── Grade / Stream selectors ────────────────────── */}
+                                                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                                              <div className="space-y-2">
+                                                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                                                                  Assigned Grade
+                                                                                </Label>
+                                                                                <select
+                                                                                  value={editGrade}
+                                                                                  onChange={(e) => setEditGrade(e.target.value)}
+                                                                                  className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                                                                >
+                                                                                  <option value="">— Not assigned —</option>
+                                                                                  {GRADE_OPTIONS.map(g => (
+                                                                                    <option key={g} value={g}>{g}</option>
+                                                                                  ))}
+                                                                                </select>
+                                                                              </div>
+                                                                              <div className="space-y-2">
+                                                                                <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">
+                                                                                  Assigned Stream
+                                                                                </Label>
+                                                                                <select
+                                                                                  value={editStream}
+                                                                                  onChange={(e) => setEditStream(e.target.value)}
+                                                                                  className="w-full h-12 rounded-xl bg-slate-50 border-none font-bold px-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                                                                                >
+                                                                                  <option value="">— Not assigned —</option>
+                                                                                  {STREAM_OPTIONS.map(s => (
+                                                                                    <option key={s} value={s}>{s}</option>
+                                                                                  ))}
+                                                                                </select>
+                                                                              </div>
+                                                                            </div>
+                                      
+                                                                            {/* Preview */}
+                                                                            <div className="rounded-2xl bg-slate-50 border border-slate-100 p-4">
+                                                                              <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mb-2">
+                                                                                Preview
+                                                                              </p>
+                                                                              <p className="text-sm text-slate-700">
+                                                                                <span className="font-bold">Class:</span>{' '}
+                                                                                {editGrade || editStream
+                                                                                  ? `${editGrade || 'Any Grade'}${editStream ? ` · ${editStream}` : ''}`
+                                                                                  : 'Not yet assigned'}
+                                                                              </p>
+                                                                              <p className="text-sm text-slate-700 mt-1">
+                                                                                <span className="font-bold">Subjects:</span>{' '}
+                                                                                {editSubjects.length > 0
+                                                                                  ? editSubjects.join(', ')
+                                                                                  : 'None selected'}
+                                                                              </p>
+                                                                            </div>
+                                                                          </div>
+                                      
+                                                                          <div className="p-6 border-t flex gap-3 sticky bottom-0 bg-white">
+                                                                            <Button
+                                                                              variant="ghost"
+                                                                              className="flex-1 rounded-xl h-11 font-bold"
+                                                                              onClick={() => setEditLoadOpen(false)}
+                                                                              disabled={editSaving}
+                                                                            >
+                                                                              Cancel
+                                                                            </Button>
+                                                                            <Button
+                                                                              className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
+                                                                              onClick={handleSaveLoad}
+                                                                              disabled={editSaving}
+                                                                            >
+                                                                              {editSaving ? (
+                                                                                <Loader2 className="animate-spin" size={16} />
+                                                                              ) : (
+                                                                                <Plus size={16} />
+                                                                              )}
+                                                                              {editSaving ? 'Saving…' : 'Save Load'}
+                                                                            </Button>
+                                                                          </div>
+                                                                        </div>
+                                                                      </div>
+                                                                    )}
         </div>
 
         <div className="lg:col-span-2 space-y-8">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
             <CardHeader className="px-8 pt-8 border-b pb-4 flex flex-row justify-between items-center">
-              <CardTitle className="text-lg">Teaching Assignments</CardTitle>
-              <Button variant="ghost" size="sm" className="text-indigo-600 font-bold">Edit Load</Button>
-            </CardHeader>
+                          <CardTitle className="text-lg">Teaching Assignments</CardTitle>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-indigo-600 font-bold gap-1.5"
+                            onClick={handleOpenEditLoad}
+                          >
+                            <Briefcase size={14} /> Edit Load
+                          </Button>
+                        </CardHeader>
             <CardContent className="p-0">
               <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
