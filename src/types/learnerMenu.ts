@@ -4,9 +4,14 @@
  * These interfaces define the shape of data flowing from the backend
  * (or mock data) into the LearnerManagementMenu component. They are the
  * single source of truth for the menu's rendering logic.
+ *
+ * NOTE: This file must never import runtime symbols from client-side
+ * libraries (e.g. lucide-react). Only use `import type {}` so that
+ * TypeScript erases the imports entirely at compile time. Mixing runtime
+ * imports with type-only usage in a non-"use client" file can corrupt
+ * the React module context and cause hooks to receive `null`.
  */
-
-import type { LucideIcon } from "lucide-react";
+import type { ComponentType } from "react";
 
 /**
  * Lifecycle status of a learner on the active roster.
@@ -62,6 +67,11 @@ export interface LearnerMenuItem {
  * Counters (`count`) and active state (`isActive`) are computed by the
  * parent at render time — never hardcoded — so the UI always reflects
  * the current dataset length and the user's current selection.
+ *
+ * The `icon` field accepts any React component-like object — in practice a
+ * Lucide icon function (`() => JSX.Element`). Declared as a generic
+ * `React.ComponentType<any>` so this type file has NO runtime lucide-react
+ * dependency.
  */
 export interface LearnerMenuFilter {
   /** Unique id (used as React key + active-state lookup). */
@@ -71,12 +81,13 @@ export interface LearnerMenuFilter {
   /** Number of learners in this category. Computed, not hardcoded. */
   count: number;
   /** Lucide icon component for the menu row. */
-  icon: LucideIcon;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  icon: ComponentType<any>;
   /** Whether this filter is currently selected. */
   isActive: boolean;
   /** Optional color token used for the count badge. */
   accent?: "indigo" | "emerald" | "amber" | "rose" | "slate";
-  /** Optional optional sub-label rendered under the count. */
+  /** Optional sub-label rendered under the count. */
   hint?: string;
 }
 
