@@ -190,10 +190,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       // Global items are visible to every authenticated user.
       if (item.global) return true;
   
-      // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item.
+      // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
+      // EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
           if (isAdminRole) {
         if (item.requiresPermission) return canAccessSystemManagement();
+        // Exclude items that are strictly owner-only (roles = ['owner'] only).
+        const itemRoles = item.roles ?? [];
+        if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
+          return false;
+        }
         return true;
       }
   

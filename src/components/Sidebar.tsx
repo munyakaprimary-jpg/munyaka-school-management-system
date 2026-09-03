@@ -150,11 +150,16 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       const dashboardItem = menuItems.find(item => item.path === '/');
   
       // ADMIN (and the legacy "super_admin" alias used by persisted sessions)
-      // always sees every sidebar item.
+      // always sees every sidebar item EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
               if (isAdminRole) {
                 return menuItems.filter(item => {
                   if (item.requiresPermission) return canAccessSystemManagement();
+                  // Exclude items that are strictly owner-only (roles = ['owner'] only).
+                  const itemRoles = item.roles ?? [];
+                  if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
+                    return false;
+                  }
                   return true;
                 }).map(item => {
                   if (item.path === '/') return { ...item, label: 'Admin Dashboard' };

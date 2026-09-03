@@ -271,7 +271,8 @@ const PaymentManagement = () => {
   const { user } = useAuth();
 
   if (!user || user.role !== 'owner') {
-    return <Navigate to="/" replace />;
+    // Admin and all other non-owner roles are redirected to the admin dashboard.
+    return <Navigate to="/dashboard" replace />;
   }
 
   const [isSaving, setIsSaving] = useState(false);
