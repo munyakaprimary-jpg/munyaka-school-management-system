@@ -24,20 +24,32 @@ interface StaffMemberProfile {
   id: string;
   id_no: string;
   tsc_no?: string;
+  tsc_number?: string;
+  designation?: string;
   full_name: string;
   name?: string;
   role: string;
   subjects: string[];
   phone: string;
   email: string;
-  status: 'Active' | 'Pre-Registered' | 'Suspended';
+  status: 'Active' | 'Pre-Registered' | 'Suspended' | string;
   joined: string;
+  created_at?: string;
+  joined_date?: string;
   department: string;
 }
 
 // Return the display name regardless of which key the record uses.
 const getDisplayName = (m: StaffMemberProfile) => m.full_name || m.name || 'Unknown';
-const getDisplayId = (m: StaffMemberProfile) => m.id_no || m.id || '';
+const getDisplayId = (m: StaffMemberProfile) => m.id_no || m.id || 'N/A';
+const getRole = (m: StaffMemberProfile) => m.role || m.designation || 'Teacher';
+const getPhone = (m: StaffMemberProfile) => m.phone || 'N/A';
+const getEmail = (m: StaffMemberProfile) => m.email || 'N/A';
+const getJoined = (m: StaffMemberProfile) => m.joined || m.created_at || m.joined_date || 'Recently Added';
+const getDepartment = (m: StaffMemberProfile) => m.department || 'General Staff';
+const getStatus = (m: StaffMemberProfile) => m.status || 'Active';
+const getSubjects = (m: StaffMemberProfile) => m.subjects || [];
+const getTscNo = (m: StaffMemberProfile) => m.tsc_no || m.tsc_number || 'N/A';
 
 const StaffProfile = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,13 +110,16 @@ const StaffProfile = () => {
               id: found.id,
               id_no: found.nationalId || '',
               tsc_no: found.tscNumber,
+              tsc_number: found.tscNumber,
+              designation: found.systemRole || found.role || '',
               full_name: found.fullName || found.name || '',
-              role: (found.systemRole || found.role || '').replace(/_/g, ' ').toUpperCase(),
+              name: found.fullName || found.name || '',
+              role: (found.systemRole || found.role || '').replace(/_/g, ' ').toUpperCase() || 'Teacher',
               subjects: found.assignedSubjects || [found.department || 'General'],
               phone: found.phone || '',
               email: found.email || '',
-              status: found.status === 'Active' ? 'Active' : 'Pre-Registered',
-              joined: found.datePreRegistered || '',
+              status: found.status || 'Pre-Registered',
+              joined: found.datePreRegistered || found.created_at || '',
               department: found.department || 'School Administration',
             } as StaffMemberProfile);
             setLoading(false);
@@ -166,32 +181,37 @@ const StaffProfile = () => {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="space-y-6">
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden text-center p-10">
-                      <div className="w-24 h-24 rounded-3xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl shadow-indigo-100">
-                        {getDisplayName(member).split(' ').map(n => n[0]).join('')}
+                                <div className="w-24 h-24 rounded-3xl bg-indigo-600 text-white flex items-center justify-center mx-auto mb-6 text-3xl font-black shadow-xl shadow-indigo-100">
+                                  {getDisplayName(member).split(' ').map(n => n[0]).join('') || '?'}
+                                </div>
+                                <h2 className="text-xl font-bold text-slate-900">{getDisplayName(member)}</h2>
+                                <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-2">{getRole(member)}</p>
+                                <p className="text-xs text-slate-400 font-medium mb-6">{getDepartment(member)}</p>
+                                <div className="flex justify-center gap-2 mb-8 flex-wrap">
+                                  <Badge className={getStatus(member) === 'Active' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-slate-100 text-slate-500"}>
+                                    {getStatus(member)}
+                                  </Badge>
+                                  <Badge variant="outline" className="border-slate-200">ID: {getDisplayId(member)}</Badge>
+                                </div>
+                      <div className="space-y-4 text-left border-t pt-8">
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                          <Calendar size={16} className="text-slate-400" />
+                          <span>Joined: {getJoined(member)}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                          <Phone size={16} className="text-slate-400" />
+                          <span>{getPhone(member)}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                          <Mail size={16} className="text-slate-400" />
+                          <span>{getEmail(member)}</span>
+                        </div>
+                        <div className="flex items-center gap-3 text-sm text-slate-600">
+                          <Briefcase size={16} className="text-slate-400" />
+                          <span>TSC: {getTscNo(member)}</span>
+                        </div>
                       </div>
-                      <h2 className="text-xl font-bold text-slate-900">{getDisplayName(member)}</h2>
-                      <p className="text-xs font-black text-indigo-500 uppercase tracking-widest mb-6">{member.role}</p>
-                      <div className="flex justify-center gap-2 mb-8">
-                        <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 hover:bg-emerald-50" : "bg-slate-100 text-slate-500"}>
-                          {member.status}
-                        </Badge>
-                        <Badge variant="outline" className="border-slate-200">ID: {getDisplayId(member)}</Badge>
-                      </div>
-            <div className="space-y-4 text-left border-t pt-8">
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Calendar size={16} className="text-slate-400" />
-                <span>Joined: {member.joined}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Phone size={16} className="text-slate-400" />
-                <span>{member.phone}</span>
-              </div>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <Mail size={16} className="text-slate-400" />
-                <span>{member.email}</span>
-              </div>
-            </div>
-          </Card>
+                    </Card>
 
           <Card className="border-none shadow-sm rounded-[2rem] bg-indigo-900 text-white p-8 overflow-hidden relative">
             <div className="absolute right-[-20px] bottom-[-20px] opacity-10">
@@ -214,16 +234,20 @@ const StaffProfile = () => {
             <CardContent className="p-0">
               <div className="p-8 grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                  <div className="flex items-center gap-3 mb-4 text-indigo-600">
-                    <Briefcase size={20} />
-                    <h4 className="font-bold">Primary Learning Areas</h4>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    {member.subjects.map(s => (
-                      <Badge key={s} className="bg-white text-slate-700 border-none shadow-sm">{s}</Badge>
-                    ))}
-                  </div>
-                </div>
+                                  <div className="flex items-center gap-3 mb-4 text-indigo-600">
+                                    <Briefcase size={20} />
+                                    <h4 className="font-bold">Primary Learning Areas</h4>
+                                  </div>
+                                  {getSubjects(member).length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                      {getSubjects(member).map((s, i) => (
+                                        <Badge key={`${s}-${i}`} className="bg-white text-slate-700 border-none shadow-sm">{s}</Badge>
+                                      ))}
+                                    </div>
+                                  ) : (
+                                    <p className="text-sm text-slate-400 font-medium italic">No learning areas assigned yet.</p>
+                                  )}
+                                </div>
                 <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
                   <div className="flex items-center gap-3 mb-4 text-emerald-600">
                     <GraduationCap size={20} />
