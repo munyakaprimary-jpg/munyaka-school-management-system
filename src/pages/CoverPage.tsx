@@ -1,9 +1,9 @@
 import React from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, BookOpen, GraduationCap, Wifi, Shield } from 'lucide-react';
+import { ArrowRight, BookOpen, GraduationCap, Wifi, Wallet } from 'lucide-react';
 
 // ── Inline SVG School Crest / Emblem ────────────────────────────────────────
-// Deep blue #1A237E  ·  Forest green #1E6B37  ·  Gold accent #D4AF37
+// Palette: Forest green #1E6B37 · Deep blue #1A237E · Gold #D4AF37
 const SchoolCrest: React.FC<{ className?: string }> = ({ className }) => (
   <svg
     viewBox="0 0 120 140"
@@ -12,18 +12,17 @@ const SchoolCrest: React.FC<{ className?: string }> = ({ className }) => (
     className={className}
     aria-label="Munyaka Primary & Junior School Crest"
   >
-    {/* Outer decorative ring */}
+    {/* Outer ring — deep blue */}
     <circle cx="60" cy="60" r="58" fill="#1A237E" />
-    <circle cx="60" cy="60" r="52" fill="#1620A0" />
-    <circle cx="60" cy="60" r="46" fill="#1A237E" />
+    <circle cx="60" cy="60" r="52" fill="#FFFFFF" />
 
-    {/* Gold border ring */}
-    <circle cx="60" cy="60" r="44" stroke="#D4AF37" strokeWidth="2.5" fill="none" />
-    <circle cx="60" cy="60" r="41" stroke="#D4AF37" strokeWidth="1" fill="none" opacity="0.5" />
+    {/* Gold accent ring */}
+    <circle cx="60" cy="60" r="50" stroke="#D4AF37" strokeWidth="2" fill="none" />
+    <circle cx="60" cy="60" r="46" stroke="#D4AF37" strokeWidth="0.6" fill="none" opacity="0.4" />
 
-    {/* Shield shape */}
+    {/* Shield — forest green */}
     <path
-      d="M60 20 L86 34 L86 62 C86 76 74 88 60 96 C46 88 34 76 34 62 L34 34 Z"
+      d="M60 22 L84 35 L84 62 C84 75 73 86 60 94 C47 86 36 75 36 62 L36 35 Z"
       fill="#1E6B37"
       stroke="#D4AF37"
       strokeWidth="1.5"
@@ -31,62 +30,54 @@ const SchoolCrest: React.FC<{ className?: string }> = ({ className }) => (
 
     {/* Inner shield highlight */}
     <path
-      d="M60 26 L82 38 L82 62 C82 74 72 84 60 91 C48 84 38 74 38 62 L38 38 Z"
+      d="M60 27 L80 38 L80 62 C80 73 71 82 60 89 C49 82 40 73 40 62 L40 38 Z"
       fill="#228B3F"
+      opacity="0.5"
     />
 
-    {/* Book on shield */}
-    <rect x="46" y="46" width="28" height="22" rx="3" fill="white" opacity="0.95" />
-    <rect x="48" y="48" width="24" height="18" rx="2" fill="#1A237E" />
-    {/* Book spine */}
-    <line x1="60" y1="48" x2="60" y2="66" stroke="#D4AF37" strokeWidth="1.5" />
-    {/* Book lines */}
-    <line x1="50" y1="53" x2="58" y2="53" stroke="white" strokeWidth="1" strokeLinecap="round" />
-    <line x1="50" y1="57" x2="58" y2="57" stroke="white" strokeWidth="1" strokeLinecap="round" />
-    <line x1="50" y1="61" x2="58" y2="61" stroke="white" strokeWidth="1" strokeLinecap="round" />
-    <line x1="62" y1="53" x2="70" y2="53" stroke="white" strokeWidth="1" strokeLinecap="round" />
-    <line x1="62" y1="57" x2="70" y2="57" stroke="white" strokeWidth="1" strokeLinecap="round" />
-    <line x1="62" y1="61" x2="70" y2="61" stroke="white" strokeWidth="1" strokeLinecap="round" />
-
-    {/* Torch on left side of shield */}
-    <rect x="42" y="52" width="4" height="14" rx="2" fill="#D4AF37" />
-    <ellipse cx="44" cy="50" rx="5" ry="6" fill="#D4AF37" />
-    <ellipse cx="44" cy="49" rx="3" ry="4" fill="#FFB300" />
-    <ellipse cx="44" cy="48.5" rx="1.5" ry="2.5" fill="white" opacity="0.8" />
-
-    {/* Torch on right side */}
-    <rect x="74" y="52" width="4" height="14" rx="2" fill="#D4AF37" />
-    <ellipse cx="76" cy="50" rx="5" ry="6" fill="#D4AF37" />
-    <ellipse cx="76" cy="49" rx="3" ry="4" fill="#FFB300" />
-    <ellipse cx="76" cy="48.5" rx="1.5" ry="2.5" fill="white" opacity="0.8" />
-
-    {/* Star at top */}
+    {/* Star at the top */}
     <polygon
-      points="60,16 62,21 67,21 63,24 65,29 60,26 55,29 57,24 53,21 58,21"
+      points="60,15 62.5,21 69,21 63.8,25 66,31 60,27 54,31 56.2,25 51,21 57.5,21"
       fill="#D4AF37"
     />
 
-    {/* Decorative scroll ribbon at bottom */}
+    {/* Open book on shield */}
+    <rect x="46" y="48" width="28" height="20" rx="2" fill="#FFFFFF" />
+    <line x1="60" y1="48" x2="60" y2="68" stroke="#1A237E" strokeWidth="1.5" />
+    <line x1="50" y1="53" x2="58" y2="53" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+    <line x1="50" y1="57" x2="58" y2="57" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+    <line x1="50" y1="61" x2="58" y2="61" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+    <line x1="62" y1="53" x2="70" y2="53" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+    <line x1="62" y1="57" x2="70" y2="57" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+    <line x1="62" y1="61" x2="70" y2="61" stroke="#1E6B37" strokeWidth="1" strokeLinecap="round" />
+
+    {/* Torch — left */}
+    <rect x="40" y="56" width="4" height="14" rx="1.5" fill="#D4AF37" />
+    <ellipse cx="42" cy="54" rx="5" ry="6" fill="#D4AF37" />
+    <ellipse cx="42" cy="53" rx="3" ry="4" fill="#FFB300" />
+    <ellipse cx="42" cy="52.5" rx="1.5" ry="2.5" fill="#FFFFFF" opacity="0.9" />
+
+    {/* Torch — right */}
+    <rect x="76" y="56" width="4" height="14" rx="1.5" fill="#D4AF37" />
+    <ellipse cx="78" cy="54" rx="5" ry="6" fill="#D4AF37" />
+    <ellipse cx="78" cy="53" rx="3" ry="4" fill="#FFB300" />
+    <ellipse cx="78" cy="52.5" rx="1.5" ry="2.5" fill="#FFFFFF" opacity="0.9" />
+
+    {/* Bottom scroll ribbon */}
     <path
-      d="M20 106 Q60 100 100 106 L100 120 Q60 114 20 120 Z"
+      d="M22 102 Q60 96 98 102 L98 116 Q60 110 22 116 Z"
       fill="#1A237E"
       stroke="#D4AF37"
       strokeWidth="1.5"
     />
-    <path
-      d="M20 106 Q60 100 100 106"
-      stroke="#D4AF37"
-      strokeWidth="2"
-      fill="none"
-    />
     {/* Ribbon tail ends */}
-    <path d="M20 106 L10 106 L14 113 L20 116 Z" fill="#1620A0" stroke="#D4AF37" strokeWidth="1" />
-    <path d="M100 106 L110 106 L106 113 L100 116 Z" fill="#1620A0" stroke="#D4AF37" strokeWidth="1" />
+    <path d="M22 102 L12 102 L16 110 L22 113 Z" fill="#1620A0" stroke="#D4AF37" strokeWidth="1" />
+    <path d="M98 102 L108 102 L104 110 L98 113 Z" fill="#1620A0" stroke="#D4AF37" strokeWidth="1" />
 
-    {/* Motto text on ribbon */}
+    {/* Motto on ribbon */}
     <text
       x="60"
-      y="117"
+      y="113"
       textAnchor="middle"
       fill="#D4AF37"
       fontSize="6.5"
@@ -99,16 +90,15 @@ const SchoolCrest: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-// ── Feature Pill ─────────────────────────────────────────────────────────────
-interface FeaturePillProps {
+// ── Subtle glassmorphism feature tag ────────────────────────────────────────
+interface FeatureTagProps {
   icon: React.ReactNode;
   label: string;
-  color: string;
 }
 
-const FeaturePill: React.FC<FeaturePillProps> = ({ icon, label, color }) => (
-  <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold ${color}`}>
-    {icon}
+const FeatureTag: React.FC<FeatureTagProps> = ({ icon, label }) => (
+  <div className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200/80 text-xs font-bold text-slate-600 shadow-sm hover:border-indigo-200 hover:bg-white transition-all">
+    <span className="text-indigo-600">{icon}</span>
     <span>{label}</span>
   </div>
 );
@@ -120,128 +110,122 @@ interface CoverPageProps {
 
 const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#1A237E] via-[#0D1257] to-[#0A0E3A] flex flex-col items-center justify-center p-4 overflow-hidden relative">
-      {/* ── Decorative background blobs ─────────────────────────────────── */}
+    <div className="min-h-screen relative flex flex-col items-center justify-center p-4 overflow-hidden bg-gradient-to-br from-white via-slate-50 to-indigo-50/40">
+      {/* ── Soft decorative background ──────────────────────────────────── */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute -top-24 -left-24 w-80 h-80 rounded-full bg-[#1E6B37] opacity-10 blur-3xl" />
-        <div className="absolute top-1/3 -right-20 w-96 h-96 rounded-full bg-[#1A237E] opacity-20 blur-3xl" />
-        <div className="absolute -bottom-20 left-1/4 w-72 h-72 rounded-full bg-[#1E6B37] opacity-10 blur-3xl" />
-        <div className="absolute top-10 right-1/4 w-48 h-48 rounded-full bg-[#D4AF37] opacity-5 blur-2xl" />
-        {/* Subtle grid overlay */}
+        {/* Soft radial highlight */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-indigo-100/30 blur-3xl" />
+        <div className="absolute bottom-0 right-0 w-[400px] h-[400px] rounded-full bg-emerald-100/20 blur-3xl" />
+        <div className="absolute top-1/3 -left-32 w-[300px] h-[300px] rounded-full bg-amber-100/20 blur-3xl" />
+        {/* Very subtle dot grid */}
         <div
-          className="absolute inset-0 opacity-[0.03]"
+          className="absolute inset-0 opacity-[0.4]"
           style={{
-            backgroundImage: `linear-gradient(#fff 1px, transparent 1px), linear-gradient(90deg, #fff 1px, transparent 1px)`,
-            backgroundSize: '40px 40px',
+            backgroundImage: `radial-gradient(circle at 1px 1px, #cbd5e1 1px, transparent 0)`,
+            backgroundSize: '32px 32px',
           }}
         />
       </div>
 
       {/* ── Main Card ───────────────────────────────────────────────────── */}
       <div className="relative w-full max-w-lg animate-in fade-in zoom-in-95 duration-700">
-        <div className="bg-white/10 backdrop-blur-xl rounded-[2rem] border border-white/20 shadow-2xl shadow-black/30 overflow-hidden">
-          {/* Top accent stripe */}
-          <div className="h-1.5 bg-gradient-to-r from-[#D4AF37] via-[#FFD700] to-[#D4AF37]" />
+        <div className="bg-white rounded-3xl shadow-2xl shadow-slate-200/60 border border-slate-100 overflow-hidden">
 
-          <div className="px-6 py-8 md:px-10 md:py-12 flex flex-col items-center text-center space-y-8">
+          {/* ── Top color stripe (subtle) ───────────────────────────────── */}
+          <div className="h-1 bg-gradient-to-r from-indigo-600 via-[#1E6B37] to-amber-400" />
 
-            {/* ── School Crest ── */}
-            <div className="flex flex-col items-center gap-4">
+          <div className="px-6 py-10 md:px-10 md:py-12 flex flex-col items-center text-center space-y-7">
+
+            {/* ── School Crest ─────────────────────────────────────────── */}
+            <div className="flex flex-col items-center gap-5">
               <div className="relative">
-                {/* Glow ring behind crest */}
-                <div className="absolute inset-0 rounded-full bg-[#D4AF37] blur-xl opacity-20 scale-90" />
-                <SchoolCrest className="w-36 h-40 md:w-44 md:h-52 relative z-10 drop-shadow-2xl" />
+                {/* Soft glow behind crest */}
+                <div className="absolute inset-0 rounded-full bg-indigo-100 blur-2xl opacity-60 scale-90" />
+                <SchoolCrest className="w-40 h-44 md:w-52 md:h-56 relative z-10 drop-shadow-xl" />
               </div>
 
-              {/* School Name */}
+              {/* ── School Name ────────────────────────────────────────── */}
               <div className="space-y-1">
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
+                <h1 className="text-2xl md:text-[1.7rem] font-black tracking-tight text-slate-900 leading-tight">
                   Munyaka Primary
                 </h1>
-                <h2 className="text-xl md:text-2xl font-black tracking-tight text-[#D4AF37] leading-tight">
+                <h2 className="text-xl md:text-2xl font-black tracking-tight text-[#1E6B37] leading-tight">
                   & Junior School
                 </h2>
               </div>
 
-              {/* Year Established badge */}
-              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#D4AF37] animate-pulse" />
-                <span className="text-xs font-black tracking-[0.25em] text-white/80 uppercase">
+              {/* ── EST. 1980 Badge ────────────────────────────────────── */}
+              <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-slate-50 border border-slate-200/80">
+                <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                <span className="text-[11px] font-black tracking-[0.2em] text-slate-500 uppercase">
                   Est. 1980
                 </span>
               </div>
             </div>
 
-            {/* ── Motto Ribbon ── */}
-            <div className="w-full max-w-xs">
-              <div className="relative bg-[#1E6B37] rounded-xl px-6 py-3 border-2 border-[#D4AF37] shadow-lg shadow-[#1E6B37]/30">
-                {/* Ribbon notch effect */}
-                <div className="absolute -top-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#D4AF37] rotate-45" />
-                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-4 h-4 bg-[#D4AF37] rotate-45" />
-                <p className="text-sm md:text-base font-black italic tracking-wide text-white relative z-10">
-                  "Knowledge is Power"
-                </p>
-              </div>
+            {/* ── Motto Pill Badge ──────────────────────────────────────── */}
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-[#1E6B37] border border-[#D4AF37]/40 shadow-sm shadow-emerald-900/10">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
+              <span className="text-sm font-bold italic tracking-wide text-white">
+                "Knowledge is Power"
+              </span>
+              <span className="w-1.5 h-1.5 rounded-full bg-[#FFD700]" />
             </div>
 
-            {/* ── Portal Badge ── */}
-            <div className="bg-white/10 backdrop-blur-sm rounded-2xl border border-white/15 px-5 py-3">
-              <p className="text-xs font-bold uppercase tracking-widest text-white/60 mb-2">
+            {/* ── Portal Badge ─────────────────────────────────────────── */}
+            <div className="space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-[0.25em] text-slate-400">
                 Official Portal
               </p>
-              <p className="text-sm font-black text-white">
+              <p className="text-sm md:text-base font-bold text-slate-700">
                 School Management &amp; Learning Portal
               </p>
             </div>
 
-            {/* ── Feature Pills ── */}
-            <div className="flex flex-wrap justify-center gap-2">
-              <FeaturePill
-                icon={<BookOpen size={11} />}
+            {/* ── Feature Tags ─────────────────────────────────────────── */}
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              <FeatureTag
+                icon={<BookOpen size={12} />}
                 label="Academics"
-                color="bg-[#1E6B37]/30 text-emerald-200 border border-[#1E6B37]/40"
               />
-              <FeaturePill
-                icon={<GraduationCap size={11} />}
+              <FeatureTag
+                icon={<GraduationCap size={12} />}
                 label="Students"
-                color="bg-[#1A237E]/50 text-indigo-200 border border-[#1A237E]/60"
               />
-              <FeaturePill
-                icon={<Shield size={11} />}
+              <FeatureTag
+                icon={<Wallet size={12} />}
                 label="Fees"
-                color="bg-[#D4AF37]/20 text-amber-200 border border-[#D4AF37]/30"
               />
-              <FeaturePill
-                icon={<Wifi size={11} />}
+              <FeatureTag
+                icon={<Wifi size={12} />}
                 label="LAN Offline"
-                color="bg-white/10 text-white/80 border border-white/20"
               />
             </div>
 
-            {/* ── Primary CTA ── */}
+            {/* ── Primary CTA ──────────────────────────────────────────── */}
             <div className="w-full space-y-3 pt-2">
               <Button
                 onClick={onEnter}
-                className="w-full h-14 rounded-2xl bg-gradient-to-r from-[#D4AF37] via-[#FFD700] to-[#D4AF37] hover:from-[#C9A432] hover:via-[#E6C200] hover:to-[#C9A432] text-[#1A237E] font-black text-base shadow-2xl shadow-[#D4AF37]/30 transition-all duration-300 active:scale-95 group"
+                className="w-full h-13 md:h-14 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-base shadow-lg shadow-indigo-200 hover:shadow-xl hover:shadow-indigo-300/60 transition-all duration-300 hover:scale-[1.02] active:scale-[0.98] group"
               >
                 <span>Proceed to Portal Sign In</span>
                 <ArrowRight
-                  size={20}
+                  size={18}
                   className="ml-2 transition-transform group-hover:translate-x-1"
                 />
               </Button>
-              <p className="text-[10px] text-white/40 font-medium text-center">
-                Staff, Teachers &amp; Administrators
+              <p className="text-[10px] text-slate-400 font-medium text-center tracking-wide">
+                For Staff, Teachers &amp; Administrators
               </p>
             </div>
           </div>
 
-          {/* Bottom accent stripe */}
-          <div className="h-1.5 bg-gradient-to-r from-[#1E6B37] via-[#228B3F] to-[#1E6B37]" />
+          {/* Bottom subtle accent */}
+          <div className="h-1 bg-gradient-to-r from-amber-400 via-[#1E6B37] to-indigo-600 opacity-60" />
         </div>
 
-        {/* Footer tagline */}
-        <p className="text-center text-[10px] text-white/30 font-medium mt-4 tracking-wide">
+        {/* ── Footer tagline ────────────────────────────────────────────── */}
+        <p className="text-center text-[10px] text-slate-400 font-medium mt-5 tracking-wide">
           P.O. Box 5239-30100, Eldoret, Kenya &nbsp;·&nbsp; Tel: +254 738 873 359
         </p>
       </div>
