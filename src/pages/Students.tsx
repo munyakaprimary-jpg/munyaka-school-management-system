@@ -7,7 +7,7 @@ import {
   Loader2, ExternalLink, Eye, Archive, ArrowRightLeft
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
@@ -27,7 +27,6 @@ import {
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
 import LearnerManagementMenu from '@/components/students/LearnerManagementMenu';
-import LearnerQuickAccess from '@/components/students/LearnerQuickAccess';
 
 interface LearnerRowCompat {
   id: string;
@@ -434,7 +433,6 @@ export default function Students() {
     // was never invoked. We now call useNavigate() so handleViewProfile can
     // programmatically route to /students/:id with the full learner object.
     const navigate = useNavigate();
-    const location = useLocation();
   
     // Resolve the current admin user for audit logging. The Transfer In
     // workflow records `actorName` on every TRANSFERRED_IN event so the
@@ -660,36 +658,33 @@ export default function Students() {
   const isAnyExportInProgress =
     allLearnersExport.isDownloading || currentViewExport.isDownloading;
 
-  // ── Learner Quick Access Menu ────────────────────────────────────────────
+  // ── Learner Management Menu (Quick Access) ────────────────────────────
   // The old "Filters & Roster" panel has been moved to the Teacher/Admin
-  // Dashboard. This side-rail now surfaces a student profile banner and
-  // four primary navigation shortcuts (Subjects, Assignments, Attendance,
-  // Classmates). Active route highlighting uses the current page location.
+  // Dashboard. This side-rail now provides student-relevant navigation
+  // shortcuts (My Subjects, Assignments, Attendance, etc.).
 
-  const menuStudentInfo = useMemo(
-    (): Parameters<typeof LearnerQuickAccess>[0]['student'] => {
-      const first = learners[0];
-      return {
-        name: first?.name ?? 'Learner',
-        grade: first?.grade ?? '',
-        stream: first?.stream ?? '',
-        studentId: first?.admNo ?? '',
-      };
-    },
-    [learners]
-  );
+  // Surface a small set of student info for the menu's identity card.
+  // Falls back to placeholder data when the learner context is unavailable
+  // (e.g. teacher impersonating the dashboard in a demo).
+  const menuStudentInfo = useMemo(() => {
+    const first = learners[0];
+    return {
+      name: first?.name ?? 'Learner',
+      grade: first?.grade ?? '',
+      stream: first?.stream ?? '',
+      admNo: first?.admNo ?? '',
+    };
+  }, [learners]);
 
   return (
     <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
       <div className="max-w-7xl mx-auto flex flex-col xl:flex-row gap-6">
         {/* Learner Quick Access Menu — left rail on wide screens */}
-        <div className="xl:w-80 xl:shrink-0">
+        <div className="xl:w-72 xl:shrink-0">
           <div className="xl:sticky xl:top-6 bg-white border border-slate-200/80 rounded-2xl shadow-xs p-4">
-            <LearnerQuickAccess
-              student={menuStudentInfo}
-              onNavigate={(route) => navigate(route)}
-              activeRoute={location.pathname}
-              searchTerm={searchTerm}
+            <LearnerManagementMenu
+              studentInfo={menuStudentInfo}
+              isLoading={false}
             />
           </div>
         </div>
