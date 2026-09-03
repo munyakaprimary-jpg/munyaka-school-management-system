@@ -1007,29 +1007,27 @@ export default function Students() {
       )}
 
       {/* Delete Confirmation Prompt Modal — requires admin password/PIN */}
-            <AdminPinModal
-              isOpen={learnerToDelete !== null}
-              onClose={() => setLearnerToDelete(null)}
-              actionLabel="Confirm Permanent Deletion"
-              targetName={learnerToDelete?.name}
-              description="You are about to permanently remove this learner from the school directory. Enter your admin password to authorise this action."
-              prompt="Admin Password"
-              onConfirm={(isValid) => {
-                if (isValid && learnerToDelete) {
-                  confirmDelete(learnerToDelete);
-                }
-              }}
-            />
+      <AdminPinModal
+        isOpen={learnerToDelete !== null}
+        onClose={() => setLearnerToDelete(null)}
+        actionLabel="Confirm Permanent Deletion"
+        targetName={learnerToDelete?.name}
+        description="You are about to permanently remove this learner from the school directory. Enter your admin password to authorise this action."
+        prompt="Admin Password"
+        onConfirm={(isValid) => {
+          if (isValid && learnerToDelete) {
+            confirmDelete(learnerToDelete);
+          }
+        }}
+      />
 
-            {/* Transfer In Modal — enroll an incoming learner and add them to the class roster. */}
-                        <TransferInModal
-                          isOpen={isTransferInOpen}
-                          onClose={handleCloseTransferIn}
-                          onTransferInComplete={handleTransferInComplete}
-                          actorName={user?.name || user?.email}
-                        />
-        </div>
-      </div>
+      {/* Transfer In Modal — enroll an incoming learner and add them to the class roster. */}
+      <TransferInModal
+        isOpen={isTransferInOpen}
+        onClose={handleCloseTransferIn}
+        onTransferInComplete={handleTransferInComplete}
+        actorName={user?.name || user?.email}
+      />
     </div>
   );
 }
