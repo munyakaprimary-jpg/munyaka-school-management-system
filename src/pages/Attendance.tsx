@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -20,13 +20,14 @@ import {
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
 import { logActivity } from '@/services/activityLog';
+import { useLiveStreamAttendance } from '@/hooks/useLiveStreamAttendance';
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
 type SessionType = 'morning' | 'afternoon';
 type ViewMode = 'marking' | 'oversight';
 
 interface Learner {
-  id: number;
+  id: string;
   name: string;
   assessment: string;
   gender?: 'M' | 'F';
@@ -88,52 +89,7 @@ const SESSION_WINDOWS: Record<SessionType, SessionWindow> = {
 const ATTENDANCE_ADMIN_BYPASS_KEY = 'munyaka_attendance_admin_bypass';
 const ATTENDANCE_LOCKS_KEY = 'munyaka_attendance_locks';
 const ATTENDANCE_DEFAULT_PASSWORD = 'munyaka5239';
-
-// Mock data — in real implementation, this comes from useStudents() or localStorage
-const MOCK_LEARNERS: Learner[] = [
-  { id: 1, name: "BRIAN KIPTOO", assessment: "MPS/2025/005", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 2, name: "MARY ATIENO", assessment: "MPS/2025/012", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 3, name: "EMMANUEL MAINA", assessment: "MPS/2025/018", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 4, name: "SHEILA CHEPKOECH", assessment: "MPS/2025/023", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 5, name: "DAVID MUTUA", assessment: "MPS/2025/031", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 6, name: "GRACE WANJIKU", assessment: "MPS/2025/037", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 7, name: "JOSEPH KARIUKI", assessment: "MPS/2025/042", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 8, name: "FAITH NJERI", assessment: "MPS/2025/048", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 9, name: "GEORGE OCHIENG", assessment: "MPS/2025/054", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 10, name: "HELEN MORAA", assessment: "MPS/2025/061", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 11, name: "SAMUEL KAMAU", assessment: "MPS/2025/068", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 12, name: "WINNIE ACHIENG", assessment: "MPS/2025/073", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 13, name: "PETER ODHIAMBO", assessment: "MPS/2025/081", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-  { id: 14, name: "JANE MWANGI", assessment: "MPS/2025/089", gender: "F", grade: "Grade 6", stream: "YELLOW" },
-  { id: 15, name: "DAVID MAINA", assessment: "MPS/2025/094", gender: "M", grade: "Grade 6", stream: "YELLOW" },
-];
-
-// Mock class-level roll call data for the admin oversight view.
-// In a real implementation this would aggregate from useStudentAttendance() and useStudents().
-interface StreamRollCallSummary {
-  grade: string;
-  stream: string;
-  totalLearners: number;
-  morningCompleted: boolean;
-  afternoonCompleted: boolean;
-  morningPresent: number;
-  afternoonPresent: number;
-  rate: number;
-}
-
-const MOCK_STREAM_SUMMARIES: StreamRollCallSummary[] = [
-  { grade: 'PP1', stream: 'ALPHA', totalLearners: 24, morningCompleted: true, afternoonCompleted: false, morningPresent: 22, afternoonPresent: 0, rate: 92 },
-  { grade: 'PP2', stream: 'BETA', totalLearners: 26, morningCompleted: true, afternoonCompleted: true, morningPresent: 24, afternoonPresent: 25, rate: 94 },
-  { grade: 'Grade 1', stream: 'RED', totalLearners: 28, morningCompleted: true, afternoonCompleted: true, morningPresent: 27, afternoonPresent: 26, rate: 95 },
-  { grade: 'Grade 2', stream: 'BLUE', totalLearners: 30, morningCompleted: false, afternoonCompleted: false, morningPresent: 0, afternoonPresent: 0, rate: 0 },
-  { grade: 'Grade 3', stream: 'GREEN', totalLearners: 32, morningCompleted: true, afternoonCompleted: false, morningPresent: 30, afternoonPresent: 0, rate: 94 },
-  { grade: 'Grade 4', stream: 'YELLOW', totalLearners: 30, morningCompleted: true, afternoonCompleted: true, morningPresent: 28, afternoonPresent: 27, rate: 92 },
-  { grade: 'Grade 5', stream: 'MERCURY', totalLearners: 27, morningCompleted: true, afternoonCompleted: true, morningPresent: 26, afternoonPresent: 25, rate: 95 },
-  { grade: 'Grade 6', stream: 'YELLOW', totalLearners: 15, morningCompleted: true, afternoonCompleted: true, morningPresent: 14, afternoonPresent: 13, rate: 90 },
-  { grade: 'Grade 7', stream: 'VENUS', totalLearners: 26, morningCompleted: false, afternoonCompleted: false, morningPresent: 0, afternoonPresent: 0, rate: 0 },
-  { grade: 'Grade 8', stream: 'JUPITER', totalLearners: 25, morningCompleted: true, afternoonCompleted: false, morningPresent: 23, afternoonPresent: 0, rate: 92 },
-  { grade: 'Grade 9', stream: 'NEPTUNE', totalLearners: 22, morningCompleted: true, afternoonCompleted: true, morningPresent: 21, afternoonPresent: 20, rate: 93 },
-];
+const STUDENTS_STORAGE_KEY = 'school_learners_data';
 
 /**
  * ============================================
@@ -245,7 +201,7 @@ const Attendance = () => {
   const [ovSearch, setOvSearch] = useState<string>('');
 
   // Attendance state — keyed by student id, then session type
-  const [attendance, setAttendance] = useState<Record<number, StudentAttendance>>({});
+  const [attendance, setAttendance] = useState<Record<string, StudentAttendance>>({});
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
@@ -345,6 +301,74 @@ const Attendance = () => {
 
   const activeSession = isSelectedDateToday ? getActiveSession(currentTime) : null;
 
+  // ── Live student records ────────────────────────────────────────────────
+  const [liveStudents, setLiveStudents] = useState<Learner[]>([]);
+
+  const loadLiveStudents = useCallback(() => {
+    try {
+      const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (!raw) { setLiveStudents([]); return; }
+      const parsed = JSON.parse(raw) as Array<{
+        id: string;
+        name?: string;
+        grade?: string;
+        stream?: string;
+        status?: string;
+        admNo?: string;
+        gender?: string;
+      }>;
+      if (!Array.isArray(parsed)) { setLiveStudents([]); return; }
+      // Filter to active students matching the selected grade+stream
+      const filtered = parsed
+        .filter(s => {
+          if (!s) return false;
+          if (s.status && s.status !== 'Active' && s.status !== 'active') return false;
+          if (s.grade !== filters.grade) return false;
+          if (s.stream !== filters.stream) return false;
+          return true;
+        })
+        .map(s => ({
+          id: String(s.id),
+          name: s.name || 'Unknown',
+          assessment: s.admNo || s.id || '',
+          grade: s.grade || '',
+          stream: s.stream || '',
+          gender: (s.gender || 'M') as 'M' | 'F',
+        }));
+      setLiveStudents(filtered);
+    } catch (e) {
+      console.error('[Attendance] Error loading live students:', e);
+      setLiveStudents([]);
+    }
+  }, [filters.grade, filters.stream]);
+
+  useEffect(() => {
+    loadLiveStudents();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === STUDENTS_STORAGE_KEY) loadLiveStudents();
+    };
+    const onCustom = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      if (detail?.key === STUDENTS_STORAGE_KEY) loadLiveStudents();
+    };
+    window.addEventListener('storage', onStorage);
+    window.addEventListener('munyaka:data-changed', onCustom as EventListener);
+    const interval = window.setInterval(loadLiveStudents, 5000);
+    return () => {
+      window.removeEventListener('storage', onStorage);
+      window.removeEventListener('munyaka:data-changed', onCustom as EventListener);
+      window.clearInterval(interval);
+    };
+  }, [loadLiveStudents]);
+
+  // ── Live stream attendance summaries (admin oversight) ─────────────────
+  const liveStreamData = useLiveStreamAttendance(
+    filters.date,
+    ovGrade,
+    ovStream,
+    ovSearch,
+  );
+
   // Load attendance from localStorage on mount and when filters change
   useEffect(() => {
     try {
@@ -353,7 +377,7 @@ const Attendance = () => {
       if (saved) {
         const parsed = JSON.parse(saved);
         if (typeof parsed === 'object' && parsed !== null) {
-          setAttendance(parsed as Record<number, StudentAttendance>);
+          setAttendance(parsed as Record<string, StudentAttendance>);
         } else {
           setAttendance({});
         }
@@ -367,13 +391,13 @@ const Attendance = () => {
   }, [filters.grade, filters.stream, filters.date]);
 
   const filteredLearners = useMemo(() => {
-    if (!searchTerm.trim()) return MOCK_LEARNERS;
+    if (!searchTerm.trim()) return liveStudents;
     const term = searchTerm.toLowerCase();
-    return MOCK_LEARNERS.filter(
+    return liveStudents.filter(
       s => s.name.toLowerCase().includes(term) ||
            s.assessment.toLowerCase().includes(term)
     );
-  }, [searchTerm]);
+  }, [liveStudents, searchTerm]);
 
   const isSessionFullyMarked = (session: SessionType): boolean => {
     if (filteredLearners.length === 0) return false;
@@ -436,41 +460,22 @@ const Attendance = () => {
   }, [filteredLearners, attendance]);
 
   // ============================================
-  // Aggregate oversight metrics (admin only) — derived from filtered data
+  // Aggregate oversight metrics (admin only) — derived from LIVE data
   // ============================================
-  const filteredStreamSummaries = useMemo(() => {
-    const q = ovSearch.trim().toLowerCase();
-    return MOCK_STREAM_SUMMARIES.filter(s => {
-      const gradeMatch = ovGrade === 'all' || s.grade === ovGrade;
-      const streamMatch = ovStream === 'all' || s.stream.toLowerCase() === ovStream.toLowerCase();
-      const searchMatch = !q
-        || s.grade.toLowerCase().includes(q)
-        || s.stream.toLowerCase().includes(q);
-      return gradeMatch && streamMatch && searchMatch;
-    });
-  }, [ovGrade, ovStream, ovSearch]);
-
-  const oversightMetrics = useMemo(() => {
-    const src = filteredStreamSummaries;
-    const totalLearners = src.reduce((sum, s) => sum + s.totalLearners, 0);
-    const streamsTotal = src.length;
-    const morningCompletedStreams = src.filter(s => s.morningCompleted).length;
-    const afternoonCompletedStreams = src.filter(s => s.afternoonCompleted).length;
-    const fullyCompletedStreams = src.filter(
-      s => s.morningCompleted && s.afternoonCompleted
-    ).length;
-    const averageRate = streamsTotal > 0
-      ? Math.round(src.reduce((sum, s) => sum + s.rate, 0) / Math.max(streamsTotal, 1))
-      : 0;
-    return {
-      totalLearners,
-      streamsTotal,
-      morningCompletedStreams,
-      afternoonCompletedStreams,
-      fullyCompletedStreams,
-      averageRate,
-    };
-  }, [filteredStreamSummaries]);
+  // `liveStreamData` is provided by useLiveStreamAttendance() which reads
+  // directly from localStorage. It returns:
+  //   - streams: the filtered list of StreamAttendanceRecord
+  //   - totalLearners, streamsTotal, morningCompletedStreams,
+  //     afternoonCompletedStreams, fullyCompletedStreams, averageRate
+  const filteredStreamSummaries = liveStreamData.streams;
+  const oversightMetrics = {
+    totalLearners: liveStreamData.totalLearners,
+    streamsTotal: liveStreamData.streamsTotal,
+    morningCompletedStreams: liveStreamData.morningCompletedStreams,
+    afternoonCompletedStreams: liveStreamData.afternoonCompletedStreams,
+    fullyCompletedStreams: liveStreamData.fullyCompletedStreams,
+    averageRate: liveStreamData.averageRate,
+  };
 
   // Per-session lock handlers
   const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
@@ -556,7 +561,7 @@ const Attendance = () => {
   };
 
   // Toggle individual student session status
-  const setSessionStatus = (studentId: number, session: SessionType, status: AttendanceStatus) => {
+  const setSessionStatus = (studentId: string, session: SessionType, status: AttendanceStatus) => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     if (sessionLock.locked) {
       showError(
@@ -611,7 +616,7 @@ const Attendance = () => {
       return;
     }
 
-    const bulk: Record<number, StudentAttendance> = {};
+    const bulk: Record<string, StudentAttendance> = {};
     const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
     filteredLearners.forEach(s => {
       const existing = attendance[s.id] || {};
@@ -1489,7 +1494,7 @@ const Attendance = () => {
             <div className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
               <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
                 <Activity size={12} className="text-indigo-500" />
-                Showing <span className="text-slate-900 font-black">{filteredStreamSummaries.length}</span> of <span className="text-slate-900 font-black">{MOCK_STREAM_SUMMARIES.length}</span> streams across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
+                Showing <span className="text-slate-900 font-black">{filteredStreamSummaries.length}</span> stream{filteredStreamSummaries.length !== 1 ? 's' : ''} across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
               </p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                 Updated {format12h(currentTime)} • Auto-syncs every minute
@@ -2101,10 +2106,10 @@ const Attendance = () => {
 interface SessionStatusButtonProps {
   status: AttendanceStatus;
   session: SessionType;
-  studentId: number;
+  studentId: string;
   currentStatus?: AttendanceStatus;
   currentTime?: string;
-  onSetStatus: (studentId: number, session: SessionType, status: AttendanceStatus) => void;
+  onSetStatus: (studentId: string, session: SessionType, status: AttendanceStatus) => void;
   isEditable: boolean;
   isLocked: boolean;
   activeClass: string;
