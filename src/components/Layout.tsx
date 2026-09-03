@@ -400,19 +400,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     </div>
         
                     {/* Back Home Button */}
-                    {location.pathname !== '/dashboard' && location.pathname !== '/' && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => navigate('/dashboard')}
-                        className="hidden md:flex rounded-2xl h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:scale-95"
-                        aria-label="Go to dashboard"
-                        title="Back Home"
-                      >
-                        <ArrowLeft size={18} />
-                        <span className="hidden md:inline-block ml-1 text-xs font-medium">Home</span>
-                      </Button>
-                    )}
+                                        {location.pathname !== '/' && location.pathname !== '/dashboard' && (
+                                          <Button
+                                            variant="ghost"
+                                            onClick={() => navigate('/dashboard')}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2"
+                                          >
+                                            <ArrowLeft size={18} />
+                                            <span>Back Home</span>
+                                          </Button>
+                                        )}
         
                     <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
