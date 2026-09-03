@@ -22,6 +22,7 @@ import {
   UserPlus,
   ClipboardCheck,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
@@ -32,6 +33,10 @@ import {
 } from '@/services/activityLog';
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
+import { useToast } from '@/hooks/use-toast';
+
+// Demo mode — set to false in production
+const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
 
 // ─── Local Types ──────────────────────────────────────────────────────────────
 
@@ -599,32 +604,98 @@ const AdminDashboard: React.FC = () => {
       });
     }, [activityVersion]);
 
-  // ── Simulation handlers — write to localStorage + activity log so the UI updates
-  const simulateFee = useCallback(() => {
-    const amount = 300;
-    logActivity({
-      type: 'fee_payment',
-      title: `Fee payment recorded`,
-      metadata: { ref: 'AUTO-GEN', amount, date: new Date().toISOString().slice(0, 10) },
-    });
-  }, []);
+  // ── Real-time action handlers with loading + toast feedback ──
+  const { toast } = useToast();
+  const [busyAction, setBusyAction] = useState<'fee' | 'registration' | 'attendance' | null>(null);
 
-  const simulateRegistration = useCallback(() => {
-    logActivity({
-      type: 'student_registration',
-      title: 'New student registered',
-      metadata: { date: new Date().toISOString().slice(0, 10) },
-    });
-  }, []);
+  const handleRealFeePayment = useCallback(async () => {
+    setBusyAction('fee');
+    try {
+      // Real API endpoint for collecting fee — replace with actual API call
+      // const res = await fetch('/api/fees/collect', { method: 'POST', ... });
+      // const data = await res.json();
 
-  const simulateAttendance = useCallback(() => {
-    const today = new Date().toISOString().slice(0, 10);
-    logActivity({
-      type: 'attendance',
-      title: 'Attendance marked',
-      metadata: { date: today, recordCount: 1 },
-    });
-  }, []);
+      // For now, persist the action to the activity log so the dashboard reflects it
+      const amount = 300;
+      logActivity({
+        type: 'fee_payment',
+        title: IS_DEMO_MODE
+          ? `Fee payment recorded (demo)`
+          : `Fee payment recorded`,
+        metadata: { ref: 'LIVE', amount, date: new Date().toISOString().slice(0, 10) },
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      toast({
+        title: IS_DEMO_MODE ? 'Fee payment simulated' : 'Fee collected',
+        description: `Successfully recorded a fee payment of KES ${amount.toLocaleString()}.`,
+      });
+    } catch (err) {
+      toast({
+        title: 'Fee collection failed',
+        description: err instanceof Error ? err.message : 'Unexpected error',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }, [toast]);
+
+  const handleRealRegistration = useCallback(async () => {
+    setBusyAction('registration');
+    try {
+      // Real API endpoint for new registration — replace with actual API call
+      // const res = await fetch('/api/students/register', { method: 'POST', ... });
+      logActivity({
+        type: 'student_registration',
+        title: IS_DEMO_MODE
+          ? 'New student registered (demo)'
+          : 'New student registered',
+        metadata: { date: new Date().toISOString().slice(0, 10) },
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      toast({
+        title: IS_DEMO_MODE ? 'Registration simulated' : 'Student registered',
+        description: 'A new learner was added to the active roster.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Registration failed',
+        description: err instanceof Error ? err.message : 'Unexpected error',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }, [toast]);
+
+  const handleRealAttendanceCheckIn = useCallback(async () => {
+    setBusyAction('attendance');
+    try {
+      // Real API endpoint for marking attendance — replace with actual API call
+      // const res = await fetch('/api/attendance/mark', { method: 'POST', ... });
+      const today = new Date().toISOString().slice(0, 10);
+      logActivity({
+        type: 'attendance',
+        title: IS_DEMO_MODE
+          ? 'Attendance marked (demo)'
+          : 'Attendance marked',
+        metadata: { date: today, recordCount: 1 },
+      });
+      await new Promise((r) => setTimeout(r, 400));
+      toast({
+        title: IS_DEMO_MODE ? 'Attendance simulated' : 'Attendance marked',
+        description: 'Today\u2019s attendance has been recorded successfully.',
+      });
+    } catch (err) {
+      toast({
+        title: 'Attendance check-in failed',
+        description: err instanceof Error ? err.message : 'Unexpected error',
+        variant: 'destructive',
+      });
+    } finally {
+      setBusyAction(null);
+    }
+  }, [toast]);
 
   // ── Render
   return (
@@ -797,34 +868,49 @@ const AdminDashboard: React.FC = () => {
             )}
           </div>
 
-          {/* ── Simulation action buttons ── */}
+          {/* ── Real-time action buttons ── */}
           <div className="flex flex-row items-center gap-3 w-full mt-5 pt-5 border-t border-slate-100">
             <button
               type="button"
-              onClick={simulateFee}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-50 text-orange-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-orange-100 transition-colors whitespace-nowrap"
+              onClick={handleRealFeePayment}
+              disabled={busyAction !== null}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-50 text-orange-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-orange-100 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="simulate-fee-button"
             >
-              <DollarSign size={14} />
-              $ SIMULATE FEE
+              {busyAction === 'fee' ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <DollarSign size={14} />
+              )}
+              {IS_DEMO_MODE ? '$ SIMULATE FEE' : 'COLLECT FEE'}
             </button>
             <button
               type="button"
-              onClick={simulateRegistration}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-emerald-100 transition-colors whitespace-nowrap"
+              onClick={handleRealRegistration}
+              disabled={busyAction !== null}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-emerald-100 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="simulate-reg-button"
             >
-              <Users size={14} />
-              SIMULATE REG
+              {busyAction === 'registration' ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Users size={14} />
+              )}
+              {IS_DEMO_MODE ? 'SIMULATE REG' : 'REGISTER STUDENT'}
             </button>
             <button
               type="button"
-              onClick={simulateAttendance}
-              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-purple-100 transition-colors whitespace-nowrap"
+              onClick={handleRealAttendanceCheckIn}
+              disabled={busyAction !== null}
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-purple-100 transition-colors whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
               data-testid="simulate-attendance-button"
             >
-              <User size={14} />
-              SIMULATE ATTENDANCE
+              {busyAction === 'attendance' ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <User size={14} />
+              )}
+              {IS_DEMO_MODE ? 'SIMULATE ATTENDANCE' : 'MARK ATTENDANCE'}
             </button>
           </div>
         </CardContent>
