@@ -798,11 +798,11 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           {/* ── Simulation action buttons ── */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5 pt-5 border-t border-slate-100">
+          <div className="flex flex-row items-center gap-3 w-full mt-5 pt-5 border-t border-slate-100">
             <button
               type="button"
               onClick={simulateFee}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-orange-50 text-orange-700 text-xs font-black uppercase tracking-wider hover:bg-orange-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-orange-50 text-orange-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-orange-100 transition-colors whitespace-nowrap"
               data-testid="simulate-fee-button"
             >
               <DollarSign size={14} />
@@ -811,7 +811,7 @@ const AdminDashboard: React.FC = () => {
             <button
               type="button"
               onClick={simulateRegistration}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-black uppercase tracking-wider hover:bg-emerald-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-emerald-100 transition-colors whitespace-nowrap"
               data-testid="simulate-reg-button"
             >
               <Users size={14} />
@@ -820,7 +820,7 @@ const AdminDashboard: React.FC = () => {
             <button
               type="button"
               onClick={simulateAttendance}
-              className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-purple-50 text-purple-700 text-xs font-black uppercase tracking-wider hover:bg-purple-100 transition-colors"
+              className="flex-1 flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-purple-50 text-purple-700 text-xs font-bold sm:text-sm uppercase tracking-wider hover:bg-purple-100 transition-colors whitespace-nowrap"
               data-testid="simulate-attendance-button"
             >
               <User size={14} />
