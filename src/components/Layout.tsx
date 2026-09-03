@@ -37,17 +37,18 @@ import {
   LogIn,
   MoreHorizontal,
   Laptop,
-    Monitor,
-    UserCog,
-    Keyboard,
-    Target,
-    Database,
-    CreditCard,
-    Archive,
-    Gamepad2,
-        Server,
-        Wifi
-      } from 'lucide-react';
+  Monitor,
+  UserCog,
+  Keyboard,
+  Target,
+  Database,
+  CreditCard,
+  Archive,
+  Gamepad2,
+  Server,
+  Wifi,
+  ArrowLeft
+} from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { NotificationBell } from "@/components/ui/NotificationBell";
@@ -377,62 +378,77 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
         {/* Mobile & Desktop Header Bar */}
-        <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
-          <div className="flex items-center gap-3">
-            {/* Hamburger Button for Mobile */}
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
-              onClick={() => setIsOpen(true)}
-              aria-label="Open menu"
-            >
-              <Menu size={22} />
-            </Button>
-
-            {/* Title / Search */}
-            <div className="flex items-center gap-2">
-              <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
-                M
-              </div>
-              <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
-            </div>
-
-            <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
-                                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                                      <input
-                                        type="text"
-                                        placeholder="Search learners, staff, grades..."
-                                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
-                                      />
-                                    </div>
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <NotificationBell />
-                        <button
-                          onClick={() => setIsDarkMode(!isDarkMode)}
-                          className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
-                          aria-label="Toggle theme"
-                        >
-                          {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
-                        </button>
-                        {/* LAN Server Connection Indicator */}
-                        <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold">
-                          {isConnected ? (
-                            <>
-                              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                              <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
-                            </>
-                          ) : (
-                            <>
-                              <div className="w-2 h-2 rounded-full bg-slate-300" />
-                              <span className="text-slate-400">Offline</span>
-                            </>
-                          )}
-                        </div>
+                <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
+                  <div className="flex items-center gap-3">
+                    {/* Hamburger Button for Mobile */}
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="lg:hidden rounded-2xl h-11 w-11 bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-200 active:scale-95"
+                      onClick={() => setIsOpen(true)}
+                      aria-label="Open menu"
+                    >
+                      <Menu size={22} />
+                    </Button>
+        
+                    {/* Title / Search */}
+                    <div className="flex items-center gap-2">
+                      <div className="lg:hidden w-8 h-8 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-xs shadow-md shadow-indigo-100">
+                        M
                       </div>
-                    </header>
+                      <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
+                    </div>
+        
+                    {/* Back Home Button */}
+                    {location.pathname !== '/dashboard' && location.pathname !== '/' && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => navigate('/dashboard')}
+                        className="hidden md:flex rounded-2xl h-10 w-10 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors active:scale-95"
+                        aria-label="Go to dashboard"
+                        title="Back Home"
+                      >
+                        <ArrowLeft size={18} />
+                        <span className="hidden md:inline-block ml-1 text-xs font-medium">Home</span>
+                      </Button>
+                    )}
+        
+                    <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
+                      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                      <input
+                        type="text"
+                        placeholder="Search learners, staff, grades..."
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl pl-10 pr-4 py-2 text-sm font-medium focus:ring-2 ring-indigo-100 dark:focus:ring-indigo-900 outline-none transition-all dark:text-white whitespace-normal break-words"
+                      />
+                    </div>
+                  </div>
+        
+                  <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <button
+                      onClick={() => setIsDarkMode(!isDarkMode)}
+                      className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors h-11 w-11 flex items-center justify-center active:scale-95"
+                      aria-label="Toggle theme"
+                    >
+                      {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
+                    </button>
+                    {/* LAN Server Connection Indicator */}
+                    <div className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold">
+                      {isConnected ? (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-2 h-2 rounded-full bg-slate-300" />
+                          <span className="text-slate-400">Offline</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </header>
 
         {/* Dynamic Main Viewport */}
         <div 
