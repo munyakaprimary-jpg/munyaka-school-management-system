@@ -10,11 +10,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { CreditCard, ArrowUpRight, Settings2, Save, Eye, FileDown, Calculator, Loader2, Lock, AlertCircle, ShieldCheck, FileText, Clock, History, Edit, Database, RefreshCw } from 'lucide-react';
-import { TRANSACTIONS as initialTransactions, GRADES_DATA, STUDENTS } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
-import { notifyDataChanged } from '@/utils/storage';
+import { notifyDataChanged, readStorage } from '@/utils/storage';
 
 // Sub-components
 import FeeStats from '@/components/fees/FeeStats';
@@ -98,10 +98,54 @@ const normalizeStreamName = (name: string): string => {
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
 
+// Storage keys used by this page (kept in sync with utils/storage.ts)
+const TX_KEY = 'munyaka_transactions';
+const FEE_STRUCT_KEY = 'munyaka_fee_structures';
+const FEE_OVERRIDE_PREFIX = 'munyaka_fee_';
+
+// Helper: read academic year/term from User Settings (single source of truth)
+const readAcademicContext = (): { year: string; term: string } => {
+  try {
+    const raw = localStorage.getItem('munyaka_user_settings');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      const year = parsed?.academic?.activeYear;
+      const term = parsed?.academic?.activeTerm;
+      if (year && term) return { year: String(year), term: String(term) };
+    }
+  } catch (e) {
+    console.error('Failed to read academic context:', e);
+  }
+  return { year: new Date().getFullYear().toString(), term: 'term1' };
+};
+
+// Helper: derive the most appropriate default year from real posted fee structures
+const deriveDefaultYear = (): string => {
+  try {
+    const raw = localStorage.getItem(FEE_STRUCT_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        // Sort years descending, pick the most recent
+        const years = Array.from(
+          new Set(parsed.map((f: any) => String(f.year)))
+        ).sort((a: any, b: any) => (a < b ? 1 : -1));
+        if (years[0]) return String(years[0]);
+      }
+    }
+  } catch (e) {
+    // ignore
+  }
+  return readAcademicContext().year;
+};
+
 const Fees = () => {
   const currentYear = new Date().getFullYear().toString();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedTerm, setSelectedTerm] = useState("term1");
+  // Default to the academic year posted in the active fee structures,
+  // falling back to the system's current year. This ensures the page lands
+  // on a year that has real ledger data rather than an empty one.
+  const [selectedYear, setSelectedYear] = useState(() => deriveDefaultYear() || currentYear);
+  const [selectedTerm, setSelectedTerm] = useState(() => readAcademicContext().term || "term1");
   const [selectedGrade, setSelectedGrade] = useState(GRADES_DATA[0].id);
 
   // Tab Grade Level View Filter
@@ -162,17 +206,13 @@ const Fees = () => {
 
   // Build fee records dynamically from real learner data
   // No more hardcoded mock data — completely driven by Learners Management
+  // and the live `munyaka_transactions` ledger. Fallback to an empty array
+  // when no posted transactions exist for the selected academic context.
   const [transactionsList, setTransactionsList] = useState<ExtendedTransaction[]>(() => {
-    const saved = localStorage.getItem('munyaka_transactions');
-    return saved ? JSON.parse(saved) : initialTransactions as ExtendedTransaction[];
+    return readStorage<ExtendedTransaction[]>(TX_KEY, []);
   });
-  const [feeStructures, setFeeStructures] = useState(() => {
-    const saved = localStorage.getItem('munyaka_fee_structures');
-    return saved ? JSON.parse(saved) : [
-      { year: "2024", term: "term1", gradeId: "g1", amount: 15000 },
-      { year: "2024", term: "term1", gradeId: "g4", amount: 15000 },
-      { year: "2024", term: "term1", gradeId: "g7", amount: 25000 },
-    ];
+  const [feeStructures, setFeeStructures] = useState<any[]>(() => {
+    return readStorage<any[]>(FEE_STRUCT_KEY, []);
   });
   
   // Audit Log State
@@ -220,15 +260,27 @@ const Fees = () => {
     notifyDataChanged('munyaka_fee_audit_logs');
   }, [auditLogs]);
 
-  // Listen for fee update events from EditFeeModal and refresh state
+  // Listen for fee update events from EditFeeModal and refresh state.
+  // Also listens to the canonical `munyaka:data-changed` event that
+  // `notifyDataChanged()` fires from every `writeStorage` call, ensuring
+  // mutations from RecordPayment, EditFee, and the unified modal all
+  // re-render this page's fee summary metrics and transaction table.
   useEffect(() => {
     const handleFeesUpdated = () => {
-      const savedTransactions = localStorage.getItem('munyaka_transactions');
+      const savedTransactions = localStorage.getItem(TX_KEY);
       if (savedTransactions) {
         try {
           setTransactionsList(JSON.parse(savedTransactions));
         } catch (e) {
           console.error("Failed to refresh transactions from localStorage:", e);
+        }
+      }
+      const savedStructures = localStorage.getItem(FEE_STRUCT_KEY);
+      if (savedStructures) {
+        try {
+          setFeeStructures(JSON.parse(savedStructures));
+        } catch (e) {
+          console.error("Failed to refresh fee structures from localStorage:", e);
         }
       }
       const savedAuditLogs = localStorage.getItem('munyaka_fee_audit_logs');
@@ -241,9 +293,39 @@ const Fees = () => {
       }
     };
 
+    const handleDataChanged = (e: Event) => {
+      const detail = (e as CustomEvent).detail;
+      const key = detail?.key as string | undefined;
+      if (
+        !key ||
+        key === TX_KEY ||
+        key === FEE_STRUCT_KEY ||
+        key === 'munyaka_fee_audit_logs' ||
+        key.startsWith(FEE_OVERRIDE_PREFIX)
+      ) {
+        handleFeesUpdated();
+      }
+    };
+
+    // Cross-tab sync via the native `storage` event
+    const handleStorage = (e: StorageEvent) => {
+      if (
+        e.key === TX_KEY ||
+        e.key === FEE_STRUCT_KEY ||
+        e.key === 'munyaka_fee_audit_logs' ||
+        (e.key && e.key.startsWith(FEE_OVERRIDE_PREFIX))
+      ) {
+        handleFeesUpdated();
+      }
+    };
+
     window.addEventListener('munyaka_fees_updated', handleFeesUpdated);
+    window.addEventListener('munyaka:data-changed', handleDataChanged);
+    window.addEventListener('storage', handleStorage);
     return () => {
       window.removeEventListener('munyaka_fees_updated', handleFeesUpdated);
+      window.removeEventListener('munyaka:data-changed', handleDataChanged);
+      window.removeEventListener('storage', handleStorage);
     };
   }, []);
 
@@ -964,8 +1046,28 @@ const Fees = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-sm text-slate-400">
-                      No transactions recorded yet. Click "Record Payment" to add one.
+                    <td colSpan={4} className="px-5 py-16 text-center">
+                      <div className="flex flex-col items-center gap-2 max-w-sm mx-auto">
+                        <div className="p-3 bg-slate-100 rounded-full">
+                          <Database className="w-7 h-7 text-slate-400" />
+                        </div>
+                        <p className="text-sm font-semibold text-slate-700">No posted records found</p>
+                        <p className="text-xs text-slate-400">
+                          {tabGradeFilter !== "all"
+                            ? `No payments have been posted for ${GRADE_LEVEL_OPTIONS.find(o => o.value === tabGradeFilter)?.label || "this grade"} in ${selectedTerm} ${selectedYear}.`
+                            : `No payments have been posted for ${selectedTerm} ${selectedYear} yet.`}
+                        </p>
+                        {normalizedLearners.length > 0 && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsRecordOpen(true)}
+                            className="mt-2 rounded-lg h-9 px-4 text-xs font-semibold gap-1.5 border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                          >
+                            <CreditCard size={13} /> Record First Payment
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 )}
