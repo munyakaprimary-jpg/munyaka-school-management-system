@@ -28,15 +28,16 @@ import {
   Users,
   Loader2
 } from 'lucide-react';
-import { 
-  DropdownMenu, 
-  DropdownMenuContent, 
-  DropdownMenuItem, 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError } from '@/utils/toast';
 import { api } from '@/lib/api';
+import { getLocalStaff, type StaffRecord } from './StaffRegistration';
 
 interface StaffMember {
   id: string;
@@ -89,7 +90,7 @@ const Staff = () => {
   });
   const [formError, setFormError] = useState('');
 
-  // Load staff directory from local API
+  // Load staff directory from local API + merge any locally-saved records
   const fetchStaffList = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -110,11 +111,44 @@ const Staff = () => {
         department: r.department || 'School Administration'
       }));
 
+      // Merge in any staff saved locally (offline-first registrations)
+      const localStaff = getLocalStaff();
+      const existingIds = new Set(staffList.map(s => s.id));
+      localStaff.forEach((ls: StaffRecord) => {
+        if (existingIds.has(ls.id)) return;
+        staffList.push({
+          id: ls.id,
+          id_no: `ID-${ls.id.slice(-6)}`,
+          tsc_no: ls.tscNumber,
+          full_name: ls.fullName,
+          role: ls.role.toUpperCase(),
+          subjects: [],
+          phone: ls.phone,
+          email: ls.email,
+          status: 'Active',
+          joined: ls.createdAt,
+          department: 'School Administration',
+        });
+      });
+
       return staffList;
     } catch (err: any) {
       console.error('Failed to fetch staff from local API:', err);
-      showError(err?.message || 'Failed to load staff directory');
-      return [];
+      // Server unreachable — fall back to local-only staff
+      const localStaff = getLocalStaff();
+      return localStaff.map((ls: StaffRecord) => ({
+        id: ls.id,
+        id_no: `ID-${ls.id.slice(-6)}`,
+        tsc_no: ls.tscNumber,
+        full_name: ls.fullName,
+        role: ls.role.toUpperCase(),
+        subjects: [],
+        phone: ls.phone,
+        email: ls.email,
+        status: 'Active' as const,
+        joined: ls.createdAt,
+        department: 'School Administration',
+      }));
     } finally {
       setIsLoading(false);
     }

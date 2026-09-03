@@ -9,18 +9,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '@/components/ui/BackButton';
-import { apiPost } from '@/services/SyncEngine';
 
 // ─── Local-first staff storage ───────────────────────────────────────────────
-const STAFF_LOCAL_KEY = 'offline_queue_staff';
+const STAFF_LOCAL_KEY = 'staff_local';
 
 export interface StaffRecord {
   id: string;
-  role: string;
   fullName: string;
+  role: string;
   phone: string;
   email: string;
-  tscNumber: string;
+  tscNumber?: string;
   createdAt: string;
 }
 
@@ -43,6 +42,40 @@ export const addLocalStaff = (record: StaffRecord) => {
   const list = getLocalStaff();
   list.push(record);
   saveLocalStaff(list);
+};
+
+// ─── Optional backend sync (only if a URL is configured) ─────────────────────
+const BACKEND_URL_KEY = 'lan_server_url';
+
+const getConfiguredBackendUrl = (): string | null => {
+  try {
+    const url = localStorage.getItem(BACKEND_URL_KEY);
+    return url && url.trim() ? url.trim() : null;
+  } catch {
+    return null;
+  }
+};
+
+const tryBackendSync = async (endpoint: string, payload: unknown): Promise<boolean> => {
+  const baseUrl = getConfiguredBackendUrl();
+  if (!baseUrl) return false; // no backend configured — pure local-first
+  if (typeof navigator !== 'undefined' && !navigator.onLine) return false;
+
+  try {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), 5000);
+    const response = await fetch(`${baseUrl}${endpoint}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    window.clearTimeout(timeoutId);
+    return response.ok;
+  } catch {
+    // Swallow network errors silently — local record is already saved
+    return false;
+  }
 };
 
 // ─── ID generator ────────────────────────────────────────────────────────────
@@ -70,43 +103,41 @@ const StaffRegistration = () => {
     setIsSubmitting(true);
 
     const staffId = generateId();
-    const payload = {
+    const record: StaffRecord = {
       id: staffId,
+      fullName: formData.fullName,
       role: formData.role,
-      name: formData.fullName,
       phone: formData.phone,
       email: formData.email,
-      tsc_number: formData.tscNumber || null,
-      created_at: new Date().toISOString(),
-      status: 'pending_sync',
+      tscNumber: formData.tscNumber || undefined,
+      createdAt: new Date().toISOString(),
     };
 
-    // ── 1. Local-first: persist to local storage immediately ──────────────────
-    addLocalStaff({
+    // ── 1. Local-first: write directly to local storage immediately ──────────
+    addLocalStaff(record);
+
+    // ── 2. Notify the rest of the app so the staff list updates right away ──
+    window.dispatchEvent(new Event('staff-changed'));
+
+    // ── 3. Optional backend sync (silent — no error UI on failure) ───────────
+    const synced = await tryBackendSync('/api/teachers', {
       id: staffId,
-      role: formData.role,
-      fullName: formData.fullName,
-      phone: formData.phone,
-      email: formData.email,
-      tscNumber: formData.tscNumber,
-      createdAt: new Date().toISOString(),
+      full_name: record.fullName,
+      role: record.role.toUpperCase(),
+      phone: record.phone,
+      email: record.email,
+      tsc_number: record.tscNumber || null,
+      id_number: `ID-${Date.now()}`,
+      created_at: record.createdAt,
     });
 
-    // ── 2. Background sync: attempt to push to server; queue if offline ───────
-    const { offline } = await apiPost('/api/teachers', payload, { type: 'teacher' });
-
-    // ── 3. Graceful UI feedback ───────────────────────────────────────────────
-    if (offline) {
-      toast({
-        title: "Staff saved locally",
-        description: `${formData.fullName} saved — will sync when connection is restored.`,
-      });
-    } else {
-      toast({
-        title: "Staff registered",
-        description: `${formData.fullName} has been added successfully.`,
-      });
-    }
+    // ── 4. Graceful UI feedback (no hardcoded URL errors) ────────────────────
+    toast({
+      title: synced ? "Staff registered" : "Staff saved locally",
+      description: synced
+        ? `${record.fullName} has been added successfully.`
+        : `${record.fullName} saved — will sync when the server is reachable.`,
+    });
 
     setIsSubmitting(false);
     navigate('/staff');
