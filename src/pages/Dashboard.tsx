@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
 import type { LucideIcon } from 'lucide-react';
+import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
 export type WidgetKey =
@@ -1198,6 +1199,8 @@ const TeacherDashboard: React.FC = () => {
 const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const role = user?.role;
+  const { activeTerm, activeYear } = useAcademicCalendar();
+  const termBadge = formatTermBadge(activeTerm, activeYear);
 
   // Owner sees the full Owner Dashboard; no wrapper header needed there
   if (role === 'owner') {
@@ -1216,10 +1219,15 @@ const Dashboard: React.FC = () => {
       {/* ── Dynamic Header ── */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-black text-slate-900 tracking-tight">
-            {title}
-          </h1>
-          <p className="text-muted-foreground mt-1">
+          <div className="flex items-center gap-3 mb-1 flex-wrap">
+            <h1 className="text-3xl font-black text-slate-900 tracking-tight">
+              {title}
+            </h1>
+            <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
+              {termBadge}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-slate-500">
             Welcome back, <span className="font-semibold text-slate-700">{user?.name || 'User'}</span>
           </p>
         </div>

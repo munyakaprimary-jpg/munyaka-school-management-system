@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
-import { useAcademicCalendar } from '@/hooks/useAcademicCalendar';
+import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
@@ -107,11 +107,11 @@ export default function Students() {
   });
 
   // 2. Use the academic calendar hook for dynamic term/year
-  const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
-  const termBadge = useMemo(() => {
-    if (isLoading) return `Term ${activeTerm}, ${activeYear}`;
-    return `${activeTerm}, ${activeYear}`;
-  }, [activeTerm, activeYear, isLoading]);
+    const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
+    const termBadge = useMemo(() => {
+      if (isLoading) return `${activeTerm}, ${activeYear}`;
+      return formatTermBadge(activeTerm, activeYear);
+    }, [activeTerm, activeYear, isLoading]);
 
   // Automatically sync learners back to localStorage on change
   useEffect(() => {
