@@ -1,134 +1,192 @@
 "use client";
 
+/**
+ * LearnerManagementMenu
+ *
+ * Refactored to serve as a student/learner's personal navigation sidebar.
+ * The "Filters & Roster" section (which was teacher/admin functionality)
+ * has been moved to TeacherRosterMenu in the Admin Dashboard.
+ *
+ * This menu now provides quick access to:
+ *   - My Subjects
+ *   - My Assignments
+ *   - Attendance History
+ *   - Classmate Directory
+ *   - My Results
+ *   - Library Access
+ */
+
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-import { AlertCircle, Inbox, Search, WifiOff } from "lucide-react";
 import {
-  AttendanceStatus,
-  LearnerMenuData,
-  LearnerMenuFilter,
-  LearnerMenuItem,
-} from "@/types/learnerMenu";
+  BookOpen,
+  FileText,
+  Clock,
+  Users,
+  BarChart3,
+  Library,
+  GraduationCap,
+  ChevronRight,
+  AlertCircle,
+  WifiOff,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-/* -------------------------------------------------------------------------- */
-/*  Shared styling tokens                                                     */
-/* -------------------------------------------------------------------------- */
+// ─── Types ──────────────────────────────────────────────────────────────────
+
+export interface LearnerMenuNavItem {
+  id: string;
+  label: string;
+  description: string;
+  icon: React.ComponentType<{ size?: number; className?: string }>;
+  /** Route path to navigate to when clicked. */
+  route: string;
+  /** Optional badge count (e.g. unread assignments). */
+  badge?: number;
+  /** Color accent for the icon pill. */
+  accent: "indigo" | "emerald" | "amber" | "rose" | "violet";
+}
+
+export interface LearnerManagementMenuProps {
+  /** Whether the menu data is still loading. */
+  isLoading?: boolean;
+  /** Error message if data failed to load. */
+  error?: string | null;
+  /** Called when the user clicks the retry button. */
+  onRetry?: () => void;
+  /** Optional className for the outer container. */
+  className?: string;
+  /** Student info for display */
+  studentInfo?: {
+    name?: string;
+    grade?: string;
+    stream?: string;
+    admNo?: string;
+  };
+}
+
+// ─── Accent tokens ──────────────────────────────────────────────────────────
 
 const ACCENT_STYLES: Record<
-  NonNullable<LearnerMenuFilter["accent"]>,
-  { pill: string; ring: string; count: string; icon: string }
+  LearnerMenuNavItem["accent"],
+  { pill: string; icon: string; hover: string; ring: string }
 > = {
   indigo: {
     pill: "bg-indigo-50 text-indigo-700 border-indigo-200",
-    ring: "ring-indigo-300",
-    count: "bg-indigo-600 text-white",
     icon: "text-indigo-500",
+    hover: "hover:border-indigo-200 hover:bg-indigo-50/40 hover:text-indigo-700",
+    ring: "ring-indigo-200",
   },
   emerald: {
     pill: "bg-emerald-50 text-emerald-700 border-emerald-200",
-    ring: "ring-emerald-300",
-    count: "bg-emerald-600 text-white",
     icon: "text-emerald-500",
+    hover: "hover:border-emerald-200 hover:bg-emerald-50/40 hover:text-emerald-700",
+    ring: "ring-emerald-200",
   },
   amber: {
     pill: "bg-amber-50 text-amber-700 border-amber-200",
-    ring: "ring-amber-300",
-    count: "bg-amber-500 text-white",
     icon: "text-amber-500",
+    hover: "hover:border-amber-200 hover:bg-amber-50/40 hover:text-amber-700",
+    ring: "ring-amber-200",
   },
   rose: {
     pill: "bg-rose-50 text-rose-700 border-rose-200",
-    ring: "ring-rose-300",
-    count: "bg-rose-600 text-white",
     icon: "text-rose-500",
+    hover: "hover:border-rose-200 hover:bg-rose-50/40 hover:text-rose-700",
+    ring: "ring-rose-200",
   },
-  slate: {
-    pill: "bg-slate-50 text-slate-700 border-slate-200",
-    ring: "ring-slate-300",
-    count: "bg-slate-600 text-white",
-    icon: "text-slate-500",
-  },
-};
-
-const ATTENDANCE_BADGE: Record<
-  AttendanceStatus,
-  { label: string; className: string }
-> = {
-  Present: {
-    label: "Present",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  },
-  Late: {
-    label: "Late",
-    className: "bg-amber-50 text-amber-700 border-amber-200",
-  },
-  Absent: {
-    label: "Absent",
-    className: "bg-rose-50 text-rose-700 border-rose-200",
-  },
-  Unmarked: {
-    label: "Unmarked",
-    className: "bg-slate-50 text-slate-500 border-slate-200",
+  violet: {
+    pill: "bg-violet-50 text-violet-700 border-violet-200",
+    icon: "text-violet-500",
+    hover: "hover:border-violet-200 hover:bg-violet-50/40 hover:text-violet-700",
+    ring: "ring-violet-200",
   },
 };
 
-/* -------------------------------------------------------------------------- */
-/*  Subcomponents — loading / empty / error                                   */
-/* -------------------------------------------------------------------------- */
+// ─── Static navigation items ────────────────────────────────────────────────
 
-/** Skeleton used while the dataset is in flight. */
+const NAV_ITEMS: LearnerMenuNavItem[] = [
+  {
+    id: "subjects",
+    label: "My Subjects",
+    description: "View your enrolled subjects and topics",
+    icon: BookOpen,
+    route: "/learning-areas",
+    accent: "indigo",
+  },
+  {
+    id: "assignments",
+    label: "Assignments",
+    description: "Track and submit your homework",
+    icon: FileText,
+    route: "/assessments",
+    accent: "amber",
+  },
+  {
+    id: "attendance",
+    label: "Attendance History",
+    description: "Review your past attendance records",
+    icon: Clock,
+    route: "/attendance",
+    accent: "emerald",
+  },
+  {
+    id: "classmates",
+    label: "Classmate Directory",
+    description: "Browse students in your class",
+    icon: Users,
+    route: "/students",
+    accent: "violet",
+  },
+  {
+    id: "results",
+    label: "My Results",
+    description: "View your exam results and reports",
+    icon: BarChart3,
+    route: "/analysis",
+    accent: "rose",
+  },
+  {
+    id: "library",
+    label: "Library Access",
+    description: "Browse and borrow library books",
+    icon: Library,
+    route: "/library",
+    accent: "emerald",
+  },
+];
+
+// ─── Subcomponents ──────────────────────────────────────────────────────────
+
 function LearnerMenuSkeleton() {
   return (
-    <div
-      role="status"
-      aria-live="polite"
-      aria-busy="true"
-      className="space-y-2"
-    >
+    <div role="status" aria-live="polite" aria-busy="true" className="space-y-3">
+      <div className="flex items-center gap-3 px-3 py-4 rounded-2xl bg-white border border-slate-200/80">
+        <Skeleton className="h-10 w-10 rounded-full" />
+        <div className="flex-1 space-y-1.5">
+          <Skeleton className="h-3 w-2/3 rounded" />
+          <Skeleton className="h-2 w-1/2 rounded" />
+        </div>
+      </div>
       {[0, 1, 2, 3, 4].map((i) => (
         <div
           key={i}
           className="flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-white border border-slate-200/80"
         >
-          <Skeleton className="h-5 w-5 rounded-md" />
+          <Skeleton className="h-9 w-9 rounded-xl" />
           <div className="flex-1 space-y-1.5">
             <Skeleton className="h-3 w-3/4 rounded" />
             <Skeleton className="h-2 w-1/2 rounded" />
           </div>
-          <Skeleton className="h-6 w-10 rounded-full" />
+          <Skeleton className="h-5 w-5 rounded-full" />
         </div>
       ))}
     </div>
   );
 }
 
-/** Empty state shown when no learners match the active filter. */
-interface EmptyStateProps {
-  filterLabel?: string;
-  searchTerm?: string;
-}
-function EmptyState({ filterLabel, searchTerm }: EmptyStateProps) {
-  const hasSearch = !!searchTerm && searchTerm.trim().length > 0;
-  return (
-    <div className="flex flex-col items-center justify-center text-center px-4 py-10 bg-white border border-dashed border-slate-200 rounded-2xl">
-      <div className="p-4 rounded-full bg-slate-50 text-slate-300 mb-3">
-        <Inbox size={28} />
-      </div>
-      <p className="text-sm font-bold text-slate-800">No learners found</p>
-      <p className="text-xs text-slate-500 mt-1 max-w-xs">
-        {hasSearch
-          ? `No results for “${searchTerm}”${filterLabel ? ` in ${filterLabel}` : ""}.`
-          : filterLabel
-            ? `There are no learners in the “${filterLabel}” category right now.`
-            : "Add a learner to get started — your roster is currently empty."}
-      </p>
-    </div>
-  );
-}
-
-/** Error state shown when the API call failed. */
 interface ErrorStateProps {
   message: string;
   onRetry?: () => void;
@@ -140,7 +198,7 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
         {onRetry ? <WifiOff size={26} /> : <AlertCircle size={26} />}
       </div>
       <p className="text-sm font-bold text-rose-800">
-        Couldn’t load the learner menu
+        Couldn't load the learner menu
       </p>
       <p className="text-xs text-rose-700/80 mt-1 max-w-xs">{message}</p>
       {onRetry && (
@@ -157,27 +215,23 @@ function ErrorState({ message, onRetry }: ErrorStateProps) {
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Filter row                                                                */
-/* -------------------------------------------------------------------------- */
+// ─── Nav item row ────────────────────────────────────────────────────────────
 
-interface FilterRowProps {
-  filter: LearnerMenuFilter;
-  onSelect: (id: string) => void;
+interface NavRowProps {
+  item: LearnerMenuNavItem;
+  onNavigate: (route: string) => void;
 }
-function FilterRow({ filter, onSelect }: FilterRowProps) {
-  const accent = ACCENT_STYLES[filter.accent ?? "slate"];
-  const Icon = filter.icon;
+function NavRow({ item, onNavigate }: NavRowProps) {
+  const accent = ACCENT_STYLES[item.accent];
+  const Icon = item.icon;
+
   return (
     <button
       type="button"
-      onClick={() => onSelect(filter.id)}
-      aria-pressed={filter.isActive}
+      onClick={() => onNavigate(item.route)}
       className={cn(
-        "group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-left text-sm font-semibold transition-all duration-200 min-h-[48px] border",
-        filter.isActive
-          ? `bg-white border-transparent shadow-sm ring-2 ${accent.ring}`
-          : "bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50",
+        "group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-left text-sm font-semibold transition-all duration-200 min-h-[48px] border border-transparent bg-white hover:border-slate-200 hover:bg-slate-50",
+        accent.hover,
       )}
     >
       <span
@@ -189,45 +243,33 @@ function FilterRow({ filter, onSelect }: FilterRowProps) {
         <Icon size={16} className={accent.icon} />
       </span>
       <span className="flex-1 min-w-0">
-        <span
-          className={cn(
-            "block truncate",
-            filter.isActive ? "text-slate-900" : "text-slate-700",
-          )}
-        >
-          {filter.label}
+        <span className="block truncate text-slate-700 group-hover:text-slate-900">
+          {item.label}
         </span>
-        {filter.hint && (
-          <span className="block text-[10px] font-medium text-slate-400 uppercase tracking-wider truncate">
-            {filter.hint}
-          </span>
-        )}
+        <span className="block text-[10px] font-medium text-slate-400 truncate">
+          {item.description}
+        </span>
       </span>
-      <span
-        className={cn(
-          "shrink-0 px-2.5 py-1 rounded-full text-[11px] font-black tabular-nums",
-          filter.isActive
-            ? accent.count
-            : "bg-slate-100 text-slate-600 border border-slate-200",
-        )}
-      >
-        {filter.count}
-      </span>
+      {item.badge !== undefined && item.badge > 0 ? (
+        <span className="shrink-0 px-2.5 py-1 rounded-full text-[11px] font-black bg-amber-500 text-white tabular-nums">
+          {item.badge}
+        </span>
+      ) : (
+        <ChevronRight
+          size={14}
+          className="shrink-0 text-slate-300 group-hover:text-slate-500 transition-colors"
+        />
+      )}
     </button>
   );
 }
 
-/* -------------------------------------------------------------------------- */
-/*  Learner row                                                               */
-/* -------------------------------------------------------------------------- */
+// ─── Student identity card ───────────────────────────────────────────────────
 
-interface LearnerRowProps {
-  learner: LearnerMenuItem;
-  onClick?: (learner: LearnerMenuItem) => void;
-}
-function LearnerRow({ learner, onClick }: LearnerRowProps) {
-  const attendance = ATTENDANCE_BADGE[learner.attendanceStatus];
-  const initials = learner.fullName
+const StudentCard: React.FC<{
+  info: NonNullable<LearnerManagementMenuProps["studentInfo"]>;
+}> = ({ info }) => {
+  const initials = (info.name ?? "?")
     .split(" ")
     .map((p) => p[0])
     .filter(Boolean)
@@ -236,82 +278,42 @@ function LearnerRow({ learner, onClick }: LearnerRowProps) {
     .toUpperCase();
 
   return (
-    <button
-      type="button"
-      onClick={() => onClick?.(learner)}
-      className="w-full text-left flex items-center gap-3 px-3.5 py-3 rounded-2xl bg-white border border-slate-200/80 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all duration-200 group"
-    >
-      {learner.avatarUrl ? (
-        <img
-          src={learner.avatarUrl}
-          alt={learner.fullName}
-          className="h-10 w-10 rounded-full object-cover border border-slate-200 shrink-0"
-        />
-      ) : (
-        <span className="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-violet-500 text-white text-xs font-black flex items-center justify-center shrink-0 shadow-sm">
-          {initials || "?"}
-        </span>
-      )}
-      <span className="flex-1 min-w-0">
-        <span className="block text-sm font-bold text-slate-900 truncate group-hover:text-indigo-700">
-          {learner.fullName}
-        </span>
-        <span className="block text-[11px] font-medium text-slate-500 truncate">
-          {learner.grade} · {learner.stream} · {learner.admNo}
-        </span>
+    <div className="flex items-center gap-3 px-4 py-4 rounded-2xl bg-gradient-to-br from-indigo-600 to-violet-600 text-white shadow-sm">
+      <span className="h-10 w-10 rounded-full bg-white/20 backdrop-blur-sm text-white text-xs font-black flex items-center justify-center shrink-0">
+        {initials}
       </span>
-      <span
-        className={cn(
-          "shrink-0 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border",
-          attendance.className,
-        )}
-      >
-        {attendance.label}
-      </span>
-    </button>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-black truncate leading-tight">
+          {info.name ?? "Learner"}
+        </p>
+        <p className="text-[10px] font-medium text-white/70 truncate mt-0.5">
+          {info.grade}
+          {info.stream ? ` · ${info.stream}` : ""}
+          {info.admNo ? ` · ${info.admNo}` : ""}
+        </p>
+      </div>
+      <GraduationCap size={16} className="shrink-0 text-white/50" />
+    </div>
   );
-}
+};
 
-/* -------------------------------------------------------------------------- */
-/*  Main component                                                            */
-/* -------------------------------------------------------------------------- */
+// ─── Main component ─────────────────────────────────────────────────────────
 
-export interface LearnerManagementMenuProps {
-  data: LearnerMenuData;
-  /** Max number of learner rows to render in the embedded list. */
-  rowLimit?: number;
-  /** Optional search term forwarded to the empty state. */
-  searchTerm?: string;
-  /** Called when the user picks a filter. */
-  onFilterChange: (filterId: string) => void;
-  /** Called when the user clicks a learner row. */
-  onLearnerClick?: (learner: LearnerMenuItem) => void;
-  /** Called when the user clicks the retry button in the error state. */
-  onRetry?: () => void;
-  /** Optional className for the outer container. */
-  className?: string;
-}
-
-/**
- * LearnerManagementMenu
- *
- * A fully dynamic side menu for the Learners page. Every counter, label,
- * and list item is driven by `data.learners` — there are no hardcoded
- * counts or hardcoded rows in the JSX. Loading, empty, and error states
- * are all derived from the `isLoading` / `error` props and from the
- * presence of data in the active filter.
- */
 export default function LearnerManagementMenu({
-  data,
-  rowLimit = 5,
-  searchTerm,
-  onFilterChange,
-  onLearnerClick,
+  isLoading = false,
+  error = null,
   onRetry,
   className,
+  studentInfo,
 }: LearnerManagementMenuProps) {
+  const navigate = useNavigate();
+
+  const handleNavigate = (route: string) => {
+    navigate(route);
+  };
+
   // ── Loading state ─────────────────────────────────────────────────────
-  if (data.isLoading) {
+  if (isLoading) {
     return (
       <aside className={cn("space-y-4", className)} aria-busy="true">
         <div className="px-2">
@@ -319,7 +321,7 @@ export default function LearnerManagementMenu({
             Learner Menu
           </p>
           <h2 className="text-base font-black text-slate-900 mt-0.5">
-            Filters & Roster
+            Quick Access
           </h2>
         </div>
         <LearnerMenuSkeleton />
@@ -328,7 +330,7 @@ export default function LearnerManagementMenu({
   }
 
   // ── Error state ───────────────────────────────────────────────────────
-  if (data.error) {
+  if (error) {
     return (
       <aside className={cn("space-y-4", className)}>
         <div className="px-2">
@@ -336,46 +338,38 @@ export default function LearnerManagementMenu({
             Learner Menu
           </p>
           <h2 className="text-base font-black text-slate-900 mt-0.5">
-            Filters & Roster
+            Quick Access
           </h2>
         </div>
-        <ErrorState message={data.error} onRetry={onRetry} />
+        <ErrorState message={error} onRetry={onRetry} />
       </aside>
     );
   }
 
-  // Active learner rows for the embedded preview.
-  // We derive the active filter's label from the filters array so the
-  // empty state copy always matches whatever the user has selected.
-  const activeFilter = data.filters.find((f) => f.isActive);
-  const previewLearners = data.learners.slice(0, rowLimit);
-  const hasLearners = previewLearners.length > 0;
-  const totalForActiveFilter = activeFilter?.count ?? 0;
-
   return (
     <aside className={cn("space-y-5", className)}>
       {/* Header */}
-      <div className="px-2 flex items-center justify-between">
-        <div>
-          <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-            Learner Menu
-          </p>
-          <h2 className="text-base font-black text-slate-900 mt-0.5">
-            Filters & Roster
-          </h2>
-        </div>
-        <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-          {data.learners.length} total
-        </span>
+      <div className="px-2">
+        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+          Learner Menu
+        </p>
+        <h2 className="text-base font-black text-slate-900 mt-0.5">
+          Quick Access
+        </h2>
       </div>
 
-      {/* Filter list — entirely driven by `data.filters` */}
-      <div className="space-y-2" role="listbox" aria-label="Learner filters">
-        {data.filters.map((filter) => (
-          <FilterRow
-            key={filter.id}
-            filter={filter}
-            onSelect={onFilterChange}
+      {/* Student identity card */}
+      <StudentCard
+        info={studentInfo ?? { name: "Learner" }}
+      />
+
+      {/* Navigation items */}
+      <div className="space-y-2" role="navigation" aria-label="Learner navigation">
+        {NAV_ITEMS.map((item) => (
+          <NavRow
+            key={item.id}
+            item={item}
+            onNavigate={handleNavigate}
           />
         ))}
       </div>
@@ -383,45 +377,12 @@ export default function LearnerManagementMenu({
       {/* Divider */}
       <div className="h-px bg-gradient-to-r from-transparent via-slate-200 to-transparent" />
 
-      {/* Preview header */}
-      <div className="px-2 flex items-center justify-between">
-        <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-          {activeFilter?.label ?? "Preview"}
+      {/* Footer */}
+      <div className="px-2 text-center">
+        <p className="text-[10px] font-medium text-slate-400">
+          Access more features from the main menu
         </p>
-        {activeFilter && totalForActiveFilter > rowLimit && (
-          <span className="text-[10px] font-bold text-slate-400 tabular-nums">
-            showing {rowLimit} of {totalForActiveFilter}
-          </span>
-        )}
       </div>
-
-      {/* Preview list — empty state when nothing matches */}
-      {hasLearners ? (
-        <div className="space-y-2">
-          {previewLearners.map((learner) => (
-            <LearnerRow
-              key={learner.id}
-              learner={learner}
-              onClick={onLearnerClick}
-            />
-          ))}
-        </div>
-      ) : (
-        <EmptyState
-          filterLabel={activeFilter?.label}
-          searchTerm={searchTerm}
-        />
-      )}
-
-      {/* Footer hint when there are more rows than we display */}
-      {hasLearners && totalForActiveFilter > rowLimit && (
-        <div className="px-2 pt-1">
-          <p className="text-[10px] font-medium text-slate-400 inline-flex items-center gap-1.5">
-            <Search size={11} />
-            Use the search bar to find a specific learner
-          </p>
-        </div>
-      )}
     </aside>
   );
 }
