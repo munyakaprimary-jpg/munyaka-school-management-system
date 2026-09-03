@@ -9,12 +9,25 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck } from 'lucide-react';
+import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck, Sparkles } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
+import { STAFF } from '@/lib/mock-data';
+
+// Directory staff entry that doesn't have a pre-registration record yet
+interface UnlinkedStaffEntry {
+  id: string;
+  nationalId: string;
+  name: string;
+  email: string;
+  phone: string;
+  role: string;
+  tscNumber?: string;
+  source: 'directory' | 'mock';
+}
 
 const StaffPreRegistration = () => {
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
@@ -30,11 +43,136 @@ const StaffPreRegistration = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
+  const [generatingKeyFor, setGeneratingKeyFor] = useState<string | null>(null);
   
   // Auth state for deletion
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
+
+  // ── Load unlinked directory staff (those without pre-registration entries) ──
+  const unlinkedStaff = useMemo<UnlinkedStaffEntry[]>(() => {
+    const preRegNatIds = new Set(staffList.map(s => s.nationalId));
+    const preRegEmails = new Set(staffList.map(s => s.email.toLowerCase()));
+    const entries: UnlinkedStaffEntry[] = [];
+
+    // From localStorage directory
+    const saved = localStorage.getItem('munyaka_staff_directory');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        parsed.forEach((s: any) => {
+          const natId = s.id_no || s.nationalId;
+          const email = (s.email || '').toLowerCase();
+          if (!preRegNatIds.has(natId) && !preRegEmails.has(email)) {
+            entries.push({
+              id: s.id || natId,
+              nationalId: natId,
+              name: s.full_name || s.name || '',
+              email: s.email || '',
+              phone: s.phone || '',
+              role: s.role || 'Staff',
+              tscNumber: s.tsc_no || s.tscNumber,
+              source: 'directory',
+            });
+          }
+        });
+      } catch { /* ignore */ }
+    }
+
+    // From mock data (seed staff not yet in ledger)
+    STAFF.forEach(s => {
+      const email = (s.email || '').toLowerCase();
+      if (!preRegNatIds.has(s.id_no) && !preRegEmails.has(email)) {
+        entries.push({
+          id: s.id,
+          nationalId: s.id_no,
+          name: s.name || '',
+          email: s.email || '',
+          phone: s.phone || '',
+          role: s.role || 'Staff',
+          tscNumber: s.tsc_no,
+          source: 'mock',
+        });
+      }
+    });
+
+    return entries;
+  }, [staffList]);
+
+  // ── Combined ledger view: pre-registered + unlinked staff ──
+  type LedgerEntry =
+    | { type: 'pre-registered'; data: PreRegisteredStaff }
+    | { type: 'unlinked'; data: UnlinkedStaffEntry };
+
+  const allLedgerEntries = useMemo<LedgerEntry[]>(() => {
+    const preRegEntries: LedgerEntry[] = staffList.map(data => ({ type: 'pre-registered', data }));
+    const unlinkedEntries: LedgerEntry[] = unlinkedStaff.map(data => ({ type: 'unlinked', data }));
+    return [...preRegEntries, ...unlinkedEntries];
+  }, [staffList, unlinkedStaff]);
+
+  const filteredLedger = useMemo(() => {
+    return allLedgerEntries.filter(entry => {
+      const isPreReg = entry.type === 'pre-registered';
+      const name = isPreReg
+        ? (entry.data as PreRegisteredStaff).fullName
+        : (entry.data as UnlinkedStaffEntry).name;
+      const natId = isPreReg
+        ? (entry.data as PreRegisteredStaff).nationalId
+        : (entry.data as UnlinkedStaffEntry).nationalId;
+      const email = isPreReg
+        ? (entry.data as PreRegisteredStaff).email
+        : (entry.data as UnlinkedStaffEntry).email;
+      const role = isPreReg
+        ? (entry.data as PreRegisteredStaff).systemRole
+        : (entry.data as UnlinkedStaffEntry).role;
+
+      const matchesSearch =
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        natId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        email.toLowerCase().includes(searchTerm.toLowerCase());
+
+      const matchesRole = roleFilter === 'all' ||
+        (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
+
+      const matchesStatus = statusFilter === 'all' ||
+        (statusFilter === 'Pre-Registered' && !isPreReg) ||
+        (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
+        (statusFilter === 'Unlinked' && !isPreReg);
+
+      return matchesSearch && matchesRole && matchesStatus;
+    });
+  }, [allLedgerEntries, searchTerm, roleFilter, statusFilter]);
+
+  // ── Generate Key / Invite for unlinked staff ──
+  const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
+    setGeneratingKeyFor(entry.id);
+    await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
+
+    const accessCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
+    const newPreReg: PreRegisteredStaff = {
+      id: `PR-${Date.now()}`,
+      staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
+      fullName: entry.name,
+      nationalId: entry.nationalId,
+      tscNumber: entry.tscNumber,
+      email: entry.email,
+      phone: entry.phone,
+      systemRole: 'subject_teacher' as any,
+      department: 'School Administration',
+      assignedSubjects: [],
+      tempAccessCode: accessCode,
+      status: 'Pre-Registered',
+      datePreRegistered: new Date().toISOString().split('T')[0],
+    };
+
+    const updatedList = [newPreReg, ...staffList];
+    setStaffList(updatedList);
+    localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+    notifyDataChanged('munyaka_staff_prereg');
+    setGeneratingKeyFor(null);
+    showSuccess(`Access key generated for "${entry.name}"! Invite dispatched.`);
+  };
 
   const filteredStaff = useMemo(() => {
     return staffList.filter(s => {
@@ -232,9 +370,10 @@ const StaffPreRegistration = () => {
               </SelectTrigger>
               <SelectContent className="rounded-2xl">
                 <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
                 <SelectItem value="Active">Active</SelectItem>
+                <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
                 <SelectItem value="Suspended">Suspended</SelectItem>
+                <SelectItem value="Unlinked">Unlinked (No Key)</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -252,13 +391,13 @@ const StaffPreRegistration = () => {
       {/* Staff Table Section */}
       <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
         <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-          <div>
-            <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Access Master Ledger</CardTitle>
-            <p className="text-sm text-slate-500 font-medium">Pre-approved staff credentials and activation keys.</p>
-          </div>
+                  <div>
+                    <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Access Master Ledger</CardTitle>
+                    <p className="text-sm text-slate-500 font-medium">Pre-approved credentials, activation keys, and unlinked personnel directory.</p>
+                  </div>
           <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
-            {filteredStaff.length} Active Records
-          </Badge>
+                      {filteredLedger.length} Records
+                    </Badge>
         </CardHeader>
         <CardContent className="p-0">
           <div className="overflow-x-auto">
@@ -274,70 +413,124 @@ const StaffPreRegistration = () => {
                 </tr>
               </thead>
               <tbody className="divide-y">
-                {filteredStaff.map((staff) => {
-                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
-                  return (
-                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="px-8 py-5">
-                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{staff.fullName}</p>
-                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
-                      </td>
-                      <td className="px-8 py-5">
-                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{roleInfo.label}</Badge>
-                      </td>
-                      <td className="px-8 py-5">
-                        <div className="flex items-center gap-2 text-slate-700">
-                          <Mail size={14} className="text-slate-400 shrink-0" />
-                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
-                          navigator.clipboard.writeText(staff.tempAccessCode);
-                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
-                        }}>
-                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
-                          <Copy size={13} className="text-slate-400" />
-                        </div>
-                      </td>
-                      <td className="px-8 py-5 text-center">
-                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
-                      </td>
-                      <td className="px-8 py-5 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <Button 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
-                          >
-                            <Send size={14} /> Send Key
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon" 
-                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                            onClick={() => requestDelete(staff)}
-                            title="Delete Pre-Registration"
-                          >
-                            <Trash2 size={16} />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredStaff.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-8 py-20 text-center">
-                      <div className="flex flex-col items-center gap-3">
-                        <Search size={32} className="text-slate-200" />
-                        <p className="text-slate-500 font-bold">No pre-registration records match the current criteria.</p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
+                              {filteredLedger.map((entry) => {
+                                if (entry.type === 'pre-registered') {
+                                  const staff = entry.data;
+                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
+                                  return (
+                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
+                                      <td className="px-8 py-5">
+                                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">{staff.fullName}</p>
+                                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
+                                      </td>
+                                      <td className="px-8 py-5">
+                                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{roleInfo.label}</Badge>
+                                      </td>
+                                      <td className="px-8 py-5">
+                                        <div className="flex items-center gap-2 text-slate-700">
+                                          <Mail size={14} className="text-slate-400 shrink-0" />
+                                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
+                                        </div>
+                                      </td>
+                                      <td className="px-8 py-5 text-center">
+                                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
+                                          navigator.clipboard.writeText(staff.tempAccessCode);
+                                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
+                                        }}>
+                                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
+                                          <Copy size={13} className="text-slate-400" />
+                                        </div>
+                                      </td>
+                                      <td className="px-8 py-5 text-center">
+                                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
+                                      </td>
+                                      <td className="px-8 py-5 text-right">
+                                        <div className="flex items-center justify-end gap-1.5">
+                                          <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
+                                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
+                                          >
+                                            <Send size={14} /> Send Key
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                            onClick={() => requestDelete(staff)}
+                                            title="Delete Pre-Registration"
+                                          >
+                                            <Trash2 size={16} />
+                                          </Button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                }
+              
+                                // Unlinked directory staff member
+                                const unlinked = entry.data;
+                                return (
+                                  <tr key={`unlinked-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
+                                    <td className="px-8 py-5">
+                                      <p className="font-bold text-slate-900">{unlinked.name}</p>
+                                      <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {unlinked.nationalId}</p>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
+                                        {unlinked.role}
+                                      </Badge>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                      <div className="flex items-center gap-2 text-slate-700">
+                                        <Mail size={14} className="text-slate-400 shrink-0" />
+                                        <span className="font-medium truncate max-w-[200px]">{unlinked.email}</span>
+                                      </div>
+                                    </td>
+                                    <td className="px-8 py-5 text-center">
+                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
+                                        <Key size={12} /> No Key
+                                      </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-center">
+                                      <Badge className="rounded-xl border-none font-bold text-xs px-3 py-1 bg-rose-50 text-rose-700">
+                                        Pending Activation
+                                      </Badge>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
+                                      <div className="flex items-center justify-end gap-1.5">
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          className="h-9 px-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 gap-1.5 shadow-md shadow-indigo-100"
+                                          disabled={generatingKeyFor === unlinked.id}
+                                          onClick={() => handleGenerateKeyAndInvite(unlinked)}
+                                          title="Generate Key / Invite"
+                                        >
+                                          {generatingKeyFor === unlinked.id ? (
+                                            <Loader2 className="animate-spin" size={14} />
+                                          ) : (
+                                            <Sparkles size={14} />
+                                          )}
+                                          Generate Key / Invite
+                                        </Button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                              {filteredLedger.length === 0 && (
+                                <tr>
+                                  <td colSpan={6} className="px-8 py-20 text-center">
+                                    <div className="flex flex-col items-center gap-3">
+                                      <Search size={32} className="text-slate-200" />
+                                      <p className="text-slate-500 font-bold">No records match the current criteria.</p>
+                                    </div>
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
             </table>
           </div>
         </CardContent>
