@@ -14,7 +14,8 @@ import {
   XCircle, Clock, ShieldCheck, UserCheck, Users, AlertCircle,
   Search, Sun, Moon, Lock, Unlock, Info,
   LockKeyhole, ShieldAlert, Shield, BarChart3, TrendingUp,
-  ClipboardList, Eye, Edit3, Layers, Sparkles, Activity
+  ClipboardList, Eye, Edit3, Layers, Sparkles, Activity,
+  RefreshCw
 } from "lucide-react";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
@@ -228,7 +229,7 @@ const Attendance = () => {
     return 'oversight';
   });
 
-  // Filters state
+  // Filters state — used in the marking register view
   const [filters, setFilters] = useState<Filters>({
     date: (() => {
       const t = new Date();
@@ -237,6 +238,11 @@ const Attendance = () => {
     grade: 'Grade 6',
     stream: 'YELLOW',
   });
+
+  // ── Oversight view filters (admin roll call dashboard) ──────
+  const [ovGrade, setOvGrade] = useState<string>('all');
+  const [ovStream, setOvStream] = useState<string>('all');
+  const [ovSearch, setOvSearch] = useState<string>('');
 
   // Attendance state — keyed by student id, then session type
   const [attendance, setAttendance] = useState<Record<number, StudentAttendance>>({});
@@ -430,19 +436,32 @@ const Attendance = () => {
   }, [filteredLearners, attendance]);
 
   // ============================================
-  // Aggregate oversight metrics (admin only)
+  // Aggregate oversight metrics (admin only) — derived from filtered data
   // ============================================
+  const filteredStreamSummaries = useMemo(() => {
+    const q = ovSearch.trim().toLowerCase();
+    return MOCK_STREAM_SUMMARIES.filter(s => {
+      const gradeMatch = ovGrade === 'all' || s.grade === ovGrade;
+      const streamMatch = ovStream === 'all' || s.stream.toLowerCase() === ovStream.toLowerCase();
+      const searchMatch = !q
+        || s.grade.toLowerCase().includes(q)
+        || s.stream.toLowerCase().includes(q);
+      return gradeMatch && streamMatch && searchMatch;
+    });
+  }, [ovGrade, ovStream, ovSearch]);
+
   const oversightMetrics = useMemo(() => {
-    const totalLearners = MOCK_STREAM_SUMMARIES.reduce((sum, s) => sum + s.totalLearners, 0);
-    const streamsTotal = MOCK_STREAM_SUMMARIES.length;
-    const morningCompletedStreams = MOCK_STREAM_SUMMARIES.filter(s => s.morningCompleted).length;
-    const afternoonCompletedStreams = MOCK_STREAM_SUMMARIES.filter(s => s.afternoonCompleted).length;
-    const fullyCompletedStreams = MOCK_STREAM_SUMMARIES.filter(
+    const src = filteredStreamSummaries;
+    const totalLearners = src.reduce((sum, s) => sum + s.totalLearners, 0);
+    const streamsTotal = src.length;
+    const morningCompletedStreams = src.filter(s => s.morningCompleted).length;
+    const afternoonCompletedStreams = src.filter(s => s.afternoonCompleted).length;
+    const fullyCompletedStreams = src.filter(
       s => s.morningCompleted && s.afternoonCompleted
     ).length;
-    const averageRate = Math.round(
-      MOCK_STREAM_SUMMARIES.reduce((sum, s) => sum + s.rate, 0) / Math.max(streamsTotal, 1)
-    );
+    const averageRate = streamsTotal > 0
+      ? Math.round(src.reduce((sum, s) => sum + s.rate, 0) / Math.max(streamsTotal, 1))
+      : 0;
     return {
       totalLearners,
       streamsTotal,
@@ -451,7 +470,7 @@ const Attendance = () => {
       fullyCompletedStreams,
       averageRate,
     };
-  }, []);
+  }, [filteredStreamSummaries]);
 
   // Per-session lock handlers
   const openLockAuthModal = (action: 'lock' | 'unlock', session: SessionType) => {
@@ -1260,6 +1279,98 @@ const Attendance = () => {
               3b. ROLL CALL COMPLETION TABLE (per stream)
               ============================================ */}
           <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            {/* Filter Bar — controls for Grade, Stream, and free-text search */}
+            <div className="p-5 sm:p-6 border-b border-slate-100 bg-slate-50/40">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+                {/* Grade Select */}
+                <div className="md:col-span-3 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    Grade
+                  </label>
+                  <Select value={ovGrade} onValueChange={setOvGrade}>
+                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                      <SelectValue placeholder="All Grades" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Grades</SelectItem>
+                      <SelectItem value="PP1">PP1</SelectItem>
+                      <SelectItem value="PP2">PP2</SelectItem>
+                      <SelectItem value="Grade 1">Grade 1</SelectItem>
+                      <SelectItem value="Grade 2">Grade 2</SelectItem>
+                      <SelectItem value="Grade 3">Grade 3</SelectItem>
+                      <SelectItem value="Grade 4">Grade 4</SelectItem>
+                      <SelectItem value="Grade 5">Grade 5</SelectItem>
+                      <SelectItem value="Grade 6">Grade 6</SelectItem>
+                      <SelectItem value="Grade 7">Grade 7</SelectItem>
+                      <SelectItem value="Grade 8">Grade 8</SelectItem>
+                      <SelectItem value="Grade 9">Grade 9</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Stream Select */}
+                <div className="md:col-span-3 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    Stream
+                  </label>
+                  <Select value={ovStream} onValueChange={setOvStream}>
+                    <SelectTrigger className="h-11 rounded-xl bg-white border-slate-200 font-bold text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500">
+                      <SelectValue placeholder="All Streams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Streams</SelectItem>
+                      <SelectItem value="YELLOW">Yellow</SelectItem>
+                      <SelectItem value="BLUE">Blue</SelectItem>
+                      <SelectItem value="GREEN">Green</SelectItem>
+                      <SelectItem value="RED">Red</SelectItem>
+                      <SelectItem value="ALPHA">Alpha</SelectItem>
+                      <SelectItem value="BETA">Beta</SelectItem>
+                      <SelectItem value="MERCURY">Mercury</SelectItem>
+                      <SelectItem value="VENUS">Venus</SelectItem>
+                      <SelectItem value="JUPITER">Jupiter</SelectItem>
+                      <SelectItem value="NEPTUNE">Neptune</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Search Input */}
+                <div className="md:col-span-4 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    Search
+                  </label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                    <Input
+                      type="text"
+                      placeholder="Search Grade, Stream, or Teacher..."
+                      value={ovSearch}
+                      onChange={(e) => setOvSearch(e.target.value)}
+                      className="pl-10 h-11 rounded-xl bg-white border-slate-200 text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Reset Filters Button */}
+                <div className="md:col-span-2 space-y-1.5">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1">
+                    &nbsp;
+                  </label>
+                  <Button
+                    onClick={() => {
+                      setOvGrade('all');
+                      setOvStream('all');
+                      setOvSearch('');
+                    }}
+                    variant="outline"
+                    className="w-full h-11 rounded-xl border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold text-sm gap-2 focus:ring-2 focus:ring-indigo-100"
+                  >
+                    <RefreshCw size={14} />
+                    Reset Filters
+                  </Button>
+                </div>
+              </div>
+            </div>
+
             <div className="p-6 sm:p-8 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-xl bg-indigo-100 text-indigo-600">
@@ -1294,7 +1405,7 @@ const Attendance = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
-                  {MOCK_STREAM_SUMMARIES.map((s) => (
+                  {filteredStreamSummaries.length > 0 ? filteredStreamSummaries.map((s) => (
                     <tr key={`${s.grade}-${s.stream}`} className="hover:bg-slate-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
@@ -1356,7 +1467,21 @@ const Attendance = () => {
                         </div>
                       </td>
                     </tr>
-                  ))}
+                  )) : (
+                    <tr>
+                      <td colSpan={7} className="px-8 py-20 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="p-4 bg-slate-50 rounded-full text-slate-300">
+                            <Search size={32} />
+                          </div>
+                          <p className="text-slate-800 font-bold">No streams match your filters.</p>
+                          <p className="text-xs text-slate-400 max-w-sm">
+                            Try adjusting the grade, stream, or search term — or reset to view all streams.
+                          </p>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1364,7 +1489,7 @@ const Attendance = () => {
             <div className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
               <p className="text-xs font-bold text-slate-500 flex items-center gap-2">
                 <Activity size={12} className="text-indigo-500" />
-                Showing <span className="text-slate-900 font-black">{MOCK_STREAM_SUMMARIES.length}</span> streams across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
+                Showing <span className="text-slate-900 font-black">{filteredStreamSummaries.length}</span> of <span className="text-slate-900 font-black">{MOCK_STREAM_SUMMARIES.length}</span> streams across <span className="text-slate-900 font-black">{oversightMetrics.totalLearners}</span> learners
               </p>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                 Updated {format12h(currentTime)} • Auto-syncs every minute
@@ -1387,7 +1512,7 @@ const Attendance = () => {
                 </div>
               </div>
               <div className="space-y-3">
-                {MOCK_STREAM_SUMMARIES.slice(0, 6).map((s) => (
+                {filteredStreamSummaries.slice(0, 6).map((s) => (
                   <div key={`grade-${s.grade}-${s.stream}`} className="space-y-1">
                     <div className="flex items-center justify-between text-xs">
                       <span className="font-bold text-slate-700">{s.grade} <span className="text-slate-400 font-medium">— {s.stream}</span></span>
@@ -1428,11 +1553,13 @@ const Attendance = () => {
                   <div className="w-full bg-amber-100 h-3 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-amber-500 to-amber-600 rounded-full transition-all duration-700"
-                      style={{ width: `${(oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100}%` }}
+                      style={{ width: `${oversightMetrics.streamsTotal > 0 ? (oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100 : 0}%` }}
                     />
                   </div>
                   <p className="text-[11px] font-bold text-slate-500 mt-1">
-                    {Math.round((oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted
+                    {oversightMetrics.streamsTotal > 0
+                      ? `${Math.round((oversightMetrics.morningCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted`
+                      : 'No streams to evaluate'}
                   </p>
                 </div>
                 <div>
@@ -1445,11 +1572,13 @@ const Attendance = () => {
                   <div className="w-full bg-indigo-100 h-3 rounded-full overflow-hidden">
                     <div
                       className="h-full bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-full transition-all duration-700"
-                      style={{ width: `${(oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100}%` }}
+                      style={{ width: `${oversightMetrics.streamsTotal > 0 ? (oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100 : 0}%` }}
                     />
                   </div>
                   <p className="text-[11px] font-bold text-slate-500 mt-1">
-                    {Math.round((oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted
+                    {oversightMetrics.streamsTotal > 0
+                      ? `${Math.round((oversightMetrics.afternoonCompletedStreams / oversightMetrics.streamsTotal) * 100)}% of streams submitted`
+                      : 'No streams to evaluate'}
                   </p>
                 </div>
                 <div className="pt-3 border-t border-slate-100 flex items-center gap-3 text-xs text-slate-600 font-medium">
