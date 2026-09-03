@@ -553,6 +553,11 @@ app.post('/api/teachers', (req, res) => {
     // Default role to TEACHER if not specified
     const finalRole = role || 'TEACHER';
 
+    // If email is empty string, make it null so unique constraint doesn't fail on multiple nulls/empty strings
+    const cleanEmail = email && email.trim() !== '' ? email.trim() : null;
+    const cleanPhone = phone && phone.trim() !== '' ? phone.trim() : null;
+    const cleanTsc = tsc_number && tsc_number.trim() !== '' ? tsc_number.trim() : null;
+
     dbRun(
       `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
@@ -563,11 +568,11 @@ app.post('/api/teachers', (req, res) => {
         firstName,
         lastName,
         finalRole,
-        email || null,
-        phone || null,
+        cleanEmail,
+        cleanPhone,
         gender || null,
         finalIdNumber,
-        tsc_number || null,
+        cleanTsc,
         subject_specialization || null,
         grade_assigned || null,
         stream_assigned || null
