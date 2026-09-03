@@ -36,6 +36,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
+import CoverPage from './CoverPage';
 
 /** True when a custom admin password has been saved to localStorage. */
 const hasCustomAdminPassword = (): boolean => {
@@ -178,6 +179,9 @@ const RoleCard: React.FC<RoleCardProps> = ({
 const Login: React.FC = () => {
   const navigate = useNavigate();
   const { login, isAuthenticated, user } = useAuth();
+
+  // ── Cover page state ────────────────────────────────────────────────────
+  const [showCover, setShowCover] = useState(true);
 
   // ── Admin state ──────────────────────────────────────────────────────────
   const [selectedAdminRole, setSelectedAdminRole] = useState<AdminRole | null>(null);
@@ -333,30 +337,51 @@ const Login: React.FC = () => {
   };
 
   // ─────────────────────────────────────────────────────────────────────────
-  //  Render — only shown when user is NOT authenticated
-  // ─────────────────────────────────────────────────────────────────────────
-  const adminConfig = selectedAdminRole ? ROLE_CONFIGS[selectedAdminRole] : null;
-  const AdminIcon = adminConfig?.icon;
-  const isAdminIndigo = adminConfig?.primaryColor === 'indigo';
-
-  return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col">
-      <div className="flex-1 flex items-center justify-center p-4 py-8">
-        <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
-
-          {/* ── Header ── */}
-          <div className="text-center space-y-3">
-            <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-amber-500 rounded-3xl shadow-2xl shadow-indigo-200 mb-2">
-              <Shield size={32} className="text-white md:hidden" />
-              <Shield size={40} className="text-white hidden md:inline" />
-            </div>
-            <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
-              Munyaka School Management
-            </h1>
-            <p className="text-sm md:text-base text-slate-500 font-medium max-w-md mx-auto">
-              Select your role to access the appropriate portal
-            </p>
-          </div>
+    //  Render — only shown when user is NOT authenticated
+    // ─────────────────────────────────────────────────────────────────────────
+    const adminConfig = selectedAdminRole ? ROLE_CONFIGS[selectedAdminRole] : null;
+    const AdminIcon = adminConfig?.icon;
+    const isAdminIndigo = adminConfig?.primaryColor === 'indigo';
+  
+    // ── Show Cover Page first ─────────────────────────────────────────────────
+    if (showCover) {
+      return (
+        <CoverPage
+          onEnter={() => setShowCover(false)}
+        />
+      );
+    }
+  
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col">
+        <div className="flex-1 flex items-center justify-center p-4 py-8">
+          <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
+  
+            {/* ── Header ── */}
+                      <div className="text-center space-y-3">
+                        {/* Back to Cover button */}
+                        <button
+                          type="button"
+                          onClick={() => setShowCover(true)}
+                          className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-500 hover:text-indigo-700 transition-colors mb-2 group"
+                        >
+                          <ArrowRight
+                            size={14}
+                            className="rotate-180 transition-transform group-hover:-translate-x-1"
+                          />
+                          <span>Back to Cover</span>
+                        </button>
+                        <div className="inline-flex items-center justify-center w-16 h-16 md:w-20 md:h-20 bg-gradient-to-br from-indigo-600 to-amber-500 rounded-3xl shadow-2xl shadow-indigo-200 mb-2">
+                          <Shield size={32} className="text-white md:hidden" />
+                          <Shield size={40} className="text-white hidden md:inline" />
+                        </div>
+                        <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">
+                          Munyaka School Management
+                        </h1>
+                        <p className="text-sm md:text-base text-slate-500 font-medium max-w-md mx-auto">
+                          Select your role to access the appropriate portal
+                        </p>
+                      </div>
 
           {/* ── Portal Access Tabs ── */}
           <Tabs defaultValue="staff" className="w-full">
