@@ -68,24 +68,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const { connectionStatus, isConnected } = useLanSync();
     const location = useLocation();
     const navigate = useNavigate();
-
-    // ── Context-aware Back handler ──────────────────────────────────────────
-    // Routes specific to the assessments flow should always return to the
-    // assessments list, even if browser history would otherwise go elsewhere.
-    const handleBack = () => {
-      if (
-        location.pathname.startsWith("/assessments/student") ||
-        location.pathname.startsWith("/assessments/create") ||
-        location.pathname.startsWith("/assessments/import")
-      ) {
-        navigate("/assessments/list");
-      } else if (location.pathname === "/assessments/list") {
-        navigate("/");
-      } else {
-        navigate(-1);
-      }
-    };
-
+  
     // Attach Hardware Back Button Handling for Capacitor/Android
     useMobileBackButton(isOpen, () => setIsOpen(false));
 
@@ -450,10 +433,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     </div>
         
                     {/* Back Navigation */}
-                                        {location.pathname !== '/' && (
+                                        {location.pathname !== '/' && location.pathname !== '/dashboard' && (
                                           <Button
                                             variant="ghost"
-                                            onClick={handleBack}
+                                            onClick={() => navigate(-1)}
                                             className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5"
                                           >
                                             <ArrowLeft size={16} />
