@@ -391,6 +391,85 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     []
   );
 
+  // ── Automatic Marking Engine for Mathematics ────────────────────────────────
+  // Returns a graded state object that the UI can use to flip a status pill
+  // from "Ungraded" → "Graded" / "Correct" / "Incorrect" in real time.
+  const gradeMathQuestion = useCallback(
+    (
+      studentAnswer: string | number | undefined | null,
+      correctAnswer: string | number | undefined | null,
+    ): { isGraded: boolean; isCorrect?: boolean; score?: number } => {
+      if (
+        studentAnswer === undefined ||
+        studentAnswer === null ||
+        studentAnswer === ""
+      ) {
+        return { isGraded: false, score: 0 };
+      }
+
+      const strStudent = String(studentAnswer).trim().toLowerCase();
+      const strCorrect = String(correctAnswer ?? "").trim().toLowerCase();
+
+      if (!strCorrect) return { isGraded: false, score: 0 };
+
+      // 1. Direct match (e.g., "10.953" === "10.953" or "1/8" === "1/8")
+      if (strStudent === strCorrect) {
+        return { isGraded: true, isCorrect: true, score: 1 };
+      }
+
+      // 2. Extract numeric digits ignoring extra text or units
+      const parseValue = (val: string): number => {
+        if (val.includes("/")) {
+          const parts = val.split("/").map((p) => Number(p.trim()));
+          const [num, den] = parts;
+          if (den && !isNaN(num) && !isNaN(den)) return num / den;
+        }
+        const match = val.match(/-?\d+(\.\d+)?/);
+        return match ? parseFloat(match[0]) : NaN;
+      };
+
+      const numStudent = parseValue(strStudent);
+      const numCorrect = parseValue(strCorrect);
+
+      if (!isNaN(numStudent) && !isNaN(numCorrect)) {
+        // Accept numeric equivalence within precision threshold
+        const isEquivalent = Math.abs(numStudent - numCorrect) < 0.001;
+        return { isGraded: true, isCorrect: isEquivalent, score: isEquivalent ? 1 : 0 };
+      }
+
+      return { isGraded: true, isCorrect: false, score: 0 };
+    },
+    []
+  );
+
+  // ── Dynamic Answer-Type Badge Formatter ─────────────────────────────────────
+  // For Mathematics / numeric / fill-in-the-blank questions we show a
+  // "Numeric Answer" hint instead of an "X words" target.
+  const renderAnswerTypeBadge = useCallback(
+    (question: any, subjectName?: string) => {
+      const isMath =
+        (subjectName ?? "").toLowerCase().includes("math") ||
+        question?.answerType === "numeric" ||
+        question?.type === "math" ||
+        question?.type === "numeric" ||
+        question?.type === "fill_blank";
+
+      if (isMath) {
+        return (
+          <span className="text-xs text-slate-500">
+            Numeric Answer (Digits/Fractions)
+          </span>
+        );
+      }
+      return (
+        <span className="text-xs text-slate-500">
+          {question?.expectedWords || 1} words
+        </span>
+      );
+    },
+    []
+  );
+
   // ── Full Assessment Marking Engine ──────────────────────────────────────────
   // Auto-grades all question types: MCQ (exact option match), structured / math
   // / numeric / fill_blank (numeric or math comparison via evaluateNumericOrMathAnswer).
@@ -973,28 +1052,81 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             )}
 
             {/* Structured / Math / Numeric / Fill-in-the-Blank */}
-            {["structured", "math", "numeric", "fill_blank"].includes(currentQuestion.type) && (
-              <div className="space-y-3">
-                <div className="flex items-center justify-between flex-wrap gap-2">
-                  <label
-                    htmlFor={`ta-${currentQuestion.id}`}
-                    className="text-sm font-semibold text-slate-700"
-                  >
-                    Your Response
-                  </label>
-                  <span className="text-xs text-slate-400">
-                    {(currentResponse?.answerText || "").length} characters
-                  </span>
+            {["structured", "math", "numeric", "fill_blank"].includes(currentQuestion.type) && (() => {
+              const rawAnswer = currentResponse?.answerText ?? "";
+              const expectedAnswer =
+                currentQuestion.correctAnswer ?? currentQuestion.modelAnswer ?? "";
+              const isMathType =
+                currentQuestion.type === "math" ||
+                currentQuestion.type === "numeric" ||
+                currentQuestion.type === "fill_blank";
+
+              // Live grading for math / numeric / fill_blank questions
+              let pillLabel = "Ungraded";
+              let pillClass = "bg-slate-100 text-slate-500";
+              if (isMathType && rawAnswer.trim()) {
+                const result = gradeMathQuestion(rawAnswer, expectedAnswer);
+                if (result.isGraded) {
+                  pillLabel = result.isCorrect ? "Correct" : "Incorrect";
+                  pillClass = result.isCorrect
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-red-100 text-red-700";
+                }
+              }
+
+              return (
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <label
+                      htmlFor={`ta-${currentQuestion.id}`}
+                      className="text-sm font-semibold text-slate-700"
+                    >
+                      Your Response
+                    </label>
+                    <div className="flex items-center gap-2">
+                      {/* Status pill — transitions Ungraded → Correct / Incorrect for numeric Qs */}
+                      <span
+                        className={cn(
+                          "px-2.5 py-0.5 rounded-full text-xs font-bold transition-colors",
+                          pillClass
+                        )}
+                      >
+                        {pillLabel}
+                      </span>
+                      <span className="text-xs text-slate-400">
+                        {rawAnswer.length} characters
+                      </span>
+                    </div>
+                  </div>
+                  {/* Answer-type hint badge */}
+                  <div className="flex items-center gap-1.5">
+                    {renderAnswerTypeBadge(currentQuestion, assessment.subject)}
+                    {isMathType && expectedAnswer && (
+                      <span className="text-xs text-slate-400">
+                        · Expected format: <code className="bg-slate-100 px-1 rounded">{expectedAnswer}</code>
+                      </span>
+                    )}
+                  </div>
+                  <Textarea
+                    id={`ta-${currentQuestion.id}`}
+                    placeholder={
+                      isMathType
+                        ? "Enter your numeric answer (e.g. 10.5, 3/4, 50%)…"
+                        : "Type your detailed answer here…"
+                    }
+                    value={rawAnswer}
+                    onChange={(e) => handleAnswerStructured(currentQuestion.id, e.target.value)}
+                    className={cn(
+                      "min-h-[220px] rounded-2xl border p-4 text-sm sm:text-base",
+                      "focus:ring-indigo-200 transition-colors",
+                      isMathType
+                        ? "border-indigo-200 focus:border-indigo-500 focus:ring-indigo-100"
+                        : "border-slate-200 focus:border-indigo-500 focus:ring-indigo-100"
+                    )}
+                  />
                 </div>
-                <Textarea
-                  id={`ta-${currentQuestion.id}`}
-                  placeholder="Type your detailed answer here..."
-                  value={currentResponse?.answerText || ""}
-                  onChange={(e) => handleAnswerStructured(currentQuestion.id, e.target.value)}
-                  className="min-h-[220px] rounded-2xl border-slate-200 p-4 text-sm sm:text-base focus:border-indigo-500 focus:ring-indigo-200"
-                />
-              </div>
-            )}
+              );
+            })()}
           </CardContent>
         </Card>
 
