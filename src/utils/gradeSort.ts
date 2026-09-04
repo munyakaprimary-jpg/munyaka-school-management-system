@@ -35,6 +35,59 @@ export const GRADE_ORDER: string[] = [
 ];
 
 /**
+ * Lookup map for the canonical grade order. PP1 → 1, PP2 → 2,
+ * Grade 1 → 3, … Grade 9 → 11. Used by `sortGradesAscending` for
+ * strict, case-insensitive ordering.
+ */
+export const GRADE_ORDER_MAP: Record<string, number> = {
+  'PP1': 1,
+  'PP2': 2,
+  'GRADE 1': 3,
+  'GRADE 2': 4,
+  'GRADE 3': 5,
+  'GRADE 4': 6,
+  'GRADE 5': 7,
+  'GRADE 6': 8,
+  'GRADE 7': 9,
+  'GRADE 8': 10,
+  'GRADE 9': 11,
+};
+
+/**
+ * Sort an array of plain grade names (e.g. `["Grade 2", "PP1", "Grade 1"]`)
+ * in canonical ascending order: PP1 → PP2 → Grade 1 → … → Grade 9.
+ *
+ * Unknown / non-canonical grades are pushed to the end and sorted
+ * alphabetically among themselves. The input is never mutated.
+ */
+export const sortGradesAscending = (grades: string[]): string[] => {
+  const canonical: string[] = [];
+  const others: string[] = [];
+
+  for (const raw of grades) {
+    if (!raw) continue;
+    const key = raw.toUpperCase().trim();
+    if (key in GRADE_ORDER_MAP) {
+      canonical.push(raw);
+    } else {
+      others.push(raw);
+    }
+  }
+
+  canonical.sort(
+    (a, b) =>
+      (GRADE_ORDER_MAP[a.toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER) -
+      (GRADE_ORDER_MAP[b.toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER),
+  );
+
+  others.sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' }),
+  );
+
+  return [...canonical, ...others];
+};
+
+/**
  * Stable list of all canonical grade names in ascending order.
  * Synonym for GRADE_ORDER — useful for dropdowns and defaults.
  */

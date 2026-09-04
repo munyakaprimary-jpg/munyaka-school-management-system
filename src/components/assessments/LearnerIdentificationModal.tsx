@@ -21,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
+import { sortGradesAscending } from "@/utils/gradeSort";
 
 const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 
@@ -88,6 +89,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   // ── Load configured data from localStorage ─────────────────────────────────
   // Read grades from any of the common system storage keys, with a safe
   // standard-grade fallback so the dropdowns are never empty.
+  // PLAYGROUP is explicitly excluded; ordering starts at PP1.
   const gradesList = useMemo<string[]>(() => {
     const raw =
       localStorage.getItem("configured_streams") ||
@@ -106,13 +108,22 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
             }
             return null;
           })
-          .filter((n): n is string => typeof n === "string" && n.length > 0);
-        if (names.length > 0) return Array.from(new Set(names)).sort();
+          .filter(
+            (n): n is string =>
+              typeof n === "string" &&
+              n.trim().length > 0 &&
+              n.toUpperCase().trim() !== "PLAYGROUP",
+          );
+        if (names.length > 0) {
+          return sortGradesAscending(Array.from(new Set(names)));
+        }
       }
     } catch {
       // fall through to defaults
     }
-    return [
+    return sortGradesAscending([
+      "PP1",
+      "PP2",
       "Grade 1",
       "Grade 2",
       "Grade 3",
@@ -122,7 +133,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       "Grade 7",
       "Grade 8",
       "Grade 9",
-    ];
+    ]);
   }, []);
 
   // ── Dynamic Grade-Based Stream Lookup ──────────────────────────────────────
