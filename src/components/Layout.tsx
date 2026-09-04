@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
@@ -48,6 +48,7 @@ import {
   Gamepad2,
   Server,
   Wifi,
+  Home,
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -66,6 +67,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
     const { connectionStatus, isConnected } = useLanSync();
     const location = useLocation();
+    const navigate = useNavigate();
 
     // Attach Hardware Back Button Handling for Capacitor/Android
     useMobileBackButton(isOpen, () => setIsOpen(false));
@@ -428,6 +430,16 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                         M
                       </div>
                       <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
+                      {location.pathname !== '/' && (
+                        <button
+                          onClick={() => navigate('/')}
+                          className="px-3 py-1.5 text-sm font-medium rounded-lg text-slate-600 hover:text-purple-600 hover:bg-purple-50 flex items-center gap-2 transition-colors"
+                          aria-label="Go to home"
+                        >
+                          <Home size={16} />
+                          <span>Home</span>
+                        </button>
+                      )}
                     </div>
         
                     <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
