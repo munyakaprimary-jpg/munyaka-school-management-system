@@ -865,12 +865,12 @@ const SetExamsList: React.FC = () => {
         </div>
 
         {/* Action buttons: Take Exam, View Exam, Download PDF, Delete */}
-        <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+        <div className="flex items-center gap-2 w-full pt-2 border-t border-slate-100">
           {/* Primary: Take Exam */}
           {exam.status !== "Closed" && (
             <Button
               onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
-              className="flex-1 rounded-xl h-10 gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold text-white shadow-sm"
+              className="flex-1 h-10 px-3 rounded-lg text-sm font-medium gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
             >
               <PlayCircle size={15} />
               Take Exam
@@ -878,9 +878,8 @@ const SetExamsList: React.FC = () => {
           )}
           {/* Secondary: View Exam */}
           <Button
-            variant="outline"
             onClick={() => handleViewExam(exam.id, exam.title)}
-            className="rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
+            className="h-10 w-24 rounded-lg text-sm font-medium gap-1.5 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200"
           >
             <Eye size={15} />
             View
@@ -912,7 +911,7 @@ const SetExamsList: React.FC = () => {
                 document.body.removeChild(paperEl);
               });
             }}
-            className="rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+            className="h-10 w-20 rounded-lg text-sm font-medium gap-1.5 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           >
             <Download size={15} />
             PDF
@@ -922,7 +921,7 @@ const SetExamsList: React.FC = () => {
             variant="ghost"
             size="icon"
             onClick={() => handleDelete(exam.id, exam.title)}
-            className="rounded-xl h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50"
+            className="h-10 w-10 rounded-lg flex items-center justify-center text-slate-500 hover:text-red-600 hover:bg-red-50"
           >
             <Trash2 size={16} />
           </Button>
