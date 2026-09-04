@@ -184,6 +184,7 @@ const StudentAssessmentPage: React.FC = () => {
       assessment={assessment}
       studentId={studentId}
       studentName={studentName}
+      onBackToExams={() => (window.location.href = "/assessments/list")}
     />
   );
 };

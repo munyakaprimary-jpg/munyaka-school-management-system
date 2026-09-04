@@ -74,6 +74,13 @@ interface StudentAssessmentViewProps {
    * knows the student identity).
    */
   skipGate?: boolean;
+  /**
+   * Called when the user clicks "Back to All Exams" / the in-page back arrow.
+   * Parent should reset any session flags and explicitly route back to the
+   * exam listing (typically `/assessments/list`). Falls back to
+   * `navigate(-1)` when omitted.
+   */
+  onBackToExams?: () => void;
 }
 
 interface QuestionGradingResult {
@@ -103,8 +110,26 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   onSubmit,
   submissionKey,
   skipGate = false,
+  onBackToExams,
 }) => {
   const navigate = useNavigate();
+
+  // ── Back navigation helper ──────────────────────────────────────────────────
+  // Cleans up the local session state and routes back to the exams listing.
+  // When `onBackToExams` is provided the parent owns navigation; otherwise we
+  // fall back to browser-history back.
+  const handleBackToExams = useCallback(() => {
+    // Clear the current student session so the next launch starts fresh
+    try {
+      localStorage.removeItem("current_student_session");
+    } catch { /* ignore */ }
+
+    if (onBackToExams) {
+      onBackToExams();
+    } else {
+      navigate(-1);
+    }
+  }, [onBackToExams, navigate]);
 
   // ── Gate State ─────────────────────────────────────────────────────────────
   const [isGatePassed, setIsGatePassed] = useState(skipGate);
@@ -499,7 +524,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         assessmentQuestionCount={assessment.questions.length}
         assessmentDuration={assessment.duration}
         onBeginExam={handleBeginExam}
-        onClose={() => navigate(-1)}
+        onClose={handleBackToExams}
       />
     );
   }
@@ -578,7 +603,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
 
               <Button
-                onClick={() => navigate(-1)}
+                onClick={handleBackToExams}
                 className="w-full h-12 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
               >
                 <FileQuestion className="w-4 h-4 mr-2" />
@@ -800,11 +825,11 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       <header className="bg-white/85 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {/* In-page Back arrow — respects browser history */}
+            {/* In-page Back arrow — routes back to exam listing */}
             <button
-              onClick={() => navigate(-1)}
+              onClick={handleBackToExams}
               className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-              title="Go back"
+              title="Back to exam listing"
             >
               <ArrowLeft size={18} />
               <span className="hidden sm:inline">Back</span>
