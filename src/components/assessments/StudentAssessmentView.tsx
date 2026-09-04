@@ -38,6 +38,24 @@ const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
 const TIMER_TICK_MS = 1000;
 
+/**
+ * Strip answer keys (correctOptionId / modelAnswer / rubric) from questions
+ * while the student is actively sitting for the assessment. These are kept
+ * on the original assessment object for grading but never shown to the
+ * student during the active attempt.
+ */
+function sanitizeQuestionsForAttempt(
+  questions: Question[]
+): Question[] {
+  return questions.map((q) => {
+    const sanitized: Question = { ...q };
+    delete sanitized.correctOptionId;
+    delete sanitized.modelAnswer;
+    delete sanitized.rubric;
+    return sanitized;
+  });
+}
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -409,6 +427,12 @@ interface StudentAssessmentViewProps {
   onSubmit?: (submission: StudentSubmission) => void;
   /** Custom storage key for this student's submission. */
   submissionKey?: string;
+  /**
+   * When true, the component skips the student-identification gate and loads
+   * the pre-authenticated session directly (used when the parent page already
+   * knows the student identity).
+   */
+  skipGate?: boolean;
 }
 
 interface GradingResult {
@@ -429,23 +453,45 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   studentName: initialStudentName,
   onSubmit,
   submissionKey,
+  skipGate = false,
 }) => {
   const navigate = useNavigate();
 
   // ── Gate State ─────────────────────────────────────────────────────────────
-  const [isGatePassed, setIsGatePassed] = useState(false);
+  const [isGatePassed, setIsGatePassed] = useState(skipGate);
   const [lockedStudentId, setLockedStudentId] = useState(initialStudentId);
   const [lockedStudentName, setLockedStudentName] = useState(initialStudentName);
-  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(
+    skipGate ? new Date().toISOString() : null
+  );
+
+  // ── Fresh Attempt ID ───────────────────────────────────────────────────────
+  // Generate a unique attempt ID per launch so prior submissions cannot
+  // pre-fill or leak into this active test view.
+  const attemptIdRef = useRef<string>(
+    `attempt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`
+  );
+
+  // ── Sanitised Question Set ─────────────────────────────────────────────────
+  // Strip answer keys while the student is actively sitting for the test.
+  const sanitizedQuestions = useMemo(
+    () => sanitizeQuestionsForAttempt(assessment.questions),
+    [assessment.questions]
+  );
 
   // ── Assessment State ────────────────────────────────────────────────────────
+  // Storage key is keyed off the fresh attempt ID so past attempts cannot
+  // pre-fill or leak in. Blank by default — every question starts unselected.
   const storageKey =
     submissionKey ||
-    `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId || "temp"}`;
+    `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId || "temp"}_${
+      attemptIdRef.current
+    }`;
 
   const [responses, setResponses] = useState<Record<string, StudentResponse>>({});
   const [timeLeft, setTimeLeft] = useState<number>(assessment.duration * 60);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [gradingResult, setGradingResult] = useState<GradingResult | null>(null);
   const [isOnline, setIsOnline] = useState<boolean>(
     typeof navigator !== "undefined" ? navigator.onLine : true
   );
@@ -469,10 +515,15 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   }, []);
 
   // ── Load saved progress on mount (only after gate) ──────────────────────────
+  // We only ever load from the fresh, attempt-scoped key. Past submissions
+  // for this student live under older keys and are NEVER restored into the
+  // active test view, ensuring a blank answer sheet every attempt.
   useEffect(() => {
     if (!isGatePassed || !lockedStudentId) return;
 
-    const currentStorageKey = `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}`;
+    const currentStorageKey =
+      submissionKey ||
+      `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`;
 
     try {
       const raw = localStorage.getItem(currentStorageKey);
@@ -488,7 +539,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           if (parsed.startedAt) startedAtRef.current = parsed.startedAt;
           if (parsed.isComplete) {
             setIsSubmitted(true);
-            // Lock timer to whatever time was left at submit
             const elapsed = parsed.submittedAt
               ? Math.floor(
                   (new Date(parsed.submittedAt).getTime() - new Date(parsed.startedAt).getTime()) /
@@ -511,27 +561,30 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     (updatedResponses: Record<string, StudentResponse>, complete: boolean) => {
       if (!lockedStudentId) return;
 
-      const currentStorageKey = `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}`;
+      const currentStorageKey =
+        submissionKey ||
+        `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`;
 
       try {
         const list: StudentResponse[] = Object.values(updatedResponses);
         const submission: StudentSubmission = {
           assessmentId: assessment.id,
           studentId: lockedStudentId,
+          attemptId: attemptIdRef.current,
           responses: list,
           startedAt: startedAtRef.current,
           submittedAt: complete ? new Date().toISOString() : undefined,
           isComplete: complete,
         };
 
-        // Write to dedicated key (submission_{assessmentId}_{studentId})
+        // Write to dedicated, attempt-scoped key
         localStorage.setItem(currentStorageKey, JSON.stringify(submission));
 
         // Also write to the shared student_submissions map so the existing
         // grading screens can read every student's work.
         const allRaw = localStorage.getItem("student_submissions");
         const all: Record<string, StudentSubmission> = allRaw ? JSON.parse(allRaw) : {};
-        all[`${assessment.id}_${lockedStudentId}`] = submission;
+        all[`${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`] = submission;
         localStorage.setItem("student_submissions", JSON.stringify(all));
 
         setSaveBadge("saved");
@@ -542,7 +595,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         showError("Could not save your progress locally.");
       }
     },
-    [assessment.id, lockedStudentId]
+    [assessment.id, lockedStudentId, submissionKey]
   );
 
   // ── Online/offline listener ────────────────────────────────────────────────
@@ -652,12 +705,13 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   const handleSubmit = useCallback(() => {
     if (isSubmitted || !assessment || !lockedStudentId) return;
 
-    // Auto-grade MCQ
+    // Auto-grade MCQ (uses full question set with answer keys; only available after submit)
     const gradingResult = autoGradeMCQ(assessment.questions, responses);
+    setGradingResult(gradingResult);
 
-    // Save grading result
+    // Save grading result (attempt-scoped so it doesn't leak into other attempts)
     try {
-      const gradingKey = `grading_result_${assessment.id}_${lockedStudentId}`;
+      const gradingKey = `grading_result_${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`;
       localStorage.setItem(gradingKey, JSON.stringify(gradingResult));
     } catch (err) {
       console.error("[StudentAssessmentView] Failed to save grading result:", err);
@@ -669,6 +723,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     const submission: StudentSubmission = {
       assessmentId: assessment.id,
       studentId: lockedStudentId,
+      attemptId: attemptIdRef.current,
       responses: Object.values(responses),
       startedAt: startedAtRef.current,
       submittedAt: new Date().toISOString(),
@@ -677,12 +732,15 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
     showSuccess("Assessment submitted successfully! MCQ auto-graded.");
     if (onSubmit) onSubmit(submission);
-
-    // Redirect to assessments list after a brief delay
-    setTimeout(() => {
-      navigate("/assessments/list");
-    }, 1500);
-  }, [isSubmitted, assessment, responses, lockedStudentId, persistSubmission, onSubmit, autoGradeMCQ, navigate]);
+  }, [
+    isSubmitted,
+    assessment,
+    responses,
+    lockedStudentId,
+    persistSubmission,
+    onSubmit,
+    autoGradeMCQ,
+  ]);
 
   // Keep a ref to the latest handleSubmit so the timer interval can call it.
   const handleSubmitRef = useRef(handleSubmit);
@@ -691,16 +749,18 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   }, [handleSubmit]);
 
   // ── Derived UI values ────────────────────────────────────────────────────────
-  const currentQuestion = assessment.questions[currentIndex];
+  // Use the sanitized question set during the active test so answer keys are never in scope.
+  const activeQuestions = isSubmitted ? assessment.questions : sanitizedQuestions;
+  const currentQuestion = activeQuestions[currentIndex];
   const currentResponse = currentQuestion ? responses[currentQuestion.id] : undefined;
-  const answeredCount = assessment.questions.filter((q) => {
+  const answeredCount = activeQuestions.filter((q) => {
     const r = responses[q.id];
     if (!r) return false;
     if (r.selectedOptionId) return true;
     if (r.answerText && r.answerText.trim() !== "") return true;
     return false;
   }).length;
-  const isLastQuestion = currentIndex === assessment.questions.length - 1;
+  const isLastQuestion = currentIndex === activeQuestions.length - 1;
 
   const timerIsCritical = timeLeft > 0 && timeLeft < 60;
   const timerIsExpired = timeLeft === 0;
@@ -727,11 +787,19 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     );
   }
 
-  // ── Render: submitted confirmation ────────────────────────────────────────
+  // ── Render: submitted — results breakdown ──────────────────────────────────
+  // Score, per-question MCQ result, and model answers are ONLY shown here,
+  // after the student has explicitly submitted. This is the only place where
+  // correctOptionId / modelAnswer are accessed for display.
   if (isSubmitted) {
+    const scorePct = gradingResult?.percentage ?? 0;
+    const scoreColor =
+      scorePct >= 80 ? "text-emerald-600" : scorePct >= 60 ? "text-amber-600" : "text-red-600";
+
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 py-10 px-4">
-        <div className="max-w-2xl mx-auto">
+        <div className="max-w-2xl mx-auto space-y-5">
+          {/* Header Card */}
           <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
             <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-8 text-center text-white">
               <div className="w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
@@ -743,43 +811,149 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </p>
             </div>
             <CardContent className="p-6 sm:p-8 space-y-5">
+              {/* Summary stats */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                    Student
-                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Student</p>
                   <p className="text-sm font-bold text-slate-800 truncate">
                     {lockedStudentName || lockedStudentId}
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                    Answered
-                  </p>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Answered</p>
                   <p className="text-sm font-bold text-slate-800">
                     {answeredCount} / {assessment.questions.length}
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
-                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">
-                    Total Points
+                  <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">Score</p>
+                  <p className={cn("text-2xl font-black", scoreColor)}>
+                    {gradingResult ? `${gradingResult.totalScore}/${gradingResult.maxScore} (${gradingResult.percentage}%)` : "—"}
                   </p>
-                  <p className="text-sm font-bold text-slate-800">{totalPoints}</p>
                 </div>
               </div>
 
-              <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex items-start gap-3">
-                <Lock className="w-5 h-5 text-emerald-600 mt-0.5 flex-shrink-0" />
+              {/* Responses locked notice */}
+              <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3">
+                <Lock className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" />
                 <div>
-                  <p className="text-sm font-bold text-emerald-800">Responses Locked</p>
-                  <p className="text-xs text-emerald-700 mt-0.5">
-                    Your answers can no longer be edited. The submission has been timestamped and
-                    stored on this device. Redirecting to assessments list...
+                  <p className="text-sm font-bold text-amber-800">Responses Locked</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Your answers can no longer be edited. The submission has been timestamped and stored on this device.
                   </p>
                 </div>
               </div>
+
+              <Button
+                onClick={() => navigate("/assessments/list")}
+                className="w-full h-12 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
+              >
+                <FileQuestion className="w-4 h-4 mr-2" />
+                Back to All Exams
+              </Button>
             </CardContent>
           </Card>
+
+          {/* Per-question results — ONLY shown after explicit submission */}
+          {gradingResult && gradingResult.mcqResults.length > 0 && (
+            <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-5 text-white">
+                <h2 className="font-black text-lg">MCQ Results Breakdown</h2>
+                <p className="text-white/70 text-sm mt-0.5">Correct answers and model solutions are now visible.</p>
+              </div>
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                {assessment.questions.map((q, i) => {
+                  if (q.type !== "mcq") return null;
+                  const result = gradingResult.mcqResults.find((r) => r.questionId === q.id);
+                  const isCorrect = result?.correct ?? false;
+                  const studentResp = responses[q.id];
+
+                  return (
+                    <div key={q.id} className="rounded-2xl border border-slate-200 overflow-hidden">
+                      <div className="flex items-start gap-3 p-4 bg-slate-50">
+                        {/* Result indicator */}
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm",
+                            isCorrect
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          )}
+                        >
+                          {isCorrect ? (
+                            <CheckCircle2 size={16} />
+                          ) : (
+                            <AlertCircle size={16} />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 mb-1">
+                            Q{i + 1}. {q.prompt}
+                          </p>
+                          <div className="flex flex-wrap gap-2 mt-1">
+                            {q.options?.map((opt) => {
+                              const isStudentChoice = studentResp?.selectedOptionId === opt.id;
+                              const isCorrectChoice = q.correctOptionId === opt.id;
+                              return (
+                                <span
+                                  key={opt.id}
+                                  className={cn(
+                                    "inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold border",
+                                    isCorrectChoice
+                                      ? "bg-emerald-100 border-emerald-300 text-emerald-800"
+                                      : isStudentChoice && !isCorrectChoice
+                                      ? "bg-red-100 border-red-300 text-red-800"
+                                      : "bg-slate-100 border-slate-200 text-slate-600"
+                                  )}
+                                >
+                                  {opt.label}. {opt.text}
+                                  {isCorrectChoice && <span className="ml-1 text-[10px] font-black">(Correct)</span>}
+                                  {isStudentChoice && !isCorrectChoice && (
+                                    <span className="ml-1 text-[10px] font-black">(Your answer)</span>
+                                  )}
+                                  {isCorrectChoice && isStudentChoice && (
+                                    <CheckCircle2 size={10} className="ml-0.5 text-emerald-600" />
+                                  )}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={cn("text-sm font-black", isCorrect ? "text-emerald-600" : "text-red-600")}>
+                            {result?.earnedPoints ?? 0}/{result?.maxPoints ?? q.points}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Structured question model answers — only shown after submit */}
+          {assessment.questions.some((q) => q.type === "structured" && !!q.modelAnswer) && (
+            <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5 text-white">
+                <h2 className="font-black text-lg">Structured Questions — Model Answers</h2>
+                <p className="text-white/70 text-sm mt-0.5">Reference solutions for structured questions.</p>
+              </div>
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                {assessment.questions.map((q, i) => {
+                  if (q.type !== "structured" || !q.modelAnswer) return null;
+                  return (
+                    <div key={q.id} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
+                      <p className="text-sm font-bold text-slate-800 mb-2">
+                        Q{i + 1}. {q.prompt}
+                      </p>
+                      <p className="text-sm text-slate-700 leading-relaxed">{q.modelAnswer}</p>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     );
@@ -843,7 +1017,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         <div className="flex flex-wrap items-center justify-between gap-3 bg-white px-5 py-3.5 rounded-2xl shadow-sm border border-slate-200">
           <div className="flex items-center gap-2 text-sm">
             <span className="font-semibold text-slate-700">
-              Question {currentIndex + 1} of {assessment.questions.length}
+              Question {currentIndex + 1} of {activeQuestions.length}
             </span>
             <span className="text-slate-300">•</span>
             <span className="text-slate-500 text-xs sm:text-sm">
@@ -954,7 +1128,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             Question Palette
           </p>
           <div className="flex flex-wrap gap-2">
-            {assessment.questions.map((q, idx) => {
+            {activeQuestions.map((q, idx) => {
               const r = responses[q.id];
               const isAnswered =
                 !!r?.selectedOptionId || (!!r?.answerText && r.answerText.trim() !== "");
@@ -1002,7 +1176,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             </Button>
           ) : (
             <Button
-              onClick={() => setCurrentIndex((p) => Math.min(assessment.questions.length - 1, p + 1))}
+              onClick={() => setCurrentIndex((p) => Math.min(activeQuestions.length - 1, p + 1))}
               className="h-12 px-4 sm:px-6 rounded-xl font-semibold bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700"
             >
               <span className="hidden sm:inline">Next</span>

@@ -49,6 +49,7 @@ export interface StudentResponse {
 export interface StudentSubmission {
   assessmentId: string;
   studentId: string;
+  attemptId?: string; // unique per launch; prevents prior attempt answers leaking in
   responses: StudentResponse[];
   startedAt: string;
   submittedAt?: string;
