@@ -69,20 +69,20 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // ── Context-aware Back handler ──────────────────────────────────────────
-    // Routes specific to the assessments flow should always return to the
-    // assessments list, even if browser history would otherwise go elsewhere.
+    // ── Automatic Parent Path Resolution ─────────────────────────────────────
+    // Dynamically compute the parent route from the current pathname instead
+    // of hardcoding specific route names. Root sections navigate to '/';
+    // deeper routes drop their last segment.
     const handleBack = () => {
-      if (
-        location.pathname.startsWith("/assessments/student") ||
-        location.pathname.startsWith("/assessments/create") ||
-        location.pathname.startsWith("/assessments/import")
-      ) {
-        navigate("/assessments/list");
-      } else if (location.pathname === "/assessments/list") {
+      const segments = location.pathname.split("/").filter(Boolean);
+
+      if (segments.length <= 1) {
+        // Already at a root section (e.g. /games, /assessments, or /) -> go to main dashboard
         navigate("/");
       } else {
-        navigate(-1);
+        // Inside a child view (e.g. /assessments/student or /games/math) -> drop last segment to go to parent section
+        segments.pop();
+        navigate(`/${segments.join("/")}`);
       }
     };
 
@@ -450,7 +450,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     </div>
         
                     {/* Back Navigation */}
-                                        {location.pathname !== '/' && (
+                                        {location.pathname !== '/' && location.pathname !== '' && (
                                           <Button
                                             variant="ghost"
                                             onClick={handleBack}
