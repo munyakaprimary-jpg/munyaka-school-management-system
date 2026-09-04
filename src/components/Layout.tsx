@@ -157,6 +157,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: ClipboardList, label: 'Take Assessment', path: '/assessments/student', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: ClipboardList, label: 'All Set Exams', path: '/assessments/list', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },

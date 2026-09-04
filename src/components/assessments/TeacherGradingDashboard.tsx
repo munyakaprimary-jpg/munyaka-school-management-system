@@ -202,7 +202,14 @@ function gradeMCQs(
 }
 
 // ─── Component ─────────────────────────────────────────────────────────────────
-const TeacherGradingDashboard: React.FC = () => {
+interface TeacherGradingDashboardProps {
+  /** Pre-select this assessment ID on load. */
+  preselectedAssessmentId?: string;
+}
+
+const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
+  preselectedAssessmentId,
+}) => {
   const csvExport = useFileDownload();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
@@ -218,7 +225,11 @@ const TeacherGradingDashboard: React.FC = () => {
   useEffect(() => {
     const available = loadAssessments();
     setAssessments(available);
-    if (available.length > 0 && !selectedAssessmentId) {
+
+    // Honour preselectedAssessmentId prop if provided and it exists in the list
+    if (preselectedAssessmentId && available.some((a) => a.id === preselectedAssessmentId)) {
+      setSelectedAssessmentId(preselectedAssessmentId);
+    } else if (available.length > 0 && !selectedAssessmentId) {
       setSelectedAssessmentId(available[0].id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
