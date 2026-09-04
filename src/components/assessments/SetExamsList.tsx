@@ -92,7 +92,7 @@ function loadExams(): ExamListItem[] {
   const seen = new Set<string>();
   const items: ExamListItem[] = [];
 
-  // 1. The "active" exam from the question bank
+  // 1. Active exam from question bank
   try {
     const raw = localStorage.getItem(QUESTION_BANK_KEY);
     if (raw) {
@@ -101,9 +101,7 @@ function loadExams(): ExamListItem[] {
         const id = parsed.metadata?.assessmentId || "assessment_bank_default";
         seen.add(id);
         const isClosed = closed.has(id);
-        const status: ExamStatus = isClosed
-          ? "Closed"
-          : statusMap[id] || "Published";
+        const status: ExamStatus = isClosed ? "Closed" : statusMap[id] || "Published";
         items.push({
           id,
           title: parsed.metadata?.title || "Untitled Assessment",
@@ -124,7 +122,7 @@ function loadExams(): ExamListItem[] {
     }
   } catch { /* ignore */ }
 
-  // 2. Saved assessments array
+  // 2. Saved assessments
   try {
     const raw = localStorage.getItem(ASSESSMENTS_KEY);
     if (raw) {
@@ -142,8 +140,7 @@ function loadExams(): ExamListItem[] {
             subject: a.subject || "—",
             classLevel: a.classLevel || "—",
             duration: a.duration || 60,
-            totalMarks:
-              a.totalMarks || (a.questions || []).reduce((s, q) => s + q.points, 0),
+            totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + q.points, 0),
             questionCount: (a.questions || []).length,
             status,
             createdAt: a.createdAt || new Date().toISOString(),
@@ -160,7 +157,6 @@ function loadExams(): ExamListItem[] {
 }
 
 function loadFullAssessment(id: string): Assessment | null {
-  // Try question bank first (active exam)
   try {
     const raw = localStorage.getItem(QUESTION_BANK_KEY);
     if (raw) {
@@ -187,7 +183,6 @@ function loadFullAssessment(id: string): Assessment | null {
     }
   } catch { /* ignore */ }
 
-  // Then try saved assessments
   try {
     const raw = localStorage.getItem(ASSESSMENTS_KEY);
     if (raw) {
@@ -200,310 +195,258 @@ function loadFullAssessment(id: string): Assessment | null {
   return null;
 }
 
-// ─── Printable Paper Builder ──────────────────────────────────────────────────
-function buildPrintableHTML(exam: Assessment): string {
-  const today = new Date().toLocaleDateString("en-KE", {
-    weekday: "long",
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
-
-  const questionsHTML = exam.questions
-    .map((q, i) => {
-      const qNum = i + 1;
-      const typeLabel = q.type === "mcq" ? "Multiple Choice" : "Structured";
-
-      if (q.type === "mcq" && q.options) {
-        const optionsHTML = q.options
-          .map(
-            (opt) => `
-          <div class="option-row">
-            <span class="option-label">${opt.label}.</span>
-            <span class="option-text">${opt.text || "(no text)"}</span>
-          </div>`
-          )
-          .join("");
-
-        return `
-        <div class="question-block">
-          <div class="question-header">
-            <span class="q-num">${qNum}.</span>
-            <span class="q-prompt">${q.prompt}</span>
-            <span class="q-points">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span>
-          </div>
-          <div class="options-list">${optionsHTML}</div>
-          <div class="answer-line"><span class="answer-label">Student's Answer:</span> ______</div>
-        </div>`;
-      } else {
-        return `
-        <div class="question-block">
-          <div class="question-header">
-            <span class="q-num">${qNum}.</span>
-            <span class="q-prompt">${q.prompt}</span>
-            <span class="q-points">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span>
-          </div>
-          ${q.modelAnswer ? `<div class="model-answer"><strong>Model Answer:</strong> ${q.modelAnswer}</div>` : ""}
-          <div class="answer-blank"></div>
-        </div>`;
-      }
-    })
-    .join('<div class="q-divider"></div>');
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>${exam.title} — Exam Paper</title>
-<style>
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    font-family: 'Courier New', Courier, monospace;
-    font-size: 12pt;
-    color: #1a1a1a;
-    padding: 40px 48px;
-    max-width: 850px;
-    margin: 0 auto;
-    line-height: 1.5;
-  }
-
-  .school-name {
-    text-align: center;
-    font-size: 11pt;
-    color: #555;
-    border-bottom: 2px solid #1a1a1a;
-    padding-bottom: 6px;
-    margin-bottom: 4px;
-    letter-spacing: 0.5px;
-  }
-
-  .paper-title {
-    text-align: center;
-    font-size: 16pt;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 8px 0 4px;
-  }
-
-  .paper-meta {
-    text-align: center;
-    font-size: 10pt;
-    color: #444;
-    margin-bottom: 16px;
-  }
-
-  .header-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-bottom: 16px;
-    font-size: 11pt;
-  }
-
-  .header-table td {
-    padding: 4px 8px;
-    border: 1px solid #1a1a1a;
-  }
-
-  .header-table .label-cell {
-    font-weight: bold;
-    background: #f5f5f5;
-    width: 30%;
-  }
-
-  .instructions-box {
-    background: #f9f9f9;
-    border: 1px solid #ccc;
-    border-left: 4px solid #1a1a1a;
-    padding: 8px 12px;
-    font-size: 10pt;
-    margin-bottom: 20px;
-  }
-
-  .instructions-box strong { font-size: 11pt; }
-
-  .section-label {
-    font-weight: bold;
-    font-size: 11pt;
-    margin-bottom: 8px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 1px solid #1a1a1a;
-    padding-bottom: 2px;
-  }
-
-  .question-block { margin-bottom: 16px; page-break-inside: avoid; }
-
-  .question-header {
-    display: flex;
-    gap: 8px;
-    align-items: flex-start;
-    margin-bottom: 6px;
-  }
-
-  .q-num { font-weight: bold; min-width: 20px; }
-  .q-prompt { flex: 1; }
-  .q-points { font-size: 10pt; color: #555; white-space: nowrap; }
-
-  .options-list { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
-
-  .option-row { display: flex; gap: 8px; }
-  .option-label { font-weight: bold; min-width: 18px; }
-  .option-text { flex: 1; }
-
-  .answer-line {
-    margin-top: 8px;
-    padding-left: 28px;
-    font-size: 10pt;
-    color: #555;
-    border-top: 1px dashed #ccc;
-    padding-top: 4px;
-  }
-  .answer-label { font-weight: bold; }
-
-  .answer-blank {
-    margin-top: 8px;
-    margin-left: 28px;
-    height: 60px;
-    border-bottom: 1px solid #1a1a1a;
-  }
-
-  .q-divider {
-    border-top: 1px solid #e0e0e0;
-    margin: 12px 0;
-  }
-
-  .model-answer {
-    font-size: 10pt;
-    color: #444;
-    background: #f9f9f9;
-    padding: 4px 8px;
-    border-left: 2px solid #aaa;
-    margin: 4px 0 0 28px;
-  }
-
-  .footer-line {
-    margin-top: 24px;
-    border-top: 1px solid #1a1a1a;
-    padding-top: 8px;
-    font-size: 9pt;
-    color: #666;
-    display: flex;
-    justify-content: space-between;
-  }
-
-  /* ── Print media ── */
-  @media print {
-    body { padding: 0; font-size: 11pt; }
-    .no-print { display: none !important; }
-    .question-block { page-break-inside: avoid; }
-    .header-table td { font-size: 10pt; }
-    .options-list { padding-left: 24px; }
-    .answer-blank { height: 40px; }
-  }
-
-  /* Print button (shown in preview window only) */
-  .no-print {
-    position: sticky;
-    top: 0;
-    background: #f0f0f0;
-    border-bottom: 1px solid #ccc;
-    padding: 12px 48px;
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    z-index: 10;
-  }
-  .btn-print {
-    background: #1a1a1a;
-    color: white;
-    border: none;
-    padding: 8px 20px;
-    font-size: 11pt;
-    cursor: pointer;
-    border-radius: 4px;
-    font-family: inherit;
-  }
-  .btn-print:hover { background: #333; }
-</style>
-</head>
-<body>
-<div class="no-print">
-  <button class="btn-print" onclick="window.print()">🖨 Print / Save PDF</button>
-</div>
-
-<div class="school-name">Munyaka E-Learning Platform — Assessment Paper</div>
-<div class="paper-title">${exam.title}</div>
-<div class="paper-meta">
-  ${exam.subject} &nbsp;|&nbsp; ${exam.classLevel} &nbsp;|&nbsp;
-  ${formatCategory(exam.category)} &nbsp;|&nbsp; Duration: ${exam.duration} minutes
-</div>
-
-<table class="header-table">
-  <tr>
-    <td class="label-cell">Student Name:</td>
-    <td style="width:38%"></td>
-    <td class="label-cell">Assessment No.:</td>
-    <td></td>
-  </tr>
-  <tr>
-    <td class="label-cell">Grade / Class:</td>
-    <td>${exam.classLevel}</td>
-    <td class="label-cell">Date:</td>
-    <td>${today}</td>
-  </tr>
-  <tr>
-    <td class="label-cell">Subject:</td>
-    <td>${exam.subject}</td>
-    <td class="label-cell">Total Marks:</td>
-    <td>${exam.totalMarks}</td>
-  </tr>
-</table>
-
-<div class="instructions-box">
-  <strong>Instructions:</strong>
-  <ul style="margin:4px 0 0 20px;">
-    <li>Write your name, assessment number, and date at the top of this paper.</li>
-    <li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li>
-    <li>For Structured questions, write your answers in the spaces provided.</li>
-    <li>Show all working where necessary. Do not use pencil unless instructed.</li>
-    <li>Total time: ${exam.duration} minutes. Manage your time carefully.</li>
-  </ul>
-</div>
-
-<div class="section-label">Questions</div>
-
-${questionsHTML}
-
-<div class="footer-line">
-  <span>${exam.title} — ${exam.subject}</span>
-  <span>Page 1 of 1</span>
-  <span>© Munyaka E-Learning Platform</span>
-</div>
-</body>
-</html>`;
-}
-
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 function formatCategory(c: string): string {
   if (!c) return "Formative";
-  return c
-    .split("-")
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
+  return c.split("-").map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
 }
 
 function statusBadge(status: ExamStatus) {
   switch (status) {
-    case "Draft":
-      return "bg-slate-100 text-slate-700 border-slate-200";
-    case "Closed":
-      return "bg-red-100 text-red-700 border-red-200";
-    case "Published":
-    default:
-      return "bg-emerald-100 text-emerald-700 border-emerald-200";
+    case "Draft":   return "bg-slate-100 text-slate-700 border-slate-200";
+    case "Closed":  return "bg-red-100 text-red-700 border-red-200";
+    default:        return "bg-emerald-100 text-emerald-700 border-emerald-200";
   }
+}
+
+function formatDate(dateStr: string): string {
+  try {
+    return new Date(dateStr).toLocaleDateString("en-KE", {
+      weekday: "long", year: "numeric", month: "long", day: "numeric",
+    });
+  } catch { return dateStr; }
+}
+
+function buildPrintableHTML(exam: Assessment): string {
+  const today = formatDate(new Date().toISOString());
+  const totalMarks = exam.questions.reduce((s, q) => s + q.points, 0);
+
+  const questionsHTML = exam.questions
+    .map((q, i) => {
+      if (q.type === "mcq" && q.options) {
+        const opts = q.options
+          .map((opt) => `<div class="opt-row"><span class="opt-lbl">${opt.label}.</span><span class="opt-txt">${opt.text || "(no text)"}</span></div>`)
+          .join("");
+        return `<div class="q-block">
+          <div class="q-hdr"><span class="q-n">${i + 1}.</span><span class="q-p">${q.prompt}</span><span class="q-pt">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
+          <div class="opt-lst">${opts}</div>
+          <div class="ans-line"><span class="ans-lbl">Student's Answer:</span> _______</div>
+        </div>`;
+      }
+      return `<div class="q-block">
+        <div class="q-hdr"><span class="q-n">${i + 1}.</span><span class="q-p">${q.prompt}</span><span class="q-pt">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
+        ${q.modelAnswer ? `<div class="mod-ans"><strong>Model Answer:</strong> ${q.modelAnswer}</div>` : ""}
+        <div class="ans-blank"></div>
+      </div>`;
+    })
+    .join('<div class="q-div"></div>');
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>${exam.title} — Exam Paper</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Courier New',Courier,monospace;font-size:12pt;color:#1a1a1a;padding:40px 48px;max-width:850px;margin:0 auto;line-height:1.5}
+.school{text-align:center;font-size:11pt;color:#555;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:4px;letter-spacing:.5px}
+.p-title{text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px}
+.p-meta{text-align:center;font-size:10pt;color:#444;margin-bottom:16px}
+.hdr-tbl{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11pt}
+.hdr-tbl td{padding:4px 8px;border:1px solid #1a1a1a}
+.hdr-tbl .lbl{font-weight:bold;background:#f5f5f5;width:30%}
+.instr-box{background:#f9f9f9;border:1px solid #ccc;border-left:4px solid #1a1a1a;padding:8px 12px;font-size:10pt;margin-bottom:20px}
+.instr-box strong{font-size:11pt}
+.sec-lbl{font-weight:bold;font-size:11pt;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1a1a1a;padding-bottom:2px}
+.q-block{margin-bottom:16px;page-break-inside:avoid}
+.q-hdr{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
+.q-n{font-weight:bold;min-width:20px}.q-p{flex:1}.q-pt{font-size:10pt;color:#555;white-space:nowrap}
+.opt-lst{padding-left:28px;display:flex;flex-direction:column;gap:4px}
+.opt-row{display:flex;gap:8px}.opt-lbl{font-weight:bold;min-width:18px}.opt-txt{flex:1}
+.ans-line{margin-top:8px;padding-left:28px;font-size:10pt;color:#555;border-top:1px dashed #ccc;padding-top:4px}
+.ans-lbl{font-weight:bold}
+.ans-blank{margin-top:8px;margin-left:28px;height:60px;border-bottom:1px solid #1a1a1a}
+.q-div{border-top:1px solid #e0e0e0;margin:12px 0}
+.mod-ans{font-size:10pt;color:#444;background:#f9f9f9;padding:4px 8px;border-left:2px solid #aaa;margin-top:4px}
+.footer{margin-top:24px;border-top:1px solid #1a1a1a;padding-top:8px;font-size:9pt;color:#666;display:flex;justify-content:space-between}
+@media print{body{padding:0;font-size:11pt}.q-block{page-break-inside:avoid}.opt-lst{padding-left:24px}.ans-blank{height:40px}}
+</style>
+</head>
+<body>
+<div class="school">Munyaka E-Learning Platform — Assessment Paper</div>
+<div class="p-title">${exam.title}</div>
+<div class="p-meta">${exam.subject} &nbsp;|&nbsp; ${exam.classLevel} &nbsp;|&nbsp; ${formatCategory(exam.category)} &nbsp;|&nbsp; Duration: ${exam.duration} minutes</div>
+<table class="hdr-tbl">
+<tr><td class="lbl">Student Name:</td><td style="width:38%"></td><td class="lbl">Assessment No.:</td><td></td></tr>
+<tr><td class="lbl">Grade / Class:</td><td>${exam.classLevel}</td><td class="lbl">Date:</td><td>${today}</td></tr>
+<tr><td class="lbl">Subject:</td><td>${exam.subject}</td><td class="lbl">Total Marks:</td><td>${totalMarks}</td></tr>
+</table>
+<div class="instr-box"><strong>Instructions:</strong>
+<ul style="margin:4px 0 0 20px"><li>Write your name, assessment number, and date at the top of this paper.</li><li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li><li>For Structured questions, write your answers in the spaces provided.</li><li>Show all working where necessary.</li><li>Total time: ${exam.duration} minutes. Manage your time carefully.</li></ul>
+</div>
+<div class="sec-lbl">Questions</div>
+${questionsHTML}
+<div class="footer"><span>${exam.title} — ${exam.subject}</span><span>Page 1 of 1</span><span>© Munyaka E-Learning Platform</span></div>
+</body>
+</html>`;
+}
+
+// ─── Print Preview Styles (injected once) ─────────────────────────────────────
+const PRINT_STYLE_ID = "exam-print-modal-styles";
+
+function injectPrintStyles() {
+  if (document.getElementById(PRINT_STYLE_ID)) return;
+  const s = document.createElement("style");
+  s.id = PRINT_STYLE_ID;
+  s.textContent = `
+    /* ── Print mode: show only the exam print container ── */
+    @media print {
+      html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+      body > * { visibility: hidden !important; }
+      body > #exam-print-container,
+      body > #exam-print-container * { visibility: visible !important; }
+
+      #exam-print-container {
+        position: static !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 40px 48px !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 11pt !important;
+        color: #1a1a1a !important;
+        background: #fff !important;
+        line-height: 1.5 !important;
+        overflow: visible !important;
+      }
+
+      #exam-print-container div,
+      #exam-print-container p,
+      #exam-print-container ul,
+      #exam-print-container li,
+      #exam-print-container span { display: revert !important; visibility: visible !important; }
+      #exam-print-container table { display: table !important; visibility: visible !important; }
+      #exam-print-container thead { display: table-header-group !important; }
+      #exam-print-container tbody { display: table-row-group !important; }
+      #exam-print-container tr { display: table-row !important; }
+      #exam-print-container td { display: table-cell !important; }
+
+      /* Hide screen-only ornaments */
+      #exam-print-container .print-hide,
+      #exam-print-container svg { display: none !important; }
+
+      /* Flex helpers */
+      #exam-print-container .print-q-hdr { display: flex !important; }
+      #exam-print-container .print-opt-row { display: flex !important; }
+      #exam-print-container .print-footer { display: flex !important; }
+      #exam-print-container .print-ans-blank { display: block !important; height: 40px; }
+
+      /* Page-break control */
+      #exam-print-container .print-q-block { page-break-inside: avoid; }
+    }
+
+    /* ── On-screen: visually hide the print container (but keep it in the DOM) ── */
+    #exam-print-container {
+      position: absolute;
+      left: -9999px;
+      top: 0;
+      width: 800px;
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 12pt;
+      color: #1a1a1a;
+      line-height: 1.5;
+      background: #fff;
+      padding: 40px 48px;
+    }
+
+    /* Paper elements */
+    .print-school { text-align: center; font-size: 11pt; color: #555; border-bottom: 2px solid #1a1a1a; padding-bottom: 6px; margin-bottom: 4px; }
+    .print-p-title { text-align: center; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 4px; }
+    .print-p-meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 16px; }
+    .print-hdr-tbl { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+    .print-hdr-tbl td { padding: 4px 8px; border: 1px solid #1a1a1a; }
+    .print-hdr-tbl .lbl { font-weight: bold; background: #f5f5f5; }
+    .print-instr-box { background: #f9f9f9; border: 1px solid #ccc; border-left: 4px solid #1a1a1a; padding: 8px 12px; font-size: 10pt; margin-bottom: 20px; }
+    .print-sec-lbl { font-weight: bold; font-size: 11pt; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; }
+    .print-q-block { margin-bottom: 16px; page-break-inside: avoid; }
+    .print-q-hdr { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+    .print-q-n { font-weight: bold; min-width: 20px; }
+    .print-q-p { flex: 1; }
+    .print-q-pt { font-size: 10pt; color: #555; white-space: nowrap; }
+    .print-opt-lst { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
+    .print-opt-row { display: flex; gap: 8px; }
+    .print-opt-lbl { font-weight: bold; min-width: 18px; }
+    .print-opt-txt { flex: 1; }
+    .print-ans-line { margin-top: 8px; padding-left: 28px; font-size: 10pt; color: #555; border-top: 1px dashed #ccc; padding-top: 4px; }
+    .print-ans-lbl { font-weight: bold; }
+    .print-ans-blank { margin-top: 8px; margin-left: 28px; height: 60px; border-bottom: 1px solid #1a1a1a; }
+    .print-mod-ans { font-size: 10pt; color: #444; background: #f9f9f9; padding: 4px 8px; border-left: 2px solid #aaa; margin-top: 4px; }
+    .print-footer { margin-top: 24px; border-top: 1px solid #1a1a1a; padding-top: 8px; font-size: 9pt; color: #666; display: flex; justify-content: space-between; }
+
+    /* Screen-only: hide print elements in the on-screen view */
+    @media screen {
+      #exam-print-container { display: block; }
+    }
+  `;
+  document.head.appendChild(s);
+}
+
+// ─── Download helper ────────────────────────────────────────────────────────────
+function downloadHTML(html: string, filename: string) {
+  const blob = new Blob([html], { type: "text/html" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ─── Printable Question Block (rendered as DOM, not HTML string) ────────────────
+function PrintableQuestion({ q, index }: { q: Question; index: number }) {
+  const totalMarks = q.points;
+  if (q.type === "mcq" && q.options) {
+    return (
+      <div className="q-block print-q-block">
+        <div className="q-hdr print-q-hdr">
+          <span className="q-n print-q-n">{index + 1}.</span>
+          <span className="q-p print-q-p">{q.prompt}</span>
+          <span className="q-pt print-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
+        </div>
+        <div className="opt-lst print-opt-lst">
+          {q.options.map((opt) => (
+            <div key={opt.id} className="opt-row print-opt-row">
+              <span className="opt-lbl print-opt-lbl">{opt.label}.</span>
+              <span className="opt-txt print-opt-txt">{opt.text || "(no text)"}</span>
+              {opt.id === q.correctOptionId && (
+                <CheckCircle2 size={12} className="text-emerald-500 ml-auto shrink-0 print-hide" />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="ans-line print-ans-line">
+          <span className="ans-lbl print-ans-lbl">Student's Answer:</span> _______
+        </div>
+      </div>
+    );
+  }
+  return (
+    <div className="q-block print-q-block">
+      <div className="q-hdr print-q-hdr">
+        <span className="q-n print-q-n">{index + 1}.</span>
+        <span className="q-p print-q-p">{q.prompt}</span>
+        <span className="q-pt print-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
+      </div>
+      {q.modelAnswer && (
+        <div className="mod-ans print-mod-ans print-hide">
+          <strong>Model Answer:</strong> {q.modelAnswer}
+        </div>
+      )}
+      <div className="ans-blank print-ans-blank" />
+    </div>
+  );
 }
 
 // ─── Exam View Modal ──────────────────────────────────────────────────────────
@@ -517,70 +460,85 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   const [exam, setExam] = useState<Assessment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const modalRef = useRef<HTMLDivElement>(null);
+  const printContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loaded = loadFullAssessment(examId);
     setExam(loaded);
     setIsLoading(false);
+    injectPrintStyles();
   }, [examId]);
 
-  // Close on Escape key
+  // Close on Escape
   useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
-    };
+    const handleKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
     document.addEventListener("keydown", handleKey);
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
+  // ── In-page print: show hidden container, print, hide again ──────────────
   const handlePrint = useCallback(() => {
+    // The print container is always in the DOM (inside the modal body).
+    // We call window.print() directly — @media print rules will show ONLY
+    // the print container and hide all surrounding UI.
+    window.print();
+  }, []);
+
+  // ── Download HTML as a file ─────────────────────────────────────────────
+  const handleDownload = useCallback(() => {
     if (!exam) return;
     const html = buildPrintableHTML(exam);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank");
-    if (!win) {
-      showError("Please allow pop-ups to open the printable paper.");
-      return;
-    }
-    win.focus();
+    const filename = `${exam.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
+    downloadHTML(html, filename);
+    showSuccess("Exam paper downloaded as HTML file.");
   }, [exam]);
 
-  const totalMarks = useMemo(() => {
-    if (!exam) return 0;
-    return exam.questions.reduce((s, q) => s + q.points, 0);
-  }, [exam]);
+  const totalMarks = useMemo(
+    () => (exam ? exam.questions.reduce((s, q) => s + q.points, 0) : 0),
+    [exam]
+  );
+
+  const today = formatDate(new Date().toISOString());
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       {/* Backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={onClose}
-      />
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
       {/* Modal */}
       <div
         ref={modalRef}
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden"
+        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden"
       >
-        {/* Header */}
-        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-6 text-white flex items-start justify-between gap-4 shrink-0">
+        {/* ── Header ─────────────────────────────────────────────────── */}
+        <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white flex items-start justify-between gap-4 shrink-0">
           <div>
             <h2 className="text-xl font-black">{examTitle}</h2>
-            <p className="text-white/70 text-sm mt-1">
+            <p className="text-white/70 text-sm mt-0.5">
               {exam ? `${exam.questions.length} questions • ${totalMarks} total marks` : "Loading…"}
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Download HTML */}
+            {exam && (
+              <button
+                onClick={handleDownload}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
+                title="Download as HTML file"
+              >
+                <Download size={14} />
+                <span className="hidden sm:inline">Download</span>
+              </button>
+            )}
+            {/* Print */}
             {exam && (
               <button
                 onClick={handlePrint}
-                className="flex items-center gap-2 px-4 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
-                title="Print / Download Exam Paper"
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
+                title="Print / Save as PDF"
               >
-                <Printer size={15} />
-                Print
+                <Printer size={14} />
+                <span className="hidden sm:inline">Print</span>
               </button>
             )}
             <button
@@ -592,8 +550,83 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
+        {/* ── Body ───────────────────────────────────────────────────── */}
+        <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
+
+          {/* ── Hidden Print Container ─────────────────────────────── */}
+          {/* This div is ALWAYS in the DOM but hidden on-screen (visually hidden).
+              @media print will hide everything else and show ONLY this. */}
+          <div
+            ref={printContainerRef}
+            id="exam-print-container"
+            aria-hidden="true"
+            className="print-pipeline"
+          >
+            {/* Print-only: school header */}
+            <div className="school print-school">
+              Munyaka E-Learning Platform — Assessment Paper
+            </div>
+            <div className="p-title print-p-title">{exam?.title}</div>
+            <div className="p-meta print-p-meta">
+              {exam?.subject} &nbsp;|&nbsp; {exam?.classLevel} &nbsp;|&nbsp;
+              {exam ? formatCategory(exam.category) : ""} &nbsp;|&nbsp;
+              Duration: {exam?.duration} minutes
+            </div>
+
+            {/* Student info table */}
+            <table className="hdr-tbl print-hdr-tbl">
+              <tbody>
+                <tr>
+                  <td className="lbl">Student Name:</td>
+                  <td style={{ width: "38%" }} />
+                  <td className="lbl">Assessment No.:</td>
+                  <td />
+                </tr>
+                <tr>
+                  <td className="lbl">Grade / Class:</td>
+                  <td>{exam?.classLevel}</td>
+                  <td className="lbl">Date:</td>
+                  <td>{today}</td>
+                </tr>
+                <tr>
+                  <td className="lbl">Subject:</td>
+                  <td>{exam?.subject}</td>
+                  <td className="lbl">Total Marks:</td>
+                  <td>{totalMarks}</td>
+                </tr>
+              </tbody>
+            </table>
+
+            {/* Instructions */}
+            <div className="instr-box print-instr-box">
+              <strong>Instructions:</strong>
+              <ul>
+                <li>Write your name, assessment number, and date at the top of this paper.</li>
+                <li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li>
+                <li>For Structured questions, write your answers in the spaces provided.</li>
+                <li>Show all working where necessary.</li>
+                <li>Total time: {exam?.duration} minutes. Manage your time carefully.</li>
+              </ul>
+            </div>
+
+            <div className="sec-lbl print-sec-lbl">Questions</div>
+
+            {/* Question blocks */}
+            {exam?.questions.map((q, i) => (
+              <PrintableQuestion key={q.id} q={q} index={i} />
+            ))}
+
+            <div className="footer print-footer">
+              <span>{exam?.title} — {exam?.subject}</span>
+              <span>Page 1 of 1</span>
+              <span>© Munyaka E-Learning Platform</span>
+            </div>
+          </div>
+
+          {/* ── On-screen preview (hidden when printing) ──────────────── */}
+          {/* The on-screen version uses the same print container but
+              we also render a styled preview here for clarity. */}
+
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -605,8 +638,8 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
             </div>
           ) : (
             <>
-              {/* Meta info */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {/* Meta grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-hide">
                 {[
                   { label: "Subject", value: exam.subject },
                   { label: "Class", value: exam.classLevel },
@@ -622,50 +655,43 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                 ))}
               </div>
 
-              {/* Questions */}
-              <div className="space-y-4">
+              {/* Questions (screen preview) */}
+              <div className="space-y-4 print-hide">
                 {exam.questions.map((q, i) => (
                   <div key={q.id} className="border border-slate-200 rounded-2xl overflow-hidden">
-                    <div className="bg-slate-50 px-5 py-4 flex items-start justify-between gap-3">
-                      <div className="flex items-start gap-3 flex-1">
-                        <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0 mt-0.5">
-                          {i + 1}
-                        </span>
-                        <div>
-                          <p className="font-bold text-slate-800 leading-snug">{q.prompt}</p>
-                          <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                            <Badge className="text-[10px] font-bold bg-slate-100 text-slate-600 border-0">
-                              {q.type === "mcq" ? "MCQ" : "Structured"}
-                            </Badge>
-                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                              {q.points} {q.points === 1 ? "pt" : "pts"}
-                            </span>
-                          </div>
+                    <div className="bg-slate-50 px-5 py-4 flex items-start gap-3">
+                      <span className="w-8 h-8 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-black text-sm shrink-0">
+                        {i + 1}
+                      </span>
+                      <div className="flex-1">
+                        <p className="font-bold text-slate-800 leading-snug">{q.prompt}</p>
+                        <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                          <Badge className="text-[10px] font-bold bg-slate-100 text-slate-600 border-0">
+                            {q.type === "mcq" ? "MCQ" : "Structured"}
+                          </Badge>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                            {q.points} {q.points === 1 ? "pt" : "pts"}
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* MCQ Options */}
                     {q.type === "mcq" && q.options && q.options.length > 0 && (
                       <div className="px-5 py-4 space-y-2.5 bg-white">
                         {q.options.map((opt) => (
-                          <div
-                            key={opt.id}
-                            className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50"
-                          >
+                          <div key={opt.id} className="flex items-center gap-3 p-3 rounded-xl border border-slate-100 bg-slate-50/50">
                             <span className="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs shrink-0">
                               {opt.label}
                             </span>
-                            <span className="text-sm text-slate-700">{opt.text || <em className="text-slate-400">(no text)</em>}</span>
+                            <span className="text-sm text-slate-700 flex-1">{opt.text || <em className="text-slate-400">(no text)</em>}</span>
                             {opt.id === q.correctOptionId && (
-                              <CheckCircle2 size={14} className="text-emerald-500 ml-auto shrink-0" title="Correct answer" />
+                              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" title="Correct answer" />
                             )}
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {/* Structured model answer */}
                     {q.type === "structured" && q.modelAnswer && (
                       <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
                         <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">
@@ -681,27 +707,37 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
           )}
         </div>
 
-        {/* Footer */}
+        {/* ── Footer ─────────────────────────────────────────────────── */}
         <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 bg-slate-50">
           <Button variant="outline" onClick={onClose} className="rounded-xl">
             Close
           </Button>
           {exam && (
-            <Button
-              onClick={handlePrint}
-              className="rounded-xl gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold"
-            >
-              <Printer size={15} />
-              Print / Download Paper
-            </Button>
+            <>
+              <Button
+                variant="outline"
+                onClick={handleDownload}
+                className="rounded-xl gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+              >
+                <Download size={15} />
+                Download HTML
+              </Button>
+              <Button
+                onClick={handlePrint}
+                className="rounded-xl gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold"
+              >
+                <Printer size={15} />
+                Print / Save PDF
+              </Button>
+            </>
           )}
         </div>
       </div>
     </div>
   );
-};
+}
 
-// ─── Main Component ───────────────────────────────────────────────────────────
+// ─── Main Component ────────────────────────────────────────────────────────────
 const SetExamsList: React.FC = () => {
   const { user } = useAuth();
   const role = (user?.role || "").toLowerCase();
@@ -715,39 +751,22 @@ const SetExamsList: React.FC = () => {
   const [previewExamId, setPreviewExamId] = useState<string | null>(null);
   const [previewExamTitle, setPreviewExamTitle] = useState<string>("");
 
-  const refresh = useCallback(() => {
-    setExams(loadExams());
-  }, []);
+  const refresh = useCallback(() => setExams(loadExams()), []);
 
   useEffect(() => {
     refresh();
-
     const onStorage = (e: StorageEvent) => {
       if (
-        e.key === QUESTION_BANK_KEY ||
-        e.key === ASSESSMENTS_KEY ||
-        e.key === EXAM_STATUS_KEY ||
-        e.key === CLOSED_EXAMS_KEY
-      ) {
-        refresh();
-      }
+        e.key === QUESTION_BANK_KEY || e.key === ASSESSMENTS_KEY ||
+        e.key === EXAM_STATUS_KEY || e.key === CLOSED_EXAMS_KEY
+      ) refresh();
     };
     window.addEventListener("storage", onStorage);
-
     const onDataChanged = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (
-        !detail?.key ||
-        detail.key === QUESTION_BANK_KEY ||
-        detail.key === ASSESSMENTS_KEY ||
-        detail.key === EXAM_STATUS_KEY ||
-        detail.key === CLOSED_EXAMS_KEY
-      ) {
-        refresh();
-      }
+      if (!detail?.key || [QUESTION_BANK_KEY, ASSESSMENTS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(detail.key)) refresh();
     };
     window.addEventListener("munyaka:data-changed" as any, onDataChanged);
-
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("munyaka:data-changed" as any, onDataChanged);
@@ -771,16 +790,13 @@ const SetExamsList: React.FC = () => {
         if (bankRaw) {
           const parsed = JSON.parse(bankRaw);
           const bankId = parsed?.metadata?.assessmentId || "assessment_bank_default";
-          if (bankId === id) {
-            localStorage.removeItem(QUESTION_BANK_KEY);
-          }
+          if (bankId === id) localStorage.removeItem(QUESTION_BANK_KEY);
         }
         const statusMap = loadStatusOverrides();
         delete statusMap[id];
         saveStatusOverrides(statusMap);
         const closed = loadClosedExams().filter((c) => c !== id);
         saveClosedExams(closed);
-
         showSuccess(`"${title}" deleted.`);
         refresh();
       } catch (e) {
@@ -793,23 +809,6 @@ const SetExamsList: React.FC = () => {
   const handleViewExam = useCallback((id: string, title: string) => {
     setPreviewExamId(id);
     setPreviewExamTitle(title);
-  }, []);
-
-  const handlePrintExam = useCallback((id: string, title: string) => {
-    const exam = loadFullAssessment(id);
-    if (!exam) {
-      showError("Could not load exam data for printing.");
-      return;
-    }
-    const html = buildPrintableHTML(exam);
-    const blob = new Blob([html], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const win = window.open(url, "_blank");
-    if (!win) {
-      showError("Please allow pop-ups to open the printable paper.");
-      return;
-    }
-    win.focus();
   }, []);
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -852,7 +851,6 @@ const SetExamsList: React.FC = () => {
         exam.status === "Closed" && "opacity-80"
       )}
     >
-      {/* Gradient header bar */}
       <div
         className={cn(
           "h-2 w-full",
@@ -864,18 +862,10 @@ const SetExamsList: React.FC = () => {
         )}
       />
       <CardContent className="p-5 space-y-4">
-        {/* Title + status */}
         <div>
           <div className="flex items-start justify-between gap-2 mb-2">
-            <h3 className="font-black text-slate-800 line-clamp-2 text-base flex-1">
-              {exam.title}
-            </h3>
-            <span
-              className={cn(
-                "shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                statusBadge(exam.status)
-              )}
-            >
+            <h3 className="font-black text-slate-800 line-clamp-2 text-base flex-1">{exam.title}</h3>
+            <span className={cn("shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border", statusBadge(exam.status))}>
               {exam.status}
             </span>
           </div>
@@ -890,7 +880,6 @@ const SetExamsList: React.FC = () => {
           </div>
         </div>
 
-        {/* Metrics row */}
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-violet-50 rounded-xl py-2.5 px-1">
             <div className="flex items-center justify-center gap-1 text-violet-600 mb-0.5">
@@ -915,13 +904,12 @@ const SetExamsList: React.FC = () => {
           </div>
         </div>
 
-        {/* Footer date */}
         <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
           <Calendar size={10} />
           Updated {new Date(exam.updatedAt).toLocaleDateString()}
         </div>
 
-        {/* Action buttons: View Exam, Print / Download, Delete */}
+        {/* Action buttons: View Exam, Print, Delete */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
           <Button
             variant="outline"
@@ -935,12 +923,19 @@ const SetExamsList: React.FC = () => {
 
           <Button
             variant="outline"
-            onClick={() => handlePrintExam(exam.id, exam.title)}
+            onClick={() => {
+              const loaded = loadFullAssessment(exam.id);
+              if (!loaded) { showError("Could not load exam data."); return; }
+              const html = buildPrintableHTML(loaded);
+              const filename = `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
+              downloadHTML(html, filename);
+              showSuccess("Exam paper downloaded.");
+            }}
             className="flex-1 rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
-            title="Print / Download Exam Paper"
+            title="Download Exam Paper"
           >
             <Printer size={15} />
-            Print
+            Download
           </Button>
 
           <Button
@@ -975,9 +970,7 @@ const SetExamsList: React.FC = () => {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {filtered.length === 0 && (
-              <tr>
-                <td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">No exams match your filters.</td>
-              </tr>
+              <tr><td colSpan={8} className="px-4 py-12 text-center text-slate-400 text-sm">No exams match your filters.</td></tr>
             )}
             {filtered.map((exam) => (
               <tr key={exam.id} className="hover:bg-slate-50/50">
@@ -991,18 +984,14 @@ const SetExamsList: React.FC = () => {
                 <td className="px-4 py-3 text-center font-bold text-blue-700">{exam.totalMarks}</td>
                 <td className="px-4 py-3 text-center font-bold text-amber-700">{exam.duration}m</td>
                 <td className="px-4 py-3 text-center">
-                  <span className={cn(
-                    "inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border",
-                    statusBadge(exam.status)
-                  )}>
+                  <span className={cn("inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-widest border", statusBadge(exam.status))}>
                     {exam.status}
                   </span>
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="ghost" size="icon"
                       onClick={() => handleViewExam(exam.id, exam.title)}
                       className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50"
                       title="View Exam"
@@ -1010,17 +999,22 @@ const SetExamsList: React.FC = () => {
                       <Eye size={14} />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handlePrintExam(exam.id, exam.title)}
+                      variant="ghost" size="icon"
+                      onClick={() => {
+                        const loaded = loadFullAssessment(exam.id);
+                        if (!loaded) { showError("Could not load exam data."); return; }
+                        const html = buildPrintableHTML(loaded);
+                        const filename = `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
+                        downloadHTML(html, filename);
+                        showSuccess("Exam paper downloaded.");
+                      }}
                       className="rounded-lg h-8 w-8 text-slate-600 hover:bg-slate-100"
-                      title="Print / Download"
+                      title="Download Exam Paper"
                     >
                       <Printer size={14} />
                     </Button>
                     <Button
-                      variant="ghost"
-                      size="icon"
+                      variant="ghost" size="icon"
                       onClick={() => handleDelete(exam.id, exam.title)}
                       className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50"
                       title="Delete"
@@ -1040,7 +1034,6 @@ const SetExamsList: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 pb-20 max-w-full">
-      {/* Modal */}
       {previewExamId && (
         <ExamViewModal
           examId={previewExamId}
@@ -1049,7 +1042,7 @@ const SetExamsList: React.FC = () => {
         />
       )}
 
-      {/* Top bar — header only */}
+      {/* Top bar */}
       <div className="flex items-center gap-3 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
           <Library className="w-5 h-5 text-white" />
@@ -1103,19 +1096,15 @@ const SetExamsList: React.FC = () => {
           <div className="flex rounded-xl bg-slate-100 p-1 h-11">
             <button
               onClick={() => setView("cards")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
-              )}
+              className={cn("flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
+                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
             >
               <Grid3x3 size={14} /> Cards
             </button>
             <button
               onClick={() => setView("table")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
-              )}
+              className={cn("flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
+                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
             >
               <TableIcon size={14} /> Table
             </button>
