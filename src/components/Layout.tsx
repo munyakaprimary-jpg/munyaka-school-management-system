@@ -69,21 +69,26 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     const location = useLocation();
     const navigate = useNavigate();
 
-    // ── Automatic Parent Path Resolution ─────────────────────────────────────
-    // Dynamically compute the parent route from the current pathname instead
-    // of hardcoding specific route names. Root sections navigate to '/';
-    // deeper routes drop their last segment.
+    // ── Explicit Route Mapping ───────────────────────────────────────────────
+    // Direct string-matching logic so child pages always land on their exact
+    // parent section, regardless of the path depth.
     const handleBack = () => {
-      const segments = location.pathname.split("/").filter(Boolean);
+      const currentPath = location.pathname.toLowerCase();
 
-      if (segments.length <= 1) {
-        // Already at a root section (e.g. /games, /assessments, or /) -> go to main dashboard
-        navigate("/");
-      } else {
-        // Inside a child view (e.g. /assessments/student or /games/math) -> drop last segment to go to parent section
-        segments.pop();
-        navigate(`/${segments.join("/")}`);
+      // Assessment sub-routes -> Assessment Repository
+      if (currentPath.includes("/assessments/") && currentPath !== "/assessments/list") {
+        navigate("/assessments/list");
+        return;
       }
+
+      // Games Hub sub-routes -> Games Hub Main Page
+      if (currentPath.includes("/games/") && currentPath !== "/games") {
+        navigate("/games");
+        return;
+      }
+
+      // Section Root Pages (e.g. /assessments/list, /games, /students) -> Main Dashboard
+      navigate("/");
     };
 
     // Attach Hardware Back Button Handling for Capacitor/Android
