@@ -252,8 +252,19 @@ const Staff = () => {
     });
   }, [masterStaffList, searchTerm, statusFilter]);
 
-  const activeCount = useMemo(() => masterStaffList.filter(s => s.status === 'Active').length, [masterStaffList]);
-  const preRegCount = useMemo(() => masterStaffList.filter(s => s.status === 'Pre-Registered').length, [masterStaffList]);
+  // Single source of truth for "is this staff record pending activation?".
+  // Matches every spelling/variant seen in the system so the banner count,
+  // the action button guard, and the actual mutation loop all stay in sync.
+  const isPending = (s: StaffMember): boolean => {
+    const raw = String(s.status ?? '').trim().toLowerCase();
+    if (raw !== '' && raw !== 'active') return true;
+    // Also treat legacy records with `isActivated === false` as pending
+    if ((s as any).isActivated === false) return true;
+    return false;
+  };
+
+  const activeCount = useMemo(() => masterStaffList.filter(s => !isPending(s)).length, [masterStaffList]);
+  const preRegCount = useMemo(() => masterStaffList.filter(isPending).length, [masterStaffList]);
 
   // Initial load + listen for changes
   useEffect(() => {
@@ -545,43 +556,73 @@ const Staff = () => {
 
   // ── Activate All Pre-Registered — local-first with server sync ─────────────
   const handleActivateAll = async () => {
-    const preRegTeachers = staffDirectory.filter(s => s.status === 'Pre-Registered');
-    if (preRegTeachers.length === 0) {
+    // Use the SAME isPending helper as the banner counter so the numbers
+    // always agree. Iterate over `masterStaffList` (includes both the
+    // server-fetched directory AND the localStorage pre-registration ledger)
+    // so we catch every pending record regardless of where it lives.
+    const pendingStaff = masterStaffList.filter(isPending);
+    if (pendingStaff.length === 0) {
       dismissToast();
       showError('No pre-registered teachers to activate.');
       return;
     }
-    if (!window.confirm(`Activate all pre-registered teachers? This will set ${preRegTeachers.length} teacher(s) to Active.`)) return;
+    if (!window.confirm(`Activate all pre-registered teachers? This will set ${pendingStaff.length} teacher(s) to Active.`)) return;
 
     setIsBulkActivating(true);
 
+    // Build a Set of pending IDs so we can match both directory rows AND
+    // ledger rows by their shared `id`.
+    const pendingIds = new Set(pendingStaff.map(p => p.id));
+
     // Always succeed — update local state first, then try to sync with server.
     const activateLocally = () => {
-      // 1. Update React state for staffDirectory
+      // 1. Update React state for staffDirectory (server-fetched rows)
       setStaffDirectory(prev =>
         prev.map(s =>
-          s.status === 'Pre-Registered'
-            ? { ...s, status: 'Active' as const }
+          pendingIds.has(s.id)
+            ? { ...s, status: 'Active' as const, isActivated: true } as StaffMember
             : s
         )
       );
       setSelectedIds(new Set());
 
-      // 2. Update localStorage pre-registration ledger
+      // 2. Update localStorage pre-registration ledger so ledger-sourced
+      //    rows also flip to Active on the next master-list rebuild.
       try {
         const saved = localStorage.getItem('munyaka_staff_prereg');
         if (saved) {
           const ledger: PreRegisteredStaff[] = JSON.parse(saved);
-          const updated = ledger.map(e => ({ ...e, status: 'Active' as const }));
+          const updated = ledger.map(e =>
+            pendingIds.has(e.id)
+              ? { ...e, status: 'Active' as const }
+              : e
+          );
           localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updated));
         }
       } catch { /* best-effort */ }
 
-      // 3. Propagate events so other components refresh
+      // 3. Also patch the canonical munyaka_staff_directory cache that
+      //    useCentralData + AdminDashboard read from so the Dashboard
+      //    counts update immediately.
+      try {
+        const cachedRaw = localStorage.getItem('munyaka_staff_directory');
+        if (cachedRaw) {
+          const cached: any[] = JSON.parse(cachedRaw);
+          const updated = cached.map(row =>
+            pendingIds.has(row.id)
+              ? { ...row, status: 'Active', is_active: 1 }
+              : row
+          );
+          localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
+        }
+      } catch { /* best-effort */ }
+
+      // 4. Propagate events so other components refresh
       notifyDataChanged('staff');
+      notifyDataChanged('munyaka_staff_directory');
       window.dispatchEvent(new Event('staff-changed'));
 
-      return preRegTeachers.length;
+      return pendingStaff.length;
     };
 
     // Try server API first — if it fails we still succeed via local fallback
@@ -903,12 +944,12 @@ const Staff = () => {
                               
                               <DropdownMenuSeparator className="my-1" />
 
-                              {member.status === 'Pre-Registered' && (
+                              {isPending(member) && (
                                 <DropdownMenuItem
                                   onClick={async () => {
                                     // Local-first: always update state immediately
                                     setStaffDirectory(prev =>
-                                      prev.map(s => s.id === member.id ? { ...s, status: 'Active' as const } : s)
+                                      prev.map(s => s.id === member.id ? { ...s, status: 'Active' as const, isActivated: true } as StaffMember : s)
                                     );
 
                                     // Update localStorage ledger if applicable
@@ -950,7 +991,7 @@ const Staff = () => {
                                 </DropdownMenuItem>
                               )}
 
-                              {member.status === 'Active' && (
+                              {!isPending(member) && (
                                 <DropdownMenuItem
                                   onClick={() => navigate('/staff/pre-registration')}
                                   className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
