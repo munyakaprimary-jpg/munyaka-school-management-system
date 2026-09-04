@@ -1,35 +1,11 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import {
-  Clock,
-  CheckCircle2,
-  AlertCircle,
-  Send,
-  FileQuestion,
-  Wifi,
-  WifiOff,
-  ChevronLeft,
-  ChevronRight,
-  Lock,
-  UserCheck,
-  IdCard,
-  Search,
-  ShieldCheck,
-  X,
-} from "lucide-react";
+import { Clock, CheckCircle2, AlertCircle, Send, FileQuestion, Wifi, WifiOff, ChevronLeft, ChevronRight, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import type {
@@ -39,20 +15,7 @@ import type {
 } from "@/types/questions";
 
 const SUBMISSION_STORAGE_KEY = "student_submissions";
-const LEARNERS_STORAGE_KEY = "school_learners_data";
-const SESSION_STORAGE_KEY = "current_student_session";
 const TIMER_TICK_MS = 1000;
-
-/** Minimal learner shape read out of `school_learners_data`. */
-interface Learner {
-  id: string;
-  name: string;
-  admissionNumber?: string;
-  admNo?: string;
-  grade?: string;
-  className?: string;
-  stream?: string;
-}
 
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
@@ -63,8 +26,8 @@ function formatTime(seconds: number): string {
 interface StudentAssessmentViewProps {
   /** The assessment to render. */
   assessment: Assessment;
-  /** ID of the active student. Optional — if omitted the component shows its own verification screen. */
-  studentId?: string;
+  /** ID of the active student. */
+  studentId: string;
   /** Optional student name for headers/logs. */
   studentName?: string;
   /** Called after a successful submission. */
@@ -75,31 +38,12 @@ interface StudentAssessmentViewProps {
 
 const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   assessment,
-  studentId: studentIdProp,
-  studentName: studentNameProp,
+  studentId,
+  studentName,
   onSubmit,
   submissionKey,
 }) => {
-  // ── Student identity state (drives the assessment session) ───────────────
-  const [studentId, setStudentId] = useState<string>(studentIdProp || "");
-  const [studentName, setStudentName] = useState<string>(studentNameProp || "");
-
-  // ── Verification / loading phases ────────────────────────────────────────
-  type Phase = "verification" | "loading" | "active" | "submitted" | "empty";
-  const [phase, setPhase] = useState<Phase>(
-    studentIdProp ? "active" : "verification"
-  );
-
-  // ── Registered learners list (for dropdown) ───────────────────────────────
-  const [learners, setLearners] = useState<Learner[]>([]);
-
-  // ── Verification form state ───────────────────────────────────────────────
-  const [verifyInput, setVerifyInput] = useState("");
-  const [verifyMode, setVerifyMode] = useState<"dropdown" | "manual">("dropdown");
-  const [verifyError, setVerifyError] = useState("");
-  const [verifyLoading, setVerifyLoading] = useState(false);
-
-  const storageKey = submissionKey || `submission_${assessment.id}_${studentId}`;
+  const storageKey = submissionKey || `${SUBMISSION_STORAGE_KEY}_${assessment.id}_${studentId}`;
 
   const [responses, setResponses] = useState<Record<string, StudentResponse>>({});
   const [timeLeft, setTimeLeft] = useState<number>(assessment.duration * 60);
@@ -119,9 +63,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
   // ── Load saved progress on mount ──────────────────────────────────────────
   useEffect(() => {
-    // Only reload after the learner has been verified; the storage key is
-    // empty while we are still on the verification screen.
-    if (phase !== "active" || !studentId) return;
     try {
       const raw = localStorage.getItem(storageKey);
       if (raw) {
@@ -151,112 +92,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       console.error("[StudentAssessmentView] Failed to load saved progress:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey, phase, studentId]);
-
-  // ── Load registered learners for the dropdown ─────────────────────────────
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(LEARNERS_STORAGE_KEY);
-      if (raw) {
-        const parsed: Learner[] = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setLearners(parsed);
-        }
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  // ── When studentIdProp becomes available (e.g. parent resolved async session),
-  //     advance from verification → active without requiring a re-entry. ──────
-  useEffect(() => {
-    if (phase === "verification" && studentIdProp) {
-      setStudentId(studentIdProp);
-      setStudentName(studentNameProp || "");
-      setPhase("active");
-    }
-  }, [studentIdProp, studentNameProp]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // ── Verification handler ──────────────────────────────────────────────────
-  // Resolves the entered admission number / selected learner against the
-  // `school_learners_data` localStorage key and, on success, binds the
-  // identity to the assessment session before advancing to the exam view.
-  const handleStartAssessment = useCallback(() => {
-    setVerifyError("");
-
-    const query = verifyInput.trim();
-    if (!query) {
-      setVerifyError("Please enter your Admission / ID number to begin.");
-      return;
-    }
-
-    setVerifyLoading(true);
-    try {
-      const raw = localStorage.getItem(LEARNERS_STORAGE_KEY);
-      if (!raw) {
-        setVerifyError(
-          "No registered learners found on this device. Please contact your teacher."
-        );
-        return;
-      }
-
-      const parsed: Learner[] = JSON.parse(raw);
-      if (!Array.isArray(parsed) || parsed.length === 0) {
-        setVerifyError(
-          "No registered learners found on this device. Please contact your teacher."
-        );
-        return;
-      }
-
-      const lower = query.toLowerCase();
-      const found = parsed.find((l) => {
-        if (!l) return false;
-        const id = (l.id || "").toLowerCase();
-        const adm = (l.admissionNumber || "").toLowerCase();
-        const admNo = (l.admNo || "").toLowerCase();
-        return id === lower || adm === lower || admNo === lower;
-      });
-
-      if (!found) {
-        setVerifyError(
-          "We could not find a registered student with that ID. Please double-check and try again."
-        );
-        return;
-      }
-
-      const resolvedId = found.id || found.admissionNumber || found.admNo || query;
-      const resolvedName = found.name || "";
-
-      setStudentId(resolvedId);
-      setStudentName(resolvedName);
-
-      // Persist the verified session so the rest of the app (grades, history,
-      // current_student_session consumers) sees the same identity.
-      try {
-        localStorage.setItem(
-          SESSION_STORAGE_KEY,
-          JSON.stringify({
-            id: resolvedId,
-            studentId: resolvedId,
-            name: resolvedName,
-            studentName: resolvedName,
-            grade: found.grade || found.className || "",
-            classId: found.grade || found.className || "",
-            className: found.grade || found.className || "",
-            stream: found.stream,
-            verifiedAt: new Date().toISOString(),
-          })
-        );
-      } catch { /* non-fatal */ }
-
-      setPhase("active");
-      showSuccess(`Welcome, ${resolvedName || resolvedId}!`);
-    } catch (err) {
-      console.error("[StudentAssessmentView] Verification failed:", err);
-      setVerifyError("Could not verify your ID. Please try again.");
-    } finally {
-      setVerifyLoading(false);
-    }
-  }, [verifyInput]);
+  }, [storageKey]);
 
   // ── Persist helper ────────────────────────────────────────────────────────
   const persistSubmission = useCallback(
@@ -307,7 +143,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
   // ── Countdown timer ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (isSubmitted || phase !== "active") return;
+    if (isSubmitted) return;
     const id = window.setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -325,7 +161,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   // ── Response handlers (auto-save on every change) ────────────────────────
   const handleSelectMCQ = useCallback(
     (questionId: string, optionId: string) => {
-      if (isSubmitted || !studentId) return;
+      if (isSubmitted) return;
       const updated: Record<string, StudentResponse> = {
         ...responses,
         [questionId]: {
@@ -344,7 +180,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
   const handleAnswerStructured = useCallback(
     (questionId: string, text: string) => {
-      if (isSubmitted || !studentId) return;
+      if (isSubmitted) return;
       const updated: Record<string, StudentResponse> = {
         ...responses,
         [questionId]: {
@@ -363,7 +199,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
-    if (isSubmitted || !assessment || !studentId) return;
+    if (isSubmitted || !assessment) return;
 
     setIsSubmitted(true);
     persistSubmission(responses, true);
@@ -413,184 +249,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           <h2 className="text-lg font-bold text-slate-700 mb-1">No Questions Available</h2>
           <p className="text-sm text-slate-500">This assessment has no questions to display.</p>
         </Card>
-      </div>
-    );
-  }
-
-  // ── Render: student verification (gates the exam) ───────────────────────
-  if (phase === "verification") {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <Card className="border-0 shadow-2xl shadow-indigo-200/40 rounded-3xl overflow-hidden">
-            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 p-6 sm:p-7 text-center text-white">
-              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-3 shadow-lg">
-                <ShieldCheck className="w-7 h-7" />
-              </div>
-              <h1 className="text-xl sm:text-2xl font-black mb-1">Student Verification</h1>
-              <p className="text-white/80 text-xs sm:text-sm">
-                Confirm your identity before starting
-                <br />
-                <span className="font-semibold text-white">{assessment.title}</span>
-              </p>
-            </div>
-
-            <CardContent className="p-5 sm:p-7 space-y-5">
-              <div className="rounded-2xl bg-indigo-50/70 border border-indigo-100 p-4 flex items-start gap-3">
-                <div className="w-9 h-9 rounded-xl bg-indigo-600 flex items-center justify-center flex-shrink-0">
-                  <IdCard className="w-4 h-4 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-bold text-indigo-900">Identify yourself</p>
-                  <p className="text-xs text-indigo-700/80 mt-0.5">
-                    Pick your name from the register or type the Admission / ID number printed on your school card.
-                  </p>
-                </div>
-              </div>
-
-              {/* Mode toggle */}
-              <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl">
-                <button
-                  type="button"
-                  onClick={() => { setVerifyMode("dropdown"); setVerifyError(""); }}
-                  className={cn(
-                    "h-10 rounded-xl text-sm font-semibold transition-all",
-                    verifyMode === "dropdown"
-                      ? "bg-white text-indigo-700 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  From Register
-                </button>
-                <button
-                  type="button"
-                  onClick={() => { setVerifyMode("manual"); setVerifyError(""); }}
-                  className={cn(
-                    "h-10 rounded-xl text-sm font-semibold transition-all",
-                    verifyMode === "manual"
-                      ? "bg-white text-indigo-700 shadow-sm"
-                      : "text-slate-500 hover:text-slate-700"
-                  )}
-                >
-                  Type ID Number
-                </button>
-              </div>
-
-              {verifyMode === "dropdown" ? (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                    Select your name
-                  </label>
-                  {learners.length === 0 ? (
-                    <div className="rounded-2xl border border-dashed border-slate-200 p-4 text-center">
-                      <p className="text-sm text-slate-500">
-                        No registered learners found on this device.
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => setVerifyMode("manual")}
-                        className="mt-2 text-xs font-semibold text-indigo-600 hover:underline"
-                      >
-                        Switch to typing your ID number →
-                      </button>
-                    </div>
-                  ) : (
-                    <Select
-                      value={verifyInput}
-                      onValueChange={(v) => {
-                        setVerifyInput(v);
-                        setVerifyError("");
-                      }}
-                    >
-                      <SelectTrigger className="h-12 rounded-2xl border-slate-200">
-                        <SelectValue placeholder="Choose your name from the list…" />
-                      </SelectTrigger>
-                      <SelectContent className="max-h-72">
-                        {learners
-                          .filter((l) => l && (l.id || l.admissionNumber || l.admNo))
-                          .map((l) => {
-                            const id = l.id || l.admissionNumber || l.admNo || "";
-                            return (
-                              <SelectItem key={id} value={id}>
-                                <span className="font-semibold">{l.name}</span>
-                                <span className="ml-2 text-xs text-slate-400">
-                                  {l.admissionNumber || l.admNo || id}
-                                  {l.grade || l.className ? ` • ${l.grade || l.className}` : ""}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                      </SelectContent>
-                    </Select>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <label className="text-xs font-bold uppercase tracking-widest text-slate-500">
-                    Admission / ID number
-                  </label>
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-                    <Input
-                      autoFocus
-                      value={verifyInput}
-                      onChange={(e) => {
-                        setVerifyInput(e.target.value);
-                        setVerifyError("");
-                      }}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleStartAssessment();
-                      }}
-                      placeholder="e.g. ADM-2024-018"
-                      className="h-12 pl-10 pr-10 rounded-2xl border-slate-200 focus:border-indigo-500 focus:ring-indigo-200"
-                    />
-                    {verifyInput && (
-                      <button
-                        type="button"
-                        onClick={() => setVerifyInput("")}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center"
-                        aria-label="Clear"
-                      >
-                        <X className="w-3.5 h-3.5 text-slate-500" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {verifyError && (
-                <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 border border-red-200">
-                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                  <p className="text-xs sm:text-sm text-red-700 font-semibold">
-                    {verifyError}
-                  </p>
-                </div>
-              )}
-
-              <Button
-                onClick={handleStartAssessment}
-                disabled={verifyLoading || !verifyInput.trim()}
-                className="w-full h-12 rounded-2xl font-bold text-base bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-200 disabled:opacity-50"
-              >
-                {verifyLoading ? (
-                  <span className="inline-flex items-center gap-2">
-                    <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                    Verifying…
-                  </span>
-                ) : (
-                  <span className="inline-flex items-center gap-2">
-                    <UserCheck className="w-4 h-4" />
-                    Start Assessment
-                  </span>
-                )}
-              </Button>
-
-              <p className="text-[11px] text-center text-slate-400">
-                Your responses will be saved under this identity.
-              </p>
-            </CardContent>
-          </Card>
-        </div>
       </div>
     );
   }
