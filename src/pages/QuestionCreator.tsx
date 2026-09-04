@@ -486,7 +486,11 @@ const QuestionCreator = () => {
                 <Card
                   key={question.id}
                   className={`border-0 shadow-lg rounded-2xl overflow-hidden transition-all duration-200 ${
-                    isExpanded ? `ring-2 ring-${accentColor}-400 shadow-${accentColor}-100` : ""
+                    isExpanded
+                      ? isMCQ
+                        ? "ring-2 ring-violet-400 shadow-violet-100"
+                        : "ring-2 ring-teal-400 shadow-teal-100"
+                      : ""
                   }`}
                 >
                   {/* Question Header */}
