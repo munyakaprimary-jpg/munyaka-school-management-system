@@ -139,45 +139,16 @@ const FeePaymentsTrendChart: React.FC = () => {
     }
   }, []);
 
-  // Generate mock historical data for previous years if needed
-  const generateMockDataForYear = (year: string): Transaction[] => {
-    const yearNum = parseInt(year, 10);
-    
-    // Generate realistic fee payment data for the year
-    const mockData: Transaction[] = [
-      // Term 1 (Jan-Mar)
-      { id: `${year}-T1-1`, date: `${year}/01/15`, amount: 45000, method: 'M-Pesa', ref: 'REF001', category: 'Tuition' },
-      { id: `${year}-T1-2`, date: `${year}/02/10`, amount: 52000, method: 'M-Pesa', ref: 'REF002', category: 'Tuition' },
-      { id: `${year}-T1-3`, date: `${year}/03/05`, amount: 38000, method: 'Bank', ref: 'REF003', category: 'Activity' },
-      
-      // Term 2 (May-Jul)
-      { id: `${year}-T2-1`, date: `${year}/05/12`, amount: 68000, method: 'M-Pesa', ref: 'REF004', category: 'Tuition' },
-      { id: `${year}-T2-2`, date: `${year}/06/08`, amount: 72000, method: 'M-Pesa', ref: 'REF005', category: 'Tuition' },
-      { id: `${year}-T2-3`, date: `${year}/07/20`, amount: 55000, method: 'Bank', ref: 'REF006', category: 'Boarding' },
-      
-      // Term 3 (Sep-Nov)
-      { id: `${year}-T3-1`, date: `${year}/09/15`, amount: 89000, method: 'M-Pesa', ref: 'REF007', category: 'Tuition' },
-      { id: `${year}-T3-2`, date: `${year}/10/10`, amount: 95000, method: 'M-Pesa', ref: 'REF008', category: 'Tuition' },
-      { id: `${year}-T3-3`, date: `${year}/11/25`, amount: 61000, method: 'Bank', ref: 'REF009', category: 'Activity' },
-    ];
-    
-    return mockData;
-  };
-
-  // Aggregate transactions by term for selected year
+  // Aggregate transactions by term for the selected year. No mock data is
+  // injected for past years — empty bars clearly indicate "no records".
   const termData = useMemo((): TermData[] => {
-    // Get transactions for the selected year
-    let yearTransactions = transactions.filter(tx => {
+    // Filter transactions for the selected year only
+    const yearTransactions = transactions.filter(tx => {
       const { year } = parseDate(tx.date);
       return year === parseInt(selectedYear, 10);
     });
 
-    // If no real data for this year, use mock data
-    if (yearTransactions.length === 0) {
-      yearTransactions = generateMockDataForYear(selectedYear);
-    }
-
-    // Aggregate by term
+    // Initialize every term at zero so the X-axis always shows all three bars
     const aggregated: Record<string, number> = {
       'Term 1 (Jan-Mar)': 0,
       'Term 2 (May-Jul)': 0,
@@ -186,7 +157,6 @@ const FeePaymentsTrendChart: React.FC = () => {
 
     yearTransactions.forEach(tx => {
       const { month } = parseDate(tx.date);
-      
       for (const [termName, config] of Object.entries(TERM_CONFIG)) {
         if (config.months.includes(month)) {
           aggregated[termName] += tx.amount;
@@ -195,7 +165,7 @@ const FeePaymentsTrendChart: React.FC = () => {
       }
     });
 
-    // Convert to array format for chart
+    // Convert to chart array — preserve the canonical academic-term order
     const result: TermData[] = Object.entries(TERM_CONFIG)
       .sort(([, a], [, b]) => a.order - b.order)
       .map(([term]) => ({
@@ -205,6 +175,14 @@ const FeePaymentsTrendChart: React.FC = () => {
       }));
 
     return result;
+  }, [transactions, selectedYear]);
+
+  // True when no real payment records exist for the selected year
+  const hasDataForYear = useMemo(() => {
+    return transactions.some(tx => {
+      const { year } = parseDate(tx.date);
+      return year === parseInt(selectedYear, 10);
+    });
   }, [transactions, selectedYear]);
 
   // Calculate totals for footer
@@ -261,29 +239,27 @@ const FeePaymentsTrendChart: React.FC = () => {
             
             {isDropdownOpen && (
               <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-xl shadow-lg border border-slate-200 py-1 z-10">
-                {ACADEMIC_YEARS.map((year) => (
-                  <button
-                    key={year}
-                    type="button"
-                    onClick={() => {
-                      setSelectedYear(year);
-                      setIsDropdownOpen(false);
-                    }}
-                    className={cn(
-                      "w-full text-left px-4 py-2.5 text-sm transition-colors",
-                      selectedYear === year
-                        ? "bg-emerald-50 text-emerald-700 font-semibold"
-                        : "text-slate-600 hover:bg-slate-50"
-                    )}
-                  >
-                    Academic Year {year}
-                    {year === '2026' && (
-                      <span className="ml-2 text-xs bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full">
-                        Current
-                      </span>
-                    )}
-                  </button>
-                ))}
+                {ACADEMIC_YEARS.map((year) => {
+                  const isCurrent = year === '2026';
+                  return (
+                    <button
+                      key={year}
+                      type="button"
+                      onClick={() => {
+                        setSelectedYear(year);
+                        setIsDropdownOpen(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-4 py-2.5 text-sm transition-colors",
+                        selectedYear === year
+                          ? "bg-emerald-50 text-emerald-700 font-semibold"
+                          : "text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      {isCurrent ? `Current Academic Year (${year})` : `Academic Year ${year}`}
+                    </button>
+                  );
+                })}
               </div>
             )}
           </div>
@@ -305,25 +281,25 @@ const FeePaymentsTrendChart: React.FC = () => {
                 strokeWidth={1}
               />
               
-              {/* X-Axis */}
+              {/* X-Axis — show the full term label "Term 1 (Jan-Mar)" */}
               <XAxis
                 dataKey="term"
                 axisLine={false}
                 tickLine={false}
-                tick={{ 
+                tick={{
                   fill: '#94A3B8',
                   fontSize: 11,
                   fontWeight: 600,
                 }}
                 dy={10}
-                tickFormatter={(value) => value.split(' ')[0] + ' ' + value.split(' ')[1]}
+                interval={0}
               />
-              
-              {/* Y-Axis */}
+
+              {/* Y-Axis — KES currency with K-suffix for readability */}
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                tick={{ 
+                tick={{
                   fill: '#94A3B8',
                   fontSize: 11,
                   fontWeight: 500,
@@ -331,7 +307,8 @@ const FeePaymentsTrendChart: React.FC = () => {
                 tickCount={5}
                 dy={0}
                 tickFormatter={(value) => {
-                  if (value >= 1000) return `KES ${(value / 1000).toFixed(0)}K`;
+                  if (value >= 1_000_000) return `KES ${(value / 1_000_000).toFixed(1)}M`;
+                  if (value >= 1_000) return `KES ${(value / 1_000).toFixed(0)}K`;
                   return `KES ${value}`;
                 }}
               />
@@ -370,16 +347,25 @@ const FeePaymentsTrendChart: React.FC = () => {
           <div>
             <p className="text-xs text-[#64748B]">Total Collected ({selectedYear})</p>
             <p className="text-xl font-black text-[#0F172A]">
-              {formatKES(totalCollected)}
+              {totalCollected > 0 ? formatKES(totalCollected) : '—'}
             </p>
           </div>
           <div className="text-right">
             <p className="text-xs text-[#64748B]">Highest Collection</p>
             <p className="text-xl font-black text-emerald-600">
-              {highestTerm?.term.split(' ')[0]} {highestTerm?.term.split(' ')[1]}
+              {totalCollected > 0
+                ? `${highestTerm?.term.split(' ')[0]} ${highestTerm?.term.split(' ')[1]}`
+                : '—'}
             </p>
           </div>
         </div>
+
+        {/* No-data notice — shown when the selected year has no payment records */}
+        {!hasDataForYear && (
+          <p className="text-xs text-center text-slate-400 mt-3">
+            No payment records found for {selectedYear}. Add fee payments to see termly collections.
+          </p>
+        )}
       </CardContent>
     </Card>
   );
