@@ -542,21 +542,46 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   }, []);
 
   // ── Download PDF via html2pdf.js ─────────────────────────────────────────────
-  // Captures the #printable-exam-paper element and saves it as a PDF file.
+  // Captures the #printable-exam-content element (the entire modal body) and
+  // saves it as a PDF file. Uses explicit html2canvas options to ensure
+  // background colors render correctly and at high DPI.
   const handleDownloadPDF = useCallback(async () => {
-    if (!exam || !printPaperRef.current) return;
+    if (!exam) return;
     setIsPdfGenerating(true);
     try {
-      const filename = `${exam.title.replace(/\s+/g, "_")}_Paper.pdf`;
+      const element = document.getElementById("printable-exam-content");
+      if (!element) {
+        showError("Could not find printable content. Please try again.");
+        return;
+      }
+
+      // The off-screen PrintableExamPaper (used for native print) must be
+      // hidden during PDF capture so it doesn't get rendered into the file.
+      const printPaperEl = document.getElementById("printable-exam-paper");
+      const previousPrintPaperDisplay = printPaperEl?.style.display;
+      if (printPaperEl) printPaperEl.style.display = "none";
+
+      const filename = `${exam.title.replace(/\s+/g, "_")}_Exam.pdf`;
       const opt = {
-        margin: 10,
+        margin: [10, 10, 10, 10] as [number, number, number, number],
         filename,
-        image: { type: "jpeg", quality: 0.98 },
-        html2canvas: { scale: 2 },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
+        image: { type: "jpeg" as const, quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          backgroundColor: "#ffffff",
+        },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
+        pagebreak: { mode: ["css", "legacy"] },
       };
-      await html2pdf().set(opt).from(printPaperRef.current).save();
-      showSuccess("Exam paper saved as PDF.");
+
+      try {
+        await html2pdf().set(opt).from(element).save();
+        showSuccess("Exam paper saved as PDF.");
+      } finally {
+        if (printPaperEl) printPaperEl.style.display = previousPrintPaperDisplay || "";
+      }
     } catch (err) {
       console.error("[ExamViewModal] PDF generation failed:", err);
       showError("Failed to generate PDF. Try using Print instead.");
@@ -576,10 +601,11 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
       {/* Backdrop */}
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
 
-      {/* Modal */}
+      {/* Modal — wrapped in printable-exam-content so html2pdf.js can target it */}
       <div
+        id="printable-exam-content"
         ref={modalRef}
-        className="relative bg-white rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden"
+        className="relative bg-white text-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[92vh] flex flex-col overflow-hidden"
       >
         {/* ── Header ─────────────────────────────────────────────────── */}
         <div className="bg-gradient-to-r from-indigo-600 to-purple-600 p-5 text-white flex items-start justify-between gap-4 shrink-0">
