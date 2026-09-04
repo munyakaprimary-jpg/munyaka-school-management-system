@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
@@ -49,17 +49,64 @@ const ASSESSMENT_CATEGORIES = [
   { value: "opener-term3", label: "Opener – Term 3" },
 ];
 
+// ─── Target grade / stream constants ─────────────────────────────────────────
+const GRADE_OPTIONS: string[] = [
+  "PP1",
+  "PP2",
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
+  "Grade 4",
+  "Grade 5",
+  "Grade 6",
+  "Grade 7",
+  "Grade 8",
+  "Grade 9",
+];
+const ALL_STREAMS_VALUE = "all";
+
+/** Read configured streams from school admin keys; falls back to []. */
+function loadConfiguredStreams(): string[] {
+  const keys = ["configured_streams", "school_classes"];
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+          .map((item: unknown) =>
+            typeof item === "string" ? item : (item as Record<string, unknown>)?.name ?? ""
+          )
+          .map((s: string) => String(s).trim())
+          .filter(Boolean);
+      }
+    } catch { /* ignore */ }
+  }
+  return [];
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const ExamCreator: React.FC = () => {
   const navigate = useNavigate();
   // Exam meta
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("formative");
+  // selectedGrade feeds the new dropdown; classLevel stays in sync so existing
+  // Assessment.classLevel consumers keep working without changes.
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [classLevel, setClassLevel] = useState("");
+  const [selectedStream, setSelectedStream] = useState<string>(ALL_STREAMS_VALUE);
+  const [availableStreams, setAvailableStreams] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
   const [totalMarks, setTotalMarks] = useState(100);
   const [passingPercentage, setPassingPercentage] = useState(50);
+
+  // Populate the stream dropdown once on mount.
+  useEffect(() => {
+    setAvailableStreams(loadConfiguredStreams());
+  }, []);
 
   // Questions
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -242,8 +289,8 @@ const ExamCreator: React.FC = () => {
       showError("Please enter an assessment title before publishing.");
       return;
     }
-    if (!classLevel.trim() || !subject.trim()) {
-      showError("Please enter a class level and subject.");
+    if (!selectedGrade || !subject.trim()) {
+      showError("Please pick a target grade and enter a subject.");
       return;
     }
     if (questions.length === 0) {
@@ -258,13 +305,18 @@ const ExamCreator: React.FC = () => {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
+      const resolvedClassLevel = (classLevel.trim() || selectedGrade).trim();
+      const resolvedStream =
+        selectedStream && selectedStream !== ALL_STREAMS_VALUE
+          ? selectedStream.trim()
+          : "all";
 
       // 1. Update question bank so StudentAssessmentView can find this exam.
       const bankPayload = {
         metadata: {
           title: title.trim(),
           category,
-          classLevel: classLevel.trim(),
+          classLevel: resolvedClassLevel,
           subject: subject.trim(),
           duration,
           totalMarks: calcTotalMarks,
@@ -273,18 +325,24 @@ const ExamCreator: React.FC = () => {
           passingPercentage,
           assessmentId,
           createdAt: now,
+          grade: selectedGrade,
+          stream: resolvedStream,
         },
         questions: questions.map((q, i) => ({ ...q, order: i + 1 })),
         savedAt: now,
       };
       writeStorage(QUESTION_BANK_KEY, bankPayload);
 
-      // 2. Build full assessment with status + all required metadata
-      const newAssessment: Assessment = {
+      // 2. Build full assessment with status + all required metadata.
+      //    `grade` and `stream` are explicit top-level fields so the
+      //    Teacher Grading Dashboard's cascading filter can match them directly.
+      const newAssessment: Assessment & { grade: string; stream: string } = {
         id: assessmentId,
         title: title.trim(),
         category,
-        classLevel: classLevel.trim(),
+        classLevel: resolvedClassLevel,
+        grade: selectedGrade,
+        stream: resolvedStream,
         subject: subject.trim(),
         duration,
         totalMarks: calcTotalMarks,
@@ -297,7 +355,7 @@ const ExamCreator: React.FC = () => {
       };
 
       // Upsert into assessments key
-      let existing: Assessment[] = [];
+      let existing: Array<Assessment & { grade?: string; stream?: string }> = [];
       try {
         const raw = localStorage.getItem(ASSESSMENTS_KEY);
         if (raw) {
@@ -308,8 +366,8 @@ const ExamCreator: React.FC = () => {
       const without = existing.filter((a) => a.id !== newAssessment.id);
       writeStorage(ASSESSMENTS_KEY, [...without, newAssessment]);
 
-      // Also save to unified all_set_exams key
-      let allSetExams: Assessment[] = [];
+      // Also save to unified all_set_exams key (used by the grading dashboard)
+      let allSetExams: Array<Assessment & { grade?: string; stream?: string }> = [];
       try {
         const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
         if (raw) {
@@ -320,7 +378,8 @@ const ExamCreator: React.FC = () => {
       const withoutAll = allSetExams.filter((a) => a.id !== newAssessment.id);
       writeStorage(ALL_SET_EXAMS_KEY, [...withoutAll, newAssessment]);
 
-      // Dispatch event so SetExamsList + StudentAssessmentPage refresh immediately
+      // Dispatch event so SetExamsList + Teacher Grading Dashboard + Marked Scripts
+      // list refresh their dropdown options automatically.
       window.dispatchEvent(new Event("assessments_updated"));
 
       setIsPublished(true);
@@ -331,7 +390,7 @@ const ExamCreator: React.FC = () => {
       setIsSaving(false);
       showError("Failed to publish: " + (e instanceof Error ? e.message : String(e)));
     }
-  }, [title, category, classLevel, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
+  }, [title, category, classLevel, selectedGrade, selectedStream, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const calculatedTotal = questions.reduce((s, q) => s + q.points, 0);
