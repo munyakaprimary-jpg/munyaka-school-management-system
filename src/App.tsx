@@ -60,6 +60,7 @@ import LANServerConfig from "./pages/LANServerConfig";
 import AssessmentSettings from "./pages/AssessmentSettings";
 import QuestionCreator from "./pages/QuestionCreator";
 import StudentAssessment from "./pages/StudentAssessment";
+import AssessmentTakingWrapper from "./pages/AssessmentTakingWrapper";
 import GradingReview from "./pages/GradingReview";
 import AssessmentsHub from "./pages/AssessmentsHub";
 
@@ -133,6 +134,7 @@ const App = () => (
                                 <Route path="/assessment-settings" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><AssessmentSettings /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/question-creator" element={<ProtectedRoute allowedRoles={['admin', 'teacher', 'head_teacher']}><AppUnlock><Layout><QuestionCreator /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/student-assessment" element={<ProtectedRoute><AppUnlock><Layout><StudentAssessment /></Layout></AppUnlock></ProtectedRoute>} />
+                                                <Route path="/assessment-taking" element={<ProtectedRoute><AppUnlock><Layout><AssessmentTakingWrapper /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/grading" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><GradingReview /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/analysis" element={<ProtectedRoute allowedRoles={['admin', 'teacher']}><AppUnlock><Layout><ResultsAnalysis /></Layout></AppUnlock></ProtectedRoute>} />
                 <Route path="/portfolio" element={<ProtectedRoute><AppUnlock><Layout><Portfolio /></Layout></AppUnlock></ProtectedRoute>} />

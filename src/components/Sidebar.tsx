@@ -133,6 +133,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
             { label: 'Grading Review', path: '/grading' },
             { label: 'Results Analysis', path: '/analysis' },
             { label: 'Question Creator', path: '/question-creator' },
+            { label: 'Take Assessment', path: '/assessment-taking', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
             { label: 'Assessment Settings', path: '/assessment-settings' },
           ]
         },

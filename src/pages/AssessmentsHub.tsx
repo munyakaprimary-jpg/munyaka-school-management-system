@@ -18,6 +18,7 @@ import {
   Award,
   Loader2,
   ChevronRight,
+  Pencil,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -365,6 +366,15 @@ export default function AssessmentsHub() {
                 accent="bg-gradient-to-br from-violet-500 to-purple-600"
                 badge="Create"
                 badgeVariant="bg-violet-50 text-violet-600"
+              />
+              <QuickLinkCard
+                icon={Pencil}
+                label="Take Assessment"
+                description="Start a test, answer questions, and submit your responses."
+                path="/assessment-taking"
+                accent="bg-gradient-to-br from-emerald-500 to-teal-600"
+                badge="Student"
+                badgeVariant="bg-emerald-50 text-emerald-600"
               />
               <QuickLinkCard
                 icon={Settings}
