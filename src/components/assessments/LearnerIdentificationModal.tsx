@@ -216,12 +216,37 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   }, []);
 
   // Filtered exams — match the selected grade and (optionally) stream.
+  // Case-insensitive grade matching; stream is flexible so exams that target
+  // "all" / "all streams" / a specific stream all surface correctly.
   // When no exam matches the chosen grade, we still want the dropdown to be
   // openable (it just shows the "No exams found for this grade" message).
   const filteredExams = useMemo<Exam[]>(() => {
-    return allExams.filter((exam) => {
-      const matchesGrade = !selectedGrade || exam.grade === selectedGrade;
-      const matchesStream = isAllStreams(selectedStream) || exam.stream === selectedStream;
+    if (!selectedGrade) return [];
+
+    const currentGrade = String(selectedGrade).toLowerCase().trim();
+    const currentStream = String(selectedStream || ALL_STREAMS).toLowerCase().trim();
+
+    return allExams.filter((exam: any) => {
+      // Normalize grade string comparison — accepts exam.targetGrade OR exam.grade
+      const examGrade = String(
+        exam?.targetGrade || exam?.grade || "",
+      )
+        .toLowerCase()
+        .trim();
+      const matchesGrade = examGrade === currentGrade;
+
+      // Stream check fallback — exam.targetStream OR exam.stream OR "all"
+      const examStream = String(
+        exam?.targetStream || exam?.stream || "all",
+      )
+        .toLowerCase()
+        .trim();
+      const matchesStream =
+        currentStream === ALL_STREAMS ||
+        examStream === ALL_STREAMS ||
+        examStream === "all streams" ||
+        examStream === currentStream;
+
       return matchesGrade && matchesStream;
     });
   }, [allExams, selectedGrade, selectedStream]);
