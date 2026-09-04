@@ -246,8 +246,8 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const csvExport = useFileDownload();
 
   const [assessments, setAssessments] = useState<Assessment[]>([]);
-  const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
-  const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
+  const [selectedExamId, setSelectedExamId] = useState<string>("");
+  const [selectedExam, setSelectedExam] = useState<Assessment | null>(null);
   const [studentGrades, setStudentGrades] = useState<StudentGrade[]>([]);
   const [selectedStudentId, setSelectedStudentId] = useState<string | null>(null);
   const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
@@ -258,6 +258,22 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const [selectedGrade, setSelectedGrade] = useState<string>(ALL_GRADES_VALUE);
   const [selectedStream, setSelectedStream] = useState<string>(ALL_STREAMS_VALUE);
 
+  // ── Auto-reset: when grade or stream changes, select the first matching exam
+  //    (but preserve "all" if the user had explicitly chosen it and it's still valid).
+  useEffect(() => {
+    const first = filteredExams[0];
+    if (first) {
+      // Only auto-select if the current choice is no longer in the filtered list.
+      const stillValid = filteredExams.some((e) => e.id === selectedExamId);
+      if (!stillValid) {
+        setSelectedExamId(first.id);
+      }
+    } else {
+      setSelectedExamId(ALL_EXAMS_VALUE);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedGrade, selectedStream]);
+
   // ── Load assessments on mount ──────────────────────────────────────────────
   useEffect(() => {
     const available = loadAssessments();
@@ -265,32 +281,27 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
     // Honour preselectedAssessmentId prop if provided and it exists in the list
     if (preselectedAssessmentId && available.some((a) => a.id === preselectedAssessmentId)) {
-      setSelectedAssessmentId(preselectedAssessmentId);
-    } else if (available.length > 0 && !selectedAssessmentId) {
-      setSelectedAssessmentId(available[0].id);
+      setSelectedExamId(preselectedAssessmentId);
+    } else if (available.length > 0 && !selectedExamId) {
+      setSelectedExamId(available[0].id);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Load submissions when assessment changes ────────────────────────────────
+  // ── Load submissions (always all; filtering is done in filteredGrades) ──────
   useEffect(() => {
-    if (!selectedAssessmentId) return;
-    // "all" mode is valid — no single assessment to look up; we'll group
-    // submissions by their own assessmentId further down.
-    const singleAssessment =
-      selectedAssessmentId === ALL_EXAMS_VALUE
-        ? null
-        : assessments.find((a) => a.id === selectedAssessmentId) || null;
-    setSelectedAssessment(singleAssessment);
+    // Resolve the single "active" assessment for the grading panel.
+    // When selectedExamId is "all" or empty, there is no single active exam.
+    const activeExam =
+      selectedExamId && selectedExamId !== ALL_EXAMS_VALUE
+        ? assessments.find((a) => a.id === selectedExamId) || null
+        : null;
+    setSelectedExam(activeExam);
 
-    // Pull every (or one) submission from localStorage.
-    const allSubmissions = loadSubmissions(selectedAssessmentId);
+    // Always load every complete submission so cascading filters work on the full set.
+    const allSubmissions = loadSubmissions(ALL_EXAMS_VALUE);
 
-    // Helper: look up the assessment that a submission belongs to.
-    const findAssessment = (examId: string): Assessment | null =>
-      assessments.find((a) => a.id === examId) || null;
-
-    // Load cached structured marks for every submission we will process.
+    // Load cached structured marks for every submission.
     const structuredMarksCache: Record<string, Record<string, number>> = {};
     allSubmissions.forEach((sub) => {
       try {
@@ -299,12 +310,12 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       } catch { /* ignore */ }
     });
 
-    // In single-assessment mode, submissions whose assessment can't be
-    // resolved (e.g. deleted) are dropped. In "all" mode we keep them but
-    // try to find a matching assessment from the loaded list.
     const grades: StudentGrade[] = [];
     allSubmissions.forEach((sub) => {
-      const assessment = singleAssessment ?? findAssessment(sub.assessmentId);
+      // When a single exam is active, only show its submissions.
+      if (activeExam && sub.assessmentId !== activeExam.id) return;
+
+      const assessment = assessments.find((a) => a.id === sub.assessmentId) || null;
       if (!assessment) return;
 
       const respMap: Record<string, StudentResponse> = {};
@@ -346,7 +357,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
     setStudentGrades(grades);
     setSelectedStudentId(grades.length > 0 ? grades[0].studentId : null);
-  }, [selectedAssessmentId, assessments]);
+  }, [selectedExamId, assessments]);
 
   // ── Structured mark change ────────────────────────────────────────────────
   const handleStructuredMarkChange = useCallback(
@@ -355,7 +366,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         prev.map((g) => {
           if (g.studentId !== studentId) return g;
           const newMarks = { ...g.structuredMarks, [questionId]: value };
-          const sq = selectedAssessment?.questions.filter((q) => q.type === "structured") || [];
+          const sq = selectedExam?.questions.filter((q) => q.type === "structured") || [];
           const earned = sq.reduce((s, q) => s + (newMarks[q.id] || 0), 0);
           const max = sq.reduce((s, q) => s + q.points, 0);
           const totalScore = g.mcqScore + earned;
@@ -374,27 +385,27 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
       // Persist to localStorage
       try {
-        const raw = localStorage.getItem(`grading_structured_${selectedAssessmentId}_${studentId}`);
+        const raw = localStorage.getItem(`grading_structured_${selectedExamId}_${studentId}`);
         const existing: Record<string, number> = raw ? JSON.parse(raw) : {};
         existing[questionId] = value;
         localStorage.setItem(
-          `grading_structured_${selectedAssessmentId}_${studentId}`,
+          `grading_structured_${selectedExamId}_${studentId}`,
           JSON.stringify(existing)
         );
       } catch { /* ignore */ }
     },
-    [selectedAssessment, selectedAssessmentId]
+    [selectedExam, selectedExamId]
   );
 
   // ── Save all results ───────────────────────────────────────────────────────
   const handleSaveAll = useCallback(async () => {
-    if (!selectedAssessment || studentGrades.length === 0) return;
+    if (!selectedExam || studentGrades.length === 0) return;
     setIsSaving(true);
     await new Promise((r) => setTimeout(r, 500));
 
     try {
       const existingAll = getAllAssessmentResults();
-      const others = existingAll.filter((r) => r.assessmentId !== selectedAssessment.id);
+      const others = existingAll.filter((r) => r.assessmentId !== selectedExam.id);
 
       let academicYear = new Date().getFullYear().toString();
       let term = "Term 1";
@@ -408,19 +419,19 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       } catch { /* ignore */ }
 
       const newResults: AssessmentResult[] = studentGrades.map((g) => ({
-        id: `result_${selectedAssessment.id}_${g.studentId}_${Date.now()}`,
+        id: `result_${selectedExam.id}_${g.studentId}_${Date.now()}`,
         studentId: g.studentId,
         studentName: g.studentName,
         classId: g.classId,
         className: g.className,
         stream: g.stream,
-        subjectId: selectedAssessment.subject,
-        subjectName: selectedAssessment.subject,
+        subjectId: selectedExam.subject,
+        subjectName: selectedExam.subject,
         academicYear,
         term,
-        examType: selectedAssessment.category,
-        assessmentId: selectedAssessment.id,
-        assessmentTitle: selectedAssessment.title,
+        examType: selectedExam.category,
+        assessmentId: selectedExam.id,
+        assessmentTitle: selectedExam.title,
         totalScore: g.totalScore,
         maxScore: g.maxScore,
         percentage: g.percentage,
@@ -451,7 +462,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           }
         });
         // Merge auto-MCQ marks with teacher-entered structured marks.
-        selectedAssessment.questions.forEach((q) => {
+        selectedExam.questions.forEach((q) => {
           const resp = g.responses[q.id];
           if (q.type === "mcq") {
             marks[q.id] =
@@ -462,9 +473,9 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         });
 
         const markedRecord: MarkedSubmission = {
-          id: `marked_${selectedAssessment.id}_${g.studentId}`,
-          examId: selectedAssessment.id,
-          examTitle: selectedAssessment.title,
+          id: `marked_${selectedExam.id}_${g.studentId}`,
+          examId: selectedExam.id,
+          examTitle: selectedExam.title,
           studentName: g.studentName,
           admissionNo: g.studentId,
           score: g.totalScore,
@@ -486,18 +497,18 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       setIsSaving(false);
       showError("Failed to save: " + (e instanceof Error ? e.message : String(e)));
     }
-  }, [selectedAssessment, studentGrades]);
+  }, [selectedExam, studentGrades]);
 
   // ── Export Marks CSV ────────────────────────────────────────────────────────
   const handleExportCSV = useCallback(async () => {
-    if (!selectedAssessment || studentGrades.length === 0) {
+    if (!selectedExam || studentGrades.length === 0) {
       showError("No grades to export.");
       return;
     }
 
-    const totalPoints = selectedAssessment.questions.reduce((s, q) => s + q.points, 0);
-    const mcqQuestions = selectedAssessment.questions.filter((q) => q.type === "mcq");
-    const structuredQuestions = selectedAssessment.questions.filter((q) => q.type === "structured");
+    const totalPoints = selectedExam.questions.reduce((s, q) => s + q.points, 0);
+    const mcqQuestions = selectedExam.questions.filter((q) => q.type === "mcq");
+    const structuredQuestions = selectedExam.questions.filter((q) => q.type === "structured");
 
     // Build headers
     const headers = [
@@ -582,7 +593,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     const csvBody = [headers.join(","), ...rows].join("\n");
 
     const filename =
-      `Marks_${selectedAssessment.title.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
+      `Marks_${selectedExam.title.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
 
     await csvExport.download({
       filename,
@@ -592,15 +603,15 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       pendingMessage: "Preparing marks export…",
       successMessage: "Marks exported successfully!",
     });
-  }, [selectedAssessment, studentGrades, csvExport]);
+  }, [selectedExam, studentGrades, csvExport]);
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const filteredGrades = useMemo(() => {
     return studentGrades.filter((g) => {
       const matchesExam =
-        selectedAssessmentId === ALL_EXAMS_VALUE ||
-        selectedAssessmentId === "" ||
-        g.assessmentId === selectedAssessmentId;
+        selectedExamId === ALL_EXAMS_VALUE ||
+        selectedExamId === "" ||
+        g.assessmentId === selectedExamId;
       const matchesGrade =
         selectedGrade === ALL_GRADES_VALUE ||
         normaliseGrade(g.classId) === normaliseGrade(selectedGrade) ||
@@ -615,20 +626,61 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         g.classId.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesExam && matchesGrade && matchesStream && matchesSearch;
     });
-  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedAssessmentId]);
+  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
 
   const selectedStudent = studentGrades.find((g) => g.studentId === selectedStudentId) || null;
 
   // ── Cascading filter lists ─────────────────────────────────────────────────
-  // Assessments whose classLevel matches the chosen grade (case-insensitive).
-  // When "All Grades" is selected we show every assessment as before.
-  const filteredAssessments = useMemo(() => {
-    if (selectedGrade === ALL_GRADES_VALUE) return assessments;
-    const needle = normaliseGrade(selectedGrade);
-    return assessments.filter(
-      (a) => normaliseGrade(a.classLevel) === needle
-    );
-  }, [assessments, selectedGrade]);
+  // filteredExams: reads from localStorage (all_set_exams) and narrows the
+  // list by selectedGrade + selectedStream, then by any exam that has
+  // at least one marked submission in the selected stream.
+  const filteredExams = useMemo(() => {
+    // 1. Load all-set exams from localStorage.
+    let allSetExams: Array<{ id: string; title: string; subject: string; classLevel?: string; grade?: string; stream?: string }> = [];
+    try {
+      const raw = localStorage.getItem("all_set_exams");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        allSetExams = Array.isArray(parsed) ? parsed : [];
+      }
+    } catch { /* ignore */ }
+
+    // 2. Load marked submissions to discover exams that have saved results.
+    let markedSubs: Array<{ examId?: string; stream?: string }> = [];
+    try {
+      const raw2 = localStorage.getItem("marked_student_submissions");
+      if (raw2) {
+        const parsed2 = JSON.parse(raw2) as Record<string, { examId?: string; stream?: string }>;
+        markedSubs = Object.values(parsed2).filter(
+          (s): s is { examId: string; stream?: string } =>
+            typeof s.examId === "string"
+        );
+      }
+    } catch { /* ignore */ }
+
+    return allSetExams.filter((exam) => {
+      const needle = normaliseGrade(selectedGrade);
+      // a) Match by grade (compare against both classLevel and grade fields).
+      const gradeField = (exam.classLevel || exam.grade || "").trim().toLowerCase();
+      const matchesGrade =
+        selectedGrade === ALL_GRADES_VALUE ||
+        needle === "" ||
+        gradeField === needle;
+
+      // b) Match by stream: direct match OR the exam has a submission in that stream.
+      const matchesStream =
+        selectedStream === ALL_STREAMS_VALUE ||
+        exam.stream === selectedStream ||
+        markedSubs.some(
+          (s) =>
+            s.examId === exam.id &&
+            (s.stream || "").trim().toLowerCase() ===
+              (selectedStream || "").trim().toLowerCase()
+        );
+
+      return matchesGrade && matchesStream;
+    });
+  }, [selectedGrade, selectedStream]);
 
   // ── Stream options: three-tier lookup ────────────────────────────────────────
   // 1. Read configured streams from the dedicated key (school admin may have set
@@ -714,9 +766,9 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   }, [selectedGrade, studentGrades, configuredStreams, gradeRegistry, allRegistryStreams]);
 
   const structuredQuestions =
-    selectedAssessment?.questions.filter((q) => q.type === "structured") || [];
+    selectedExam?.questions.filter((q) => q.type === "structured") || [];
   const mcqQuestions =
-    selectedAssessment?.questions.filter((q) => q.type === "mcq") || [];
+    selectedExam?.questions.filter((q) => q.type === "mcq") || [];
 
   const classStats = useMemo(() => {
     if (filteredGrades.length === 0) return null;
@@ -970,7 +1022,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
           <div className="sm:ml-auto flex flex-wrap items-center gap-3">
             {/* ── Grade Selector ─────────────────────────────────────────── */}
-            <Select value={selectedGrade} onValueChange={(v) => { setSelectedGrade(v); setSelectedAssessmentId(""); }}>
+            <Select value={selectedGrade} onValueChange={setSelectedGrade}>
               <SelectTrigger className="w-44 rounded-xl border-slate-200 bg-slate-50 font-medium">
                 <SelectValue placeholder="All Grades" />
               </SelectTrigger>
@@ -997,32 +1049,29 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
               ))}
             </select>
 
-            {/* ── Exam Selector (cascaded by grade) ─────────────────────── */}
-            <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
-              <SelectTrigger className="w-64 rounded-xl border-slate-200 bg-slate-50 font-medium">
-                <SelectValue placeholder="Select assessment…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_EXAMS_VALUE}>All Exams (no filter)</SelectItem>
-                {filteredAssessments.length === 0 && (
-                  <SelectItem value="none" disabled>
-                    {selectedGrade !== ALL_GRADES_VALUE
-                      ? `No exams for ${selectedGrade}`
-                      : "No assessments found"}
-                  </SelectItem>
-                )}
-                {filteredAssessments.map((a) => (
-                  <SelectItem key={a.id} value={a.id}>
-                    <span className="flex flex-col">
-                      <span className="font-medium">{a.title}</span>
-                      <span className="text-xs text-slate-500">
-                        {a.subject} · {a.category} · Class {a.classLevel}
-                      </span>
-                    </span>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* ── Exam Selector (cascaded by grade & stream) ─────────────────── */}
+            <select
+              value={selectedExamId}
+              onChange={(e) => setSelectedExamId(e.target.value)}
+              className="h-11 w-64 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              aria-label="Select exam"
+            >
+              <option value={ALL_EXAMS_VALUE}>All Exams</option>
+              {filteredExams.length === 0 ? (
+                <option value="" disabled>
+                  {selectedGrade !== ALL_GRADES_VALUE
+                    ? `No exams found for ${selectedGrade}`
+                    : "No exams found"}
+                </option>
+              ) : (
+                filteredExams.map((exam) => (
+                  <option key={exam.id} value={exam.id}>
+                    {exam.title} ({exam.subject}
+                    {(exam.classLevel || exam.grade) && ` • ${exam.classLevel || exam.grade}`})
+                  </option>
+                ))
+              )}
+            </select>
 
             <Button
               variant="outline"
@@ -1056,7 +1105,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
       <div className="max-w-7xl mx-auto px-4 py-6">
         {/* No assessment */}
-        {!selectedAssessment && (
+        {!selectedExam && (
           <div className="flex flex-col items-center justify-center py-28 text-center">
             <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center mb-6 shadow-inner">
               <BookOpen className="w-10 h-10 text-indigo-400" />
@@ -1069,21 +1118,21 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         )}
 
         {/* No submissions */}
-        {selectedAssessment && studentGrades.length === 0 && (
+        {selectedExam && studentGrades.length === 0 && (
           <div className="flex flex-col items-center justify-center py-28 text-center">
             <div className="w-20 h-20 rounded-3xl bg-emerald-50 flex items-center justify-center mb-6 shadow-inner">
               <CheckCircle2 className="w-10 h-10 text-emerald-400" />
             </div>
             <h2 className="text-xl font-bold text-slate-800 mb-2">No Submissions Yet</h2>
             <p className="text-slate-500 max-w-md">
-              No students have submitted <strong>{selectedAssessment.title}</strong> yet.
+              No students have submitted <strong>{selectedExam.title}</strong> yet.
               Submissions will appear here once students complete the assessment.
             </p>
           </div>
         )}
 
         {/* Full grading layout */}
-        {selectedAssessment && studentGrades.length > 0 && (
+        {selectedExam && studentGrades.length > 0 && (
           <div className="flex flex-col lg:flex-row gap-6">
             {/* Left: Student list */}
             <div className="w-full lg:w-80 shrink-0 flex flex-col gap-4">
@@ -1211,7 +1260,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                         <p className="text-indigo-100 text-sm mt-0.5">
                           {selectedStudent.classId}
                           {selectedStudent.stream ? ` · ${selectedStudent.stream}` : ""}
-                          {" · "}{selectedAssessment.subject}
+                          {" · "}{selectedExam.subject}
                         </p>
                       </div>
                       <div className="flex items-center gap-4 flex-wrap">
