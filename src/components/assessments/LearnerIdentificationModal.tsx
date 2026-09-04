@@ -125,62 +125,70 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
     ];
   }, []);
 
-  // All streams (across grades) so the Stream dropdown is never permanently
-  // empty if the configured_streams data is sparse.
+  // ── Dynamic Grade-Based Stream Lookup ──────────────────────────────────────
+  // Read configured grade/stream structures from localStorage and filter
+  // stream options to match the currently selected `selectedGrade`.
+  // Supports two shapes:
+  //   1. Nested: [{ grade: "Grade 4", streams: ["A", "B"] }, ...]
+  //   2. Flat:   ["A", "B", "C"] (global, used as a fallback)
   const allStreams = useMemo<string[]>(() => {
-    const raw =
-      localStorage.getItem("configured_streams") ||
-      localStorage.getItem("grades_and_streams") ||
-      "[]";
-    try {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        const streams = parsed
-          .map((item: unknown) => {
-            if (item && typeof item === "object") {
-              const obj = item as { stream?: string };
-              return obj.stream;
-            }
-            return null;
-          })
-          .filter((s): s is string => typeof s === "string" && s.length > 0);
-        if (streams.length > 0) return Array.from(new Set(streams)).sort();
-      }
-    } catch {
-      // fall through to defaults
-    }
-    return ["A", "B", "C", "D"];
-  }, []);
-
-  // Streams for the currently selected grade (falls back to all streams
-  // so the dropdown is always usable once a grade is picked).
-  const availableStreams = useMemo<string[]>(() => {
-    if (!selectedGrade) return [];
     try {
       const raw =
         localStorage.getItem("configured_streams") ||
-        localStorage.getItem("grades_and_streams") ||
+        localStorage.getItem("school_classes") ||
         "[]";
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        const streamsForGrade = parsed
-          .filter(
-            (item: unknown) =>
-              item &&
-              typeof item === "object" &&
-              (item as { grade?: string }).grade === selectedGrade
-          )
-          .map((item: unknown) => (item as { stream?: string }).stream)
-          .filter((s): s is string => typeof s === "string" && s.length > 0);
-        if (streamsForGrade.length > 0) {
-          return Array.from(new Set(streamsForGrade)).sort();
-        }
-      }
+      if (!Array.isArray(parsed)) return ["A", "B", "C", "D"];
+      const names = parsed
+        .map((s: any) => (typeof s === "string" ? s : s?.name))
+        .filter((n: unknown): n is string => typeof n === "string" && n.length > 0);
+      return names.length > 0 ? Array.from(new Set(names)).sort() : ["A", "B", "C", "D"];
     } catch {
-      // fall through
+      return ["A", "B", "C", "D"];
     }
-    return allStreams;
+  }, []);
+
+  // Streams that belong specifically to the selected grade.
+  const availableStreams = useMemo<string[]>(() => {
+    if (!selectedGrade) return [];
+
+    try {
+      const savedConfigs = JSON.parse(
+        localStorage.getItem("configured_streams") ||
+          localStorage.getItem("school_classes") ||
+          "[]"
+      );
+
+      if (!Array.isArray(savedConfigs) || savedConfigs.length === 0) {
+        return allStreams;
+      }
+
+      // Find the configuration matching the selected Grade
+      const gradeConfig = savedConfigs.find((item: any) => {
+        const key = typeof item === "string" ? item : item?.grade || item?.name;
+        return key === selectedGrade;
+      });
+
+      if (gradeConfig && Array.isArray(gradeConfig.streams)) {
+        return gradeConfig.streams
+          .map((s: any) => (typeof s === "string" ? s : s?.name || s?.title))
+          .filter((n: unknown): n is string => typeof n === "string" && n.length > 0);
+      }
+
+      // Fallback: If configurations exist as flat array of names
+      return Array.isArray(savedConfigs)
+        ? savedConfigs
+            .map((s: any) => (typeof s === "string" ? s : s?.name))
+            .filter((n: unknown): n is string => typeof n === "string" && n.length > 0)
+        : [];
+    } catch {
+      return allStreams;
+    }
   }, [selectedGrade, allStreams]);
+
+  // Sentinel for "no stream filter" — supports both legacy "" and new "all".
+  const ALL_STREAMS = "all";
+  const isAllStreams = (v: string) => v === "" || v === ALL_STREAMS;
 
   // All configured exams — populated as soon as a grade is picked, even if
   // none match exactly, so the Target Exam dropdown can show its options.
@@ -202,7 +210,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   const filteredExams = useMemo<Exam[]>(() => {
     return allExams.filter((exam) => {
       const matchesGrade = !selectedGrade || exam.grade === selectedGrade;
-      const matchesStream = !selectedStream || exam.stream === selectedStream;
+      const matchesStream = isAllStreams(selectedStream) || exam.stream === selectedStream;
       return matchesGrade && matchesStream;
     });
   }, [allExams, selectedGrade, selectedStream]);
@@ -282,7 +290,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   const filteredStudents = useMemo(() => {
     return students.filter((s) => {
       const matchesGrade = !selectedGrade || s.grade === selectedGrade;
-      const matchesStream = !selectedStream || s.stream === selectedStream;
+      const matchesStream = isAllStreams(selectedStream) || s.stream === selectedStream;
       const matchesQuery =
         !searchTerm ||
         s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,13 +304,21 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
 
   // ── Reset downstream selections when parent changes ──────────────────────────
   useEffect(() => {
-    setSelectedStream("");
+    // Reset exam selection whenever the grade or stream changes.
     setSelectedExamId("");
-  }, [selectedGrade]);
+  }, [selectedGrade, selectedStream]);
 
+  // ── Auto-Reset Stream on Grade Change ───────────────────────────────────────
+  // When `selectedGrade` changes, automatically reset `selectedStream` to
+  // "all" (or the first available stream). When no streams are configured
+  // for the new grade, clear the selection.
   useEffect(() => {
-    setSelectedExamId("");
-  }, [selectedStream]);
+    if (availableStreams.length > 0) {
+      setSelectedStream(ALL_STREAMS);
+    } else {
+      setSelectedStream("");
+    }
+  }, [selectedGrade, availableStreams]);
 
   // ── Selection handlers ──────────────────────────────────────────────────────
   const handleSelectGrade = (grade: string) => {
@@ -402,7 +418,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       setRegName("");
       setRegAdmissionNo("");
       setRegGrade(selectedGrade);
-      setRegStream(selectedStream);
+      setRegStream(isAllStreams(selectedStream) ? "" : selectedStream);
 
       showSuccess(`${newStudent.name} registered successfully!`);
     } catch (err) {
@@ -527,7 +543,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                       </div>
                     </div>
 
-                    {/* Stream Selector — enabled as soon as a grade is picked; "No stream" option allows all-stream filter */}
+                    {/* Stream Selector — enabled as soon as a grade is picked; "All Streams" resets the stream filter */}
                     <div>
                       <label className="text-xs font-medium text-slate-500 mb-1 block">
                         Stream
@@ -540,17 +556,21 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                           className={cn(
                             "w-full h-10 px-3 rounded-lg border appearance-none text-sm transition-colors pr-8",
                             !selectedGrade && "opacity-50 cursor-not-allowed bg-slate-50",
-                            selectedStream
+                            selectedStream && !isAllStreams(selectedStream)
                               ? "border-indigo-300 bg-indigo-50 text-slate-800"
                               : "border-slate-200 bg-white text-slate-400"
                           )}
                         >
-                          <option value="">All Streams</option>
-                          {availableStreams.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
+                          <option value="all">All Streams</option>
+                          {availableStreams.map((stream: any) => {
+                            const streamName =
+                              typeof stream === "string" ? stream : stream?.name || stream?.title || "";
+                            return (
+                              <option key={streamName} value={streamName}>
+                                {streamName}
+                              </option>
+                            );
+                          })}
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                       </div>
@@ -564,7 +584,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                         className="bg-indigo-50 border-indigo-200 text-indigo-600"
                       >
                         {selectedGrade}
-                        {selectedStream && ` • ${selectedStream}`}
+                        {!isAllStreams(selectedStream) && selectedStream && ` • ${selectedStream}`}
                       </Badge>
                     </div>
                   )}
@@ -623,7 +643,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                         <AlertCircle className="w-3.5 h-3.5" />
                         No exams are set for{" "}
                         {selectedGrade}
-                        {selectedStream ? ` ${selectedStream}` : ""} yet.
+                        {!isAllStreams(selectedStream) && selectedStream ? ` ${selectedStream}` : ""} yet.
                         You can still register and attempt this assessment.
                       </p>
                     )}
@@ -661,7 +681,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                           setRegName("");
                           setRegAdmissionNo("");
                           setRegGrade(selectedGrade);
-                          setRegStream(selectedStream);
+                          setRegStream(isAllStreams(selectedStream) ? "" : selectedStream);
                           setRegError(null);
                           setIsRegisteringNewStudent(true);
                         }}
@@ -731,7 +751,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                           setRegName("");
                           setRegAdmissionNo("");
                           setRegGrade(selectedGrade);
-                          setRegStream(selectedStream);
+                          setRegStream(isAllStreams(selectedStream) ? "" : selectedStream);
                           setRegError(null);
                           setIsRegisteringNewStudent(true);
                         }}
@@ -766,7 +786,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                       <p className="text-xs text-emerald-600 truncate">
                         {selectedStudent.assessmentNo || selectedStudent.admissionNumber || "ID not set"} •{" "}
                         {selectedGrade}
-                        {selectedStream && ` ${selectedStream}`}
+                        {!isAllStreams(selectedStream) && selectedStream && ` ${selectedStream}`}
                       </p>
                     </div>
                   </div>
@@ -907,12 +927,18 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                     onChange={(e) => setRegStream(e.target.value)}
                     className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm appearance-none pr-8 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors"
                   >
-                    <option value="">All Streams</option>
-                    {(regGrade ? availableStreams : allStreams).map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
+                    <option value="all">All Streams</option>
+                    {(regGrade ? availableStreams : allStreams).map((stream: any) => {
+                      const streamName =
+                        typeof stream === "string"
+                          ? stream
+                          : stream?.name || stream?.title || "";
+                      return (
+                        <option key={streamName} value={streamName}>
+                          {streamName}
+                        </option>
+                      );
+                    })}
                   </select>
                   <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 </div>
@@ -927,7 +953,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                     className="bg-indigo-50 border-indigo-200 text-indigo-600"
                   >
                     {regGrade || "Any Grade"}
-                    {regStream ? ` ${regStream}` : ""}
+                    {!isAllStreams(regStream) && regStream ? ` ${regStream}` : ""}
                   </Badge>
                 </div>
               )}
