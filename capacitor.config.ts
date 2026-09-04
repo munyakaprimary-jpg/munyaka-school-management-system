@@ -5,7 +5,15 @@ const config: CapacitorConfig = {
   appName: 'Munyaka School Portal',
   webDir: 'dist',
   server: {
-    androidScheme: 'https'
+    /**
+     * Allow unencrypted http:// traffic to LAN servers (e.g. http://10.0.2.2:5000
+     * for the emulator and http://192.168.x.x:5000 for devices on the same
+     * network). Required because the on-device LAN backend only serves HTTP.
+     */
+    cleartext: true,
+    /** Use http:// scheme so http://localhost and http://10.0.2.2 resolve
+     * without TLS — pairs with cleartext: true. */
+    androidScheme: 'http'
   }
 };
 
