@@ -12,6 +12,7 @@ import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
+import { saveTeacherInputResult } from "@/utils/assessmentResults";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -400,49 +401,77 @@ const Assessments = () => {
   }, [targetKey, filteredStudents, allTierSubjects]);
 
   // ============================================
-  // IMMEDIATE LOCALSTORAGE AUTOSAVE & HISTORY PRESERVATION
-  // Uses strict 5-part targetKey for isolation
-  // ============================================
-  const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
-    let clean = value.replace(/[^0-9]/g, "");
-    if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
-
-    setMarksMatrix(prev => {
-      const updated = {
-        ...prev,
-        [studentId]: {
-          ...(prev[studentId] || {}),
-          [subj]: clean
-        }
-      };
-
-      // 3. History Preservation & Merging: Save into specific targetKey
-      try {
-        localStorage.setItem(targetKey, JSON.stringify(updated));
-        notifyDataChanged(targetKey);
-
-        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
-        let masterObj: Record<string, any> = {};
-        if (existingMasterStr) {
-          try {
-            masterObj = JSON.parse(existingMasterStr);
-          } catch (err) {
-            masterObj = {};
+    // IMMEDIATE LOCALSTORAGE AUTOSAVE & HISTORY PRESERVATION
+    // Uses strict 5-part targetKey for isolation
+    // Also persists an AssessmentResult record linked to student/class/subject/term.
+    // ============================================
+    const handleMarkChange = useCallback((studentId: string, subj: string, value: string) => {
+      let clean = value.replace(/[^0-9]/g, "");
+      if (clean !== "" && parseInt(clean, 10) > 100) clean = "100";
+  
+      setMarksMatrix(prev => {
+        const updated = {
+          ...prev,
+          [studentId]: {
+            ...(prev[studentId] || {}),
+            [subj]: clean
           }
+        };
+  
+        // 3. History Preservation & Merging: Save into specific targetKey
+        try {
+          localStorage.setItem(targetKey, JSON.stringify(updated));
+          notifyDataChanged(targetKey);
+  
+          const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+          let masterObj: Record<string, any> = {};
+          if (existingMasterStr) {
+            try {
+              masterObj = JSON.parse(existingMasterStr);
+            } catch (err) {
+              masterObj = {};
+            }
+          }
+          masterObj[targetKey] = updated;
+          localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+          notifyDataChanged("munyaka_assessment_scores");
+  
+          // Also write an AssessmentResult record linked to student/class/subject/term
+          if (clean !== "") {
+            const score = parseInt(clean, 10);
+            if (!isNaN(score)) {
+              const student = filteredStudents.find(
+                (s) => (s.id || s.admissionNumber) === studentId
+              );
+              if (student) {
+                saveTeacherInputResult(score, {
+                  studentId,
+                  studentName: student.name,
+                  classId: student.grade || student.gradeLevel || currentGrade,
+                  className: student.grade || student.gradeLevel || currentGrade,
+                  stream: student.stream || student.classStream,
+                }, {
+                  academicYear,
+                  term,
+                  examType,
+                  subjectId: subj,
+                  subjectName: subj,
+                  assessmentTitle: `${subj} – ${examType}`,
+                  maxScore: 100,
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Autosave/History preservation error:", e);
         }
-        masterObj[targetKey] = updated;
-        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
-        notifyDataChanged("munyaka_assessment_scores");
-      } catch (e) {
-        console.error("Autosave/History preservation error:", e);
-      }
-
-      return updated;
-    });
-
-    setShowSavedBadge(true);
-    setTimeout(() => setShowSavedBadge(false), 2000);
-  }, [targetKey]);
+  
+        return updated;
+      });
+  
+      setShowSavedBadge(true);
+      setTimeout(() => setShowSavedBadge(false), 2000);
+    }, [targetKey, filteredStudents, academicYear, term, examType, currentGrade]);
 
   // Calculations for Totals, Subject Totals, Subject MSS, Class Average
   const studentTotals = useMemo(() => {
@@ -542,33 +571,63 @@ const Assessments = () => {
   }, [filteredStudents, marksMatrix, allTierSubjects]);
 
   // Save All Marks explicitly commits to localStorage under targetKey
-  const handleSaveAll = async () => {
-    setIsSaving(true);
-    await new Promise(r => setTimeout(r, 600));
-    try {
-      localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
-      notifyDataChanged(targetKey);
-
-      const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
-      let masterObj: Record<string, any> = {};
-      if (existingMasterStr) {
-        try {
-          masterObj = JSON.parse(existingMasterStr);
-        } catch (err) {
-          masterObj = {};
+    // Also writes AssessmentResult records for every entered mark
+    const handleSaveAll = async () => {
+      setIsSaving(true);
+      await new Promise(r => setTimeout(r, 600));
+      try {
+        localStorage.setItem(targetKey, JSON.stringify(marksMatrix));
+        notifyDataChanged(targetKey);
+  
+        const existingMasterStr = localStorage.getItem("munyaka_assessment_scores");
+        let masterObj: Record<string, any> = {};
+        if (existingMasterStr) {
+          try {
+            masterObj = JSON.parse(existingMasterStr);
+          } catch (err) {
+            masterObj = {};
+          }
         }
+        masterObj[targetKey] = marksMatrix;
+        localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
+        notifyDataChanged("munyaka_assessment_scores");
+  
+        // Bulk write AssessmentResult records for every entered mark
+        filteredStudents.forEach((student) => {
+          const studentId = student.id || student.admissionNumber;
+          const studentMarks = marksMatrix[studentId] || {};
+          Object.entries(studentMarks).forEach(([subj, rawScore]) => {
+            const scoreStr = String(rawScore || "").trim();
+            if (scoreStr !== "") {
+              const score = parseInt(scoreStr, 10);
+              if (!isNaN(score)) {
+                saveTeacherInputResult(score, {
+                  studentId,
+                  studentName: student.name,
+                  classId: student.grade || student.gradeLevel || currentGrade,
+                  className: student.grade || student.gradeLevel || currentGrade,
+                  stream: student.stream || student.classStream,
+                }, {
+                  academicYear,
+                  term,
+                  examType,
+                  subjectId: subj,
+                  subjectName: subj,
+                  assessmentTitle: `${subj} – ${examType}`,
+                  maxScore: 100,
+                });
+              }
+            }
+          });
+        });
+  
+        setIsSaving(false);
+        showSuccess("All marks successfully committed to localStorage!");
+      } catch (e) {
+        setIsSaving(false);
+        showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
       }
-      masterObj[targetKey] = marksMatrix;
-      localStorage.setItem("munyaka_assessment_scores", JSON.stringify(masterObj));
-      notifyDataChanged("munyaka_assessment_scores");
-
-      setIsSaving(false);
-      showSuccess("All marks successfully committed to localStorage!");
-    } catch (e) {
-      setIsSaving(false);
-      showError("Error saving marks: " + (e instanceof Error ? e.message : String(e)));
-    }
-  };
+    };
 
   // ====== UNIFIED DOWNLOAD HANDLER: CSV export ======
   // Builds the CSV with EXACTLY these first rows in order:

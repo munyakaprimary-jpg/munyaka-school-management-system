@@ -20,6 +20,7 @@ import {
   WifiOff,
 } from "lucide-react";
 import type { Assessment, StudentSubmission, StudentResponse } from "@/types/questions";
+import { buildAndSaveResult } from "@/utils/assessmentResults";
 
 const STORAGE_KEY = "question_bank";
 const SUBMISSION_STORAGE_KEY = "student_submissions";
@@ -32,7 +33,56 @@ export default function StudentAssessment() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const studentId = "student_demo_01"; // Simulated student ID
+
+  // Load student identity from the main learner store
+  const [studentInfo, setStudentInfo] = useState<{
+    studentId: string;
+    studentName?: string;
+    classId: string;
+    className: string;
+    stream?: string;
+  }>(() => {
+    // Try to get the logged-in student from session or default to demo
+    const sessionStudent = localStorage.getItem("current_student_session");
+    if (sessionStudent) {
+      try {
+        const parsed = JSON.parse(sessionStudent);
+        return {
+          studentId: parsed.id || parsed.studentId || "student_demo_01",
+          studentName: parsed.name || parsed.studentName,
+          classId: parsed.grade || parsed.classId || "Grade 4",
+          className: parsed.grade || parsed.classId || "Grade 4",
+          stream: parsed.stream,
+        };
+      } catch { /* fall through */ }
+    }
+
+    // Fallback: load first active learner from school_learners_data
+    try {
+      const learnersRaw = localStorage.getItem("school_learners_data");
+      if (learnersRaw) {
+        const learners = JSON.parse(learnersRaw);
+        const active = Array.isArray(learners) ? learners.find((l: any) => l.status !== "TRANSFERRED") : null;
+        if (active) {
+          return {
+            studentId: active.id || "student_demo_01",
+            studentName: active.name,
+            classId: active.grade || "Grade 4",
+            className: active.grade || "Grade 4",
+            stream: active.stream,
+          };
+        }
+      }
+    } catch { /* fall through */ }
+
+    return {
+      studentId: "student_demo_01",
+      classId: "Grade 4",
+      className: "Grade 4",
+    };
+  });
+
+  const studentId = studentInfo.studentId;
 
   // Load assessment and previous responses on mount
   useEffect(() => {
@@ -170,6 +220,42 @@ export default function StudentAssessment() {
     if (!assessment) return;
     setIsSubmitted(true);
     saveResponsesToStorage(responses, true);
+
+    // Persist a full AssessmentResult linked to student/class/subject/term
+    try {
+      // Load academic year + term from system settings
+      let academicYear = new Date().getFullYear().toString();
+      let term = "Term 1";
+      try {
+        const settingsRaw = localStorage.getItem("munyaka_system_settings_v3");
+        if (settingsRaw) {
+          const settings = JSON.parse(settingsRaw);
+          academicYear = settings.academicYear || academicYear;
+          term = settings.term || term;
+        }
+      } catch { /* use defaults */ }
+
+      buildAndSaveResult(
+        assessment,
+        {
+          responses,
+          startedAt: new Date().toISOString(),
+          submittedAt: new Date().toISOString(),
+          isComplete: true,
+        },
+        studentInfo,
+        {
+          academicYear,
+          term,
+          examType: assessment.category,
+          subjectId: assessment.subject,
+          subjectName: assessment.subject,
+          durationSeconds: (assessment.duration * 60) - timeLeft,
+        }
+      );
+    } catch (e) {
+      console.error("Failed to save assessment result:", e);
+    }
   };
 
   const formatTime = (seconds: number) => {
