@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
@@ -49,73 +49,17 @@ const ASSESSMENT_CATEGORIES = [
   { value: "opener-term3", label: "Opener – Term 3" },
 ];
 
-// ─── Target grade list (CBC: PP1, PP2, Grade 1–9) ───────────────────────────
-const GRADE_OPTIONS: string[] = [
-  "PP1",
-  "PP2",
-  "Grade 1",
-  "Grade 2",
-  "Grade 3",
-  "Grade 4",
-  "Grade 5",
-  "Grade 6",
-  "Grade 7",
-  "Grade 8",
-  "Grade 9",
-];
-const ALL_STREAMS_VALUE = "all";
-
-/**
- * Read available streams from the localStorage keys the school admin uses to
- * configure the school. Falls back to an empty array if nothing is configured
- * (in which case the dropdown will only show "All Streams").
- */
-function loadConfiguredStreams(): string[] {
-  const keys = ["configured_streams", "school_classes"];
-  for (const k of keys) {
-    try {
-      const raw = localStorage.getItem(k);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Accept either a flat string[] or an object list with `name` fields.
-        return parsed
-          .map((item: any) =>
-            typeof item === "string" ? item : item?.name ?? ""
-          )
-          .map((s: string) => String(s).trim())
-          .filter(Boolean);
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-  return [];
-}
-
 // ─── Component ────────────────────────────────────────────────────────────────
 const ExamCreator: React.FC = () => {
   const navigate = useNavigate();
   // Exam meta
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("formative");
-  // Target grade replaces the previous free-text classLevel so the saved
-  // assessment has a normalized, queryable grade string. classLevel is still
-  // populated from selectedGrade so the rest of the app (which reads
-  // Assessment.classLevel) keeps working unchanged.
-  const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [classLevel, setClassLevel] = useState("");
-  const [selectedStream, setSelectedStream] = useState<string>(ALL_STREAMS_VALUE);
-  const [availableStreams, setAvailableStreams] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
   const [totalMarks, setTotalMarks] = useState(100);
   const [passingPercentage, setPassingPercentage] = useState(50);
-
-  // Pull the configured streams list once on mount.
-  useEffect(() => {
-    setAvailableStreams(loadConfiguredStreams());
-  }, []);
 
   // Questions
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -298,8 +242,8 @@ const ExamCreator: React.FC = () => {
       showError("Please enter an assessment title before publishing.");
       return;
     }
-    if (!selectedGrade || !subject.trim()) {
-      showError("Please pick a target grade and enter a subject.");
+    if (!classLevel.trim() || !subject.trim()) {
+      showError("Please enter a class level and subject.");
       return;
     }
     if (questions.length === 0) {
@@ -314,18 +258,13 @@ const ExamCreator: React.FC = () => {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
-      const resolvedClassLevel = (classLevel.trim() || selectedGrade).trim();
-      const resolvedStream =
-        selectedStream && selectedStream !== ALL_STREAMS_VALUE
-          ? selectedStream.trim()
-          : "all";
 
       // 1. Update question bank so StudentAssessmentView can find this exam.
       const bankPayload = {
         metadata: {
           title: title.trim(),
           category,
-          classLevel: resolvedClassLevel,
+          classLevel: classLevel.trim(),
           subject: subject.trim(),
           duration,
           totalMarks: calcTotalMarks,
@@ -340,18 +279,12 @@ const ExamCreator: React.FC = () => {
       };
       writeStorage(QUESTION_BANK_KEY, bankPayload);
 
-      // 2. Build full assessment with status + all required metadata.
-      //    `grade` and `stream` are explicit top-level fields so the
-      //    Teacher Grading Dashboard's cascading filter can match against
-      //    them directly. `stream === "all"` means the exam is open to
-      //    every stream in the target grade.
-      const newAssessment: Assessment & { grade: string; stream: string } = {
+      // 2. Build full assessment with status + all required metadata
+      const newAssessment: Assessment = {
         id: assessmentId,
         title: title.trim(),
         category,
-        classLevel: resolvedClassLevel,
-        grade: selectedGrade,
-        stream: resolvedStream,
+        classLevel: classLevel.trim(),
         subject: subject.trim(),
         duration,
         totalMarks: calcTotalMarks,
@@ -376,7 +309,7 @@ const ExamCreator: React.FC = () => {
       writeStorage(ASSESSMENTS_KEY, [...without, newAssessment]);
 
       // Also save to unified all_set_exams key
-      let allSetExams: Array<Assessment & { grade?: string; stream?: string }> = [];
+      let allSetExams: Assessment[] = [];
       try {
         const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
         if (raw) {
@@ -387,8 +320,7 @@ const ExamCreator: React.FC = () => {
       const withoutAll = allSetExams.filter((a) => a.id !== newAssessment.id);
       writeStorage(ALL_SET_EXAMS_KEY, [...withoutAll, newAssessment]);
 
-      // Dispatch event so SetExamsList + StudentAssessmentPage + Teacher
-      // Grading Dashboard refresh their dropdown options immediately.
+      // Dispatch event so SetExamsList + StudentAssessmentPage refresh immediately
       window.dispatchEvent(new Event("assessments_updated"));
 
       setIsPublished(true);
@@ -399,7 +331,7 @@ const ExamCreator: React.FC = () => {
       setIsSaving(false);
       showError("Failed to publish: " + (e instanceof Error ? e.message : String(e)));
     }
-  }, [title, category, classLevel, selectedGrade, selectedStream, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
+  }, [title, category, classLevel, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const calculatedTotal = questions.reduce((s, q) => s + q.points, 0);
@@ -527,54 +459,18 @@ const ExamCreator: React.FC = () => {
               </select>
             </div>
 
-            {/* ── Target Grade + Target Stream + Subject ─────────────────── */}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Target Grade <span className="text-red-500">*</span>
+                  Class <span className="text-red-500">*</span>
                 </Label>
-                <select
-                  value={selectedGrade}
-                  onChange={(e) => {
-                    setSelectedGrade(e.target.value);
-                    // Keep classLevel in sync so existing Assessment.classLevel
-                    // consumers continue to work.
-                    setClassLevel(e.target.value);
-                  }}
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  aria-label="Target grade"
-                >
-                  <option value="">Select grade…</option>
-                  {GRADE_OPTIONS.map((g) => (
-                    <option key={g} value={g}>{g}</option>
-                  ))}
-                </select>
+                <Input
+                  placeholder="e.g. Grade 4"
+                  value={classLevel}
+                  onChange={(e) => setClassLevel(e.target.value)}
+                  className="rounded-xl h-11"
+                />
               </div>
-              <div className="space-y-2">
-                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Target Stream
-                </Label>
-                <select
-                  value={selectedStream}
-                  onChange={(e) => setSelectedStream(e.target.value)}
-                  className="w-full h-11 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                  aria-label="Target stream"
-                >
-                  <option value={ALL_STREAMS_VALUE}>All Streams (entire grade)</option>
-                  {availableStreams.length === 0 ? (
-                    <option value="" disabled>
-                      No streams configured
-                    </option>
-                  ) : (
-                    availableStreams.map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))
-                  )}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Subject <span className="text-red-500">*</span>
