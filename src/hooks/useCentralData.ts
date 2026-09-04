@@ -209,9 +209,14 @@ const computeStats = (): CentralDataStats => {
     const allTeachers = getTeachers();
     // Track BOTH totals separately so callers can distinguish:
     //   - totalTeachers       → every teacher-classified record (active + pending)
-    //   - activeTeacherCount  → only Active/active status rows
+    //   - activeTeacherCount  → only Active status rows
     // The dashboard "Registered Teachers" card shows the total, while
     // an "Active" badge can show the active sub-count.
+    //
+    // The server now returns a `status` field ('Active' | 'Pre-Registered')
+    // derived from `is_active`. Use it directly instead of inferring
+    // from the integer column. Fall back to the legacy is_active
+    // boolean for locally-created records that haven't been synced.
     const allTeacherRecords = allTeachers.filter((t) => {
       if (!t) return false;
       if (!matchesActiveSchool(t, activeSchoolId)) return false;
@@ -219,11 +224,14 @@ const computeStats = (): CentralDataStats => {
       return isTeacherRecord(t);
     });
     const totalTeachers = allTeacherRecords.length;
-    // Backwards-compat: also expose the active sub-count
     const activeTeacherCount = allTeacherRecords.filter((t) => {
-      if (!t.status) return true; // missing status → treat as active (legacy shape)
-      const s = String(t.status).toLowerCase();
-      return s === 'active' || s === 'verified' || s === 'approved' || s === 'enabled';
+      const status = String(t.status || '').toLowerCase();
+      if (status) {
+        // Server returns 'Active' or 'Pre-Registered' — use it directly
+        return status === 'active';
+      }
+      // Legacy local record: fall back to is_active boolean
+      return t.is_active !== 0 && t.is_active !== false && t.is_active !== '0';
     }).length;
 
     // ── Today's attendance — deduplicated by studentId ──

@@ -216,6 +216,7 @@ const initDB = () => {
       grade_assigned TEXT,
       stream_assigned TEXT,
       is_active INTEGER DEFAULT 1,
+      status TEXT DEFAULT 'active',
       created_at TEXT DEFAULT CURRENT_TIMESTAMP,
       updated_at TEXT DEFAULT CURRENT_TIMESTAMP
     );
@@ -305,7 +306,6 @@ const initDB = () => {
   // Fallback: Add missing columns to teachers table for older database files
   const migrateTeachersTable = () => {
     try {
-      // Check if full_name column exists, if not add it
       const tableInfo = dbAll("PRAGMA table_info(teachers)");
       const columnNames = tableInfo.map(col => col.name);
 
@@ -320,6 +320,13 @@ const initDB = () => {
       if (!columnNames.includes('tsc_number')) {
         dbRun("ALTER TABLE teachers ADD COLUMN tsc_number TEXT");
         console.log('  → Added tsc_number column to teachers table');
+      }
+      if (!columnNames.includes('status')) {
+        dbRun("ALTER TABLE teachers ADD COLUMN status TEXT DEFAULT 'active'");
+        console.log('  → Added status column to teachers table');
+        // Migrate existing pre-registered teachers to active
+        dbRun("UPDATE teachers SET status = 'active', is_active = 1 WHERE status IS NULL OR status = 'Pre-Registered'");
+        console.log('  → Migrated existing pre-registered teachers to active');
       }
     } catch (err) {
       console.warn('Migration note:', err.message);
@@ -481,7 +488,7 @@ app.delete('/api/students/:id', (req, res) => {
 // Get all teachers
 // Accepts optional query params:
 //   ?search=keyword        — full-text search on name / staff_id
-//   ?active=true|false     — filter by is_active (omit to return ALL teachers)
+//   ?active=true|false    — filter by is_active (omit to return ALL teachers)
 app.get('/api/teachers', (req, res) => {
   try {
     const { search, active } = req.query;
@@ -504,7 +511,15 @@ app.get('/api/teachers', (req, res) => {
 
     query += ' ORDER BY last_name, first_name';
     const teachers = dbAll(query, params);
-    res.json({ success: true, data: teachers });
+
+    // Derive a human-readable `status` field from `is_active` so
+    // the frontend doesn't need to know about the integer column.
+    const enriched = teachers.map(t => ({
+      ...t,
+      status: t.is_active ? 'Active' : 'Pre-Registered',
+    }));
+
+    res.json({ success: true, data: enriched });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -517,7 +532,71 @@ app.get('/api/teachers/:id', (req, res) => {
     if (!teacher) {
       return res.status(404).json({ success: false, error: 'Teacher not found' });
     }
-    res.json({ success: true, data: teacher });
+    res.json({
+      success: true,
+      data: { ...teacher, status: teacher.is_active ? 'Active' : 'Pre-Registered' }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ─── Bulk Activate Teachers ────────────────────────────────────────────────────
+// POST /api/teachers/bulk-activate
+// Body: { ids: string[] }   — array of teacher record IDs
+// Returns: { success, activated, notFound[] }
+app.post('/api/teachers/bulk-activate', (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids must be a non-empty array' });
+    }
+
+    let activated = 0;
+    const notFound: string[] = [];
+
+    for (const id of ids) {
+      const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [id]);
+      if (!existing) {
+        notFound.push(id);
+        continue;
+      }
+      dbRun(
+        `UPDATE teachers SET is_active = 1, status = 'active', updated_at = CURRENT_TIMESTAMP WHERE id = ?`,
+        [id]
+      );
+      activated++;
+    }
+
+    saveDatabase();
+
+    res.json({
+      success: true,
+      activated,
+      notFound: notFound.length > 0 ? notFound : undefined,
+      message: `Activated ${activated} teacher(s).`,
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// POST /api/teachers/activate-all
+// Activates every pre-registered / inactive teacher in one shot.
+// Useful for first-time onboarding or after importing a roster.
+app.post('/api/teachers/activate-all', (req, res) => {
+  try {
+    const result = dbRun(
+      `UPDATE teachers SET is_active = 1, status = 'active', updated_at = CURRENT_TIMESTAMP
+       WHERE is_active = 0 OR is_active IS NULL OR LOWER(status) IN ('pre-registered', 'pre-registered', 'pending', 'inactive')`
+    );
+    saveDatabase();
+    res.json({
+      success: true,
+      activated: result.changes || 0,
+      message: `Activated ${result.changes || 0} teacher(s).`,
+    });
   } catch (error) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -560,6 +639,14 @@ app.post('/api/teachers', (req, res) => {
     // Default role to TEACHER if not specified
     const finalRole = role || 'TEACHER';
 
+    // Auto-activate: a newly created teacher is active by default.
+    // Admin approval is only required when the client explicitly
+    // sends is_active=false / status='pre-registered'.
+    const finalIsActive = is_active !== undefined
+      ? (is_active ? 1 : 0)
+      : 1;
+    const finalStatus = finalIsActive ? 'active' : 'pre-registered';
+
     // If email is empty string, make it null so unique constraint doesn't fail on multiple nulls/empty strings
     const cleanEmail = email && email.trim() !== '' ? email.trim() : null;
     const cleanPhone = phone && phone.trim() !== '' ? phone.trim() : null;
@@ -575,8 +662,8 @@ app.post('/api/teachers', (req, res) => {
     }
 
     dbRun(
-      `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         id,
         finalStaffId,
@@ -591,7 +678,9 @@ app.post('/api/teachers', (req, res) => {
         cleanTsc,
         subject_specialization || null,
         grade_assigned || null,
-        stream_assigned || null
+        stream_assigned || null,
+        finalIsActive,
+        finalStatus
       ]
     );
 
@@ -610,7 +699,7 @@ app.put('/api/teachers/:id', (req, res) => {
     const {
       staff_id, full_name, first_name, last_name, role,
       email, phone, gender, id_number, tsc_number,
-      subject_specialization, grade_assigned, stream_assigned, is_active
+      subject_specialization, grade_assigned, stream_assigned, is_active, status
     } = req.body;
 
     // Handle full_name: split into first/last if provided and they aren't
@@ -622,13 +711,28 @@ app.put('/api/teachers/:id', (req, res) => {
       lastName = nameParts.slice(1).join(' ') || '';
     }
 
+    // Derive is_active from either the boolean or the status string
+    let computedIsActive;
+    if (typeof is_active === 'boolean' || typeof is_active === 'number') {
+      computedIsActive = is_active ? 1 : 0;
+    } else if (typeof status === 'string') {
+      computedIsActive = status.toLowerCase() === 'active' ? 1 : 0;
+    } else {
+      computedIsActive = 1;
+    }
+    const computedStatus = computedIsActive ? 'active' : 'pre-registered';
+
     dbRun(
-      `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
-      [staff_id, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, role || 'TEACHER', email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, req.params.id]
+      `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, status=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+      [staff_id, full_name || `${firstName} ${lastName}`.trim(), firstName, lastName, role || 'TEACHER', email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, computedIsActive, computedStatus, req.params.id]
     );
 
     saveDatabase();
     const teacher = dbGet('SELECT * FROM teachers WHERE id = ?', [req.params.id]);
+    // Enrich with derived status field
+    if (teacher) {
+      teacher.status = teacher.is_active ? 'Active' : 'Pre-Registered';
+    }
     res.json({ success: true, data: teacher });
   } catch (err) {
     console.error('PUT /api/teachers/:id error:', err.message);
@@ -1036,9 +1140,10 @@ app.post('/api/sync', (req, res) => {
             );
             results.push({ id: teacherId, status: 'updated' });
           } else {
+            const finalSyncActive = data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1;
             dbRun(
-              `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active, status)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
               [
                 teacherId,
                 data.staff_id || finalStaffId,
@@ -1054,7 +1159,8 @@ app.post('/api/sync', (req, res) => {
                 data.subject_specialization || null,
                 data.grade_assigned || null,
                 data.stream_assigned || null,
-                data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1
+                finalSyncActive,
+                finalSyncActive ? 'active' : 'pre-registered'
               ]
             );
             results.push({ id: teacherId, status: 'created' });

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import BackButton from '@/components/ui/BackButton';
 import { 
   UserPlus, 
@@ -86,6 +87,10 @@ const Staff = () => {
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
   const [isSaving, setIsSaving] = useState(false);
 
+  // Bulk activation state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [isBulkActivating, setIsBulkActivating] = useState(false);
+
   // Form state for new/edit staff
   const [formData, setFormData] = useState({
     full_name: '',
@@ -103,19 +108,38 @@ const Staff = () => {
       const res = await api.get<{ success?: boolean; data: any[] }>('/api/teachers');
       const records = Array.isArray(res) ? res : (res.data || []);
 
-      const staffList: StaffMember[] = records.map((r: any) => ({
-        id: r.id,
-        id_no: r.id_number || r.id_no || r.staff_id || '',
-        tsc_no: r.tsc_number || r.tsc_no,
-        full_name: r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-        role: r.role || 'TEACHER',
-        subjects: r.subjects || [],
-        phone: r.phone || '',
-        email: r.email || '',
-        status: r.status || 'Active',
-        joined: r.joined || r.created_at || '',
-        department: r.department || 'School Administration'
-      }));
+      const staffList: StaffMember[] = records.map((r: any) => {
+        // The server derives a `status` field ('Active' | 'Pre-Registered')
+        // from the integer is_active column. Use it directly when present.
+        // Otherwise fall back to deriving from is_active for legacy records.
+        let status: 'Active' | 'Pre-Registered' | 'Suspended' = 'Active';
+        if (r.status) {
+          const s = String(r.status).toLowerCase();
+          if (s === 'pre-registered' || s === 'pre_registered' || s === 'preregistered') {
+            status = 'Pre-Registered';
+          } else if (s === 'suspended') {
+            status = 'Suspended';
+          } else {
+            status = 'Active';
+          }
+        } else if (r.is_active === 0 || r.is_active === false || r.is_active === '0') {
+          status = 'Pre-Registered';
+        }
+
+        return {
+          id: r.id,
+          id_no: r.id_number || r.id_no || r.staff_id || '',
+          tsc_no: r.tsc_number || r.tsc_no,
+          full_name: r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
+          role: r.role || 'TEACHER',
+          subjects: r.subjects || [],
+          phone: r.phone || '',
+          email: r.email || '',
+          status,
+          joined: r.joined || r.created_at || '',
+          department: r.department || 'School Administration'
+        };
+      });
 
       // Merge in any staff saved locally (offline-first registrations)
       const localStaff = getLocalStaff();
@@ -424,6 +448,101 @@ const Staff = () => {
     });
   };
 
+  // ── Bulk Selection ──────────────────────────────────────────────────────────
+  const toggleSelectAll = () => {
+    if (selectedIds.size === filteredStaff.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(filteredStaff.map(s => s.id)));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  // ── Bulk Activate via Server ────────────────────────────────────────────────
+  const handleBulkActivate = async () => {
+    if (selectedIds.size === 0) return;
+    setIsBulkActivating(true);
+    try {
+      const idsToActivate = [...selectedIds];
+      const baseUrl = getApiBaseUrl();
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`${baseUrl}/api/teachers/bulk-activate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: idsToActivate }),
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
+
+      if (response.ok) {
+        // Update local state optimistically
+        setStaffDirectory(prev =>
+          prev.map(s =>
+            idsToActivate.includes(s.id)
+              ? { ...s, status: 'Active' as const }
+              : s
+          )
+        );
+        setSelectedIds(new Set());
+        const result = await response.json();
+        showSuccess(result.message || `Activated ${idsToActivate.length} teacher(s).`);
+      } else {
+        showError('Bulk activation failed. Please try again.');
+      }
+    } catch {
+      showError('Network error during bulk activation. Check your connection.');
+    } finally {
+      setIsBulkActivating(false);
+    }
+  };
+
+  // ── Activate All Pre-Registered via Server ─────────────────────────────────
+  const handleActivateAll = async () => {
+    if (!window.confirm(`Activate all pre-registered teachers? This will set ${preRegCount} teacher(s) to Active.`)) return;
+    setIsBulkActivating(true);
+    try {
+      const baseUrl = getApiBaseUrl();
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
+
+      const response = await fetch(`${baseUrl}/api/teachers/activate-all`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        signal: controller.signal,
+      });
+      window.clearTimeout(timeoutId);
+
+      if (response.ok) {
+        setStaffDirectory(prev =>
+          prev.map(s =>
+            s.status === 'Pre-Registered'
+              ? { ...s, status: 'Active' as const }
+              : s
+          )
+        );
+        setSelectedIds(new Set());
+        const result = await response.json();
+        showSuccess(result.message || `Activated all pre-registered teachers.`);
+      } else {
+        showError('Activate-all failed. Please try again.');
+      }
+    } catch {
+      showError('Network error during activation. Check your connection.');
+    } finally {
+      setIsBulkActivating(false);
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Page Header */}
@@ -483,10 +602,10 @@ const Staff = () => {
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input 
+          <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            placeholder="Search staff by name, ID or email..." 
+            placeholder="Search staff by name, ID or email..."
             className="h-12 rounded-2xl bg-white border-none shadow-sm pl-11 text-sm font-medium focus:ring-2 ring-indigo-50"
           />
         </div>
@@ -498,8 +617,8 @@ const Staff = () => {
               variant="ghost"
               onClick={() => setStatusFilter(status)}
               className={
-                statusFilter === status 
-                  ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100" 
+                statusFilter === status
+                  ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100"
                   : "rounded-xl h-10 px-5 font-bold text-xs text-slate-500 hover:bg-slate-50"
               }
             >
@@ -508,6 +627,50 @@ const Staff = () => {
           ))}
         </div>
       </div>
+
+      {/* Bulk Action Bar — visible when there are pre-registered teachers */}
+      {preRegCount > 0 && (
+        <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-2xl">
+          <div className="flex items-center gap-3 flex-1">
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
+              <ShieldCheck size={20} />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-900">
+                {preRegCount} teacher{preRegCount === 1 ? '' : 's'} pending activation
+              </p>
+              <p className="text-xs text-amber-700 font-medium">
+                Pre-registered staff can sign in but haven't been approved for full system access yet.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-2 shrink-0">
+            {selectedIds.size > 0 && (
+              <Button
+                onClick={handleBulkActivate}
+                disabled={isBulkActivating}
+                className="h-11 px-5 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
+              >
+                {isBulkActivating ? (
+                  <Loader2 className="animate-spin" size={16} />
+                ) : (
+                  <UserCheck size={16} />
+                )}
+                Approve Selected ({selectedIds.size})
+              </Button>
+            )}
+            <Button
+              onClick={handleActivateAll}
+              disabled={isBulkActivating}
+              variant="outline"
+              className="h-11 px-5 rounded-2xl gap-2 border-amber-300 text-amber-800 hover:bg-amber-100 font-bold"
+            >
+              {isBulkActivating ? <Loader2 className="animate-spin" size={16} /> : <UserCheck size={16} />}
+              Activate All
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Empty State */}
       {masterStaffList.length === 0 && (
@@ -540,7 +703,7 @@ const Staff = () => {
                 <p className="text-sm text-slate-500 font-medium">Full master ledger of internal school staff.</p>
               </div>
               <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
-                Showing {filteredStaff.length} Records
+                Showing {filteredStaff.length} Record{filteredStaff.length === 1 ? '' : 's'}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
@@ -548,6 +711,13 @@ const Staff = () => {
                 <table className="w-full text-sm text-left min-w-[900px]">
                   <thead className="text-slate-500 bg-slate-50/50 border-b">
                     <tr>
+                      <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
+                        <Checkbox
+                          checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length}
+                          onCheckedChange={toggleSelectAll}
+                          aria-label="Select all staff"
+                        />
+                      </th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
@@ -558,6 +728,13 @@ const Staff = () => {
                   <tbody className="divide-y divide-slate-100">
                     {filteredStaff.map((member) => (
                       <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-4 py-5 w-12">
+                          <Checkbox
+                            checked={selectedIds.has(member.id)}
+                            onCheckedChange={() => toggleSelectOne(member.id)}
+                            aria-label={`Select ${member.full_name}`}
+                          />
+                        </td>
                         <td className="px-8 py-5 min-w-[200px]">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -621,22 +798,54 @@ const Staff = () => {
                               </DropdownMenuItem>
                               
                               <DropdownMenuSeparator className="my-1" />
-                              
-                              <DropdownMenuItem 
-                                onClick={() => navigate('/staff/pre-registration')}
-                                className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
-                              >
-                                <Key size={15} /> Manage Access Keys
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
+
+                              {member.status === 'Pre-Registered' && (
+                                <DropdownMenuItem
+                                  onClick={async () => {
+                                    try {
+                                      const baseUrl = getApiBaseUrl();
+                                      const controller = new AbortController();
+                                      const timeoutId = window.setTimeout(() => controller.abort(), 8000);
+                                      const res = await fetch(`${baseUrl}/api/teachers/bulk-activate`, {
+                                        method: 'POST',
+                                        headers: { 'Content-Type': 'application/json' },
+                                        body: JSON.stringify({ ids: [member.id] }),
+                                        signal: controller.signal,
+                                      });
+                                      window.clearTimeout(timeoutId);
+                                      if (res.ok) {
+                                        setStaffDirectory(prev =>
+                                          prev.map(s => s.id === member.id ? { ...s, status: 'Active' as const } : s)
+                                        );
+                                        showSuccess(`${member.full_name} has been activated.`);
+                                      } else {
+                                        showError('Activation failed.');
+                                      }
+                                    } catch {
+                                      showError('Network error. Could not activate teacher.');
+                                    }
+                                  }}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-emerald-600 hover:bg-emerald-50"
+                                >
+                                  <UserCheck size={15} /> Activate Teacher
+                                </DropdownMenuItem>
+                              )}
+
+                              {member.status === 'Active' && (
+                                <DropdownMenuItem
+                                  onClick={() => navigate('/staff/pre-registration')}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
+                                >
+                                  <Key size={15} /> Manage Access Keys
+                                </DropdownMenuItem>
+                              )}
                         </td>
                       </tr>
                     ))}
 
                     {filteredStaff.length === 0 && (
                       <tr>
-                        <td colSpan={5} className="px-8 py-20 text-center">
+                        <td colSpan={6} className="px-8 py-20 text-center">
                           <div className="flex flex-col items-center gap-3">
                             <Search size={32} className="text-slate-200" />
                             <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
