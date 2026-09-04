@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Plus,
   Pencil,
