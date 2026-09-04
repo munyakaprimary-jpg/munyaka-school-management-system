@@ -77,11 +77,13 @@ interface RegisteredStudent {
 interface LearnerIdentificationGateProps {
   assessment: Assessment;
   onBeginExam: (studentId: string, studentName: string) => void;
+  onClose?: () => void;
 }
 
 const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
   assessment,
   onBeginExam,
+  onClose,
 }) => {
   const [students, setStudents] = useState<RegisteredStudent[]>([]);
   const [selectedStudent, setSelectedStudent] = useState<RegisteredStudent | null>(null);
@@ -236,7 +238,17 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
       <div className="max-w-lg mx-auto">
         <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 text-center text-white">
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 text-center text-white relative">
+            {/* Close button — top-right */}
+            {onClose && (
+              <button
+                onClick={onClose}
+                className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                title="Close and return to exam list"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
             <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
               <GraduationCap className="w-8 h-8" />
             </div>
@@ -768,7 +780,11 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   // ── Render: Learner Identification Gate ───────────────────────────────────
   if (!isGatePassed) {
     return (
-      <LearnerIdentificationGate assessment={assessment} onBeginExam={handleBeginExam} />
+      <LearnerIdentificationGate
+        assessment={assessment}
+        onBeginExam={handleBeginExam}
+        onClose={() => navigate("/assessments/list")}
+      />
     );
   }
 
