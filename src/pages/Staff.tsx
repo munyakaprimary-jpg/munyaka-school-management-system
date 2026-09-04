@@ -839,6 +839,8 @@ const Staff = () => {
                                   <Key size={15} /> Manage Access Keys
                                 </DropdownMenuItem>
                               )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </td>
                       </tr>
                     ))}
