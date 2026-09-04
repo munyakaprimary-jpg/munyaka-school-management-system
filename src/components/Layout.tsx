@@ -432,15 +432,15 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
                     </div>
         
-                    {/* Back Navigation */}
+                    {/* Back Home Button */}
                                         {location.pathname !== '/' && location.pathname !== '/dashboard' && (
                                           <Button
                                             variant="ghost"
-                                            onClick={() => navigate(-1)}
-                                            className="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-sm font-medium flex items-center gap-1.5"
+                                            onClick={() => navigate('/dashboard')}
+                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2"
                                           >
-                                            <ArrowLeft size={16} />
-                                            <span>Back</span>
+                                            <ArrowLeft size={18} />
+                                            <span>Back Home</span>
                                           </Button>
                                         )}
         
