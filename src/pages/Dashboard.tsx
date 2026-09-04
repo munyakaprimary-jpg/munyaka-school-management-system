@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
-import type { LucideIcon } from 'lucide-react';
 import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
@@ -53,6 +52,7 @@ import {
   BarChart3,
   TrendingUp,
   AlertCircle,
+  type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
