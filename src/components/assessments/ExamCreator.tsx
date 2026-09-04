@@ -67,14 +67,15 @@ const GRADE_OPTIONS: string[] = [
 const ALL_STREAMS_VALUE = "all";
 
 /**
- * Load the grades & streams configuration from the canonical localStorage
- * source used by the Grades & Streams menu (and consumed everywhere else in
- * the app via `readGradesAndStreams()`).
+ * Load streams from the Grades & Streams menu configuration.
+ * - When a grade is selected: returns only that grade's streams.
+ * - When no grade is selected: returns all unique streams across all grades.
  */
 function loadConfiguredStreams(selectedGrade: string): string[] {
   const config = readGradesAndStreams();
   if (!selectedGrade) return config.streams;
-  return getStreamsForGrade(selectedGrade, config);
+  const gradeStreams = getStreamsForGrade(selectedGrade, config);
+  return gradeStreams;
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -93,7 +94,6 @@ const ExamCreator: React.FC = () => {
   // Streams are derived dynamically based on selectedGrade so teachers only
   // see streams belonging to the chosen grade (when configured per-grade).
   const resolvedStreams = useMemo(() => {
-    if (!selectedGrade) return [];
     return loadConfiguredStreams(selectedGrade);
   }, [selectedGrade]);
 
@@ -558,9 +558,11 @@ const ExamCreator: React.FC = () => {
                 >
                   <option value={ALL_STREAMS_VALUE}>All Streams (entire grade)</option>
                   {availableStreams.length === 0 ? (
-                    <option value="" disabled>
-                      No streams configured
-                    </option>
+                    selectedGrade ? (
+                      <option value="" disabled>
+                        No streams configured for {selectedGrade}
+                      </option>
+                    ) : null
                   ) : (
                     availableStreams.map((s) => (
                       <option key={s} value={s}>{s}</option>
