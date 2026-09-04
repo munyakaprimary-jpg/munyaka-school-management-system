@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect } from "react";
+import React, { useState, useCallback, useEffect, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
@@ -66,26 +66,68 @@ const GRADE_OPTIONS: string[] = [
 const ALL_STREAMS_VALUE = "all";
 
 /**
- * Read configured streams from the school admin storage. Accepts both
- * a flat string[] (`configured_streams`) and an object list with `name`
- * fields (`school_classes`). Returns [] when neither is set.
+ * Read configured streams from the school admin storage. Accepts:
+ * - A flat string[] (`configured_streams`)
+ * - An object list with `name` fields (`school_classes`)
+ * - A keyed object with grade → streams arrays (`grades_and_streams`)
+ *
+ * When `selectedGrade` is provided, returns only the streams for that grade
+ * if the storage format supports per-grade streams; otherwise returns all.
  */
-function loadConfiguredStreams(): string[] {
-  const keys = ["configured_streams", "school_classes"];
+function loadConfiguredStreams(selectedGrade: string | null): string[] {
+  const keys = ["configured_streams", "school_classes", "grades_and_streams"];
   for (const k of keys) {
     try {
       const raw = localStorage.getItem(k);
       if (!raw) continue;
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed
-          .map((item: unknown) =>
-            typeof item === "string"
-              ? item
-              : (item as Record<string, unknown>)?.name ?? ""
-          )
-          .map((s: string) => String(s).trim())
-          .filter(Boolean);
+
+      // Format: flat string[] — return all as-is
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") {
+        return selectedGrade ? [] : parsed.map((s) => String(s).trim()).filter(Boolean);
+      }
+
+      // Format: object keyed by grade { "Grade 9": ["Science", "Arts", ...] }
+      if (!Array.isArray(parsed) && typeof parsed === "object" && parsed !== null) {
+        const entries = Object.entries(parsed as Record<string, unknown>);
+        if (entries.length > 0) {
+          if (selectedGrade && Object.prototype.hasOwnProperty.call(parsed, selectedGrade)) {
+            const gradeStreams = (parsed as Record<string, unknown>)[selectedGrade];
+            return Array.isArray(gradeStreams)
+              ? (gradeStreams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
+              : [];
+          }
+          // Return all unique streams across all grades when no grade selected
+          const allStreams = entries.flatMap(([, v]) =>
+            Array.isArray(v) ? (v as unknown[]).map((s) => String(s).trim()).filter(Boolean) : []
+          );
+          return [...new Set(allStreams)];
+        }
+      }
+
+      // Format: array of objects [{ grade, streams }, ...]
+      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
+        if (selectedGrade) {
+          const gradeMatch = parsed.find(
+            (item: unknown) =>
+              (item as Record<string, unknown>)?.grade === selectedGrade
+          );
+          if (gradeMatch) {
+            const streams = (gradeMatch as Record<string, unknown>).streams;
+            return Array.isArray(streams)
+              ? (streams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
+              : [];
+          }
+          return [];
+        }
+        // No grade selected — collect all streams from all grade entries
+        const allStreams = parsed.flatMap((item: unknown) => {
+          const streams = (item as Record<string, unknown>).streams;
+          return Array.isArray(streams)
+            ? (streams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
+            : [];
+        });
+        return [...new Set(allStreams)];
       }
     } catch { /* ignore */ }
   }
@@ -104,6 +146,21 @@ const ExamCreator: React.FC = () => {
   const [classLevel, setClassLevel] = useState("");
   const [selectedStream, setSelectedStream] = useState<string>("all");
   const [availableStreams, setAvailableStreams] = useState<string[]>([]);
+
+  // Streams are derived dynamically based on selectedGrade so teachers only
+  // see streams belonging to the chosen grade (when configured per-grade).
+  const resolvedStreams = useMemo(() => {
+    if (!selectedGrade) return [];
+    return loadConfiguredStreams(selectedGrade);
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    setAvailableStreams(resolvedStreams);
+    // Reset stream to "all" when no streams are available for the chosen grade
+    if (resolvedStreams.length === 0) {
+      setSelectedStream(ALL_STREAMS_VALUE);
+    }
+  }, [resolvedStreams]);
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
   const [totalMarks, setTotalMarks] = useState(100);
@@ -116,11 +173,6 @@ const ExamCreator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
-
-  // Populate the stream dropdown from the school admin configuration once.
-  useEffect(() => {
-    setAvailableStreams(loadConfiguredStreams());
-  }, []);
 
   // Active question form (used for both "add" and "edit")
   const [draftType, setDraftType] = useState<QuestionType>("mcq");
@@ -539,6 +591,8 @@ const ExamCreator: React.FC = () => {
                     // Keep classLevel in sync so existing Assessment.classLevel
                     // consumers keep working unchanged.
                     setClassLevel(e.target.value);
+                    // Streams are grade-specific; reset to "all" on grade change.
+                    setSelectedStream(ALL_STREAMS_VALUE);
                   }}
                   className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
                   aria-label="Target grade"
