@@ -49,9 +49,8 @@ import {
   FlaskConical,
   Fingerprint,
   CreditCard,
-    Gamepad2,
-    ClipboardList
-  } from 'lucide-react';
+  Gamepad2
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
@@ -121,22 +120,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       ]
     },
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher'] },
-        { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-        {
-          icon: ClipboardList,
-          label: 'Assessments & Exams',
-          path: '/assessments-hub',
-          roles: ['admin', 'head_teacher', 'teacher'],
-          subItems: [
-            { label: 'Assessments Hub', path: '/assessments-hub' },
-            { label: 'Enter Marks', path: '/assessments' },
-            { label: 'Grading Review', path: '/grading' },
-            { label: 'Results Analysis', path: '/analysis' },
-            { label: 'Question Creator', path: '/question-creator' },
-            { label: 'Take Assessment', path: '/assessment-taking', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-            { label: 'Assessment Settings', path: '/assessment-settings' },
-          ]
-        },
+    { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },
     { icon: Keyboard, label: 'Digital Skills Assessment', path: '/digital-skills', roles: ['admin', 'head_teacher', 'teacher'] },
