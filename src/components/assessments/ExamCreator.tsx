@@ -30,6 +30,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { showSuccess, showError } from "@/utils/toast";
+import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { writeStorage, generateId } from "@/utils/storage";
 import { cn } from "@/lib/utils";
 import type { Assessment, Question, QuestionType } from "@/types/questions";
@@ -66,72 +67,14 @@ const GRADE_OPTIONS: string[] = [
 const ALL_STREAMS_VALUE = "all";
 
 /**
- * Read configured streams from the school admin storage. Accepts:
- * - A flat string[] (`configured_streams`)
- * - An object list with `name` fields (`school_classes`)
- * - A keyed object with grade → streams arrays (`grades_and_streams`)
- *
- * When `selectedGrade` is provided, returns only the streams for that grade
- * if the storage format supports per-grade streams; otherwise returns all.
+ * Load the grades & streams configuration from the canonical localStorage
+ * source used by the Grades & Streams menu (and consumed everywhere else in
+ * the app via `readGradesAndStreams()`).
  */
-function loadConfiguredStreams(selectedGrade: string | null): string[] {
-  const keys = ["configured_streams", "school_classes", "grades_and_streams"];
-  for (const k of keys) {
-    try {
-      const raw = localStorage.getItem(k);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw);
-
-      // Format: flat string[] — return all as-is
-      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "string") {
-        return selectedGrade ? [] : parsed.map((s) => String(s).trim()).filter(Boolean);
-      }
-
-      // Format: object keyed by grade { "Grade 9": ["Science", "Arts", ...] }
-      if (!Array.isArray(parsed) && typeof parsed === "object" && parsed !== null) {
-        const entries = Object.entries(parsed as Record<string, unknown>);
-        if (entries.length > 0) {
-          if (selectedGrade && Object.prototype.hasOwnProperty.call(parsed, selectedGrade)) {
-            const gradeStreams = (parsed as Record<string, unknown>)[selectedGrade];
-            return Array.isArray(gradeStreams)
-              ? (gradeStreams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
-              : [];
-          }
-          // Return all unique streams across all grades when no grade selected
-          const allStreams = entries.flatMap(([, v]) =>
-            Array.isArray(v) ? (v as unknown[]).map((s) => String(s).trim()).filter(Boolean) : []
-          );
-          return [...new Set(allStreams)];
-        }
-      }
-
-      // Format: array of objects [{ grade, streams }, ...]
-      if (Array.isArray(parsed) && parsed.length > 0 && typeof parsed[0] === "object") {
-        if (selectedGrade) {
-          const gradeMatch = parsed.find(
-            (item: unknown) =>
-              (item as Record<string, unknown>)?.grade === selectedGrade
-          );
-          if (gradeMatch) {
-            const streams = (gradeMatch as Record<string, unknown>).streams;
-            return Array.isArray(streams)
-              ? (streams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
-              : [];
-          }
-          return [];
-        }
-        // No grade selected — collect all streams from all grade entries
-        const allStreams = parsed.flatMap((item: unknown) => {
-          const streams = (item as Record<string, unknown>).streams;
-          return Array.isArray(streams)
-            ? (streams as unknown[]).map((s) => String(s).trim()).filter(Boolean)
-            : [];
-        });
-        return [...new Set(allStreams)];
-      }
-    } catch { /* ignore */ }
-  }
-  return [];
+function loadConfiguredStreams(selectedGrade: string): string[] {
+  const config = readGradesAndStreams();
+  if (!selectedGrade) return config.streams;
+  return getStreamsForGrade(selectedGrade, config);
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
