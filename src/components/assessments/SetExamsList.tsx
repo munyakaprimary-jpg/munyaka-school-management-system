@@ -542,14 +542,14 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   }, []);
 
   // ── Download PDF via html2pdf.js ─────────────────────────────────────────────
-  // Captures the #printable-exam-content element (the entire modal body) and
-  // saves it as a PDF file. Uses explicit html2canvas options to ensure
-  // background colors render correctly and at high DPI.
+  // Captures the #pdf-paper-content element (only the exam body, with header
+  // action buttons and footer action buttons excluded via
+  // data-html2canvas-ignore="true") and saves it as a PDF file.
   const handleDownloadPDF = useCallback(async () => {
     if (!exam) return;
     setIsPdfGenerating(true);
     try {
-      const element = document.getElementById("printable-exam-content");
+      const element = document.getElementById("pdf-paper-content");
       if (!element) {
         showError("Could not find printable content. Please try again.");
         return;
@@ -571,6 +571,9 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
           useCORS: true,
           logging: false,
           backgroundColor: "#ffffff",
+          ignoreElements: (el: Element) =>
+            el instanceof HTMLElement &&
+            el.getAttribute("data-html2canvas-ignore") === "true",
         },
         jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
         pagebreak: { mode: ["css", "legacy"] },
@@ -615,7 +618,10 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
               {exam ? `${exam.questions.length} questions • ${totalMarks} total marks` : "Loading…"}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div
+            data-html2canvas-ignore="true"
+            className="flex items-center gap-2 shrink-0"
+          >
             {/* Print */}
             {exam && (
               <button
@@ -666,16 +672,40 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
 
           {/* ── On-screen preview ─────────────────────────────────────── */}
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
+            <div
+              data-html2canvas-ignore="true"
+              className="flex items-center justify-center py-16"
+            >
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
             </div>
           ) : !exam || exam.questions.length === 0 ? (
-            <div className="text-center py-16 text-slate-400">
+            <div
+              data-html2canvas-ignore="true"
+              className="text-center py-16 text-slate-400"
+            >
               <FileQuestion className="w-12 h-12 mx-auto mb-3 opacity-40" />
               <p className="font-semibold">No questions found for this exam.</p>
             </div>
           ) : (
-            <>
+            <div
+              id="pdf-paper-content"
+              className="p-6 bg-white text-slate-900 space-y-6"
+            >
+              {/* Paper Title Header (visible in the PDF) */}
+              <div className="border-b-2 border-slate-200 pb-4">
+                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 text-center">
+                  Munyaka E-Learning Platform — Assessment Paper
+                </p>
+                <h1 className="text-2xl font-black text-slate-900 text-center mt-1">
+                  {exam.title}
+                </h1>
+                <p className="text-sm text-slate-600 text-center mt-1">
+                  {exam.subject} &nbsp;|&nbsp; {exam.classLevel} &nbsp;|&nbsp;{" "}
+                  {formatCategory(exam.category)} &nbsp;|&nbsp; Duration: {exam.duration} minutes
+                </p>
+                <p className="text-[10px] text-slate-500 text-center mt-1">{today}</p>
+              </div>
+
               {/* Meta grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
@@ -739,12 +769,21 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                   </div>
                 ))}
               </div>
-            </>
+
+              {/* Paper Footer */}
+              <div className="border-t-2 border-slate-200 pt-3 mt-2 flex items-center justify-between text-[10px] text-slate-500">
+                <span>{exam.title} — {exam.subject}</span>
+                <span>© Munyaka E-Learning Platform</span>
+              </div>
+            </div>
           )}
         </div>
 
         {/* ── Footer ─────────────────────────────────────────────────── */}
-        <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 bg-slate-50">
+        <div
+          data-html2canvas-ignore="true"
+          className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 bg-slate-50"
+        >
           <Button variant="outline" onClick={onClose} className="rounded-xl">
             Close
           </Button>
