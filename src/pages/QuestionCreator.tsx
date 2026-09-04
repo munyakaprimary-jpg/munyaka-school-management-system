@@ -39,9 +39,11 @@ import {
   AlertCircle,
   Eye,
   FileQuestion,
-  Layers,
-} from "lucide-react";
-import type { Question, QuestionType, Assessment, MCQOption } from "@/types/questions";
+    Layers,
+    Upload,
+  } from "lucide-react";
+  import type { Question, QuestionType, Assessment, MCQOption } from "@/types/questions";
+  import CSVImporterModal from "@/components/CSVImporterModal";
 
 const STORAGE_KEY = "question_bank";
 const ASSESSMENT_STORAGE_KEY = "assessments";
@@ -97,10 +99,28 @@ const QuestionCreator = () => {
   const [activeQuestionType, setActiveQuestionType] = useState<QuestionType>("mcq");
 
   // Dialogs
-  const [showPreview, setShowPreview] = useState(false);
-  const [previewAssessment, setPreviewAssessment] = useState<Assessment | null>(null);
-  const [showSaveDialog, setShowSaveDialog] = useState(false);
-  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [showPreview, setShowPreview] = useState(false);
+    const [previewAssessment, setPreviewAssessment] = useState<Assessment | null>(null);
+    const [showSaveDialog, setShowSaveDialog] = useState(false);
+    const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+    const [showCsvImporter, setShowCsvImporter] = useState(false);
+  
+    // Handler called by CSVImporterModal once it has built the Question objects
+    const handleCsvImport = useCallback((importedQuestions: Question[]) => {
+      if (importedQuestions.length === 0) return;
+      setQuestions((prev) => {
+        // Re-order incoming rows so they continue from prev count
+        const startOrder = prev.length + 1;
+        const numbered = importedQuestions.map((q, i) => ({ ...q, order: startOrder + i }));
+        return [...prev, ...numbered];
+      });
+      // Open the new rows so the teacher can review them
+      setExpandedQuestions((prev) => {
+        const next = new Set(prev);
+        importedQuestions.forEach((q) => next.add(q.id));
+        return next;
+      });
+    }, []);
 
   // Load saved question bank on mount
   useEffect(() => {
@@ -722,15 +742,23 @@ const QuestionCreator = () => {
         )}
 
         {/* Action Buttons */}
-        <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                <div className="flex flex-col sm:flex-row gap-3 pt-4 flex-wrap">
           <Button
-            variant="outline"
-            onClick={handleReset}
-            className="h-12 rounded-xl border-2 border-slate-200 font-semibold"
-          >
-            <RotateCcw className="w-4 h-4 mr-2" />
-            Reset All
-          </Button>
+                      variant="outline"
+                      onClick={() => setShowCsvImporter(true)}
+                      className="h-12 rounded-xl border-2 border-indigo-200 bg-indigo-50/50 hover:bg-indigo-100 text-indigo-700 font-semibold gap-2"
+                    >
+                      <Upload className="w-4 h-4" />
+                      Import CSV
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={handleReset}
+                      className="h-12 rounded-xl border-2 border-slate-200 font-semibold"
+                    >
+                      <RotateCcw className="w-4 h-4 mr-2" />
+                      Reset All
+                    </Button>
           <Button
             variant="outline"
             onClick={handlePreview}
@@ -769,8 +797,16 @@ const QuestionCreator = () => {
         </div>
       </main>
 
-      {/* Save Dialog */}
-      <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
+      {/* CSV Importer Modal */}
+            <CSVImporterModal
+              open={showCsvImporter}
+              onClose={() => setShowCsvImporter(false)}
+              onImport={handleCsvImport}
+              existingCount={questions.length}
+            />
+      
+            {/* Save Dialog */}
+            <Dialog open={showSaveDialog} onOpenChange={setShowSaveDialog}>
         <DialogContent className="rounded-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">

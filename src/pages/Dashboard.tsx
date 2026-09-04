@@ -42,8 +42,8 @@ import {
   Wifi,
   WifiOff,
   XCircle,
-  type LucideIcon,
 } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
 export type WidgetKey =
