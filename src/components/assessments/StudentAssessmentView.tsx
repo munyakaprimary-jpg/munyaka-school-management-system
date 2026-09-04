@@ -19,6 +19,7 @@ import {
   X,
   GraduationCap,
   Loader2,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -982,6 +983,16 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       <header className="bg-white/85 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
+            {/* In-page Back arrow -> Assessment Repository */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate("/assessments/list")}
+              className="h-10 w-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex-shrink-0"
+              title="Back to Assessment Repository"
+            >
+              <ArrowLeft size={18} />
+            </Button>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200 flex-shrink-0">
               <FileQuestion className="w-5 h-5 text-white" />
             </div>
