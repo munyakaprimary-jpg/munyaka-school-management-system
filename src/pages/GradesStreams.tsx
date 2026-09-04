@@ -15,7 +15,11 @@ import { GRADES_DATA, Grade, Stream } from '@/lib/mock-data';
 import { sortGrades, GRADE_ORDER } from '@/utils/gradeSort';
 import { notifyDataChanged } from '@/utils/storage';
 
-const STORAGE_KEY = 'munyaka_grades';
+// Primary canonical key — all readers should now use `configured_streams`.
+const STORAGE_KEY = 'configured_streams';
+// Legacy key kept so existing cross-tab listeners and other pages that
+// watch `munyaka_grades` keep working without needing to be updated.
+const LEGACY_STORAGE_KEY = 'munyaka_grades';
 const SCHOOL_INFO_KEY = 'munyaka_school_info';
 
 // Filter helper: detect "mock" grades and streams by checking against the
@@ -47,20 +51,24 @@ const GradesStreams = () => {
       }));
   };
 
-  // Initial state — only user-created records from localStorage. If the
-  // user has never added anything, this array is empty and the page
-  // shows a friendly empty state.
+  // Initial state — reads from the canonical key first, then the legacy
+  // key, so users don't lose data when the key name is unified. If both
+  // are missing or corrupted, falls through to an empty array (the page
+  // will show its friendly empty state rather than crashing).
   const [grades, setGrades] = useState<Grade[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return stripSeedData(parsed);
+    const keys = [STORAGE_KEY, LEGACY_STORAGE_KEY];
+    for (const k of keys) {
+      try {
+        const saved = localStorage.getItem(k);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return stripSeedData(parsed);
+          }
         }
+      } catch {
+        // Corrupted JSON — skip this key and try the next one
       }
-    } catch {
-      // ignore — fall through to empty state
     }
     return [];
   });
@@ -83,13 +91,19 @@ const GradesStreams = () => {
   const [newStreamStudents, setNewStreamStudents] = useState("");
 
   useEffect(() => {
-    if (grades.length > 0) {
-      try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(grades));
-        notifyDataChanged('munyaka_grades');
-      } catch (e) {
-        // localStorage quota exceeded — best-effort, fall through silently
-      }
+    // Always persist to the canonical key AND the legacy key so that:
+    //   1. New readers find data under the canonical name
+    //   2. Existing pages listening on `munyaka_grades` still work
+    // Including when grades becomes [] after a delete so we don't leave
+    // stale entries in localStorage.
+    try {
+      const data = JSON.stringify(grades);
+      localStorage.setItem(STORAGE_KEY, data);
+      localStorage.setItem(LEGACY_STORAGE_KEY, data);
+      notifyDataChanged(STORAGE_KEY);
+      notifyDataChanged(LEGACY_STORAGE_KEY);
+    } catch (e) {
+      // localStorage quota exceeded — best-effort, fall through silently
     }
   }, [grades]);
 

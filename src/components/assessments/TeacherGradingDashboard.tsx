@@ -33,6 +33,7 @@ import { showSuccess, showError } from "@/utils/toast";
 import { notifyDataChanged } from "@/utils/storage";
 import { useFileDownload, MUNYAKA_HEADERS } from "@/utils/fileDownloader";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
+import { readGradesAndStreams, getStreamsForGrade } from "@/services/gradesStreamsConfig";
 import { saveMarkedSubmission } from "@/types/assessment";
 import type { StudentSubmission as MarkedSubmission } from "@/types/assessment";
 import type {
@@ -48,6 +49,8 @@ const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
 const SUBMISSION_KEY = "student_submissions";
 const RESULTS_KEY = "munyaka_assessment_results";
+const ALL_SET_EXAMS_KEY = "all_set_exams";
+const MARKED_SUBMISSIONS_KEY = "marked_student_submissions";
 
 // ─── Filter option lists ───────────────────────────────────────────────────────
 // Standard Kenyan CBC grade list (PP1, PP2, Grade 1..9). The selector compares
@@ -638,7 +641,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     // 1. Load all-set exams from localStorage.
     let allSetExams: Array<{ id: string; title: string; subject: string; classLevel?: string; grade?: string; stream?: string }> = [];
     try {
-      const raw = localStorage.getItem("all_set_exams");
+      const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         allSetExams = Array.isArray(parsed) ? parsed : [];
@@ -648,7 +651,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     // 2. Load marked submissions to discover exams that have saved results.
     let markedSubs: Array<{ examId?: string; stream?: string }> = [];
     try {
-      const raw2 = localStorage.getItem("marked_student_submissions");
+      const raw2 = localStorage.getItem(MARKED_SUBMISSIONS_KEY);
       if (raw2) {
         const parsed2 = JSON.parse(raw2) as Record<string, { examId?: string; stream?: string }>;
         markedSubs = Object.values(parsed2).filter(
@@ -683,45 +686,12 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   }, [selectedGrade, selectedStream]);
 
   // ── Stream options: three-tier lookup ────────────────────────────────────────
-  // 1. Read configured streams from the dedicated key (school admin may have set
-  //    a custom global list).
-  // 2. Read per-grade streams from the munyaka_grades ledger (authoritative
-  //    source of class → streams mapping).
-  // 3. Fall back to extracting unique stream names from in-memory student rows.
-  const configuredStreams: string[] = (() => {
-    try {
-      const raw = localStorage.getItem("configured_streams");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch { /* ignore */ }
-    return [];
-  })();
+  // 1. Read from the Grades & Streams menu (canonical source — readGradesAndStreams).
+  // 2. Falls back to extracting unique stream names from in-memory student rows.
+  const gradesConfig = readGradesAndStreams();
 
-  // Munyaka grade registry: each entry is { name: "Grade 4", streams: [{name: "Blue"}, …] }
-  const gradeRegistry: Array<{ name: string; streams: Array<{ name: string }> }> = (() => {
-    try {
-      const raw = localStorage.getItem("munyaka_grades");
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        return Array.isArray(parsed) ? parsed : [];
-      }
-    } catch { /* ignore */ }
-    return [];
-  })();
-
-  // All streams seen across the entire registry (used as baseline).
-  const allRegistryStreams = useMemo(() => {
-    const seen = new Set<string>();
-    gradeRegistry.forEach((g) =>
-      g.streams.forEach((s) => {
-        const n = (s.name || "").trim();
-        if (n) seen.add(n);
-      })
-    );
-    return Array.from(seen);
-  }, [gradeRegistry]);
+  // All streams from the Grades & Streams menu registry.
+  const allRegistryStreams = [...gradesConfig.streams];
 
   /**
    * Streams available for display, filtered by the currently selected grade.
@@ -734,26 +704,13 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
    *     resort so the dropdown is never blank.
    */
   const availableStreams = useMemo(() => {
-    // a) Use the admin-configured global list if available.
-    if (configuredStreams.length > 0) {
-      return configuredStreams;
+    // a) Narrow by grade using the canonical Grades & Streams menu config.
+    if (selectedGrade !== ALL_GRADES_VALUE && selectedGrade) {
+      const gradeStreams = getStreamsForGrade(selectedGrade, gradesConfig);
+      if (gradeStreams.length > 0) return gradeStreams;
     }
 
-    // b) Narrow by grade, or fall back to all registry streams.
-    if (selectedGrade !== ALL_GRADES_VALUE) {
-      const gradeEntry = gradeRegistry.find(
-        (g) => normaliseGrade(g.name) === normaliseGrade(selectedGrade)
-      );
-      if (gradeEntry && gradeEntry.streams.length > 0) {
-        return gradeEntry.streams
-          .map((s) => s.name.trim())
-          .filter(Boolean);
-      }
-      // Grade is selected but has no registry entry — narrow the global list.
-      if (allRegistryStreams.length > 0) return allRegistryStreams;
-    }
-
-    // b fallback: no grade selected → return all registry streams.
+    // b) No grade selected (or no per-grade streams) → return all registry streams.
     if (allRegistryStreams.length > 0) return allRegistryStreams;
 
     // c) Last resort: extract from the in-memory student rows.
@@ -763,7 +720,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       if (s) fromRows.add(s);
     });
     return Array.from(fromRows).sort();
-  }, [selectedGrade, studentGrades, configuredStreams, gradeRegistry, allRegistryStreams]);
+  }, [selectedGrade, studentGrades, gradesConfig, allRegistryStreams]);
 
   const structuredQuestions =
     selectedExam?.questions.filter((q) => q.type === "structured") || [];

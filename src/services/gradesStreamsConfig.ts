@@ -14,8 +14,12 @@ export interface GradesStreamsConfig {
   gradeStreamMap: Record<string, string[]>;
 }
 
-// Supported localStorage keys (checked in priority order)
+// Supported localStorage keys (checked in priority order).
+// `configured_streams` is the canonical name across the project; the
+// historical `munyaka_*` keys are still read so user data isn't lost when
+// the key naming is unified.
 const STORAGE_KEYS = [
+  'configured_streams',
   'munyaka_grades',
   'munyaka_grades_streams',
   'munyaka_grades_streams_data',
