@@ -9,6 +9,8 @@
       "build:dev": "vite build --mode development",
       "lint": "eslint .",
       "preview": "vite preview",
+      "server": "node server/index.js",
+      "server:dev": "node --watch server/index.js",
       "reset-server": "tsx server/reset-server.ts",
       "prestart": "tsx server/reset-server.ts",
       "lan-server": "node server/index.js",
