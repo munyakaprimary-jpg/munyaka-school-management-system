@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
@@ -49,13 +49,61 @@ const ASSESSMENT_CATEGORIES = [
   { value: "opener-term3", label: "Opener – Term 3" },
 ];
 
+// ─── Target grade / stream constants ─────────────────────────────────────────
+const GRADE_OPTIONS: string[] = [
+  "PP1",
+  "PP2",
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
+  "Grade 4",
+  "Grade 5",
+  "Grade 6",
+  "Grade 7",
+  "Grade 8",
+  "Grade 9",
+];
+const ALL_STREAMS_VALUE = "all";
+
+/**
+ * Read configured streams from the school admin storage. Accepts both
+ * a flat string[] (`configured_streams`) and an object list with `name`
+ * fields (`school_classes`). Returns [] when neither is set.
+ */
+function loadConfiguredStreams(): string[] {
+  const keys = ["configured_streams", "school_classes"];
+  for (const k of keys) {
+    try {
+      const raw = localStorage.getItem(k);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed
+          .map((item: unknown) =>
+            typeof item === "string"
+              ? item
+              : (item as Record<string, unknown>)?.name ?? ""
+          )
+          .map((s: string) => String(s).trim())
+          .filter(Boolean);
+      }
+    } catch { /* ignore */ }
+  }
+  return [];
+}
+
 // ─── Component ────────────────────────────────────────────────────────────────
 const ExamCreator: React.FC = () => {
   const navigate = useNavigate();
   // Exam meta
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("formative");
+  // selectedGrade feeds the new dropdown; classLevel stays in sync so existing
+  // Assessment.classLevel consumers keep working without changes.
+  const [selectedGrade, setSelectedGrade] = useState<string>("");
   const [classLevel, setClassLevel] = useState("");
+  const [selectedStream, setSelectedStream] = useState<string>("all");
+  const [availableStreams, setAvailableStreams] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
   const [totalMarks, setTotalMarks] = useState(100);
@@ -68,6 +116,11 @@ const ExamCreator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
+
+  // Populate the stream dropdown from the school admin configuration once.
+  useEffect(() => {
+    setAvailableStreams(loadConfiguredStreams());
+  }, []);
 
   // Active question form (used for both "add" and "edit")
   const [draftType, setDraftType] = useState<QuestionType>("mcq");
@@ -242,8 +295,8 @@ const ExamCreator: React.FC = () => {
       showError("Please enter an assessment title before publishing.");
       return;
     }
-    if (!classLevel.trim() || !subject.trim()) {
-      showError("Please enter a class level and subject.");
+    if (!selectedGrade || !subject.trim()) {
+      showError("Please pick a target grade and enter a subject.");
       return;
     }
     if (questions.length === 0) {
@@ -258,13 +311,20 @@ const ExamCreator: React.FC = () => {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
+      const resolvedClassLevel = (classLevel.trim() || selectedGrade).trim();
+      // Persist `"all"` (not an empty string) so the Teacher Grading
+      // Dashboard's stream filter has a canonical sentinel.
+      const resolvedStream =
+        selectedStream && selectedStream !== ALL_STREAMS_VALUE
+          ? selectedStream.trim()
+          : "all";
 
       // 1. Update question bank so StudentAssessmentView can find this exam.
       const bankPayload = {
         metadata: {
           title: title.trim(),
           category,
-          classLevel: classLevel.trim(),
+          classLevel: resolvedClassLevel,
           subject: subject.trim(),
           duration,
           totalMarks: calcTotalMarks,
@@ -273,18 +333,25 @@ const ExamCreator: React.FC = () => {
           passingPercentage,
           assessmentId,
           createdAt: now,
+          grade: selectedGrade,
+          stream: resolvedStream,
         },
         questions: questions.map((q, i) => ({ ...q, order: i + 1 })),
         savedAt: now,
       };
       writeStorage(QUESTION_BANK_KEY, bankPayload);
 
-      // 2. Build full assessment with status + all required metadata
-      const newAssessment: Assessment = {
+      // 2. Build full assessment with status + all required metadata.
+      //    `grade` and `stream` are explicit top-level fields so the
+      //    Teacher Grading Dashboard's cascading filter can match them
+      //    directly.
+      const newAssessment: Assessment & { grade: string; stream: string } = {
         id: assessmentId,
         title: title.trim(),
         category,
-        classLevel: classLevel.trim(),
+        classLevel: resolvedClassLevel,
+        grade: selectedGrade,
+        stream: resolvedStream,
         subject: subject.trim(),
         duration,
         totalMarks: calcTotalMarks,
@@ -297,7 +364,7 @@ const ExamCreator: React.FC = () => {
       };
 
       // Upsert into assessments key
-      let existing: Assessment[] = [];
+      let existing: Array<Assessment & { grade?: string; stream?: string }> = [];
       try {
         const raw = localStorage.getItem(ASSESSMENTS_KEY);
         if (raw) {
@@ -308,8 +375,8 @@ const ExamCreator: React.FC = () => {
       const without = existing.filter((a) => a.id !== newAssessment.id);
       writeStorage(ASSESSMENTS_KEY, [...without, newAssessment]);
 
-      // Also save to unified all_set_exams key
-      let allSetExams: Assessment[] = [];
+      // Also save to unified all_set_exams key (used by the grading dashboard)
+      let allSetExams: Array<Assessment & { grade?: string; stream?: string }> = [];
       try {
         const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
         if (raw) {
@@ -320,7 +387,8 @@ const ExamCreator: React.FC = () => {
       const withoutAll = allSetExams.filter((a) => a.id !== newAssessment.id);
       writeStorage(ALL_SET_EXAMS_KEY, [...withoutAll, newAssessment]);
 
-      // Dispatch event so SetExamsList + StudentAssessmentPage refresh immediately
+      // Dispatch event so SetExamsList + Teacher Grading Dashboard + Marked
+      // Scripts list refresh their dropdown options automatically.
       window.dispatchEvent(new Event("assessments_updated"));
 
       setIsPublished(true);
@@ -331,7 +399,7 @@ const ExamCreator: React.FC = () => {
       setIsSaving(false);
       showError("Failed to publish: " + (e instanceof Error ? e.message : String(e)));
     }
-  }, [title, category, classLevel, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
+  }, [title, category, classLevel, selectedGrade, selectedStream, subject, duration, totalMarks, passingPercentage, questions, publishedAssessmentId]);
 
   // ── Derived values ────────────────────────────────────────────────────────
   const calculatedTotal = questions.reduce((s, q) => s + q.points, 0);
@@ -462,15 +530,50 @@ const ExamCreator: React.FC = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                  Class <span className="text-red-500">*</span>
+                  Target Grade <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  placeholder="e.g. Grade 4"
-                  value={classLevel}
-                  onChange={(e) => setClassLevel(e.target.value)}
-                  className="rounded-xl h-11"
-                />
+                <select
+                  value={selectedGrade}
+                  onChange={(e) => {
+                    setSelectedGrade(e.target.value);
+                    // Keep classLevel in sync so existing Assessment.classLevel
+                    // consumers keep working unchanged.
+                    setClassLevel(e.target.value);
+                  }}
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                  aria-label="Target grade"
+                >
+                  <option value="">Select grade…</option>
+                  {GRADE_OPTIONS.map((g) => (
+                    <option key={g} value={g}>{g}</option>
+                  ))}
+                </select>
               </div>
+              <div className="space-y-2">
+                <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  Target Stream
+                </Label>
+                <select
+                  value={selectedStream}
+                  onChange={(e) => setSelectedStream(e.target.value)}
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                  aria-label="Target stream"
+                >
+                  <option value={ALL_STREAMS_VALUE}>All Streams (entire grade)</option>
+                  {availableStreams.length === 0 ? (
+                    <option value="" disabled>
+                      No streams configured
+                    </option>
+                  ) : (
+                    availableStreams.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))
+                  )}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3">
               <div className="space-y-2">
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Subject <span className="text-red-500">*</span>
