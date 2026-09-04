@@ -582,7 +582,7 @@ app.post('/api/teachers/bulk-activate', (req, res) => {
     }
 
     let activated = 0;
-    const notFound: string[] = [];
+    const notFound = [];
 
     for (const id of ids) {
       const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [id]);
