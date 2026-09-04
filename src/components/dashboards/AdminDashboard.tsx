@@ -44,6 +44,7 @@ const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
 interface SystemVitals {
   totalStudents: number;
   totalTeachers: number;
+  activeTeacherCount: number;
   todayAttendanceRate: number;
   primarySchoolCount: number;
   juniorSchoolCount: number;
@@ -297,7 +298,7 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { totalStudents, totalTeachers, todayAttendanceRate, isLoading } = useCentralData();
+  const { totalStudents, totalTeachers, activeTeacherCount, todayAttendanceRate, isLoading } = useCentralData();
 
   // Local state for re-rendering alerts when the activity log changes
   const [activityVersion, setActivityVersion] = useState(0);
@@ -321,12 +322,13 @@ const AdminDashboard: React.FC = () => {
     return {
       totalStudents: isLoading ? 0 : totalStudents,
       totalTeachers: isLoading ? 0 : totalTeachers,
+      activeTeacherCount: isLoading ? 0 : (activeTeacherCount ?? 0),
       todayAttendanceRate: isLoading ? 0 : todayAttendanceRate,
       primarySchoolCount: isLoading ? 0 : Math.max(0, totalStudents - juniorCount),
       juniorSchoolCount: juniorCount,
       systemStatus: 'Live',
     };
-  }, [isLoading, totalStudents, totalTeachers, todayAttendanceRate, activityVersion]);
+  }, [isLoading, totalStudents, totalTeachers, activeTeacherCount, todayAttendanceRate, activityVersion]);
 
   // ── Weekly attendance — last 7 days, fully driven by real DB-style data
   //   No mock percentages. If a day has no records, the bar shows 0% and
@@ -735,6 +737,7 @@ const AdminDashboard: React.FC = () => {
             iconBg="bg-purple-50"
             title="Total Teachers"
             value={vitals.totalTeachers.toLocaleString()}
+            subtitle={`Active: ${vitals.activeTeacherCount} | Pending: ${Math.max(0, vitals.totalTeachers - vitals.activeTeacherCount)}`}
           />
           <VitalCard
             icon={<UserCheck size={20} className="text-emerald-600" />}

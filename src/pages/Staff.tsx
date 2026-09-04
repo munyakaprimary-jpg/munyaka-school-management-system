@@ -108,6 +108,16 @@ const Staff = () => {
       const res = await api.get<{ success?: boolean; data: any[] }>('/api/teachers');
       const records = Array.isArray(res) ? res : (res.data || []);
 
+      // Write raw server response to the same localStorage key that
+      // useCentralData reads from — this keeps the Dashboard in sync
+      // with whatever the Staff page has fetched from the server.
+      try {
+        localStorage.setItem('munyaka_staff_directory', JSON.stringify(records));
+        // Fire both event flavours so any listener re-computes
+        notifyDataChanged('munyaka_staff_directory');
+        notifyDataChanged('staff');
+      } catch { /* ignore storage quota errors */ }
+
       const staffList: StaffMember[] = records.map((r: any) => {
         // The server derives a `status` field ('Active' | 'Pre-Registered')
         // from the integer is_active column. Use it directly when present.
