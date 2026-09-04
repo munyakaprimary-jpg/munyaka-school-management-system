@@ -11,12 +11,17 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
+import bcrypt from 'bcryptjs';
+import jwt from 'jsonwebtoken';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Configuration
-const PORT = process.env.PORT || 5000;
+// Configuration — hardcoded for LAN operation; 0.0.0.0 accepts connections
+// from any device on the local network.
+const PORT = 5000;
+const HOST = '0.0.0.0';
+const JWT_SECRET = process.env.JWT_SECRET || 'munyaka-lan-jwt-secret-2026';
 const DB_PATH = path.join(__dirname, 'data', 'school.db');
 
 // Ensure data directory exists
@@ -49,6 +54,27 @@ app.options('*', cors({
 }));
 
 app.use(express.json({ limit: '50mb' }));
+
+// ============================================
+// JWT Authentication Middleware
+// ============================================
+
+const signToken = (payload) => jwt.sign(payload, JWT_SECRET, { expiresIn: '24h' });
+
+const verifyToken = (req, res, next) => {
+  const header = req.headers.authorization;
+  if (!header || !header.startsWith('Bearer ')) {
+    return res.status(401).json({ success: false, error: 'No token provided' });
+  }
+  const token = header.slice(7);
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({ success: false, error: 'Invalid or expired token' });
+  }
+};
 
 // ============================================
 // SQLite Database Setup using sql.js
@@ -334,12 +360,14 @@ const initDB = () => {
   };
   migrateTeachersTable();
 
-  // Insert default admin user if not exists
+  // Insert default admin user if not exists — password stored as bcrypt hash
   const adminExists = dbGet('SELECT id FROM users WHERE role = ?', ['admin']);
   if (!adminExists) {
+    // Hash the plaintext default password so it works with bcrypt.compareSync
+    const hashed = bcrypt.hashSync('admin123', 10);
     dbRun(
       `INSERT INTO users (id, name, email, phone, role, password) VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', 'admin123']
+      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', hashed]
     );
   }
 
@@ -1310,49 +1338,241 @@ app.post('/api/backup/restore', (req, res) => {
 // AUTHENTICATION API
 // ============================================
 
-// Login endpoint
+// Login endpoint — bcrypt verification + JWT issuance
+// Accepts both 'admin' and 'teacher' (and 'staff') roles, case-insensitive.
+// Falls back to plaintext comparison if a stored password is not bcrypt-hashed,
+// so existing seed data continues to work.
 app.post('/api/auth/login', (req, res) => {
   try {
     const { email, password } = req.body;
-    
+
     if (!email || !password) {
       return res.status(400).json({ success: false, error: 'Email and password are required' });
     }
-    
+
     // Look up user by email (case-insensitive)
     const user = dbGet('SELECT id, name, email, role, password FROM users WHERE LOWER(email) = LOWER(?)', [email]);
-    
+
     if (!user) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-    
-    // Validate password (case-sensitive as stored)
-    if (user.password !== password) {
+
+    // Verify password: bcrypt-hashed values start with "$2a$" / "$2b$" / "$2y$".
+    // Anything else is treated as legacy plaintext and compared directly.
+    const stored = user.password || '';
+    const isBcrypt = typeof stored === 'string' && /^\$2[aby]\$/.test(stored);
+    let passwordValid = false;
+    if (isBcrypt) {
+      try {
+        passwordValid = bcrypt.compareSync(password, stored);
+      } catch {
+        passwordValid = false;
+      }
+    } else {
+      passwordValid = stored === password;
+    }
+
+    if (!passwordValid) {
       return res.status(401).json({ success: false, error: 'Invalid credentials' });
     }
-    
+
     // Normalize role to lowercase for validation
-    const role = user.role ? user.role.toLowerCase() : '';
-    
+    const role = (user.role || '').toLowerCase();
+
     // Accept admin and teacher (and staff) roles
     if (role !== 'admin' && role !== 'teacher' && role !== 'staff') {
       return res.status(403).json({ success: false, error: 'Role not authorized to login' });
     }
-    
-    // Generate a simple token (in production, use JWT)
-    const token = crypto.randomUUID();
-    
-    // Return token and user data
+
+    // Sign a JWT carrying the user's id + role
+    const token = signToken({ id: user.id, name: user.name, role: user.role });
+
     res.json({
       success: true,
       token,
       user: {
         id: user.id,
         name: user.name,
-        role: user.role // Return original role as stored
+        role: user.role
       }
     });
   } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
+// DASHBOARD API (replaces PocketBase dashboard queries)
+// ============================================
+// Unified endpoint that returns everything the admin dashboard needs
+// in a single round-trip, with no external service dependencies.
+
+const getTodayDate = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+app.get('/api/dashboard/stats', (req, res) => {
+  try {
+    const today = getTodayDate();
+
+    // 1. Total active students
+    const totalActiveStudents =
+      dbGet('SELECT COUNT(*) as c FROM students WHERE COALESCE(is_active, 0) = 1')?.c || 0;
+
+    // 2. Total teachers (case-insensitive role match)
+    const totalActiveTeachers = dbGet(`
+      SELECT COUNT(*) as c FROM teachers
+      WHERE LOWER(COALESCE(role, '')) LIKE '%teacher%'
+    `)?.c || 0;
+
+    // 3. Today's attendance %
+    const presentToday = dbGet(`
+      SELECT COUNT(DISTINCT student_id) as c FROM attendance
+      WHERE date = ? AND LOWER(COALESCE(status, '')) IN ('present', 'late') AND LOWER(COALESCE(type, '')) = 'student'
+    `, [today])?.c || 0;
+
+    const todayAttendancePercentage = totalActiveStudents > 0
+      ? Math.round((presentToday / totalActiveStudents) * 100)
+      : 0;
+
+    // 4. Weekly attendance trend (Mon–Fri)
+    const dayOfWeek = new Date().getDay();
+    const mondayOffset = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const monday = new Date();
+    monday.setDate(monday.getDate() + mondayOffset);
+    monday.setHours(0, 0, 0, 0);
+    const friday = new Date(monday);
+    friday.setDate(monday.getDate() + 4);
+    friday.setHours(23, 59, 59, 999);
+    const mondayISO = monday.toISOString().split('T')[0];
+    const fridayISO = friday.toISOString().split('T')[0];
+    const todayISO = getTodayDate();
+
+    const weeklyRows = dbAll(`
+      SELECT date, student_id FROM attendance
+      WHERE date >= ? AND date <= ?
+        AND LOWER(COALESCE(status, '')) IN ('present', 'late')
+        AND LOWER(COALESCE(type, '')) = 'student'
+    `, [mondayISO, fridayISO]);
+
+    const byDate = new Map();
+    weeklyRows.forEach(r => {
+      if (!byDate.has(r.date)) byDate.set(r.date, new Set());
+      byDate.get(r.date).add(r.student_id);
+    });
+
+    const dayNames = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+    const weeklyAttendanceTrend = dayNames.map((day, i) => {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const dateStr = d.toISOString().split('T')[0];
+      const presentCount = byDate.get(dateStr)?.size || 0;
+      const rate = totalActiveStudents > 0
+        ? Math.round((presentCount / totalActiveStudents) * 100)
+        : 0;
+      return { day, date: dateStr, rate, isToday: dateStr === todayISO };
+    });
+
+    // 5. Class participation (per grade)
+    const classRows = dbAll(`
+      SELECT grade, COUNT(*) as enrolled FROM students
+      WHERE COALESCE(is_active, 0) = 1
+      GROUP BY grade
+      ORDER BY grade
+    `);
+
+    const classParticipation = classRows.map(c => {
+      const studentsInClass = dbAll(
+        'SELECT id FROM students WHERE grade = ? AND COALESCE(is_active, 0) = 1',
+        [c.grade]
+      ).map(s => s.id);
+
+      let presentToday = 0;
+      if (studentsInClass.length > 0) {
+        const placeholders = studentsInClass.map(() => '?').join(',');
+        presentToday = dbGet(`
+          SELECT COUNT(DISTINCT student_id) as c FROM attendance
+          WHERE date = ?
+            AND student_id IN (${placeholders})
+            AND LOWER(COALESCE(status, '')) IN ('present', 'late')
+            AND LOWER(COALESCE(type, '')) = 'student'
+        `, [today, ...studentsInClass])?.c || 0;
+      }
+
+      const attendanceRate = c.enrolled > 0
+        ? Math.round((presentToday / c.enrolled) * 100)
+        : 0;
+
+      return {
+        className: c.grade,
+        totalEnrolled: c.enrolled,
+        presentToday,
+        attendanceRate
+      };
+    });
+
+    // 6. Recent alerts — last 5 activity items combined
+    const recentAlerts = [];
+
+    const recentFees = dbAll(`
+      SELECT id, amount, receipt_no, created_at FROM fee_payments
+      ORDER BY created_at DESC LIMIT 5
+    `);
+    recentFees.forEach(p => recentAlerts.push({
+      id: `fee_${p.id}`,
+      type: 'fee_receipt',
+      message: `Fee payment received: ${p.receipt_no} (KES ${p.amount})`,
+      createdAt: p.created_at,
+      relatedId: p.id,
+      relatedType: 'fee_payment'
+    }));
+
+    const recentStudents = dbAll(`
+      SELECT id, first_name, last_name, admission_no, created_at FROM students
+      WHERE COALESCE(is_active, 0) = 1
+      ORDER BY created_at DESC LIMIT 5
+    `);
+    recentStudents.forEach(s => recentAlerts.push({
+      id: `student_${s.id}`,
+      type: 'student_registration',
+      message: `New student registered: ${s.first_name} ${s.last_name} (${s.admission_no})`,
+      createdAt: s.created_at,
+      relatedId: s.id,
+      relatedType: 'student'
+    }));
+
+    const recentStaffAttendance = dbAll(`
+      SELECT id, teacher_id, status, created_at FROM attendance
+      WHERE LOWER(COALESCE(type, '')) = 'teacher'
+      ORDER BY created_at DESC LIMIT 5
+    `);
+    recentStaffAttendance.forEach(r => recentAlerts.push({
+      id: `staff_${r.id}`,
+      type: 'staff_attendance',
+      message: `Staff marked ${r.status}`,
+      createdAt: r.created_at,
+      relatedId: r.id,
+      relatedType: 'staff_attendance'
+    }));
+
+    const top5 = recentAlerts
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5);
+
+    res.json({
+      success: true,
+      data: {
+        totalActiveStudents,
+        totalActiveTeachers,
+        todayAttendancePercentage,
+        weeklyAttendanceTrend,
+        classParticipation,
+        recentAlerts: top5
+      }
+    });
+  } catch (error) {
+    console.error('dashboard/stats error:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1475,32 +1695,38 @@ const startServer = async () => {
     await loadDatabase();
     initDB();
 
-    app.listen(PORT, '0.0.0.0', () => {
+    app.listen(PORT, HOST, () => {
       const localIP = getLocalIP();
       console.log(`
 ╔══════════════════════════════════════════════════════════════╗
 ║           MUNYAKA LAN SCHOOL MANAGEMENT SERVER                ║
 ╠══════════════════════════════════════════════════════════════╣
-║  Server running on: http://${localIP}:${PORT}                  
-║  Local access:    http://localhost:${PORT}                     
-║  Database:        ${DB_PATH}   
-║  Engine:          sql.js (Pure JavaScript SQLite - WASM)
+║  Server binding:  http://${HOST}:${PORT}
+║  Local access:     http://localhost:${PORT}
+║  Network access:   http://${localIP}:${PORT}
+║  Database:         ${DB_PATH}
+║  Auth:             JWT (bcryptjs) — no external provider
 ╠══════════════════════════════════════════════════════════════╣
-║  API Endpoints:                                                ║
-║  • GET  /api/students     - List all students                 ║
-║  • POST /api/students     - Create student                    ║
-║  • GET  /api/teachers     - List all teachers                 ║
-║  • POST /api/teachers     - Create teacher                    ║
-║  • GET  /api/attendance   - Get attendance records            ║
-║  • POST /api/attendance   - Record attendance                 ║
-║  • GET  /api/fees         - Get fee records                  ║
-║  • POST /api/fees         - Create fee record                 ║
-║  • GET  /api/devices      - List connected devices            ║
-║  • POST /api/sync         - Sync offline data                ║
-║  • GET  /api/stats        - Database statistics              ║
-║  • GET  /api/backup       - Export database backup (JSON)    ║
-║  • GET  /api/backup/db    - Export SQLite file               ║
-║  • GET  /api/server/info   - Server connection info           ║
+║  Auth:                                                        ║
+║  • POST /api/auth/login       - Login (returns JWT)         ║
+║  Authenticated:                                       ║
+║  • GET  /api/students        - List all students            ║
+║  • POST /api/students        - Create student               ║
+║  • GET  /api/teachers        - List all teachers            ║
+║  • POST /api/teachers        - Create teacher               ║
+║  • POST /api/teachers/bulk-activate                        ║
+║  • POST /api/teachers/activate-all                         ║
+║  • GET  /api/attendance      - Get attendance records       ║
+║  • POST /api/attendance      - Record attendance            ║
+║  • GET  /api/fees            - Get fee records             ║
+║  • POST /api/fees            - Create fee record            ║
+║  • GET  /api/devices         - List connected devices       ║
+║  • POST /api/sync             - Sync offline data           ║
+║  • GET  /api/dashboard/stats - Dashboard stats (unified)   ║
+║  • GET  /api/stats           - Database statistics           ║
+║  • GET  /api/backup          - Export database (JSON)      ║
+║  • GET  /api/backup/db       - Export SQLite file          ║
+║  • GET  /api/server/info     - Server connection info      ║
 ╚══════════════════════════════════════════════════════════════╝
       `);
     });
