@@ -6,6 +6,44 @@ import { useNavigate } from 'react-router-dom';
 import OwnerDashboard from '@/components/dashboards/OwnerDashboard';
 import AdminDashboardComponent from '@/components/dashboards/AdminDashboard';
 import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
+import { useAuth } from '@/context/AuthContext';
+import { getNotices } from '@/utils/notice-board';
+import { useLanSync } from '@/hooks/useLanSync';
+import { formatRelativeTime } from '@/services/activityLog';
+import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
+import { getAllAssessmentResults } from '@/utils/assessmentResults';
+import type { Assessment, AssessmentResult, StudentSubmission } from '@/types/questions';
+import {
+  FileQuestion,
+  AlertCircle,
+  TrendingUp,
+  ArrowRight,
+  Users,
+  UserCheck,
+  GraduationCap,
+  Megaphone,
+  PenLine,
+  ClipboardCheck,
+  ClipboardList,
+  CalendarDays,
+  CalendarClock,
+  Wifi,
+  WifiOff,
+  Server,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  BookOpen,
+  FileText,
+  LayoutGrid,
+  CheckCircle2,
+  XCircle,
+  Circle,
+  UsersRound,
+  BookMarked,
+  BarChart3,
+  type LucideIcon,
+} from 'lucide-react';
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
 export type WidgetKey =
@@ -24,43 +62,6 @@ export type WidgetKey =
   | 'myClassAttendanceRate'
   | 'pendingMarks'
   | 'todayLessonSchedule';
-import {
-  Users,
-  UserCheck,
-  GraduationCap,
-  Megaphone,
-  PenLine,
-  ClipboardCheck,
-  ClipboardList,
-  CalendarDays,
-  CalendarClock,
-  Wifi,
-  WifiOff,
-  Server,
-  Clock,
-  ArrowRight,
-  AlertTriangle,
-  RefreshCw,
-  BookOpen,
-  FileText,
-  LayoutGrid,
-  CheckCircle2,
-  XCircle,
-  Circle,
-  UsersRound,
-  BookMarked,
-  BarChart3,
-  TrendingUp,
-  AlertCircle,
-  type LucideIcon,
-} from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { getNotices } from '@/utils/notice-board';
-import { useLanSync } from '@/hooks/useLanSync';
-import { formatRelativeTime } from '@/services/activityLog';
-import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
-import { getAllAssessmentResults } from '@/utils/assessmentResults';
-import type { Assessment, AssessmentResult, StudentSubmission } from '@/types/questions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
