@@ -2,12 +2,23 @@
 
 import React, { useState, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { Download, Upload, Table2, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft } from "lucide-react";
+import { Download, Upload, Table2, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft, FileText, BadgeCheck, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import type { Question, QuestionType } from "@/types/questions";
+// pdfjs-dist v3 is the last version that exports the legacy build compatible
+// with Vite without requiring the .mjs worker rewrite. We use the legacy build
+// for simplicity and broad browser support.
+import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
+// Vite-friendly worker registration — point at the same legacy build's worker.
+// This avoids the need to copy the worker into /public and keeps the bundle
+// self-contained.
+import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.js?url";
+
+// Configure pdf.js to use the bundled worker. Done once at module load.
+pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const QUESTION_BANK_KEY = "question_bank";
 const ACTIVE_ASSESSMENT_ID_KEY = "csv_importer_active_assessment_id";
@@ -122,6 +133,117 @@ function parseCSVLine(line: string): string[] {
 }
 
 // ─── Question Converter ───────────────────────────────────────────────────────
+
+// ─── PDF Text Extractor ───────────────────────────────────────────────────────
+
+/**
+ * Extracts plain text from an unprotected PDF using pdfjs-dist.
+ * Returns an array of non-empty text lines.
+ */
+async function extractTextFromPDF(file: File): Promise<string[]> {
+  const arrayBuffer = await file.arrayBuffer();
+  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
+  const pdf = await loadingTask.promise;
+
+  const lines: string[] = [];
+  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+    const page = await pdf.getPage(pageNum);
+    const textContent = await page.getTextContent();
+    const pageText = textContent.items
+      .map((item) => ("str" in item ? (item as { str: string }).str : ""))
+      .join(" ");
+    const paragraphBlocks = pageText
+      .split(/\n{2,}|\s{4,}/)
+      .map((l) => l.trim())
+      .filter((l) => l.length > 0);
+    lines.push(...paragraphBlocks);
+  }
+
+  return lines;
+}
+
+// ─── PDF Line → CSV Row ────────────────────────────────────────────────────────
+
+const QUESTION_PATTERNS = [
+  /^(?:\d+)\.\s+(.+)/,
+  /^Q(\d+)[.:\s]+(.+)/,
+  /^\((\d+)\)\s*(.+)/,
+  /^[Qq]uestion\s+(\d+)[.:]\s*(.+)/,
+  /^(?:\d+)\)\s+(.+)/,
+  /^QUESTION\s+(\d+)[.:]\s*(.+)/,
+];
+
+const OPTION_PATTERN = /^([A-D])\.\s*(.+)/i;
+const ANSWER_PATTERN = /^(?:answer|correct|answer is|right answer)[:\s]+([A-D])\b/i;
+const POINTS_PATTERN  = /^(?:points|marks)[:\s]+(\d+)/i;
+
+/**
+ * Detects question-numbering patterns in extracted PDF lines and groups
+ * them into individual CSVRow entries.
+ */
+function groupPDFLinesToRows(lines: string[]): CSVRow[] {
+  const rows: CSVRow[] = [];
+  let current: Partial<CSVRow> = {};
+
+  for (let i = 0; i < lines.length; i++) {
+    const raw = lines[i].trim();
+    if (!raw) continue;
+
+    let isNewQuestion = false;
+    for (const pattern of QUESTION_PATTERNS) {
+      const match = raw.match(pattern);
+      if (match) {
+        if (current.question_text) {
+          rows.push(current as CSVRow);
+        }
+        current = {
+          question_text: match[2] ?? match[1],
+          type: "mcq",
+        };
+        isNewQuestion = true;
+        break;
+      }
+    }
+    if (isNewQuestion) continue;
+
+    const optionMatch = raw.match(OPTION_PATTERN);
+    if (optionMatch && current.question_text) {
+      const key = `option_${optionMatch[1].toLowerCase()}` as keyof CSVRow;
+      (current as Record<string, string>)[key] = optionMatch[2];
+      continue;
+    }
+
+    const answerMatch = raw.match(ANSWER_PATTERN);
+    if (answerMatch && current.question_text) {
+      current.correct_answer = answerMatch[1].toUpperCase();
+      continue;
+    }
+
+    const pointsMatch = raw.match(POINTS_PATTERN);
+    if (pointsMatch && current.question_text) {
+      current.points = pointsMatch[1];
+      continue;
+    }
+
+    if (current.question_text) {
+      current.question_text = (current.question_text as string) + " " + raw;
+    }
+  }
+
+  if (current.question_text) {
+    rows.push(current as CSVRow);
+  }
+
+  return rows;
+}
+
+async function parsePDF(file: File): Promise<CSVRow[]> {
+  const lines = await extractTextFromPDF(file);
+  if (lines.length === 0) return [];
+  return groupPDFLinesToRows(lines);
+}
+
+// ─── Question Converter ────────────────────────────────────────────────────────
 
 function csvRowToQuestion(row: CSVRow, index: number): Question {
   const type: QuestionType = row.type?.trim().toLowerCase() === "structured" ? "structured" : "mcq";
@@ -240,16 +362,47 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
   // ── File Upload & Parse ───────────────────────────────────────────────────
 
   const handleFileChange = useCallback(
-    (e: React.ChangeEvent<HTMLInputElement>) => {
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      if (!file.name.endsWith(".csv") && file.type !== "text/csv") {
-        showError("Please upload a .csv file.");
+      const isCSV = file.name.toLowerCase().endsWith(".csv") || file.type === "text/csv";
+      const isPDF = file.name.toLowerCase().endsWith(".pdf") || file.type === "application/pdf";
+
+      if (!isCSV && !isPDF) {
+        showError("Please upload a .csv or .pdf file.");
         return;
       }
 
       setFileName(file.name);
+
+      if (isPDF) {
+        try {
+          const rows = await parsePDF(file);
+          if (rows.length === 0) {
+            showError("PDF did not contain any detectable questions.");
+            return;
+          }
+
+          const validated = rows.map((row, i) => validateRow(row, i + 1));
+          setParsedQuestions(validated);
+
+          const validCount = validated.filter((q) => q.isValid).length;
+          const invalidCount = validated.length - validCount;
+
+          if (invalidCount === 0) {
+            showSuccess(`All ${validCount} PDF questions parsed and valid!`);
+          } else {
+            showError(
+              `${validCount} valid, ${invalidCount} with errors — fix them before saving.`
+            );
+          }
+        } catch (err) {
+          console.error("PDF parse error:", err);
+          showError("Could not read this PDF. It may be scanned, encrypted, or unprotected text extraction is unsupported.");
+        }
+        return;
+      }
 
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -422,13 +575,13 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
               <input
                 ref={fileInputRef}
                 type="file"
-                accept=".csv,text/csv"
+                accept=".csv, .pdf,text/csv,application/pdf"
                 className="hidden"
                 onChange={handleFileChange}
               />
               <span className="inline-flex items-center justify-center rounded-xl h-11 px-5 gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 text-white font-bold shadow-lg shadow-purple-100 transition-all w-full sm:w-auto">
                 <Upload size={16} />
-                {fileName ? `Change: ${fileName}` : "Select CSV File"}
+                {fileName ? `Change: ${fileName}` : "Select CSV or PDF File"}
               </span>
             </label>
 
@@ -442,6 +595,22 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
                 Clear
               </Button>
             )}
+          </div>
+
+          {/* File Format Support Badge */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-indigo-50 text-indigo-700 border border-indigo-200">
+              <BadgeCheck size={13} />
+              Supports CSV &amp; Unprotected PDF Text Files
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
+              <FileSpreadsheet size={11} />
+              CSV
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-slate-50 text-slate-500 border border-slate-200">
+              <FileText size={11} />
+              PDF
+            </span>
           </div>
 
           {/* Assessment ID display */}
