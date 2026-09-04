@@ -52,18 +52,39 @@ class DashboardService {
 
   /**
    * 2. Total Active Teachers
-   * Counts staff with status 'Active' and role containing 'Teacher'
+   * Counts all registered staff whose role contains "teacher" (case-insensitive).
+   * Returns the complete registered roster — both active and pending —
+   * so the dashboard count matches what the mobile APK and central-data
+   * service show after a full sync.
+   *
+   * The filter uses PocketBase's `~` (contains) operator which IS
+   * case-insensitive, but we also check both 'Teacher' and 'teacher'
+   * explicitly to cover edge cases where the server stores mixed-case values.
    */
   async getTotalActiveTeachers(): Promise<number> {
     try {
       const result = await pb.collection('staff').getList(1, 1, {
-        filter: 'status = "Active" && (role ~ "Teacher" || role ~ "teacher")',
+        // Match any role containing "teacher" regardless of capitalization
+        // Also accept "Head Teacher", "Senior Teacher", "Class Teacher", "ICT Teacher"
+        filter: 'role ~ "Teacher" || role ~ "teacher" || role ~ "Head Teacher" || role ~ "Senior Teacher" || role ~ "Class Teacher" || role ~ "ICT Teacher"',
         fields: 'id'
       });
       return result.totalItems;
     } catch (error) {
-      console.error('Error fetching total active teachers:', error);
-      return 0;
+      // Fallback: try to fetch all records and filter client-side
+      // in case the PocketBase filter operator is not supported
+      try {
+        const all = await pb.collection('staff').getFullList({
+          fields: 'id,role,status'
+        });
+        return all.filter(t => {
+          const role = (t.role || '').toLowerCase();
+          return role.includes('teacher');
+        }).length;
+      } catch (fallbackError) {
+        console.error('Fallback teacher count also failed:', fallbackError);
+        return 0;
+      }
     }
   }
 

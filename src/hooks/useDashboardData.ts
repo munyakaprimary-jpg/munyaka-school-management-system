@@ -166,7 +166,11 @@ const computeStats = (): DashboardStats => {
     const totalTeachers = teachers.filter((t) => {
       if (!t) return false;
       if (!matchesActiveSchool(t, activeSchoolId)) return false;
-      if (t.status && t.status !== 'Active' && t.status !== 'active') return false;
+      // Count every teacher-classified record regardless of status.
+      // The previous version dropped records whose status was not
+      // exactly "Active" (e.g. missing, "Pending", "Verified"), which
+      // caused the dashboard to show 1 instead of 7. The dashboard
+      // should reflect the full registered roster.
       return isTeacherRecord(t);
     }).length;
 

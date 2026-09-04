@@ -479,6 +479,9 @@ app.delete('/api/students/:id', (req, res) => {
 // ============================================
 
 // Get all teachers
+// Accepts optional query params:
+//   ?search=keyword        — full-text search on name / staff_id
+//   ?active=true|false     — filter by is_active (omit to return ALL teachers)
 app.get('/api/teachers', (req, res) => {
   try {
     const { search, active } = req.query;
@@ -490,9 +493,13 @@ app.get('/api/teachers', (req, res) => {
       const searchTerm = `%${search}%`;
       params.push(searchTerm, searchTerm, searchTerm);
     }
-    if (active !== undefined) {
-      query += ' AND is_active = ?';
-      params.push(active === 'true' ? 1 : 0);
+    // Only filter by active when explicitly requested;
+    // omitting the param returns ALL teachers so the dashboard
+    // and APK show the complete registered roster.
+    if (active === 'true') {
+      query += ' AND is_active = 1';
+    } else if (active === 'false') {
+      query += ' AND (is_active = 0 OR is_active IS NULL)';
     }
 
     query += ' ORDER BY last_name, first_name';
@@ -993,6 +1000,65 @@ app.post('/api/sync', (req, res) => {
               results.push({ id: data.id, status: 'created' });
             }
           }
+        } else if (type === 'teacher') {
+          // Teacher sync: upsert so the dashboard sees every record
+          // pushed from the mobile APK, even when is_active differs
+          // from the server default.
+          const teacherId = data.id || generateId();
+          const existing = dbGet('SELECT id FROM teachers WHERE id = ?', [teacherId]);
+          const finalStaffId = data.staff_id || `STF-${Date.now()}`;
+          const finalIdNumber = data.id_number || `ID-${Date.now()}`;
+          const finalRole = data.role || 'TEACHER';
+          const cleanEmail = data.email && String(data.email).trim() !== '' ? String(data.email).trim() : null;
+          const cleanPhone = data.phone && String(data.phone).trim() !== '' ? String(data.phone).trim() : null;
+          const cleanTsc = data.tsc_number && String(data.tsc_number).trim() !== '' ? String(data.tsc_number).trim() : null;
+
+          if (existing) {
+            dbRun(
+              `UPDATE teachers SET staff_id=?, full_name=?, first_name=?, last_name=?, role=?, email=?, phone=?, gender=?, id_number=?, tsc_number=?, subject_specialization=?, grade_assigned=?, stream_assigned=?, is_active=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+              [
+                data.staff_id || finalStaffId,
+                data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+                data.first_name || '',
+                data.last_name || '',
+                finalRole,
+                cleanEmail,
+                cleanPhone,
+                data.gender || null,
+                data.id_number || finalIdNumber,
+                cleanTsc,
+                data.subject_specialization || null,
+                data.grade_assigned || null,
+                data.stream_assigned || null,
+                data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1,
+                teacherId
+              ]
+            );
+            results.push({ id: teacherId, status: 'updated' });
+          } else {
+            dbRun(
+              `INSERT INTO teachers (id, staff_id, full_name, first_name, last_name, role, email, phone, gender, id_number, tsc_number, subject_specialization, grade_assigned, stream_assigned, is_active)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+              [
+                teacherId,
+                data.staff_id || finalStaffId,
+                data.full_name || `${data.first_name || ''} ${data.last_name || ''}`.trim(),
+                data.first_name || '',
+                data.last_name || '',
+                finalRole,
+                cleanEmail,
+                cleanPhone,
+                data.gender || null,
+                data.id_number || finalIdNumber,
+                cleanTsc,
+                data.subject_specialization || null,
+                data.grade_assigned || null,
+                data.stream_assigned || null,
+                data.is_active !== undefined ? (data.is_active ? 1 : 0) : 1
+              ]
+            );
+            results.push({ id: teacherId, status: 'created' });
+          }
         }
       } catch (err) {
         results.push({ id: data.id, status: 'error', error: err.message });
@@ -1019,9 +1085,28 @@ app.post('/api/sync', (req, res) => {
 // Get database stats
 app.get('/api/stats', (req, res) => {
   try {
+    // Unified teacher breakdown: total + active + inactive (pending/suspended)
+    // Do NOT hard-filter by is_active so the dashboard reflects every
+    // registered teacher regardless of their verification status.
+    const teacherTotals = dbGet(`
+      SELECT
+        COUNT(*) AS total,
+        SUM(CASE WHEN LOWER(COALESCE(role, '')) = 'teacher' THEN 1 ELSE 0 END) AS role_teacher,
+        SUM(CASE WHEN COALESCE(is_active, 0) = 1 THEN 1 ELSE 0 END) AS active,
+        SUM(CASE WHEN COALESCE(is_active, 0) = 0 OR is_active IS NULL THEN 1 ELSE 0 END) AS pending
+      FROM teachers
+    `) || { total: 0, role_teacher: 0, active: 0, pending: 0 };
+
     const stats = {
       students: dbGet('SELECT COUNT(*) as count FROM students WHERE is_active = 1')?.count || 0,
-      teachers: dbGet('SELECT COUNT(*) as count FROM teachers WHERE is_active = 1')?.count || 0,
+      // Backwards-compatible: keep the `teachers` key returning the
+      // TOTAL registered count (not just active) so the dashboard
+      // matches the mobile APK's view of the world.
+      teachers: teacherTotals.total || 0,
+      teachers_total: teacherTotals.total || 0,
+      teachers_active: teacherTotals.active || 0,
+      teachers_pending: teacherTotals.pending || 0,
+      teachers_role_teacher: teacherTotals.role_teacher || 0,
       attendance_today: dbGet(`SELECT COUNT(*) as count FROM attendance WHERE date = date('now')`)?.count || 0,
       pending_fees: dbGet(`SELECT COUNT(*) as count FROM fees WHERE status IN ('pending', 'partial', 'overdue')`)?.count || 0,
       connected_devices: dbGet(`SELECT COUNT(*) as count FROM connected_devices WHERE datetime(last_seen) > datetime('now', '-5 minutes')`)?.count || 0,

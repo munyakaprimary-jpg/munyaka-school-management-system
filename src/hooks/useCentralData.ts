@@ -49,6 +49,12 @@ export interface AttendanceLog {
 export interface CentralDataStats {
   totalStudents: number;
   totalTeachers: number;
+  /**
+   * Sub-count of teachers whose status is "Active" / "Verified".
+   * Optional because not every consumer needs it; when absent
+   * the consumer should treat `totalTeachers` as the canonical count.
+   */
+  activeTeacherCount?: number;
   todayAttendanceRate: number;
   isLoading: boolean;
 }
@@ -201,14 +207,24 @@ const computeStats = (): CentralDataStats => {
 
     // ── Teachers ──
     const allTeachers = getTeachers();
-    const activeTeachers = allTeachers.filter((t) => {
+    // Track BOTH totals separately so callers can distinguish:
+    //   - totalTeachers       → every teacher-classified record (active + pending)
+    //   - activeTeacherCount  → only Active/active status rows
+    // The dashboard "Registered Teachers" card shows the total, while
+    // an "Active" badge can show the active sub-count.
+    const allTeacherRecords = allTeachers.filter((t) => {
       if (!t) return false;
       if (!matchesActiveSchool(t, activeSchoolId)) return false;
       if (!isActiveRecord(t)) return false;
-      if (t.status && t.status !== 'Active' && t.status !== 'active') return false;
       return isTeacherRecord(t);
     });
-    const totalTeachers = activeTeachers.length;
+    const totalTeachers = allTeacherRecords.length;
+    // Backwards-compat: also expose the active sub-count
+    const activeTeacherCount = allTeacherRecords.filter((t) => {
+      if (!t.status) return true; // missing status → treat as active (legacy shape)
+      const s = String(t.status).toLowerCase();
+      return s === 'active' || s === 'verified' || s === 'approved' || s === 'enabled';
+    }).length;
 
     // ── Today's attendance — deduplicated by studentId ──
     const todayLogs = getTodayAttendanceLogs();
@@ -223,6 +239,7 @@ const computeStats = (): CentralDataStats => {
     return {
       totalStudents,
       totalTeachers,
+      activeTeacherCount,
       todayAttendanceRate,
       isLoading: false,
     };
@@ -237,6 +254,7 @@ const computeStats = (): CentralDataStats => {
     return {
       totalStudents: fallbackStudents,
       totalTeachers: fallbackTeachers,
+      activeTeacherCount: fallbackTeachers,
       todayAttendanceRate: 0,
       isLoading: false,
     };
@@ -248,7 +266,7 @@ const computeStats = (): CentralDataStats => {
 export const useCentralData = (): CentralDataStats => {
   const [stats, setStats] = useState<CentralDataStats>(() => {
     if (typeof window === 'undefined') {
-      return { totalStudents: 0, totalTeachers: 0, todayAttendanceRate: 0, isLoading: true };
+      return { totalStudents: 0, totalTeachers: 0, activeTeacherCount: 0, todayAttendanceRate: 0, isLoading: true };
     }
     return computeStats();
   });
