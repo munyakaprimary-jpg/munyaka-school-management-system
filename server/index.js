@@ -613,22 +613,30 @@ app.post('/api/teachers/bulk-activate', (req, res) => {
 // POST /api/teachers/activate-all
 // Activates every pre-registered / inactive teacher in one shot.
 // Useful for first-time onboarding or after importing a roster.
-app.post('/api/teachers/activate-all', (req, res) => {
+// Also accepts PATCH so clients that prefer PATCH semantics can call it.
+app.post('/api/teachers/activate-all', activateAllTeachers);
+app.patch('/api/teachers/activate-all', activateAllTeachers);
+
+function activateAllTeachers(req, res) {
   try {
     const result = dbRun(
       `UPDATE teachers SET is_active = 1, status = 'active', updated_at = CURRENT_TIMESTAMP
-       WHERE is_active = 0 OR is_active IS NULL OR LOWER(status) IN ('pre-registered', 'pre-registered', 'pending', 'inactive')`
+       WHERE is_active = 0 OR is_active IS NULL OR LOWER(status) IN ('pre-registered', 'pre_registered', 'pending', 'inactive')`
     );
     saveDatabase();
+    const activatedCount = result.changes || 0;
+    console.log(`[activate-all] Activated ${activatedCount} teacher(s).`);
     res.json({
       success: true,
-      activated: result.changes || 0,
-      message: `Activated ${result.changes || 0} teacher(s).`,
+      activated: activatedCount,
+      count: activatedCount,
+      message: `Activated ${activatedCount} teacher(s).`,
     });
   } catch (error) {
+    console.error('[activate-all] Failed:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
-});
+}
 
 // Create teacher
 app.post('/api/teachers', (req, res) => {
@@ -1715,7 +1723,7 @@ const startServer = async () => {
 ║  • GET  /api/teachers        - List all teachers            ║
 ║  • POST /api/teachers        - Create teacher               ║
 ║  • POST /api/teachers/bulk-activate                        ║
-║  • POST /api/teachers/activate-all                         ║
+║  • POST/PATCH /api/teachers/activate-all                   ║
 ║  • GET  /api/attendance      - Get attendance records       ║
 ║  • POST /api/attendance      - Record attendance            ║
 ║  • GET  /api/fees            - Get fee records             ║

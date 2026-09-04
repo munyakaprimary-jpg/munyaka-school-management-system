@@ -476,16 +476,34 @@ const Staff = () => {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('munyaka_auth_token');
+        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      } catch {
+        // localStorage unavailable; continue without token
+      }
+
+      console.log('[bulk-activate] Sending POST', `${baseUrl}/api/teachers/bulk-activate`, { ids: idsToActivate });
+
       const response = await fetch(`${baseUrl}/api/teachers/bulk-activate`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         body: JSON.stringify({ ids: idsToActivate }),
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);
 
+      console.log('[bulk-activate] Response status:', response.status, response.statusText);
+
       if (response.ok) {
-        // Update local state optimistically
+        const result = await response.json().catch((parseErr) => {
+          console.error('[bulk-activate] Failed to parse JSON response:', parseErr);
+          return { success: false, message: 'Invalid server response' };
+        });
+        console.log('[bulk-activate] Response body:', result);
+
+        // Optimistic local update
         setStaffDirectory(prev =>
           prev.map(s =>
             idsToActivate.includes(s.id)
@@ -494,12 +512,31 @@ const Staff = () => {
           )
         );
         setSelectedIds(new Set());
-        const result = await response.json();
+
+        // Refetch to sync with server's canonical state
+        try {
+          const fresh = await fetchStaffList();
+          setStaffDirectory(fresh);
+        } catch (refetchErr) {
+          console.warn('[bulk-activate] Refetch failed (UI is already updated optimistically):', refetchErr);
+        }
+
+        notifyDataChanged('staff');
+        window.dispatchEvent(new Event('staff-changed'));
+
         showSuccess(result.message || `Activated ${idsToActivate.length} teacher(s).`);
       } else {
-        showError('Bulk activation failed. Please try again.');
+        let errBody: any = null;
+        try {
+          errBody = await response.json();
+        } catch (parseErr) {
+          console.error('[bulk-activate] Could not parse error response body:', parseErr);
+        }
+        console.error('[bulk-activate] Server returned non-OK status:', response.status, errBody);
+        showError(errBody?.error || 'Bulk activation failed. Please try again.');
       }
-    } catch {
+    } catch (err) {
+      console.error('[bulk-activate] Network/abort error:', err);
       showError('Network error during bulk activation. Check your connection.');
     } finally {
       setIsBulkActivating(false);
@@ -515,14 +552,34 @@ const Staff = () => {
       const controller = new AbortController();
       const timeoutId = window.setTimeout(() => controller.abort(), 15000);
 
+      // Attach JWT token if available so the backend can authorize the call
+      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
+      try {
+        const token = localStorage.getItem('munyaka_auth_token');
+        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
+      } catch {
+        // localStorage may be unavailable in some environments; continue without token
+      }
+
+      console.log('[activate-all] Sending POST', `${baseUrl}/api/teachers/activate-all`);
+
       const response = await fetch(`${baseUrl}/api/teachers/activate-all`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders,
         signal: controller.signal,
       });
       window.clearTimeout(timeoutId);
 
+      console.log('[activate-all] Response status:', response.status, response.statusText);
+
       if (response.ok) {
+        const result = await response.json().catch((parseErr) => {
+          console.error('[activate-all] Failed to parse JSON response:', parseErr);
+          return { success: false, message: 'Invalid server response' };
+        });
+        console.log('[activate-all] Response body:', result);
+
+        // Optimistically update local state for instant UI feedback
         setStaffDirectory(prev =>
           prev.map(s =>
             s.status === 'Pre-Registered'
@@ -531,12 +588,35 @@ const Staff = () => {
           )
         );
         setSelectedIds(new Set());
-        const result = await response.json();
-        showSuccess(result.message || `Activated all pre-registered teachers.`);
+
+        // Refetch from the server so the Personnel Directory reflects the
+        // canonical post-activation state (covers any rows the optimistic
+        // update missed).
+        try {
+          const fresh = await fetchStaffList();
+          setStaffDirectory(fresh);
+        } catch (refetchErr) {
+          console.warn('[activate-all] Refetch after activate-all failed (UI is already updated optimistically):', refetchErr);
+        }
+
+        notifyDataChanged('staff');
+        window.dispatchEvent(new Event('staff-changed'));
+
+        const activatedCount = result.activated ?? result.count ?? preRegCount;
+        showSuccess(result.message || `Activated ${activatedCount} teacher(s).`);
       } else {
-        showError('Activate-all failed. Please try again.');
+        // Capture server-provided error details for debugging
+        let errBody: any = null;
+        try {
+          errBody = await response.json();
+        } catch (parseErr) {
+          console.error('[activate-all] Could not parse error response body:', parseErr);
+        }
+        console.error('[activate-all] Server returned non-OK status:', response.status, errBody);
+        showError(errBody?.error || 'Activate-all failed. Please try again.');
       }
-    } catch {
+    } catch (err) {
+      console.error('[activate-all] Network/abort error:', err);
       showError('Network error during activation. Check your connection.');
     } finally {
       setIsBulkActivating(false);
