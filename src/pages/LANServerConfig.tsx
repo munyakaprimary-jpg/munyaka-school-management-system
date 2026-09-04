@@ -40,6 +40,7 @@ import {
 } from '@/components/ui/dialog';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { notifyServerUrlChanged } from '@/lib/apiBase';
 
 const LAN_SERVER_KEY = 'lan_server_url';
 const DEFAULT_LAN_URL = 'http://10.28.160.196:5000';
@@ -301,6 +302,7 @@ export default function LANServerConfig() {
     const normalized = normalizeUrl(serverUrl);
     localStorage.setItem(LAN_SERVER_KEY, normalized);
     setServerUrl(normalized);
+    notifyServerUrlChanged(normalized);
     showSuccess(`LAN Server Address saved: ${normalized}`);
 
     setIsTesting(true);
@@ -340,6 +342,7 @@ export default function LANServerConfig() {
   const handleReset = () => {
     setServerUrl(DEFAULT_LAN_URL);
     localStorage.setItem(LAN_SERVER_KEY, DEFAULT_LAN_URL);
+    notifyServerUrlChanged(DEFAULT_LAN_URL);
     setServerProcess('offline');
     setStatus('offline');
     setLatency(null);
@@ -361,6 +364,7 @@ export default function LANServerConfig() {
     setPortInput('');
     setServerUrl(newUrl);
     localStorage.setItem(LAN_SERVER_KEY, newUrl);
+    notifyServerUrlChanged(newUrl);
     showSuccess(`Port updated to ${port}. Saving & testing...`);
     setIsSaving(true);
     setStatus('testing');
