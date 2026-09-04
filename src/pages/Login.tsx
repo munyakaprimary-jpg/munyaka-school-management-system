@@ -352,37 +352,69 @@ const Login: React.FC = () => {
     // ── Server rejected the credentials or is unreachable ─────────────────
     console.warn('[Login] LAN auth failed:', result);
 
-    // Network-level failures should NOT fall back to local — show the
-    // network error verbatim so the admin knows the server is unreachable.
+    // ── Network errors: show as native alert (impossible to miss in APK) ──
+    //    plus the inline error banner. The native alert survives screen
+    //    rotation, app backgrounding, and is the first thing a field
+    //    technician will see when troubleshooting an APK install.
     if (result.code === 'NETWORK_ERROR') {
-      const msg = `Cannot reach the LAN server. ${result.error}`;
-      setStaffAuthError(msg);
-      showError(msg);
-      // Useful developer alert — surfaces immediately even if the toast
-      // disappears, helping diagnose APK LAN connection issues on the field.
-      if (typeof window !== 'undefined') {
-        // eslint-disable-next-line no-console
-        console.warn(`[Login] Server unreachable: ${getApiBaseUrl()}`);
-      }
+      const networkMsg = result.error;
+      setStaffAuthError(networkMsg);
+      showError(networkMsg);
+
+      // Fire a native alert on Capacitor for unmissable diagnostics.
+      // On plain web this falls through to the toast/inline error.
+      try {
+        if ((window as any).Capacitor?.isNativePlatform?.()) {
+          const { Plugins } = (window as any).Capacitor;
+          if (Plugins?.Dialog?.alert) {
+            await Plugins.Dialog.alert({
+              title: '⚠️ Network Error',
+              message: networkMsg + '\n\nCheck that:\n• The LAN server is running\n• The Server IP in Settings is correct\n• The phone is on the same Wi-Fi as the server',
+            });
+          }
+        } else if (typeof window !== 'undefined' && (window as any).alert) {
+          // Fallback: browser alert (works in dev mode on Chrome / Safari)
+          window.alert(`⚠️ Network Error\n\n${networkMsg}\n\nCheck that:\n• The LAN server is running\n• The Server IP in Settings is correct\n• The phone is on the same Wi-Fi as the server`);
+        }
+      } catch { /* ignore alert failures */ }
+
+      console.error(`[Login] Server unreachable: ${result.attemptedUrl}`);
       setIsStaffVerifying(false);
       return;
     }
 
-    // Server is reachable but rejected credentials — distinguish the two
-    // sub-cases so the user gets actionable feedback.
+    // ── Credential / role / server errors: differentiated messages ──────
     let displayMessage: string;
+    let alertTitle: string | null = null;
+
     if (result.code === 'INVALID_CREDENTIALS') {
-      displayMessage = 'Invalid Credentials: The TSC Number / Staff ID or Password you entered is incorrect.';
+      displayMessage = '❌ Invalid Password — The TSC Number / Staff ID or Password is incorrect. Please check your credentials and try again.';
+      alertTitle = 'Invalid Credentials';
     } else if (result.code === 'ROLE_NOT_ALLOWED') {
-      displayMessage = 'This account type is not permitted to sign in on this device.';
+      displayMessage = '🚫 Access Denied — This account type is not permitted to sign in on this device. Contact the school administrator.';
+      alertTitle = 'Role Not Authorized';
     } else if (result.code === 'SERVER_ERROR') {
-      displayMessage = `Server error: ${result.error}`;
+      displayMessage = `🔧 Server Error — ${result.error}`;
+      alertTitle = 'Server Error';
     } else {
       displayMessage = result.error || 'Login failed. Please try again.';
     }
 
     setStaffAuthError(displayMessage);
     showError(displayMessage);
+
+    // Native alert for credential/role errors too — these are the most
+    // common field issues and the technician needs an unambiguous signal
+    // distinguishing "you typed the wrong password" from "the server is down".
+    if (alertTitle && (window as any).Capacitor?.isNativePlatform?.()) {
+      try {
+        const { Plugins } = (window as any).Capacitor;
+        if (Plugins?.Dialog?.alert) {
+          await Plugins.Dialog.alert({ title: alertTitle, message: displayMessage });
+        }
+      } catch { /* ignore */ }
+    }
+
     setIsStaffVerifying(false);
   };
 

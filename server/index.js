@@ -38,9 +38,9 @@ const app = express();
 // file://, http://10.x.x.x:port) which the default CORS middleware blocks.
 app.use(cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['*'],
-  exposedHeaders: ['*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
   credentials: false,
   maxAge: 86400, // cache preflight for 24h
 }));
@@ -49,8 +49,8 @@ app.use(cors({
 // global CORS middleware (e.g. legacy browsers, native HTTP clients).
 app.options('*', cors({
   origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['*'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 
 app.use(express.json({ limit: '50mb' }));
@@ -354,21 +354,131 @@ const initDB = () => {
         dbRun("UPDATE teachers SET status = 'active', is_active = 1 WHERE status IS NULL OR status = 'Pre-Registered'");
         console.log('  → Migrated existing pre-registered teachers to active');
       }
+      // Add password column for teacher authentication (bcrypt hash)
+      if (!columnNames.includes('password')) {
+        dbRun("ALTER TABLE teachers ADD COLUMN password TEXT");
+        console.log('  → Added password column to teachers table');
+      }
     } catch (err) {
       console.warn('Migration note:', err.message);
     }
   };
   migrateTeachersTable();
 
+  // ── Seed default teacher accounts (only if no teachers exist yet) ─────────────
+  const teacherCount = dbGet('SELECT COUNT(*) as c FROM teachers')?.c ?? 0;
+  if (teacherCount === 0) {
+    // Default teacher accounts — passwords hashed with bcryptjs (cost factor 10)
+    // Default password for all seed teachers: Teacher@123
+    const defaultTeacherPass = 'Teacher@123';
+    const hashedTeacher = bcrypt.hashSync(defaultTeacherPass, 10);
+
+    const seedTeachers = [
+      {
+        id: 'teacher-001',
+        staff_id: 'TSC12345',
+        full_name: 'Jane Mwangi',
+        first_name: 'Jane',
+        last_name: 'Mwangi',
+        role: 'TEACHER',
+        email: 'jane.mwangi@munyaka.sc.ke',
+        phone: '+254 712 345 678',
+        gender: 'F',
+        id_number: 'ID-001',
+        tsc_number: 'TSC12345',
+        subject_specialization: 'Mathematics',
+        grade_assigned: 'Grade 8',
+        stream_assigned: '8 East',
+        is_active: 1,
+        status: 'active',
+        password: hashedTeacher,
+      },
+      {
+        id: 'teacher-002',
+        staff_id: 'TSC67890',
+        full_name: 'John Ochieng',
+        first_name: 'John',
+        last_name: 'Ochieng',
+        role: 'HEAD_TEACHER',
+        email: 'john.ochieng@munyaka.sc.ke',
+        phone: '+254 723 456 789',
+        gender: 'M',
+        id_number: 'ID-002',
+        tsc_number: 'TSC67890',
+        subject_specialization: 'English',
+        grade_assigned: 'Grade 7',
+        stream_assigned: '7 West',
+        is_active: 1,
+        status: 'active',
+        password: hashedTeacher,
+      },
+      {
+        id: 'teacher-003',
+        staff_id: 'TSC11223',
+        full_name: 'Grace Wanjiku',
+        first_name: 'Grace',
+        last_name: 'Wanjiku',
+        role: 'TEACHER',
+        email: 'grace.wanjiku@munyaka.sc.ke',
+        phone: '+254 734 567 890',
+        gender: 'F',
+        id_number: 'ID-003',
+        tsc_number: 'TSC11223',
+        subject_specialization: 'Science',
+        grade_assigned: 'Grade 7',
+        stream_assigned: '7 East',
+        is_active: 0,
+        status: 'Pre-Registered',
+        password: hashedTeacher,
+      },
+      {
+        id: 'teacher-004',
+        staff_id: 'TSC44556',
+        full_name: 'Peter Kimani',
+        first_name: 'Peter',
+        last_name: 'Kimani',
+        role: 'TEACHER',
+        email: 'peter.kimani@munyaka.sc.ke',
+        phone: '+254 745 678 901',
+        gender: 'M',
+        id_number: 'ID-004',
+        tsc_number: 'TSC44556',
+        subject_specialization: 'Social Studies',
+        grade_assigned: 'Grade 8',
+        stream_assigned: '8 West',
+        is_active: 0,
+        status: 'Pre-Registered',
+        password: hashedTeacher,
+      },
+    ];
+
+    for (const t of seedTeachers) {
+      dbRun(
+        `INSERT INTO teachers
+          (id, staff_id, full_name, first_name, last_name, role, email, phone,
+           gender, id_number, tsc_number, subject_specialization, grade_assigned,
+           stream_assigned, is_active, status, password)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [t.id, t.staff_id, t.full_name, t.first_name, t.last_name, t.role,
+         t.email, t.phone, t.gender, t.id_number, t.tsc_number,
+         t.subject_specialization, t.grade_assigned, t.stream_assigned,
+         t.is_active, t.status, t.password]
+      );
+      console.log(`  → Seeded teacher: ${t.staff_id} — "${t.full_name}" (status: ${t.status})`);
+    }
+    console.log(`  → Default teacher password: "${defaultTeacherPass}"`);
+    console.log('  → Seed complete — run "npm run reset-server" to re-seed from scratch');
+  }
+
   // Insert default admin user if not exists — password stored as bcrypt hash
   const adminExists = dbGet('SELECT id FROM users WHERE role = ?', ['admin']);
   if (!adminExists) {
-    // Hash the plaintext default password so it works with bcrypt.compareSync
-    const hashed = bcrypt.hashSync('admin123', 10);
+    const hashedAdmin = bcrypt.hashSync('admin123', 10);
     dbRun(
       `INSERT INTO users (id, name, email, phone, role, password) VALUES (?, ?, ?, ?, ?, ?)`,
-      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', hashed]
+      ['admin-001', 'School Administrator', 'admin@munyaka.local', '+254 700 000 000', 'admin', hashedAdmin]
     );
+    console.log('  → Seeded default admin: admin@munyaka.local / admin123');
   }
 
   saveDatabase();
@@ -1365,23 +1475,31 @@ const verifyPassword = (inputPassword: string, storedPassword: string): boolean 
   return storedPassword === inputPassword;
 };
 
+// ── POST /api/auth/login ───────────────────────────────────────────────────────────
+// Accepts credentials from teachers, admins, bursars, and owners. The "identifier"
+// can be an email, TSC number, staff ID, or username — all looked up
+// case-insensitively in the appropriate table. Returns a signed JWT.
 app.post('/api/auth/login', (req, res) => {
+  // ── Log every incoming login attempt (helps diagnose APK field issues) ──────
+  const identifierIn = req.body.identifier || req.body.tscNumber || req.body.email || req.body.staff_id || req.body.username || '';
+  console.log(`[AUTH LOG] Login attempt for: ${identifierIn || '(empty)'}`);
+
   try {
-    const { email, password, staff_id } = req.body;
+    const { email, password, staff_id, identifier: bodyIdentifier, tscNumber } = req.body;
 
     if (!password) {
+      console.log(`[AUTH LOG] Rejected — no password supplied for "${identifierIn}"`);
       return res.status(400).json({ success: false, error: 'Password is required' });
     }
 
-    // identifier can be an email, a staff_id (e.g. "teacher1"), a TSC number,
-    // or a raw username — normalise to lowercase for case-insensitive lookup.
-    const identifier = (email || staff_id || '').trim().toLowerCase();
+    // Accept any of: identifier / tscNumber / email / staff_id / username
+    const identifier = (bodyIdentifier || tscNumber || email || staff_id || '').trim().toLowerCase();
     if (!identifier) {
-      return res.status(400).json({ success: false, error: 'Email or Staff ID is required' });
+      console.log('[AUTH LOG] Rejected — no identifier supplied');
+      return res.status(400).json({ success: false, error: 'Email, TSC Number, or Staff ID is required' });
     }
 
-    // ── 1. Try teachers table ────────────────────────────────────────────────
-    // Matches on: email, staff_id, tsc_number (case-insensitive)
+    // ── 1. Try teachers table (email, staff_id, OR tsc_number) ─────────────────
     const teacher = dbGet(
       `SELECT id, full_name AS name, first_name, last_name, email, phone,
               staff_id, tsc_number, role, status, is_active, password
@@ -1395,33 +1513,36 @@ app.post('/api/auth/login', (req, res) => {
     if (teacher) {
       const passwordValid = verifyPassword(password, teacher.password || '');
       if (!passwordValid) {
-        console.log(`[login] Teacher "${identifier}" — invalid password`);
+        console.log(`[AUTH LOG] Teacher "${identifier}" — invalid password`);
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
       }
 
       const role = (teacher.role || 'teacher').toLowerCase();
       if (role !== 'teacher' && role !== 'head_teacher' && role !== 'ict_teacher'
         && role !== 'senior_teacher' && role !== 'class_teacher' && role !== 'admin') {
+        console.log(`[AUTH LOG] Teacher "${identifier}" — role "${teacher.role}" not authorized`);
         return res.status(403).json({ success: false, error: 'Role not authorized to login' });
       }
 
+      const displayName = teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim();
       const token = signToken({
         id: teacher.id,
-        name: teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim(),
+        name: displayName,
         role: teacher.role || 'teacher',
         type: 'teacher'
       });
 
-      console.log(`[login] Teacher "${identifier}" logged in successfully`);
+      console.log(`[AUTH LOG] Teacher "${identifier}" logged in successfully (role: ${teacher.role})`);
       return res.json({
         success: true,
         token,
         user: {
           id: teacher.id,
-          name: teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim(),
+          name: displayName,
           email: teacher.email || '',
           phone: teacher.phone || '',
           role: teacher.role || 'teacher',
+          tscNumber: teacher.tsc_number || '',
           staff_id: teacher.staff_id || '',
           tsc_number: teacher.tsc_number || '',
           status: teacher.status,
@@ -1429,7 +1550,7 @@ app.post('/api/auth/login', (req, res) => {
       });
     }
 
-    // ── 2. Try users table (admin / bursar accounts) ────────────────────────
+    // ── 2. Try users table (admin / bursar accounts) ─────────────────────────
     const user = dbGet(
       `SELECT id, name, email, phone, role, password
        FROM users
@@ -1440,12 +1561,13 @@ app.post('/api/auth/login', (req, res) => {
     if (user) {
       const passwordValid = verifyPassword(password, user.password || '');
       if (!passwordValid) {
-        console.log(`[login] User "${identifier}" — invalid password`);
+        console.log(`[AUTH LOG] User "${identifier}" — invalid password`);
         return res.status(401).json({ success: false, error: 'Invalid credentials' });
       }
 
       const role = (user.role || '').toLowerCase();
       if (role !== 'admin' && role !== 'owner' && role !== 'staff' && role !== 'bursar') {
+        console.log(`[AUTH LOG] User "${identifier}" — role "${user.role}" not authorized`);
         return res.status(403).json({ success: false, error: 'Role not authorized to login' });
       }
 
@@ -1456,7 +1578,7 @@ app.post('/api/auth/login', (req, res) => {
         type: 'user'
       });
 
-      console.log(`[login] User "${identifier}" (role: ${user.role}) logged in successfully`);
+      console.log(`[AUTH LOG] User "${identifier}" (role: ${user.role}) logged in successfully`);
       return res.json({
         success: true,
         token,
@@ -1470,12 +1592,12 @@ app.post('/api/auth/login', (req, res) => {
       });
     }
 
-    // ── 3. No matching record found ───────────────────────────────────────────
-    console.log(`[login] No record found for identifier: "${identifier}"`);
+    // ── 3. No matching record found ──────────────────────────────────────────
+    console.log(`[AUTH LOG] No record found for identifier: "${identifier}"`);
     return res.status(401).json({ success: false, error: 'Invalid credentials' });
 
   } catch (error) {
-    console.error('[login] Unhandled error:', error.message);
+    console.error('[AUTH LOG] Unhandled error during login:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -1786,26 +1908,35 @@ const startServer = async () => {
 ║  Database:         ${DB_PATH}
 ║  Auth:             JWT (bcryptjs) — no external provider
 ╠══════════════════════════════════════════════════════════════╣
-║  Auth:                                                        ║
-║  • POST /api/auth/login       - Login (returns JWT)         ║
-║  Authenticated:                                       ║
-║  • GET  /api/students        - List all students            ║
-║  • POST /api/students        - Create student               ║
+║  Default Seed Accounts (bcrypt-hashed passwords):            ║
+║                                                            ║
+║  Teacher login — TSC Number: TSC12345 | Password: Teacher@123║
+║  Teacher login — TSC Number: TSC67890 | Password: Teacher@123║
+║  Admin login   — Email: admin@munyaka.local | Password: admin123║
+║                                                            ║
+║  POST /api/auth/login  body:                               ║
+║    { email, password }  OR  { staff_id, password }          ║
+║    { tscNumber, password }  OR  { identifier, password }   ║
+╠══════════════════════════════════════════════════════════════╣
+║  Endpoints:                                                 ║
+║  • POST /api/auth/login       - Authenticate (returns JWT)   ║
 ║  • GET  /api/teachers        - List all teachers            ║
 ║  • POST /api/teachers        - Create teacher               ║
 ║  • POST /api/teachers/bulk-activate                        ║
 ║  • POST/PATCH /api/teachers/activate-all                   ║
-║  • GET  /api/attendance      - Get attendance records       ║
-║  • POST /api/attendance      - Record attendance            ║
-║  • GET  /api/fees            - Get fee records             ║
-║  • POST /api/fees            - Create fee record            ║
-║  • GET  /api/devices         - List connected devices       ║
-║  • POST /api/sync             - Sync offline data           ║
-║  • GET  /api/dashboard/stats - Dashboard stats (unified)   ║
-║  • GET  /api/stats           - Database statistics           ║
-║  • GET  /api/backup          - Export database (JSON)      ║
-║  • GET  /api/backup/db       - Export SQLite file          ║
-║  • GET  /api/server/info     - Server connection info      ║
+║  • GET  /api/students        - List all students            ║
+║  • POST /api/students        - Create student               ║
+║  • GET  /api/attendance      - Get / record attendance       ║
+║  • POST /api/attendance/bulk - Bulk record attendance        ║
+║  • GET  /api/fees            - Get / create fee records      ║
+║  • GET  /api/devices         - List connected devices        ║
+║  • POST /api/sync             - Sync offline data            ║
+║  • GET  /api/dashboard/stats - Dashboard stats (unified)     ║
+║  • GET  /api/stats           - Database statistics         ║
+║  • GET  /api/health          - Health check                 ║
+║  • GET  /api/backup          - Export database (JSON)       ║
+║  • GET  /api/backup/db       - Export SQLite file            ║
+║  • GET  /api/server/info     - Server connection info         ║
 ╚══════════════════════════════════════════════════════════════╝
       `);
     });
