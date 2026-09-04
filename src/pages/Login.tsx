@@ -297,13 +297,15 @@ const Login: React.FC = () => {
     const trimmedPass = staffPassword.trim();
 
     if (!trimmedId) {
-      setStaffAuthError('Please enter your Email Address.');
+      setStaffAuthError('Please enter your Email Address or Staff ID.');
       return;
     }
-    // Basic email format validation
+    // Accept either a valid email OR a staff ID (e.g. "teacher1", "T001")
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedId)) {
-      setStaffAuthError('Please enter a valid email address (e.g. teacher@school.com).');
+    const isEmail = emailRegex.test(trimmedId);
+    const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
+    if (!isEmail && !isStaffId) {
+      setStaffAuthError('Please enter a valid email address or staff ID.');
       return;
     }
     if (!trimmedPass) {

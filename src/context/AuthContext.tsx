@@ -266,7 +266,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // success when the entered value matches it — exactly mirroring
       // the Login page's own dual-mode check so a saved-or-default
       // flow works the same way in both directions.
-      const isAdminUser = foundUser.role === 'owner' || foundUser.role === 'admin';
+      const normalizedRole = foundUser.role.toLowerCase();
+            const isAdminUser = normalizedRole === 'owner' || normalizedRole === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = pass.trim();

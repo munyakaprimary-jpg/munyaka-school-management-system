@@ -1116,6 +1116,57 @@ app.post('/api/backup/restore', (req, res) => {
 });
 
 // ============================================
+// AUTHENTICATION API
+// ============================================
+
+// Login endpoint
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { email, password } = req.body;
+    
+    if (!email || !password) {
+      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    }
+    
+    // Look up user by email (case-insensitive)
+    const user = dbGet('SELECT id, name, email, role, password FROM users WHERE LOWER(email) = LOWER(?)', [email]);
+    
+    if (!user) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    // Validate password (case-sensitive as stored)
+    if (user.password !== password) {
+      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    }
+    
+    // Normalize role to lowercase for validation
+    const role = user.role ? user.role.toLowerCase() : '';
+    
+    // Accept admin and teacher (and staff) roles
+    if (role !== 'admin' && role !== 'teacher' && role !== 'staff') {
+      return res.status(403).json({ success: false, error: 'Role not authorized to login' });
+    }
+    
+    // Generate a simple token (in production, use JWT)
+    const token = crypto.randomUUID();
+    
+    // Return token and user data
+    res.json({
+      success: true,
+      token,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role // Return original role as stored
+      }
+    });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================
 // USERS API
 // ============================================
 
