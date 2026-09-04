@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   Eye,
   Printer,
@@ -20,6 +21,7 @@ import {
   X,
   Download,
   FileText,
+  PlayCircle,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
@@ -706,6 +708,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
 // ─── Main Component ────────────────────────────────────────────────────────────
 const SetExamsList: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const role = (user?.role || "").toLowerCase();
   const isStudent = role === "student" || role === "parent";
 
@@ -861,23 +864,33 @@ const SetExamsList: React.FC = () => {
           Updated {new Date(exam.updatedAt).toLocaleDateString()}
         </div>
 
-        {/* Action buttons: View Exam, Print, Delete */}
+        {/* Action buttons: Take Exam, View Exam, Download PDF, Delete */}
         <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-slate-100">
+          {/* Primary: Take Exam */}
+          {exam.status !== "Closed" && (
+            <Button
+              onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+              className="flex-1 rounded-xl h-10 gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold text-white shadow-sm"
+            >
+              <PlayCircle size={15} />
+              Take Exam
+            </Button>
+          )}
+          {/* Secondary: View Exam */}
           <Button
             variant="outline"
             onClick={() => handleViewExam(exam.id, exam.title)}
-            className="flex-1 rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
+            className="rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
           >
             <Eye size={15} />
-            View Exam
+            View
           </Button>
+          {/* Utility: Download PDF */}
           <Button
             variant="outline"
             onClick={() => {
               const loaded = loadFullAssessment(exam.id);
               if (!loaded) { showError("Could not load exam data."); return; }
-              const today = formatDate(new Date().toISOString());
-              const totalMarks = loaded.questions.reduce((s, q) => s + q.points, 0);
               const paperEl = document.createElement("div");
               // Render the printable paper to a temporary DOM element
               paperEl.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
@@ -899,11 +912,12 @@ const SetExamsList: React.FC = () => {
                 document.body.removeChild(paperEl);
               });
             }}
-            className="flex-1 rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+            className="rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
           >
             <Download size={15} />
-            Download PDF
+            PDF
           </Button>
+          {/* Icon: Delete */}
           <Button
             variant="ghost"
             size="icon"
@@ -955,6 +969,13 @@ const SetExamsList: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
+                    {exam.status !== "Closed" && (
+                      <Button variant="ghost" size="icon"
+                        onClick={() => navigate(`/assessments/student?id=${exam.id}`)}
+                        className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="Take Exam">
+                        <PlayCircle size={14} />
+                      </Button>
+                    )}
                     <Button variant="ghost" size="icon" onClick={() => handleViewExam(exam.id, exam.title)}
                       className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="View Exam">
                       <Eye size={14} />
