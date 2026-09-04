@@ -32,6 +32,7 @@ export interface Assessment {
   totalMarks: number;
   randomizeQuestions: boolean;
   showImmediateFeedback: boolean;
+  status?: "draft" | "published" | "closed";
   questions: Question[];
   createdAt: string;
   updatedAt: string;

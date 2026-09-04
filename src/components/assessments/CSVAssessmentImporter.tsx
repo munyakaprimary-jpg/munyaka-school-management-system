@@ -21,7 +21,9 @@ import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.js?url";
 pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
 
 const QUESTION_BANK_KEY = "question_bank";
+const ASSESSMENTS_KEY = "assessments";
 const ACTIVE_ASSESSMENT_ID_KEY = "csv_importer_active_assessment_id";
+const ALL_SET_EXAMS_KEY = "all_set_exams";
 
 // ─── CSV Row Shape ────────────────────────────────────────────────────────────
 
@@ -486,13 +488,14 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
 
       // Re-index order
       const reIndexed = mergedQuestions.map((q, i) => ({ ...q, order: i + 1 }));
+      const now = new Date().toISOString();
 
       const updatedBank = {
         ...existingData,
         metadata: {
           ...(existingData.metadata || {}),
           lastImportAssessmentId: currentAssessmentId,
-          lastImportAt: new Date().toISOString(),
+          lastImportAt: now,
           lastImportCount: newUnique.length,
         },
         questions: reIndexed,
@@ -500,6 +503,51 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
 
       localStorage.setItem(QUESTION_BANK_KEY, JSON.stringify(updatedBank));
       localStorage.setItem(ACTIVE_ASSESSMENT_ID_KEY, currentAssessmentId);
+
+      // ── Also save to assessments + all_set_exams so SetExamsList can see it ──
+      const assessmentId = currentAssessmentId;
+      const totalPoints = reIndexed.reduce((s, q) => s + (q.points || 0), 0);
+
+      const newAssessment = {
+        id: assessmentId,
+        title: (existingData.metadata?.title as string) || `Imported Assessment ${new Date().toLocaleDateString()}`,
+        category: (existingData.metadata?.category as string) || "Formative Quiz",
+        classLevel: (existingData.metadata?.classLevel as string) || "Grade 4",
+        subject: (existingData.metadata?.subject as string) || "General",
+        duration: (existingData.metadata?.duration as number) || 60,
+        totalMarks: (existingData.metadata?.totalMarks as number) || totalPoints,
+        randomizeQuestions: false,
+        showImmediateFeedback: false,
+        status: "published" as const,
+        questions: reIndexed,
+        createdAt: (existingData.metadata as any)?.createdAt || now,
+        updatedAt: now,
+      };
+
+      // Upsert into assessments
+      let existingAssessments: any[] = [];
+      try {
+        const raw = localStorage.getItem(ASSESSMENTS_KEY);
+        if (raw) existingAssessments = JSON.parse(raw);
+        if (!Array.isArray(existingAssessments)) existingAssessments = [];
+      } catch { existingAssessments = []; }
+
+      const without = existingAssessments.filter((a) => a.id !== assessmentId);
+      localStorage.setItem(ASSESSMENTS_KEY, JSON.stringify([...without, newAssessment]));
+
+      // Upsert into all_set_exams
+      let allSetExams: any[] = [];
+      try {
+        const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+        if (raw) allSetExams = JSON.parse(raw);
+        if (!Array.isArray(allSetExams)) allSetExams = [];
+      } catch { allSetExams = []; }
+
+      const withoutAll = allSetExams.filter((a) => a.id !== assessmentId);
+      localStorage.setItem(ALL_SET_EXAMS_KEY, JSON.stringify([...withoutAll, newAssessment]));
+
+      // Dispatch update event so SetExamsList + StudentAssessmentPage refresh immediately
+      window.dispatchEvent(new Event("assessments_updated"));
 
       const savedCount = newUnique.length;
       showSuccess(

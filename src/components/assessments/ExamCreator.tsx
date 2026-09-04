@@ -36,6 +36,7 @@ import type { Assessment, Question, QuestionType } from "@/types/questions";
 
 const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
+const ALL_SET_EXAMS_KEY = "all_set_exams";
 const ASSESSMENT_CATEGORIES = [
   { value: "formative", label: "Formative Quiz" },
   { value: "summative", label: "Summative Quiz" },
@@ -254,9 +255,11 @@ const ExamCreator: React.FC = () => {
     await new Promise((r) => setTimeout(r, 400));
 
     try {
+      const now = new Date().toISOString();
+      const assessmentId = publishedAssessmentId || generateId("asm");
+      const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
+
       // 1. Update question bank so StudentAssessmentView can find this exam.
-      //    The bank stores ONE active assessment at a time, so the most recently
-      //    published exam becomes the active one.
       const bankPayload = {
         metadata: {
           title: title.trim(),
@@ -264,34 +267,36 @@ const ExamCreator: React.FC = () => {
           classLevel: classLevel.trim(),
           subject: subject.trim(),
           duration,
-          totalMarks: totalMarks || questions.reduce((s, q) => s + q.points, 0),
+          totalMarks: calcTotalMarks,
           randomize: false,
           showFeedback: false,
           passingPercentage,
-          assessmentId: publishedAssessmentId || generateId("asm"),
+          assessmentId,
+          createdAt: now,
         },
         questions: questions.map((q, i) => ({ ...q, order: i + 1 })),
-        savedAt: new Date().toISOString(),
+        savedAt: now,
       };
       writeStorage(QUESTION_BANK_KEY, bankPayload);
 
-      // 2. Also save to the assessments array so it shows up in grading screens
-      //    and other lists.
+      // 2. Build full assessment with status + all required metadata
       const newAssessment: Assessment = {
-        id: bankPayload.metadata.assessmentId,
+        id: assessmentId,
         title: title.trim(),
         category,
         classLevel: classLevel.trim(),
         subject: subject.trim(),
         duration,
-        totalMarks: bankPayload.metadata.totalMarks,
+        totalMarks: calcTotalMarks,
         randomizeQuestions: false,
         showImmediateFeedback: false,
+        status: "published",
         questions: bankPayload.questions,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
+        createdAt: now,
+        updatedAt: now,
       };
 
+      // Upsert into assessments key
       let existing: Assessment[] = [];
       try {
         const raw = localStorage.getItem(ASSESSMENTS_KEY);
@@ -300,11 +305,23 @@ const ExamCreator: React.FC = () => {
           if (Array.isArray(parsed)) existing = parsed;
         }
       } catch { /* ignore */ }
-
-      // Upsert (replace if same id exists)
       const without = existing.filter((a) => a.id !== newAssessment.id);
-      const merged = [...without, newAssessment];
-      writeStorage(ASSESSMENTS_KEY, merged);
+      writeStorage(ASSESSMENTS_KEY, [...without, newAssessment]);
+
+      // Also save to unified all_set_exams key
+      let allSetExams: Assessment[] = [];
+      try {
+        const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) allSetExams = parsed;
+        }
+      } catch { /* ignore */ }
+      const withoutAll = allSetExams.filter((a) => a.id !== newAssessment.id);
+      writeStorage(ALL_SET_EXAMS_KEY, [...withoutAll, newAssessment]);
+
+      // Dispatch event so SetExamsList + StudentAssessmentPage refresh immediately
+      window.dispatchEvent(new Event("assessments_updated"));
 
       setIsPublished(true);
       setPublishedAssessmentId(newAssessment.id);

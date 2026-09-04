@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import StudentAssessmentView from "@/components/assessments/StudentAssessmentView";
 import type { Assessment } from "@/types/questions";
@@ -9,12 +9,13 @@ import { Button } from "@/components/ui/button";
 
 const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
+const ALL_SET_EXAMS_KEY = "all_set_exams";
 
 /**
  * Take Assessment page.
  * Reads `?id=` from the URL — if present, looks up that assessment in the
- * `assessments` localStorage key. Otherwise falls back to the active
- * assessment in `question_bank`.
+ * `all_set_exams` (primary) or `assessments` localStorage keys. Otherwise
+ * falls back to the active assessment in `question_bank`.
  */
 const StudentAssessmentPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -24,47 +25,76 @@ const StudentAssessmentPage: React.FC = () => {
   const [studentId, setStudentId] = useState<string>("");
   const [studentName, setStudentName] = useState<string>("");
 
-  useEffect(() => {
-    let loadedAssessment: Assessment | null = null;
+  const loadAssessment = useCallback((): Assessment | null => {
+    // 1. If a specific exam id is requested, check `all_set_exams` first
+    if (requestedId) {
+      try {
+        const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+        if (raw) {
+          const parsed: Assessment[] = JSON.parse(raw);
+          if (Array.isArray(parsed)) {
+            const found = parsed.find((a) => a.id === requestedId);
+            if (found) return found;
+          }
+        }
+      } catch { /* ignore */ }
 
-    try {
-      // 1. If a specific exam id is requested, look it up in `assessments`
-      if (requestedId) {
+      try {
         const raw = localStorage.getItem(ASSESSMENTS_KEY);
         if (raw) {
           const parsed: Assessment[] = JSON.parse(raw);
           if (Array.isArray(parsed)) {
             const found = parsed.find((a) => a.id === requestedId);
-            if (found) loadedAssessment = found;
+            if (found) return found;
           }
         }
-      }
+      } catch { /* ignore */ }
+    }
 
-      // 2. Fall back to the active exam in `question_bank`
-      if (!loadedAssessment) {
-        const raw = localStorage.getItem(QUESTION_BANK_KEY);
+    // 2. Fall back to the active exam in `question_bank`
+    try {
+      const raw = localStorage.getItem(QUESTION_BANK_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.questions?.length > 0) {
+          return {
+            id: parsed.metadata?.assessmentId || "assessment_default",
+            title: parsed.metadata?.title || "Assessment",
+            category: parsed.metadata?.category || "Formative Quiz",
+            classLevel: parsed.metadata?.classLevel || "4",
+            subject: parsed.metadata?.subject || "General",
+            duration: parsed.metadata?.duration || 60,
+            totalMarks: parsed.metadata?.totalMarks || 100,
+            randomizeQuestions: parsed.metadata?.randomize || false,
+            showImmediateFeedback: parsed.metadata?.showFeedback ?? false,
+            questions: parsed.questions,
+            createdAt: parsed.savedAt || new Date().toISOString(),
+            updatedAt: parsed.savedAt || new Date().toISOString(),
+          };
+        }
+      }
+    } catch { /* ignore */ }
+
+    // 3. If no specific id, fall back to first item in all_set_exams
+    if (!requestedId) {
+      try {
+        const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
         if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.questions?.length > 0) {
-            loadedAssessment = {
-              id: parsed.metadata?.assessmentId || "assessment_default",
-              title: parsed.metadata?.title || "Assessment",
-              category: parsed.metadata?.category || "Formative Quiz",
-              classLevel: parsed.metadata?.classLevel || "4",
-              subject: parsed.metadata?.subject || "General",
-              duration: parsed.metadata?.duration || 60,
-              totalMarks: parsed.metadata?.totalMarks || 100,
-              randomizeQuestions: parsed.metadata?.randomize || false,
-              showImmediateFeedback: parsed.metadata?.showFeedback ?? false,
-              questions: parsed.questions,
-              createdAt: parsed.savedAt || new Date().toISOString(),
-              updatedAt: parsed.savedAt || new Date().toISOString(),
-            };
+          const parsed: Assessment[] = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed[0];
           }
         }
-      }
+      } catch { /* ignore */ }
+    }
 
-      if (loadedAssessment) setAssessment(loadedAssessment);
+    return null;
+  }, [requestedId]);
+
+  useEffect(() => {
+    try {
+      const loaded = loadAssessment();
+      if (loaded) setAssessment(loaded);
     } catch (err) {
       console.error("[StudentAssessmentPage] Failed to load assessment:", err);
     }
@@ -97,7 +127,26 @@ const StudentAssessmentPage: React.FC = () => {
     } catch { /* ignore */ }
 
     setStudentId("student_demo_01");
-  }, [requestedId]);
+  }, [loadAssessment]);
+
+  // Listen for assessments_updated so same-tab saves show up immediately
+  useEffect(() => {
+    const onUpdate = () => {
+      const loaded = loadAssessment();
+      if (loaded) setAssessment(loaded);
+    };
+    window.addEventListener("assessments_updated", onUpdate);
+    const onStorage = (e: StorageEvent) => {
+      if ([ALL_SET_EXAMS_KEY, ASSESSMENTS_KEY, QUESTION_BANK_KEY].includes(e.key || "")) {
+        onUpdate();
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("assessments_updated", onUpdate);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [loadAssessment]);
 
   if (!assessment) {
     return (

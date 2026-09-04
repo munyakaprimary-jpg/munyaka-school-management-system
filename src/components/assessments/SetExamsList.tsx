@@ -43,6 +43,7 @@ import type { Assessment, Question } from "@/types/questions";
 
 const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
+const ALL_SET_EXAMS_KEY = "all_set_exams";
 const EXAM_STATUS_KEY = "exam_status_overrides";
 const CLOSED_EXAMS_KEY = "closed_exams";
 
@@ -92,7 +93,37 @@ function loadExams(): ExamListItem[] {
   const seen = new Set<string>();
   const items: ExamListItem[] = [];
 
-  // 1. Active exam from question bank
+  // 1. Unified all_set_exams (primary source — both ExamCreator + CSVImporter write here)
+  try {
+    const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+    if (raw) {
+      const parsed: Assessment[] = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        parsed.forEach((a) => {
+          if (!seen.has(a.id)) {
+            seen.add(a.id);
+            const status: ExamStatus = closed.has(a.id) ? "Closed" : statusMap[a.id] || (a.status === "draft" ? "Draft" : "Published");
+            items.push({
+              id: a.id,
+              title: a.title || "Untitled",
+              category: a.category || "Formative",
+              subject: a.subject || "—",
+              classLevel: a.classLevel || "—",
+              duration: a.duration || 60,
+              totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + (q.points || 0), 0),
+              questionCount: (a.questions || []).length,
+              status,
+              createdAt: a.createdAt || new Date().toISOString(),
+              updatedAt: a.updatedAt || a.createdAt || new Date().toISOString(),
+              source: "saved",
+            });
+          }
+        });
+      }
+    }
+  } catch { /* ignore */ }
+
+  // 2. Active exam from question bank (legacy fallback for exams saved before this fix)
   try {
     const raw = localStorage.getItem(QUESTION_BANK_KEY);
     if (raw) {
@@ -123,7 +154,7 @@ function loadExams(): ExamListItem[] {
     }
   } catch { /* ignore */ }
 
-  // 2. Saved assessments
+  // 3. Saved assessments (legacy fallback)
   try {
     const raw = localStorage.getItem(ASSESSMENTS_KEY);
     if (raw) {
@@ -132,7 +163,7 @@ function loadExams(): ExamListItem[] {
         parsed.forEach((a) => {
           if (!seen.has(a.id)) {
             seen.add(a.id);
-            const status: ExamStatus = closed.has(a.id) ? "Closed" : statusMap[a.id] || "Published";
+            const status: ExamStatus = closed.has(a.id) ? "Closed" : statusMap[a.id] || (a.status === "draft" ? "Draft" : "Published");
             items.push({
               id: a.id,
               title: a.title || "Untitled",
@@ -140,7 +171,7 @@ function loadExams(): ExamListItem[] {
               subject: a.subject || "—",
               classLevel: a.classLevel || "—",
               duration: a.duration || 60,
-              totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + q.points, 0),
+              totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + (q.points || 0), 0),
               questionCount: (a.questions || []).length,
               status,
               createdAt: a.createdAt || new Date().toISOString(),
@@ -158,6 +189,16 @@ function loadExams(): ExamListItem[] {
 }
 
 function loadFullAssessment(id: string): Assessment | null {
+  // 1. Check unified all_set_exams first (primary source for newly created/imported exams)
+  try {
+    const raw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+    if (raw) {
+      const parsed: Assessment[] = JSON.parse(raw);
+      const found = parsed.find((a) => a.id === id);
+      if (found) return found;
+    }
+  } catch { /* ignore */ }
+
   try {
     const raw = localStorage.getItem(QUESTION_BANK_KEY);
     if (raw) {
@@ -726,17 +767,21 @@ const SetExamsList: React.FC = () => {
   useEffect(() => {
     refresh();
     const onStorage = (e: StorageEvent) => {
-      if ([QUESTION_BANK_KEY, ASSESSMENTS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(e.key || "")) refresh();
+      if ([QUESTION_BANK_KEY, ASSESSMENTS_KEY, ALL_SET_EXAMS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(e.key || "")) refresh();
     };
     window.addEventListener("storage", onStorage);
     const onDataChanged = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (!detail?.key || [QUESTION_BANK_KEY, ASSESSMENTS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(detail.key)) refresh();
+      if (!detail?.key || [QUESTION_BANK_KEY, ASSESSMENTS_KEY, ALL_SET_EXAMS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(detail.key)) refresh();
     };
     window.addEventListener("munyaka:data-changed" as any, onDataChanged);
+    // Listen for assessments_updated — fired by ExamCreator + CSVImporter on same-tab saves
+    const onAssessmentsUpdated = () => refresh();
+    window.addEventListener("assessments_updated", onAssessmentsUpdated);
     return () => {
       window.removeEventListener("storage", onStorage);
       window.removeEventListener("munyaka:data-changed" as any, onDataChanged);
+      window.removeEventListener("assessments_updated", onAssessmentsUpdated);
     };
   }, [refresh]);
 
@@ -753,6 +798,15 @@ const SetExamsList: React.FC = () => {
             localStorage.setItem(ASSESSMENTS_KEY, JSON.stringify(next));
           }
         }
+        // Also clean up all_set_exams
+        const allRaw = localStorage.getItem(ALL_SET_EXAMS_KEY);
+        if (allRaw) {
+          const parsed: Assessment[] = JSON.parse(allRaw);
+          if (Array.isArray(parsed)) {
+            const next = parsed.filter((a) => a.id !== id);
+            localStorage.setItem(ALL_SET_EXAMS_KEY, JSON.stringify(next));
+          }
+        }
         const bankRaw = localStorage.getItem(QUESTION_BANK_KEY);
         if (bankRaw) {
           const parsed = JSON.parse(bankRaw);
@@ -764,6 +818,7 @@ const SetExamsList: React.FC = () => {
         saveStatusOverrides(statusMap);
         const closed = loadClosedExams().filter((c) => c !== id);
         saveClosedExams(closed);
+        window.dispatchEvent(new Event("assessments_updated"));
         showSuccess(`"${title}" deleted.`);
         refresh();
       } catch (e) {
