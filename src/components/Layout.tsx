@@ -13,6 +13,7 @@ import {
   Megaphone,
   Calendar,
   ClipboardCheck,
+  ClipboardList,
   Clock,
   FileSpreadsheet,
   BarChart3,
@@ -150,6 +151,11 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     // Academic Assessment & Analysis
     { icon: FileSpreadsheet, label: 'Enter Marks', path: '/assessments', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: BarChart3, label: 'Results Analysis', path: '/analysis', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
+    // Assessments & Exams
+    { icon: ClipboardList, label: 'Assessments & Exams', path: '', roles: ['admin', 'head_teacher', 'teacher', 'student'], section: true },
+    { icon: ClipboardList, label: 'Question Bank & Import', path: '/assessments/import', roles: ['admin', 'head_teacher', 'teacher'] },
+    { icon: ClipboardList, label: 'Take Assessment', path: '/assessments/student', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
+    { icon: ClipboardList, label: 'Grading & Marks', path: '/assessments/grading', roles: ['admin', 'head_teacher', 'teacher'] },
     // Digital Hub & ICT
     { icon: Laptop, label: 'Digital Hub', path: '/digital-hub', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Monitor, label: 'ICT Lab & Devices', path: '/ict-lab', roles: ['admin', 'head_teacher'] },
@@ -316,16 +322,39 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         {/* Navigation List */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
           {navMenu.map((item) => {
+            // Section header (non-clickable divider)
+            if ((item as any).section) {
+              if (isCollapsed) {
+                return (
+                  <div
+                    key={`section-${item.label}`}
+                    className="my-2 border-t border-slate-200 dark:border-slate-800"
+                    aria-label={item.label}
+                  />
+                );
+              }
+              return (
+                <div
+                  key={`section-${item.label}`}
+                  className="px-3 pt-4 pb-1.5 flex items-center gap-2"
+                >
+                  <item.icon size={14} className="text-indigo-500 shrink-0" />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                    {item.label}
+                  </span>
+                </div>
+              );
+            }
             const isActive = location.pathname === item.path;
             return (
-              <Link 
-                key={item.path} 
+              <Link
+                key={item.path}
                 to={item.path}
                 onClick={() => setIsOpen(false)}
                 className={cn(
                   "flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group",
-                  isActive 
-                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" 
+                  isActive
+                    ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none"
                     : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"
                 )}
               >
