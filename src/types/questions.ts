@@ -1,4 +1,9 @@
-export type QuestionType = 'mcq' | 'structured';
+export type QuestionType =
+  | 'mcq'
+  | 'structured'
+  | 'math'
+  | 'numeric'
+  | 'fill_blank';
 
 export interface MCQOption {
   id: string;
@@ -19,6 +24,8 @@ export interface Question {
   // Structured specific
   modelAnswer?: string;
   rubric?: string;
+  // Numeric / math / fill-in-the-blank specific
+  correctAnswer?: string;
 }
 
 export interface Assessment {

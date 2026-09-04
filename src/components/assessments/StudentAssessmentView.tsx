@@ -76,16 +76,24 @@ interface StudentAssessmentViewProps {
   skipGate?: boolean;
 }
 
+interface QuestionGradingResult {
+  questionId: string;
+  type: Question["type"];
+  correct: boolean;
+  earnedPoints: number;
+  maxPoints: number;
+  userAnswer?: string;
+  expectedAnswer?: string;
+}
+
 interface GradingResult {
   totalScore: number;
   maxScore: number;
   percentage: number;
-  mcqResults: {
-    questionId: string;
-    correct: boolean;
-    earnedPoints: number;
-    maxPoints: number;
-  }[];
+  /** Per-MCQ details (kept for the existing MCQ breakdown panel). */
+  mcqResults: QuestionGradingResult[];
+  /** Per-question details for ALL question types (drives the post-submit summary). */
+  questionResults: QuestionGradingResult[];
 }
 
 const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
@@ -307,29 +315,104 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     [assessment.id, lockedStudentId, responses, persistSubmission, isSubmitted]
   );
 
-  // ── MCQ Auto-Grading ────────────────────────────────────────────────────────
-  const autoGradeMCQ = useCallback(
+  // ── Flexible Math & Numeric Normaliser ──────────────────────────────────────
+  // Handles integers, decimals, fractions (e.g. "1/2", "3 1/4"), and responses
+  // with optional units (e.g. "12.5 cm", "50%"). Returns true when the student's
+  // cleaned answer is numerically equivalent to the expected answer.
+  const evaluateNumericOrMathAnswer = useCallback(
+    (studentInput: string | undefined, expectedAnswer: string | undefined): boolean => {
+      if (!studentInput || !expectedAnswer) return false;
+
+      const rawStudent = studentInput.trim().toLowerCase();
+      const rawExpected = expectedAnswer.trim().toLowerCase();
+
+      // 1. Exact string match after normalisation
+      if (rawStudent === rawExpected) return true;
+
+      // 2. Extract raw numbers (integers / decimals)
+      const extractNum = (str: string): number | null => {
+        const match = str.match(/-?\d+(\.\d+)?/);
+        return match ? parseFloat(match[0]) : null;
+      };
+
+      const numStudent = extractNum(rawStudent);
+      const numExpected = extractNum(rawExpected);
+
+      if (numStudent !== null && numExpected !== null) {
+        // Allow small precision variance for rounded decimals (e.g. 0.33 vs 0.333)
+        if (Math.abs(numStudent - numExpected) < 0.01) return true;
+      }
+
+      // 3. Handle fraction parsing (e.g. "1/2" or "3/4")
+      const parseFraction = (str: string): number | null => {
+        const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
+        if (match) {
+          const num = parseFloat(match[1]);
+          const den = parseFloat(match[2]);
+          if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
+        }
+        return null;
+      };
+
+      const fracStudent = parseFraction(rawStudent) ?? numStudent;
+      const fracExpected = parseFraction(rawExpected) ?? numExpected;
+
+      if (fracStudent !== null && fracExpected !== null) {
+        return Math.abs(fracStudent - fracExpected) < 0.01;
+      }
+
+      return false;
+    },
+    []
+  );
+
+  // ── Full Assessment Marking Engine ──────────────────────────────────────────
+  // Auto-grades all question types: MCQ (exact option match), structured / math
+  // / numeric / fill_blank (numeric or math comparison via evaluateNumericOrMathAnswer).
+  const calculateGradingResult = useCallback(
     (questions: Question[], studentResponses: Record<string, StudentResponse>): GradingResult => {
-      const mcqResults: GradingResult["mcqResults"] = [];
+      const mcqResults: QuestionGradingResult[] = [];
+      const questionResults: QuestionGradingResult[] = [];
       let totalScore = 0;
       let maxScore = 0;
 
       questions.forEach((question) => {
+        const response = studentResponses[question.id];
+        let isCorrect = false;
+        let earnedPoints = 0;
+        let userAnswer = "";
+        let expectedAnswer = "";
+
         if (question.type === "mcq") {
-          const response = studentResponses[question.id];
-          const isCorrect = response?.selectedOptionId === question.correctOptionId;
-          const earnedPoints = isCorrect ? question.points : 0;
+          isCorrect = response?.selectedOptionId === question.correctOptionId;
+          earnedPoints = isCorrect ? question.points : 0;
+          userAnswer = response?.selectedOptionId ?? "";
+          expectedAnswer = question.correctOptionId ?? "";
+        } else {
+          // structured / math / numeric / fill_blank — use numeric/math evaluator
+          userAnswer = response?.answerText ?? "";
+          expectedAnswer =
+            question.correctAnswer ?? question.modelAnswer ?? "";
 
-          mcqResults.push({
-            questionId: question.id,
-            correct: isCorrect,
-            earnedPoints,
-            maxPoints: question.points,
-          });
-
-          totalScore += earnedPoints;
-          maxScore += question.points;
+          isCorrect = evaluateNumericOrMathAnswer(userAnswer, expectedAnswer);
+          earnedPoints = isCorrect ? question.points : 0;
         }
+
+        const result: QuestionGradingResult = {
+          questionId: question.id,
+          type: question.type,
+          correct: isCorrect,
+          earnedPoints,
+          maxPoints: question.points,
+          userAnswer,
+          expectedAnswer,
+        };
+
+        if (question.type === "mcq") mcqResults.push(result);
+        questionResults.push(result);
+
+        totalScore += earnedPoints;
+        maxScore += question.points;
       });
 
       return {
@@ -337,17 +420,18 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         maxScore,
         percentage: maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0,
         mcqResults,
+        questionResults,
       };
     },
-    []
+    [evaluateNumericOrMathAnswer]
   );
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
     if (isSubmitted || !assessment || !lockedStudentId) return;
 
-    // Auto-grade MCQ (uses full question set with answer keys; only available after submit)
-    const gradingResult = autoGradeMCQ(assessment.questions, responses);
+    // Auto-grade all question types (uses full question set with answer keys; only available after submit)
+    const gradingResult = calculateGradingResult(assessment.questions, responses);
     setGradingResult(gradingResult);
 
     // Save grading result (attempt-scoped so it doesn't leak into other attempts)
@@ -371,7 +455,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       isComplete: true,
     };
 
-    showSuccess("Assessment submitted successfully! MCQ auto-graded.");
+    showSuccess("Assessment submitted! Answers auto-graded across all question types.");
     if (onSubmit) onSubmit(submission);
   }, [
     isSubmitted,
@@ -380,7 +464,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     lockedStudentId,
     persistSubmission,
     onSubmit,
-    autoGradeMCQ,
+    calculateGradingResult,
   ]);
 
   // Keep a ref to the latest handleSubmit so the timer interval can call it.
@@ -455,7 +539,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
               <h1 className="text-2xl sm:text-3xl font-black mb-2">Assessment Submitted</h1>
               <p className="text-white/80 text-sm sm:text-base">
-                Your responses have been saved and MCQ has been auto-graded.
+                Your responses have been saved. MCQ, math, numeric, and fill-in-the-blank
+                questions are auto-graded; structured answers are pending teacher review.
               </p>
             </div>
             <CardContent className="p-6 sm:p-8 space-y-5">
@@ -501,6 +586,87 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </Button>
             </CardContent>
           </Card>
+
+          {/* Numeric / Math / Fill-blank results breakdown — only after submission */}
+          {gradingResult && gradingResult.questionResults.some(
+            (r) => r.type !== "mcq"
+          ) && (
+            <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
+              <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5 text-white">
+                <h2 className="font-black text-lg">Numeric &amp; Math Results</h2>
+                <p className="text-white/70 text-sm mt-0.5">
+                  Auto-graded structured, math, numeric, and fill-in-the-blank answers.
+                </p>
+              </div>
+              <CardContent className="p-5 sm:p-6 space-y-4">
+                {gradingResult.questionResults.map((result, i) => {
+                  if (result.type === "mcq") return null;
+                  const question = assessment.questions.find((q) => q.id === result.questionId);
+                  if (!question) return null;
+                  const qIndex = assessment.questions.findIndex((q) => q.id === result.questionId);
+
+                  return (
+                    <div key={result.questionId} className="rounded-2xl border border-slate-200 overflow-hidden">
+                      <div className="flex items-start gap-3 p-4 bg-slate-50">
+                        <div
+                          className={cn(
+                            "w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-sm",
+                            result.correct
+                              ? "bg-emerald-100 text-emerald-700"
+                              : "bg-red-100 text-red-700"
+                          )}
+                        >
+                          {result.correct ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-bold text-slate-800 mb-2">
+                            Q{qIndex + 1}. {question.prompt}
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <div className="rounded-lg bg-white border border-slate-200 p-2.5">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-0.5">
+                                Your answer
+                              </p>
+                              <p
+                                className={cn(
+                                  "text-sm font-mono break-words",
+                                  result.correct ? "text-emerald-700" : "text-red-700"
+                                )}
+                              >
+                                {result.userAnswer || (
+                                  <span className="italic text-slate-400">No answer</span>
+                                )}
+                              </p>
+                            </div>
+                            <div className="rounded-lg bg-emerald-50 border border-emerald-200 p-2.5">
+                              <p className="text-[10px] font-black uppercase tracking-widest text-emerald-600 mb-0.5">
+                                Correct answer
+                              </p>
+                              <p className="text-sm font-mono break-words text-emerald-800">
+                                {result.expectedAnswer || (
+                                  <span className="italic text-slate-400">—</span>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span
+                            className={cn(
+                              "text-sm font-black",
+                              result.correct ? "text-emerald-600" : "text-red-600"
+                            )}
+                          >
+                            {result.earnedPoints}/{result.maxPoints}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Per-question results — ONLY shown after explicit submission */}
           {gradingResult && gradingResult.mcqResults.length > 0 && (
@@ -581,21 +747,41 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           )}
 
           {/* Structured question model answers — only shown after submit */}
-          {assessment.questions.some((q) => q.type === "structured" && !!q.modelAnswer) && (
+          {assessment.questions.some(
+            (q) =>
+              (q.type === "structured" && !!q.modelAnswer) ||
+              (["math", "numeric", "fill_blank"].includes(q.type) && !!q.correctAnswer)
+          ) && (
             <Card className="border-0 shadow-xl rounded-3xl overflow-hidden">
               <div className="bg-gradient-to-r from-amber-500 to-orange-600 px-6 py-5 text-white">
-                <h2 className="font-black text-lg">Structured Questions — Model Answers</h2>
-                <p className="text-white/70 text-sm mt-0.5">Reference solutions for structured questions.</p>
+                <h2 className="font-black text-lg">Model Answers &amp; Solutions</h2>
+                <p className="text-white/70 text-sm mt-0.5">
+                  Reference solutions for structured, math, and fill-in-the-blank questions.
+                </p>
               </div>
               <CardContent className="p-5 sm:p-6 space-y-4">
                 {assessment.questions.map((q, i) => {
-                  if (q.type !== "structured" || !q.modelAnswer) return null;
+                  if (
+                    (q.type !== "structured" || !q.modelAnswer) &&
+                    !["math", "numeric", "fill_blank"].includes(q.type)
+                  )
+                    return null;
+
+                  const displayAnswer =
+                    q.correctAnswer ??
+                    q.modelAnswer ??
+                    null;
+
+                  if (!displayAnswer) return null;
+
                   return (
                     <div key={q.id} className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
                       <p className="text-sm font-bold text-slate-800 mb-2">
                         Q{i + 1}. {q.prompt}
                       </p>
-                      <p className="text-sm text-slate-700 leading-relaxed">{q.modelAnswer}</p>
+                      <p className="text-sm text-slate-700 leading-relaxed font-mono bg-amber-100/60 rounded-lg px-3 py-2">
+                        {displayAnswer}
+                      </p>
                     </div>
                   );
                 })}
@@ -696,7 +882,15 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-7">
             <div className="flex items-center justify-between text-white/90 mb-3 flex-wrap gap-2">
               <Badge className="bg-white/20 text-white border-0 font-semibold">
-                {currentQuestion.type === "mcq" ? "Multiple Choice" : "Structured"}
+                {currentQuestion.type === "mcq"
+                  ? "Multiple Choice"
+                  : currentQuestion.type === "math"
+                  ? "Math"
+                  : currentQuestion.type === "numeric"
+                  ? "Numeric"
+                  : currentQuestion.type === "fill_blank"
+                  ? "Fill in the Blank"
+                  : "Structured"}
               </Badge>
               <span className="text-sm font-bold">{currentQuestion.points} Points</span>
             </div>
@@ -753,8 +947,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
             )}
 
-            {/* Structured */}
-            {currentQuestion.type === "structured" && (
+            {/* Structured / Math / Numeric / Fill-in-the-Blank */}
+            {["structured", "math", "numeric", "fill_blank"].includes(currentQuestion.type) && (
               <div className="space-y-3">
                 <div className="flex items-center justify-between flex-wrap gap-2">
                   <label
