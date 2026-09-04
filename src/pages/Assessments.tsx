@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileDown, FileText, Save, Loader2, Search, CheckCircle2 } from "lucide-react";
+import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
@@ -94,6 +95,9 @@ const Assessments = () => {
   const [marksMatrix, setMarksMatrix] = useState<Record<string, Record<string, string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [showSavedBadge, setShowSavedBadge] = useState(false);
+
+  // ====== Navigation ======
+  const navigate = useNavigate();
 
   // ====== Unified file-download state for CSV & PDF ======
   const csvExport = useFileDownload();
@@ -779,13 +783,20 @@ ${filteredStudents.length} learner(s) included.
             {csvExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileDown size={16} />} Download CSV
           </Button>
           <Button
-            variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
-            onClick={handleDownloadPDF}
-            disabled={pdfExport.isDownloading}
-          >
-            {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
-          </Button>
+                      variant="outline"
+                      className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+                      onClick={handleDownloadPDF}
+                      disabled={pdfExport.isDownloading}
+                    >
+                      {pdfExport.isDownloading ? <Loader2 className="animate-spin" size={16} /> : <FileText size={16} />} Download PDF
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="rounded-xl h-11 px-4 border-indigo-200 bg-indigo-50 gap-2 text-sm font-bold shadow-sm hover:bg-indigo-100 text-indigo-700"
+                      onClick={() => navigate("/grading")}
+                    >
+                      <ClipboardCheck size={16} /> Grading Review
+                    </Button>
           <Button
             className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"
             onClick={handleSaveAll}
