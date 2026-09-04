@@ -50,6 +50,111 @@ const ASSESSMENT_CATEGORIES = [
   { value: "opener-term3", label: "Opener – Term 3" },
 ];
 
+// ─── Tier subjects used as fallback when no Learning Areas are configured ─────
+const TIER_SUBJECTS: Record<string, string[]> = {
+  "pre-primary": [
+    "Language Activities",
+    "Mathematical Activities",
+    "Environmental Activities",
+    "Psychomotor & Creative Activities",
+    "Religious Education",
+  ],
+  "lower-primary": [
+    "Literacy",
+    "Kiswahili/Indigenous Language",
+    "English Language",
+    "Mathematical Activities",
+    "Environmental Activities",
+    "Hygiene & Nutrition Activities",
+    "Religious Education",
+    "Movement & Creative Activities",
+  ],
+  "upper-primary": [
+    "English",
+    "Kiswahili",
+    "Mathematics",
+    "Science & Technology",
+    "Agriculture & Nutrition",
+    "Social Studies",
+    "Religious Education (CRE/IRE/HRE)",
+    "Creative Arts",
+  ],
+  "junior-secondary": [
+    "English",
+    "Kiswahili",
+    "Mathematics",
+    "Integrated Science",
+    "Health Education",
+    "Agriculture & Nutrition",
+    "Social Studies",
+    "Religious Education",
+    "Pre-Technical Studies",
+    "Computer Science",
+    "Creative Arts & Sports",
+  ],
+};
+
+const getTierKey = (gradeName: string): string => {
+  const g = gradeName.toLowerCase();
+  if (g.includes("pp1") || g.includes("pp2") || g.includes("pre-primary")) return "pre-primary";
+  if (g.includes("grade 1") || g.includes("grade 2") || g.includes("grade 3")) return "lower-primary";
+  if (g.includes("grade 4") || g.includes("grade 5") || g.includes("grade 6")) return "upper-primary";
+  if (g.includes("grade 7") || g.includes("grade 8") || g.includes("grade 9") || g.includes("junior")) return "junior-secondary";
+  return "lower-primary";
+};
+
+/**
+ * Load subjects from `munyaka_learning_areas`.
+ * - When a grade is selected: returns subjects for that grade's tier/cluster.
+ * - Falls back to TIER_SUBJECTS if nothing is stored.
+ * - Handles both the cluster-based format and flat string-array format.
+ */
+function loadConfiguredSubjects(selectedGrade: string): string[] {
+  const defaultSubjects = TIER_SUBJECTS[getTierKey(selectedGrade)] || TIER_SUBJECTS["lower-primary"];
+
+  try {
+    const raw = localStorage.getItem("munyaka_learning_areas");
+    if (!raw) return defaultSubjects;
+
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed) || parsed.length === 0) return defaultSubjects;
+
+    const targetTierName = getTierKey(selectedGrade).toLowerCase().replace("-", " ");
+
+    // Cluster-based format: [{ id, name, learningAreas: [{ name }, ...] }, ...]
+    const hasClusters = parsed.some(
+      (item: any) => item?.learningAreas || item?.subjects || item?.name
+    );
+    if (hasClusters) {
+      // Try to match by tier key (e.g. "lower primary" → "Lower Primary")
+      const tierName = getTierKey(selectedGrade).replace("-", " ");
+      const matchedCluster = parsed.find((item: any) => {
+        const itemName = (item.name || item.title || item.id || "").toLowerCase();
+        return itemName.includes(tierName) || tierName.includes(itemName);
+      });
+
+      const source = matchedCluster
+        ? (matchedCluster.learningAreas || matchedCluster.subjects || [])
+        : parsed.flatMap((item: any) => item.learningAreas || item.subjects || []);
+
+      const extracted = source
+        .map((s: any) => (typeof s === "string" ? s : s.name || s.title || s.subjectName))
+        .filter(Boolean) as string[];
+
+      return extracted.length > 0 ? extracted : defaultSubjects;
+    }
+
+    // Flat string[] format: ["English", "Mathematics", ...]
+    const flatExtracted = parsed
+      .map((s: any) => (typeof s === "string" ? s : s.name || s.title || s.subjectName))
+      .filter(Boolean) as string[];
+
+    return flatExtracted.length > 0 ? flatExtracted : defaultSubjects;
+  } catch {
+    return defaultSubjects;
+  }
+}
+
 // ─── Target grade / stream constants ─────────────────────────────────────────
 const GRADE_OPTIONS: string[] = [
   "PP1",
@@ -90,20 +195,7 @@ const ExamCreator: React.FC = () => {
   const [classLevel, setClassLevel] = useState("");
   const [selectedStream, setSelectedStream] = useState<string>("all");
   const [availableStreams, setAvailableStreams] = useState<string[]>([]);
-
-  // Streams are derived dynamically based on selectedGrade so teachers only
-  // see streams belonging to the chosen grade (when configured per-grade).
-  const resolvedStreams = useMemo(() => {
-    return loadConfiguredStreams(selectedGrade);
-  }, [selectedGrade]);
-
-  useEffect(() => {
-    setAvailableStreams(resolvedStreams);
-    // Reset stream to "all" when no streams are available for the chosen grade
-    if (resolvedStreams.length === 0) {
-      setSelectedStream(ALL_STREAMS_VALUE);
-    }
-  }, [resolvedStreams]);
+  const [availableSubjects, setAvailableSubjects] = useState<string[]>([]);
   const [subject, setSubject] = useState("");
   const [duration, setDuration] = useState(60);
   const [totalMarks, setTotalMarks] = useState(100);
@@ -116,6 +208,31 @@ const ExamCreator: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isPublished, setIsPublished] = useState(false);
   const [publishedAssessmentId, setPublishedAssessmentId] = useState<string>("");
+
+  // ── Streams: derived dynamically from Grades & Streams menu ─────────────────
+  const resolvedStreams = useMemo(() => {
+    return loadConfiguredStreams(selectedGrade);
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    setAvailableStreams(resolvedStreams);
+    if (resolvedStreams.length === 0) {
+      setSelectedStream(ALL_STREAMS_VALUE);
+    }
+  }, [resolvedStreams]);
+
+  // ── Subjects: derived dynamically from Learning Areas Manager ───────────────
+  const resolvedSubjects = useMemo(() => {
+    if (!selectedGrade) return [];
+    return loadConfiguredSubjects(selectedGrade);
+  }, [selectedGrade]);
+
+  useEffect(() => {
+    setAvailableSubjects(resolvedSubjects);
+    if (selectedGrade && resolvedSubjects.length > 0 && !resolvedSubjects.includes(subject)) {
+      setSubject("");
+    }
+  }, [resolvedSubjects]);
 
   // Active question form (used for both "add" and "edit")
   const [draftType, setDraftType] = useState<QuestionType>("mcq");
@@ -577,12 +694,22 @@ const ExamCreator: React.FC = () => {
                 <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
                   Subject <span className="text-red-500">*</span>
                 </Label>
-                <Input
-                  placeholder="e.g. Mathematics"
+                <select
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  className="rounded-xl h-11"
-                />
+                  className="w-full h-11 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-violet-200"
+                  aria-label="Subject"
+                >
+                  <option value="">Select subject…</option>
+                  {availableSubjects.length === 0 && selectedGrade ? (
+                    <option value="" disabled>
+                      No subjects configured for this grade
+                    </option>
+                  ) : null}
+                  {availableSubjects.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </div>
             </div>
 
