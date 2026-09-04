@@ -1135,9 +1135,6 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                 <div className="flex flex-col gap-2 pr-2">
                   {filteredGrades.map((g) => {
                     const isSelected = g.studentId === selectedStudentId;
-                    const pendingStructured = structuredQuestions.some(
-                      (q) => g.structuredMarks[q.id] === undefined
-                    );
 
                     return (
                       <button
@@ -1182,12 +1179,6 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                             />
                           </div>
                         </div>
-                        {pendingStructured && (
-                          <div className="mt-2 flex items-center gap-1 text-xs text-amber-600">
-                            <div className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                            Structured pending
-                          </div>
-                        )}
                       </button>
                     );
                   })}

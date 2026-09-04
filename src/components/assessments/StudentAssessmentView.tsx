@@ -28,6 +28,7 @@ import type {
   StudentResponse,
   Question,
 } from "@/types/questions";
+import { saveMarkedSubmission } from "@/types/assessment";
 import { LearnerIdentificationModal } from "./LearnerIdentificationModal";
 
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
@@ -470,6 +471,75 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     []
   );
 
+  // ── Auto-Grading Submission Pipeline ──────────────────────────────────────────
+  // Runs full auto-evaluation across ALL question types (MCQ, structured, math,
+  // numeric, fill_blank) and returns a graded submission object compatible
+  // with `StudentSubmission` from `@/types/assessment`. No questions are left
+  // with `status: 'pending'` — every answer gets a grade.
+  const autoGradeSubmission = useCallback(
+    (
+      questions: Question[],
+      studentResponses: Record<string, StudentResponse>,
+      assessmentMeta: { id: string; title: string; subject?: string },
+      studentMeta: { id: string; name?: string; admissionNo?: string },
+      attemptId: string,
+    ): StudentSubmission => {
+      let totalScore = 0;
+      let maxScore = 0;
+
+      const answers: Record<string, string> = {};
+      const marks: Record<string, number> = {};
+
+      questions.forEach((q) => {
+        const points = Number(q.points ?? 1);
+        maxScore += points;
+
+        const response = studentResponses[q.id];
+        const studentAns = response?.answerText ?? response?.selectedOptionId ?? "";
+        const correctAns = String(q.correctAnswer ?? q.correctOptionId ?? q.modelAnswer ?? "");
+
+        answers[q.id] = studentAns;
+        let isCorrect = false;
+
+        if (q.type === "mcq") {
+          isCorrect = response?.selectedOptionId === q.correctOptionId;
+        } else {
+          // structured / math / numeric / fill_blank — numeric comparison
+          isCorrect = evaluateNumericOrMathAnswer(studentAns, correctAns);
+        }
+
+        const earned = isCorrect ? points : 0;
+        totalScore += earned;
+        marks[q.id] = earned;
+      });
+
+      const scorePercentage =
+        maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
+
+      // CBC performance level
+      let performanceLevel = "BE";
+      if (scorePercentage >= 80) performanceLevel = "EE";
+      else if (scorePercentage >= 65) performanceLevel = "ME";
+      else if (scorePercentage >= 50) performanceLevel = "AE";
+
+      return {
+        id: `${assessmentMeta.id}_${studentMeta.id}_${attemptId}`,
+        examId: assessmentMeta.id,
+        examTitle: assessmentMeta.title,
+        studentName: studentMeta.name ?? studentMeta.id,
+        admissionNo: studentMeta.admissionNo ?? "",
+        score: totalScore,
+        totalPoints: maxScore,
+        percentage: scorePercentage,
+        level: performanceLevel as any,
+        submittedAt: new Date().toISOString(),
+        answers,
+        marks,
+      };
+    },
+    [evaluateNumericOrMathAnswer]
+  );
+
   // ── Full Assessment Marking Engine ──────────────────────────────────────────
   // Auto-grades all question types: MCQ (exact option match), structured / math
   // / numeric / fill_blank (numeric or math comparison via evaluateNumericOrMathAnswer).
@@ -534,11 +604,11 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   const handleSubmit = useCallback(() => {
     if (isSubmitted || !assessment || !lockedStudentId) return;
 
-    // Auto-grade all question types (uses full question set with answer keys; only available after submit)
+    // ── Full auto-grade across ALL question types ──────────────────────────────
     const gradingResult = calculateGradingResult(assessment.questions, responses);
     setGradingResult(gradingResult);
 
-    // Save grading result (attempt-scoped so it doesn't leak into other attempts)
+    // Persist grading result (attempt-scoped so it doesn't leak into other attempts)
     try {
       const gradingKey = `grading_result_${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`;
       localStorage.setItem(gradingKey, JSON.stringify(gradingResult));
@@ -549,26 +619,31 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     setIsSubmitted(true);
     persistSubmission(responses, true);
 
-    const submission: StudentSubmission = {
-      assessmentId: assessment.id,
-      studentId: lockedStudentId,
-      attemptId: attemptIdRef.current,
-      responses: Object.values(responses),
-      startedAt: startedAtRef.current,
-      submittedAt: new Date().toISOString(),
-      isComplete: true,
-    };
+    // ── Build and persist graded submission to `marked_student_submissions` ─────
+    // Every question is auto-graded immediately — no structured-pending flags.
+    const submission: StudentSubmission = autoGradeSubmission(
+      assessment.questions,
+      responses,
+      { id: assessment.id, title: assessment.title, subject: assessment.subject },
+      { id: lockedStudentId, name: lockedStudentName },
+      attemptIdRef.current,
+    );
 
-    showSuccess("Assessment submitted! Answers auto-graded across all question types.");
+    // Save to the frozen ledger — also dispatches `submissions_updated`
+    saveMarkedSubmission(submission);
+
+    showSuccess("Assessment submitted and graded! All answers have been evaluated.");
     if (onSubmit) onSubmit(submission);
   }, [
     isSubmitted,
     assessment,
     responses,
     lockedStudentId,
+    lockedStudentName,
     persistSubmission,
     onSubmit,
     calculateGradingResult,
+    autoGradeSubmission,
   ]);
 
   // Keep a ref to the latest handleSubmit so the timer interval can call it.
@@ -643,8 +718,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
               <h1 className="text-2xl sm:text-3xl font-black mb-2">Assessment Submitted</h1>
               <p className="text-white/80 text-sm sm:text-base">
-                Your responses have been saved. MCQ, math, numeric, and fill-in-the-blank
-                questions are auto-graded; structured answers are pending teacher review.
+                Your responses have been saved and all question types have been
+                auto-graded. Results are available immediately.
               </p>
             </div>
             <CardContent className="p-6 sm:p-8 space-y-5">
