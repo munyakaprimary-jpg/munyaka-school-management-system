@@ -415,7 +415,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         assessmentQuestionCount={assessment.questions.length}
         assessmentDuration={assessment.duration}
         onBeginExam={handleBeginExam}
-        onClose={() => navigate("/assessments/list")}
+        onClose={() => navigate(-1)}
       />
     );
   }
@@ -493,7 +493,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
 
               <Button
-                onClick={() => navigate("/assessments/list")}
+                onClick={() => navigate(-1)}
                 className="w-full h-12 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg"
               >
                 <FileQuestion className="w-4 h-4 mr-2" />
@@ -614,11 +614,11 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       <header className="bg-white/85 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-5xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3 min-w-0">
-            {/* In-page Back arrow -> Assessment Repository */}
+            {/* In-page Back arrow — respects browser history */}
             <button
-              onClick={() => navigate("/assessments/list")}
+              onClick={() => navigate(-1)}
               className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer"
-              title="Back to Assessment Repository"
+              title="Go back"
             >
               <ArrowLeft size={18} />
               <span className="hidden sm:inline">Back</span>

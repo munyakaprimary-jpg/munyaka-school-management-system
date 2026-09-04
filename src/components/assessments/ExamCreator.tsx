@@ -524,10 +524,10 @@ const ExamCreator: React.FC = () => {
       {/* Top bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <div className="flex items-center gap-3">
-          {/* Back to Repository */}
+          {/* Back — respects browser history */}
           <Button
             variant="ghost"
-            onClick={() => navigate("/assessments/list")}
+            onClick={() => navigate(-1)}
             className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer px-3 py-2 rounded-xl hover:bg-slate-100"
           >
             <ArrowLeft size={16} />
