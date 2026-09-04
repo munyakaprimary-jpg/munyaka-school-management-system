@@ -3,20 +3,44 @@ import { toast } from "sonner";
 /** Re-export the raw sonner `toast` for callers that need direct access. */
 export { toast };
 
+/** Default auto-dismiss duration in milliseconds. */
+const DEFAULT_DURATION_MS = 3000;
+
+/** Dismiss all existing toasts before showing a new one — prevents stacking
+ *  when buttons are clicked rapidly or multiple handlers fire in sequence. */
+const dismissAllBeforeNew = () => {
+  toast.dismiss();
+};
+
 export const showSuccess = (message: string) => {
-  toast.success(message);
+  dismissAllBeforeNew();
+  toast.success(message, {
+    duration: DEFAULT_DURATION_MS,
+    closeButton: true,
+  });
 };
 
 export const showError = (message: string) => {
-  toast.error(message);
+  dismissAllBeforeNew();
+  toast.error(message, {
+    duration: DEFAULT_DURATION_MS,
+    closeButton: true,
+  });
 };
 
 export const showLoading = (message: string) => {
-  return toast.loading(message);
+  return toast.loading(message, {
+    duration: Infinity, // Loading toasts must be manually dismissed via dismissToast()
+    closeButton: true,
+  });
 };
 
-export const dismissToast = (toastId: string) => {
-  toast.dismiss(toastId);
+export const dismissToast = (toastId?: string | number) => {
+  if (toastId !== undefined && toastId !== null) {
+    toast.dismiss(toastId);
+  } else {
+    toast.dismiss(); // Dismiss all
+  }
 };
 
 /**

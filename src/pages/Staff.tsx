@@ -36,7 +36,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
-import { showSuccess, showError } from '@/utils/toast';
+import { showSuccess, showError, dismissToast } from '@/utils/toast';
 import { api } from '@/lib/api';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { getLocalStaff, addLocalStaff, type StaffRecord } from './StaffRegistration';
@@ -523,6 +523,7 @@ const Staff = () => {
       console.warn('[bulk-activate] Server unreachable, activated locally:', err);
     }
 
+    dismissToast();
     showSuccess(
       apiOk
         ? `Activated ${idsToActivate.length} teacher(s).`
@@ -536,6 +537,7 @@ const Staff = () => {
   const handleActivateAll = async () => {
     const preRegTeachers = staffDirectory.filter(s => s.status === 'Pre-Registered');
     if (preRegTeachers.length === 0) {
+      dismissToast();
       showError('No pre-registered teachers to activate.');
       return;
     }
@@ -625,8 +627,10 @@ const Staff = () => {
 
     if (apiSuccess) {
       const total = apiActivated || localCount;
+      dismissToast();
       showSuccess(`All pending teachers activated successfully (${total} activated).`);
     } else {
+      dismissToast();
       showSuccess(`All pending teachers activated locally (${localCount} activated). Server sync skipped — it will sync on next load.`);
     }
 
@@ -911,6 +915,7 @@ const Staff = () => {
 
                                     notifyDataChanged('staff');
                                     window.dispatchEvent(new Event('staff-changed'));
+                                    dismissToast();
                                     showSuccess(`${member.full_name} has been activated.`);
 
                                     // Try to sync with server in background — failure is non-blocking
