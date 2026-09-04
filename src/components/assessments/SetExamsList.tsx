@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from "react"
 import {
   Eye,
   Printer,
-  Download,
+  FileDown,
   Trash2,
   CheckCircle2,
   Search,
@@ -19,6 +19,7 @@ import {
   Table as TableIcon,
   X,
 } from "lucide-react";
+import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -61,29 +62,23 @@ interface ExamListItem {
 function loadStatusOverrides(): Record<string, ExamStatus> {
   try {
     const raw = localStorage.getItem(EXAM_STATUS_KEY);
-    if (!raw) return {};
-    return JSON.parse(raw) || {};
+    return raw ? JSON.parse(raw) : {};
   } catch { return {}; }
 }
 
 function saveStatusOverrides(map: Record<string, ExamStatus>) {
-  try {
-    localStorage.setItem(EXAM_STATUS_KEY, JSON.stringify(map));
-  } catch { /* ignore */ }
+  try { localStorage.setItem(EXAM_STATUS_KEY, JSON.stringify(map)); } catch { /* ignore */ }
 }
 
 function loadClosedExams(): string[] {
   try {
     const raw = localStorage.getItem(CLOSED_EXAMS_KEY);
-    if (!raw) return [];
-    return JSON.parse(raw) || [];
+    return raw ? JSON.parse(raw) : [];
   } catch { return []; }
 }
 
 function saveClosedExams(ids: string[]) {
-  try {
-    localStorage.setItem(CLOSED_EXAMS_KEY, JSON.stringify(ids));
-  } catch { /* ignore */ }
+  try { localStorage.setItem(CLOSED_EXAMS_KEY, JSON.stringify(ids)); } catch { /* ignore */ }
 }
 
 function loadExams(): ExamListItem[] {
@@ -99,25 +94,26 @@ function loadExams(): ExamListItem[] {
       const parsed = JSON.parse(raw);
       if (parsed?.questions?.length > 0) {
         const id = parsed.metadata?.assessmentId || "assessment_bank_default";
-        seen.add(id);
-        const isClosed = closed.has(id);
-        const status: ExamStatus = isClosed ? "Closed" : statusMap[id] || "Published";
-        items.push({
-          id,
-          title: parsed.metadata?.title || "Untitled Assessment",
-          category: parsed.metadata?.category || "Formative",
-          subject: parsed.metadata?.subject || "—",
-          classLevel: parsed.metadata?.classLevel || "—",
-          duration: parsed.metadata?.duration || 60,
-          totalMarks:
-            parsed.metadata?.totalMarks ||
-            (parsed.questions || []).reduce((s: number, q: any) => s + (q.points || 0), 0),
-          questionCount: (parsed.questions || []).length,
-          status,
-          createdAt: parsed.savedAt || new Date().toISOString(),
-          updatedAt: parsed.savedAt || new Date().toISOString(),
-          source: "bank",
-        });
+        if (!seen.has(id)) {
+          seen.add(id);
+          const status: ExamStatus = closed.has(id) ? "Closed" : statusMap[id] || "Published";
+          items.push({
+            id,
+            title: parsed.metadata?.title || "Untitled Assessment",
+            category: parsed.metadata?.category || "Formative",
+            subject: parsed.metadata?.subject || "—",
+            classLevel: parsed.metadata?.classLevel || "—",
+            duration: parsed.metadata?.duration || 60,
+            totalMarks:
+              parsed.metadata?.totalMarks ||
+              (parsed.questions || []).reduce((s: number, q: any) => s + (q.points || 0), 0),
+            questionCount: (parsed.questions || []).length,
+            status,
+            createdAt: parsed.savedAt || new Date().toISOString(),
+            updatedAt: parsed.savedAt || new Date().toISOString(),
+            source: "bank",
+          });
+        }
       }
     }
   } catch { /* ignore */ }
@@ -129,24 +125,24 @@ function loadExams(): ExamListItem[] {
       const parsed: Assessment[] = JSON.parse(raw);
       if (Array.isArray(parsed)) {
         parsed.forEach((a) => {
-          if (seen.has(a.id)) return;
-          seen.add(a.id);
-          const isClosed = closed.has(a.id);
-          const status: ExamStatus = isClosed ? "Closed" : statusMap[a.id] || "Published";
-          items.push({
-            id: a.id,
-            title: a.title || "Untitled",
-            category: a.category || "Formative",
-            subject: a.subject || "—",
-            classLevel: a.classLevel || "—",
-            duration: a.duration || 60,
-            totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + q.points, 0),
-            questionCount: (a.questions || []).length,
-            status,
-            createdAt: a.createdAt || new Date().toISOString(),
-            updatedAt: a.updatedAt || a.createdAt || new Date().toISOString(),
-            source: "saved",
-          });
+          if (!seen.has(a.id)) {
+            seen.add(a.id);
+            const status: ExamStatus = closed.has(a.id) ? "Closed" : statusMap[a.id] || "Published";
+            items.push({
+              id: a.id,
+              title: a.title || "Untitled",
+              category: a.category || "Formative",
+              subject: a.subject || "—",
+              classLevel: a.classLevel || "—",
+              duration: a.duration || 60,
+              totalMarks: a.totalMarks || (a.questions || []).reduce((s, q) => s + q.points, 0),
+              questionCount: (a.questions || []).length,
+              status,
+              createdAt: a.createdAt || new Date().toISOString(),
+              updatedAt: a.updatedAt || a.createdAt || new Date().toISOString(),
+              source: "saved",
+            });
+          }
         });
       }
     }
@@ -203,8 +199,8 @@ function formatCategory(c: string): string {
 
 function statusBadge(status: ExamStatus) {
   switch (status) {
-    case "Draft":   return "bg-slate-100 text-slate-700 border-slate-200";
-    case "Closed":  return "bg-red-100 text-red-700 border-red-200";
+    case "Draft":  return "bg-slate-100 text-slate-700 border-slate-200";
+    case "Closed": return "bg-red-100 text-red-700 border-red-200";
     default:        return "bg-emerald-100 text-emerald-700 border-emerald-200";
   }
 }
@@ -217,96 +213,38 @@ function formatDate(dateStr: string): string {
   } catch { return dateStr; }
 }
 
-function buildPrintableHTML(exam: Assessment): string {
-  const today = formatDate(new Date().toISOString());
-  const totalMarks = exam.questions.reduce((s, q) => s + q.points, 0);
+// ─── Global Print Styles ──────────────────────────────────────────────────────
+const PRINT_STYLE_ID = "exam-print-global-styles";
 
-  const questionsHTML = exam.questions
-    .map((q, i) => {
-      if (q.type === "mcq" && q.options) {
-        const opts = q.options
-          .map((opt) => `<div class="opt-row"><span class="opt-lbl">${opt.label}.</span><span class="opt-txt">${opt.text || "(no text)"}</span></div>`)
-          .join("");
-        return `<div class="q-block">
-          <div class="q-hdr"><span class="q-n">${i + 1}.</span><span class="q-p">${q.prompt}</span><span class="q-pt">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
-          <div class="opt-lst">${opts}</div>
-          <div class="ans-line"><span class="ans-lbl">Student's Answer:</span> _______</div>
-        </div>`;
-      }
-      return `<div class="q-block">
-        <div class="q-hdr"><span class="q-n">${i + 1}.</span><span class="q-p">${q.prompt}</span><span class="q-pt">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
-        ${q.modelAnswer ? `<div class="mod-ans"><strong>Model Answer:</strong> ${q.modelAnswer}</div>` : ""}
-        <div class="ans-blank"></div>
-      </div>`;
-    })
-    .join('<div class="q-div"></div>');
-
-  return `<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>${exam.title} — Exam Paper</title>
-<style>
-*{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Courier New',Courier,monospace;font-size:12pt;color:#1a1a1a;padding:40px 48px;max-width:850px;margin:0 auto;line-height:1.5}
-.school{text-align:center;font-size:11pt;color:#555;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:4px;letter-spacing:.5px}
-.p-title{text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;letter-spacing:1px;margin:8px 0 4px}
-.p-meta{text-align:center;font-size:10pt;color:#444;margin-bottom:16px}
-.hdr-tbl{width:100%;border-collapse:collapse;margin-bottom:16px;font-size:11pt}
-.hdr-tbl td{padding:4px 8px;border:1px solid #1a1a1a}
-.hdr-tbl .lbl{font-weight:bold;background:#f5f5f5;width:30%}
-.instr-box{background:#f9f9f9;border:1px solid #ccc;border-left:4px solid #1a1a1a;padding:8px 12px;font-size:10pt;margin-bottom:20px}
-.instr-box strong{font-size:11pt}
-.sec-lbl{font-weight:bold;font-size:11pt;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid #1a1a1a;padding-bottom:2px}
-.q-block{margin-bottom:16px;page-break-inside:avoid}
-.q-hdr{display:flex;gap:8px;align-items:flex-start;margin-bottom:6px}
-.q-n{font-weight:bold;min-width:20px}.q-p{flex:1}.q-pt{font-size:10pt;color:#555;white-space:nowrap}
-.opt-lst{padding-left:28px;display:flex;flex-direction:column;gap:4px}
-.opt-row{display:flex;gap:8px}.opt-lbl{font-weight:bold;min-width:18px}.opt-txt{flex:1}
-.ans-line{margin-top:8px;padding-left:28px;font-size:10pt;color:#555;border-top:1px dashed #ccc;padding-top:4px}
-.ans-lbl{font-weight:bold}
-.ans-blank{margin-top:8px;margin-left:28px;height:60px;border-bottom:1px solid #1a1a1a}
-.q-div{border-top:1px solid #e0e0e0;margin:12px 0}
-.mod-ans{font-size:10pt;color:#444;background:#f9f9f9;padding:4px 8px;border-left:2px solid #aaa;margin-top:4px}
-.footer{margin-top:24px;border-top:1px solid #1a1a1a;padding-top:8px;font-size:9pt;color:#666;display:flex;justify-content:space-between}
-@media print{body{padding:0;font-size:11pt}.q-block{page-break-inside:avoid}.opt-lst{padding-left:24px}.ans-blank{height:40px}}
-</style>
-</head>
-<body>
-<div class="school">Munyaka E-Learning Platform — Assessment Paper</div>
-<div class="p-title">${exam.title}</div>
-<div class="p-meta">${exam.subject} &nbsp;|&nbsp; ${exam.classLevel} &nbsp;|&nbsp; ${formatCategory(exam.category)} &nbsp;|&nbsp; Duration: ${exam.duration} minutes</div>
-<table class="hdr-tbl">
-<tr><td class="lbl">Student Name:</td><td style="width:38%"></td><td class="lbl">Assessment No.:</td><td></td></tr>
-<tr><td class="lbl">Grade / Class:</td><td>${exam.classLevel}</td><td class="lbl">Date:</td><td>${today}</td></tr>
-<tr><td class="lbl">Subject:</td><td>${exam.subject}</td><td class="lbl">Total Marks:</td><td>${totalMarks}</td></tr>
-</table>
-<div class="instr-box"><strong>Instructions:</strong>
-<ul style="margin:4px 0 0 20px"><li>Write your name, assessment number, and date at the top of this paper.</li><li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li><li>For Structured questions, write your answers in the spaces provided.</li><li>Show all working where necessary.</li><li>Total time: ${exam.duration} minutes. Manage your time carefully.</li></ul>
-</div>
-<div class="sec-lbl">Questions</div>
-${questionsHTML}
-<div class="footer"><span>${exam.title} — ${exam.subject}</span><span>Page 1 of 1</span><span>© Munyaka E-Learning Platform</span></div>
-</body>
-</html>`;
-}
-
-// ─── Print Preview Styles (injected once) ─────────────────────────────────────
-const PRINT_STYLE_ID = "exam-print-modal-styles";
-
-function injectPrintStyles() {
+function injectGlobalPrintStyles() {
   if (document.getElementById(PRINT_STYLE_ID)) return;
   const s = document.createElement("style");
   s.id = PRINT_STYLE_ID;
   s.textContent = `
-    /* ── Print mode: show only the exam print container ── */
+    /* ── Hide everything except the printable paper when printing ── */
     @media print {
-      html, body { margin: 0 !important; padding: 0 !important; background: #fff !important; }
-      body > * { visibility: hidden !important; }
-      body > #exam-print-container,
-      body > #exam-print-container * { visibility: visible !important; }
+      html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      body * {
+        visibility: hidden !important;
+      }
 
-      #exam-print-container {
-        position: static !important;
+      /*
+       * The printable paper container — matched by id AND by class.
+       * Only #printable-exam-paper and its children become visible.
+       */
+      #printable-exam-paper,
+      #printable-exam-paper * {
+        visibility: visible !important;
+      }
+
+      #printable-exam-paper {
+        position: absolute;
         left: 0 !important;
         top: 0 !important;
         width: 100% !important;
@@ -317,81 +255,89 @@ function injectPrintStyles() {
         color: #1a1a1a !important;
         background: #fff !important;
         line-height: 1.5 !important;
-        overflow: visible !important;
+        box-sizing: border-box !important;
       }
 
-      #exam-print-container div,
-      #exam-print-container p,
-      #exam-print-container ul,
-      #exam-print-container li,
-      #exam-print-container span { display: revert !important; visibility: visible !important; }
-      #exam-print-container table { display: table !important; visibility: visible !important; }
-      #exam-print-container thead { display: table-header-group !important; }
-      #exam-print-container tbody { display: table-row-group !important; }
-      #exam-print-container tr { display: table-row !important; }
-      #exam-print-container td { display: table-cell !important; }
+      /* Restore display types for structured content */
+      #printable-exam-paper div,
+      #printable-exam-paper p,
+      #printable-exam-paper ul,
+      #printable-exam-paper li,
+      #printable-exam-paper span {
+        display: revert !important;
+        visibility: visible !important;
+      }
+      #printable-exam-paper table {
+        display: table !important;
+        visibility: visible !important;
+        width: 100% !important;
+      }
+      #printable-exam-paper thead    { display: table-header-group !important; }
+      #printable-exam-paper tbody    { display: table-row-group !important; }
+      #printable-exam-paper tr      { display: table-row !important; }
+      #printable-exam-paper td      { display: table-cell !important; }
 
-      /* Hide screen-only ornaments */
-      #exam-print-container .print-hide,
-      #exam-print-container svg { display: none !important; }
+      /* Hide screen-only ornament elements inside the paper */
+      #printable-exam-paper .no-print,
+      #printable-exam-paper svg {
+        display: none !important;
+        visibility: hidden !important;
+      }
 
       /* Flex helpers */
-      #exam-print-container .print-q-hdr { display: flex !important; }
-      #exam-print-container .print-opt-row { display: flex !important; }
-      #exam-print-container .print-footer { display: flex !important; }
-      #exam-print-container .print-ans-blank { display: block !important; height: 40px; }
+      #printable-exam-paper .pp-q-hdr   { display: flex !important; }
+      #printable-exam-paper .pp-opt-row { display: flex !important; }
+      #printable-exam-paper .pp-footer { display: flex !important; justify-content: space-between; }
+      #printable-exam-paper .pp-ans-blank { display: block !important; height: 40px; }
 
       /* Page-break control */
-      #exam-print-container .print-q-block { page-break-inside: avoid; }
-    }
+            #printable-exam-paper .pp-q-block { page-break-inside: avoid; }
+          }
+      
+          /* ── Web view: keep the printable paper off-screen ── */
+          #printable-exam-paper {
+            position: absolute;
+            left: -9999px !important;
+            top: 0;
+            width: 800px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 12pt;
+            color: #1a1a1a;
+            line-height: 1.5;
+            background: #fff;
+            padding: 40px 48px;
+            box-sizing: border-box;
+          }
+      
+          /* Paper elements (live styles used in both screen & print) */
+          .pp-school { text-align: center; font-size: 11pt; color: #555; border-bottom: 2px solid #1a1a1a; padding-bottom: 6px; margin-bottom: 4px; }
+          .pp-paper-title { text-align: center; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 4px; }
+          .pp-paper-meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 16px; }
+          .pp-hdr-tbl { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+          .pp-hdr-tbl td { padding: 4px 8px; border: 1px solid #1a1a1a; }
+          .pp-lbl { font-weight: bold; background: #f5f5f5; }
+          .pp-instr-box { background: #f9f9f9; border: 1px solid #ccc; border-left: 4px solid #1a1a1a; padding: 8px 12px; font-size: 10pt; margin-bottom: 20px; }
+          .pp-instr-box ul { margin: 4px 0 0 20px; }
+          .pp-sec-lbl { font-weight: bold; font-size: 11pt; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; }
+          .pp-q-block { margin-bottom: 16px; page-break-inside: avoid; }
+          .pp-q-hdr { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
+          .pp-q-n { font-weight: bold; min-width: 20px; }
+          .pp-q-p { flex: 1; }
+          .pp-q-pt { font-size: 10pt; color: #555; white-space: nowrap; }
+          .pp-opt-lst { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
+          .pp-opt-row { display: flex; gap: 8px; }
+          .pp-opt-lbl { font-weight: bold; min-width: 18px; }
+          .pp-opt-txt { flex: 1; }
+          .pp-ans-line { margin-top: 8px; padding-left: 28px; font-size: 10pt; color: #555; border-top: 1px dashed #ccc; padding-top: 4px; }
+          .pp-ans-lbl { font-weight: bold; }
+          .pp-ans-blank { margin-top: 8px; margin-left: 28px; height: 60px; border-bottom: 1px solid #1a1a1a; }
+          .pp-mod-ans { font-size: 10pt; color: #444; background: #f9f9f9; padding: 4px 8px; border-left: 2px solid #aaa; margin-top: 4px; }
+          .pp-footer { margin-top: 24px; border-top: 1px solid #1a1a1a; padding-top: 8px; font-size: 9pt; color: #666; display: flex; justify-content: space-between; }
+        `;
+        document.head.appendChild(s);
+      }
 
-    /* ── On-screen: visually hide the print container (but keep it in the DOM) ── */
-    #exam-print-container {
-      position: absolute;
-      left: -9999px;
-      top: 0;
-      width: 800px;
-      font-family: 'Courier New', Courier, monospace;
-      font-size: 12pt;
-      color: #1a1a1a;
-      line-height: 1.5;
-      background: #fff;
-      padding: 40px 48px;
-    }
-
-    /* Paper elements */
-    .print-school { text-align: center; font-size: 11pt; color: #555; border-bottom: 2px solid #1a1a1a; padding-bottom: 6px; margin-bottom: 4px; }
-    .print-p-title { text-align: center; font-size: 16pt; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; margin: 8px 0 4px; }
-    .print-p-meta { text-align: center; font-size: 10pt; color: #444; margin-bottom: 16px; }
-    .print-hdr-tbl { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
-    .print-hdr-tbl td { padding: 4px 8px; border: 1px solid #1a1a1a; }
-    .print-hdr-tbl .lbl { font-weight: bold; background: #f5f5f5; }
-    .print-instr-box { background: #f9f9f9; border: 1px solid #ccc; border-left: 4px solid #1a1a1a; padding: 8px 12px; font-size: 10pt; margin-bottom: 20px; }
-    .print-sec-lbl { font-weight: bold; font-size: 11pt; margin-bottom: 8px; text-transform: uppercase; border-bottom: 1px solid #1a1a1a; padding-bottom: 2px; }
-    .print-q-block { margin-bottom: 16px; page-break-inside: avoid; }
-    .print-q-hdr { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 6px; }
-    .print-q-n { font-weight: bold; min-width: 20px; }
-    .print-q-p { flex: 1; }
-    .print-q-pt { font-size: 10pt; color: #555; white-space: nowrap; }
-    .print-opt-lst { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
-    .print-opt-row { display: flex; gap: 8px; }
-    .print-opt-lbl { font-weight: bold; min-width: 18px; }
-    .print-opt-txt { flex: 1; }
-    .print-ans-line { margin-top: 8px; padding-left: 28px; font-size: 10pt; color: #555; border-top: 1px dashed #ccc; padding-top: 4px; }
-    .print-ans-lbl { font-weight: bold; }
-    .print-ans-blank { margin-top: 8px; margin-left: 28px; height: 60px; border-bottom: 1px solid #1a1a1a; }
-    .print-mod-ans { font-size: 10pt; color: #444; background: #f9f9f9; padding: 4px 8px; border-left: 2px solid #aaa; margin-top: 4px; }
-    .print-footer { margin-top: 24px; border-top: 1px solid #1a1a1a; padding-top: 8px; font-size: 9pt; color: #666; display: flex; justify-content: space-between; }
-
-    /* Screen-only: hide print elements in the on-screen view */
-    @media screen {
-      #exam-print-container { display: block; }
-    }
-  `;
-  document.head.appendChild(s);
-}
-
-// ─── Download helper ────────────────────────────────────────────────────────────
+// ─── Download helpers ─────────────────────────────────────────────────────────
 function downloadHTML(html: string, filename: string) {
   const blob = new Blob([html], { type: "text/html" });
   const url = URL.createObjectURL(blob);
@@ -404,50 +350,128 @@ function downloadHTML(html: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-// ─── Printable Question Block (rendered as DOM, not HTML string) ────────────────
-function PrintableQuestion({ q, index }: { q: Question; index: number }) {
-  const totalMarks = q.points;
+// ─── Printable Question Row ──────────────────────────────────────────────────
+function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
   if (q.type === "mcq" && q.options) {
     return (
-      <div className="q-block print-q-block">
-        <div className="q-hdr print-q-hdr">
-          <span className="q-n print-q-n">{index + 1}.</span>
-          <span className="q-p print-q-p">{q.prompt}</span>
-          <span className="q-pt print-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
+      <div className="pp-q-block">
+        <div className="pp-q-hdr">
+          <span className="pp-q-n">{index + 1}.</span>
+          <span className="pp-q-p">{q.prompt}</span>
+          <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
         </div>
-        <div className="opt-lst print-opt-lst">
+        <div className="pp-opt-lst">
           {q.options.map((opt) => (
-            <div key={opt.id} className="opt-row print-opt-row">
-              <span className="opt-lbl print-opt-lbl">{opt.label}.</span>
-              <span className="opt-txt print-opt-txt">{opt.text || "(no text)"}</span>
-              {opt.id === q.correctOptionId && (
-                <CheckCircle2 size={12} className="text-emerald-500 ml-auto shrink-0 print-hide" />
-              )}
+            <div key={opt.id} className="pp-opt-row">
+              <span className="pp-opt-lbl">{opt.label}.</span>
+              <span className="pp-opt-txt">{opt.text || "(no text)"}</span>
             </div>
           ))}
         </div>
-        <div className="ans-line print-ans-line">
-          <span className="ans-lbl print-ans-lbl">Student's Answer:</span> _______
+        <div className="pp-ans-line">
+          <span className="pp-ans-lbl">Student's Answer:</span> ____________________
         </div>
       </div>
     );
   }
+
   return (
-    <div className="q-block print-q-block">
-      <div className="q-hdr print-q-hdr">
-        <span className="q-n print-q-n">{index + 1}.</span>
-        <span className="q-p print-q-p">{q.prompt}</span>
-        <span className="q-pt print-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
+    <div className="pp-q-block">
+      <div className="pp-q-hdr">
+        <span className="pp-q-n">{index + 1}.</span>
+        <span className="pp-q-p">{q.prompt}</span>
+        <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
       </div>
       {q.modelAnswer && (
-        <div className="mod-ans print-mod-ans print-hide">
+        <div className="pp-mod-ans">
           <strong>Model Answer:</strong> {q.modelAnswer}
         </div>
       )}
-      <div className="ans-blank print-ans-blank" />
+      <div className="pp-ans-blank" />
     </div>
   );
 }
+
+// ─── Dedicated Printable Exam Paper Component ────────────────────────────────
+interface PrintableExamPaperProps {
+  exam: Assessment;
+  totalMarks: number;
+  today: string;
+}
+
+/**
+ * Off-screen assessment template — hidden in web view (left: -9999px),
+ * fully visible in @media print via global CSS rules injected in injectGlobalPrintStyles().
+ *
+ * Contains:
+ * - Official School Header (School Name, Exam Title, Subject, Date)
+ * - Learner Credentials Block (Learner Name, Assessment No./Birth Cert No., Grade/Class, Duration, Total Marks)
+ * - General Instructions section
+ * - Cleanly formatted MCQ options or lined answer boxes for structured questions
+ */
+const PrintableExamPaper = React.forwardRef<HTMLDivElement, PrintableExamPaperProps>(
+  ({ exam, totalMarks, today }, ref) => (
+  <div ref={ref} id="printable-exam-paper" aria-hidden="true" className="pp-root">
+    {/* ── Official School Header ── */}
+    <div className="pp-school">Munyaka E-Learning Platform — Assessment Paper</div>
+    <div className="pp-paper-title">{exam.title}</div>
+    <div className="pp-paper-meta">
+      {exam.subject} &nbsp;|&nbsp; {exam.classLevel} &nbsp;|&nbsp;
+      {formatCategory(exam.category)} &nbsp;|&nbsp; Duration: {exam.duration} minutes
+    </div>
+
+    {/* ── Learner Credentials Block ── */}
+    <table className="pp-hdr-tbl">
+      <tbody>
+        <tr>
+          <td className="pp-lbl">Learner Name:</td>
+          <td style={{ width: "38%" }} />
+          <td className="pp-lbl">Assessment No. / Birth Cert No.:</td>
+          <td />
+        </tr>
+        <tr>
+          <td className="pp-lbl">Grade / Class:</td>
+          <td>{exam.classLevel}</td>
+          <td className="pp-lbl">Date:</td>
+          <td>{today}</td>
+        </tr>
+        <tr>
+          <td className="pp-lbl">Subject:</td>
+          <td>{exam.subject}</td>
+          <td className="pp-lbl">Total Marks:</td>
+          <td>{totalMarks}</td>
+        </tr>
+      </tbody>
+    </table>
+
+    {/* ── General Instructions ── */}
+    <div className="pp-instr-box">
+      <strong>Instructions:</strong>
+      <ul>
+        <li>Write your name, Assessment No. / Birth Certificate No., and date at the top of this paper.</li>
+        <li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li>
+        <li>For Structured questions, write your answers in the spaces provided.</li>
+        <li>Show all working where necessary.</li>
+        <li>Total time: {exam.duration} minutes. Manage your time carefully.</li>
+      </ul>
+    </div>
+
+    <div className="pp-sec-lbl">Questions</div>
+
+    {/* ── Questions ── */}
+    {exam.questions.map((q, i) => (
+      <PrintableQuestionRow key={q.id} q={q} index={i} />
+    ))}
+
+    {/* ── Footer ── */}
+        <div className="pp-footer">
+          <span>{exam.title} — {exam.subject}</span>
+          <span>© Munyaka E-Learning Platform</span>
+        </div>
+      </div>
+      )
+    );
+    PrintableExamPaper.displayName = "PrintableExamPaper";
 
 // ─── Exam View Modal ──────────────────────────────────────────────────────────
 interface ExamViewModalProps {
@@ -459,14 +483,15 @@ interface ExamViewModalProps {
 const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClose }) => {
   const [exam, setExam] = useState<Assessment | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isPdfGenerating, setIsPdfGenerating] = useState(false);
   const modalRef = useRef<HTMLDivElement>(null);
-  const printContainerRef = useRef<HTMLDivElement>(null);
+  const printPaperRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const loaded = loadFullAssessment(examId);
     setExam(loaded);
     setIsLoading(false);
-    injectPrintStyles();
+    injectGlobalPrintStyles();
   }, [examId]);
 
   // Close on Escape
@@ -476,20 +501,82 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
     return () => document.removeEventListener("keydown", handleKey);
   }, [onClose]);
 
-  // ── In-page print: show hidden container, print, hide again ──────────────
+  // ── Native Print (browser print dialog) ──────────────────────────────────────
+  // Calls window.print() — the global @media print CSS hides all UI and shows
+  // ONLY #printable-exam-paper (the PrintableExamPaper component below).
   const handlePrint = useCallback(() => {
-    // The print container is always in the DOM (inside the modal body).
-    // We call window.print() directly — @media print rules will show ONLY
-    // the print container and hide all surrounding UI.
     window.print();
   }, []);
 
-  // ── Download HTML as a file ─────────────────────────────────────────────
-  const handleDownload = useCallback(() => {
+  // ── Download PDF via html2pdf.js ─────────────────────────────────────────────
+  // Captures the #printable-exam-paper element and saves it as a PDF file.
+  const handleDownloadPDF = useCallback(async () => {
+    if (!exam || !printPaperRef.current) return;
+    setIsPdfGenerating(true);
+    try {
+      const filename = `${exam.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`;
+      const opt = {
+        margin: 0,
+        filename,
+        image: { type: "jpeg", quality: 0.98 },
+        html2canvas: {
+          scale: 2,
+          useCORS: true,
+          logging: false,
+          // Render only the paper element (ignore off-screen / clipped areas)
+          windowWidth: 800,
+        },
+        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+        pagebreak: { mode: ["avoid-all", "css-and-library"] },
+      };
+      await html2pdf().set(opt).from(printPaperRef.current).save();
+      showSuccess("Exam paper saved as PDF.");
+    } catch (err) {
+      console.error("[ExamViewModal] PDF generation failed:", err);
+      showError("Failed to generate PDF. Try using Print instead.");
+    } finally {
+      setIsPdfGenerating(false);
+    }
+  }, [exam]);
+
+  // ── Download HTML (fallback) ───────────────────────────────────────────────
+  const handleDownloadHTML = useCallback(() => {
     if (!exam) return;
-    const html = buildPrintableHTML(exam);
-    const filename = `${exam.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
-    downloadHTML(html, filename);
+    const today = formatDate(new Date().toISOString());
+    const totalMarks = exam.questions.reduce((s, q) => s + q.points, 0);
+
+    const questionsHTML = exam.questions.map((q, i) => {
+      if (q.type === "mcq" && q.options) {
+        const opts = q.options.map((o) =>
+          `<div style="display:flex;gap:8px"><span style="font-weight:bold;min-width:18px">${o.label}.</span><span>${o.text || "(no text)"}</span></div>`
+        ).join("");
+        return `<div style="margin-bottom:16px">
+          <div style="display:flex;gap:8px"><span style="font-weight:bold">${i + 1}.</span><span>${q.prompt}</span><span style="font-size:10pt;color:#555">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
+          <div style="padding-left:28px;display:flex;flex-direction:column;gap:4px">${opts}</div>
+          <div style="margin-top:8px;padding-left:28px;font-size:10pt;color:#555;border-top:1px dashed #ccc;padding-top:4px"><strong>Student's Answer:</strong> _______________</div>
+        </div>`;
+      }
+      return `<div style="margin-bottom:16px">
+        <div style="display:flex;gap:8px"><span style="font-weight:bold">${i + 1}.</span><span>${q.prompt}</span><span style="font-size:10pt;color:#555">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
+        <div style="margin-top:8px;margin-left:28px;height:60px;border-bottom:1px solid #1a1a1a"></div>
+      </div>`;
+    }).join("<hr style='border:none;border-top:1px solid #e0e0e0;margin:12px 0'/>");
+
+    const html = `<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/>
+<style>body{font-family:'Courier New',monospace;padding:40px 48px;max-width:850px;margin:0 auto;font-size:12pt}table{width:100%;border-collapse:collapse;margin-bottom:16px}td{padding:4px 8px;border:1px solid #1a1a1a}.lbl{font-weight:bold;background:#f5f5f5}hr{border:none;border-top:1px solid #e0e0e0;margin:12px 0}</style>
+</head><body>
+<div style="text-align:center;font-size:11pt;color:#555;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:4px">Munyaka E-Learning Platform — Assessment Paper</div>
+<div style="text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;margin:8px 0 4px">${exam.title}</div>
+<div style="text-align:center;font-size:10pt;color:#444;margin-bottom:16px">${exam.subject} | ${exam.classLevel} | ${formatCategory(exam.category)} | Duration: ${exam.duration} minutes</div>
+<table><tr><td class="lbl">Learner Name:</td><td style="width:38%"></td><td class="lbl">Assessment No. / Birth Cert No.:</td><td></td></tr><tr><td class="lbl">Grade / Class:</td><td>${exam.classLevel}</td><td class="lbl">Date:</td><td>${today}</td></tr><tr><td class="lbl">Subject:</td><td>${exam.subject}</td><td class="lbl">Total Marks:</td><td>${totalMarks}</td></tr></table>
+<div style="background:#f9f9f9;border:1px solid #ccc;border-left:4px solid #1a1a1a;padding:8px 12px;font-size:10pt;margin-bottom:20px"><strong>Instructions:</strong><ul style="margin:4px 0 0 20px"><li>Write your name, Assessment No. / Birth Certificate No., and date at the top of this paper.</li><li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li><li>For Structured questions, write your answers in the spaces provided.</li><li>Show all working where necessary.</li><li>Total time: ${exam.duration} minutes.</li></ul></div>
+<div style="font-weight:bold;font-size:11pt;margin-bottom:8px;text-transform:uppercase;border-bottom:1px solid #1a1a1a;padding-bottom:2px">Questions</div>
+${questionsHTML}
+<div style="margin-top:24px;border-top:1px solid #1a1a1a;padding-top:8px;font-size:9pt;color:#666;display:flex;justify-content:space-between"><span>${exam.title} — ${exam.subject}</span><span>© Munyaka E-Learning Platform</span></div>
+</body></html>`;
+
+    downloadHTML(html, `${exam.title.replace(/[^a-z0-9]/gi, "_")}_Paper.html`);
     showSuccess("Exam paper downloaded as HTML file.");
   }, [exam]);
 
@@ -497,7 +584,6 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
     () => (exam ? exam.questions.reduce((s, q) => s + q.points, 0) : 0),
     [exam]
   );
-
   const today = formatDate(new Date().toISOString());
 
   return (
@@ -519,26 +605,29 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
             </p>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            {/* Download HTML */}
-            {exam && (
-              <button
-                onClick={handleDownload}
-                className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
-                title="Download as HTML file"
-              >
-                <Download size={14} />
-                <span className="hidden sm:inline">Download</span>
-              </button>
-            )}
             {/* Print */}
             {exam && (
               <button
                 onClick={handlePrint}
                 className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors"
-                title="Print / Save as PDF"
+                title="Print / Save as PDF via browser"
               >
-                <Printer size={14} />
+                <Printer size={15} />
                 <span className="hidden sm:inline">Print</span>
+              </button>
+            )}
+            {/* Download PDF */}
+            {exam && (
+              <button
+                onClick={handleDownloadPDF}
+                disabled={isPdfGenerating}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors disabled:opacity-60"
+                title="Download as PDF"
+              >
+                <FileDown size={15} />
+                <span className="hidden sm:inline">
+                  {isPdfGenerating ? "Generating…" : "PDF"}
+                </span>
               </button>
             )}
             <button
@@ -553,80 +642,18 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
         {/* ── Body ───────────────────────────────────────────────────── */}
         <div className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-6">
 
-          {/* ── Hidden Print Container ─────────────────────────────── */}
-          {/* This div is ALWAYS in the DOM but hidden on-screen (visually hidden).
-              @media print will hide everything else and show ONLY this. */}
-          <div
-            ref={printContainerRef}
-            id="exam-print-container"
-            aria-hidden="true"
-            className="print-pipeline"
-          >
-            {/* Print-only: school header */}
-            <div className="school print-school">
-              Munyaka E-Learning Platform — Assessment Paper
-            </div>
-            <div className="p-title print-p-title">{exam?.title}</div>
-            <div className="p-meta print-p-meta">
-              {exam?.subject} &nbsp;|&nbsp; {exam?.classLevel} &nbsp;|&nbsp;
-              {exam ? formatCategory(exam.category) : ""} &nbsp;|&nbsp;
-              Duration: {exam?.duration} minutes
-            </div>
+          {/* ── Dedicated Printable Paper Component ─────────────────────── */}
+          {/* Off-screen in web view, fully visible via @media print */}
+          {exam && (
+            <PrintableExamPaper
+              ref={printPaperRef}
+              exam={exam}
+              totalMarks={totalMarks}
+              today={today}
+            />
+          )}
 
-            {/* Student info table */}
-            <table className="hdr-tbl print-hdr-tbl">
-              <tbody>
-                <tr>
-                  <td className="lbl">Student Name:</td>
-                  <td style={{ width: "38%" }} />
-                  <td className="lbl">Assessment No.:</td>
-                  <td />
-                </tr>
-                <tr>
-                  <td className="lbl">Grade / Class:</td>
-                  <td>{exam?.classLevel}</td>
-                  <td className="lbl">Date:</td>
-                  <td>{today}</td>
-                </tr>
-                <tr>
-                  <td className="lbl">Subject:</td>
-                  <td>{exam?.subject}</td>
-                  <td className="lbl">Total Marks:</td>
-                  <td>{totalMarks}</td>
-                </tr>
-              </tbody>
-            </table>
-
-            {/* Instructions */}
-            <div className="instr-box print-instr-box">
-              <strong>Instructions:</strong>
-              <ul>
-                <li>Write your name, assessment number, and date at the top of this paper.</li>
-                <li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li>
-                <li>For Structured questions, write your answers in the spaces provided.</li>
-                <li>Show all working where necessary.</li>
-                <li>Total time: {exam?.duration} minutes. Manage your time carefully.</li>
-              </ul>
-            </div>
-
-            <div className="sec-lbl print-sec-lbl">Questions</div>
-
-            {/* Question blocks */}
-            {exam?.questions.map((q, i) => (
-              <PrintableQuestion key={q.id} q={q} index={i} />
-            ))}
-
-            <div className="footer print-footer">
-              <span>{exam?.title} — {exam?.subject}</span>
-              <span>Page 1 of 1</span>
-              <span>© Munyaka E-Learning Platform</span>
-            </div>
-          </div>
-
-          {/* ── On-screen preview (hidden when printing) ──────────────── */}
-          {/* The on-screen version uses the same print container but
-              we also render a styled preview here for clarity. */}
-
+          {/* ── On-screen preview ─────────────────────────────────────── */}
           {isLoading ? (
             <div className="flex items-center justify-center py-16">
               <div className="w-8 h-8 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin" />
@@ -639,7 +666,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
           ) : (
             <>
               {/* Meta grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 print-hide">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                 {[
                   { label: "Subject", value: exam.subject },
                   { label: "Class", value: exam.classLevel },
@@ -656,7 +683,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
               </div>
 
               {/* Questions (screen preview) */}
-              <div className="space-y-4 print-hide">
+              <div className="space-y-4">
                 {exam.questions.map((q, i) => (
                   <div key={q.id} className="border border-slate-200 rounded-2xl overflow-hidden">
                     <div className="bg-slate-50 px-5 py-4 flex items-start gap-3">
@@ -694,9 +721,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
 
                     {q.type === "structured" && q.modelAnswer && (
                       <div className="px-5 py-3 bg-amber-50 border-t border-amber-100">
-                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">
-                          Model Answer
-                        </p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-1">Model Answer</p>
                         <p className="text-sm text-amber-800 leading-relaxed">{q.modelAnswer}</p>
                       </div>
                     )}
@@ -716,10 +741,11 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
             <>
               <Button
                 variant="outline"
-                onClick={handleDownload}
+                onClick={handleDownloadHTML}
                 className="rounded-xl gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
+                title="Download as HTML file"
               >
-                <Download size={15} />
+                <FileDown size={15} />
                 Download HTML
               </Button>
               <Button
@@ -735,7 +761,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
       </div>
     </div>
   );
-}
+};
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 const SetExamsList: React.FC = () => {
@@ -756,10 +782,7 @@ const SetExamsList: React.FC = () => {
   useEffect(() => {
     refresh();
     const onStorage = (e: StorageEvent) => {
-      if (
-        e.key === QUESTION_BANK_KEY || e.key === ASSESSMENTS_KEY ||
-        e.key === EXAM_STATUS_KEY || e.key === CLOSED_EXAMS_KEY
-      ) refresh();
+      if ([QUESTION_BANK_KEY, ASSESSMENTS_KEY, EXAM_STATUS_KEY, CLOSED_EXAMS_KEY].includes(e.key || "")) refresh();
     };
     window.addEventListener("storage", onStorage);
     const onDataChanged = (e: Event) => {
@@ -847,20 +870,15 @@ const SetExamsList: React.FC = () => {
     <Card
       key={exam.id}
       className={cn(
-        "border border-slate-100 shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all group",
+        "border border-slate-100 shadow-sm rounded-2xl overflow-hidden hover:shadow-md transition-all",
         exam.status === "Closed" && "opacity-80"
       )}
     >
-      <div
-        className={cn(
-          "h-2 w-full",
-          exam.status === "Published"
-            ? "bg-gradient-to-r from-emerald-500 to-teal-500"
-            : exam.status === "Draft"
-            ? "bg-gradient-to-r from-slate-400 to-slate-500"
-            : "bg-gradient-to-r from-red-400 to-red-500"
-        )}
-      />
+      <div className={cn("h-2 w-full",
+        exam.status === "Published" ? "bg-gradient-to-r from-emerald-500 to-teal-500"
+          : exam.status === "Draft" ? "bg-gradient-to-r from-slate-400 to-slate-500"
+          : "bg-gradient-to-r from-red-400 to-red-500"
+      )} />
       <CardContent className="p-5 space-y-4">
         <div>
           <div className="flex items-start justify-between gap-2 mb-2">
@@ -882,23 +900,17 @@ const SetExamsList: React.FC = () => {
 
         <div className="grid grid-cols-3 gap-2 text-center">
           <div className="bg-violet-50 rounded-xl py-2.5 px-1">
-            <div className="flex items-center justify-center gap-1 text-violet-600 mb-0.5">
-              <ListChecks size={12} />
-            </div>
+            <div className="flex items-center justify-center gap-1 text-violet-600 mb-0.5"><ListChecks size={12} /></div>
             <div className="text-base font-black text-violet-700">{exam.questionCount}</div>
             <div className="text-[9px] font-black uppercase tracking-widest text-violet-500">Questions</div>
           </div>
           <div className="bg-blue-50 rounded-xl py-2.5 px-1">
-            <div className="flex items-center justify-center gap-1 text-blue-600 mb-0.5">
-              <Award size={12} />
-            </div>
+            <div className="flex items-center justify-center gap-1 text-blue-600 mb-0.5"><Award size={12} /></div>
             <div className="text-base font-black text-blue-700">{exam.totalMarks}</div>
             <div className="text-[9px] font-black uppercase tracking-widest text-blue-500">Total Pts</div>
           </div>
           <div className="bg-amber-50 rounded-xl py-2.5 px-1">
-            <div className="flex items-center justify-center gap-1 text-amber-600 mb-0.5">
-              <Clock size={12} />
-            </div>
+            <div className="flex items-center justify-center gap-1 text-amber-600 mb-0.5"><Clock size={12} /></div>
             <div className="text-base font-black text-amber-700">{exam.duration}m</div>
             <div className="text-[9px] font-black uppercase tracking-widest text-amber-500">Time Limit</div>
           </div>
@@ -915,35 +927,47 @@ const SetExamsList: React.FC = () => {
             variant="outline"
             onClick={() => handleViewExam(exam.id, exam.title)}
             className="flex-1 rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
-            title="View Exam"
           >
             <Eye size={15} />
             View Exam
           </Button>
-
           <Button
             variant="outline"
             onClick={() => {
               const loaded = loadFullAssessment(exam.id);
               if (!loaded) { showError("Could not load exam data."); return; }
-              const html = buildPrintableHTML(loaded);
-              const filename = `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
-              downloadHTML(html, filename);
-              showSuccess("Exam paper downloaded.");
+              const today = formatDate(new Date().toISOString());
+              const totalMarks = loaded.questions.reduce((s, q) => s + q.points, 0);
+              const paperEl = document.createElement("div");
+              // Render the printable paper to a temporary DOM element
+              paperEl.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
+              document.body.appendChild(paperEl);
+              import("html2pdf.js").then(({ default: html2pdf }) => {
+                const opt = {
+                  margin: 0, filename: `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`,
+                  image: { type: "jpeg", quality: 0.98 },
+                  html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
+                  jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+                };
+                html2pdf().set(opt).from(paperEl).save().then(() => {
+                  showSuccess("Exam paper saved as PDF.");
+                  document.body.removeChild(paperEl);
+                });
+              }).catch(() => {
+                showError("PDF generation failed. Try the Print button in the preview.");
+                document.body.removeChild(paperEl);
+              });
             }}
             className="flex-1 rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
-            title="Download Exam Paper"
           >
             <Printer size={15} />
-            Download
+            Print
           </Button>
-
           <Button
             variant="ghost"
             size="icon"
             onClick={() => handleDelete(exam.id, exam.title)}
             className="rounded-xl h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50"
-            title="Delete"
           >
             <Trash2 size={16} />
           </Button>
@@ -990,35 +1014,35 @@ const SetExamsList: React.FC = () => {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex items-center justify-end gap-1">
-                    <Button
-                      variant="ghost" size="icon"
-                      onClick={() => handleViewExam(exam.id, exam.title)}
-                      className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50"
-                      title="View Exam"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleViewExam(exam.id, exam.title)}
+                      className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="View Exam">
                       <Eye size={14} />
                     </Button>
-                    <Button
-                      variant="ghost" size="icon"
+                    <Button variant="ghost" size="icon"
                       onClick={() => {
                         const loaded = loadFullAssessment(exam.id);
                         if (!loaded) { showError("Could not load exam data."); return; }
-                        const html = buildPrintableHTML(loaded);
-                        const filename = `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_exam_paper.html`;
-                        downloadHTML(html, filename);
-                        showSuccess("Exam paper downloaded.");
+                        import("html2pdf.js").then(({ default: html2pdf }) => {
+                          const el = document.createElement("div");
+                          el.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
+                          document.body.appendChild(el);
+                          const opt = {
+                            margin: 0, filename: `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`,
+                            image: { type: "jpeg", quality: 0.98 },
+                            html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
+                            jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+                          };
+                          html2pdf().set(opt).from(el).save().then(() => {
+                            showSuccess("PDF saved.");
+                            document.body.removeChild(el);
+                          });
+                        });
                       }}
-                      className="rounded-lg h-8 w-8 text-slate-600 hover:bg-slate-100"
-                      title="Download Exam Paper"
-                    >
+                      className="rounded-lg h-8 w-8 text-slate-600 hover:bg-slate-100" title="Download PDF">
                       <Printer size={14} />
                     </Button>
-                    <Button
-                      variant="ghost" size="icon"
-                      onClick={() => handleDelete(exam.id, exam.title)}
-                      className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50"
-                      title="Delete"
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(exam.id, exam.title)}
+                      className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50" title="Delete">
                       <Trash2 size={14} />
                     </Button>
                   </div>
@@ -1067,7 +1091,6 @@ const SetExamsList: React.FC = () => {
               className="pl-9 h-11 rounded-xl bg-slate-50 border-none"
             />
           </div>
-
           <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
             <SelectTrigger className="w-full sm:w-48 h-11 rounded-xl bg-slate-50 border-none font-bold">
               <Filter size={14} className="mr-1" />
@@ -1080,7 +1103,6 @@ const SetExamsList: React.FC = () => {
               ))}
             </SelectContent>
           </Select>
-
           <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
             <SelectTrigger className="w-full sm:w-44 h-11 rounded-xl bg-slate-50 border-none font-bold">
               <SelectValue placeholder="Status" />
@@ -1092,20 +1114,15 @@ const SetExamsList: React.FC = () => {
               <SelectItem value="Closed">Closed</SelectItem>
             </SelectContent>
           </Select>
-
           <div className="flex rounded-xl bg-slate-100 p-1 h-11">
-            <button
-              onClick={() => setView("cards")}
+            <button onClick={() => setView("cards")}
               className={cn("flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
-            >
+                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}>
               <Grid3x3 size={14} /> Cards
             </button>
-            <button
-              onClick={() => setView("table")}
+            <button onClick={() => setView("table")}
               className={cn("flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}
-            >
+                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500")}>
               <TableIcon size={14} /> Table
             </button>
           </div>
@@ -1120,19 +1137,15 @@ const SetExamsList: React.FC = () => {
           { key: "Draft", label: "Draft", count: stats.draft, color: "text-slate-500", icon: <FileQuestion size={14} /> },
           { key: "Closed", label: "Closed", count: stats.closed, color: "text-red-500", icon: <X size={14} /> },
         ].map((s) => (
-          <button
-            key={s.key}
-            onClick={() => setStatusFilter(s.key as any)}
-            className={cn(
-              "p-4 rounded-2xl border-2 text-left transition-all",
+          <button key={s.key} onClick={() => setStatusFilter(s.key as any)}
+            className={cn("p-4 rounded-2xl border-2 text-left transition-all",
               statusFilter === s.key
                 ? s.key === "Published" ? "bg-emerald-50 border-emerald-300 shadow-sm"
                   : s.key === "Draft" ? "bg-slate-100 border-slate-300 shadow-sm"
                   : s.key === "Closed" ? "bg-red-50 border-red-300 shadow-sm"
                   : "bg-slate-50 border-slate-300 shadow-sm"
                 : "bg-white border-slate-100 hover:border-slate-200"
-            )}
-          >
+            )}>
             <div className={cn("flex items-center gap-2 mb-1", s.color)}>
               {s.icon}
               <span className="text-[10px] font-black uppercase tracking-widest">{s.label}</span>
@@ -1160,13 +1173,8 @@ const SetExamsList: React.FC = () => {
         <Card className="border border-slate-100 shadow-sm rounded-2xl">
           <CardContent className="py-12 text-center">
             <p className="text-slate-500 font-semibold">No exams match the current filters.</p>
-            <Button
-              variant="ghost"
-              onClick={() => { setSearchTerm(""); setStatusFilter("all"); setCategoryFilter("all"); }}
-              className="rounded-xl mt-3"
-            >
-              Clear filters
-            </Button>
+            <Button variant="ghost" onClick={() => { setSearchTerm(""); setStatusFilter("all"); setCategoryFilter("all"); }}
+              className="rounded-xl mt-3">Clear filters</Button>
           </CardContent>
         </Card>
       ) : view === "cards" ? (
