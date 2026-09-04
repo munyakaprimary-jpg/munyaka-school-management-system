@@ -207,6 +207,38 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
     });
   }, [allExams, selectedGrade, selectedStream]);
 
+  // ── Reactive Selected Exam Lookup ───────────────────────────────────────────
+  // Look up the currently-selected exam from localStorage so the summary
+  // card can reflect its properties (title, subject, question count,
+  // duration) as soon as the user picks a target exam from the dropdown.
+  const activeExam = useMemo<Exam | null>(() => {
+    if (!selectedExamId) return null;
+    try {
+      const exams = JSON.parse(localStorage.getItem("all_set_exams") || "[]");
+      if (!Array.isArray(exams)) return null;
+      return (exams.find((e: any) => e?.id === selectedExamId) as Exam) || null;
+    } catch {
+      return null;
+    }
+  }, [selectedExamId]);
+
+  // ── Auto-Select First Available Exam ────────────────────────────────────────
+  // Whenever `filteredExams` updates (e.g. after picking a Grade or Stream),
+  // auto-select the first available exam so the summary card fills in
+  // immediately. We skip the auto-select when the user has already picked a
+  // valid exam from the filtered list (so we don't yank their selection).
+  useEffect(() => {
+    if (
+      selectedGrade &&
+      filteredExams.length > 0 &&
+      !filteredExams.some((e) => e.id === selectedExamId)
+    ) {
+      setSelectedExamId(filteredExams[0]?.id || "");
+    } else if (filteredExams.length === 0 && selectedExamId) {
+      setSelectedExamId("");
+    }
+  }, [filteredExams, selectedGrade, selectedExamId]);
+
   // ── Load students from localStorage ─────────────────────────────────────────
   useEffect(() => {
     try {
@@ -413,18 +445,44 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
           </div>
 
           <CardContent className="p-6 sm:p-8 space-y-6">
-            {/* Assessment Info */}
-            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+            {/* Assessment Summary Card — reactive to selected exam */}
+            <div
+              className={cn(
+                "p-4 rounded-2xl border transition-colors",
+                activeExam
+                  ? "bg-indigo-50/60 border-indigo-200"
+                  : "bg-slate-50 border-slate-200"
+              )}
+            >
               <div className="flex items-center gap-2 mb-2">
-                <BookOpen className="w-4 h-4 text-indigo-500" />
+                <BookOpen
+                  className={cn(
+                    "w-4 h-4",
+                    activeExam ? "text-indigo-600" : "text-indigo-500"
+                  )}
+                />
                 <p className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Assessment
                 </p>
               </div>
-              <p className="font-bold text-slate-800">{assessmentTitle}</p>
-              <p className="text-sm text-slate-500 mt-1">
-                {assessmentSubject} • {assessmentQuestionCount} questions • {assessmentDuration} minutes
-              </p>
+              {!activeExam ? (
+                <>
+                  <p className="font-bold text-slate-800">No Exam Selected</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Please select a Grade, Stream, and Target Exam below to view
+                    assessment details.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-bold text-slate-800">{activeExam.title}</p>
+                  <p className="text-sm text-slate-500 mt-1">
+                    {activeExam.subject || "General"} •{" "}
+                    {activeExam.questions?.length || 0} questions •{" "}
+                    {activeExam.duration || 0} minutes
+                  </p>
+                </>
+              )}
             </div>
 
             {isLoading ? (
