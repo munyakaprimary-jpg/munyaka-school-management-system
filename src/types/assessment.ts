@@ -40,6 +40,12 @@ export interface StudentSubmission {
   marks: Record<string, number>;
   /** questionId -> teacher comment (optional) */
   feedback?: Record<string, string>;
+  /** Class / grade the student belongs to (e.g. "Grade 4"). Optional but
+   *  preserved when present so downstream filters can re-apply class
+   *  filtering without re-querying the student roster. */
+  grade?: string;
+  /** Stream / section within the class (e.g. "East"). */
+  stream?: string;
 }
 
 /** LocalStorage key for the marked-submissions ledger. */

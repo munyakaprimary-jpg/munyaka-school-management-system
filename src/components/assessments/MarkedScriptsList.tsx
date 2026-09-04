@@ -272,11 +272,27 @@ const ScriptPreviewDialog: React.FC<ScriptPreviewDialogProps> = ({
 
 // ─── Main component ─────────────────────────────────────────────────────────
 
+const GRADE_OPTIONS_LIST: string[] = [
+  "PP1",
+  "PP2",
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
+  "Grade 4",
+  "Grade 5",
+  "Grade 6",
+  "Grade 7",
+  "Grade 8",
+  "Grade 9",
+];
+
 const MarkedScriptsList: React.FC = () => {
   const { submissions, isLoading, deleteSubmission } = useMarkedSubmissions();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [examFilter, setExamFilter] = useState<string>("all");
+  const [gradeFilter, setGradeFilter] = useState<string>("all");
+  const [streamFilter, setStreamFilter] = useState<string>("all");
   const [previewing, setPreviewing] = useState<StudentSubmission | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
@@ -290,28 +306,63 @@ const MarkedScriptsList: React.FC = () => {
     return Array.from(seen.entries()).map(([id, title]) => ({ id, title }));
   }, [submissions]);
 
+  // Streams actually present on the current submissions list.
+  const streamOptions = useMemo(() => {
+    const seen = new Set<string>();
+    submissions.forEach((s) => {
+      if (s.stream) seen.add(s.stream);
+    });
+    return Array.from(seen).sort();
+  }, [submissions]);
+
+  // Grades actually present on the current submissions list (so admins
+  // who use custom grade labels still see their values in the dropdown).
+  const gradeOptions = useMemo(() => {
+    const seen = new Set<string>();
+    submissions.forEach((s) => {
+      if (s.grade) seen.add(s.grade);
+    });
+    // Always expose the canonical CBC list as a baseline.
+    GRADE_OPTIONS_LIST.forEach((g) => seen.add(g));
+    return Array.from(seen);
+  }, [submissions]);
+
   const filtered = useMemo(() => {
     const q = searchTerm.trim().toLowerCase();
     return submissions.filter((s) => {
       if (examFilter !== "all" && s.examId !== examFilter) return false;
+      if (
+        gradeFilter !== "all" &&
+        (s.grade || "").trim().toLowerCase() !== gradeFilter.trim().toLowerCase()
+      ) {
+        return false;
+      }
+      if (
+        streamFilter !== "all" &&
+        (s.stream || "").trim().toLowerCase() !== streamFilter.trim().toLowerCase()
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         (s.studentName || "").toLowerCase().includes(q) ||
         (s.admissionNo || "").toLowerCase().includes(q) ||
-        (s.examTitle || "").toLowerCase().includes(q)
+        (s.examTitle || "").toLowerCase().includes(q) ||
+        (s.grade || "").toLowerCase().includes(q) ||
+        (s.stream || "").toLowerCase().includes(q)
       );
     });
-  }, [submissions, searchTerm, examFilter]);
+  }, [submissions, searchTerm, examFilter, gradeFilter, streamFilter]);
 
   // Class-level roll-up for the stats card.
   const stats = useMemo(() => {
-    if (submissions.length === 0) return null;
-    const total = submissions.reduce((s, x) => s + x.percentage, 0);
-    const avg = Math.round(total / submissions.length);
-    const highest = Math.max(...submissions.map((s) => s.percentage));
-    const lowest = Math.min(...submissions.map((s) => s.percentage));
-    return { avg, highest, lowest, count: submissions.length };
-  }, [submissions]);
+    if (filtered.length === 0) return null;
+    const total = filtered.reduce((s, x) => s + x.percentage, 0);
+    const avg = Math.round(total / filtered.length);
+    const highest = Math.max(...filtered.map((s) => s.percentage));
+    const lowest = Math.min(...filtered.map((s) => s.percentage));
+    return { avg, highest, lowest, count: filtered.length };
+  }, [filtered]);
 
   const handlePreview = (submission: StudentSubmission) => {
     setPreviewing(submission);
@@ -447,23 +498,51 @@ const MarkedScriptsList: React.FC = () => {
               />
             </div>
             <div className="sm:w-72">
-              <Select value={examFilter} onValueChange={setExamFilter}>
-                <SelectTrigger className="h-11 rounded-xl border-slate-200">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
-                    <SelectValue placeholder="All exams" />
-                  </div>
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All exams</SelectItem>
-                  {examOptions.map((opt) => (
-                    <SelectItem key={opt.id} value={opt.id}>
-                      {opt.title}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                  <Select value={examFilter} onValueChange={setExamFilter}>
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <Filter className="w-4 h-4 text-slate-400 flex-shrink-0" />
+                        <SelectValue placeholder="All exams" />
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All exams</SelectItem>
+                      {examOptions.map((opt) => (
+                        <SelectItem key={opt.id} value={opt.id}>
+                          {opt.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Grade filter */}
+                <div className="sm:w-44">
+                  <Select value={gradeFilter} onValueChange={setGradeFilter}>
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                      <SelectValue placeholder="All Grades" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Grades</SelectItem>
+                      {gradeOptions.map((g) => (
+                        <SelectItem key={g} value={g}>{g}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                {/* Stream filter */}
+                <div className="sm:w-36">
+                  <Select value={streamFilter} onValueChange={setStreamFilter}>
+                    <SelectTrigger className="h-11 rounded-xl border-slate-200">
+                      <SelectValue placeholder="All Streams" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Streams</SelectItem>
+                      {streamOptions.map((s) => (
+                        <SelectItem key={s} value={s}>{s}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
           </CardContent>
         </Card>
 

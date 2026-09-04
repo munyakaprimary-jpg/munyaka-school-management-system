@@ -49,6 +49,43 @@ const ASSESSMENTS_KEY = "assessments";
 const SUBMISSION_KEY = "student_submissions";
 const RESULTS_KEY = "munyaka_assessment_results";
 
+// ─── Filter option lists ───────────────────────────────────────────────────────
+// Standard Kenyan CBC grade list (PP1, PP2, Grade 1..9). The selector compares
+// these values against each Assessment's `classLevel` field, so any extra
+// custom values supplied by admins are still passed through as-is.
+const GRADE_OPTIONS: string[] = [
+  "PP1",
+  "PP2",
+  "Grade 1",
+  "Grade 2",
+  "Grade 3",
+  "Grade 4",
+  "Grade 5",
+  "Grade 6",
+  "Grade 7",
+  "Grade 8",
+  "Grade 9",
+];
+const ALL_GRADES_VALUE = "all";
+
+// Common class-stream labels. Same as the grade list: extras discovered at
+// runtime are added on top so admins aren't locked out of their own naming.
+const STREAM_OPTIONS: string[] = [
+  "East",
+  "West",
+  "North",
+  "South",
+  "A",
+  "B",
+];
+const ALL_STREAMS_VALUE = "all";
+const ALL_EXAMS_VALUE = "all";
+
+/** Normalise a grade string for case-insensitive comparison. */
+function normaliseGrade(value: string | undefined | null): string {
+  return (value || "").trim().toLowerCase();
+}
+
 // ─── Grade level helpers ────────────────────────────────────────────────────────
 function computeGradeLevel(pct: number): AssessmentResult["gradeLevel"] {
   if (pct >= 80) return "EE";
@@ -84,6 +121,9 @@ interface StudentGrade {
   classId: string;
   className: string;
   stream?: string;
+  /** The assessment this row belongs to (used in 'all exams' mode). */
+  assessmentId: string;
+  assessmentTitle: string;
   submission: StudentSubmission;
   responses: Record<string, StudentResponse>;
   // Teacher-assigned structured marks: questionId → awarded points
@@ -145,7 +185,9 @@ function loadSubmissions(assessmentId: string): StudentSubmission[] {
     const raw = localStorage.getItem(SUBMISSION_KEY);
     if (!raw) return [];
     const all: Record<string, StudentSubmission> = JSON.parse(raw);
-    return Object.values(all).filter((s) => s.assessmentId === assessmentId && s.isComplete);
+    const subs = Object.values(all).filter((s) => s.isComplete);
+    if (assessmentId === ALL_EXAMS_VALUE) return subs;
+    return subs.filter((s) => s.assessmentId === assessmentId);
   } catch { return []; }
 }
 
@@ -223,6 +265,10 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
 
+  // ── Filter controls ────────────────────────────────────────────────────────
+  const [selectedGrade, setSelectedGrade] = useState<string>(ALL_GRADES_VALUE);
+  const [selectedStream, setSelectedStream] = useState<string>(ALL_STREAMS_VALUE);
+
   // ── Load assessments on mount ──────────────────────────────────────────────
   useEffect(() => {
     const available = loadAssessments();
@@ -240,43 +286,63 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
   // ── Load submissions when assessment changes ────────────────────────────────
   useEffect(() => {
     if (!selectedAssessmentId) return;
-    const assessment = assessments.find((a) => a.id === selectedAssessmentId) || null;
-    setSelectedAssessment(assessment);
+    // "all" mode is valid — no single assessment to look up; we'll group
+    // submissions by their own assessmentId further down.
+    const singleAssessment =
+      selectedAssessmentId === ALL_EXAMS_VALUE
+        ? null
+        : assessments.find((a) => a.id === selectedAssessmentId) || null;
+    setSelectedAssessment(singleAssessment);
 
-    if (!assessment) {
-      setStudentGrades([]);
-      setSelectedStudentId(null);
-      return;
-    }
+    // Pull every (or one) submission from localStorage.
+    const allSubmissions = loadSubmissions(selectedAssessmentId);
 
-    const submissions = loadSubmissions(selectedAssessmentId);
+    // Helper: look up the assessment that a submission belongs to.
+    const findAssessment = (examId: string): Assessment | null =>
+      assessments.find((a) => a.id === examId) || null;
 
-    // Load cached structured marks for this assessment
+    // Load cached structured marks for every submission we will process.
     const structuredMarksCache: Record<string, Record<string, number>> = {};
-    submissions.forEach((sub) => {
+    allSubmissions.forEach((sub) => {
       try {
-        const raw = localStorage.getItem(`grading_structured_${selectedAssessmentId}_${sub.studentId}`);
-        if (raw) structuredMarksCache[sub.studentId] = JSON.parse(raw);
+        const raw = localStorage.getItem(`grading_structured_${sub.assessmentId}_${sub.studentId}`);
+        if (raw) structuredMarksCache[`${sub.assessmentId}_${sub.studentId}`] = JSON.parse(raw);
       } catch { /* ignore */ }
     });
 
-    const grades: StudentGrade[] = submissions.map((sub) => {
+    // In single-assessment mode, submissions whose assessment can't be
+    // resolved (e.g. deleted) are dropped. In "all" mode we keep them but
+    // try to find a matching assessment from the loaded list.
+    const grades: StudentGrade[] = [];
+    allSubmissions.forEach((sub) => {
+      const assessment = singleAssessment ?? findAssessment(sub.assessmentId);
+      if (!assessment) return;
+
       const respMap: Record<string, StudentResponse> = {};
       sub.responses.forEach((r) => { respMap[r.questionId] = r; });
 
-      const structuredMarks = structuredMarksCache[sub.studentId] || {};
+      const structuredMarks =
+        structuredMarksCache[`${sub.assessmentId}_${sub.studentId}`] || {};
       const { score: mcqScore, max: mcqMax } = gradeMCQs(assessment.questions, respMap);
       const structuredQuestions = assessment.questions.filter((q) => q.type === "structured");
       const structuredMax = structuredQuestions.reduce((s, q) => s + q.points, 0);
-      const structuredEarned = structuredQuestions.reduce((s, q) => s + (structuredMarks[q.id] || 0), 0);
+      const structuredEarned = structuredQuestions.reduce(
+        (s, q) => s + (structuredMarks[q.id] || 0),
+        0
+      );
       const totalScore = mcqScore + structuredEarned;
       const maxScore = mcqMax + structuredMax;
       const percentage = maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
 
-      return {
+      const studentMeta = loadStudentMeta(sub.studentId);
+      grades.push({
         studentId: sub.studentId,
         studentName: loadStudentName(sub.studentId),
-        ...loadStudentMeta(sub.studentId),
+        classId: studentMeta.classId,
+        className: studentMeta.className,
+        stream: studentMeta.stream,
+        assessmentId: sub.assessmentId,
+        assessmentTitle: assessment.title,
         submission: sub,
         responses: respMap,
         structuredMarks,
@@ -286,7 +352,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         maxScore,
         percentage,
         gradeLevel: computeGradeLevel(percentage),
-      };
+      });
     });
 
     setStudentGrades(grades);
@@ -419,6 +485,8 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           answers,
           marks,
           feedback: {},
+          grade: g.classId,
+          stream: g.stream,
         };
         saveMarkedSubmission(markedRecord);
       });
@@ -539,17 +607,53 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
 
   // ── Derived values ─────────────────────────────────────────────────────────
   const filteredGrades = useMemo(() => {
-    if (!searchTerm.trim()) return studentGrades;
-    const q = searchTerm.toLowerCase();
-    return studentGrades.filter(
-      (g) =>
-        g.studentName.toLowerCase().includes(q) ||
-        g.studentId.toLowerCase().includes(q) ||
-        g.classId.toLowerCase().includes(q)
-    );
-  }, [studentGrades, searchTerm]);
+    return studentGrades.filter((g) => {
+      const matchesExam =
+        selectedAssessmentId === ALL_EXAMS_VALUE ||
+        selectedAssessmentId === "" ||
+        g.assessmentId === selectedAssessmentId;
+      const matchesGrade =
+        selectedGrade === ALL_GRADES_VALUE ||
+        normaliseGrade(g.classId) === normaliseGrade(selectedGrade) ||
+        normaliseGrade(g.className) === normaliseGrade(selectedGrade);
+      const matchesStream =
+        selectedStream === ALL_STREAMS_VALUE ||
+        normaliseGrade(g.stream) === normaliseGrade(selectedStream);
+      const matchesSearch =
+        !searchTerm.trim() ||
+        g.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        g.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        g.classId.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesExam && matchesGrade && matchesStream && matchesSearch;
+    });
+  }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedAssessmentId]);
 
   const selectedStudent = studentGrades.find((g) => g.studentId === selectedStudentId) || null;
+
+  // ── Cascading filter lists ─────────────────────────────────────────────────
+  // Assessments whose classLevel matches the chosen grade (case-insensitive).
+  // When "All Grades" is selected we show every assessment as before.
+  const filteredAssessments = useMemo(() => {
+    if (selectedGrade === ALL_GRADES_VALUE) return assessments;
+    const needle = normaliseGrade(selectedGrade);
+    return assessments.filter(
+      (a) => normaliseGrade(a.classLevel) === needle
+    );
+  }, [assessments, selectedGrade]);
+
+  // Streams actually used by the currently loaded rows. Falls back to the
+  // canonical list when no rows are loaded yet so the dropdown is never
+  // empty.
+  const streamOptions = useMemo(() => {
+    const present = new Set<string>();
+    studentGrades.forEach((g) => {
+      const s = (g.stream || "").trim();
+      if (s) present.add(s);
+    });
+    // Always include the canonical list as a baseline.
+    STREAM_OPTIONS.forEach((s) => present.add(s));
+    return Array.from(present);
+  }, [studentGrades]);
 
   const structuredQuestions =
     selectedAssessment?.questions.filter((q) => q.type === "structured") || [];
@@ -557,12 +661,12 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     selectedAssessment?.questions.filter((q) => q.type === "mcq") || [];
 
   const classStats = useMemo(() => {
-    if (studentGrades.length === 0) return null;
-    const avg = studentGrades.reduce((s, g) => s + g.percentage, 0) / studentGrades.length;
-    const highest = Math.max(...studentGrades.map((g) => g.percentage));
-    const lowest = Math.min(...studentGrades.map((g) => g.percentage));
+    if (filteredGrades.length === 0) return null;
+    const avg = filteredGrades.reduce((s, g) => s + g.percentage, 0) / filteredGrades.length;
+    const highest = Math.max(...filteredGrades.map((g) => g.percentage));
+    const lowest = Math.min(...filteredGrades.map((g) => g.percentage));
     return { avg: Math.round(avg), highest, lowest };
-  }, [studentGrades]);
+  }, [filteredGrades]);
 
   const toggleSection = (id: string) =>
     setExpandedItems((prev) => ({ ...prev, [id]: !prev[id] }));
@@ -807,15 +911,47 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
           </div>
 
           <div className="sm:ml-auto flex flex-wrap items-center gap-3">
+            {/* ── Grade Selector ─────────────────────────────────────────── */}
+            <Select value={selectedGrade} onValueChange={(v) => { setSelectedGrade(v); setSelectedAssessmentId(""); }}>
+              <SelectTrigger className="w-44 rounded-xl border-slate-200 bg-slate-50 font-medium">
+                <SelectValue placeholder="All Grades" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_GRADES_VALUE}>All Grades</SelectItem>
+                {GRADE_OPTIONS.map((g) => (
+                  <SelectItem key={g} value={g}>{g}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* ── Stream Selector ────────────────────────────────────────── */}
+            <Select value={selectedStream} onValueChange={setSelectedStream}>
+              <SelectTrigger className="w-36 rounded-xl border-slate-200 bg-slate-50 font-medium">
+                <SelectValue placeholder="All Streams" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_STREAMS_VALUE}>All Streams</SelectItem>
+                {streamOptions.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {/* ── Exam Selector (cascaded by grade) ─────────────────────── */}
             <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
               <SelectTrigger className="w-64 rounded-xl border-slate-200 bg-slate-50 font-medium">
                 <SelectValue placeholder="Select assessment…" />
               </SelectTrigger>
               <SelectContent>
-                {assessments.length === 0 && (
-                  <SelectItem value="none" disabled>No assessments found</SelectItem>
+                <SelectItem value={ALL_EXAMS_VALUE}>All Exams (no filter)</SelectItem>
+                {filteredAssessments.length === 0 && (
+                  <SelectItem value="none" disabled>
+                    {selectedGrade !== ALL_GRADES_VALUE
+                      ? `No exams for ${selectedGrade}`
+                      : "No assessments found"}
+                  </SelectItem>
                 )}
-                {assessments.map((a) => (
+                {filteredAssessments.map((a) => (
                   <SelectItem key={a.id} value={a.id}>
                     <span className="flex flex-col">
                       <span className="font-medium">{a.title}</span>
