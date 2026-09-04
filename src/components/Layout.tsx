@@ -137,7 +137,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Contact2, label: 'Staff Directory', path: '/staff', roles: ['admin', 'head_teacher'] },
     { icon: Key, label: 'Staff Access Master', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
     { icon: CreditCard, label: 'Payment & Subscriptions', path: '/payment-management', roles: ['owner'] },
-                    { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
+                    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['owner'] },
+        { icon: Server, label: 'Admin Control Center', path: '/admin/control-center', roles: ['admin'] },
         { icon: MessageSquare, label: 'Communication', path: '/communication', roles: ['admin'] },
     { icon: Megaphone, label: 'Events & Notices', path: '/notices', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
     { icon: Calendar, label: 'Timetable', path: '/timetable', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
@@ -160,9 +161,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-    { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
-    { icon: Wifi, label: 'LAN Server Config', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher'] },
-  ];
+        { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
+      ];
 
   // Route-level role denylist: these roles are blocked even if listed in item.roles.
   // Used to enforce that OWNER cannot access administrative routes like /fees.
@@ -248,10 +248,10 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
           { icon: Server, label: 'Server', path: '/admin/control-center', roles: ['admin'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-      { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-      { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-      { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['admin', 'head_teacher', 'teacher'] },
+            { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+            { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+            { icon: Gamepad2, label: 'Games', path: '/games', global: true },
+            { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
     ].filter(item => {
       if (!user) return false;
       if (item.global) return true;
@@ -432,23 +432,25 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     >
                       {isDarkMode ? <Sun size={18} className="text-amber-400" /> : <Moon size={18} className="text-slate-500" />}
                     </button>
-                    {/* LAN Server Connection Indicator - Clickable link to LAN Config */}
-                    <Link
-                      to="/lan-config"
-                      className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
-                    >
-                      {isConnected ? (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
-                        </>
-                      ) : (
-                        <>
-                          <div className="w-2 h-2 rounded-full bg-slate-300" />
-                          <span className="text-slate-400">Offline</span>
-                        </>
-                      )}
-                    </Link>
+                    {/* LAN Server Connection Indicator - Visible only for owner; navigates to /lan-config */}
+                    {(user?.role ?? '').toLowerCase() === 'owner' ? (
+                      <Link
+                        to="/lan-config"
+                        className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-slate-800 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                      >
+                        {isConnected ? (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="text-emerald-600 dark:text-emerald-400">LAN Connected</span>
+                          </>
+                        ) : (
+                          <>
+                            <div className="w-2 h-2 rounded-full bg-slate-300" />
+                            <span className="text-slate-400">Offline</span>
+                          </>
+                        )}
+                      </Link>
+                    ) : null}
                   </div>
                 </header>
 

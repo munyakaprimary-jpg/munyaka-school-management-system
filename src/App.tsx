@@ -146,7 +146,7 @@ const App = () => (
                 <Route path="/settings/profile" element={<ProtectedRoute allowedRoles={['owner', 'admin']}><AppUnlock><Layout><ProfileSettings /></Layout></AppUnlock></ProtectedRoute>} />
                                 <Route path="/admin/control-center" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner', 'bursar', 'parent', 'student']}><AppUnlock><Layout><AdminControlCenter /></Layout></AppUnlock></ProtectedRoute>} />
                                                 <Route path="/mobile/settings" element={<ProtectedRoute><AppUnlock><Layout><MobileSettings /></Layout></AppUnlock></ProtectedRoute>} />
-                                                <Route path="/lan-config" element={<ProtectedRoute><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
+                                                <Route path="/lan-config" element={<ProtectedRoute allowedRoles={['owner']} blockedRoles={['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
                 
                                 <Route path="*" element={<NotFound />} />
               </Routes>

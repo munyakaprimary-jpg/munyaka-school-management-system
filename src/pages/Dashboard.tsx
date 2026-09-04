@@ -1126,7 +1126,13 @@ const TeacherDashboard: React.FC = () => {
     setLocalStatus(status);
   }, []);
 
-  const handleOpenLanSettings = () => navigate('/lan-config');
+  const handleOpenLanSettings = () => {
+      // Only owners can open the LAN Server Config page; for other roles,
+      // the click is a no-op (the banner remains read-only status display).
+      if ((user?.role ?? '').toLowerCase() === 'owner') {
+        navigate('/lan-config');
+      }
+    };
 
   // Mock data - in real app, these would come from teacher's assignments
   const attendanceStatus = 'pending'; // or 'saved'
