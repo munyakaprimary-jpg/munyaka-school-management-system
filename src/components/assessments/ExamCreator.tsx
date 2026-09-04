@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
   Plus,
@@ -21,6 +21,7 @@ import {
   CheckCircle,
   Library,
   X,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -49,6 +50,7 @@ const ASSESSMENT_CATEGORIES = [
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const ExamCreator: React.FC = () => {
+  const navigate = useNavigate();
   // Exam meta
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("formative");
@@ -325,6 +327,15 @@ const ExamCreator: React.FC = () => {
       {/* Top bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <div className="flex items-center gap-3">
+          {/* Back to Repository */}
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/assessments/list")}
+            className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer px-3 py-2 rounded-xl hover:bg-slate-100"
+          >
+            <ArrowLeft size={16} />
+            Back to Repository
+          </Button>
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center shadow-lg shadow-violet-200">
             <FileQuestion className="w-5 h-5 text-white" />
           </div>

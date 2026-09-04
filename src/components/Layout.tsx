@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import {
   LayoutDashboard,
@@ -48,7 +48,6 @@ import {
   Gamepad2,
   Server,
   Wifi,
-  ArrowLeft
 } from 'lucide-react';
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -67,8 +66,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
   const { user, logout } = useAuth();
     const { connectionStatus, isConnected } = useLanSync();
     const location = useLocation();
-    const navigate = useNavigate();
-  
+
     // Attach Hardware Back Button Handling for Capacitor/Android
     useMobileBackButton(isOpen, () => setIsOpen(false));
 
@@ -431,18 +429,6 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                       </div>
                       <span className="lg:hidden font-black text-slate-900 dark:text-white text-sm tracking-tight flex-1 min-w-0 truncate">Munyaka Portal</span>
                     </div>
-        
-                    {/* Back Home Button */}
-                                        {location.pathname !== '/' && location.pathname !== '/dashboard' && (
-                                          <Button
-                                            variant="ghost"
-                                            onClick={() => navigate('/dashboard')}
-                                            className="bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border text-sm font-medium flex items-center gap-2"
-                                          >
-                                            <ArrowLeft size={18} />
-                                            <span>Back Home</span>
-                                          </Button>
-                                        )}
         
                     <div className="relative hidden md:block flex-1 min-w-0 max-w-md ml-4">
                       <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" size={16} />

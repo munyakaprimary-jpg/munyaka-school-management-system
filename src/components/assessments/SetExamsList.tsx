@@ -22,6 +22,7 @@ import {
   Download,
   FileText,
   PlayCircle,
+  ArrowLeft,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
@@ -1030,6 +1031,16 @@ const SetExamsList: React.FC = () => {
 
       {/* Top bar */}
       <div className="flex items-center gap-3 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+        {/* Back arrow -> Main Dashboard */}
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => navigate("/")}
+          className="h-10 w-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex-shrink-0"
+          title="Back to Dashboard"
+        >
+          <ArrowLeft size={18} />
+        </Button>
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
           <Library className="w-5 h-5 text-white" />
         </div>
