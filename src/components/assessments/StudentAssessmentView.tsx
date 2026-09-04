@@ -19,7 +19,6 @@ import {
   X,
   GraduationCap,
   Loader2,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +34,7 @@ import type {
   Question,
 } from "@/types/questions";
 
-const STUDENTS_STORAGE_KEY = "school_learners_data";
+const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
 const TIMER_TICK_MS = 1000;
 
@@ -49,6 +48,8 @@ interface RegisteredStudent {
   id: string;
   admissionNumber?: string;
   admNo?: string;
+  assessmentNo?: string;
+  birthCertNo?: string;
   name: string;
   grade?: string;
   stream?: string;
@@ -74,22 +75,29 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
   // Registration form state
   const [regName, setRegName] = useState("");
   const [regGrade, setRegGrade] = useState("");
-  const [regAdmNo, setRegAdmNo] = useState("");
+  const [regAssessmentNo, setRegAssessmentNo] = useState("");
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Load students from localStorage
+  // Load students from localStorage (try students_data first, then school_learners_data)
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
-      if (raw) {
-        const parsed: RegisteredStudent[] = JSON.parse(raw);
-        // Filter out transferred students
-        const active = parsed.filter(
-          (s) => !s.status || s.status === "Active" || s.status === "active"
-        );
-        setStudents(active);
+      let loadedStudents: RegisteredStudent[] = [];
+      for (const key of STUDENTS_STORAGE_KEYS) {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const parsed: RegisteredStudent[] = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            loadedStudents = parsed;
+            break;
+          }
+        }
       }
+      // Filter out transferred students
+      const active = loadedStudents.filter(
+        (s) => !s.status || s.status === "Active" || s.status === "active"
+      );
+      setStudents(active);
     } catch (err) {
       console.error("[LearnerIdentificationGate] Failed to load students:", err);
     }
@@ -107,15 +115,24 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Filter students by search query
+  // Filter students by search query (matches assessmentNo, birthCertNo, admission numbers, or name)
   const filteredStudents = useMemo(() => {
     if (!searchQuery.trim()) return students;
     const query = searchQuery.toLowerCase();
-    return students.filter(
-      (s) =>
+    return students.filter((s) => {
+      const idFields = [
+        s.assessmentNo,
+        s.birthCertNo,
+        s.admissionNumber,
+        s.admNo,
+      ]
+        .filter(Boolean)
+        .map((v) => String(v).toLowerCase());
+      return (
         (s.name || "").toLowerCase().includes(query) ||
-        (s.admissionNumber || s.admNo || "").toLowerCase().includes(query)
-    );
+        idFields.some((id) => id.includes(query))
+      );
+    });
   }, [students, searchQuery]);
 
   const handleSelectStudent = (student: RegisteredStudent) => {
@@ -134,25 +151,48 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
 
     if (showRegistration) {
       // Quick inline registration
-      if (!regName.trim() || !regAdmNo.trim()) {
-        showError("Please fill in the student's name and admission number.");
+      if (!regName.trim() || !regAssessmentNo.trim()) {
+        showError("Please fill in the student's name and Assessment / Birth Certificate number.");
         return;
       }
       const newStudent: RegisteredStudent = {
         id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        admissionNumber: regAdmNo.trim(),
-        admNo: regAdmNo.trim(),
+        assessmentNo: regAssessmentNo.trim(),
+        birthCertNo: regAssessmentNo.trim(),
+        admissionNumber: regAssessmentNo.trim(),
+        admNo: regAssessmentNo.trim(),
         name: regName.trim(),
         grade: regGrade.trim(),
         status: "Active",
       };
 
-      // Save to localStorage
+      // Save to localStorage (write to both possible keys for compatibility)
       try {
-        const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
-        const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
-        existing.push(newStudent);
-        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(existing));
+        let saved = false;
+        for (const key of STUDENTS_STORAGE_KEYS) {
+          const raw = localStorage.getItem(key);
+          const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
+          // Avoid duplicates based on assessmentNo / birthCertNo / admNo
+          const duplicate = existing.some(
+            (s) =>
+              s.id === newStudent.id ||
+              s.assessmentNo === newStudent.assessmentNo ||
+              s.birthCertNo === newStudent.birthCertNo
+          );
+          if (!duplicate) {
+            existing.push(newStudent);
+            localStorage.setItem(key, JSON.stringify(existing));
+            saved = true;
+          }
+        }
+        if (!saved) {
+          // Fallback: write to first key even if a duplicate exists
+          const fallbackKey = STUDENTS_STORAGE_KEYS[0];
+          const raw = localStorage.getItem(fallbackKey);
+          const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
+          existing.push(newStudent);
+          localStorage.setItem(fallbackKey, JSON.stringify(existing));
+        }
         showSuccess("Student registered successfully!");
         onBeginExam(newStudent.id, newStudent.name);
       } catch (err) {
@@ -164,7 +204,13 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
     }
   };
 
-  const studentId = selectedStudent?.id || selectedStudent?.admissionNumber || selectedStudent?.admNo;
+  const studentId =
+    selectedStudent?.id ||
+    selectedStudent?.assessmentNo ||
+    selectedStudent?.birthCertNo ||
+    selectedStudent?.admissionNumber ||
+    selectedStudent?.admNo ||
+    "";
   const studentName = selectedStudent?.name || "";
 
   return (
@@ -212,7 +258,7 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
                       <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                       <Input
                         type="text"
-                        placeholder="Search by name or admission number..."
+                        placeholder="Search by name, Assessment No., or Birth Certificate No..."
                         value={searchQuery}
                         onChange={(e) => {
                           setSearchQuery(e.target.value);
@@ -257,9 +303,12 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
                               <p className="font-semibold text-slate-800 truncate">
                                 {student.name}
                               </p>
-                              <p className="text-xs text-slate-500">
-                                {student.admissionNumber || student.admNo || "No ID"} •
-                                {student.grade || "N/A"}
+                              <p className="text-xs text-indigo-600 font-medium">
+                                {student.assessmentNo ||
+                                  student.birthCertNo ||
+                                  student.admissionNumber ||
+                                  student.admNo ||
+                                  "No ID"}
                               </p>
                             </div>
                           </button>
@@ -303,12 +352,12 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
                       <div className="grid grid-cols-2 gap-3">
                         <div>
                           <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                            Admission No. *
+                            Assessment No. / Birth Certificate No. *
                           </label>
                           <Input
-                            placeholder="e.g., ADM-001"
-                            value={regAdmNo}
-                            onChange={(e) => setRegAdmNo(e.target.value)}
+                            placeholder="e.g., Assessment No. or Birth Cert No."
+                            value={regAssessmentNo}
+                            onChange={(e) => setRegAssessmentNo(e.target.value)}
                             className="h-10 rounded-lg"
                           />
                         </div>
@@ -333,7 +382,7 @@ const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
                   onClick={handleBeginExam}
                   disabled={
                     (!selectedStudent && !showRegistration) ||
-                    (showRegistration && (!regName.trim() || !regAdmNo.trim()))
+                    (showRegistration && (!regName.trim() || !regAssessmentNo.trim()))
                   }
                   className="w-full h-12 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
