@@ -46,6 +46,26 @@ export interface StudentSubmission {
   grade?: string;
   /** Stream / section within the class (e.g. "East"). */
   stream?: string;
+  /** CBC performance level (EE / ME / AE / BE). Calculated from percentage. */
+  level?: "EE" | "ME" | "AE" | "BE";
+  /** Submission status. Auto-submissions are always "completed". */
+  status?: "completed" | "pending";
+  /** Flag: whether any structured question is still awaiting teacher grading.
+   *  Auto-submissions force this to `false`. */
+  hasPendingStructured?: boolean;
+  /** Flag: whether the submission requires any manual teacher grading. */
+  requiresManualGrading?: boolean;
+  /** Per-question grading breakdown (drives MarkedScripts list / PDF). */
+  gradedDetails?: Array<{
+    questionId: string;
+    questionText: string;
+    studentAnswer: string;
+    correctAnswer: string;
+    isCorrect: boolean;
+    earnedPoints: number;
+    possiblePoints: number;
+    isGraded: boolean;
+  }>;
 }
 
 /** LocalStorage key for the marked-submissions ledger. */
@@ -82,7 +102,10 @@ export function saveMarkedSubmission(submission: StudentSubmission): boolean {
     ledger[submission.id] = submission;
     localStorage.setItem(MARKED_SUBMISSIONS_KEY, JSON.stringify(ledger));
     if (typeof window !== "undefined") {
+      // Notify same-tab listeners
       window.dispatchEvent(new Event("submissions_updated"));
+      // Notify cross-tab listeners via the storage event
+      window.dispatchEvent(new StorageEvent("storage", { key: MARKED_SUBMISSIONS_KEY }));
     }
     return true;
   } catch (err) {

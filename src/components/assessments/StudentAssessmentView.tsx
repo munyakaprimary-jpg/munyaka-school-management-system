@@ -24,11 +24,16 @@ import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import type {
   Assessment,
-  StudentSubmission,
+  StudentSubmission as LiveStudentSubmission,
   StudentResponse,
   Question,
 } from "@/types/questions";
 import { saveMarkedSubmission } from "@/types/assessment";
+import {
+  gradeMathResponse,
+  processSubmission,
+  type GradingStudent,
+} from "@/lib/gradingUtils";
 import { LearnerIdentificationModal } from "./LearnerIdentificationModal";
 
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
@@ -66,7 +71,7 @@ interface StudentAssessmentViewProps {
   /** Optional student name for headers/logs. */
   studentName?: string;
   /** Called after a successful submission. */
-  onSubmit?: (submission: StudentSubmission) => void;
+  onSubmit?: (submission: LiveStudentSubmission) => void;
   /** Custom storage key for this student's submission. */
   submissionKey?: string;
   /**
@@ -203,7 +208,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     try {
       const raw = localStorage.getItem(currentStorageKey);
       if (raw) {
-        const parsed: StudentSubmission = JSON.parse(raw);
+        const parsed: LiveStudentSubmission = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.responses)) {
           const map: Record<string, StudentResponse> = {};
           parsed.responses.forEach((r) => {
@@ -242,7 +247,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
 
       try {
         const list: StudentResponse[] = Object.values(updatedResponses);
-        const submission: StudentSubmission = {
+        const submission: LiveStudentSubmission = {
           assessmentId: assessment.id,
           studentId: lockedStudentId,
           attemptId: attemptIdRef.current,
@@ -258,7 +263,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         // Also write to the shared student_submissions map so the existing
         // grading screens can read every student's work.
         const allRaw = localStorage.getItem("student_submissions");
-        const all: Record<string, StudentSubmission> = allRaw ? JSON.parse(allRaw) : {};
+        const all: Record<string, LiveStudentSubmission> = allRaw ? JSON.parse(allRaw) : {};
         all[`${assessment.id}_${lockedStudentId}_${attemptIdRef.current}`] = submission;
         localStorage.setItem("student_submissions", JSON.stringify(all));
 
@@ -341,60 +346,10 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     [assessment.id, lockedStudentId, responses, persistSubmission, isSubmitted]
   );
 
-  // ── Flexible Math & Numeric Normaliser ──────────────────────────────────────
-  // Handles integers, decimals, fractions (e.g. "1/2", "3 1/4"), and responses
-  // with optional units (e.g. "12.5 cm", "50%"). Returns true when the student's
-  // cleaned answer is numerically equivalent to the expected answer.
-  const evaluateNumericOrMathAnswer = useCallback(
-    (studentInput: string | undefined, expectedAnswer: string | undefined): boolean => {
-      if (!studentInput || !expectedAnswer) return false;
-
-      const rawStudent = studentInput.trim().toLowerCase();
-      const rawExpected = expectedAnswer.trim().toLowerCase();
-
-      // 1. Exact string match after normalisation
-      if (rawStudent === rawExpected) return true;
-
-      // 2. Extract raw numbers (integers / decimals)
-      const extractNum = (str: string): number | null => {
-        const match = str.match(/-?\d+(\.\d+)?/);
-        return match ? parseFloat(match[0]) : null;
-      };
-
-      const numStudent = extractNum(rawStudent);
-      const numExpected = extractNum(rawExpected);
-
-      if (numStudent !== null && numExpected !== null) {
-        // Allow small precision variance for rounded decimals (e.g. 0.33 vs 0.333)
-        if (Math.abs(numStudent - numExpected) < 0.01) return true;
-      }
-
-      // 3. Handle fraction parsing (e.g. "1/2" or "3/4")
-      const parseFraction = (str: string): number | null => {
-        const match = str.match(/^(\d+)\s*\/\s*(\d+)$/);
-        if (match) {
-          const num = parseFloat(match[1]);
-          const den = parseFloat(match[2]);
-          if (!isNaN(num) && !isNaN(den) && den !== 0) return num / den;
-        }
-        return null;
-      };
-
-      const fracStudent = parseFraction(rawStudent) ?? numStudent;
-      const fracExpected = parseFraction(rawExpected) ?? numExpected;
-
-      if (fracStudent !== null && fracExpected !== null) {
-        return Math.abs(fracStudent - fracExpected) < 0.01;
-      }
-
-      return false;
-    },
-    []
-  );
-
   // ── Automatic Marking Engine for Mathematics ────────────────────────────────
   // Returns a graded state object that the UI can use to flip a status pill
-  // from "Ungraded" → "Graded" / "Correct" / "Incorrect" in real time.
+  // from "Ungraded" → "Correct" / "Incorrect" in real time.
+  // Wraps `gradeMathResponse` (from gradingUtils) with a richer return shape.
   const gradeMathQuestion = useCallback(
     (
       studentAnswer: string | number | undefined | null,
@@ -407,38 +362,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       ) {
         return { isGraded: false, score: 0 };
       }
-
-      const strStudent = String(studentAnswer).trim().toLowerCase();
-      const strCorrect = String(correctAnswer ?? "").trim().toLowerCase();
-
-      if (!strCorrect) return { isGraded: false, score: 0 };
-
-      // 1. Direct match (e.g., "10.953" === "10.953" or "1/8" === "1/8")
-      if (strStudent === strCorrect) {
-        return { isGraded: true, isCorrect: true, score: 1 };
-      }
-
-      // 2. Extract numeric digits ignoring extra text or units
-      const parseValue = (val: string): number => {
-        if (val.includes("/")) {
-          const parts = val.split("/").map((p) => Number(p.trim()));
-          const [num, den] = parts;
-          if (den && !isNaN(num) && !isNaN(den)) return num / den;
-        }
-        const match = val.match(/-?\d+(\.\d+)?/);
-        return match ? parseFloat(match[0]) : NaN;
-      };
-
-      const numStudent = parseValue(strStudent);
-      const numCorrect = parseValue(strCorrect);
-
-      if (!isNaN(numStudent) && !isNaN(numCorrect)) {
-        // Accept numeric equivalence within precision threshold
-        const isEquivalent = Math.abs(numStudent - numCorrect) < 0.001;
-        return { isGraded: true, isCorrect: isEquivalent, score: isEquivalent ? 1 : 0 };
-      }
-
-      return { isGraded: true, isCorrect: false, score: 0 };
+      const isCorrect = gradeMathResponse(studentAnswer, correctAnswer);
+      if (!isCorrect) return { isGraded: true, isCorrect: false, score: 0 };
+      return { isGraded: true, isCorrect: true, score: 1 };
     },
     []
   );
@@ -471,78 +397,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     []
   );
 
-  // ── Auto-Grading Submission Pipeline ──────────────────────────────────────────
-  // Runs full auto-evaluation across ALL question types (MCQ, structured, math,
-  // numeric, fill_blank) and returns a graded submission object compatible
-  // with `StudentSubmission` from `@/types/assessment`. No questions are left
-  // with `status: 'pending'` — every answer gets a grade.
-  const autoGradeSubmission = useCallback(
-    (
-      questions: Question[],
-      studentResponses: Record<string, StudentResponse>,
-      assessmentMeta: { id: string; title: string; subject?: string },
-      studentMeta: { id: string; name?: string; admissionNo?: string },
-      attemptId: string,
-    ): StudentSubmission => {
-      let totalScore = 0;
-      let maxScore = 0;
-
-      const answers: Record<string, string> = {};
-      const marks: Record<string, number> = {};
-
-      questions.forEach((q) => {
-        const points = Number(q.points ?? 1);
-        maxScore += points;
-
-        const response = studentResponses[q.id];
-        const studentAns = response?.answerText ?? response?.selectedOptionId ?? "";
-        const correctAns = String(q.correctAnswer ?? q.correctOptionId ?? q.modelAnswer ?? "");
-
-        answers[q.id] = studentAns;
-        let isCorrect = false;
-
-        if (q.type === "mcq") {
-          isCorrect = response?.selectedOptionId === q.correctOptionId;
-        } else {
-          // structured / math / numeric / fill_blank — numeric comparison
-          isCorrect = evaluateNumericOrMathAnswer(studentAns, correctAns);
-        }
-
-        const earned = isCorrect ? points : 0;
-        totalScore += earned;
-        marks[q.id] = earned;
-      });
-
-      const scorePercentage =
-        maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0;
-
-      // CBC performance level
-      let performanceLevel = "BE";
-      if (scorePercentage >= 80) performanceLevel = "EE";
-      else if (scorePercentage >= 65) performanceLevel = "ME";
-      else if (scorePercentage >= 50) performanceLevel = "AE";
-
-      return {
-        id: `${assessmentMeta.id}_${studentMeta.id}_${attemptId}`,
-        examId: assessmentMeta.id,
-        examTitle: assessmentMeta.title,
-        studentName: studentMeta.name ?? studentMeta.id,
-        admissionNo: studentMeta.admissionNo ?? "",
-        score: totalScore,
-        totalPoints: maxScore,
-        percentage: scorePercentage,
-        level: performanceLevel as any,
-        submittedAt: new Date().toISOString(),
-        answers,
-        marks,
-      };
-    },
-    [evaluateNumericOrMathAnswer]
-  );
-
   // ── Full Assessment Marking Engine ──────────────────────────────────────────
   // Auto-grades all question types: MCQ (exact option match), structured / math
-  // / numeric / fill_blank (numeric or math comparison via evaluateNumericOrMathAnswer).
+  // / numeric / fill_blank (numeric or math comparison via gradeMathResponse).
   const calculateGradingResult = useCallback(
     (questions: Question[], studentResponses: Record<string, StudentResponse>): GradingResult => {
       const mcqResults: QuestionGradingResult[] = [];
@@ -563,12 +420,11 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           userAnswer = response?.selectedOptionId ?? "";
           expectedAnswer = question.correctOptionId ?? "";
         } else {
-          // structured / math / numeric / fill_blank — use numeric/math evaluator
           userAnswer = response?.answerText ?? "";
           expectedAnswer =
             question.correctAnswer ?? question.modelAnswer ?? "";
 
-          isCorrect = evaluateNumericOrMathAnswer(userAnswer, expectedAnswer);
+          isCorrect = gradeMathResponse(userAnswer, expectedAnswer);
           earnedPoints = isCorrect ? question.points : 0;
         }
 
@@ -597,7 +453,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         questionResults,
       };
     },
-    [evaluateNumericOrMathAnswer]
+    []
   );
 
   // ── Submit ────────────────────────────────────────────────────────────────
@@ -619,21 +475,31 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     setIsSubmitted(true);
     persistSubmission(responses, true);
 
-    // ── Build and persist graded submission to `marked_student_submissions` ─────
-    // Every question is auto-graded immediately — no structured-pending flags.
-    const submission: StudentSubmission = autoGradeSubmission(
-      assessment.questions,
-      responses,
-      { id: assessment.id, title: assessment.title, subject: assessment.subject },
-      { id: lockedStudentId, name: lockedStudentName },
+    // ── Build and persist graded submission via the shared pipeline ──────────
+    // Every question (mcq / structured / math / numeric / fill_blank /
+    // short_answer) is auto-graded immediately — no structured-pending flags.
+    const userAnswers: Record<string, string> = {};
+    Object.entries(responses).forEach(([qid, r]) => {
+      userAnswers[qid] = r?.answerText ?? r?.selectedOptionId ?? "";
+    });
+
+    const studentMeta: GradingStudent = {
+      id: lockedStudentId,
+      name: lockedStudentName,
+    };
+
+    const submission = processSubmission(
+      assessment,
+      studentMeta,
+      userAnswers,
       attemptIdRef.current,
     );
 
-    // Save to the frozen ledger — also dispatches `submissions_updated`
+    // Save to the frozen ledger — dispatches `submissions_updated` + `storage`
     saveMarkedSubmission(submission);
 
     showSuccess("Assessment submitted and graded! All answers have been evaluated.");
-    if (onSubmit) onSubmit(submission);
+    if (onSubmit) onSubmit(submission as unknown as LiveStudentSubmission);
   }, [
     isSubmitted,
     assessment,
@@ -643,7 +509,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     persistSubmission,
     onSubmit,
     calculateGradingResult,
-    autoGradeSubmission,
   ]);
 
   // Keep a ref to the latest handleSubmit so the timer interval can call it.
