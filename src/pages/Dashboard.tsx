@@ -59,6 +59,8 @@ import { getNotices } from '@/utils/notice-board';
 import { useLanSync } from '@/hooks/useLanSync';
 import { formatRelativeTime } from '@/services/activityLog';
 import { checkServerConnection, subscribeToConnectionStatus } from '@/services/SyncEngine';
+import { getAllAssessmentResults } from '@/utils/assessmentResults';
+import type { Assessment, AssessmentResult, StudentSubmission } from '@/types/questions';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -1135,49 +1137,205 @@ const TeacherDashboard: React.FC = () => {
     };
 
   // Mock data - in real app, these would come from teacher's assignments
-  const attendanceStatus = 'pending'; // or 'saved'
-  const pendingMarksCount = 2; // Number of pending assessment entries
-
-  return (
-    <div className="space-y-4 pb-10">
-      {/* ── Compact LAN Sync Banner ── */}
-      <CompactLanSyncBanner
-        isOnline={localStatus.isOnline}
-        isConnected={localStatus.serverReachable}
-        serverUrl={serverUrl}
-        latency={localStatus.latency}
-        onOpenSettings={handleOpenLanSettings}
-        onRefresh={handleLanRefresh}
-      />
-
-      {/* ── My Assigned Classes Summary ── */}
-      <MyClassesSummary />
-
-      {/* ── Class Attendance Widget (Today's Roll Call) ── */}
-      <ClassAttendanceWidget onTakeAttendance={() => navigate('/attendance')} />
-
-      {/* ── Two Column Layout: Schedule + Quick Actions ── */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-        {/* Left: My Daily Schedule */}
-        <div className="lg:col-span-3">
-          <MyDailyScheduleCard onViewTimetable={() => navigate('/timetable')} />
+    const attendanceStatus = 'pending'; // or 'saved'
+    const pendingMarksCount = 2; // Number of pending assessment entries
+  
+    // ── Assessment stats for teacher dashboard card ──
+    const [assessmentStats, setAssessmentStats] = useState<{
+      activeTests: number;
+      pendingGrading: number;
+      totalResults: number;
+      recentResults: AssessmentResult[];
+    }>({ activeTests: 0, pendingGrading: 0, totalResults: 0, recentResults: [] });
+  
+    useEffect(() => {
+      const loadAssessmentStats = () => {
+        try {
+          const qbRaw = localStorage.getItem('question_bank');
+          let activeTests = 0;
+          if (qbRaw) {
+            const qb = JSON.parse(qbRaw);
+            if (qb?.questions?.length > 0) activeTests++;
+          }
+          const asmtsRaw = localStorage.getItem('assessments');
+          if (asmtsRaw) {
+            const asmts: Assessment[] = JSON.parse(asmtsRaw);
+            if (Array.isArray(asmts)) activeTests += asmts.length;
+          }
+  
+          const results = getAllAssessmentResults();
+          const recentResults = [...results]
+            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+            .slice(0, 3);
+  
+          const subRaw = localStorage.getItem('student_submissions');
+          let pendingGrading = 0;
+          if (subRaw) {
+            const subs: Record<string, StudentSubmission> = JSON.parse(subRaw);
+            const resultKeys = new Set(results.map((r) => `${r.assessmentId}_${r.studentId}`));
+            Object.values(subs).forEach((sub) => {
+              if (sub.isComplete && !resultKeys.has(`${sub.assessmentId}_${sub.studentId}`)) {
+                pendingGrading++;
+              }
+            });
+          }
+  
+          setAssessmentStats({ activeTests, pendingGrading, totalResults: results.length, recentResults });
+        } catch { /* ignore */ }
+      };
+  
+      loadAssessmentStats();
+      window.addEventListener('storage', loadAssessmentStats);
+      window.addEventListener('munyaka_assessment_results_changed', loadAssessmentStats as EventListener);
+      return () => {
+        window.removeEventListener('storage', loadAssessmentStats);
+        window.removeEventListener('munyaka_assessment_results_changed', loadAssessmentStats as EventListener);
+      };
+    }, []);
+  
+    return (
+      <div className="space-y-4 pb-10">
+        {/* ── Compact LAN Sync Banner ── */}
+        <CompactLanSyncBanner
+          isOnline={localStatus.isOnline}
+          isConnected={localStatus.serverReachable}
+          serverUrl={serverUrl}
+          latency={localStatus.latency}
+          onOpenSettings={handleOpenLanSettings}
+          onRefresh={handleLanRefresh}
+        />
+  
+        {/* ── Assessment & Examinations Summary (Teacher) ── */}
+        <div className="bg-white border border-indigo-100 rounded-2xl p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2.5">
+              <div className="bg-indigo-100 p-2 rounded-xl">
+                <ClipboardList size={18} className="text-indigo-600" />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900">Assessments &amp; Examinations</h2>
+                <p className="text-xs text-slate-500 mt-0.5">Active tests and grading status</p>
+              </div>
+            </div>
+            <button
+              onClick={() => navigate('/assessments-hub')}
+              className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:gap-2.5 transition-all"
+            >
+              Open Hub <ArrowRight size={12} />
+            </button>
+          </div>
+  
+          <div className="grid grid-cols-3 gap-3">
+            <div className="bg-indigo-50/70 rounded-xl p-4 text-center border border-indigo-100">
+              <FileQuestion size={18} className="text-indigo-500 mx-auto mb-1.5" />
+              <p className="text-2xl font-black text-indigo-700">{assessmentStats.activeTests}</p>
+              <p className="text-[10px] text-indigo-500 font-medium mt-1">Active Tests</p>
+            </div>
+  
+            <div
+              className={`rounded-xl p-4 text-center border ${
+                assessmentStats.pendingGrading > 0
+                  ? 'bg-amber-50/70 border-amber-200'
+                  : 'bg-emerald-50/70 border-emerald-100'
+              }`}
+            >
+              {assessmentStats.pendingGrading > 0 ? (
+                <AlertCircle size={18} className="text-amber-500 mx-auto mb-1.5" />
+              ) : (
+                <TrendingUp size={18} className="text-emerald-500 mx-auto mb-1.5" />
+              )}
+              <p
+                className={`text-2xl font-black ${
+                  assessmentStats.pendingGrading > 0 ? 'text-amber-700' : 'text-emerald-700'
+                }`}
+              >
+                {assessmentStats.pendingGrading}
+              </p>
+              <p
+                className={`text-[10px] font-medium mt-1 ${
+                  assessmentStats.pendingGrading > 0 ? 'text-amber-600' : 'text-emerald-600'
+                }`}
+              >
+                Pending Grading
+              </p>
+            </div>
+  
+            <div className="bg-emerald-50/70 rounded-xl p-4 text-center border border-emerald-100">
+              <TrendingUp size={18} className="text-emerald-500 mx-auto mb-1.5" />
+              <p className="text-2xl font-black text-emerald-700">{assessmentStats.totalResults}</p>
+              <p className="text-[10px] text-emerald-500 font-medium mt-1">Graded Results</p>
+            </div>
+          </div>
+  
+          {/* Recent results preview */}
+          {assessmentStats.recentResults.length > 0 && (
+            <div className="mt-4 pt-4 border-t border-indigo-100">
+              <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                Recent Results
+              </p>
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {assessmentStats.recentResults.map((r) => (
+                  <div
+                    key={r.id}
+                    className="shrink-0 bg-white border border-slate-200 rounded-lg px-3 py-2 min-w-[120px]"
+                  >
+                    <p className="text-xs font-semibold text-slate-700 truncate">
+                      {r.studentName || r.studentId}
+                    </p>
+                    <p className="text-[10px] text-slate-400 truncate">
+                      {r.subjectName || r.assessmentTitle}
+                    </p>
+                    <div className="flex items-center justify-between mt-1.5">
+                      <span className="text-sm font-black text-slate-900">{r.percentage}%</span>
+                      <span
+                        className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${
+                          r.gradeLevel === 'EE'
+                            ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : r.gradeLevel === 'ME'
+                            ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : r.gradeLevel === 'AE'
+                            ? 'bg-amber-100 text-amber-700 border-amber-200'
+                            : 'bg-red-100 text-red-700 border-red-200'
+                        }`}
+                      >
+                        {r.gradeLevel || '—'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
-
-        {/* Right: Quick Actions Grid */}
-        <div className="lg:col-span-2">
-          <QuickActionsGrid
-            attendanceStatus={attendanceStatus}
-            pendingMarksCount={pendingMarksCount}
-            onMarkAttendance={() => navigate('/attendance')}
-            onEnterMarks={() => navigate('/assessments')}
-            onDownloadReports={() => navigate('/reports')}
-            onViewTimetable={() => navigate('/timetable')}
-          />
+  
+        {/* ── My Assigned Classes Summary ── */}
+        <MyClassesSummary />
+  
+        {/* ── Class Attendance Widget (Today's Roll Call) ── */}
+        <ClassAttendanceWidget onTakeAttendance={() => navigate('/attendance')} />
+  
+        {/* ── Two Column Layout: Schedule + Quick Actions ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+          {/* Left: My Daily Schedule */}
+          <div className="lg:col-span-3">
+            <MyDailyScheduleCard onViewTimetable={() => navigate('/timetable')} />
+          </div>
+  
+          {/* Right: Quick Actions Grid */}
+          <div className="lg:col-span-2">
+            <QuickActionsGrid
+              attendanceStatus={attendanceStatus}
+              pendingMarksCount={pendingMarksCount}
+              onMarkAttendance={() => navigate('/attendance')}
+              onEnterMarks={() => navigate('/assessments')}
+              onDownloadReports={() => navigate('/reports')}
+              onViewTimetable={() => navigate('/timetable')}
+            />
+          </div>
         </div>
       </div>
-    </div>
-  );
-};
+    );
+  };
 
 // ─── Main Dashboard ──────────────────────────────────────────────────────────
 

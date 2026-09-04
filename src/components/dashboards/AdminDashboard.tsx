@@ -24,8 +24,13 @@ import {
   TrendingUp,
   Loader2,
   Clock,
-} from 'lucide-react';
-import { useCentralData } from '@/hooks/useCentralData';
+    ClipboardList,
+    FileQuestion,
+    AlertCircle,
+    TrendingUp,
+    ArrowRight,
+  } from 'lucide-react';
+  import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
 import {
   getRecentActivity,
@@ -35,6 +40,9 @@ import {
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
+import { getAllAssessmentResults } from '@/utils/assessmentResults';
+import type { Assessment, AssessmentResult, StudentSubmission } from '@/types/questions';
 
 // Demo mode — set to false in production
 const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
@@ -301,7 +309,65 @@ const AdminDashboard: React.FC = () => {
   const { totalStudents, totalTeachers, activeTeacherCount, todayAttendanceRate, isLoading } = useCentralData();
 
   // Local state for re-rendering alerts when the activity log changes
-  const [activityVersion, setActivityVersion] = useState(0);
+    const [activityVersion, setActivityVersion] = useState(0);
+  
+    // ── Assessment Stats ──────────────────────────────────────────────────────
+    const [assessmentStats, setAssessmentStats] = useState<{
+      activeTests: number;
+      pendingGrading: number;
+      totalResults: number;
+      recentResults: AssessmentResult[];
+    }>({ activeTests: 0, pendingGrading: 0, totalResults: 0, recentResults: [] });
+  
+    useEffect(() => {
+      const loadAssessmentStats = () => {
+        try {
+          // Count active assessments from question_bank
+          const qbRaw = localStorage.getItem('question_bank');
+          let activeTests = 0;
+          if (qbRaw) {
+            const qb = JSON.parse(qbRaw);
+            if (qb?.questions?.length > 0) activeTests++;
+          }
+          const asmtsRaw = localStorage.getItem('assessments');
+          if (asmtsRaw) {
+            const asmts: Assessment[] = JSON.parse(asmtsRaw);
+            if (Array.isArray(asmts)) activeTests += asmts.length;
+          }
+  
+          // Load results
+          const results = getAllAssessmentResults();
+          const recentResults = [...results]
+            .sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+            .slice(0, 3);
+  
+          // Count pending grading (submissions without result records)
+          const subRaw = localStorage.getItem('student_submissions');
+          let pendingGrading = 0;
+          if (subRaw) {
+            const subs: Record<string, StudentSubmission> = JSON.parse(subRaw);
+            const resultKeys = new Set(
+              results.map((r) => `${r.assessmentId}_${r.studentId}`)
+            );
+            Object.values(subs).forEach((sub) => {
+              if (sub.isComplete && !resultKeys.has(`${sub.assessmentId}_${sub.studentId}`)) {
+                pendingGrading++;
+              }
+            });
+          }
+  
+          setAssessmentStats({ activeTests, pendingGrading, totalResults: results.length, recentResults });
+        } catch { /* ignore */ }
+      };
+  
+      loadAssessmentStats();
+      window.addEventListener('storage', loadAssessmentStats);
+      window.addEventListener('munyaka_assessment_results_changed', loadAssessmentStats as EventListener);
+      return () => {
+        window.removeEventListener('storage', loadAssessmentStats);
+        window.removeEventListener('munyaka_assessment_results_changed', loadAssessmentStats as EventListener);
+      };
+    }, []);
 
   useEffect(() => {
     const handler = () => setActivityVersion((v) => v + 1);
@@ -720,7 +786,104 @@ const AdminDashboard: React.FC = () => {
       </div>
 
       {/* ── Live Sync Banner ── */}
-      <LiveSyncBanner />
+            <LiveSyncBanner />
+      
+            {/* ── Assessment & Examinations Summary ── */}
+            <div className="bg-white border border-indigo-100 rounded-2xl p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2.5">
+                  <div className="bg-indigo-100 p-2 rounded-xl">
+                    <ClipboardList size={18} className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-black text-slate-900">Assessments &amp; Examinations</h2>
+                    <p className="text-xs text-slate-500 mt-0.5">Quick overview of test activity and grading status</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => window.location.href = '/assessments-hub'}
+                  className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:gap-2.5 transition-all"
+                >
+                  Open Hub <ArrowRight size={12} />
+                </button>
+              </div>
+      
+              <div className="grid grid-cols-3 gap-3">
+                {/* Active Tests */}
+                <div className="bg-indigo-50/70 rounded-xl p-4 text-center border border-indigo-100">
+                  <FileQuestion size={18} className="text-indigo-500 mx-auto mb-1.5" />
+                  <p className="text-2xl font-black text-indigo-700">{assessmentStats.activeTests}</p>
+                  <p className="text-[10px] text-indigo-500 font-medium mt-1">Active Tests</p>
+                </div>
+      
+                {/* Pending Grading */}
+                <div
+                  className={`rounded-xl p-4 text-center border ${
+                    assessmentStats.pendingGrading > 0
+                      ? 'bg-amber-50/70 border-amber-200'
+                      : 'bg-emerald-50/70 border-emerald-100'
+                  }`}
+                >
+                  {assessmentStats.pendingGrading > 0 ? (
+                    <AlertCircle size={18} className="text-amber-500 mx-auto mb-1.5" />
+                  ) : (
+                    <TrendingUp size={18} className="text-emerald-500 mx-auto mb-1.5" />
+                  )}
+                  <p className={`text-2xl font-black ${
+                    assessmentStats.pendingGrading > 0 ? 'text-amber-700' : 'text-emerald-700'
+                  }`}>
+                    {assessmentStats.pendingGrading}
+                  </p>
+                  <p className={`text-[10px] font-medium mt-1 ${
+                    assessmentStats.pendingGrading > 0 ? 'text-amber-600' : 'text-emerald-600'
+                  }`}>
+                    Pending Grading
+                  </p>
+                </div>
+      
+                {/* Total Results */}
+                <div className="bg-emerald-50/70 rounded-xl p-4 text-center border border-emerald-100">
+                  <TrendingUp size={18} className="text-emerald-500 mx-auto mb-1.5" />
+                  <p className="text-2xl font-black text-emerald-700">{assessmentStats.totalResults}</p>
+                  <p className="text-[10px] text-emerald-500 font-medium mt-1">Graded Results</p>
+                </div>
+              </div>
+      
+              {/* Recent results preview */}
+              {assessmentStats.recentResults.length > 0 && (
+                <div className="mt-4 pt-4 border-t border-indigo-100">
+                  <p className="text-[10px] font-semibold text-slate-500 uppercase tracking-wide mb-2">
+                    Recent Results
+                  </p>
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {assessmentStats.recentResults.map((r) => (
+                      <div
+                        key={r.id}
+                        className="shrink-0 bg-white border border-slate-200 rounded-lg px-3 py-2 min-w-[120px]"
+                      >
+                        <p className="text-xs font-semibold text-slate-700 truncate">
+                          {r.studentName || r.studentId}
+                        </p>
+                        <p className="text-[10px] text-slate-400 truncate">
+                          {r.subjectName || r.assessmentTitle}
+                        </p>
+                        <div className="flex items-center justify-between mt-1.5">
+                          <span className="text-sm font-black text-slate-900">{r.percentage}%</span>
+                          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${
+                            r.gradeLevel === 'EE' ? 'bg-emerald-100 text-emerald-700 border-emerald-200'
+                            : r.gradeLevel === 'ME' ? 'bg-blue-100 text-blue-700 border-blue-200'
+                            : r.gradeLevel === 'AE' ? 'bg-amber-100 text-amber-700 border-amber-200'
+                            : 'bg-red-100 text-red-700 border-red-200'
+                          }`}>
+                            {r.gradeLevel || '—'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
 
       {/* ── Summary Metric Cards ── */}
       <div className="space-y-4 w-full">
