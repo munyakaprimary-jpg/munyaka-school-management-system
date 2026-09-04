@@ -28,18 +28,13 @@ export function getAllAssessmentResults(): AssessmentResult[] {
 }
 
 /** Save all assessment results (full overwrite). */
-export function saveAllAssessmentResults(results: AssessmentResult[]): void {
+function saveAllAssessmentResults(results: AssessmentResult[]): void {
   localStorage.setItem(ASSESSMENT_RESULTS_STORAGE_KEY, JSON.stringify(results));
   notifyDataChanged(ASSESSMENT_RESULTS_STORAGE_KEY);
   window.dispatchEvent(new CustomEvent(ASSESSMENT_RESULTS_CHANGE_KEY));
 }
 
-// ─── Per-assessment-instance helpers ────────────────────────────────────────
-
-/** Unique composite key for a student's result record: assessment × student */
-export function resultRecordKey(assessmentId: string, studentId: string): string {
-  return `${assessmentId}__${studentId}`;
-}
+// ─── Internal helpers ──────────────────────────────────────────────────────────
 
 /**
  * Compute a CBC grade level from percentage score.
@@ -56,70 +51,8 @@ export function computeGradeLevel(percentage: number): AssessmentResult["gradeLe
   return "BE";
 }
 
-// ─── Read helpers ────────────────────────────────────────────────────────────
-
-/**
- * Get all results for a specific student across all assessments.
- */
-export function getResultsByStudent(studentId: string): AssessmentResult[] {
-  return getAllAssessmentResults().filter((r) => r.studentId === studentId);
-}
-
-/**
- * Get all results for a specific class+stream within an academic year+term.
- */
-export function getResultsByClass(
-  academicYear: string,
-  term: string,
-  classId: string,
-  stream?: string
-): AssessmentResult[] {
-  return getAllAssessmentResults().filter(
-    (r) =>
-      r.academicYear === academicYear &&
-      r.term === term &&
-      r.classId === classId &&
-      (stream ? r.stream === stream : true)
-  );
-}
-
-/**
- * Get all results for a specific subject within an academic year+term.
- */
-export function getResultsBySubject(
-  academicYear: string,
-  term: string,
-  subjectId: string
-): AssessmentResult[] {
-  return getAllAssessmentResults().filter(
-    (r) =>
-      r.academicYear === academicYear &&
-      r.term === term &&
-      r.subjectId === subjectId
-  );
-}
-
-/**
- * Get the single result record for a student + assessment combo.
- * Returns undefined if not yet recorded.
- */
-export function getResultByAssessmentAndStudent(
-  assessmentId: string,
-  studentId: string
-): AssessmentResult | undefined {
-  const results = getAllAssessmentResults();
-  return results.find(
-    (r) => r.assessmentId === assessmentId && r.studentId === studentId
-  );
-}
-
-// ─── Write helpers ───────────────────────────────────────────────────────────
-
-/**
- * Save (upsert) an AssessmentResult record.
- * If a result already exists for the same assessmentId + studentId, it is replaced.
- */
-export function saveAssessmentResult(result: AssessmentResult): void {
+/** Save (upsert) an AssessmentResult record. */
+function saveAssessmentResult(result: AssessmentResult): void {
   const all = getAllAssessmentResults();
   const existingIndex = all.findIndex(
     (r) => r.assessmentId === result.assessmentId && r.studentId === result.studentId
@@ -133,6 +66,8 @@ export function saveAssessmentResult(result: AssessmentResult): void {
 
   saveAllAssessmentResults(all);
 }
+
+// ─── Public write helpers ─────────────────────────────────────────────────────
 
 /**
  * Build and persist an AssessmentResult from a completed StudentSubmission.
@@ -217,8 +152,6 @@ export function buildAndSaveResult(
   return result;
 }
 
-// ─── Teacher score entry helper ───────────────────────────────────────────────
-
 /**
  * Build and persist an AssessmentResult from a teacher-inputted mark.
  * Used when a teacher enters numeric scores in Assessments.tsx.
@@ -276,23 +209,4 @@ export function saveTeacherInputResult(
 
   saveAssessmentResult(result);
   return result;
-}
-
-// ─── Export for CSV / analysis ───────────────────────────────────────────────
-
-/**
- * Get all results for a given academicYear + term combination,
- * optionally filtered by grade/classId.
- */
-export function getResultsForReport(
-  academicYear: string,
-  term: string,
-  classId?: string
-): AssessmentResult[] {
-  return getAllAssessmentResults().filter(
-    (r) =>
-      r.academicYear === academicYear &&
-      r.term === term &&
-      (classId ? r.classId === classId : true)
-  );
 }

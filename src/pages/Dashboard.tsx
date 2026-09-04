@@ -27,8 +27,6 @@ export type WidgetKey =
   | 'todayLessonSchedule';
 import {
   Users,
-  UserCheck,
-  GraduationCap,
   Megaphone,
   PenLine,
   ClipboardCheck,
@@ -44,15 +42,11 @@ import {
   RefreshCw,
   BookOpen,
   FileText,
-  LayoutGrid,
   CheckCircle2,
   XCircle,
   Circle,
   UsersRound,
   BookMarked,
-  BarChart3,
-  TrendingUp,
-  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';
