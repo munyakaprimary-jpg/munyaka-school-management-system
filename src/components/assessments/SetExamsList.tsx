@@ -13,6 +13,7 @@ import {
   Clock,
   Award,
   ListChecks,
+  BookOpen,
   Library,
   FileQuestion,
   Eye,
