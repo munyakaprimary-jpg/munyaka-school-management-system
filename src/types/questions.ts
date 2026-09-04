@@ -53,8 +53,6 @@ export interface StudentSubmission {
   startedAt: string;
   submittedAt?: string;
   isComplete: boolean;
-  /** Unique attempt identifier — used to scope state to a single attempt. */
-  attemptId?: string;
 }
 
 // =============================================
