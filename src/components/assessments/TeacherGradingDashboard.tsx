@@ -509,91 +509,52 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       return;
     }
 
-    const totalPoints = selectedExam.questions.reduce((s, q) => s + q.points, 0);
-    const mcqQuestions = selectedExam.questions.filter((q) => q.type === "mcq");
-    const structuredQuestions = selectedExam.questions.filter((q) => q.type === "structured");
+    const questions = selectedExam.questions ?? [];
 
-    // Build headers
+    // Clean headers: Admission No, Student Name, Q1, Q2, …, Total Score, Percentage, Rubric Level
     const headers = [
+      "Admission No",
       "Student Name",
-      "Student ID",
       "Class",
       "Stream",
-      // MCQ per-question
-      ...mcqQuestions.flatMap((q, i) => [
-        `Q${i + 1} (MCQ) – ${q.prompt.substring(0, 40)}${q.prompt.length > 40 ? "…" : ""}`,
-        `Q${i + 1} – Student Answer`,
-        `Q${i + 1} – Correct Answer`,
-        `Q${i + 1} – Points`,
-      ]),
-      // Structured per-question
-      ...structuredQuestions.flatMap((q, i) => [
-        `Q${mcqQuestions.length + i + 1} (Str) – ${q.prompt.substring(0, 40)}${q.prompt.length > 40 ? "…" : ""}`,
-        `Q${mcqQuestions.length + i + 1} – Student's Answer`,
-        `Q${mcqQuestions.length + i + 1} – Model Answer`,
-        `Q${mcqQuestions.length + i + 1} – Max Points`,
-        `Q${mcqQuestions.length + i + 1} – Awarded`,
-      ]),
-      "MCQ Score",
-      "MCQ Max",
-      "Structured Score",
-      "Structured Max",
+      ...questions.map((_, i) => `Q${i + 1}`),
       "Total Score",
-      "Max Score",
       "Percentage",
-      "Grade Level",
+      "Rubric Level",
     ];
 
-    // Build rows
+    // Build rows: each question column = points earned (1/0 for MCQ, actual points otherwise)
     const rows = studentGrades.map((g) => {
+      // Prefer marks from the submission ledger (auto-graded pipeline).
+      // Falls back to the dashboard's teacher-entered marks if the submission field is absent.
+      const submissionMarks: Record<string, number> = g.submission?.marks ?? {};
+      const structuredMarks = g.structuredMarks ?? {};
+
       const cells: string[] = [
-        g.studentName,
-        g.studentId,
-        g.classId,
-        g.stream || "",
+        String(g.submission?.admissionNo ?? g.studentId ?? ""),
+        g.studentName ?? "",
+        g.classId ?? g.className ?? "",
+        g.stream ?? "All",
       ];
 
-      // MCQ columns
-      mcqQuestions.forEach((q) => {
-        const resp = g.responses[q.id];
-        const selectedOption = q.options?.find((o) => o.id === resp?.selectedOptionId);
-        const correctOption = q.options?.find((o) => o.id === q.correctOptionId);
-        const isCorrect = resp?.selectedOptionId === q.correctOptionId;
-        cells.push(q.prompt);
-        cells.push(selectedOption ? `${selectedOption.label}. ${selectedOption.text}` : "(no answer)");
-        cells.push(correctOption ? `${correctOption.label}. ${correctOption.text}` : "(none)");
-        cells.push(isCorrect ? String(q.points) : "0");
+      // Per-question points earned
+      questions.forEach((q) => {
+        // Auto-graded mark from the submission pipeline first; teacher mark as fallback
+        const earned =
+          submissionMarks[q.id] ?? structuredMarks[q.id] ?? 0;
+        cells.push(String(earned));
       });
 
-      // Structured columns
-      structuredQuestions.forEach((q) => {
-        const resp = g.responses[q.id];
-        const awarded = g.structuredMarks[q.id] ?? 0;
-        cells.push(q.prompt);
-        cells.push(resp?.answerText?.trim() || "(no answer)");
-        cells.push(q.modelAnswer?.trim() || "(none)");
-        cells.push(String(q.points));
-        cells.push(String(awarded));
-      });
-
-      // Totals
-      const structuredScore = structuredQuestions.reduce((s, q) => s + (g.structuredMarks[q.id] || 0), 0);
-      const structuredMax = structuredQuestions.reduce((s, q) => s + q.points, 0);
       cells.push(
-        String(g.mcqScore),
-        String(g.mcqMax),
-        String(structuredScore),
-        String(structuredMax),
-        String(g.totalScore),
-        String(g.maxScore),
+        `${g.totalScore}/${g.maxScore}`,
         `${g.percentage}%`,
-        g.gradeLevel
+        g.gradeLevel ?? "",
       );
 
-      return cells.map((c) => `"${c.replace(/"/g, '""')}"`).join(",");
+      return cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(",");
     });
 
-    const csvBody = [headers.join(","), ...rows].join("\n");
+    const csvBody = [headers.map((h) => `"${h}"`).join(","), ...rows].join("\n");
 
     const filename =
       `Marks_${selectedExam.title.replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.csv`;
