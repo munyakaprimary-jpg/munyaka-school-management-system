@@ -67,17 +67,6 @@ const GRADE_OPTIONS: string[] = [
   "Grade 9",
 ];
 const ALL_GRADES_VALUE = "all";
-
-// Common class-stream labels. Same as the grade list: extras discovered at
-// runtime are added on top so admins aren't locked out of their own naming.
-const STREAM_OPTIONS: string[] = [
-  "East",
-  "West",
-  "North",
-  "South",
-  "A",
-  "B",
-];
 const ALL_STREAMS_VALUE = "all";
 const ALL_EXAMS_VALUE = "all";
 
@@ -641,19 +630,88 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
     );
   }, [assessments, selectedGrade]);
 
-  // Streams actually used by the currently loaded rows. Falls back to the
-  // canonical list when no rows are loaded yet so the dropdown is never
-  // empty.
-  const streamOptions = useMemo(() => {
-    const present = new Set<string>();
+  // ── Stream options: three-tier lookup ────────────────────────────────────────
+  // 1. Read configured streams from the dedicated key (school admin may have set
+  //    a custom global list).
+  // 2. Read per-grade streams from the munyaka_grades ledger (authoritative
+  //    source of class → streams mapping).
+  // 3. Fall back to extracting unique stream names from in-memory student rows.
+  const configuredStreams: string[] = (() => {
+    try {
+      const raw = localStorage.getItem("configured_streams");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch { /* ignore */ }
+    return [];
+  })();
+
+  // Munyaka grade registry: each entry is { name: "Grade 4", streams: [{name: "Blue"}, …] }
+  const gradeRegistry: Array<{ name: string; streams: Array<{ name: string }> }> = (() => {
+    try {
+      const raw = localStorage.getItem("munyaka_grades");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        return Array.isArray(parsed) ? parsed : [];
+      }
+    } catch { /* ignore */ }
+    return [];
+  })();
+
+  // All streams seen across the entire registry (used as baseline).
+  const allRegistryStreams = useMemo(() => {
+    const seen = new Set<string>();
+    gradeRegistry.forEach((g) =>
+      g.streams.forEach((s) => {
+        const n = (s.name || "").trim();
+        if (n) seen.add(n);
+      })
+    );
+    return Array.from(seen);
+  }, [gradeRegistry]);
+
+  /**
+   * Streams available for display, filtered by the currently selected grade.
+   *
+   * Priority:
+   *  a) If `selectedGrade` is "all" — show every stream from the registry (or
+   *     the configured global list if set).
+   *  b) If a specific grade is selected — narrow to that grade's streams.
+   *  c) If both sources are empty — pull from in-memory student rows as last
+   *     resort so the dropdown is never blank.
+   */
+  const availableStreams = useMemo(() => {
+    // a) Use the admin-configured global list if available.
+    if (configuredStreams.length > 0) {
+      return configuredStreams;
+    }
+
+    // b) Narrow by grade, or fall back to all registry streams.
+    if (selectedGrade !== ALL_GRADES_VALUE) {
+      const gradeEntry = gradeRegistry.find(
+        (g) => normaliseGrade(g.name) === normaliseGrade(selectedGrade)
+      );
+      if (gradeEntry && gradeEntry.streams.length > 0) {
+        return gradeEntry.streams
+          .map((s) => s.name.trim())
+          .filter(Boolean);
+      }
+      // Grade is selected but has no registry entry — narrow the global list.
+      if (allRegistryStreams.length > 0) return allRegistryStreams;
+    }
+
+    // b fallback: no grade selected → return all registry streams.
+    if (allRegistryStreams.length > 0) return allRegistryStreams;
+
+    // c) Last resort: extract from the in-memory student rows.
+    const fromRows = new Set<string>();
     studentGrades.forEach((g) => {
       const s = (g.stream || "").trim();
-      if (s) present.add(s);
+      if (s) fromRows.add(s);
     });
-    // Always include the canonical list as a baseline.
-    STREAM_OPTIONS.forEach((s) => present.add(s));
-    return Array.from(present);
-  }, [studentGrades]);
+    return Array.from(fromRows).sort();
+  }, [selectedGrade, studentGrades, configuredStreams, gradeRegistry, allRegistryStreams]);
 
   const structuredQuestions =
     selectedAssessment?.questions.filter((q) => q.type === "structured") || [];
@@ -924,18 +982,20 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
               </SelectContent>
             </Select>
 
-            {/* ── Stream Selector ────────────────────────────────────────── */}
-            <Select value={selectedStream} onValueChange={setSelectedStream}>
-              <SelectTrigger className="w-36 rounded-xl border-slate-200 bg-slate-50 font-medium">
-                <SelectValue placeholder="All Streams" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value={ALL_STREAMS_VALUE}>All Streams</SelectItem>
-                {streamOptions.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {/* ── Stream Selector (native <select> for dynamic options) ──────── */}
+            <select
+              value={selectedStream}
+              onChange={(e) => setSelectedStream(e.target.value)}
+              className="h-11 w-36 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm font-medium text-slate-700 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+              aria-label="Filter by stream"
+            >
+              <option value={ALL_STREAMS_VALUE}>All Streams</option>
+              {availableStreams.map((streamName) => (
+                <option key={streamName} value={streamName}>
+                  {streamName}
+                </option>
+              ))}
+            </select>
 
             {/* ── Exam Selector (cascaded by grade) ─────────────────────── */}
             <Select value={selectedAssessmentId} onValueChange={setSelectedAssessmentId}>
