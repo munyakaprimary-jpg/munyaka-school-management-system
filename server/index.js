@@ -1350,61 +1350,132 @@ app.post('/api/backup/restore', (req, res) => {
 // Accepts both 'admin' and 'teacher' (and 'staff') roles, case-insensitive.
 // Falls back to plaintext comparison if a stored password is not bcrypt-hashed,
 // so existing seed data continues to work.
+// ── Password verification helper (shared by all auth routes) ─────────────────
+const verifyPassword = (inputPassword: string, storedPassword: string): boolean => {
+  if (!inputPassword || !storedPassword) return false;
+  const isBcrypt = typeof storedPassword === 'string' && /^\$2[aby]\$/.test(storedPassword);
+  if (isBcrypt) {
+    try {
+      return bcrypt.compareSync(inputPassword, storedPassword);
+    } catch {
+      return false;
+    }
+  }
+  // Legacy plaintext comparison
+  return storedPassword === inputPassword;
+};
+
 app.post('/api/auth/login', (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email, password, staff_id } = req.body;
 
-    if (!email || !password) {
-      return res.status(400).json({ success: false, error: 'Email and password are required' });
+    if (!password) {
+      return res.status(400).json({ success: false, error: 'Password is required' });
     }
 
-    // Look up user by email (case-insensitive)
-    const user = dbGet('SELECT id, name, email, role, password FROM users WHERE LOWER(email) = LOWER(?)', [email]);
-
-    if (!user) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
+    // identifier can be an email, a staff_id (e.g. "teacher1"), a TSC number,
+    // or a raw username — normalise to lowercase for case-insensitive lookup.
+    const identifier = (email || staff_id || '').trim().toLowerCase();
+    if (!identifier) {
+      return res.status(400).json({ success: false, error: 'Email or Staff ID is required' });
     }
 
-    // Verify password: bcrypt-hashed values start with "$2a$" / "$2b$" / "$2y$".
-    // Anything else is treated as legacy plaintext and compared directly.
-    const stored = user.password || '';
-    const isBcrypt = typeof stored === 'string' && /^\$2[aby]\$/.test(stored);
-    let passwordValid = false;
-    if (isBcrypt) {
-      try {
-        passwordValid = bcrypt.compareSync(password, stored);
-      } catch {
-        passwordValid = false;
+    // ── 1. Try teachers table ────────────────────────────────────────────────
+    // Matches on: email, staff_id, tsc_number (case-insensitive)
+    const teacher = dbGet(
+      `SELECT id, full_name AS name, first_name, last_name, email, phone,
+              staff_id, tsc_number, role, status, is_active, password
+       FROM teachers
+       WHERE LOWER(email) = LOWER(?)
+          OR LOWER(staff_id) = LOWER(?)
+          OR LOWER(tsc_number) = LOWER(?)`,
+      [identifier, identifier, identifier]
+    );
+
+    if (teacher) {
+      const passwordValid = verifyPassword(password, teacher.password || '');
+      if (!passwordValid) {
+        console.log(`[login] Teacher "${identifier}" — invalid password`);
+        return res.status(401).json({ success: false, error: 'Invalid credentials' });
       }
-    } else {
-      passwordValid = stored === password;
+
+      const role = (teacher.role || 'teacher').toLowerCase();
+      if (role !== 'teacher' && role !== 'head_teacher' && role !== 'ict_teacher'
+        && role !== 'senior_teacher' && role !== 'class_teacher' && role !== 'admin') {
+        return res.status(403).json({ success: false, error: 'Role not authorized to login' });
+      }
+
+      const token = signToken({
+        id: teacher.id,
+        name: teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim(),
+        role: teacher.role || 'teacher',
+        type: 'teacher'
+      });
+
+      console.log(`[login] Teacher "${identifier}" logged in successfully`);
+      return res.json({
+        success: true,
+        token,
+        user: {
+          id: teacher.id,
+          name: teacher.name || `${teacher.first_name} ${teacher.last_name}`.trim(),
+          email: teacher.email || '',
+          phone: teacher.phone || '',
+          role: teacher.role || 'teacher',
+          staff_id: teacher.staff_id || '',
+          tsc_number: teacher.tsc_number || '',
+          status: teacher.status,
+        }
+      });
     }
 
-    if (!passwordValid) {
-      return res.status(401).json({ success: false, error: 'Invalid credentials' });
-    }
+    // ── 2. Try users table (admin / bursar accounts) ────────────────────────
+    const user = dbGet(
+      `SELECT id, name, email, phone, role, password
+       FROM users
+       WHERE LOWER(email) = LOWER(?)`,
+      [identifier]
+    );
 
-    // Normalize role to lowercase for validation
-    const role = (user.role || '').toLowerCase();
+    if (user) {
+      const passwordValid = verifyPassword(password, user.password || '');
+      if (!passwordValid) {
+        console.log(`[login] User "${identifier}" — invalid password`);
+        return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      }
 
-    // Accept admin and teacher (and staff) roles
-    if (role !== 'admin' && role !== 'teacher' && role !== 'staff') {
-      return res.status(403).json({ success: false, error: 'Role not authorized to login' });
-    }
+      const role = (user.role || '').toLowerCase();
+      if (role !== 'admin' && role !== 'owner' && role !== 'staff' && role !== 'bursar') {
+        return res.status(403).json({ success: false, error: 'Role not authorized to login' });
+      }
 
-    // Sign a JWT carrying the user's id + role
-    const token = signToken({ id: user.id, name: user.name, role: user.role });
-
-    res.json({
-      success: true,
-      token,
-      user: {
+      const token = signToken({
         id: user.id,
-        name: user.name,
-        role: user.role
-      }
-    });
+        name: user.name || identifier,
+        role: user.role || role,
+        type: 'user'
+      });
+
+      console.log(`[login] User "${identifier}" (role: ${user.role}) logged in successfully`);
+      return res.json({
+        success: true,
+        token,
+        user: {
+          id: user.id,
+          name: user.name || identifier,
+          email: user.email || '',
+          phone: user.phone || '',
+          role: user.role || role,
+        }
+      });
+    }
+
+    // ── 3. No matching record found ───────────────────────────────────────────
+    console.log(`[login] No record found for identifier: "${identifier}"`);
+    return res.status(401).json({ success: false, error: 'Invalid credentials' });
+
   } catch (error) {
+    console.error('[login] Unhandled error:', error.message);
     res.status(500).json({ success: false, error: error.message });
   }
 });

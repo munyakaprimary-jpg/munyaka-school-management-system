@@ -29,6 +29,8 @@ import {
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 import { cn } from '@/lib/utils';
+import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
+import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import {
   MUNYAKA_ADMIN_PASSWORD,
@@ -297,15 +299,16 @@ const Login: React.FC = () => {
     const trimmedPass = staffPassword.trim();
 
     if (!trimmedId) {
-      setStaffAuthError('Please enter your Email Address or Staff ID.');
+      setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
       return;
     }
-    // Accept either a valid email OR a staff ID (e.g. "teacher1", "T001")
+    // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     const isEmail = emailRegex.test(trimmedId);
     const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
-    if (!isEmail && !isStaffId) {
-      setStaffAuthError('Please enter a valid email address or staff ID.');
+    const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
+    if (!isEmail && !isStaffId && !isTscNumber) {
+      setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
       return;
     }
     if (!trimmedPass) {
@@ -315,28 +318,90 @@ const Login: React.FC = () => {
 
     setIsStaffVerifying(true);
     setStaffAuthError('');
-    await new Promise(r => setTimeout(r, 700));
 
-    // AuthContext.login accepts email as the username field.
-    const success = await login(trimmedId, trimmedPass);
-    if (success) {
-      // Look up the staff ledger (if any) so we can route based on system role
-      const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
-      const staffLedger: PreRegisteredStaff[] = savedLedgerJson
-        ? JSON.parse(savedLedgerJson)
-        : [];
-      const match = staffLedger.find(
-        s => s.email?.toLowerCase() === trimmedId.toLowerCase()
-      );
-      const systemRole = match?.systemRole ?? 'subject_teacher';
-      showSuccess(match ? `Welcome, ${match.fullName}!` : 'Welcome!');
-      navigate(getStaffRedirectPath(systemRole), { replace: true });
-    } else {
-      setStaffAuthError('Invalid Email or Password. Please try again.');
-      showError('Authentication failed');
+    console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
+
+    // ── Authenticate against the LAN backend (mobile / APK deployments) ─────
+    const result = await teacherLogin(trimmedId, trimmedPass);
+
+    if (result.success) {
+      console.log('[Login] LAN auth succeeded:', result.user);
+
+      // Persist the authenticated user so the rest of the app can read it
+      const userData = {
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email || trimmedId,
+        phone: result.user.phone || '',
+        role: result.user.role || 'teacher',
+        staff_id: result.user.staff_id,
+        tsc_number: result.user.tsc_number,
+        avatar: result.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+      };
+
+      try {
+        localStorage.setItem('munyaka_session', JSON.stringify(userData));
+      } catch { /* ignore */ }
+
+      showSuccess(`Welcome, ${result.user.name}!`);
+      navigate(getStaffRedirectPath(result.user.role || 'subject_teacher'), { replace: true });
+      setIsStaffVerifying(false);
+      return;
     }
+
+    // ── Server rejected the credentials or is unreachable ─────────────────
+    console.warn('[Login] LAN auth failed:', result);
+
+    // Network-level failures should NOT fall back to local — show the
+    // network error verbatim so the admin knows the server is unreachable.
+    if (result.code === 'NETWORK_ERROR') {
+      const msg = `Cannot reach the LAN server. ${result.error}`;
+      setStaffAuthError(msg);
+      showError(msg);
+      // Useful developer alert — surfaces immediately even if the toast
+      // disappears, helping diagnose APK LAN connection issues on the field.
+      if (typeof window !== 'undefined') {
+        // eslint-disable-next-line no-console
+        console.warn(`[Login] Server unreachable: ${getApiBaseUrl()}`);
+      }
+      setIsStaffVerifying(false);
+      return;
+    }
+
+    // Server is reachable but rejected credentials — distinguish the two
+    // sub-cases so the user gets actionable feedback.
+    let displayMessage: string;
+    if (result.code === 'INVALID_CREDENTIALS') {
+      displayMessage = 'Invalid Credentials: The TSC Number / Staff ID or Password you entered is incorrect.';
+    } else if (result.code === 'ROLE_NOT_ALLOWED') {
+      displayMessage = 'This account type is not permitted to sign in on this device.';
+    } else if (result.code === 'SERVER_ERROR') {
+      displayMessage = `Server error: ${result.error}`;
+    } else {
+      displayMessage = result.error || 'Login failed. Please try again.';
+    }
+
+    setStaffAuthError(displayMessage);
+    showError(displayMessage);
     setIsStaffVerifying(false);
   };
+
+  // ── Lightweight server reachability check on mount ──────────────────────
+  useEffect(() => {
+    let cancelled = false;
+    checkServerHealth().then((status) => {
+      if (cancelled) return;
+      if (!status.reachable) {
+        // Soft warning — the user can still try to log in, the service
+        // will surface the network error in the form if the server is
+        // genuinely unreachable. We just log it for diagnostics.
+        console.warn(`[Login] Health check: ${status.error} — server may be offline`);
+      } else {
+        console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
+      }
+    });
+    return () => { cancelled = true; };
+  }, []);
 
   // ─────────────────────────────────────────────────────────────────────────
     //  Render — only shown when user is NOT authenticated
