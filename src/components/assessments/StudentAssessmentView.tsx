@@ -38,6 +38,38 @@ const STUDENTS_STORAGE_KEYS = ["students_data", "school_learners_data"];
 const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
 const TIMER_TICK_MS = 1000;
 
+/**
+ * Generate a fresh session attempt ID for a new assessment attempt.
+ * Used to scope any in-flight state to a single attempt and prevent
+ * previously-saved responses from leaking into the active test view.
+ */
+function generateAttemptId(): string {
+  return `attempt_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * Check whether the localStorage key belongs to the currently active
+ * student. This guards the load-progress effect so a stale submission
+ * from a different student can never pre-fill a fresh attempt.
+ */
+function readExistingSubmission(
+  assessmentId: string,
+  studentId: string
+): StudentSubmission | null {
+  if (!studentId) return null;
+  try {
+    const raw = localStorage.getItem(
+      `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessmentId}_${studentId}`
+    );
+    if (!raw) return null;
+    const parsed: StudentSubmission = JSON.parse(raw);
+    if (parsed && Array.isArray(parsed.responses)) return parsed;
+  } catch (err) {
+    console.error("[StudentAssessmentView] Failed to read existing submission:", err);
+  }
+  return null;
+}
+
 function formatTime(seconds: number): string {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -437,6 +469,12 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   const [lockedStudentId, setLockedStudentId] = useState(initialStudentId);
   const [lockedStudentName, setLockedStudentName] = useState(initialStudentName);
   const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
+  /**
+   * Unique identifier for the current attempt. A fresh value is minted each
+   * time `handleBeginExam` fires, so previously-saved submission answers
+   * can never pre-fill or leak into the active test view.
+   */
+  const [attemptId, setAttemptId] = useState<string>(generateAttemptId());
 
   // ── Assessment State ────────────────────────────────────────────────────────
   const storageKey =
@@ -465,46 +503,63 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     setLockedStudentName(studentName);
     setSessionStartTime(new Date().toISOString());
     startedAtRef.current = new Date().toISOString();
+    // Mint a fresh attempt ID and clear any previously stored response
+    // state so a new attempt never inherits answers from a past submission.
+    setAttemptId(generateAttemptId());
+    setResponses({});
+    setIsSubmitted(false);
+    setCurrentIndex(0);
+    setTimeLeft(assessment.duration * 60);
     setIsGatePassed(true);
-  }, []);
+  }, [assessment.duration]);
 
   // ── Load saved progress on mount (only after gate) ──────────────────────────
+  // A new attempt starts completely blank. We only restore an in-progress
+  // session when the persisted attemptId matches the active one, and we
+  // never restore answers from a previously-submitted attempt — those live
+  // in the grading dashboard only.
   useEffect(() => {
     if (!isGatePassed || !lockedStudentId) return;
 
-    const currentStorageKey = `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}`;
+    // Always start a new attempt from a blank answer sheet.
+    setResponses({});
 
-    try {
-      const raw = localStorage.getItem(currentStorageKey);
-      if (raw) {
-        const parsed: StudentSubmission = JSON.parse(raw);
-        if (parsed && Array.isArray(parsed.responses)) {
-          const map: Record<string, StudentResponse> = {};
-          parsed.responses.forEach((r) => {
-            map[r.questionId] = r;
-          });
-          setResponses(map);
+    const existing = readExistingSubmission(assessment.id, lockedStudentId);
+    if (!existing) return;
 
-          if (parsed.startedAt) startedAtRef.current = parsed.startedAt;
-          if (parsed.isComplete) {
-            setIsSubmitted(true);
-            // Lock timer to whatever time was left at submit
-            const elapsed = parsed.submittedAt
-              ? Math.floor(
-                  (new Date(parsed.submittedAt).getTime() - new Date(parsed.startedAt).getTime()) /
-                    1000
-                )
-              : 0;
-            const remaining = Math.max(0, assessment.duration * 60 - elapsed);
-            setTimeLeft(remaining);
-          }
-        }
-      }
-    } catch (err) {
-      console.error("[StudentAssessmentView] Failed to load saved progress:", err);
+    // Only restore an in-progress attempt that was started under the SAME
+    // attemptId and is not yet complete. Completed submissions are hidden
+    // from the active test view by design.
+    if (
+      existing.attemptId &&
+      existing.attemptId === attemptId &&
+      !existing.isComplete &&
+      Array.isArray(existing.responses)
+    ) {
+      const map: Record<string, StudentResponse> = {};
+      existing.responses.forEach((r) => {
+        map[r.questionId] = r;
+      });
+      setResponses(map);
+      if (existing.startedAt) startedAtRef.current = existing.startedAt;
+    } else if (existing.isComplete) {
+      // Past submission exists for this student — keep the active attempt
+      // blank, but reflect the completed state so the score screen shows
+      // up instead of a fresh blank paper.
+      setIsSubmitted(true);
+      if (existing.startedAt) startedAtRef.current = existing.startedAt;
+      const elapsed = existing.submittedAt
+        ? Math.floor(
+            (new Date(existing.submittedAt).getTime() -
+              new Date(existing.startedAt).getTime()) /
+              1000
+          )
+        : 0;
+      const remaining = Math.max(0, assessment.duration * 60 - elapsed);
+      setTimeLeft(remaining);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isGatePassed, lockedStudentId, assessment.id]);
+  }, [isGatePassed, lockedStudentId, assessment.id, attemptId]);
 
   // ── Persist helper ──────────────────────────────────────────────────────────
   const persistSubmission = useCallback(
@@ -516,13 +571,14 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       try {
         const list: StudentResponse[] = Object.values(updatedResponses);
         const submission: StudentSubmission = {
-          assessmentId: assessment.id,
-          studentId: lockedStudentId,
-          responses: list,
-          startedAt: startedAtRef.current,
-          submittedAt: complete ? new Date().toISOString() : undefined,
-          isComplete: complete,
-        };
+            assessmentId: assessment.id,
+            studentId: lockedStudentId,
+            responses: list,
+            startedAt: startedAtRef.current,
+            submittedAt: complete ? new Date().toISOString() : undefined,
+            isComplete: complete,
+            attemptId, // scope this state to the current attempt only
+          };
 
         // Write to dedicated key (submission_{assessmentId}_{studentId})
         localStorage.setItem(currentStorageKey, JSON.stringify(submission));
@@ -673,6 +729,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       startedAt: startedAtRef.current,
       submittedAt: new Date().toISOString(),
       isComplete: true,
+      attemptId,
     };
 
     showSuccess("Assessment submitted successfully! MCQ auto-graded.");
