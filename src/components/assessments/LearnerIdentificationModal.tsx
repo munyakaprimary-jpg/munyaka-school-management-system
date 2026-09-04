@@ -74,11 +74,14 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   const [students, setStudents] = useState<RegisteredStudent[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [showStudentDropdown, setShowStudentDropdown] = useState(false);
-  const [showRegistration, setShowRegistration] = useState(false);
 
-  // Registration form state
+  // Quick Learner Registration Modal state
+  const [isRegisteringNewStudent, setIsRegisteringNewStudent] = useState(false);
   const [regName, setRegName] = useState("");
-  const [regAssessmentNo, setRegAssessmentNo] = useState("");
+  const [regAdmissionNo, setRegAdmissionNo] = useState("");
+  const [regGrade, setRegGrade] = useState("");
+  const [regStream, setRegStream] = useState("");
+  const [regError, setRegError] = useState<string | null>(null);
 
   const studentDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -275,19 +278,22 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
     // Cascade: picking a grade resets downstream state and re-populates streams/exams
     setSelectedStudentId("");
     setSearchTerm("");
+    // Pre-fill registration form grade so it's ready if user opens the modal
+    setRegGrade(grade);
   };
 
   const handleSelectStream = (stream: string) => {
     setSelectedStream(stream);
     setSelectedStudentId("");
     setSearchTerm("");
+    // Pre-fill registration form stream
+    setRegStream(stream);
   };
 
   const handleSelectStudent = (student: RegisteredStudent) => {
     setSelectedStudentId(student.id);
     setSearchTerm(student.name);
     setShowStudentDropdown(false);
-    setShowRegistration(false);
   };
 
   // ── Get selected objects for display ────────────────────────────────────────
@@ -295,59 +301,92 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   const selectedExam = allExams.find((e) => e.id === selectedExamId);
 
   // ── Begin exam handler ──────────────────────────────────────────────────────
-  const handleBeginExam = () => {
-    if (showRegistration) {
-      // Quick inline registration
-      if (!regName.trim() || !regAssessmentNo.trim()) {
-        showError("Please fill in the student's name and Assessment / Birth Certificate number.");
+  // ── Save new student and auto-select them ───────────────────────────────────
+  const handleSaveNewStudent = () => {
+    if (!regName.trim()) {
+      setRegError("Please enter the learner's full name.");
+      return;
+    }
+    if (!regAdmissionNo.trim()) {
+      setRegError("Please enter an Admission or Assessment number.");
+      return;
+    }
+    setRegError(null);
+
+    const newStudent: RegisteredStudent = {
+      id: `std_${Date.now()}`,
+      name: regName.trim(),
+      admissionNumber: regAdmissionNo.trim(),
+      admNo: regAdmissionNo.trim(),
+      assessmentNo: regAdmissionNo.trim(),
+      birthCertNo: regAdmissionNo.trim(),
+      grade: regGrade || undefined,
+      stream: regStream || undefined,
+      status: "Active",
+    };
+
+    try {
+      // Read existing students
+      const raw = localStorage.getItem("registered_students");
+      const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
+
+      // Check for duplicates
+      const duplicate = existing.some(
+        (s) =>
+          s.admissionNumber === newStudent.admissionNumber ||
+          s.admNo === newStudent.admNo ||
+          s.assessmentNo === newStudent.assessmentNo
+      );
+      if (duplicate) {
+        setRegError("A learner with this number already exists.");
         return;
       }
-      const newStudent: RegisteredStudent = {
-        id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        assessmentNo: regAssessmentNo.trim(),
-        birthCertNo: regAssessmentNo.trim(),
-        admissionNumber: regAssessmentNo.trim(),
-        admNo: regAssessmentNo.trim(),
-        name: regName.trim(),
-        grade: selectedGrade || undefined,
-        stream: selectedStream || undefined,
-        status: "Active",
-      };
 
-      // Save to localStorage
-      try {
-        for (const key of STUDENTS_STORAGE_KEYS) {
-          const raw = localStorage.getItem(key);
-          const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
-          const duplicate = existing.some(
-            (s) =>
-              s.id === newStudent.id ||
-              s.assessmentNo === newStudent.assessmentNo ||
-              s.birthCertNo === newStudent.birthCertNo
-          );
-          if (!duplicate) {
-            existing.push(newStudent);
-            localStorage.setItem(key, JSON.stringify(existing));
-            break;
-          }
+      existing.push(newStudent);
+      localStorage.setItem("registered_students", JSON.stringify(existing));
+
+      // Also sync to other known student storage keys for compatibility
+      for (const key of STUDENTS_STORAGE_KEYS) {
+        const otherRaw = localStorage.getItem(key);
+        const other: RegisteredStudent[] = otherRaw ? JSON.parse(otherRaw) : [];
+        if (!other.some((s) => s.id === newStudent.id)) {
+          other.push(newStudent);
+          localStorage.setItem(key, JSON.stringify(other));
         }
-        showSuccess("Student registered successfully!");
-        onBeginExam(newStudent.id, newStudent.name);
-      } catch (err) {
-        console.error("[LearnerIdentificationModal] Failed to save student:", err);
-        showError("Failed to register student. Please try again.");
       }
-    } else if (selectedStudentId) {
+
+      // Dispatch students_updated event so other parts of the app refresh
+      window.dispatchEvent(new Event("students_updated"));
+
+      // Update local students list
+      setStudents((prev) => [...prev, newStudent]);
+
+      // Auto-select the newly registered student
+      setSelectedStudentId(newStudent.id);
+      setSearchTerm(newStudent.name);
+      setIsRegisteringNewStudent(false);
+
+      // Reset form
+      setRegName("");
+      setRegAdmissionNo("");
+      setRegGrade(selectedGrade);
+      setRegStream(selectedStream);
+
+      showSuccess(`${newStudent.name} registered successfully!`);
+    } catch (err) {
+      console.error("[LearnerIdentificationModal] Failed to save student:", err);
+      showError("Failed to register learner. Please try again.");
+    }
+  };
+
+  const handleBeginExam = () => {
+    if (selectedStudentId) {
       onBeginExam(selectedStudentId, selectedStudent?.name || "");
     }
   };
 
   const canBeginExam =
-    (selectedStudentId && (selectedExamId || filteredExams.length === 0)) ||
-    (showRegistration &&
-      regName.trim() &&
-      regAssessmentNo.trim() &&
-      (selectedExamId || filteredExams.length === 0));
+    !!selectedStudentId && (!!selectedExamId || filteredExams.length === 0);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 py-10 px-4">
@@ -553,7 +592,6 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                         onChange={(e) => {
                           setSearchTerm(e.target.value);
                           setSelectedStudentId("");
-                          setShowRegistration(true);
                           setShowStudentDropdown(true);
                         }}
                         onFocus={() => setShowStudentDropdown(true)}
@@ -561,20 +599,18 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                       />
                       <button
                         onClick={() => {
-                          setShowRegistration(!showRegistration);
-                          if (!showRegistration) {
-                            setSelectedStudentId("");
-                            setSearchTerm("");
-                          }
+                          // Pre-fill the registration form with current selections
+                          setRegName("");
+                          setRegAdmissionNo("");
+                          setRegGrade(selectedGrade);
+                          setRegStream(selectedStream);
+                          setRegError(null);
+                          setIsRegisteringNewStudent(true);
                         }}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-600 hover:text-indigo-700"
-                        title={showRegistration ? "Cancel" : "Register new student"}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-8 h-8 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-600 hover:text-indigo-700 flex items-center justify-center transition-colors"
+                        title="Register new learner"
                       >
-                        {showRegistration ? (
-                          <X className="w-4 h-4" />
-                        ) : (
-                          <Plus className="w-4 h-4" />
-                        )}
+                        <Plus className="w-4 h-4" />
                       </button>
                     </div>
 
@@ -628,12 +664,19 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                     )}
                   </div>
 
-                  {searchTerm && filteredStudents.length === 0 && !showRegistration && (
+                  {searchTerm && filteredStudents.length === 0 && !selectedStudentId && (
                     <p className="text-xs text-slate-500 flex items-center gap-1">
                       <Users className="w-3.5 h-3.5" />
                       <span>No learner found in {selectedGrade || "any class"}.</span>
                       <button
-                        onClick={() => setShowRegistration(true)}
+                        onClick={() => {
+                          setRegName("");
+                          setRegAdmissionNo("");
+                          setRegGrade(selectedGrade);
+                          setRegStream(selectedStream);
+                          setRegError(null);
+                          setIsRegisteringNewStudent(true);
+                        }}
                         className="text-indigo-600 hover:underline font-medium"
                       >
                         Register new learner
@@ -641,52 +684,6 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
                     </p>
                   )}
                 </div>
-
-                {/* Inline Registration Form */}
-                {showRegistration && !selectedStudentId && (
-                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-4">
-                    <div className="flex items-center gap-2 text-amber-800">
-                      <Plus className="w-4 h-4" />
-                      <span className="text-sm font-bold">Quick Learner Registration</span>
-                    </div>
-                    <div className="space-y-3">
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                          Full Name *
-                        </label>
-                        <Input
-                          placeholder="Enter learner's full name"
-                          value={regName}
-                          onChange={(e) => setRegName(e.target.value)}
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      <div>
-                        <label className="text-xs font-semibold text-slate-600 mb-1 block">
-                          Assessment No. / Birth Certificate No. *
-                        </label>
-                        <Input
-                          placeholder="e.g., Assessment No. or Birth Cert No."
-                          value={regAssessmentNo}
-                          onChange={(e) => setRegAssessmentNo(e.target.value)}
-                          className="h-10 rounded-lg"
-                        />
-                      </div>
-                      {(selectedGrade || selectedStream) && (
-                        <div className="flex items-center gap-2 text-xs text-slate-500">
-                          <span>Registering for:</span>
-                          <Badge
-                            variant="outline"
-                            className="bg-white border-amber-200 text-amber-700"
-                          >
-                            {selectedGrade}
-                            {selectedStream && ` ${selectedStream}`}
-                          </Badge>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
 
                 {/* Start Assessment Button */}
                 <Button
@@ -721,6 +718,182 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Quick Learner Registration Modal ─────────────────────────────────── */}
+      {isRegisteringNewStudent && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="register-learner-title"
+        >
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setIsRegisteringNewStudent(false)}
+          />
+
+          {/* Modal */}
+          <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden">
+            {/* Header */}
+            <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-6 text-white">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
+                    <Plus className="w-5 h-5" />
+                  </div>
+                  <h2 id="register-learner-title" className="text-lg font-bold">
+                    Register New Learner
+                  </h2>
+                </div>
+                <button
+                  onClick={() => setIsRegisteringNewStudent(false)}
+                  className="w-8 h-8 rounded-lg bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+                  title="Close"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Form */}
+            <div className="p-6 space-y-5">
+              {regError && (
+                <div className="flex items-start gap-2 p-3 rounded-xl bg-red-50 border border-red-200">
+                  <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                  <p className="text-sm text-red-700">{regError}</p>
+                </div>
+              )}
+
+              {/* Full Name */}
+              <div>
+                <label
+                  htmlFor="reg-name"
+                  className="text-sm font-semibold text-slate-700 mb-1.5 block"
+                >
+                  Full Name <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  id="reg-name"
+                  type="text"
+                  placeholder="Enter learner's full name"
+                  value={regName}
+                  onChange={(e) => {
+                    setRegName(e.target.value);
+                    setRegError(null);
+                  }}
+                  autoFocus
+                  className="h-11 rounded-xl"
+                />
+              </div>
+
+              {/* Admission / Assessment No. */}
+              <div>
+                <label
+                  htmlFor="reg-admission"
+                  className="text-sm font-semibold text-slate-700 mb-1.5 block"
+                >
+                  Admission / Assessment No. <span className="text-red-500">*</span>
+                </label>
+                <Input
+                  id="reg-admission"
+                  type="text"
+                  placeholder="e.g., ADM-001 or ASS-123"
+                  value={regAdmissionNo}
+                  onChange={(e) => {
+                    setRegAdmissionNo(e.target.value);
+                    setRegError(null);
+                  }}
+                  className="h-11 rounded-xl"
+                />
+              </div>
+
+              {/* Grade */}
+              <div>
+                <label
+                  htmlFor="reg-grade"
+                  className="text-sm font-semibold text-slate-700 mb-1.5 block"
+                >
+                  Grade
+                </label>
+                <div className="relative">
+                  <select
+                    id="reg-grade"
+                    value={regGrade}
+                    onChange={(e) => setRegGrade(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm appearance-none pr-8 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors"
+                  >
+                    <option value="">Select Grade…</option>
+                    {gradesList.map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Stream */}
+              <div>
+                <label
+                  htmlFor="reg-stream"
+                  className="text-sm font-semibold text-slate-700 mb-1.5 block"
+                >
+                  Stream
+                </label>
+                <div className="relative">
+                  <select
+                    id="reg-stream"
+                    value={regStream}
+                    onChange={(e) => setRegStream(e.target.value)}
+                    className="w-full h-11 px-3 rounded-xl border border-slate-200 bg-white text-sm appearance-none pr-8 focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-colors"
+                  >
+                    <option value="">All Streams</option>
+                    {(regGrade ? availableStreams : allStreams).map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+
+              {/* Class badge */}
+              {(regGrade || regStream) && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500">Registering for:</span>
+                  <Badge
+                    variant="outline"
+                    className="bg-indigo-50 border-indigo-200 text-indigo-600"
+                  >
+                    {regGrade || "Any Grade"}
+                    {regStream ? ` ${regStream}` : ""}
+                  </Badge>
+                </div>
+              )}
+
+              {/* Action Buttons */}
+              <div className="flex items-center gap-3 pt-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setIsRegisteringNewStudent(false)}
+                  className="flex-1 h-11 rounded-xl font-semibold border-slate-200"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleSaveNewStudent}
+                  className="flex-1 h-11 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-md"
+                >
+                  Save & Continue Assessment
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
