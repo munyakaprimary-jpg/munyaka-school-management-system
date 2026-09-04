@@ -1,20 +1,42 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { Clock, CheckCircle2, AlertCircle, Send, FileQuestion, Wifi, WifiOff, ChevronLeft, ChevronRight, Lock } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Clock,
+  CheckCircle2,
+  AlertCircle,
+  Send,
+  FileQuestion,
+  Wifi,
+  WifiOff,
+  ChevronLeft,
+  ChevronRight,
+  Lock,
+  User,
+  Search,
+  Plus,
+  X,
+  GraduationCap,
+  Loader2,
+  ChevronDown,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import type {
   Assessment,
   StudentSubmission,
   StudentResponse,
+  Question,
 } from "@/types/questions";
 
-const SUBMISSION_STORAGE_KEY = "student_submissions";
+const STUDENTS_STORAGE_KEY = "school_learners_data";
+const SUBMISSION_STORAGE_KEY_PREFIX = "submission";
 const TIMER_TICK_MS = 1000;
 
 function formatTime(seconds: number): string {
@@ -22,6 +44,310 @@ function formatTime(seconds: number): string {
   const s = seconds % 60;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
 }
+
+interface RegisteredStudent {
+  id: string;
+  admissionNumber?: string;
+  admNo?: string;
+  name: string;
+  grade?: string;
+  stream?: string;
+  status?: string;
+}
+
+interface LearnerIdentificationGateProps {
+  assessment: Assessment;
+  onBeginExam: (studentId: string, studentName: string) => void;
+}
+
+const LearnerIdentificationGate: React.FC<LearnerIdentificationGateProps> = ({
+  assessment,
+  onBeginExam,
+}) => {
+  const [students, setStudents] = useState<RegisteredStudent[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<RegisteredStudent | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [showRegistration, setShowRegistration] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Registration form state
+  const [regName, setRegName] = useState("");
+  const [regGrade, setRegGrade] = useState("");
+  const [regAdmNo, setRegAdmNo] = useState("");
+
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Load students from localStorage
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
+      if (raw) {
+        const parsed: RegisteredStudent[] = JSON.parse(raw);
+        // Filter out transferred students
+        const active = parsed.filter(
+          (s) => !s.status || s.status === "Active" || s.status === "active"
+        );
+        setStudents(active);
+      }
+    } catch (err) {
+      console.error("[LearnerIdentificationGate] Failed to load students:", err);
+    }
+    setIsLoading(false);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Filter students by search query
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery.trim()) return students;
+    const query = searchQuery.toLowerCase();
+    return students.filter(
+      (s) =>
+        (s.name || "").toLowerCase().includes(query) ||
+        (s.admissionNumber || s.admNo || "").toLowerCase().includes(query)
+    );
+  }, [students, searchQuery]);
+
+  const handleSelectStudent = (student: RegisteredStudent) => {
+    setSelectedStudent(student);
+    setSearchQuery(student.name);
+    setShowDropdown(false);
+    setShowRegistration(false);
+  };
+
+  const handleSearchFocus = () => {
+    setShowDropdown(true);
+  };
+
+  const handleBeginExam = () => {
+    if (!selectedStudent && !showRegistration) return;
+
+    if (showRegistration) {
+      // Quick inline registration
+      if (!regName.trim() || !regAdmNo.trim()) {
+        showError("Please fill in the student's name and admission number.");
+        return;
+      }
+      const newStudent: RegisteredStudent = {
+        id: `student_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+        admissionNumber: regAdmNo.trim(),
+        admNo: regAdmNo.trim(),
+        name: regName.trim(),
+        grade: regGrade.trim(),
+        status: "Active",
+      };
+
+      // Save to localStorage
+      try {
+        const raw = localStorage.getItem(STUDENTS_STORAGE_KEY);
+        const existing: RegisteredStudent[] = raw ? JSON.parse(raw) : [];
+        existing.push(newStudent);
+        localStorage.setItem(STUDENTS_STORAGE_KEY, JSON.stringify(existing));
+        showSuccess("Student registered successfully!");
+        onBeginExam(newStudent.id, newStudent.name);
+      } catch (err) {
+        console.error("[LearnerIdentificationGate] Failed to save student:", err);
+        showError("Failed to register student. Please try again.");
+      }
+    } else if (selectedStudent) {
+      onBeginExam(selectedStudent.id, selectedStudent.name);
+    }
+  };
+
+  const studentId = selectedStudent?.id || selectedStudent?.admissionNumber || selectedStudent?.admNo;
+  const studentName = selectedStudent?.name || "";
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 py-10 px-4">
+      <div className="max-w-lg mx-auto">
+        <Card className="border-0 shadow-2xl rounded-3xl overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-br from-indigo-600 to-purple-700 p-8 text-center text-white">
+            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <GraduationCap className="w-8 h-8" />
+            </div>
+            <h1 className="text-2xl font-bold mb-1">Learner Identification</h1>
+            <p className="text-white/80 text-sm">
+              Please identify yourself before starting the assessment
+            </p>
+          </div>
+
+          <CardContent className="p-6 sm:p-8 space-y-6">
+            {/* Assessment Info */}
+            <div className="p-4 rounded-2xl bg-slate-50 border border-slate-200">
+              <p className="text-xs font-black uppercase tracking-widest text-slate-400 mb-1">
+                Assessment
+              </p>
+              <p className="font-bold text-slate-800">{assessment.title}</p>
+              <p className="text-sm text-slate-500 mt-1">
+                {assessment.subject} • {assessment.questions.length} questions •{" "}
+                {assessment.duration} minutes
+              </p>
+            </div>
+
+            {isLoading ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-6 h-6 animate-spin text-indigo-500" />
+              </div>
+            ) : (
+              <>
+                {/* Student Search / Selection */}
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Select Student
+                  </label>
+                  <div className="relative" ref={dropdownRef}>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <Input
+                        type="text"
+                        placeholder="Search by name or admission number..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setSelectedStudent(null);
+                          setShowRegistration(true);
+                        }}
+                        onFocus={handleSearchFocus}
+                        className="pl-10 pr-10 h-12 rounded-xl border-slate-200 focus:border-indigo-500"
+                      />
+                      <button
+                        onClick={() => {
+                          setShowRegistration(!showRegistration);
+                          if (!showRegistration) {
+                            setSelectedStudent(null);
+                            setSearchQuery("");
+                          }
+                        }}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-indigo-600 hover:text-indigo-700"
+                        title={showRegistration ? "Cancel" : "Register new student"}
+                      >
+                        {showRegistration ? (
+                          <X className="w-4 h-4" />
+                        ) : (
+                          <Plus className="w-4 h-4" />
+                        )}
+                      </button>
+                    </div>
+
+                    {/* Dropdown Results */}
+                    {showDropdown && filteredStudents.length > 0 && (
+                      <div className="absolute z-50 w-full mt-2 bg-white rounded-xl border border-slate-200 shadow-xl max-h-60 overflow-y-auto">
+                        {filteredStudents.slice(0, 10).map((student) => (
+                          <button
+                            key={student.id}
+                            onClick={() => handleSelectStudent(student)}
+                            className="w-full flex items-center gap-3 p-3 hover:bg-indigo-50 text-left transition-colors border-b border-slate-100 last:border-0"
+                          >
+                            <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0">
+                              <User className="w-4 h-4 text-indigo-600" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="font-semibold text-slate-800 truncate">
+                                {student.name}
+                              </p>
+                              <p className="text-xs text-slate-500">
+                                {student.admissionNumber || student.admNo || "No ID"} •
+                                {student.grade || "N/A"}
+                              </p>
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                  {searchQuery && filteredStudents.length === 0 && !showRegistration && (
+                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                      <span>No student found.</span>
+                      <button
+                        onClick={() => setShowRegistration(true)}
+                        className="text-indigo-600 hover:underline font-medium"
+                      >
+                        Register new student
+                      </button>
+                    </p>
+                  )}
+                </div>
+
+                {/* Inline Registration Form */}
+                {showRegistration && !selectedStudent && (
+                  <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 space-y-4">
+                    <div className="flex items-center gap-2 text-amber-800">
+                      <Plus className="w-4 h-4" />
+                      <span className="text-sm font-bold">Quick Student Registration</span>
+                    </div>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                          Full Name *
+                        </label>
+                        <Input
+                          placeholder="Enter student's full name"
+                          value={regName}
+                          onChange={(e) => setRegName(e.target.value)}
+                          className="h-10 rounded-lg"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                            Admission No. *
+                          </label>
+                          <Input
+                            placeholder="e.g., ADM-001"
+                            value={regAdmNo}
+                            onChange={(e) => setRegAdmNo(e.target.value)}
+                            className="h-10 rounded-lg"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-semibold text-slate-600 mb-1 block">
+                            Grade/Class
+                          </label>
+                          <Input
+                            placeholder="e.g., Grade 4"
+                            value={regGrade}
+                            onChange={(e) => setRegGrade(e.target.value)}
+                            className="h-10 rounded-lg"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Begin Exam Button */}
+                <Button
+                  onClick={handleBeginExam}
+                  disabled={
+                    (!selectedStudent && !showRegistration) ||
+                    (showRegistration && (!regName.trim() || !regAdmNo.trim()))
+                  }
+                  className="w-full h-12 rounded-xl font-bold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 shadow-lg shadow-indigo-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <FileQuestion className="w-4 h-4 mr-2" />
+                  Begin Exam
+                </Button>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
 
 interface StudentAssessmentViewProps {
   /** The assessment to render. */
@@ -36,14 +362,37 @@ interface StudentAssessmentViewProps {
   submissionKey?: string;
 }
 
+interface GradingResult {
+  totalScore: number;
+  maxScore: number;
+  percentage: number;
+  mcqResults: {
+    questionId: string;
+    correct: boolean;
+    earnedPoints: number;
+    maxPoints: number;
+  }[];
+}
+
 const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   assessment,
-  studentId,
-  studentName,
+  studentId: initialStudentId,
+  studentName: initialStudentName,
   onSubmit,
   submissionKey,
 }) => {
-  const storageKey = submissionKey || `${SUBMISSION_STORAGE_KEY}_${assessment.id}_${studentId}`;
+  const navigate = useNavigate();
+
+  // ── Gate State ─────────────────────────────────────────────────────────────
+  const [isGatePassed, setIsGatePassed] = useState(false);
+  const [lockedStudentId, setLockedStudentId] = useState(initialStudentId);
+  const [lockedStudentName, setLockedStudentName] = useState(initialStudentName);
+  const [sessionStartTime, setSessionStartTime] = useState<string | null>(null);
+
+  // ── Assessment State ────────────────────────────────────────────────────────
+  const storageKey =
+    submissionKey ||
+    `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId || "temp"}`;
 
   const [responses, setResponses] = useState<Record<string, StudentResponse>>({});
   const [timeLeft, setTimeLeft] = useState<number>(assessment.duration * 60);
@@ -61,10 +410,23 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     [assessment.questions]
   );
 
-  // ── Load saved progress on mount ──────────────────────────────────────────
+  // ── Gate Handler ────────────────────────────────────────────────────────────
+  const handleBeginExam = useCallback((studentId: string, studentName: string) => {
+    setLockedStudentId(studentId);
+    setLockedStudentName(studentName);
+    setSessionStartTime(new Date().toISOString());
+    startedAtRef.current = new Date().toISOString();
+    setIsGatePassed(true);
+  }, []);
+
+  // ── Load saved progress on mount (only after gate) ──────────────────────────
   useEffect(() => {
+    if (!isGatePassed || !lockedStudentId) return;
+
+    const currentStorageKey = `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}`;
+
     try {
-      const raw = localStorage.getItem(storageKey);
+      const raw = localStorage.getItem(currentStorageKey);
       if (raw) {
         const parsed: StudentSubmission = JSON.parse(raw);
         if (parsed && Array.isArray(parsed.responses)) {
@@ -80,7 +442,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             // Lock timer to whatever time was left at submit
             const elapsed = parsed.submittedAt
               ? Math.floor(
-                  (new Date(parsed.submittedAt).getTime() - new Date(parsed.startedAt).getTime()) / 1000
+                  (new Date(parsed.submittedAt).getTime() - new Date(parsed.startedAt).getTime()) /
+                    1000
                 )
               : 0;
             const remaining = Math.max(0, assessment.duration * 60 - elapsed);
@@ -92,31 +455,35 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       console.error("[StudentAssessmentView] Failed to load saved progress:", err);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storageKey]);
+  }, [isGatePassed, lockedStudentId, assessment.id]);
 
-  // ── Persist helper ────────────────────────────────────────────────────────
+  // ── Persist helper ──────────────────────────────────────────────────────────
   const persistSubmission = useCallback(
     (updatedResponses: Record<string, StudentResponse>, complete: boolean) => {
+      if (!lockedStudentId) return;
+
+      const currentStorageKey = `${SUBMISSION_STORAGE_KEY_PREFIX}_${assessment.id}_${lockedStudentId}`;
+
       try {
         const list: StudentResponse[] = Object.values(updatedResponses);
         const submission: StudentSubmission = {
           assessmentId: assessment.id,
-          studentId,
+          studentId: lockedStudentId,
           responses: list,
           startedAt: startedAtRef.current,
           submittedAt: complete ? new Date().toISOString() : undefined,
           isComplete: complete,
         };
 
-        // Write to dedicated key
-        localStorage.setItem(storageKey, JSON.stringify(submission));
+        // Write to dedicated key (submission_{assessmentId}_{studentId})
+        localStorage.setItem(currentStorageKey, JSON.stringify(submission));
 
         // Also write to the shared student_submissions map so the existing
         // grading screens can read every student's work.
-        const allRaw = localStorage.getItem(SUBMISSION_STORAGE_KEY);
+        const allRaw = localStorage.getItem("student_submissions");
         const all: Record<string, StudentSubmission> = allRaw ? JSON.parse(allRaw) : {};
-        all[`${assessment.id}_${studentId}`] = submission;
-        localStorage.setItem(SUBMISSION_STORAGE_KEY, JSON.stringify(all));
+        all[`${assessment.id}_${lockedStudentId}`] = submission;
+        localStorage.setItem("student_submissions", JSON.stringify(all));
 
         setSaveBadge("saved");
         if (saveBadgeTimeoutRef.current) window.clearTimeout(saveBadgeTimeoutRef.current);
@@ -126,10 +493,10 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         showError("Could not save your progress locally.");
       }
     },
-    [assessment.id, studentId, storageKey]
+    [assessment.id, lockedStudentId]
   );
 
-  // ── Online/offline listener ──────────────────────────────────────────────
+  // ── Online/offline listener ────────────────────────────────────────────────
   useEffect(() => {
     const handleOnline = () => setIsOnline(true);
     const handleOffline = () => setIsOnline(false);
@@ -141,9 +508,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     };
   }, []);
 
-  // ── Countdown timer ──────────────────────────────────────────────────────
+  // ── Countdown timer ────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isSubmitted) return;
+    if (isSubmitted || !isGatePassed) return;
     const id = window.setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
@@ -156,9 +523,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       });
     }, TIMER_TICK_MS);
     return () => window.clearInterval(id);
-  }, [isSubmitted]);
+  }, [isSubmitted, isGatePassed]);
 
-  // ── Response handlers (auto-save on every change) ────────────────────────
+  // ── Response handlers (auto-save on every change) ──────────────────────────
   const handleSelectMCQ = useCallback(
     (questionId: string, optionId: string) => {
       if (isSubmitted) return;
@@ -166,7 +533,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         ...responses,
         [questionId]: {
           assessmentId: assessment.id,
-          studentId,
+          studentId: lockedStudentId,
           questionId,
           selectedOptionId: optionId,
           answeredAt: new Date().toISOString(),
@@ -175,7 +542,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       setResponses(updated);
       persistSubmission(updated, false);
     },
-    [assessment.id, studentId, responses, persistSubmission, isSubmitted]
+    [assessment.id, lockedStudentId, responses, persistSubmission, isSubmitted]
   );
 
   const handleAnswerStructured = useCallback(
@@ -185,7 +552,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         ...responses,
         [questionId]: {
           assessmentId: assessment.id,
-          studentId,
+          studentId: lockedStudentId,
           questionId,
           answerText: text,
           answeredAt: new Date().toISOString(),
@@ -194,28 +561,79 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
       setResponses(updated);
       persistSubmission(updated, false);
     },
-    [assessment.id, studentId, responses, persistSubmission, isSubmitted]
+    [assessment.id, lockedStudentId, responses, persistSubmission, isSubmitted]
+  );
+
+  // ── MCQ Auto-Grading ────────────────────────────────────────────────────────
+  const autoGradeMCQ = useCallback(
+    (questions: Question[], studentResponses: Record<string, StudentResponse>): GradingResult => {
+      const mcqResults: GradingResult["mcqResults"] = [];
+      let totalScore = 0;
+      let maxScore = 0;
+
+      questions.forEach((question) => {
+        if (question.type === "mcq") {
+          const response = studentResponses[question.id];
+          const isCorrect = response?.selectedOptionId === question.correctOptionId;
+          const earnedPoints = isCorrect ? question.points : 0;
+
+          mcqResults.push({
+            questionId: question.id,
+            correct: isCorrect,
+            earnedPoints,
+            maxPoints: question.points,
+          });
+
+          totalScore += earnedPoints;
+          maxScore += question.points;
+        }
+      });
+
+      return {
+        totalScore,
+        maxScore,
+        percentage: maxScore > 0 ? Math.round((totalScore / maxScore) * 100) : 0,
+        mcqResults,
+      };
+    },
+    []
   );
 
   // ── Submit ────────────────────────────────────────────────────────────────
   const handleSubmit = useCallback(() => {
-    if (isSubmitted || !assessment) return;
+    if (isSubmitted || !assessment || !lockedStudentId) return;
+
+    // Auto-grade MCQ
+    const gradingResult = autoGradeMCQ(assessment.questions, responses);
+
+    // Save grading result
+    try {
+      const gradingKey = `grading_result_${assessment.id}_${lockedStudentId}`;
+      localStorage.setItem(gradingKey, JSON.stringify(gradingResult));
+    } catch (err) {
+      console.error("[StudentAssessmentView] Failed to save grading result:", err);
+    }
 
     setIsSubmitted(true);
     persistSubmission(responses, true);
 
     const submission: StudentSubmission = {
       assessmentId: assessment.id,
-      studentId,
+      studentId: lockedStudentId,
       responses: Object.values(responses),
       startedAt: startedAtRef.current,
       submittedAt: new Date().toISOString(),
       isComplete: true,
     };
 
-    showSuccess("Assessment submitted successfully!");
+    showSuccess("Assessment submitted successfully! MCQ auto-graded.");
     if (onSubmit) onSubmit(submission);
-  }, [isSubmitted, assessment, responses, studentId, persistSubmission, onSubmit]);
+
+    // Redirect to assessments list after a brief delay
+    setTimeout(() => {
+      navigate("/assessments/list");
+    }, 1500);
+  }, [isSubmitted, assessment, responses, lockedStudentId, persistSubmission, onSubmit, autoGradeMCQ, navigate]);
 
   // Keep a ref to the latest handleSubmit so the timer interval can call it.
   const handleSubmitRef = useRef(handleSubmit);
@@ -223,7 +641,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     handleSubmitRef.current = handleSubmit;
   }, [handleSubmit]);
 
-  // ── Derived UI values ────────────────────────────────────────────────────
+  // ── Derived UI values ────────────────────────────────────────────────────────
   const currentQuestion = assessment.questions[currentIndex];
   const currentResponse = currentQuestion ? responses[currentQuestion.id] : undefined;
   const answeredCount = assessment.questions.filter((q) => {
@@ -238,7 +656,14 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
   const timerIsCritical = timeLeft > 0 && timeLeft < 60;
   const timerIsExpired = timeLeft === 0;
 
-  // ── Render: empty / no questions ─────────────────────────────────────────
+  // ── Render: Learner Identification Gate ───────────────────────────────────
+  if (!isGatePassed) {
+    return (
+      <LearnerIdentificationGate assessment={assessment} onBeginExam={handleBeginExam} />
+    );
+  }
+
+  // ── Render: empty / no questions ───────────────────────────────────────────
   if (!assessment.questions || assessment.questions.length === 0) {
     return (
       <div className="min-h-[60vh] flex items-center justify-center p-6">
@@ -253,7 +678,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     );
   }
 
-  // ── Render: submitted confirmation ───────────────────────────────────────
+  // ── Render: submitted confirmation ────────────────────────────────────────
   if (isSubmitted) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30 py-10 px-4">
@@ -265,7 +690,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </div>
               <h1 className="text-2xl sm:text-3xl font-black mb-2">Assessment Submitted</h1>
               <p className="text-white/80 text-sm sm:text-base">
-                Your responses have been saved locally and are ready for grading.
+                Your responses have been saved and MCQ has been auto-graded.
               </p>
             </div>
             <CardContent className="p-6 sm:p-8 space-y-5">
@@ -275,7 +700,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
                     Student
                   </p>
                   <p className="text-sm font-bold text-slate-800 truncate">
-                    {studentName || studentId}
+                    {lockedStudentName || lockedStudentId}
                   </p>
                 </div>
                 <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
@@ -299,8 +724,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
                 <div>
                   <p className="text-sm font-bold text-emerald-800">Responses Locked</p>
                   <p className="text-xs text-emerald-700 mt-0.5">
-                    Your answers can no longer be edited. The submission has been timestamped and stored
-                    on this device.
+                    Your answers can no longer be edited. The submission has been timestamped and
+                    stored on this device. Redirecting to assessments list...
                   </p>
                 </div>
               </div>
@@ -311,7 +736,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     );
   }
 
-  // ── Render: active assessment ────────────────────────────────────────────
+  // ── Render: active assessment ──────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-purple-50/30">
       {/* Header */}
@@ -327,7 +752,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </h1>
               <p className="text-xs sm:text-sm text-slate-500 truncate">
                 {assessment.subject} • Total {totalPoints} pts
-                {studentName ? ` • ${studentName}` : ""}
+                {lockedStudentName ? ` • ${lockedStudentName}` : ""}
               </p>
             </div>
           </div>
@@ -542,7 +967,8 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           <div className="flex items-start gap-2 p-3 rounded-2xl bg-red-50 border border-red-200">
             <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
             <p className="text-xs sm:text-sm text-red-700 font-semibold">
-              Less than a minute remaining! Your assessment will auto-submit when the timer reaches zero.
+              Less than a minute remaining! Your assessment will auto-submit when the timer reaches
+              zero.
             </p>
           </div>
         )}
