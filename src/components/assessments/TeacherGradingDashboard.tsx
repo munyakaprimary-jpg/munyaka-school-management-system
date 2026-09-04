@@ -33,6 +33,8 @@ import { showSuccess, showError } from "@/utils/toast";
 import { notifyDataChanged } from "@/utils/storage";
 import { useFileDownload, MUNYAKA_HEADERS } from "@/utils/fileDownloader";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
+import { saveMarkedSubmission } from "@/types/assessment";
+import type { StudentSubmission as MarkedSubmission } from "@/types/assessment";
 import type {
   Assessment,
   Question,
@@ -377,6 +379,49 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
       const merged = [...others, ...newResults];
       localStorage.setItem(RESULTS_KEY, JSON.stringify(merged));
       notifyDataChanged(RESULTS_KEY);
+
+      // ── Persist per-student marked snapshots ─────────────────────────────
+      // After the aggregate result is stored, snapshot each student's
+      // final answers, marks and feedback into the dedicated
+      // `marked_student_submissions` ledger so the Marked Scripts
+      // management view can list & export them as PDFs.
+      studentGrades.forEach((g) => {
+        const answers: Record<string, any> = {};
+        const marks: Record<string, number> = {};
+        g.submission.responses.forEach((r) => {
+          if (r.selectedOptionId !== undefined) {
+            answers[r.questionId] = r.selectedOptionId;
+          } else {
+            answers[r.questionId] = r.answerText ?? "";
+          }
+        });
+        // Merge auto-MCQ marks with teacher-entered structured marks.
+        selectedAssessment.questions.forEach((q) => {
+          const resp = g.responses[q.id];
+          if (q.type === "mcq") {
+            marks[q.id] =
+              resp?.selectedOptionId === q.correctOptionId ? q.points : 0;
+          } else {
+            marks[q.id] = g.structuredMarks[q.id] ?? 0;
+          }
+        });
+
+        const markedRecord: MarkedSubmission = {
+          id: `marked_${selectedAssessment.id}_${g.studentId}`,
+          examId: selectedAssessment.id,
+          examTitle: selectedAssessment.title,
+          studentName: g.studentName,
+          admissionNo: g.studentId,
+          score: g.totalScore,
+          totalPoints: g.maxScore,
+          percentage: g.percentage,
+          submittedAt: g.submission.submittedAt || new Date().toISOString(),
+          answers,
+          marks,
+          feedback: {},
+        };
+        saveMarkedSubmission(markedRecord);
+      });
 
       setIsSaving(false);
       showSuccess("All grades saved successfully!");
