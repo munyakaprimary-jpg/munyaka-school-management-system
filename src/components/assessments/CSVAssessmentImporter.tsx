@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useCallback, useRef } from "react";
-import { Download, Upload, Table2, AlertCircle, CheckCircle2, X, Trash2 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import { Download, Upload, Table2, AlertCircle, CheckCircle2, X, Trash2, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
@@ -170,6 +171,7 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
   assessmentId: initialAssessmentId,
   onSaved,
 }) => {
+  const navigate = useNavigate();
   const [parsedQuestions, setParsedQuestions] = useState<ParsedQuestion[]>([]);
   const [currentAssessmentId, setCurrentAssessmentId] = useState<string>(() => {
     if (initialAssessmentId) return initialAssessmentId;
@@ -381,6 +383,16 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
 
   return (
     <div className="space-y-6">
+      {/* In-page Back arrow -> Assessment Repository */}
+      <Button
+        variant="ghost"
+        onClick={() => navigate("/assessments/list")}
+        className="flex items-center gap-2 text-sm font-medium text-slate-600 hover:text-slate-900 transition-colors cursor-pointer px-3 py-2 rounded-xl hover:bg-slate-100"
+      >
+        <ArrowLeft size={16} />
+        Back to Repository
+      </Button>
+
       {/* Header Card */}
       <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
         <CardHeader className="bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 pb-10 pt-6 px-6">
