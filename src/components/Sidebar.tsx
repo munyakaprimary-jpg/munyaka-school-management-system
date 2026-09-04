@@ -100,7 +100,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     // based on the user's session role.  Only one Dashboard entry exists.
     { icon: LayoutDashboard, label: 'Dashboard', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student', 'owner'] },
     { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+    { icon: Database, label: 'Central Data & APK', path: '/central-data', roles: ['admin'] },
     { icon: Users, label: 'Students', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
     { icon: Layers, label: 'Grades & Streams', path: '/grades', roles: ['admin', 'head_teacher'] },
     { icon: BookOpen, label: 'Learning Areas', path: '/learning-areas', roles: ['admin', 'head_teacher'] },
@@ -234,7 +234,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
       { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
       { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
-      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
+      { icon: Database, label: 'Central', path: '/central-data', roles: ['admin'] },
       { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
       { icon: Gamepad2, label: 'Games', path: '/games', global: true },
     ].filter(item => {
