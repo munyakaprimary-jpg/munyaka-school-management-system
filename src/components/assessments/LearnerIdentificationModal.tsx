@@ -284,10 +284,19 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   }, [filteredExams, selectedGrade, selectedExamId]);
 
   // ── Load students from localStorage ─────────────────────────────────────────
+  // Reads from multiple possible storage keys; prioritises whichever has data.
   useEffect(() => {
     try {
       let loadedStudents: RegisteredStudent[] = [];
-      for (const key of STUDENTS_STORAGE_KEYS) {
+
+      // Priority order: registered_students → students_list → STUDENTS_STORAGE_KEYS
+      const allKeys = [
+        "registered_students",
+        "students_list",
+        ...STUDENTS_STORAGE_KEYS,
+      ];
+
+      for (const key of allKeys) {
         const raw = localStorage.getItem(key);
         if (raw) {
           const parsed: RegisteredStudent[] = JSON.parse(raw);
@@ -297,6 +306,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
           }
         }
       }
+
       // Filter out transferred students
       const active = loadedStudents.filter(
         (s) => !s.status || s.status === "Active" || s.status === "active"
@@ -323,17 +333,35 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   }, []);
 
   // ── Filter students based on selectedGrade, selectedStream, and searchTerm ──
+  // Case-insensitive grade/stream matching; stream is flexible so a student
+  // whose stream is "all" will always appear regardless of stream selection.
   const filteredStudents = useMemo(() => {
-    return students.filter((s) => {
-      const matchesGrade = !selectedGrade || s.grade === selectedGrade;
-      const matchesStream = isAllStreams(selectedStream) || s.stream === selectedStream;
+    const normGrade = String(selectedGrade || "").toLowerCase().trim();
+    const normStream = String(selectedStream || "all").toLowerCase().trim();
+    const normQuery = String(searchTerm || "").toLowerCase().trim();
+
+    return students.filter((s: any) => {
+      // Grade check — accepts student.grade OR student.class
+      const studentGrade = String(s?.grade || s?.class || "").toLowerCase().trim();
+      const matchesGrade = !normGrade || studentGrade === normGrade;
+
+      // Stream check — student with "all" stream always matches regardless of selection
+      const studentStream = String(s?.stream || "all").toLowerCase().trim();
+      const matchesStream =
+        normStream === "all" ||
+        studentStream === "all" ||
+        studentStream === normStream;
+
+      // Search term check — name and ID fields are all normalised
+      const studentName = String(s?.name || s?.fullName || "").toLowerCase();
+      const studentAdm = String(
+        s?.admissionNo || s?.assessmentNo || s?.admissionNumber || s?.admNo || s?.id || ""
+      ).toLowerCase();
       const matchesQuery =
-        !searchTerm ||
-        s.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.admissionNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.admNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.assessmentNo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.birthCertNo?.toLowerCase().includes(searchTerm.toLowerCase());
+        !normQuery ||
+        studentName.includes(normQuery) ||
+        studentAdm.includes(normQuery);
+
       return matchesGrade && matchesStream && matchesQuery;
     });
   }, [students, selectedGrade, selectedStream, searchTerm]);
