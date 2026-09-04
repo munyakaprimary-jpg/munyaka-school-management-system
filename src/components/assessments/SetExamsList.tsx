@@ -1,10 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import {
-  Plus,
-  Pencil,
   Trash2,
   PlayCircle,
   ClipboardCheck,
@@ -13,10 +11,8 @@ import {
   Clock,
   Award,
   ListChecks,
-  BookOpen,
   Library,
   FileQuestion,
-  Eye,
   Calendar,
   Filter,
   Grid3x3,
@@ -187,18 +183,13 @@ function statusBadge(status: ExamStatus) {
 
 // ─── Component ────────────────────────────────────────────────────────────────
 const SetExamsList: React.FC = () => {
-  const navigate = useNavigate();
   const { user } = useAuth();
   const role = (user?.role || "").toLowerCase();
   const isStudent = role === "student" || role === "parent";
-  const isTeacher =
-    role === "admin" ||
-    role === "super_admin" ||
-    role === "head_teacher" ||
-    role === "teacher";
 
   const [exams, setExams] = useState<ExamListItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<"all" | ExamStatus>("all");
   const [view, setView] = useState<"cards" | "table">("cards");
 
@@ -283,34 +274,19 @@ const SetExamsList: React.FC = () => {
     [refresh]
   );
 
-  const handleToggleStatus = useCallback(
-    (id: string) => {
-      const statusMap = loadStatusOverrides();
-      const closed = new Set(loadClosedExams());
-      const current = closed.has(id) ? "Closed" : statusMap[id] || "Published";
-
-      let next: ExamStatus;
-      if (current === "Published") next = "Draft";
-      else if (current === "Draft") next = "Closed";
-      else next = "Published";
-
-      if (next === "Closed") closed.add(id);
-      else closed.delete(id);
-      saveClosedExams(Array.from(closed));
-
-      statusMap[id] = next;
-      saveStatusOverrides(statusMap);
-
-      showSuccess(`Status changed to ${next}.`);
-      refresh();
-    },
-    [refresh]
-  );
-
   // ── Derived ───────────────────────────────────────────────────────────────
+  const categoryOptions = useMemo(() => {
+    const set = new Set<string>();
+    exams.forEach((e) => {
+      if (e.category) set.add(e.category);
+    });
+    return Array.from(set);
+  }, [exams]);
+
   const filtered = useMemo(() => {
     let list = exams;
     if (statusFilter !== "all") list = list.filter((e) => e.status === statusFilter);
+    if (categoryFilter !== "all") list = list.filter((e) => e.category === categoryFilter);
     if (searchTerm.trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter(
@@ -322,7 +298,7 @@ const SetExamsList: React.FC = () => {
       );
     }
     return list;
-  }, [exams, searchTerm, statusFilter]);
+  }, [exams, searchTerm, statusFilter, categoryFilter]);
 
   const stats = useMemo(() => {
     return {
@@ -413,83 +389,49 @@ const SetExamsList: React.FC = () => {
             </div>
           </div>
 
-          {/* Footer date + actions */}
+          {/* Footer date */}
           <div className="flex items-center gap-1 text-[10px] text-slate-400 font-semibold">
             <Calendar size={10} />
             Updated {new Date(exam.updatedAt).toLocaleDateString()}
           </div>
 
-          {/* Action buttons */}
+          {/* Action buttons — strictly: Take Exam, Grade Submissions, Delete */}
           <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-100">
-            {isStudent ? (
+            <Button
+              asChild
+              disabled={!isOpen}
+              className="flex-1 rounded-xl h-10 gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold disabled:opacity-50"
+              title={isOpen ? "Take Exam" : "This exam is not published"}
+            >
+              <Link to={`/assessments/student?id=${encodeURIComponent(exam.id)}`}>
+                <PlayCircle size={16} />
+                Take Exam
+              </Link>
+            </Button>
+
+            {!isStudent && (
               <Button
                 asChild
-                disabled={!isOpen}
-                className="flex-1 rounded-xl h-10 gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold disabled:opacity-50"
+                variant="outline"
+                className="flex-1 rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
+                title="Grade Submissions"
               >
-                <Link to={`/assessments/student?id=${encodeURIComponent(exam.id)}`}>
-                  <PlayCircle size={16} />
-                  Take Exam
+                <Link to={`/assessments/grading?id=${encodeURIComponent(exam.id)}`}>
+                  <ClipboardCheck size={16} />
+                  Grade Submissions
                 </Link>
               </Button>
-            ) : (
-              <>
-                <Button
-                  asChild
-                  disabled={!isOpen}
-                  className="flex-1 rounded-xl h-10 gap-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold disabled:opacity-50"
-                >
-                  <Link to={`/assessments/student?id=${encodeURIComponent(exam.id)}`}>
-                    <PlayCircle size={16} />
-                    Take
-                  </Link>
-                </Button>
-                <Button
-                  asChild
-                  variant="outline"
-                  className="flex-1 rounded-xl h-10 gap-2 border-indigo-200 bg-indigo-50 text-indigo-700 font-bold hover:bg-indigo-100"
-                >
-                  <Link to={`/assessments/grading?id=${encodeURIComponent(exam.id)}`}>
-                    <ClipboardCheck size={16} />
-                    Grade
-                  </Link>
-                </Button>
-              </>
             )}
 
-            {isTeacher && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  asChild
-                  className="rounded-xl h-10 w-10 text-slate-500 hover:text-violet-600 hover:bg-violet-50"
-                  title="Edit"
-                >
-                  <Link to={`/assessments/create?id=${encodeURIComponent(exam.id)}`}>
-                    <Pencil size={16} />
-                  </Link>
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleToggleStatus(exam.id)}
-                  className="rounded-xl h-10 w-10 text-slate-500 hover:text-blue-600 hover:bg-blue-50"
-                  title={`Cycle status (currently ${exam.status})`}
-                >
-                  <Eye size={16} />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleDelete(exam.id, exam.title)}
-                  className="rounded-xl h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50"
-                  title="Delete"
-                >
-                  <Trash2 size={16} />
-                </Button>
-              </>
-            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleDelete(exam.id, exam.title)}
+              className="rounded-xl h-10 w-10 text-slate-500 hover:text-red-600 hover:bg-red-50"
+              title="Delete"
+            >
+              <Trash2 size={16} />
+            </Button>
           </div>
         </CardContent>
       </Card>
@@ -592,30 +534,15 @@ const SetExamsList: React.FC = () => {
                           </Link>
                         </Button>
                       )}
-                      {isTeacher && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            asChild
-                            className="rounded-lg h-8 w-8 text-violet-600 hover:bg-violet-50"
-                            title="Edit"
-                          >
-                            <Link to={`/assessments/create?id=${encodeURIComponent(exam.id)}`}>
-                              <Pencil size={14} />
-                            </Link>
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(exam.id, exam.title)}
-                            className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50"
-                            title="Delete"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                        </>
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete(exam.id, exam.title)}
+                        className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50"
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </Button>
                     </div>
                   </td>
                 </tr>
@@ -630,33 +557,86 @@ const SetExamsList: React.FC = () => {
   // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6 pb-20 max-w-full">
-      {/* Top bar */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
-            <Library className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h1 className="text-2xl font-black tracking-tight text-slate-900">All Set Exams</h1>
-            <p className="text-sm text-slate-500 mt-0.5">
-              Manage every published, draft, and closed exam from one place.
-            </p>
-          </div>
+      {/* Top bar — header only (no Create button) */}
+      <div className="flex items-center gap-3 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
+          <Library className="w-5 h-5 text-white" />
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            asChild
-            className="rounded-xl h-11 px-6 bg-gradient-to-r from-violet-500 to-purple-600 hover:from-violet-600 hover:to-purple-700 text-white font-bold shadow-lg shadow-violet-100 gap-2"
-          >
-            <Link to="/assessments/create">
-              <Plus size={16} />
-              Create New Exam
-            </Link>
-          </Button>
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-900">All Set Exams</h1>
+          <p className="text-sm text-slate-500 mt-0.5">
+            View, filter, and manage every exam stored on this device.
+          </p>
         </div>
       </div>
 
-      {/* Stats cards */}
+      {/* Search + filter bar (top of layout) */}
+      <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
+        <CardContent className="p-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Input
+              placeholder="Search by title, subject, category…"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 h-11 rounded-xl bg-slate-50 border-none"
+            />
+          </div>
+
+          {/* Category filter */}
+          <Select value={categoryFilter} onValueChange={(v) => setCategoryFilter(v)}>
+            <SelectTrigger className="w-full sm:w-48 h-11 rounded-xl bg-slate-50 border-none font-bold">
+              <Filter size={14} className="mr-1" />
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {categoryOptions.map((c) => (
+                <SelectItem key={c} value={c}>
+                  {formatCategory(c)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {/* Status filter */}
+          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+            <SelectTrigger className="w-full sm:w-44 h-11 rounded-xl bg-slate-50 border-none font-bold">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Published">Published</SelectItem>
+              <SelectItem value="Draft">Draft</SelectItem>
+              <SelectItem value="Closed">Closed</SelectItem>
+            </SelectContent>
+          </Select>
+
+          {/* View toggle */}
+          <div className="flex rounded-xl bg-slate-100 p-1 h-11">
+            <button
+              onClick={() => setView("cards")}
+              className={cn(
+                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
+                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
+              )}
+            >
+              <Grid3x3 size={14} /> Cards
+            </button>
+            <button
+              onClick={() => setView("table")}
+              className={cn(
+                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
+                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
+              )}
+            >
+              <TableIcon size={14} /> Table
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Quick stats / status filter chips */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <button
           onClick={() => setStatusFilter("all")}
@@ -720,53 +700,6 @@ const SetExamsList: React.FC = () => {
         </button>
       </div>
 
-      {/* Search + filter bar */}
-      <Card className="border border-slate-100 shadow-sm rounded-2xl overflow-hidden">
-        <CardContent className="p-4 flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <Input
-              placeholder="Search by title, subject, category…"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-9 h-11 rounded-xl bg-slate-50 border-none"
-            />
-          </div>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-            <SelectTrigger className="w-full sm:w-44 h-11 rounded-xl bg-slate-50 border-none font-bold">
-              <Filter size={14} className="mr-1" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Statuses</SelectItem>
-              <SelectItem value="Published">Published</SelectItem>
-              <SelectItem value="Draft">Draft</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
-          <div className="flex rounded-xl bg-slate-100 p-1 h-11">
-            <button
-              onClick={() => setView("cards")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "cards" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
-              )}
-            >
-              <Grid3x3 size={14} /> Cards
-            </button>
-            <button
-              onClick={() => setView("table")}
-              className={cn(
-                "flex-1 sm:flex-initial px-3 rounded-lg flex items-center justify-center gap-1.5 text-xs font-bold transition-all",
-                view === "table" ? "bg-white shadow-sm text-indigo-600" : "text-slate-500"
-              )}
-            >
-              <TableIcon size={14} /> Table
-            </button>
-          </div>
-        </CardContent>
-      </Card>
-
       {/* Empty state */}
       {exams.length === 0 ? (
         <Card className="border-2 border-dashed border-slate-200 rounded-2xl">
@@ -775,21 +708,10 @@ const SetExamsList: React.FC = () => {
               <Library className="w-8 h-8 text-slate-300" />
             </div>
             <h2 className="text-lg font-bold text-slate-700 mb-1">No exams yet</h2>
-            <p className="text-sm text-slate-400 max-w-sm mb-5">
-              Create your first exam using the Exam Creator, or import questions in bulk via CSV.
+            <p className="text-sm text-slate-400 max-w-sm">
+              No set exams are currently stored on this device. Create exams from the Exam Creator
+              or import them via CSV, then they will appear here automatically.
             </p>
-            <div className="flex flex-wrap gap-2 justify-center">
-              <Button asChild className="rounded-xl gap-2 bg-gradient-to-r from-violet-500 to-purple-600">
-                <Link to="/assessments/create">
-                  <Plus size={16} /> Create New Exam
-                </Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-xl gap-2 border-indigo-200 bg-indigo-50 text-indigo-700">
-                <Link to="/assessments/import">
-                  <BookOpen size={16} /> Bulk Import
-                </Link>
-              </Button>
-            </div>
           </CardContent>
         </Card>
       ) : filtered.length === 0 ? (
@@ -803,6 +725,7 @@ const SetExamsList: React.FC = () => {
               onClick={() => {
                 setSearchTerm("");
                 setStatusFilter("all");
+                setCategoryFilter("all");
               }}
               className="rounded-xl mt-3"
             >
