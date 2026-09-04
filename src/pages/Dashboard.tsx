@@ -15,6 +15,7 @@ import { formatRelativeTime } from "@/services/activityLog";
 import { checkServerConnection, subscribeToConnectionStatus } from "@/services/SyncEngine";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
 import type { Assessment, AssessmentResult, StudentSubmission } from "@/types/questions";
+import type { LucideIcon } from "lucide-react";
 import {
   AlertCircle,
   AlertTriangle,
@@ -41,9 +42,8 @@ import {
   UsersRound,
   Wifi,
   WifiOff,
-  XCircle,
+  XCircle
 } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 /** Identifiers for the dashboard widgets used by the RBAC matrix. */
 export type WidgetKey =
