@@ -18,6 +18,8 @@ import {
   Grid3x3,
   Table as TableIcon,
   X,
+  Download,
+  FileText,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
@@ -337,19 +339,6 @@ function injectGlobalPrintStyles() {
         document.head.appendChild(s);
       }
 
-// ─── Download helpers ─────────────────────────────────────────────────────────
-function downloadHTML(html: string, filename: string) {
-  const blob = new Blob([html], { type: "text/html" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
 // ─── Printable Question Row ──────────────────────────────────────────────────
 function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
   if (q.type === "mcq" && q.options) {
@@ -514,20 +503,13 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
     if (!exam || !printPaperRef.current) return;
     setIsPdfGenerating(true);
     try {
-      const filename = `${exam.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`;
+      const filename = `${exam.title.replace(/\s+/g, "_")}_Paper.pdf`;
       const opt = {
-        margin: 0,
+        margin: 10,
         filename,
         image: { type: "jpeg", quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          // Render only the paper element (ignore off-screen / clipped areas)
-          windowWidth: 800,
-        },
-        jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
-        pagebreak: { mode: ["avoid-all", "css-and-library"] },
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
       };
       await html2pdf().set(opt).from(printPaperRef.current).save();
       showSuccess("Exam paper saved as PDF.");
@@ -537,47 +519,6 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
     } finally {
       setIsPdfGenerating(false);
     }
-  }, [exam]);
-
-  // ── Download HTML (fallback) ───────────────────────────────────────────────
-  const handleDownloadHTML = useCallback(() => {
-    if (!exam) return;
-    const today = formatDate(new Date().toISOString());
-    const totalMarks = exam.questions.reduce((s, q) => s + q.points, 0);
-
-    const questionsHTML = exam.questions.map((q, i) => {
-      if (q.type === "mcq" && q.options) {
-        const opts = q.options.map((o) =>
-          `<div style="display:flex;gap:8px"><span style="font-weight:bold;min-width:18px">${o.label}.</span><span>${o.text || "(no text)"}</span></div>`
-        ).join("");
-        return `<div style="margin-bottom:16px">
-          <div style="display:flex;gap:8px"><span style="font-weight:bold">${i + 1}.</span><span>${q.prompt}</span><span style="font-size:10pt;color:#555">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
-          <div style="padding-left:28px;display:flex;flex-direction:column;gap:4px">${opts}</div>
-          <div style="margin-top:8px;padding-left:28px;font-size:10pt;color:#555;border-top:1px dashed #ccc;padding-top:4px"><strong>Student's Answer:</strong> _______________</div>
-        </div>`;
-      }
-      return `<div style="margin-bottom:16px">
-        <div style="display:flex;gap:8px"><span style="font-weight:bold">${i + 1}.</span><span>${q.prompt}</span><span style="font-size:10pt;color:#555">[${q.points} ${q.points === 1 ? "mark" : "marks"}]</span></div>
-        <div style="margin-top:8px;margin-left:28px;height:60px;border-bottom:1px solid #1a1a1a"></div>
-      </div>`;
-    }).join("<hr style='border:none;border-top:1px solid #e0e0e0;margin:12px 0'/>");
-
-    const html = `<!DOCTYPE html>
-<html lang="en"><head><meta charset="UTF-8"/>
-<style>body{font-family:'Courier New',monospace;padding:40px 48px;max-width:850px;margin:0 auto;font-size:12pt}table{width:100%;border-collapse:collapse;margin-bottom:16px}td{padding:4px 8px;border:1px solid #1a1a1a}.lbl{font-weight:bold;background:#f5f5f5}hr{border:none;border-top:1px solid #e0e0e0;margin:12px 0}</style>
-</head><body>
-<div style="text-align:center;font-size:11pt;color:#555;border-bottom:2px solid #1a1a1a;padding-bottom:6px;margin-bottom:4px">Munyaka E-Learning Platform — Assessment Paper</div>
-<div style="text-align:center;font-size:16pt;font-weight:bold;text-transform:uppercase;margin:8px 0 4px">${exam.title}</div>
-<div style="text-align:center;font-size:10pt;color:#444;margin-bottom:16px">${exam.subject} | ${exam.classLevel} | ${formatCategory(exam.category)} | Duration: ${exam.duration} minutes</div>
-<table><tr><td class="lbl">Learner Name:</td><td style="width:38%"></td><td class="lbl">Assessment No. / Birth Cert No.:</td><td></td></tr><tr><td class="lbl">Grade / Class:</td><td>${exam.classLevel}</td><td class="lbl">Date:</td><td>${today}</td></tr><tr><td class="lbl">Subject:</td><td>${exam.subject}</td><td class="lbl">Total Marks:</td><td>${totalMarks}</td></tr></table>
-<div style="background:#f9f9f9;border:1px solid #ccc;border-left:4px solid #1a1a1a;padding:8px 12px;font-size:10pt;margin-bottom:20px"><strong>Instructions:</strong><ul style="margin:4px 0 0 20px"><li>Write your name, Assessment No. / Birth Certificate No., and date at the top of this paper.</li><li>Answer all questions. For Multiple Choice, circle or tick the correct letter.</li><li>For Structured questions, write your answers in the spaces provided.</li><li>Show all working where necessary.</li><li>Total time: ${exam.duration} minutes.</li></ul></div>
-<div style="font-weight:bold;font-size:11pt;margin-bottom:8px;text-transform:uppercase;border-bottom:1px solid #1a1a1a;padding-bottom:2px">Questions</div>
-${questionsHTML}
-<div style="margin-top:24px;border-top:1px solid #1a1a1a;padding-top:8px;font-size:9pt;color:#666;display:flex;justify-content:space-between"><span>${exam.title} — ${exam.subject}</span><span>© Munyaka E-Learning Platform</span></div>
-</body></html>`;
-
-    downloadHTML(html, `${exam.title.replace(/[^a-z0-9]/gi, "_")}_Paper.html`);
-    showSuccess("Exam paper downloaded as HTML file.");
   }, [exam]);
 
   const totalMarks = useMemo(
@@ -740,13 +681,12 @@ ${questionsHTML}
           {exam && (
             <>
               <Button
-                variant="outline"
-                onClick={handleDownloadHTML}
-                className="rounded-xl gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
-                title="Download as HTML file"
+                onClick={handleDownloadPDF}
+                disabled={isPdfGenerating}
+                className="rounded-xl gap-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 font-bold"
               >
-                <FileDown size={15} />
-                Download HTML
+                <Download size={15} />
+                {isPdfGenerating ? "Generating..." : "Download PDF"}
               </Button>
               <Button
                 onClick={handlePrint}
@@ -944,10 +884,11 @@ const SetExamsList: React.FC = () => {
               document.body.appendChild(paperEl);
               import("html2pdf.js").then(({ default: html2pdf }) => {
                 const opt = {
-                  margin: 0, filename: `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`,
+                  margin: 10,
+                  filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
                   image: { type: "jpeg", quality: 0.98 },
-                  html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
-                  jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+                  html2canvas: { scale: 2 },
+                  jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                 };
                 html2pdf().set(opt).from(paperEl).save().then(() => {
                   showSuccess("Exam paper saved as PDF.");
@@ -960,8 +901,8 @@ const SetExamsList: React.FC = () => {
             }}
             className="flex-1 rounded-xl h-10 gap-2 border-slate-200 text-slate-700 font-bold hover:bg-slate-50"
           >
-            <Printer size={15} />
-            Print
+            <Download size={15} />
+            Download PDF
           </Button>
           <Button
             variant="ghost"
@@ -1027,10 +968,11 @@ const SetExamsList: React.FC = () => {
                           el.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
                           document.body.appendChild(el);
                           const opt = {
-                            margin: 0, filename: `${loaded.title.replace(/[^a-z0-9]/gi, "_")}_Paper.pdf`,
+                            margin: 10,
+                            filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
                             image: { type: "jpeg", quality: 0.98 },
-                            html2canvas: { scale: 2, useCORS: true, windowWidth: 800 },
-                            jsPDF: { unit: "pt", format: "a4", orientation: "portrait" },
+                            html2canvas: { scale: 2 },
+                            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                           };
                           html2pdf().set(opt).from(el).save().then(() => {
                             showSuccess("PDF saved.");
@@ -1039,7 +981,7 @@ const SetExamsList: React.FC = () => {
                         });
                       }}
                       className="rounded-lg h-8 w-8 text-slate-600 hover:bg-slate-100" title="Download PDF">
-                      <Printer size={14} />
+                      <Download size={14} />
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => handleDelete(exam.id, exam.title)}
                       className="rounded-lg h-8 w-8 text-red-600 hover:bg-red-50" title="Delete">
