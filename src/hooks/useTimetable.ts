@@ -130,9 +130,14 @@ export function useTimetable() {
   }, [grades, selectedGrade]);
 
   const [timetables, setTimetables] = useState<Record<string, { timeSlots: TimeSlot[]; entries: TimetableEntry[] }>>(() => {
-    if (typeof window === 'undefined') return {};
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) return JSON.parse(stored);
+    try {
+      const ls = window.localStorage;
+      const stored = ls?.getItem(STORAGE_KEY);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed && typeof parsed === 'object') return parsed;
+      }
+    } catch { /* ignore corrupt data */ }
     return {};
   });
 
@@ -143,7 +148,11 @@ export function useTimetable() {
       const entries = getDefaultEntries(timeSlots);
       setTimetables(prev => {
         const updated = { ...prev, [gradeId]: { timeSlots, entries } };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+        try {
+          window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+        } catch (err) {
+          console.error('[useTimetable] Failed to persist timetable:', err);
+        }
         return updated;
       });
     }
@@ -196,7 +205,11 @@ export function useTimetable() {
         entries: paired.map(p => p.entry),
       };
       const updated = { ...prev, [selectedGrade]: updatedTimetable };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('[useTimetable] Failed to persist addTimeSlot:', err);
+      }
       return updated;
     });
   }, [selectedGrade]);
@@ -219,7 +232,11 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('[useTimetable] Failed to persist updateTimeSlot:', err);
+      }
       return updated;
     });
   }, [selectedGrade]);
@@ -244,7 +261,11 @@ export function useTimetable() {
         return original;
       });
       const updated = { ...prev, [selectedGrade]: result };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('[useTimetable] Failed to persist updateSlotTimes:', err);
+      }
       return updated;
     });
   }, [selectedGrade]);
@@ -262,7 +283,11 @@ export function useTimetable() {
           entries: current.entries.filter((_, i) => i !== slotIndex),
         },
       };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('[useTimetable] Failed to persist deleteTimeSlot:', err);
+      }
       return updated;
     });
   }, [selectedGrade]);
@@ -281,7 +306,11 @@ export function useTimetable() {
         return entry;
       });
       const updated = { ...prev, [selectedGrade]: { ...current, entries: updatedEntries } };
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      try {
+        window.localStorage?.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (err) {
+        console.error('[useTimetable] Failed to persist setLesson:', err);
+      }
       return updated;
     });
   }, [selectedGrade]);

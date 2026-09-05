@@ -12,17 +12,17 @@ const dismissAllBeforeNew = () => {
   toast.dismiss();
 };
 
-export const showSuccess = (message: string) => {
+export const showSuccess = (message: string, duration: number = DEFAULT_DURATION_MS) => {
   dismissAllBeforeNew();
   toast.success(message, {
-    duration: DEFAULT_DURATION_MS,
+    duration,
   });
 };
 
-export const showError = (message: string) => {
+export const showError = (message: string, duration: number = DEFAULT_DURATION_MS) => {
   dismissAllBeforeNew();
   toast.error(message, {
-    duration: DEFAULT_DURATION_MS,
+    duration,
   });
 };
 

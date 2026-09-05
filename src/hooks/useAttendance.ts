@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
 import { downloadCSV } from '@/utils/downloadHelper';
-import { lsSet, notifyDataChanged, lsRead, tryParse } from '@/utils/storage';
-import { getLocalStorage } from '@/utils/storageUtils';
+import { lsSet, notifyDataChanged, lsRead } from '@/utils/storage';
+import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 
 interface SessionAttendance {
   status: string;
@@ -107,16 +107,16 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   const [isRegisterSubmitted, setIsRegisterSubmitted] = useState(false);
   
   useEffect(() => {
-    const stored = localStorage.getItem(SUBMISSION_STATUS_KEY);
-    if (stored) {
-      try {
-        const submissionData = JSON.parse(stored);
+    const ls = getLocalStorage();
+    if (ls) {
+      const stored = ls.getItem(SUBMISSION_STATUS_KEY);
+      const submissionData = tryParse<Record<string, boolean>>(stored);
+      if (submissionData) {
         const key = `${selectedClass}_${selectedStream}_${selectedDate}`;
-        if (submissionData?.[key]) {
+        if (submissionData[key]) {
           setIsRegisterSubmitted(true);
+          return;
         }
-      } catch (e) {
-        console.error("Error parsing submission status:", e);
       }
     }
     setIsRegisterSubmitted(false);

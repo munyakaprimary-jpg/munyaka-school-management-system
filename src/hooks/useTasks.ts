@@ -1,14 +1,17 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Task, Status, Priority } from '../types/tasks';
+import { lsRead, safeWrite } from '@/utils/storageUtils';
+
+const STORAGE_KEY = 'taskflow_tasks';
 
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('taskflow_tasks');
-    return saved ? JSON.parse(saved) : [];
+    const saved = lsRead<Task[]>(STORAGE_KEY, []);
+    return Array.isArray(saved) ? saved : [];
   });
 
   useEffect(() => {
-    localStorage.setItem('taskflow_tasks', JSON.stringify(tasks));
+    safeWrite(STORAGE_KEY, tasks);
   }, [tasks]);
 
   const addTask = (task: Omit<Task, 'id' | 'createdAt'>) => {

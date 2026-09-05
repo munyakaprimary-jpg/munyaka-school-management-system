@@ -25,7 +25,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { getLocalStorage } from '@/utils/storageUtils';
+import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -54,11 +54,6 @@ interface LiveRegisterEntry {
 const ATTENDANCE_V2_PREFIX = 'munyaka_attendance_v2_';
 const ATTENDANCE_RECORDS_KEY = 'munyaka_attendance_records';
 const STUDENTS_KEY = 'school_learners_data';
-
-const safeParse = <T>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try { return JSON.parse(raw) as T; } catch { return null; }
-};
 
 const normalizeStream = (s: string): string =>
   s.trim().toLowerCase().replace(/\s+/g, '');
@@ -114,7 +109,7 @@ export const useLiveStreamAttendance = (
 
       // ── 1. Load active students ──────────────────────────────────────────────
       const studentsRaw = ls.getItem(STUDENTS_KEY);
-      const students = safeParse<Array<{
+      const students = tryParse<Array<{
         id: string;
         name?: string;
         grade?: string;
@@ -161,7 +156,7 @@ export const useLiveStreamAttendance = (
         // Build the storage key — stream in the key uses underscores (no spaces)
         const v2Key = buildV2Key(grade, stream, selectedDate);
         const registerRaw = ls.getItem(v2Key);
-        const register = safeParse<LiveRegisterEntry>(registerRaw);
+        const register = tryParse<LiveRegisterEntry>(registerRaw);
 
         let morningPresent = 0;
         let afternoonPresent = 0;
@@ -182,7 +177,7 @@ export const useLiveStreamAttendance = (
 
           // Also check the master record map for session-level completeness
           const masterRaw = ls.getItem(ATTENDANCE_RECORDS_KEY);
-          const master = safeParse<Record<string, LiveRegisterEntry>>(masterRaw);
+          const master = tryParse<Record<string, LiveRegisterEntry>>(masterRaw);
           const masterKey = `${grade}_${stream}_${selectedDate}`;
           const masterEntry = master?.[masterKey];
 
@@ -217,7 +212,7 @@ export const useLiveStreamAttendance = (
             const afternoonKey = buildV2Key(grade, stream, `${selectedDate}_afternoon`);
             const afternoonRaw = ls.getItem(afternoonKey);
             if (afternoonRaw) {
-              const afternoonReg = safeParse<LiveRegisterEntry>(afternoonRaw);
+              const afternoonReg = tryParse<LiveRegisterEntry>(afternoonRaw);
               if (afternoonReg && afternoonReg.date === selectedDate) {
                 afternoonCompleted = true;
                 for (const [sid, status] of Object.entries(afternoonReg)) {

@@ -1,3 +1,5 @@
+import { showError } from './toast';
+
 /**
  * storageUtils.ts — Shared safe storage primitives and quota error handling
  *
@@ -45,12 +47,10 @@ export function isQuotaExceeded(err: unknown): boolean {
  */
 export function handleQuotaError(key: string, operation = 'save'): void {
   try {
-    // Dynamic import to avoid bundling toast utility into core storage layer
-    const { showError } = require('./toast');
     showError(
       `Storage is full. Could not ${operation} "${key}". ` +
         'Please export your data and clear old records to free up space.',
-      { duration: 8000 }
+      8000
     );
   } catch {
     // Fallback: at least log to console so admins know what happened

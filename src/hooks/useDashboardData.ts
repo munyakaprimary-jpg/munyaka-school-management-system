@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
-import { getLocalStorage, safeParse } from '@/utils/storage';
+import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -72,7 +72,8 @@ const getActiveSchoolId = (): string | null => {
     const ls = getLocalStorage();
     const direct = ls?.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID) ?? null;
     if (direct) return direct;
-    const profile = safeParse<{ schoolId?: string }>(STORAGE_KEYS.SCHOOL_PROFILE);
+    const profileRaw = ls?.getItem(STORAGE_KEYS.SCHOOL_PROFILE) ?? null;
+    const profile = tryParse<{ schoolId?: string }>(profileRaw);
     return profile?.schoolId ?? null;
   } catch {
     return null;
@@ -127,7 +128,8 @@ const computeStats = (): DashboardStats => {
     const todayStr = getTodayDate();
 
     // ── 1. Learners ─────────────────────────────────────────────────────────
-    const learnersFromLS = safeParse<Learner[]>(STORAGE_KEYS.LEARNERS);
+    const lsForRead = getLocalStorage();
+    const learnersFromLS = tryParse<Learner[]>(lsForRead?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
     let learners: Learner[] = [];
     if (Array.isArray(learnersFromLS) && learnersFromLS.length > 0) {
       learners = learnersFromLS;
@@ -144,11 +146,11 @@ const computeStats = (): DashboardStats => {
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
     let teachers: Teacher[] = [];
-    const teachersFromLS = safeParse<Teacher[]>(STORAGE_KEYS.TEACHERS);
+    const teachersFromLS = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
     if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
       teachers = teachersFromLS;
     } else {
-      const teachersFromFallback = safeParse<Teacher[]>(STORAGE_KEYS.TEACHERS_FALLBACK);
+      const teachersFromFallback = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
       if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
         teachers = teachersFromFallback;
       } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
@@ -168,7 +170,7 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 3. Today's attendance % — deduplicated by studentId, capped at 100% ─
-    const flatAttendance = safeParse<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE) ?? [];
+    const flatAttendance = tryParse<AttendanceLog[]>(lsForRead?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null) ?? [];
     const presentStudentIds = new Set<string>();
     const ls = getLocalStorage();
 
@@ -189,9 +191,9 @@ const computeStats = (): DashboardStats => {
           try {
             const raw = ls.getItem(key);
             if (!raw) return;
-            // Read the raw string and parse it directly here to avoid double-fetching
-            const record = safeParse<Record<string, any>>(key);
-            if (!record) return;
+            // Parse the raw string directly (avoid re-keying safeParse)
+            const record = JSON.parse(raw) as Record<string, any> | null;
+            if (!record || typeof record !== 'object') return;
             Object.values(record).forEach((entry: any) => {
               if (!entry || typeof entry !== 'object') return;
               if (entry?.date && entry?.date !== todayStr) return;

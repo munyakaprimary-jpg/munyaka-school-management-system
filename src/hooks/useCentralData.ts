@@ -8,7 +8,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
-import { getLocalStorage } from '@/utils/storageUtils';
+import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,15 +74,6 @@ const STORAGE_KEYS = {
   SCHOOL_PROFILE:       'munyaka_school_profile',
 } as const;
 
-const safeParse = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-};
-
 const getTodayDate = (): string => {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -133,7 +124,8 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 // ─── Core data selectors (memoized) ───────────────────────────────────────────
 
 const getLearners = (): Learner[] => {
-  const fromLS = safeParse<Learner[]>(localStorage?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
+  const ls = getLocalStorage();
+  const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
   const seedStudents = INITIAL_SEED_DATA?.students;
   if (Array.isArray(seedStudents) && seedStudents.length > 0) {
@@ -143,9 +135,10 @@ const getLearners = (): Learner[] => {
 };
 
 const getTeachers = (): Teacher[] => {
-  const fromLS = safeParse<Teacher[]>(localStorage?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
+  const ls = getLocalStorage();
+  const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  const fromFallback = safeParse<Teacher[]>(localStorage?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
+  const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
   const seedStaff = INITIAL_SEED_DATA?.staff;
   if (Array.isArray(seedStaff) && seedStaff.length > 0) {
@@ -159,9 +152,8 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const activeSchoolId = getActiveSchoolId();
 
   // 1. Flat attendance log
-  const flat = safeParse<AttendanceLog[]>(
-    getLocalStorage()?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null,
-    []
+  const flat = tryParse<AttendanceLog[]>(
+    getLocalStorage()?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null
   );
   if (Array.isArray(flat) && flat.length > 0) {
     return flat.filter((a) => {
@@ -182,7 +174,7 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
       try {
         const raw = ls.getItem(key);
         if (!raw) return;
-        const record = safeParse<Record<string, any>>(raw, null);
+        const record = tryParse<Record<string, any>>(raw);
         if (!record || typeof record !== 'object') return;
         Object.values(record).forEach((entry: any) => {
           if (!entry || typeof entry !== 'object') return;
