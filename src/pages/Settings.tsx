@@ -231,7 +231,7 @@ const Settings = () => {
     if (typeof window !== 'undefined') {
       const params = new URLSearchParams(window.location.search);
       const tab = params.get('tab');
-      if (['general', 'academic', 'roles', 'security'].includes(tab ?? '')) return tab as string;
+      if (['general', 'academic', 'roles', 'security', 'database'].includes(tab ?? '')) return tab as string;
     }
     return 'roles';
   });
@@ -1113,11 +1113,27 @@ const Settings = () => {
         url.searchParams.set('tab', tab);
         window.history.replaceState({}, '', url.toString());
       }} className="w-full">
-        <TabsList className="bg-white p-1 rounded-xl md:rounded-2xl shadow-sm border h-12 md:h-14 mb-6 md:mb-8 flex overflow-x-auto scrollbar-hide gap-1">
-          <TabsTrigger value="general" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">General</TabsTrigger>
-          <TabsTrigger value="academic" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Academic Setup</TabsTrigger>
-          <TabsTrigger value="roles" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Users & Roles</TabsTrigger>
-          <TabsTrigger value="security" className="rounded-lg md:rounded-xl px-3 md:px-6 lg:px-8 h-full font-bold text-xs md:text-sm whitespace-nowrap">Security</TabsTrigger>
+        <TabsList className="bg-white p-1 rounded-xl md:rounded-2xl shadow-sm border h-auto md:h-14 mb-6 md:mb-8 flex overflow-x-auto scrollbar-hide gap-1">
+          <TabsTrigger value="general" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
+            <Settings2 size={18} className="shrink-0" />
+            <span>School Profile</span>
+          </TabsTrigger>
+          <TabsTrigger value="academic" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
+            <ShieldCheck size={18} className="shrink-0" />
+            <span>Academic Setup</span>
+          </TabsTrigger>
+          <TabsTrigger value="roles" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
+            <Users size={18} className="shrink-0" />
+            <span>RBAC Roles</span>
+          </TabsTrigger>
+          <TabsTrigger value="security" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
+            <Key size={18} className="shrink-0" />
+            <span>Security & Auth</span>
+          </TabsTrigger>
+          <TabsTrigger value="database" className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap">
+            <Database size={18} className="shrink-0" />
+            <span>Database & Backup</span>
+          </TabsTrigger>
         </TabsList>
 
         <TabsContent value="general" className="space-y-6">
@@ -1547,6 +1563,71 @@ const Settings = () => {
           </Card>
 
           {/* Database Backup / Restore — quick access from System Configuration */}
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl shrink-0">
+                  <Database size={18} className="md:hidden" />
+                  <Database size={24} className="hidden md:inline" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Database Backup &amp; Restore</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Export all school data to a JSON file, or import a backup to move data between the web app and the Android APK.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-0 pt-4 md:pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                      <Download size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Backup / Export Database (JSON)</p>
+                      <p className="text-xs text-slate-500">Download a complete JSON snapshot of all local data.</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      try {
+                        downloadDatabaseBackup();
+                        showSuccess('Database backup downloaded successfully!');
+                      } catch {
+                        showError('Failed to export database.');
+                      }
+                    }}
+                    className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
+                  >
+                    <Download size={14} /> Export Database (JSON)
+                  </Button>
+                </div>
+
+                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                      <Upload size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Restore / Import Database (JSON)</p>
+                      <p className="text-xs text-slate-500">Replace local data with a previously exported backup.</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/system-management')}
+                    variant="outline"
+                    className="w-full h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-100 font-bold gap-2"
+                  >
+                    <Upload size={14} /> Open Restore Wizard
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="database" className="space-y-6">
           <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
             <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
               <div className="flex items-center gap-3">
