@@ -121,7 +121,7 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
 
 /** Normalize email/username for consistent storage & lookup */
 const normalizeEmail = (email: string): string => {
-  return email.trim().toLowerCase();
+  return String(email || '').trim().toLowerCase();
 };
 
 const initializeUsersStorage = () => {
@@ -245,7 +245,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     // Accept email OR staffId as the username field; normalise for lookup
     const normalizedEmail = normalizeEmail(email);
-    const normalizedStaffId = email.trim().toLowerCase();
+    const normalizedStaffId = String(email || '').trim().toLowerCase();
     
     initializeUsersStorage();
 
@@ -270,7 +270,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
             const isAdminUser = normalizedRole === 'owner' || normalizedRole === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
-        const entered = pass.trim();
+        const entered = String(pass || '').trim();
 
         // Debug logging (development only) so any future mismatch is
         // easy to diagnose from the browser console.
@@ -368,11 +368,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const newUserId = `user-${Date.now()}`;
     const newUser = {
       id: newUserId,
-      name: userData.fullName.trim(),
+      name: String(userData.fullName || '').trim(),
       email: normalizedEmail,
       phone: userData.phone,
       role: userData.role,
-      avatar: userData.fullName.substring(0, 2).toUpperCase(),
+      avatar: String(userData.fullName || '').substring(0, 2).toUpperCase(),
       password: userData.password,
       isActive: true, // Explicit activation
       emailConfirmed: true, // Explicit verification
