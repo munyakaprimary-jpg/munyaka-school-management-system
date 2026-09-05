@@ -317,7 +317,7 @@ export function useVideoSearch(
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
 
-    if (!searchQuery.trim()) {
+    if (!String(searchQuery || '').trim()) {
       setYoutubeResults([]);
       setYoutubeError(null);
       setYoutubeLoading(false);
