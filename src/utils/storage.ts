@@ -19,7 +19,15 @@
 
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
-import { safeParse, isQuotaExceeded, handleQuotaError } from './storageUtils';
+import { safeParse, isQuotaExceeded, handleQuotaError, getLocalStorage } from './storageUtils';
+
+/**
+ * Re-export the safe localStorage accessor so existing imports of
+ * `getLocalStorage` from `@/utils/storage` keep working. The canonical
+ * implementation lives in `./storageUtils` — this file re-exports it
+ * as a convenience for callers that already depend on `@/utils/storage`.
+ */
+export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
