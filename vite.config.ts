@@ -15,15 +15,48 @@ export default defineConfig(() => ({
     },
   },
   build: {
+    // Raise the warning threshold to accommodate the heavy vendor stack used
+    // for local / Capacitor builds (recharts, pdfjs, sql.js, lucide).
+    chunkSizeWarningLimit: 2000,
     rollupOptions: {
       output: {
-        manualChunks: {
-          // React core packages
-          "vendor-react": ["react", "react-dom", "react-router-dom"],
-          // Lucide icons library
-          "vendor-icons": ["lucide-react"],
-          // PDF parsing and processing libraries
-          "vendor-pdf": ["pdfjs-dist"],
+        manualChunks(id) {
+          if (id.includes("node_modules")) {
+            // Charting libs (recharts + d3 ecosystem)
+            if (
+              id.includes("recharts") ||
+              id.includes("d3-") ||
+              id.includes("/d3/")
+            ) {
+              return "vendor-charts";
+            }
+            // Icon set
+            if (id.includes("lucide-react")) {
+              return "vendor-icons";
+            }
+            // React core
+            if (
+              id.includes("react-router") ||
+              id.includes("react-dom") ||
+              id.includes("/react/")
+            ) {
+              return "vendor-core";
+            }
+            // PDF parsing/processing
+            if (id.includes("pdfjs-dist")) {
+              return "vendor-pdf";
+            }
+            // Capacitor (mobile bridge)
+            if (id.includes("@capacitor")) {
+              return "vendor-capacitor";
+            }
+            // SQL.js (offline DB)
+            if (id.includes("sql.js") || id.includes("sqljs")) {
+              return "vendor-sql";
+            }
+            // Everything else from node_modules
+            return "vendor-libs";
+          }
         },
       },
     },
