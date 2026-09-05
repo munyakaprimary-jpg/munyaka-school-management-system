@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -73,6 +74,27 @@ import AuthGate from "./components/AuthGate";
 const queryClient = new QueryClient();
 
 /**
+ * Loading fallback shown before React has fully mounted.
+ * Critical for Android WebView: prevents the blank white screen
+ * when the WebView tries to paint before JS bundle is parsed.
+ */
+const LoadingFallback = () => (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      alignItems: "center",
+      height: "100vh",
+      background: "#ffffff",
+    }}
+  >
+    <p style={{ color: "#333333", fontFamily: "sans-serif" }}>
+      Loading Munyaka App...
+    </p>
+  </div>
+);
+
+/**
  * App component.
  *
  * Provider hierarchy (top → bottom):
@@ -100,18 +122,34 @@ const queryClient = new QueryClient();
  * corrupted `munyaka_session` JSON value) are caught and the user sees
  * the fallback screen instead of a white screen / app crash.
  */
-const App = () => (
-  <AppErrorBoundary>
-    <QueryClientProvider client={queryClient}>
-      <BrowserRouter>
-        <AuthProvider>
-          <AuthGate>
-            <NotificationProvider>
-              <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-                <TooltipProvider>
-                  <Toaster />
-                  <Sonner />
-                  <Routes>
+const App = () => {
+  // Guard: ensure component tree is fully mounted before rendering the app.
+  // This prevents the blank white screen on Android WebView where the
+  // initial paint can occur before React finishes hydrating.
+  const [isReady, setIsReady] = useState(false);
+
+  useEffect(() => {
+    // Give React time to settle the component tree and local state/storage
+    // before painting the actual application UI.
+    setIsReady(true);
+  }, []);
+
+  if (!isReady) {
+    return <LoadingFallback />;
+  }
+
+  return (
+    <AppErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <AuthProvider>
+            <AuthGate>
+              <NotificationProvider>
+                <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                  <TooltipProvider>
+                    <Toaster />
+                    <Sonner />
+                    <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 
@@ -183,15 +221,16 @@ const App = () => (
                                                 <Route path="/lan-config" element={<ProtectedRoute allowedRoles={['owner']} blockedRoles={['admin', 'super_admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student']}><AppUnlock><Layout><LANServerConfig /></Layout></AppUnlock></ProtectedRoute>} />
                 
                                 <Route path="*" element={<NotFound />} />
-              </Routes>
-                </TooltipProvider>
-              </ThemeProvider>
-            </NotificationProvider>
-          </AuthGate>
-        </AuthProvider>
-      </BrowserRouter>
-    </QueryClientProvider>
-  </AppErrorBoundary>
-);
-
-export default App;
+                                              </Routes>
+                                                </TooltipProvider>
+                                              </ThemeProvider>
+                                            </NotificationProvider>
+                                          </AuthGate>
+                                        </AuthProvider>
+                                      </BrowserRouter>
+                                    </QueryClientProvider>
+                                  </AppErrorBoundary>
+                                  );
+                                };
+                                
+                                export default App;

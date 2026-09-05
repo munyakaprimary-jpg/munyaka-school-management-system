@@ -10,16 +10,18 @@
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>Munyaka School Portal</title>
-    <link rel="manifest" href="/manifest.json" />
+    <!-- Use relative paths so assets resolve correctly under Capacitor's file:// URL -->
+    <link rel="manifest" href="./manifest.json" />
   </head>
 
   <body class="overflow-x-hidden antialiased select-none touch-manipulation">
     <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Relative module path resolves correctly under file:// in Android APK -->
+    <script type="module" src="./src/main.tsx"></script>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').then(registration => {
+          navigator.serviceWorker.register('./sw.js').then(registration => {
             console.log('SW registered: ', registration);
           }).catch(registrationError => {
             console.log('SW registration failed: ', registrationError);
