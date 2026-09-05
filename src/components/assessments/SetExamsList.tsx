@@ -372,6 +372,8 @@ function injectGlobalPrintStyles() {
           .pp-q-n { font-weight: bold; min-width: 20px; }
           .pp-q-p { flex: 1; }
           .pp-q-pt { font-size: 10pt; color: #555; white-space: nowrap; }
+          .pp-q-img { text-align: center; margin: 8px 0; }
+          .pp-q-img img { max-height: 200px; max-width: 100%; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
           .pp-opt-lst { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
           .pp-opt-row { display: flex; gap: 8px; }
           .pp-opt-lbl { font-weight: bold; min-width: 18px; }
@@ -395,6 +397,11 @@ function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
           <span className="pp-q-p">{q.prompt}</span>
           <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
         </div>
+        {q.imageUrl && (
+          <div className="pp-q-img">
+            <img src={q.imageUrl} alt="Question diagram" />
+          </div>
+        )}
         <div className="pp-opt-lst">
           {q.options.map((opt) => (
             <div key={opt.id} className="pp-opt-row">
@@ -417,6 +424,11 @@ function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
         <span className="pp-q-p">{q.prompt}</span>
         <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
       </div>
+      {q.imageUrl && (
+        <div className="pp-q-img">
+          <img src={q.imageUrl} alt="Question diagram" />
+        </div>
+      )}
       {q.modelAnswer && (
         <div className="pp-mod-ans">
           <strong>Model Answer:</strong> {q.modelAnswer}
@@ -718,6 +730,16 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                             )}
                           </div>
                         ))}
+                      </div>
+                    )}
+
+                    {q.imageUrl && (
+                      <div className="px-5 py-4 flex justify-center bg-white">
+                        <img
+                          src={q.imageUrl}
+                          alt="Question diagram"
+                          className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                        />
                       </div>
                     )}
 

@@ -18,6 +18,8 @@ export interface Question {
   prompt: string;
   points: number;
   order: number;
+  // Optional image attached to the question (Base64 data URL or object URL)
+  imageUrl?: string;
   // MCQ specific
   options?: MCQOption[];
   correctOptionId?: string;

@@ -368,6 +368,21 @@ const MarkedScriptPDF: React.FC<MarkedScriptPDFProps> = ({
                         >
                           {q.prompt || "(No prompt)"}
                         </p>
+                        {q.imageUrl && (
+                          <div style={{ textAlign: "center", marginTop: "8px" }}>
+                            <img
+                              src={q.imageUrl}
+                              alt="Question diagram"
+                              style={{
+                                maxHeight: "180px",
+                                maxWidth: "100%",
+                                objectFit: "contain",
+                                border: "1px solid #ddd",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </div>
+                        )}
                       </div>
                       <div
                         style={{

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback, useEffect, useMemo } from "react";
+import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Save,
@@ -22,6 +22,8 @@ import {
   Library,
   X,
   ArrowLeft,
+  Image,
+  ImagePlus,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -237,6 +239,7 @@ const ExamCreator: React.FC = () => {
   // Active question form (used for both "add" and "edit")
   const [draftType, setDraftType] = useState<QuestionType>("mcq");
   const [draftPrompt, setDraftPrompt] = useState("");
+  const [draftImageUrl, setDraftImageUrl] = useState<string | undefined>(undefined);
   const [draftPoints, setDraftPoints] = useState(1);
   const [draftOptionA, setDraftOptionA] = useState("");
   const [draftOptionB, setDraftOptionB] = useState("");
@@ -244,11 +247,48 @@ const ExamCreator: React.FC = () => {
   const [draftOptionD, setDraftOptionD] = useState("");
   const [draftCorrectOption, setDraftCorrectOption] = useState<"a" | "b" | "c" | "d">("a");
   const [draftModelAnswer, setDraftModelAnswer] = useState("");
+  const draftImageInputRef = useRef<HTMLInputElement>(null);
+
+  // ── Image upload handler ────────────────────────────────────────────────
+  const handleDraftImageChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      if (!file.type.startsWith("image/")) {
+        showError("Please select an image file (PNG, JPG, GIF, SVG, etc.).");
+        return;
+      }
+      // Cap at 4MB to keep localStorage healthy
+      if (file.size > 4 * 1024 * 1024) {
+        showError("Image is too large. Please use an image under 4MB.");
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const result = ev.target?.result as string;
+        if (result) {
+          setDraftImageUrl(result);
+          showSuccess("Image attached to question.");
+        }
+      };
+      reader.onerror = () => showError("Failed to read the image file.");
+      reader.readAsDataURL(file);
+      // Reset input so re-selecting the same file fires the change event again
+      e.target.value = "";
+    },
+    []
+  );
+
+  const handleRemoveDraftImage = useCallback(() => {
+    setDraftImageUrl(undefined);
+    if (draftImageInputRef.current) draftImageInputRef.current.value = "";
+  }, []);
 
   // ── Reset draft form ──────────────────────────────────────────────────────
   const resetDraft = useCallback(() => {
     setDraftType("mcq");
     setDraftPrompt("");
+    setDraftImageUrl(undefined);
     setDraftPoints(1);
     setDraftOptionA("");
     setDraftOptionB("");
@@ -302,6 +342,7 @@ const ExamCreator: React.FC = () => {
               ? {
                   ...q,
                   prompt: draftPrompt.trim(),
+                  imageUrl: draftImageUrl,
                   points: draftPoints,
                   options,
                   correctOptionId: draftCorrectOption,
@@ -315,6 +356,7 @@ const ExamCreator: React.FC = () => {
           id: generateId("q"),
           type: "mcq",
           prompt: draftPrompt.trim(),
+          imageUrl: draftImageUrl,
           points: draftPoints,
           order: questions.length + 1,
           options,
@@ -332,6 +374,7 @@ const ExamCreator: React.FC = () => {
               ? {
                   ...q,
                   prompt: draftPrompt.trim(),
+                  imageUrl: draftImageUrl,
                   points: draftPoints,
                   modelAnswer: draftModelAnswer.trim(),
                 }
@@ -344,6 +387,7 @@ const ExamCreator: React.FC = () => {
           id: generateId("q"),
           type: "structured",
           prompt: draftPrompt.trim(),
+          imageUrl: draftImageUrl,
           points: draftPoints,
           order: questions.length + 1,
           modelAnswer: draftModelAnswer.trim(),
@@ -354,12 +398,13 @@ const ExamCreator: React.FC = () => {
       }
     }
     resetDraft();
-  }, [validateDraft, draftType, draftPrompt, draftPoints, draftOptionA, draftOptionB, draftOptionC, draftOptionD, draftCorrectOption, draftModelAnswer, editingQuestionId, questions.length, resetDraft]);
+  }, [validateDraft, draftType, draftPrompt, draftImageUrl, draftPoints, draftOptionA, draftOptionB, draftOptionC, draftOptionD, draftCorrectOption, draftModelAnswer, editingQuestionId, questions.length, resetDraft]);
 
   // ── Edit existing question ────────────────────────────────────────────────
   const handleEditQuestion = useCallback((q: Question) => {
     setDraftType(q.type);
     setDraftPrompt(q.prompt);
+    setDraftImageUrl(q.imageUrl);
     setDraftPoints(q.points);
     if (q.type === "mcq" && q.options) {
       setDraftOptionA(q.options.find((o) => o.id === "a")?.text || "");
@@ -833,6 +878,43 @@ const ExamCreator: React.FC = () => {
                 onChange={(e) => setDraftPrompt(e.target.value)}
                 className="rounded-xl min-h-[100px]"
               />
+
+              {/* Image attachment */}
+              <div className="space-y-2">
+                {draftImageUrl ? (
+                  <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                    <img
+                      src={draftImageUrl}
+                      alt="Question diagram"
+                      className="max-h-56 mx-auto object-contain"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleRemoveDraftImage}
+                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
+                      title="Remove image"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => draftImageInputRef.current?.click()}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all cursor-pointer"
+                  >
+                    <ImagePlus size={15} />
+                    Attach Image / Diagram
+                  </button>
+                )}
+                <input
+                  ref={draftImageInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleDraftImageChange}
+                />
+              </div>
             </div>
 
             {/* Type-specific fields */}
@@ -1087,6 +1169,16 @@ const ExamCreator: React.FC = () => {
                       <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                         {q.prompt}
                       </p>
+
+                      {q.imageUrl && (
+                        <div className="flex justify-center">
+                          <img
+                            src={q.imageUrl}
+                            alt="Question diagram"
+                            className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                          />
+                        </div>
+                      )}
 
                       {q.type === "mcq" && q.options && (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">

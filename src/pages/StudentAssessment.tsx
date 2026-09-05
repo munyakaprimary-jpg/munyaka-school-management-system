@@ -399,6 +399,17 @@ export default function StudentAssessment() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8 space-y-6">
+                {/* Question image */}
+                {currentQuestion.imageUrl && (
+                  <div className="flex justify-center">
+                    <img
+                      src={currentQuestion.imageUrl}
+                      alt="Question diagram"
+                      className="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
+                    />
+                  </div>
+                )}
+
                 {/* MCQ Options */}
                 {currentQuestion.type === "mcq" && currentQuestion.options && (
                   <div className="space-y-3">
