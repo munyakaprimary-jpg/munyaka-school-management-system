@@ -1242,9 +1242,11 @@ const ExamCreator: React.FC = () => {
                         <span className="text-xs text-slate-400 font-bold">{q.points} pts</span>
                       </div>
                       <p className="text-sm font-semibold text-slate-800 line-clamp-1">
-                        {q.prompt || (
-                          <span className="italic text-slate-400">No prompt yet…</span>
-                        )}
+                        {q.contextStatement?.trim()
+                          ? q.contextStatement
+                          : (q.prompt || (
+                              <span className="italic text-slate-400">No prompt yet…</span>
+                            ))}
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
