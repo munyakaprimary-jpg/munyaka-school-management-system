@@ -14,4 +14,18 @@ export default defineConfig(() => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // React core packages
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          // Lucide icons library
+          "vendor-icons": ["lucide-react"],
+          // PDF parsing and processing libraries
+          "vendor-pdf": ["pdfjs-dist"],
+        },
+      },
+    },
+  },
 }));
