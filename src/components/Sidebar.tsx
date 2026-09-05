@@ -131,7 +131,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
     { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
   ];
 
@@ -180,11 +180,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 //   2. Payment & Subscriptions
                 //   3. Games Hub (global)
                                 //   4. Profile Settings
+                                //   5. Settings (System Configuration)
                                 const order = [
                                   '/',                       // Dashboard
                                   '/payment-management',     // Payment & Subscriptions
                                   '/games',                  // Games Hub (global)
                                   '/settings/profile',       // Profile Settings
+                                  '/settings',               // System Configuration / Settings
                                 ];
         const ordered: typeof withDashboard = [];
         order.forEach(p => {
