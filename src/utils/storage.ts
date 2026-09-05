@@ -19,6 +19,7 @@
 
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
+import { safeParse, isQuotaExceeded, handleQuotaError } from './storageUtils';
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
@@ -137,26 +138,6 @@ export interface LearningAreaCluster {
   }>;
 }
 
-// ─── Safe localStorage helpers ──────────────────────────────────────────────
-
-function safeLocalStorage(): Storage | null {
-  try {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function safeParse<T>(raw: string | null): T | null {
-  if (raw == null) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
-
 // ─── Read / Write primitives ────────────────────────────────────────────────
 
 /**
@@ -164,29 +145,59 @@ function safeParse<T>(raw: string | null): T | null {
  * missing, unparseable, or the value is null/undefined.
  */
 export function readStorage<T>(key: string, fallback: T): T {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return fallback;
   const raw = ls.getItem(key);
   if (raw == null) return fallback;
-  const parsed = safeParse<T>(raw);
+  const parsed = safeParse<T>(raw, fallback);
   return parsed == null ? fallback : parsed;
+}
+
+/**
+ * Convenience wrapper around `readStorage` for strings.
+ * Returns `''` on any failure rather than null.
+ */
+export function lsRead<T>(key: string, fallback: T): T {
+  return readStorage<T>(key, fallback);
+}
+
+/**
+ * Variant that returns `null` on parse error so callers can distinguish
+ * "no data" from "fallback default".
+ */
+export function tryParse<T>(key: string): T | null {
+  const ls = getLocalStorage();
+  if (!ls) return null;
+  const raw = ls.getItem(key);
+  if (raw == null) return null;
+  try {
+    const parsed = JSON.parse(raw);
+    return parsed as T;
+  } catch {
+    return null;
+  }
 }
 
 /**
  * Persist a JSON value to localStorage. Returns `true` on success.
  * Emits a `storage` event + custom `munyaka:data-changed` event so all
  * React subscribers refresh.
+ *
+ * QuotaExceededError is caught and surfaced to the user via a toast.
  */
 export function writeStorage<T>(key: string, value: T): boolean {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return false;
   try {
-    const serialized = JSON.stringify(value);
-    ls.setItem(key, serialized);
+    ls.setItem(key, JSON.stringify(value));
     notifyDataChanged(key);
     return true;
   } catch (err) {
-    console.error(`[storage] Failed to write "${key}":`, err);
+    if (isQuotaExceeded(err)) {
+      handleQuotaError(key);
+    } else {
+      console.error(`[storage] Failed to write "${key}":`, err);
+    }
     return false;
   }
 }
@@ -195,7 +206,7 @@ export function writeStorage<T>(key: string, value: T): boolean {
  * Remove a key from localStorage and notify subscribers.
  */
 export function removeStorage(key: string): boolean {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return false;
   try {
     ls.removeItem(key);
@@ -211,7 +222,7 @@ export function removeStorage(key: string): boolean {
  * Wipe ALL app data from localStorage. Use with care.
  */
 export function clearAllStorage(): void {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return;
   try {
     ls.clear();
@@ -230,14 +241,18 @@ export function clearAllStorage(): void {
  *   lsSet('my_key', myObject);
  */
 export function lsSet(key: string, value: unknown): boolean {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return false;
   try {
     ls.setItem(key, JSON.stringify(value));
     notifyDataChanged(key);
     return true;
   } catch (err) {
-    console.error(`[storage] lsSet failed for key "${key}":`, err);
+    if (isQuotaExceeded(err)) {
+      handleQuotaError(key);
+    } else {
+      console.error(`[storage] lsSet failed for key "${key}":`, err);
+    }
     return false;
   }
 }
@@ -287,7 +302,7 @@ export interface HydrationReport {
  * Returns a report describing which keys were touched.
  */
 export function hydrateAllStores(): HydrationReport {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   const report: HydrationReport = {
     hydrated: false,
     schemaVersion: CURRENT_SCHEMA_VERSION,
@@ -297,133 +312,133 @@ export function hydrateAllStores(): HydrationReport {
 
   if (!ls) return report;
 
+  // ── Helper: write one key only if absent, catch every write individually ─
+  // This ensures a quota error on one key does NOT abort seeding of others.
+  const seedIfAbsent = (key: string, value: unknown): void => {
+    try {
+      if (ls.getItem(key) !== null) return;
+      ls.setItem(key, JSON.stringify(value));
+      report.restoredFromSeed.push(key);
+    } catch (err) {
+      if (isQuotaExceeded(err)) {
+        handleQuotaError(key, 'seed');
+      } else {
+        console.error(`[storage] hydrate failed to write "${key}":`, err);
+      }
+    }
+  };
+
   try {
     // 1. Students
-    const existingStudents = ls.getItem(STORAGE_KEYS.STUDENTS);
-    if (!existingStudents && Array.isArray(INITIAL_SEED_DATA.students)) {
-      ls.setItem(STORAGE_KEYS.STUDENTS, JSON.stringify(INITIAL_SEED_DATA.students));
-      ls.setItem(STORAGE_KEYS.STUDENTS_LEGACY, JSON.stringify(INITIAL_SEED_DATA.students));
-      report.restoredFromSeed.push(STORAGE_KEYS.STUDENTS);
+    if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
+      seedIfAbsent(STORAGE_KEYS.STUDENTS, INITIAL_SEED_DATA.students);
+      seedIfAbsent(STORAGE_KEYS.STUDENTS_LEGACY, INITIAL_SEED_DATA.students);
     }
     report.keys.push(STORAGE_KEYS.STUDENTS);
 
-    // 1b. Staff directory (from seed)
-    if (!ls.getItem(STORAGE_KEYS.STAFF) && Array.isArray(INITIAL_SEED_DATA.staff)) {
-      ls.setItem(STORAGE_KEYS.STAFF, JSON.stringify(INITIAL_SEED_DATA.staff));
-      ls.setItem('munyaka_staff', JSON.stringify(INITIAL_SEED_DATA.staff));
-      report.restoredFromSeed.push(STORAGE_KEYS.STAFF);
+    // 1b. Staff directory
+    if (Array.isArray(INITIAL_SEED_DATA?.staff) && INITIAL_SEED_DATA.staff.length > 0) {
+      seedIfAbsent(STORAGE_KEYS.STAFF, INITIAL_SEED_DATA.staff);
+      seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
     }
     report.keys.push(STORAGE_KEYS.STAFF);
 
     // 1c. Staff pre-registration
-    if (!ls.getItem(STORAGE_KEYS.STAFF_PREREG) && Array.isArray(INITIAL_SEED_DATA.staffPrereg)) {
-      ls.setItem(STORAGE_KEYS.STAFF_PREREG, JSON.stringify(INITIAL_SEED_DATA.staffPrereg));
-      report.restoredFromSeed.push(STORAGE_KEYS.STAFF_PREREG);
+    if (Array.isArray(INITIAL_SEED_DATA?.staffPrereg)) {
+      seedIfAbsent(STORAGE_KEYS.STAFF_PREREG, INITIAL_SEED_DATA.staffPrereg);
     }
     report.keys.push(STORAGE_KEYS.STAFF_PREREG);
 
     // 1d. Grades / Classes
-    if (!ls.getItem(STORAGE_KEYS.GRADES) && Array.isArray(INITIAL_SEED_DATA.grades)) {
-      ls.setItem(STORAGE_KEYS.GRADES, JSON.stringify(INITIAL_SEED_DATA.grades));
-      report.restoredFromSeed.push(STORAGE_KEYS.GRADES);
+    if (Array.isArray(INITIAL_SEED_DATA?.grades)) {
+      seedIfAbsent(STORAGE_KEYS.GRADES, INITIAL_SEED_DATA.grades);
     }
     report.keys.push(STORAGE_KEYS.GRADES);
 
     // 1e. Exam types
-    if (!ls.getItem(STORAGE_KEYS.EXAM_TYPES) && Array.isArray(INITIAL_SEED_DATA.examTypes)) {
-      ls.setItem(STORAGE_KEYS.EXAM_TYPES, JSON.stringify(INITIAL_SEED_DATA.examTypes));
-      report.restoredFromSeed.push(STORAGE_KEYS.EXAM_TYPES);
+    if (Array.isArray(INITIAL_SEED_DATA?.examTypes)) {
+      seedIfAbsent(STORAGE_KEYS.EXAM_TYPES, INITIAL_SEED_DATA.examTypes);
     }
     report.keys.push(STORAGE_KEYS.EXAM_TYPES);
 
     // 1f. Assessment scores
-    if (!ls.getItem(STORAGE_KEYS.ASSESSMENT_SCORES) && INITIAL_SEED_DATA.assessmentScores) {
-      ls.setItem(STORAGE_KEYS.ASSESSMENT_SCORES, JSON.stringify(INITIAL_SEED_DATA.assessmentScores));
-      report.restoredFromSeed.push(STORAGE_KEYS.ASSESSMENT_SCORES);
+    if (INITIAL_SEED_DATA?.assessmentScores) {
+      seedIfAbsent(STORAGE_KEYS.ASSESSMENT_SCORES, INITIAL_SEED_DATA.assessmentScores);
     }
     report.keys.push(STORAGE_KEYS.ASSESSMENT_SCORES);
 
     // 1g. Library books
-    if (!ls.getItem(STORAGE_KEYS.LIBRARY_BOOKS) && Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
-      ls.setItem(STORAGE_KEYS.LIBRARY_BOOKS, JSON.stringify(INITIAL_SEED_DATA.libraryBooks));
-      report.restoredFromSeed.push(STORAGE_KEYS.LIBRARY_BOOKS);
+    if (Array.isArray(INITIAL_SEED_DATA?.libraryBooks)) {
+      seedIfAbsent(STORAGE_KEYS.LIBRARY_BOOKS, INITIAL_SEED_DATA.libraryBooks);
     }
     report.keys.push(STORAGE_KEYS.LIBRARY_BOOKS);
 
     // 1h. ICT assets
-    if (!ls.getItem(STORAGE_KEYS.ICT_ASSETS) && Array.isArray(INITIAL_SEED_DATA.ictAssets)) {
-      ls.setItem(STORAGE_KEYS.ICT_ASSETS, JSON.stringify(INITIAL_SEED_DATA.ictAssets));
-      report.restoredFromSeed.push(STORAGE_KEYS.ICT_ASSETS);
+    if (Array.isArray(INITIAL_SEED_DATA?.ictAssets)) {
+      seedIfAbsent(STORAGE_KEYS.ICT_ASSETS, INITIAL_SEED_DATA.ictAssets);
     }
     report.keys.push(STORAGE_KEYS.ICT_ASSETS);
 
     // 1i. Attendance
-    if (!ls.getItem(STORAGE_KEYS.ATTENDANCE) && INITIAL_SEED_DATA.attendance) {
-      ls.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(INITIAL_SEED_DATA.attendance));
-      report.restoredFromSeed.push(STORAGE_KEYS.ATTENDANCE);
+    if (INITIAL_SEED_DATA?.attendance) {
+      seedIfAbsent(STORAGE_KEYS.ATTENDANCE, INITIAL_SEED_DATA.attendance);
     }
     report.keys.push(STORAGE_KEYS.ATTENDANCE);
 
-    // 2. CBC Learning Areas (from canonical defaults)
+    // 2. CBC Learning Areas
     const existingClusters = ls.getItem(STORAGE_KEYS.CBC_LEARNING_AREAS);
     if (!existingClusters) {
-      // Prefer the seed-defined learning areas if present, otherwise build defaults
-      const seedAreas = Array.isArray(INITIAL_SEED_DATA.learningAreas)
+      const seedAreas = Array.isArray(INITIAL_SEED_DATA?.learningAreas)
         ? INITIAL_SEED_DATA.learningAreas
         : null;
-      const value = seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
-      ls.setItem(STORAGE_KEYS.CBC_LEARNING_AREAS, JSON.stringify(value));
-      report.restoredFromSeed.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
+      const value =
+        seedAreas && seedAreas.length > 0 ? seedAreas : buildDefaultClusters();
+      seedIfAbsent(STORAGE_KEYS.CBC_LEARNING_AREAS, value);
     }
     report.keys.push(STORAGE_KEYS.CBC_LEARNING_AREAS);
 
-    // 3. Payment Records / Fee Ledgers
-    if (!ls.getItem(STORAGE_KEYS.PAYMENT_RECORDS)) {
-      const seedFees = Array.isArray(INITIAL_SEED_DATA.fees)
-        ? INITIAL_SEED_DATA.fees
-        : [];
-      ls.setItem(STORAGE_KEYS.PAYMENT_RECORDS, JSON.stringify(seedFees));
-      report.restoredFromSeed.push(STORAGE_KEYS.PAYMENT_RECORDS);
+    // 3. Payment Records
+    if (ls.getItem(STORAGE_KEYS.PAYMENT_RECORDS) === null) {
+      seedIfAbsent(
+        STORAGE_KEYS.PAYMENT_RECORDS,
+        Array.isArray(INITIAL_SEED_DATA?.fees) ? INITIAL_SEED_DATA.fees : []
+      );
     }
     report.keys.push(STORAGE_KEYS.PAYMENT_RECORDS);
 
     // 3b. Transactions
-    if (!ls.getItem(STORAGE_KEYS.TRANSACTIONS)) {
-      const seedTx = Array.isArray(INITIAL_SEED_DATA.transactions)
-        ? INITIAL_SEED_DATA.transactions
-        : [];
-      ls.setItem(STORAGE_KEYS.TRANSACTIONS, JSON.stringify(seedTx));
-      report.restoredFromSeed.push(STORAGE_KEYS.TRANSACTIONS);
+    if (ls.getItem(STORAGE_KEYS.TRANSACTIONS) === null) {
+      seedIfAbsent(
+        STORAGE_KEYS.TRANSACTIONS,
+        Array.isArray(INITIAL_SEED_DATA?.transactions) ? INITIAL_SEED_DATA.transactions : []
+      );
     }
     report.keys.push(STORAGE_KEYS.TRANSACTIONS);
 
     // 4. User Settings
-    if (!ls.getItem(STORAGE_KEYS.USER_SETTINGS)) {
-      const seedSettings = INITIAL_SEED_DATA.settings ?? {};
-      ls.setItem(STORAGE_KEYS.USER_SETTINGS, JSON.stringify(seedSettings));
-      report.restoredFromSeed.push(STORAGE_KEYS.USER_SETTINGS);
+    if (ls.getItem(STORAGE_KEYS.USER_SETTINGS) === null) {
+      seedIfAbsent(STORAGE_KEYS.USER_SETTINGS, INITIAL_SEED_DATA?.settings ?? {});
     }
     report.keys.push(STORAGE_KEYS.USER_SETTINGS);
 
-    // 5. Subscriptions (start with empty list if missing)
-    if (!ls.getItem(STORAGE_KEYS.SUBSCRIPTIONS)) {
-      ls.setItem(STORAGE_KEYS.SUBSCRIPTIONS, JSON.stringify([]));
-      report.restoredFromSeed.push(STORAGE_KEYS.SUBSCRIPTIONS);
+    // 5. Subscriptions
+    if (ls.getItem(STORAGE_KEYS.SUBSCRIPTIONS) === null) {
+      seedIfAbsent(STORAGE_KEYS.SUBSCRIPTIONS, []);
     }
     report.keys.push(STORAGE_KEYS.SUBSCRIPTIONS);
 
     // 5b. Billing settings
-    if (!ls.getItem(STORAGE_KEYS.BILLING_SETTINGS)) {
-      ls.setItem(STORAGE_KEYS.BILLING_SETTINGS, JSON.stringify({}));
+    if (ls.getItem(STORAGE_KEYS.BILLING_SETTINGS) === null) {
+      seedIfAbsent(STORAGE_KEYS.BILLING_SETTINGS, {});
     }
     report.keys.push(STORAGE_KEYS.BILLING_SETTINGS);
 
-    // Mark hydration complete and bump schema version
+    // Mark hydration complete
     ls.setItem(STORAGE_KEYS.HYDRATION_DONE, 'true');
     ls.setItem(STORAGE_KEYS.SCHEMA_VERSION, CURRENT_SCHEMA_VERSION);
     report.hydrated = true;
   } catch (err) {
-    console.error('[storage] Hydration failed:', err);
+    console.error('[storage] Hydration outer block failed:', err);
   }
 
   return report;
@@ -666,7 +681,7 @@ export function deleteSubscription(id: string): boolean {
  * Useful for the Central Data Service screen.
  */
 export function getStorageSizes(): Record<string, number> {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return {};
   const out: Record<string, number> = {};
   for (let i = 0; i < ls.length; i++) {
@@ -682,7 +697,7 @@ export function getStorageSizes(): Record<string, number> {
  * True if localStorage already has a hydrated dataset.
  */
 export function isHydrated(): boolean {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return false;
   return ls.getItem(STORAGE_KEYS.HYDRATION_DONE) === 'true';
 }

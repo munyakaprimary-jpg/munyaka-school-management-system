@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
+import { getLocalStorage, safeParse } from '@/utils/storage';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -53,15 +54,6 @@ const STORAGE_KEYS = {
   SCHOOL_PROFILE:       'munyaka_school_profile',
 } as const;
 
-const safeParse = <T,>(raw: string | null): T | null => {
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-};
-
 const getTodayDate = (): string => {
   const today = new Date();
   const yyyy = today.getFullYear();
@@ -77,9 +69,10 @@ const getTodayDate = (): string => {
  */
 const getActiveSchoolId = (): string | null => {
   try {
-    const direct = localStorage.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID);
+    const ls = getLocalStorage();
+    const direct = ls?.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID) ?? null;
     if (direct) return direct;
-    const profile = safeParse<{ schoolId?: string }>(localStorage.getItem(STORAGE_KEYS.SCHOOL_PROFILE));
+    const profile = safeParse<{ schoolId?: string }>(STORAGE_KEYS.SCHOOL_PROFILE);
     return profile?.schoolId ?? null;
   } catch {
     return null;
@@ -134,7 +127,7 @@ const computeStats = (): DashboardStats => {
     const todayStr = getTodayDate();
 
     // ── 1. Learners ─────────────────────────────────────────────────────────
-    const learnersFromLS = safeParse<Learner[]>(localStorage.getItem(STORAGE_KEYS.LEARNERS));
+    const learnersFromLS = safeParse<Learner[]>(STORAGE_KEYS.LEARNERS);
     let learners: Learner[] = [];
     if (Array.isArray(learnersFromLS) && learnersFromLS.length > 0) {
       learners = learnersFromLS;
@@ -151,11 +144,11 @@ const computeStats = (): DashboardStats => {
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
     let teachers: Teacher[] = [];
-    const teachersFromLS = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS));
+    const teachersFromLS = safeParse<Teacher[]>(STORAGE_KEYS.TEACHERS);
     if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
       teachers = teachersFromLS;
     } else {
-      const teachersFromFallback = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS_FALLBACK));
+      const teachersFromFallback = safeParse<Teacher[]>(STORAGE_KEYS.TEACHERS_FALLBACK);
       if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
         teachers = teachersFromFallback;
       } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
@@ -175,8 +168,9 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 3. Today's attendance % — deduplicated by studentId, capped at 100% ─
-    const flatAttendance = safeParse<AttendanceLog[]>(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) ?? [];
+    const flatAttendance = safeParse<AttendanceLog[]>(STORAGE_KEYS.ATTENDANCE) ?? [];
     const presentStudentIds = new Set<string>();
+    const ls = getLocalStorage();
 
     if (Array.isArray(flatAttendance) && flatAttendance.length > 0) {
       flatAttendance.forEach((a) => {
@@ -187,26 +181,29 @@ const computeStats = (): DashboardStats => {
           if (a.studentId) presentStudentIds.add(a.studentId);
         }
       });
-    } else {
+    } else if (ls) {
       // Walk all v2 per-grade registers
-      Object.keys(localStorage).forEach((key) => {
-        if (!key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
-        try {
-          const raw = localStorage.getItem(key);
-          if (!raw) return;
-          const record = safeParse<Record<string, any>>(raw);
-          if (!record) return;
-          Object.values(record).forEach((entry: any) => {
-            if (!entry || typeof entry !== 'object') return;
-            if (entry.date && entry.date !== todayStr) return;
-            const morning = entry.morning?.status || entry.morning;
-            const afternoon = entry.afternoon?.status || entry.afternoon;
-            if (morning === 'P' || afternoon === 'P') {
-              if (entry.studentId) presentStudentIds.add(entry.studentId);
-            }
-          });
-        } catch { /* ignore individual records */ }
-      });
+      try {
+        Object.keys(ls).forEach((key) => {
+          if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
+          try {
+            const raw = ls.getItem(key);
+            if (!raw) return;
+            // Read the raw string and parse it directly here to avoid double-fetching
+            const record = safeParse<Record<string, any>>(key);
+            if (!record) return;
+            Object.values(record).forEach((entry: any) => {
+              if (!entry || typeof entry !== 'object') return;
+              if (entry?.date && entry?.date !== todayStr) return;
+              const morning = entry?.morning?.status || entry?.morning;
+              const afternoon = entry?.afternoon?.status || entry?.afternoon;
+              if (morning === 'P' || afternoon === 'P') {
+                if (entry?.studentId) presentStudentIds.add(entry.studentId);
+              }
+            });
+          } catch { /* ignore individual records */ }
+        });
+      } catch { /* ignore outer loop */ }
     }
 
     // Deduplicated count — each student counted at most once

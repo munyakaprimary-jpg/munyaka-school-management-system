@@ -25,6 +25,7 @@
  */
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { getLocalStorage } from '@/utils/storageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -105,8 +106,14 @@ export const useLiveStreamAttendance = (
 
   const recompute = useCallback(() => {
     try {
+      const ls = getLocalStorage();
+      if (!ls) {
+        setRawStreams([]);
+        return;
+      }
+
       // ── 1. Load active students ──────────────────────────────────────────────
-      const studentsRaw = localStorage.getItem(STUDENTS_KEY);
+      const studentsRaw = ls.getItem(STUDENTS_KEY);
       const students = safeParse<Array<{
         id: string;
         name?: string;
@@ -153,7 +160,7 @@ export const useLiveStreamAttendance = (
       for (const [, { grade, stream, studentIds }] of gradeStreamMap) {
         // Build the storage key — stream in the key uses underscores (no spaces)
         const v2Key = buildV2Key(grade, stream, selectedDate);
-        const registerRaw = localStorage.getItem(v2Key);
+        const registerRaw = ls.getItem(v2Key);
         const register = safeParse<LiveRegisterEntry>(registerRaw);
 
         let morningPresent = 0;
@@ -174,7 +181,7 @@ export const useLiveStreamAttendance = (
           }
 
           // Also check the master record map for session-level completeness
-          const masterRaw = localStorage.getItem(ATTENDANCE_RECORDS_KEY);
+          const masterRaw = ls.getItem(ATTENDANCE_RECORDS_KEY);
           const master = safeParse<Record<string, LiveRegisterEntry>>(masterRaw);
           const masterKey = `${grade}_${stream}_${selectedDate}`;
           const masterEntry = master?.[masterKey];
@@ -208,7 +215,7 @@ export const useLiveStreamAttendance = (
             // The current system uses a single register with morning entries
             // Afternoon is tracked via a separate key suffix or same key with afternoon marker
             const afternoonKey = buildV2Key(grade, stream, `${selectedDate}_afternoon`);
-            const afternoonRaw = localStorage.getItem(afternoonKey);
+            const afternoonRaw = ls.getItem(afternoonKey);
             if (afternoonRaw) {
               const afternoonReg = safeParse<LiveRegisterEntry>(afternoonRaw);
               if (afternoonReg && afternoonReg.date === selectedDate) {

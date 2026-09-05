@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { getLocalStorage } from '@/utils/storage';
 
 export interface AcademicCalendar {
   activeTerm: string;
@@ -52,7 +53,8 @@ export const useAcademicCalendar = (): AcademicCalendar => {
   /** Re-read from localStorage and update state if the data changed. */
   const loadSettings = useCallback(() => {
     try {
-      const stored = localStorage.getItem(ACADEMIC_SETTINGS_KEY);
+      const ls = getLocalStorage();
+      const stored = ls?.getItem(ACADEMIC_SETTINGS_KEY) ?? null;
       const parsed = parseSettings(stored);
       setRawSettings(parsed);
     } catch (e) {
@@ -121,9 +123,14 @@ export const useAcademicCalendar = (): AcademicCalendar => {
  * (e.g., CSV headers, print footers, non-reactive server payloads).
  */
 export const getActiveAcademic = (): { activeTerm: string; activeYear: string } => {
-  const raw = localStorage.getItem(ACADEMIC_SETTINGS_KEY);
-  const parsed = parseSettings(raw);
-  return parsed ?? { activeTerm: FALLBACK_TERM, activeYear: FALLBACK_YEAR };
+  try {
+    const ls = getLocalStorage();
+    const raw = ls?.getItem(ACADEMIC_SETTINGS_KEY) ?? null;
+    const parsed = parseSettings(raw);
+    return parsed ?? { activeTerm: FALLBACK_TERM, activeYear: FALLBACK_YEAR };
+  } catch {
+    return { activeTerm: FALLBACK_TERM, activeYear: FALLBACK_YEAR };
+  }
 };
 
 /**

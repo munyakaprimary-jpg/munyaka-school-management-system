@@ -7,7 +7,8 @@
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
-import { lsSet, notifyDataChanged as fireDataChanged } from '@/utils/storage';
+import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
+import { getLocalStorage } from '@/utils/storageUtils';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -92,9 +93,9 @@ const getTodayDate = (): string => {
 
 const getActiveSchoolId = (): string | null => {
   try {
-    const direct = localStorage.getItem(STORAGE_KEYS.ACTIVE_SCHOOL_ID);
+    const direct = lsRead<string>(STORAGE_KEYS.ACTIVE_SCHOOL_ID, '');
     if (direct) return direct;
-    const profile = safeParse<{ schoolId?: string }>(localStorage.getItem(STORAGE_KEYS.SCHOOL_PROFILE));
+    const profile = lsRead<{ schoolId?: string }>(STORAGE_KEYS.SCHOOL_PROFILE, {});
     return profile?.schoolId ?? null;
   } catch {
     return null;
@@ -158,7 +159,10 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const activeSchoolId = getActiveSchoolId();
 
   // 1. Flat attendance log
-  const flat = safeParse<AttendanceLog[]>(localStorage.getItem(STORAGE_KEYS.ATTENDANCE)) ?? [];
+  const flat = safeParse<AttendanceLog[]>(
+    getLocalStorage()?.getItem(STORAGE_KEYS.ATTENDANCE) ?? null,
+    []
+  );
   if (Array.isArray(flat) && flat.length > 0) {
     return flat.filter((a) => {
       if (!a) return false;
@@ -170,25 +174,28 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
 
   // 2. Per-grade v2 registers
   const logs: AttendanceLog[] = [];
-  if (typeof localStorage === 'undefined') return logs;
-  Object.keys(localStorage ?? {}).forEach((key) => {
-    if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
-    try {
-      const raw = localStorage.getItem(key);
-      if (!raw) return;
-      const record = safeParse<Record<string, any>>(raw);
-      if (!record) return;
-      Object.values(record).forEach((entry: any) => {
-        if (!entry || typeof entry !== 'object') return;
-        if (entry.date && entry.date !== todayStr) return;
-        const morning = entry?.morning?.status ?? entry?.morning;
-        const afternoon = entry?.afternoon?.status ?? entry?.afternoon;
-        if (morning === 'P' || afternoon === 'P') {
-          logs.push({ studentId: entry?.studentId || '', date: todayStr, status: 'present' });
-        }
-      });
-    } catch { /* ignore */ }
-  });
+  const ls = getLocalStorage();
+  if (!ls) return logs;
+  try {
+    Object.keys(ls).forEach((key) => {
+      if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
+      try {
+        const raw = ls.getItem(key);
+        if (!raw) return;
+        const record = safeParse<Record<string, any>>(raw, null);
+        if (!record || typeof record !== 'object') return;
+        Object.values(record).forEach((entry: any) => {
+          if (!entry || typeof entry !== 'object') return;
+          if (entry?.date && entry?.date !== todayStr) return;
+          const morning = entry?.morning?.status ?? entry?.morning;
+          const afternoon = entry?.afternoon?.status ?? entry?.afternoon;
+          if (morning === 'P' || afternoon === 'P') {
+            logs.push({ studentId: entry?.studentId || '', date: todayStr, status: 'present' });
+          }
+        });
+      } catch { /* ignore */ }
+    });
+  } catch { /* ignore */ }
   return logs;
 };
 

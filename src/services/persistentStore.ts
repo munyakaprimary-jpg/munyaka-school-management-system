@@ -36,26 +36,11 @@
 
 import { idbStore } from './idbStore';
 import { SCHEMA_META_KEY } from './schemaMigrations';
+import { getLocalStorage, safeParse, isQuotaExceeded, handleQuotaError } from '@/utils/storageUtils';
 
 // ─── Safe localStorage helpers ──────────────────────────────────────────────
-
-function safeLocalStorage(): Storage | null {
-  try {
-    if (typeof window === 'undefined') return null;
-    return window.localStorage;
-  } catch {
-    return null;
-  }
-}
-
-function safeParse<T>(raw: string | null): T | null {
-  if (raw == null) return null;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return null;
-  }
-}
+// safeLocalStorage and safeParse are now imported from @/utils/storageUtils
+// so all write paths in this codebase share a single quota-error handler.
 
 // ─── In-memory cache ────────────────────────────────────────────────────────
 
@@ -86,11 +71,11 @@ export function readStorage<T>(key: string, fallback: T): T {
   if (cached !== null) return cached;
 
   // 2. localStorage
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (ls) {
     const raw = ls.getItem(key);
     if (raw != null) {
-      const parsed = safeParse<T>(raw);
+      const parsed = safeParse<T>(raw, fallback);
       if (parsed !== null) {
         cacheSet(key, parsed);
         return parsed;
@@ -124,14 +109,18 @@ export function writeStorage<T>(key: string, value: T): boolean {
   const serialized = JSON.stringify(value);
 
   // 1. localStorage (source of truth for synchronous reads)
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) {
     console.warn(`[persistentStore] localStorage unavailable — write to "${key}" failed silently`);
   } else {
     try {
       ls.setItem(key, serialized);
     } catch (err) {
-      console.error(`[persistentStore] localStorage write failed for "${key}":`, err);
+      if (isQuotaExceeded(err)) {
+        handleQuotaError(key);
+      } else {
+        console.error(`[persistentStore] localStorage write failed for "${key}":`, err);
+      }
     }
   }
 
@@ -141,7 +130,9 @@ export function writeStorage<T>(key: string, value: T): boolean {
   // 3. IndexedDB write-through (fire-and-forget)
   //    The store name is derived from the key pattern so we can retrieve
   //    it later in idbRead / idbWriteMany without extra mapping.
-  _idbWriteThru(key, value);
+  _idbWriteThru(key, value).catch((err) => {
+    console.error(`[persistentStore] IDB write-through failed for "${key}":`, err);
+  });
 
   // 4. Notify React subscribers
   notifyDataChanged(key);
@@ -173,8 +164,15 @@ export function lsSet<T>(key: string, value: T): boolean {
  * Remove a key from all three layers.
  */
 export function removeStorage(key: string): boolean {
-  const ls = safeLocalStorage();
-  if (ls) ls.removeItem(key);
+  const ls = getLocalStorage();
+  if (ls) {
+    try {
+      ls.removeItem(key);
+    } catch (err) {
+      console.error(`[persistentStore] Failed to remove "${key}":`, err);
+      return false;
+    }
+  }
   memoryCache.delete(key);
   _idbDeleteByKey(key).catch(() => {});
   notifyDataChanged(key);
@@ -185,8 +183,12 @@ export function removeStorage(key: string): boolean {
  * Wipe ALL app data from localStorage + IndexedDB + memory cache.
  */
 export function clearAllStorage(): void {
-  const ls = safeLocalStorage();
-  if (ls) ls.clear();
+  const ls = getLocalStorage();
+  try {
+    if (ls) ls.clear();
+  } catch (err) {
+    console.error('[persistentStore] Failed to clear storage:', err);
+  }
   memoryCache.clear();
   // Clear every store in IDB
   const storeNames = [
@@ -319,7 +321,7 @@ import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
  * through to both IndexedDB and localStorage via writeStorage().
  */
 export function hydrateFromSeed(): void {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return;
 
   const seedIfAbsent = (key: string, value: unknown) => {
@@ -583,7 +585,7 @@ export function patchUserSettings(patch: Partial<UserSettings>): boolean {
 // ─── Storage size inspection ─────────────────────────────────────────────────
 
 export function getStorageSizes(): Record<string, number> {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return {};
   const out: Record<string, number> = {};
   for (let i = 0; i < ls.length; i++) {
@@ -595,7 +597,7 @@ export function getStorageSizes(): Record<string, number> {
 }
 
 export function isHydrated(): boolean {
-  const ls = safeLocalStorage();
+  const ls = getLocalStorage();
   if (!ls) return false;
   return ls.getItem(STORAGE_KEYS.HYDRATION_DONE) === 'true';
 }

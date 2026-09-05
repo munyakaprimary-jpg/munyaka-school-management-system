@@ -7,7 +7,8 @@ import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
 import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
-import { lsSet } from '@/utils/storage';
+import { lsSet, lsRead } from '@/utils/storage';
+import { tryParse } from '@/utils/storageUtils';
 
 export default function CentralDataService() {
   const centralStats = useCentralData();
@@ -16,7 +17,7 @@ export default function CentralDataService() {
     staffCount: 0,
     attendanceCount: 0,
     feesCount: 0,
-    lastExportDate: localStorage.getItem('munyaka_last_export_date') || 'Never'
+    lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
   });
 
   const [importJsonText, setImportJsonText] = useState('');
@@ -30,15 +31,15 @@ export default function CentralDataService() {
     try {
       const students = getActiveLearners();
       const staff = getActiveTeachers();
-      const attendance = JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}');
-      const fees = JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}');
+      const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
+      const fees = lsRead<Record<string, unknown>>('munyaka_fees_records', {});
 
       setStats({
-        studentsCount: students.length,
-        staffCount: staff.length,
-        attendanceCount: Object.keys(attendance).length,
-        feesCount: Object.keys(fees).length,
-        lastExportDate: localStorage.getItem('munyaka_last_export_date') || 'Never'
+        studentsCount: students?.length ?? 0,
+        staffCount: staff?.length ?? 0,
+        attendanceCount: Object.keys(attendance ?? {}).length,
+        feesCount: Object.keys(fees ?? {}).length,
+        lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
       });
     } catch (e) {
       console.error(e);
@@ -57,33 +58,34 @@ export default function CentralDataService() {
         version: "4.0",
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]'),
-        staff: JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]'),
-        staffPrereg: JSON.parse(localStorage.getItem('munyaka_staff_prereg') || '[]'),
-        fees: JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}'),
-        transactions: JSON.parse(localStorage.getItem('munyaka_transactions') || '[]'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}'),
-        grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]'),
-        examTypes: JSON.parse(localStorage.getItem('munyaka_exam_types') || '[]'),
-        learningAreas: JSON.parse(localStorage.getItem('munyaka_learning_areas') || '[]'),
-        assessmentScores: JSON.parse(localStorage.getItem('munyaka_assessment_scores') || '{}'),
-        libraryBooks: JSON.parse(localStorage.getItem('munyaka_library_books') || '[]'),
-        ictAssets: JSON.parse(localStorage.getItem('munyaka_ict_assets') || '[]'),
-        settings: JSON.parse(localStorage.getItem('munyaka_system_settings_v3') || '{}')
+        students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
+        staff: lsRead<unknown>('munyaka_staff_directory', []),
+        staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
+        fees: lsRead<unknown>('munyaka_fees_records', {}),
+        transactions: lsRead<unknown>('munyaka_transactions', []),
+        attendance: lsRead<unknown>('munyaka_attendance_records', {}),
+        grades: lsRead<unknown>('munyaka_grades', []),
+        examTypes: lsRead<unknown>('munyaka_exam_types', []),
+        learningAreas: lsRead<unknown>('munyaka_learning_areas', []),
+        assessmentScores: lsRead<unknown>('munyaka_assessment_scores', {}),
+        libraryBooks: lsRead<unknown>('munyaka_library_books', []),
+        ictAssets: lsRead<unknown>('munyaka_ict_assets', []),
+        settings: lsRead<unknown>('munyaka_system_settings_v3', {})
       };
 
       // Serialize EVERY single key stored in localStorage into a clean key-value dictionary object
       const allLocalStorageData: Record<string, any> = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key !== 'app_seed_version') {
-          const val = localStorage.getItem(key);
-          try {
-            allLocalStorageData[key] = val ? JSON.parse(val) : val;
-          } catch {
-            allLocalStorageData[key] = val;
+      try {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key && key !== 'app_seed_version') {
+            const val = localStorage.getItem(key);
+            const parsed = tryParse(val);
+            allLocalStorageData[key] = parsed !== null ? parsed : val;
           }
         }
+      } catch (err) {
+        console.error('[CentralDataService] Failed to snapshot localStorage:', err);
       }
 
       const fullExportObject = {
@@ -92,7 +94,7 @@ export default function CentralDataService() {
       };
 
       const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
-      
+
       const nowStr = new Date().toLocaleString();
       lsSet('munyaka_last_export_date', nowStr);
       setStats(prev => ({ ...prev, lastExportDate: nowStr }));
@@ -119,11 +121,11 @@ export default function CentralDataService() {
         version: "3.5",
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-        students: JSON.parse(localStorage.getItem('school_learners_data') || localStorage.getItem('munyaka_students') || '[]'),
-        staff: JSON.parse(localStorage.getItem('munyaka_staff_directory') || '[]'),
-        fees: JSON.parse(localStorage.getItem('munyaka_fees_records') || '{}'),
-        attendance: JSON.parse(localStorage.getItem('munyaka_attendance_records') || '{}'),
-        grades: JSON.parse(localStorage.getItem('munyaka_grades') || '[]')
+        students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
+        staff: lsRead<unknown>('munyaka_staff_directory', []),
+        fees: lsRead<unknown>('munyaka_fees_records', {}),
+        attendance: lsRead<unknown>('munyaka_attendance_records', {}),
+        grades: lsRead<unknown>('munyaka_grades', [])
       };
 
       const jsonString = JSON.stringify(dbBundle, null, 2);
@@ -150,37 +152,37 @@ export default function CentralDataService() {
     }
     try {
       setIsImporting(true);
-      const parsed = JSON.parse(importJsonText);
+      const parsed = JSON.parse(importJsonText) as Record<string, unknown>;
       
-      if (parsed.students && Array.isArray(parsed.students)) {
+      if (parsed?.students && Array.isArray(parsed.students)) {
         lsSet('school_learners_data', parsed.students);
         lsSet('munyaka_students', parsed.students);
       }
-      if (parsed.staff && Array.isArray(parsed.staff)) {
+      if (parsed?.staff && Array.isArray(parsed.staff)) {
         lsSet('munyaka_staff_directory', parsed.staff);
       }
-      if (parsed.staffPrereg && Array.isArray(parsed.staffPrereg)) {
+      if (parsed?.staffPrereg && Array.isArray(parsed.staffPrereg)) {
         lsSet('munyaka_staff_prereg', parsed.staffPrereg);
       }
-      if (parsed.fees) {
+      if (parsed?.fees) {
         lsSet('munyaka_fees_records', parsed.fees);
       }
-      if (parsed.transactions) {
+      if (parsed?.transactions) {
         lsSet('munyaka_transactions', parsed.transactions);
       }
-      if (parsed.attendance) {
+      if (parsed?.attendance) {
         lsSet('munyaka_attendance_records', parsed.attendance);
       }
-      if (parsed.grades) {
+      if (parsed?.grades) {
         lsSet('munyaka_grades', parsed.grades);
       }
-      if (parsed.examTypes) {
+      if (parsed?.examTypes) {
         lsSet('munyaka_exam_types', parsed.examTypes);
       }
-      if (parsed.learningAreas) {
+      if (parsed?.learningAreas) {
         lsSet('munyaka_learning_areas', parsed.learningAreas);
       }
-      if (parsed.assessmentScores) {
+      if (parsed?.assessmentScores) {
         lsSet('munyaka_assessment_scores', parsed.assessmentScores);
       }
 

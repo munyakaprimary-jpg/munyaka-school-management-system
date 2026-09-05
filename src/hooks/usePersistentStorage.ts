@@ -40,6 +40,8 @@ import {
   deleteSubscription as _deleteSubscription,
   // Notifications
   notifyDataChanged,
+  lsSet,
+  lsRead,
   STORAGE_KEYS,
   type Student,
   type PaymentRecord,
@@ -80,14 +82,9 @@ function createPersistentHook<T>(
 ) {
   return function usePersistentStore() {
     const [state, setState] = useState<T>(() => {
-      try {
-        const raw = localStorage.getItem(storageKey);
-        if (raw != null) {
-          const parsed = JSON.parse(raw) as T;
-          return selector ? selector(parsed) : parsed;
-        }
-      } catch {
-        /* ignore parse errors — fall through to initial */
+      const parsed = lsRead<unknown>(storageKey, null);
+      if (parsed != null) {
+        return selector ? selector(parsed as T) : (parsed as T);
       }
       return initialValue;
     });
@@ -98,26 +95,16 @@ function createPersistentHook<T>(
     useEffect(() => {
       const handleStorage = (e: StorageEvent) => {
         if (e.key === storageKey || e.key === null) {
-          try {
-            const raw = localStorage.getItem(storageKey);
-            const value = raw != null ? (JSON.parse(raw) as T) : initialValue;
-            setState(selector ? selector(value) : value);
-          } catch {
-            /* ignore */
-          }
+          const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+          setState(selector ? selector(value) : value);
         }
       };
 
       const handleCustom = (e: Event) => {
         const detail = (e as CustomEvent).detail;
         if (!detail?.key || detail.key === storageKey) {
-          try {
-            const raw = localStorage.getItem(storageKey);
-            const value = raw != null ? (JSON.parse(raw) as T) : initialValue;
-            setState(selector ? selector(value) : value);
-          } catch {
-            /* ignore */
-          }
+          const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+          setState(selector ? selector(value) : value);
         }
       };
 
@@ -135,12 +122,8 @@ function createPersistentHook<T>(
         isInternalUpdate.current = true;
         setState((prev) => {
           const resolved = typeof next === 'function' ? (next as (prev: T) => T)(prev) : next;
-          try {
-            localStorage.setItem(storageKey, JSON.stringify(resolved));
-            notifyDataChanged(storageKey);
-          } catch (err) {
-            console.error(`[usePersistentStorage] Failed to persist "${storageKey}":`, err);
-          }
+          // lsSet handles quota errors + fires notifyDataChanged internally
+          lsSet(storageKey, resolved);
           return resolved;
         });
       },
