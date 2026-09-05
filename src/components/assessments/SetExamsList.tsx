@@ -1026,6 +1026,7 @@ function loadExamTableData(examId: string): ExamTableData {
 interface ExamResultsTableModalProps {
   examId: string;
   examTitle: string;
+  examSubject?: string;
   onClose: () => void;
 }
 
@@ -1042,6 +1043,7 @@ interface ExamResultsTableModalProps {
 const ExamResultsTableModal: React.FC<ExamResultsTableModalProps> = ({
   examId,
   examTitle,
+  examSubject,
   onClose,
 }) => {
   const [tableData, setTableData] = useState<ExamTableData>({
@@ -1164,7 +1166,13 @@ const ExamResultsTableModal: React.FC<ExamResultsTableModalProps> = ({
               <FileSpreadsheet size={12} />
               Results Table View
             </div>
-            <h2 className="text-xl font-black truncate">{examTitle}</h2>
+            <h2 className="text-xl font-black truncate">
+              {(() => {
+                const subject = String(examSubject || "").trim().toUpperCase();
+                const title = String(examTitle || "").trim();
+                return subject ? `${subject} — ${title}` : title || "Results Table";
+              })()}
+            </h2>
             <p className="text-white/80 text-xs mt-0.5">
               {isLoading
                 ? "Loading…"
@@ -1351,6 +1359,7 @@ const SetExamsList: React.FC = () => {
   const [previewExamTitle, setPreviewExamTitle] = useState<string>("");
   const [resultsExamId, setResultsExamId] = useState<string | null>(null);
   const [resultsExamTitle, setResultsExamTitle] = useState<string>("");
+  const [resultsExamSubject, setResultsExamSubject] = useState<string>("");
 
   // Returns to the Assessments parent menu and resets in-page nested state.
   const handleBackToParent = useBackToAssessmentsMenu(
@@ -1438,9 +1447,10 @@ const SetExamsList: React.FC = () => {
     setPreviewExamTitle(title);
   }, []);
 
-  const handleViewResults = useCallback((id: string, title: string) => {
+  const handleViewResults = useCallback((id: string, title: string, subject?: string) => {
     setResultsExamId(id);
     setResultsExamTitle(title);
+    setResultsExamSubject(subject || "");
   }, []);
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -1552,7 +1562,7 @@ const SetExamsList: React.FC = () => {
           </Button>
           {/* Results / Marksheet */}
           <Button
-            onClick={() => handleViewResults(exam.id, exam.title)}
+            onClick={() => handleViewResults(exam.id, exam.title, exam.subject)}
             className="h-10 w-28 rounded-lg text-sm font-medium gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
           >
             <FileSpreadsheet size={15} />
@@ -1634,7 +1644,7 @@ const SetExamsList: React.FC = () => {
                       className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="View Exam">
                       <Eye size={14} />
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleViewResults(exam.id, exam.title)}
+                    <Button variant="ghost" size="icon" onClick={() => handleViewResults(exam.id, exam.title, exam.subject)}
                       className="rounded-lg h-8 w-8 text-emerald-600 hover:bg-emerald-50" title="View Results">
                       <FileSpreadsheet size={14} />
                     </Button>
@@ -1675,6 +1685,7 @@ const SetExamsList: React.FC = () => {
         <ExamResultsTableModal
           examId={resultsExamId}
           examTitle={resultsExamTitle}
+          examSubject={resultsExamSubject}
           onClose={() => setResultsExamId(null)}
         />
       )}
