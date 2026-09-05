@@ -65,9 +65,9 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
       if (!currentMaster[staff.id]) {
         currentMaster[staff.id] = {
           staffId: staff.id,
-          staffName: staff.fullName,
-          name: staff.fullName,
-          role: staff.systemRole.replace('_', ' '),
+          staffName: staff.fullName || '',
+          name: staff.fullName || '',
+          role: (staff?.systemRole || '').replace('_', ' '),
           date: todayStr,
         };
       }
