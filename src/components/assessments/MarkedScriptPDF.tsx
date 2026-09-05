@@ -318,10 +318,10 @@ const MarkedScriptPDF: React.FC<MarkedScriptPDFProps> = ({
                     : "—";
                 } else {
                   studentAnswerText =
-                    typeof studentAnswer === "string" && studentAnswer.trim()
-                      ? studentAnswer
-                      : "No answer";
-                  correctAnswerText = q.modelAnswer?.trim() || "—";
+                    typeof studentAnswer === "string" && String(studentAnswer || '').trim()
+                                          ? studentAnswer
+                                          : "No answer";
+                                      correctAnswerText = String(q.modelAnswer || '').trim() || "—";
                 }
 
                 return (

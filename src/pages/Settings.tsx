@@ -38,10 +38,13 @@ import {
   CreditCard,
   Crown,
   Settings2,
-  ArrowLeft
+  ArrowLeft,
+  Database,
+  Download,
+  Upload
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { notifyDataChanged } from '@/utils/storage';
+import { notifyDataChanged, downloadDatabaseBackup } from '@/utils/storage';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
 import { localData } from '@/services/localDataService';
@@ -293,18 +296,18 @@ const Settings = () => {
 
   // Login handlers
   const handleLogin = async (role: AdminRole, password: string) => {
-    if (!password.trim()) {
-      setAuthError("Please enter your password.");
-      return;
-    }
-
-    setIsVerifyingAuth(true);
-    setAuthError("");
-
-    await new Promise(r => setTimeout(r, 600));
-
-    const storedPassword = getCredential();
-    const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
+    if (!String(password || '').trim()) {
+          setAuthError("Please enter your password.");
+          return;
+        }
+    
+        setIsVerifyingAuth(true);
+        setAuthError("");
+    
+        await new Promise(r => setTimeout(r, 600));
+    
+        const storedPassword = getCredential();
+        const isValid = String(password || '').trim() === storedPassword || String(password || '').trim() === DEFAULT_ADMIN_PASSWORD;
 
     if (isValid) {
           const roleInfo = {
@@ -362,7 +365,7 @@ const Settings = () => {
 
     // Normalise the entered "current" password and the stored value so
     // a stray whitespace / newline never blocks a legitimate update.
-    const enteredCurrent = passwordForm.currentPassword.trim();
+    const enteredCurrent = String(passwordForm.currentPassword || '').trim();
     if (!enteredCurrent) {
       showError("Please enter your current password.");
       return;
@@ -725,21 +728,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-
-              <Button 
-                type="submit" 
-                disabled={isVerifyingAuth || !authPassword.trim()}
-                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-              >
-                {isVerifyingAuth ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    Verifying...
-                  </>
-                ) : (
-                  <>
-                    <Unlock size={20} />
-                    Authorize Access
+              
+                            <Button
+                              type="submit"
+                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
+                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+                            >
+                              {isVerifyingAuth ? (
+                                <>
+                                  <Loader2 className="animate-spin" size={20} />
+                                  Verifying...
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock size={20} />
+                                  Authorize Access
                   </>
                 )}
               </Button>
@@ -865,21 +868,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-
-              <Button 
-                type="submit" 
-                disabled={isVerifyingAuth || !authPassword.trim()}
-                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-              >
-                {isVerifyingAuth ? (
-                  <>
-                    <Loader2 className="animate-spin" size={20} />
-                    Switching...
-                  </>
-                ) : (
-                  <>
-                    <Unlock size={20} />
-                    Switch Role
+              
+                            <Button
+                              type="submit"
+                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
+                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+                            >
+                              {isVerifyingAuth ? (
+                                <>
+                                  <Loader2 className="animate-spin" size={20} />
+                                  Switching...
+                                </>
+                              ) : (
+                                <>
+                                  <Unlock size={20} />
+                                  Switch Role
                   </>
                 )}
               </Button>
@@ -1539,6 +1542,70 @@ const Settings = () => {
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Database Backup / Restore — quick access from System Configuration */}
+          <Card className="border-none shadow-sm rounded-2xl md:rounded-[2.5rem] bg-white p-4 md:p-8 overflow-hidden">
+            <CardHeader className="px-0 pt-0 pb-4 md:pb-6 border-b flex flex-col sm:flex-row sm:items-start gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 md:p-3 bg-emerald-50 text-emerald-600 rounded-xl md:rounded-2xl shrink-0">
+                  <Database size={18} className="md:hidden" />
+                  <Database size={24} className="hidden md:inline" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-lg md:text-2xl font-black text-slate-900">Database Backup &amp; Restore</CardTitle>
+                  <CardDescription className="text-xs md:text-sm">Export all school data to a JSON file, or import a backup to move data between the web app and the Android APK.</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+
+            <CardContent className="px-0 pt-4 md:pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-emerald-50/50 border border-emerald-100 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-emerald-100 text-emerald-600 rounded-xl">
+                      <Download size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Backup / Export Database (JSON)</p>
+                      <p className="text-xs text-slate-500">Download a complete JSON snapshot of all local data.</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => {
+                      try {
+                        downloadDatabaseBackup();
+                        showSuccess('Database backup downloaded successfully!');
+                      } catch {
+                        showError('Failed to export database.');
+                      }
+                    }}
+                    className="w-full h-10 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold gap-2"
+                  >
+                    <Download size={14} /> Export Database (JSON)
+                  </Button>
+                </div>
+
+                <div className="p-4 bg-amber-50/50 border border-amber-100 rounded-2xl space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                      <Upload size={18} />
+                    </div>
+                    <div>
+                      <p className="font-bold text-slate-900">Restore / Import Database (JSON)</p>
+                      <p className="text-xs text-slate-500">Replace local data with a previously exported backup.</p>
+                    </div>
+                  </div>
+                  <Button
+                    onClick={() => navigate('/system-management')}
+                    variant="outline"
+                    className="w-full h-10 rounded-xl border-amber-200 text-amber-700 hover:bg-amber-100 font-bold gap-2"
+                  >
+                    <Upload size={14} /> Open Restore Wizard
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

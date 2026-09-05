@@ -59,7 +59,7 @@ interface ServerStats {
 }
 
 const normalizeUrl = (input: string): string => {
-  let url = input.trim();
+  let url = String(input || '').trim();
   if (!url) return '';
   if (!url.startsWith('http://') && !url.startsWith('https://')) {
     url = `http://${url}`;
@@ -292,10 +292,10 @@ export default function LANServerConfig() {
   // ── Connection Controls ────────────────────────────────────────────────────
 
   const handleSaveAndTest = async () => {
-    if (!serverUrl.trim()) {
-      showError('Please enter a LAN Server Address');
-      return;
-    }
+    if (!String(serverUrl || '').trim()) {
+          showError('Please enter a LAN Server Address');
+          return;
+        }
 
     setIsSaving(true);
     setActiveError(null);

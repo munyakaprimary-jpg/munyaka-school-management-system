@@ -69,7 +69,7 @@ const HEADER_PATTERNS: RegExp[] = [
  * than an actual question or question content.
  */
 function isHeaderOrInstruction(line: string): boolean {
-  const trimmed = line.trim();
+  const trimmed = String(line || '').trim();
   if (trimmed.length < 3) return true;
   return HEADER_PATTERNS.some((p) => p.test(trimmed));
 }
@@ -186,14 +186,14 @@ async function extractRawText(file: File): Promise<{
     const page = await pdf.getPage(pageNum);
     const textContent = await page.getTextContent();
     const pageText = textContent.items
-      .map((item) => ("str" in item ? (item as { str: string }).str : ""))
-      .join(" ")
-      .replace(/\s{2,}/g, " ")
-      .trim();
+          .map((item) => ("str" in item ? (item as { str: string }).str : ""))
+          .join(" ")
+          .replace(/\s{2,}/g, " ")
+          .trim() || "";
     pageTexts.push(pageText);
   }
 
-  const rawText = pageTexts.join("\n\n--- Page Break ---\n\n").trim();
+  const rawText = String(pageTexts.join("\n\n--- Page Break ---\n\n") || '').trim();
   const hasTextLayer = pageTexts.some((t) => t && t.replace(/\s/g, "").length > 0);
   const isScanned = !hasTextLayer;
 
@@ -214,12 +214,12 @@ function normalizeOrphanedNumbers(lines: string[]): string[] {
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+      const line = String(lines[i] || '').trim();
 
     // Check if this line is ONLY a question number (e.g. "4." or "4)" or "(4)")
     const orphanedMatch = line.match(/^(?:\d+)[.)]$|^\(\d+\)$|^[a-z]\)$|^Q\s*\d+$|^QUESTION\s+\d+$/i);
     if (orphanedMatch && i + 1 < lines.length) {
-      const nextLine = lines[i + 1].trim();
+      const nextLine = String(lines[i + 1] || '').trim();
       // Only join if the next line isn't also a number
       if (!nextLine.match(/^(?:\d+)[.)]$|^\(\d+\)$/)) {
         result.push(`${line} ${nextLine}`);
@@ -267,13 +267,13 @@ export async function parseAssessmentPDF(file: File): Promise<PDFParseResult> {
     if (pageText) {
       // Split on paragraph breaks and 4+ spaces (column separators in KNEC papers)
       const paragraphBlocks = pageText
-        .split(/\n{2,}|\s{4,}/)
-        .map((l) => l.trim())
+              .split(/\n{2,}|\s{4,}/)
+              .map((l) => String(l || '').trim())
         .filter((l) => l.length > 0);
 
       for (const block of paragraphBlocks) {
         // Also split long blocks on double newlines within the block
-        const blockLines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
+        const blockLines = block.split(/\n/).map((l) => String(l || '').trim()).filter(Boolean);
         allLines.push(...blockLines);
       }
     }
@@ -383,10 +383,10 @@ export function processImageOnlyQuestion(
   availableText: string,
   pageIndex: number
 ): Partial<CSVRow> {
-  if (availableText && availableText.trim().length > 0) {
-    // There is some readable text — treat as a normal question with a figure note
-    return {
-      question_text: `${availableText.trim()} [Figure reference on page ${pageIndex + 1} — image content not extracted]`,
+  if (availableText && String(availableText || '').trim().length > 0) {
+      // There is some readable text — treat as a normal question with a figure note
+      return {
+        question_text: `${String(availableText || '').trim()} [Figure reference on page ${pageIndex + 1} — image content not extracted]`,
       type: "structured",
     };
   }

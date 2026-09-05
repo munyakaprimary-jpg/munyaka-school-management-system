@@ -45,7 +45,7 @@ import CoverPage from './CoverPage';
 const hasCustomAdminPassword = (): boolean => {
   try {
     const stored = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
-    return stored != null && stored.trim().length > 0;
+    return stored != null && String(stored).trim().length > 0;
   } catch {
     return false;
   }
@@ -230,7 +230,7 @@ const Login: React.FC = () => {
     if (!selectedAdminRole) return;
 
     // Normalise the entered PIN: trim whitespace and strip newlines
-    const entered = adminPassword.trim().replace(/\n$/, '');
+    const entered = String(adminPassword || '').trim().replace(/\n$/, '');
 
     if (!entered) {
       setAdminAuthError('Please enter your password.');
@@ -296,8 +296,8 @@ const Login: React.FC = () => {
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedId = staffId.trim();
-    const trimmedPass = staffPassword.trim();
+    const trimmedId = String(staffId || '').trim();
+        const trimmedPass = String(staffPassword || '').trim();
 
     if (!trimmedId) {
       setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
@@ -606,8 +606,8 @@ const Login: React.FC = () => {
                       </div>
                       <Button
                         type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
-                        className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
+                                                disabled={isAdminVerifying || !String(adminPassword || '').trim()}
+                                                className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
                       >
                         {isAdminVerifying ? (
                           <><Loader2 className="animate-spin" size={20} /> Verifying...</>
@@ -711,8 +711,8 @@ const Login: React.FC = () => {
                       </div>
                       <Button
                         type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
-                        className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
+                                                disabled={isAdminVerifying || !String(adminPassword || '').trim()}
+                                                className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
                       >
                         {isAdminVerifying ? (
                           <><Loader2 className="animate-spin" size={20} /> Verifying...</>
@@ -791,7 +791,7 @@ const Login: React.FC = () => {
 
                     <Button
                       type="submit"
-                      disabled={isStaffVerifying || !staffId.trim() || !staffPassword.trim()}
+                      disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
                       className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
                     >
                       {isStaffVerifying ? (

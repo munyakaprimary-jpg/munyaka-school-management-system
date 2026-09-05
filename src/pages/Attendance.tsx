@@ -572,7 +572,7 @@ const Attendance = () => {
               // Could be a flat array of stream strings
               fromSettings = parsed
                 .filter(v => typeof v === 'string')
-                .map(v => v.toUpperCase().trim())
+                .map(v => String(v || '').toUpperCase().trim())
                 .filter(Boolean);
               if (fromSettings.length > 0) break;
             } else if (parsed && typeof parsed === 'object') {
@@ -642,7 +642,7 @@ const Attendance = () => {
     }, [filters.grade, availableStreams]);
   
     const filteredLearners = useMemo(() => {
-      if (!searchTerm.trim()) return liveStudents;
+      if (!String(searchTerm || '').trim()) return liveStudents;
       const term = searchTerm.toLowerCase();
       return liveStudents.filter(
         s => s.name.toLowerCase().includes(term) ||
@@ -799,7 +799,7 @@ const Attendance = () => {
       locked: true,
       lockedAt: new Date().toISOString(),
       lockedBy: isAdminRole ? 'Administrator' : 'Class Teacher',
-      reason: opts.reason.trim() || 'Auto-locked after saving attendance',
+      reason: String(opts?.reason || '').trim() || 'Auto-locked after saving attendance',
     };
     const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
     setLocksMap(prev => ({ ...prev, [targetKey]: next }));
@@ -816,7 +816,7 @@ const Attendance = () => {
 
   const handleConfirmLockAction = async () => {
     if (!lockAction || !lockTargetSession) return;
-    if (!adminAuthPassword.trim()) {
+    if (!String(adminAuthPassword || '').trim()) {
       setAdminAuthError('Please enter the admin password to continue.');
       return;
     }
@@ -2339,16 +2339,16 @@ const Attendance = () => {
                                       <Users size={36} />
                                     </div>
                                     <div className="space-y-1.5 max-w-md">
-                                      {searchTerm.trim() ? (
-                                        <>
-                                          <p className="text-slate-900 font-black text-base">
-                                            No learners match "{searchTerm}"
-                                          </p>
-                                          <p className="text-xs text-slate-500 font-medium">
-                                            Try searching with a different name or admission number. {liveStudents.length === 0 && `No students are registered for ${filters.grade} ${filters.stream}.`}
-                                          </p>
-                                        </>
-                                      ) : (
+                                      {String(searchTerm || '').trim() ? (
+                                                                              <>
+                                                                                <p className="text-slate-900 font-black text-base">
+                                                                                  No learners match "{searchTerm}"
+                                                                                </p>
+                                                                                <p className="text-xs text-slate-500 font-medium">
+                                                                                  Try searching with a different name or admission number. {liveStudents.length === 0 && `No students are registered for ${filters.grade} ${filters.stream}.`}
+                                                                                </p>
+                                                                              </>
+                                                                            ) : (
                                         <>
                                           <p className="text-slate-900 font-black text-base">
                                             No learners registered under {filters.grade} {filters.stream}
@@ -2368,7 +2368,7 @@ const Attendance = () => {
                                         Add Learners
                                       </a>
                                     )}
-                                    {searchTerm.trim() && liveStudents.length > 0 && (
+                                    {String(searchTerm || '').trim() && liveStudents.length > 0 && (
                                       <button
                                         onClick={() => setSearchTerm('')}
                                         className="inline-flex items-center gap-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs h-10 px-5 transition-colors"

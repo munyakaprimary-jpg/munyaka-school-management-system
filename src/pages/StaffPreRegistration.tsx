@@ -262,10 +262,10 @@ const StaffPreRegistration = () => {
   };
 
   const handleVerifyAuth = async () => {
-    if (!authPassword.trim()) {
-      setAuthError("Password is required");
-      return;
-    }
+    if (!String(authPassword || '').trim()) {
+          setAuthError("Password is required");
+          return;
+        }
 
     setIsVerifying(true);
     setAuthError("");

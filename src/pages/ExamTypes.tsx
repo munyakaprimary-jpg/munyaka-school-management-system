@@ -52,16 +52,16 @@ const ExamTypes = () => {
 
   const handleAddExamType = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !code.trim()) return;
-
-    const newExam: ExamType = {
-      id: `et-${Date.now()}`,
-      name: name.trim(),
-      code: code.trim().toUpperCase(),
-      weight: parseInt(weight) || 0,
-      category,
-      description: description.trim() || undefined
-    };
+    if (!String(name || '').trim() || !String(code || '').trim()) return;
+    
+        const newExam: ExamType = {
+          id: `et-${Date.now()}`,
+          name: String(name || '').trim(),
+          code: String(code || '').trim().toUpperCase(),
+          weight: parseInt(weight) || 0,
+          category,
+          description: String(description || '').trim() || undefined
+        };
 
     setExamTypes([...examTypes, newExam]);
     setIsOpen(false);

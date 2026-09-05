@@ -70,7 +70,7 @@ const GRADE_ORDER = [
 ];
 
 const getGradeSortIndex = (gradeName: string): number => {
-  const normalized = gradeName.toLowerCase().trim();
+  const normalized = String(gradeName || '').toLowerCase().trim();
   const index = GRADE_ORDER.findIndex(g => normalized.includes(g));
   return index !== -1 ? index : 999;
 };
@@ -201,12 +201,12 @@ const ResultsAnalysis = () => {
         }
       }
 
-      const matchesSearch = 
-        !searchTerm.trim() ||
-        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) || 
-        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+      const matchesSearch =
+              !String(searchTerm || '').trim() ||
+              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });

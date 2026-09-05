@@ -97,26 +97,26 @@ const LearningAreas = () => {
   };
 
   const handleAddLearningArea = () => {
-    if (!name.trim()) {
-      showError('Please enter a learning area name.');
-      return;
-    }
-
-    if (!isNameUniqueInCluster(selectedClusterId, name.trim())) {
-      showError(
-        `A learning area named "${name.trim()}" already exists in ${
-          clusters.find((c) => c.id === selectedClusterId)?.name
-        }.`
-      );
-      return;
-    }
-
-    const newArea: LearningArea = {
-      id: `la-${Date.now()}`,
-      name: name.trim(),
-      periodsPerWeek: parseInt(periods) || 4,
-      type,
-      description: description.trim() || undefined,
+      if (!String(name || '').trim()) {
+        showError('Please enter a learning area name.');
+        return;
+      }
+  
+      if (!isNameUniqueInCluster(selectedClusterId, String(name || '').trim())) {
+        showError(
+          `A learning area named "${String(name || '').trim()}" already exists in ${
+            clusters.find((c) => c.id === selectedClusterId)?.name
+          }.`
+        );
+        return;
+      }
+  
+      const newArea: LearningArea = {
+        id: `la-${Date.now()}`,
+        name: String(name || '').trim(),
+        periodsPerWeek: parseInt(periods) || 4,
+        type,
+        description: String(description || '').trim() || undefined,
       isDefault: false,
     };
 
@@ -138,43 +138,43 @@ const LearningAreas = () => {
   };
 
   const handleEditLearningArea = () => {
-    if (!name.trim()) {
-      showError('Please enter a learning area name.');
-      return;
-    }
-
-    if (!isNameUniqueInCluster(targetClusterId, name.trim(), targetLearningArea?.id)) {
-      showError(
-        `A learning area named "${name.trim()}" already exists in ${
-          clusters.find((c) => c.id === targetClusterId)?.name
-        }.`
-      );
-      return;
-    }
-
-    if (targetLearningArea) {
-      setClusters((prev) =>
-        prev.map((c) =>
-          c.id === targetClusterId
-            ? {
-                ...c,
-                learningAreas: c.learningAreas.map((la) =>
-                  la.id === targetLearningArea.id
-                    ? {
-                        ...la,
-                        name: name.trim(),
-                        periodsPerWeek: parseInt(periods) || 4,
-                        type,
-                        description: description.trim() || undefined,
-                      }
-                    : la
-                ),
-              }
-            : c
-        )
-      );
-      showSuccess(`Successfully updated "${name.trim()}"!`);
-    }
+      if (!String(name || '').trim()) {
+        showError('Please enter a learning area name.');
+        return;
+      }
+  
+      if (!isNameUniqueInCluster(targetClusterId, String(name || '').trim(), targetLearningArea?.id)) {
+        showError(
+          `A learning area named "${String(name || '').trim()}" already exists in ${
+            clusters.find((c) => c.id === targetClusterId)?.name
+          }.`
+        );
+        return;
+      }
+  
+      if (targetLearningArea) {
+        setClusters((prev) =>
+          prev.map((c) =>
+            c.id === targetClusterId
+              ? {
+                  ...c,
+                  learningAreas: c.learningAreas.map((la) =>
+                    la.id === targetLearningArea.id
+                      ? {
+                          ...la,
+                          name: String(name || '').trim(),
+                          periodsPerWeek: parseInt(periods) || 4,
+                          type,
+                          description: String(description || '').trim() || undefined,
+                        }
+                      : la
+                  ),
+                }
+              : c
+          )
+        );
+        showSuccess(`Successfully updated "${String(name || '').trim()}"!`);
+      }
 
     setIsEditOpen(false);
     setTargetLearningArea(null);
@@ -204,10 +204,10 @@ const LearningAreas = () => {
   }, []);
 
   const handleVerifyAuth = useCallback(async () => {
-    if (!authPassword.trim()) {
-      setAuthError('Password is required');
-      return;
-    }
+    if (!String(authPassword || '').trim()) {
+          setAuthError('Password is required');
+          return;
+        }
 
     setIsVerifying(true);
     setAuthError('');

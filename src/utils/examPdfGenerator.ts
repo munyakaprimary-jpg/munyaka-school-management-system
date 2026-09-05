@@ -133,8 +133,8 @@ function normalizeOptions(
     if (typeof opt === "string") return opt;
     if (opt && typeof opt === "object") {
       const label = opt.label ? `${opt.label}. ` : "";
-      const text = opt.text || "";
-      return `${label}${text}`.trim();
+            const text = opt.text || "";
+            return String(`${label}${text}` || '').trim();
     }
     return String(opt ?? "");
   });
@@ -155,8 +155,8 @@ function getQuestionPrompt(q: ExamQuestion): string {
  * guidance even if the underlying field is empty.
  */
 function getInstructions(exam: ExamRecord): string {
-  if (exam.instructions && exam.instructions.trim().length > 0) {
-    return exam.instructions.trim();
+  if (exam.instructions && String(exam.instructions || '').trim().length > 0) {
+    return String(exam.instructions || '').trim();
   }
   return [
     "1. Answer all questions in the spaces provided.",
