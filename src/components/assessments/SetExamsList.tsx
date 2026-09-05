@@ -38,6 +38,7 @@ import {
 } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import { generateExamPDF } from "@/utils/examPdfGenerator";
+import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import type { Assessment, Question } from "@/types/questions";
@@ -1283,6 +1284,21 @@ const SetExamsList: React.FC = () => {
   const [resultsExamId, setResultsExamId] = useState<string | null>(null);
   const [resultsExamTitle, setResultsExamTitle] = useState<string>("");
 
+  // Returns to the Assessments parent menu and resets in-page nested state.
+  const handleBackToParent = useBackToAssessmentsMenu(
+    {},
+    {
+      resets: [
+        () => setPreviewExamId(null),
+        () => setResultsExamId(null),
+        () => setSearchTerm(""),
+        () => setStatusFilter("all"),
+        () => setCategoryFilter("all"),
+        () => setView("cards"),
+      ],
+    }
+  );
+
   const refresh = useCallback(() => setExams(loadExams()), []);
 
   useEffect(() => {
@@ -1601,7 +1617,7 @@ const SetExamsList: React.FC = () => {
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/assessments")}
+          onClick={handleBackToParent}
           className="h-10 w-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex-shrink-0"
           title="Back to Assessments"
         >

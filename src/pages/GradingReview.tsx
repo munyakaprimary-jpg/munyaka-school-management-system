@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   CheckCircle2,
   XCircle,
@@ -34,6 +33,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { showSuccess, showError } from "@/utils/toast";
 import { notifyDataChanged } from "@/utils/storage";
 import { getAllAssessmentResults } from "@/utils/assessmentResults";
+import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 import type {
   Assessment,
   Question,
@@ -233,7 +233,6 @@ function loadStudentMeta(studentId: string): {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function GradingReview() {
-  const navigate = useNavigate();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
@@ -244,12 +243,17 @@ export default function GradingReview() {
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null);
 
-  const handleBackToParent = useCallback(() => {
-    setSelectedAssessmentId("");
-    setSelectedAssessment(null);
-    setSelectedStudentId(null);
-    navigate("/assessments");
-  }, [navigate]);
+  const handleBackToParent = useBackToAssessmentsMenu(
+    {},
+    {
+      resets: [
+        () => setSelectedAssessmentId(""),
+        () => setSelectedAssessment(null),
+        () => setSelectedStudentId(null),
+        () => setSearchTerm(""),
+      ],
+    }
+  );
 
   // Load available assessments on mount
   useEffect(() => {

@@ -14,6 +14,7 @@ import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
 import { saveTeacherInputResult } from "@/utils/assessmentResults";
+import { useBackToAssessmentsMenu } from "@/hooks/useBackToAssessmentsMenu";
 
 // Educational Tier Subject Mappings & Parsing Logic
 const TIER_SUBJECTS: Record<string, string[]> = {
@@ -101,10 +102,10 @@ const Assessments = () => {
 
   // Returns the user to the parent Assessments menu. Local selection state
   // is reset so re-entry starts clean, but persisted marks remain intact.
-  const handleBackToParent = useCallback(() => {
-    setSearchTerm("");
-    navigate("/assessments");
-  }, [navigate]);
+  const handleBackToParent = useBackToAssessmentsMenu(
+    {}, // no module-style setters in this route — falls back to navigate()
+    { resets: [() => setSearchTerm("")] }
+  );
 
   // ====== Unified file-download state for CSV & PDF ======
   const csvExport = useFileDownload();
