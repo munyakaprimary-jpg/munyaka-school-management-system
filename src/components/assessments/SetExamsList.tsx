@@ -1597,13 +1597,13 @@ const SetExamsList: React.FC = () => {
 
       {/* Top bar */}
       <div className="flex items-center gap-3 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-        {/* Back arrow -> Main Dashboard */}
+        {/* Back arrow -> Assessments parent menu */}
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/assessments")}
           className="h-10 w-10 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 flex-shrink-0"
-          title="Back to Dashboard"
+          title="Back to Assessments"
         >
           <ArrowLeft size={18} />
         </Button>
