@@ -40,6 +40,7 @@ import type {
   Assessment,
   Question,
   StudentResponse,
+  StudentSubmission,
   AssessmentResult,
 } from "@/types/questions";
 
