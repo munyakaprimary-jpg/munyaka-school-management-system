@@ -230,7 +230,7 @@ const Login: React.FC = () => {
     if (!selectedAdminRole) return;
 
     // Normalise the entered PIN: trim whitespace and strip newlines
-    const entered = (adminPassword ?? '').trim().replace(/\n$/, '');
+    const entered = adminPassword.trim().replace(/\n$/, '');
 
     if (!entered) {
       setAdminAuthError('Please enter your password.');
@@ -296,8 +296,8 @@ const Login: React.FC = () => {
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const trimmedId = (staffId ?? '').trim();
-    const trimmedPass = (staffPassword ?? '').trim();
+    const trimmedId = staffId.trim();
+    const trimmedPass = staffPassword.trim();
 
     if (!trimmedId) {
       setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');

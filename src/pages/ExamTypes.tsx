@@ -52,15 +52,15 @@ const ExamTypes = () => {
 
   const handleAddExamType = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(name ?? '').trim() || !(code ?? '').trim()) return;
+    if (!name.trim() || !code.trim()) return;
 
     const newExam: ExamType = {
       id: `et-${Date.now()}`,
-      name: (name ?? '').trim(),
-      code: (code ?? '').trim().toUpperCase(),
+      name: name.trim(),
+      code: code.trim().toUpperCase(),
       weight: parseInt(weight) || 0,
       category,
-      description: (description ?? '').trim() || undefined
+      description: description.trim() || undefined
     };
 
     setExamTypes([...examTypes, newExam]);

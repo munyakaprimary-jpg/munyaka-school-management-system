@@ -97,14 +97,14 @@ const LearningAreas = () => {
   };
 
   const handleAddLearningArea = () => {
-    if (!(name ?? '').trim()) {
+    if (!name.trim()) {
       showError('Please enter a learning area name.');
       return;
     }
 
-    if (!isNameUniqueInCluster(selectedClusterId, (name ?? '').trim())) {
+    if (!isNameUniqueInCluster(selectedClusterId, name.trim())) {
       showError(
-        `A learning area named "${(name ?? '').trim()}" already exists in ${
+        `A learning area named "${name.trim()}" already exists in ${
           clusters.find((c) => c.id === selectedClusterId)?.name
         }.`
       );
@@ -113,10 +113,10 @@ const LearningAreas = () => {
 
     const newArea: LearningArea = {
       id: `la-${Date.now()}`,
-      name: (name ?? '').trim(),
+      name: name.trim(),
       periodsPerWeek: parseInt(periods) || 4,
       type,
-      description: (description ?? '').trim() || undefined,
+      description: description.trim() || undefined,
       isDefault: false,
     };
 
@@ -138,14 +138,14 @@ const LearningAreas = () => {
   };
 
   const handleEditLearningArea = () => {
-    if (!(name ?? '').trim()) {
+    if (!name.trim()) {
       showError('Please enter a learning area name.');
       return;
     }
 
-    if (!isNameUniqueInCluster(targetClusterId, (name ?? '').trim(), targetLearningArea?.id)) {
+    if (!isNameUniqueInCluster(targetClusterId, name.trim(), targetLearningArea?.id)) {
       showError(
-        `A learning area named "${(name ?? '').trim()}" already exists in ${
+        `A learning area named "${name.trim()}" already exists in ${
           clusters.find((c) => c.id === targetClusterId)?.name
         }.`
       );
@@ -162,10 +162,10 @@ const LearningAreas = () => {
                   la.id === targetLearningArea.id
                     ? {
                         ...la,
-                        name: (name ?? '').trim(),
+                        name: name.trim(),
                         periodsPerWeek: parseInt(periods) || 4,
                         type,
-                        description: (description ?? '').trim() || undefined,
+                        description: description.trim() || undefined,
                       }
                     : la
                 ),
@@ -173,7 +173,7 @@ const LearningAreas = () => {
             : c
         )
       );
-      showSuccess(`Successfully updated "${(name ?? '').trim()}"!`);
+      showSuccess(`Successfully updated "${name.trim()}"!`);
     }
 
     setIsEditOpen(false);
@@ -204,7 +204,7 @@ const LearningAreas = () => {
   }, []);
 
   const handleVerifyAuth = useCallback(async () => {
-    if (!(authPassword ?? '').trim()) {
+    if (!authPassword.trim()) {
       setAuthError('Password is required');
       return;
     }

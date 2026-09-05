@@ -405,10 +405,10 @@ const ExamCreator: React.FC = () => {
 
   // ── Validate draft ────────────────────────────────────────────────────────
   const validateDraft = useCallback((): string | null => {
-    if (!(draftPrompt ?? '').trim()) return "Please enter a question prompt.";
+    if (!draftPrompt.trim()) return "Please enter a question prompt.";
 
     if (draftType === "mcq") {
-      if (!(draftOptionA ?? '').trim() || !(draftOptionB ?? '').trim()) {
+      if (!draftOptionA.trim() || !draftOptionB.trim()) {
         return "MCQ questions need at least Options A and B filled in.";
       }
     }
@@ -429,13 +429,13 @@ const ExamCreator: React.FC = () => {
 
     if (draftType === "mcq") {
       const options = [
-        { id: "a" as const, label: "A" as const, text: (draftOptionA ?? '').trim() },
-        { id: "b" as const, label: "B" as const, text: (draftOptionB ?? '').trim() },
-        ...((draftOptionC ?? '').trim()
-          ? [{ id: "c" as const, label: "C" as const, text: (draftOptionC ?? '').trim() }]
+        { id: "a" as const, label: "A" as const, text: draftOptionA.trim() },
+        { id: "b" as const, label: "B" as const, text: draftOptionB.trim() },
+        ...(draftOptionC.trim()
+          ? [{ id: "c" as const, label: "C" as const, text: draftOptionC.trim() }]
           : []),
-        ...((draftOptionD ?? '').trim()
-          ? [{ id: "d" as const, label: "D" as const, text: (draftOptionD ?? '').trim() }]
+        ...(draftOptionD.trim()
+          ? [{ id: "d" as const, label: "D" as const, text: draftOptionD.trim() }]
           : []),
       ];
 
@@ -445,7 +445,7 @@ const ExamCreator: React.FC = () => {
             q.id === editingQuestionId
               ? {
                   ...q,
-                  prompt: (draftPrompt ?? '').trim(),
+                  prompt: draftPrompt.trim(),
                   contextStatement: draftContextStatement || undefined,
                   imageUrl: draftImageUrl,
                   imagePosition: draftImagePosition,
@@ -461,7 +461,7 @@ const ExamCreator: React.FC = () => {
         const newQ: Question = {
           id: generateId("q"),
           type: "mcq",
-          prompt: (draftPrompt ?? '').trim(),
+          prompt: draftPrompt.trim(),
           contextStatement: draftContextStatement || undefined,
           imageUrl: draftImageUrl,
           imagePosition: draftImagePosition,
@@ -481,12 +481,12 @@ const ExamCreator: React.FC = () => {
             q.id === editingQuestionId
               ? {
                   ...q,
-                  prompt: (draftPrompt ?? '').trim(),
+                  prompt: draftPrompt.trim(),
                   contextStatement: draftContextStatement || undefined,
                   imageUrl: draftImageUrl,
                   imagePosition: draftImagePosition,
                   points: draftPoints,
-                  modelAnswer: (draftModelAnswer ?? '').trim(),
+                  modelAnswer: draftModelAnswer.trim(),
                 }
               : q
           )
@@ -496,13 +496,13 @@ const ExamCreator: React.FC = () => {
         const newQ: Question = {
           id: generateId("q"),
           type: "structured",
-          prompt: (draftPrompt ?? '').trim(),
+          prompt: draftPrompt.trim(),
           contextStatement: draftContextStatement || undefined,
           imageUrl: draftImageUrl,
           imagePosition: draftImagePosition,
           points: draftPoints,
           order: questions.length + 1,
-          modelAnswer: (draftModelAnswer ?? '').trim(),
+          modelAnswer: draftModelAnswer.trim(),
         };
         setQuestions((prev) => [...prev, newQ]);
         setExpandedQuestionId(newQ.id);
@@ -562,11 +562,11 @@ const ExamCreator: React.FC = () => {
 
   // ── Publish assessment ────────────────────────────────────────────────────
   const handlePublish = useCallback(async () => {
-    if (!(title ?? '').trim()) {
+    if (!title.trim()) {
       showError("Please enter an assessment title before publishing.");
       return;
     }
-    if (!selectedGrade || !(subject ?? '').trim()) {
+    if (!selectedGrade || !subject.trim()) {
       showError("Please pick a target grade and enter a subject.");
       return;
     }
@@ -582,21 +582,21 @@ const ExamCreator: React.FC = () => {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
-      const resolvedClassLevel = ((classLevel ?? '').trim() || selectedGrade).trim();
+      const resolvedClassLevel = (classLevel.trim() || selectedGrade).trim();
       // Persist `"all"` (not an empty string) so the Teacher Grading
       // Dashboard's stream filter has a canonical sentinel.
       const resolvedStream =
         selectedStream && selectedStream !== ALL_STREAMS_VALUE
-          ? (selectedStream ?? '').trim()
+          ? selectedStream.trim()
           : "all";
 
       // 1. Update question bank so StudentAssessmentView can find this exam.
       const bankPayload = {
         metadata: {
-          title: (title ?? '').trim(),
+          title: title.trim(),
           category,
           classLevel: resolvedClassLevel,
-          subject: (subject ?? '').trim(),
+          subject: subject.trim(),
           duration,
           totalMarks: calcTotalMarks,
           randomize: false,
@@ -618,12 +618,12 @@ const ExamCreator: React.FC = () => {
       //    directly.
       const newAssessment: Assessment & { grade: string; stream: string } = {
         id: assessmentId,
-        title: (title ?? '').trim(),
+        title: title.trim(),
         category,
         classLevel: resolvedClassLevel,
         grade: selectedGrade,
         stream: resolvedStream,
-        subject: (subject ?? '').trim(),
+        subject: subject.trim(),
         duration,
         totalMarks: calcTotalMarks,
         randomizeQuestions: false,
