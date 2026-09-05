@@ -16,7 +16,6 @@ export const showSuccess = (message: string) => {
   dismissAllBeforeNew();
   toast.success(message, {
     duration: DEFAULT_DURATION_MS,
-    closeButton: true,
   });
 };
 
@@ -24,14 +23,12 @@ export const showError = (message: string) => {
   dismissAllBeforeNew();
   toast.error(message, {
     duration: DEFAULT_DURATION_MS,
-    closeButton: true,
   });
 };
 
 export const showLoading = (message: string) => {
   return toast.loading(message, {
     duration: Infinity, // Loading toasts must be manually dismissed via dismissToast()
-    closeButton: true,
   });
 };
 

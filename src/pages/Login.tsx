@@ -37,6 +37,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
+import type { LoginFailure } from '@/services/mobileAuthService';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import CoverPage from './CoverPage';
 
@@ -352,12 +353,17 @@ const Login: React.FC = () => {
     // ── Server rejected the credentials or is unreachable ─────────────────
     console.warn('[Login] LAN auth failed:', result);
 
+    // TypeScript doesn't always narrow discriminated unions across catch-all
+    // conditionals, so we narrow explicitly here.
+    if (result.success) return;
+    const failure = result as LoginFailure;
+
     // ── Network errors: show as native alert (impossible to miss in APK) ──
     //    plus the inline error banner. The native alert survives screen
     //    rotation, app backgrounding, and is the first thing a field
     //    technician will see when troubleshooting an APK install.
-    if (result.code === 'NETWORK_ERROR') {
-      const networkMsg = result.error;
+    if (failure.code === 'NETWORK_ERROR') {
+      const networkMsg = failure.error;
       setStaffAuthError(networkMsg);
       showError(networkMsg);
 
@@ -378,7 +384,7 @@ const Login: React.FC = () => {
         }
       } catch { /* ignore alert failures */ }
 
-      console.error(`[Login] Server unreachable: ${result.attemptedUrl}`);
+      console.error(`[Login] Server unreachable: ${failure.attemptedUrl}`);
       setIsStaffVerifying(false);
       return;
     }
@@ -387,17 +393,17 @@ const Login: React.FC = () => {
     let displayMessage: string;
     let alertTitle: string | null = null;
 
-    if (result.code === 'INVALID_CREDENTIALS') {
+    if (failure.code === 'INVALID_CREDENTIALS') {
       displayMessage = '❌ Invalid Password — The TSC Number / Staff ID or Password is incorrect. Please check your credentials and try again.';
       alertTitle = 'Invalid Credentials';
-    } else if (result.code === 'ROLE_NOT_ALLOWED') {
+    } else if (failure.code === 'ROLE_NOT_ALLOWED') {
       displayMessage = '🚫 Access Denied — This account type is not permitted to sign in on this device. Contact the school administrator.';
       alertTitle = 'Role Not Authorized';
-    } else if (result.code === 'SERVER_ERROR') {
-      displayMessage = `🔧 Server Error — ${result.error}`;
+    } else if (failure.code === 'SERVER_ERROR') {
+      displayMessage = `🔧 Server Error — ${failure.error}`;
       alertTitle = 'Server Error';
     } else {
-      displayMessage = result.error || 'Login failed. Please try again.';
+      displayMessage = failure.error || 'Login failed. Please try again.';
     }
 
     setStaffAuthError(displayMessage);

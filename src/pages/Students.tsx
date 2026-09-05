@@ -554,7 +554,7 @@ export default function Students() {
       }
     }
 
-    const normalizedEntry = {
+    const normalizedEntry: Partial<LearnerRowCompat> & typeof formData = {
       ...formData,
       grade: normalizeGradeName(formData.grade),
       stream: normalizeStreamName(formData.stream),
@@ -562,6 +562,7 @@ export default function Students() {
       // Empty string is normalized to undefined so the field is omitted from
       // the stored JSON when not supplied.
       birthCertificateNo: bcNo || undefined,
+      status: formData.status ?? 'Active',
     };
 
     if (editingLearnerId) {

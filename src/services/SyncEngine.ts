@@ -32,6 +32,7 @@ export interface ConnectionStatus {
   serverReachable: boolean;
   latency: number | null;
   lastChecked: string | null;
+  serverUrl: string | null;
 }
 
 export interface SyncResult {
@@ -159,7 +160,8 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => {
       isOnline,
       serverReachable: false,
       latency: null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   }
 
@@ -386,11 +388,15 @@ export const startAutoSync = (
 
   const tick = async () => {
     if (!navigator.onLine) {
-      notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString() });
+      notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString(), serverUrl: getServerUrl() });
       return;
     }
 
     const status = await checkServerConnection();
+    // Ensure serverUrl is always included in the status payload
+    if (status.serverUrl === undefined) {
+      status.serverUrl = getServerUrl();
+    }
     notifyListeners(status);
 
     if (status.serverReachable) {
@@ -540,6 +546,9 @@ export const apiGet = async <T = any>(
 export const setupAutoSyncOnReconnect = () => {
   const handleOnline = async () => {
     const status = await checkServerConnection();
+    if (status.serverUrl === undefined) {
+      status.serverUrl = getServerUrl();
+    }
     notifyListeners(status);
     
     if (status.serverReachable) {
@@ -552,7 +561,7 @@ export const setupAutoSyncOnReconnect = () => {
   };
 
   const handleOffline = () => {
-    notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString() });
+    notifyListeners({ isOnline: false, serverReachable: false, latency: null, lastChecked: new Date().toISOString(), serverUrl: getServerUrl() });
   };
 
   window.addEventListener('online', handleOnline);

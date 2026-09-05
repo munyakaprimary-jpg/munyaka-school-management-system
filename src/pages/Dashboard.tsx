@@ -47,6 +47,7 @@ import {
   Circle,
   UsersRound,
   BookMarked,
+  AlertCircle,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { getNotices } from '@/utils/notice-board';

@@ -36,6 +36,7 @@ export interface Teacher {
   department?: string;
   isArchived?: boolean;
   deletedAt?: string;
+  is_active?: boolean | number | string;
 }
 
 export interface AttendanceLog {

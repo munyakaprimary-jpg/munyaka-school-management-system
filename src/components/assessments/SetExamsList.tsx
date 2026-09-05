@@ -753,7 +753,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                             </span>
                             <span className="text-sm text-slate-700 flex-1">{opt.text || <em className="text-slate-400">(no text)</em>}</span>
                             {opt.id === q.correctOptionId && (
-                              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" title="Correct answer" />
+                              <CheckCircle2 size={14} className="text-emerald-500 shrink-0" />
                             )}
                           </div>
                         ))}
@@ -1019,7 +1019,7 @@ const SetExamsList: React.FC = () => {
                 const opt = {
                   margin: 10,
                   filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
-                  image: { type: "jpeg", quality: 0.98 },
+                  image: { type: "jpeg" as const, quality: 0.98 },
                   html2canvas: { scale: 2 },
                   jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                 };
@@ -1111,7 +1111,7 @@ const SetExamsList: React.FC = () => {
                           const opt = {
                             margin: 10,
                             filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
-                            image: { type: "jpeg", quality: 0.98 },
+                            image: { type: "jpeg" as const, quality: 0.98 },
                             html2canvas: { scale: 2 },
                             jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
                           };
