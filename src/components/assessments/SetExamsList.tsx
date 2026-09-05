@@ -25,7 +25,6 @@ import {
   ArrowLeft,
   FileSpreadsheet,
 } from "lucide-react";
-import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -38,6 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
+import { generateExamPDF } from "@/utils/examPdfGenerator";
 import { useAuth } from "@/context/AuthContext";
 import { cn } from "@/lib/utils";
 import type { Assessment, Question } from "@/types/questions";
@@ -546,52 +546,11 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   // Captures the #pdf-paper-content element (only the exam body, with header
   // action buttons and footer action buttons excluded via
   // data-html2canvas-ignore="true") and saves it as a PDF file.
-  const handleDownloadPDF = useCallback(async () => {
+  const handleDownloadPDF = useCallback(() => {
     if (!exam) return;
-    setIsPdfGenerating(true);
-    try {
-      const element = document.getElementById("pdf-paper-content");
-      if (!element) {
-        showError("Could not find printable content. Please try again.");
-        return;
-      }
-
-      // The off-screen PrintableExamPaper (used for native print) must be
-      // hidden during PDF capture so it doesn't get rendered into the file.
-      const printPaperEl = document.getElementById("printable-exam-paper");
-      const previousPrintPaperDisplay = printPaperEl?.style.display;
-      if (printPaperEl) printPaperEl.style.display = "none";
-
-      const filename = `${exam.title.replace(/\s+/g, "_")}_Exam.pdf`;
-      const opt = {
-        margin: [10, 10, 10, 10] as [number, number, number, number],
-        filename,
-        image: { type: "jpeg" as const, quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          logging: false,
-          backgroundColor: "#ffffff",
-          ignoreElements: (el: Element) =>
-            el instanceof HTMLElement &&
-            el.getAttribute("data-html2canvas-ignore") === "true",
-        },
-        jsPDF: { unit: "mm", format: "a4", orientation: "portrait" as const },
-        pagebreak: { mode: ["css", "legacy"] },
-      };
-
-      try {
-        await html2pdf().set(opt).from(element).save();
-        showSuccess("Exam paper saved as PDF.");
-      } finally {
-        if (printPaperEl) printPaperEl.style.display = previousPrintPaperDisplay || "";
-      }
-    } catch (err) {
-      console.error("[ExamViewModal] PDF generation failed:", err);
-      showError("Failed to generate PDF. Try using Print instead.");
-    } finally {
-      setIsPdfGenerating(false);
-    }
+    const ok = generateExamPDF(exam.id, "download");
+    if (!ok) showError("Failed to generate PDF. Try the Print button instead.");
+    else showSuccess("Exam paper downloaded.");
   }, [exam]);
 
   const totalMarks = useMemo(
@@ -1519,28 +1478,9 @@ const SetExamsList: React.FC = () => {
           <Button
             variant="outline"
             onClick={() => {
-              const loaded = loadFullAssessment(exam.id);
-              if (!loaded) { showError("Could not load exam data."); return; }
-              const paperEl = document.createElement("div");
-              // Render the printable paper to a temporary DOM element
-              paperEl.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
-              document.body.appendChild(paperEl);
-              import("html2pdf.js").then(({ default: html2pdf }) => {
-                const opt = {
-                  margin: 10,
-                  filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
-                  image: { type: "jpeg" as const, quality: 0.98 },
-                  html2canvas: { scale: 2 },
-                  jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                };
-                html2pdf().set(opt).from(paperEl).save().then(() => {
-                  showSuccess("Exam paper saved as PDF.");
-                  document.body.removeChild(paperEl);
-                });
-              }).catch(() => {
-                showError("PDF generation failed. Try the Print button in the preview.");
-                document.body.removeChild(paperEl);
-              });
+              const ok = generateExamPDF(exam.id, "download");
+              if (!ok) showError("Could not generate the PDF. Please try the Print button in the preview.");
+              else showSuccess("Exam paper downloaded.");
             }}
             className="h-10 w-20 rounded-lg text-sm font-medium gap-1.5 border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
           >
@@ -1616,24 +1556,9 @@ const SetExamsList: React.FC = () => {
                     </Button>
                     <Button variant="ghost" size="icon"
                       onClick={() => {
-                        const loaded = loadFullAssessment(exam.id);
-                        if (!loaded) { showError("Could not load exam data."); return; }
-                        import("html2pdf.js").then(({ default: html2pdf }) => {
-                          const el = document.createElement("div");
-                          el.style.cssText = "position:fixed;left:-9999px;top:0;font-family:'Courier New',monospace;font-size:12pt;padding:40px 48px;width:800px;background:#fff;color:#1a1a1a;line-height:1.5";
-                          document.body.appendChild(el);
-                          const opt = {
-                            margin: 10,
-                            filename: `${loaded.title.replace(/\s+/g, "_")}_Paper.pdf`,
-                            image: { type: "jpeg" as const, quality: 0.98 },
-                            html2canvas: { scale: 2 },
-                            jsPDF: { unit: "mm", format: "a4", orientation: "portrait" },
-                          };
-                          html2pdf().set(opt).from(el).save().then(() => {
-                            showSuccess("PDF saved.");
-                            document.body.removeChild(el);
-                          });
-                        });
+                        const ok = generateExamPDF(exam.id, "download");
+                        if (!ok) showError("Could not generate the PDF.");
+                        else showSuccess("PDF saved.");
                       }}
                       className="rounded-lg h-8 w-8 text-slate-600 hover:bg-slate-100" title="Download PDF">
                       <Download size={14} />
