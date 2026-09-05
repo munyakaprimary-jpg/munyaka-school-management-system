@@ -395,6 +395,11 @@ export default function StudentAssessment() {
                   </Badge>
                   <span className="text-sm font-semibold">{currentQuestion.points} Points</span>
                 </div>
+                {currentQuestion.contextStatement && currentQuestion.contextStatement.trim() && (
+                  <h2 className="text-lg sm:text-2xl text-white font-semibold leading-relaxed mt-2">
+                    {currentQuestion.contextStatement}
+                  </h2>
+                )}
               </CardHeader>
               <CardContent className="p-6 sm:p-8 space-y-6">
                 <QuestionRenderer

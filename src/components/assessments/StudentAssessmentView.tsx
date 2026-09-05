@@ -940,7 +940,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               <span className="text-sm font-bold">{currentQuestion.points} Points</span>
             </div>
             <h2 className="text-lg sm:text-2xl text-white font-semibold leading-relaxed">
-              {currentQuestion.prompt}
+              {currentQuestion.contextStatement && currentQuestion.contextStatement.trim()
+                ? currentQuestion.contextStatement
+                : currentQuestion.prompt}
             </h2>
           </div>
 
