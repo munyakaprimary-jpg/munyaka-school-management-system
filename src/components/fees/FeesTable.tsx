@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Eye, FileDown, Edit, Trash2 } from 'lucide-react';
 import { cn } from "@/lib/utils";
-import { FEES_DATA as initialFees } from '@/lib/mock-data';
+// No initial mock fees: load from localStorage, fallback to empty list.
+const initialFees: FeeRecord[] = [];
 
 interface FeeRecord {
   id: string;

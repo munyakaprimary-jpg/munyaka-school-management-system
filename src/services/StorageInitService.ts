@@ -1,4 +1,5 @@
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
+import { lsSet, notifyDataChanged } from '@/utils/storage';
 
 const SEED_VERSION_KEY = 'app_seed_version';
 const CURRENT_SEED_VERSION = 'v_full_sync_v2';
@@ -38,84 +39,89 @@ export function initializeAppStorage(): void {
 
     // Students / Learners
     if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
-      localStorage.setItem('school_learners_data', JSON.stringify(INITIAL_SEED_DATA.students));
-      localStorage.setItem('munyaka_students', JSON.stringify(INITIAL_SEED_DATA.students));
+      lsSet('school_learners_data', INITIAL_SEED_DATA.students);
+      lsSet('munyaka_students', INITIAL_SEED_DATA.students);
     }
 
     // Staff
     if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-      localStorage.setItem('munyaka_staff_directory', JSON.stringify(INITIAL_SEED_DATA.staff));
-      localStorage.setItem('munyaka_staff', JSON.stringify(INITIAL_SEED_DATA.staff));
+      lsSet('munyaka_staff_directory', INITIAL_SEED_DATA.staff);
+      lsSet('munyaka_staff', INITIAL_SEED_DATA.staff);
     }
 
     // Staff Pre-Registration
     if (Array.isArray(INITIAL_SEED_DATA.staffPrereg) && INITIAL_SEED_DATA.staffPrereg.length > 0) {
-      localStorage.setItem('munyaka_staff_prereg', JSON.stringify(INITIAL_SEED_DATA.staffPrereg));
+      lsSet('munyaka_staff_prereg', INITIAL_SEED_DATA.staffPrereg);
     }
 
     // Fees / Fee Ledgers
     if (Array.isArray(INITIAL_SEED_DATA.fees)) {
-      localStorage.setItem('munyaka_fees_records', JSON.stringify(INITIAL_SEED_DATA.fees));
-      localStorage.setItem('munyaka_student_fees', JSON.stringify(INITIAL_SEED_DATA.fees));
+      lsSet('munyaka_fees_records', INITIAL_SEED_DATA.fees);
+      lsSet('munyaka_student_fees', INITIAL_SEED_DATA.fees);
     }
 
     // Fee Structures
     if (Array.isArray(INITIAL_SEED_DATA.feeStructures)) {
-      localStorage.setItem('munyaka_fee_structures', JSON.stringify(INITIAL_SEED_DATA.feeStructures));
+      lsSet('munyaka_fee_structures', INITIAL_SEED_DATA.feeStructures);
     }
 
     // Transactions
     if (Array.isArray(INITIAL_SEED_DATA.transactions)) {
-      localStorage.setItem('munyaka_transactions', JSON.stringify(INITIAL_SEED_DATA.transactions));
+      lsSet('munyaka_transactions', INITIAL_SEED_DATA.transactions);
     }
 
     // Attendance
     if (INITIAL_SEED_DATA.attendance) {
-      localStorage.setItem('munyaka_attendance_records', JSON.stringify(INITIAL_SEED_DATA.attendance));
+      lsSet('munyaka_attendance_records', INITIAL_SEED_DATA.attendance);
     }
 
     // Grades / Classes
     if (Array.isArray(INITIAL_SEED_DATA.grades)) {
-      localStorage.setItem('munyaka_grades', JSON.stringify(INITIAL_SEED_DATA.grades));
+      lsSet('munyaka_grades', INITIAL_SEED_DATA.grades);
     }
 
     // Exam Types
     if (Array.isArray(INITIAL_SEED_DATA.examTypes)) {
-      localStorage.setItem('munyaka_exam_types', JSON.stringify(INITIAL_SEED_DATA.examTypes));
+      lsSet('munyaka_exam_types', INITIAL_SEED_DATA.examTypes);
     }
 
     // Learning Areas
     if (Array.isArray(INITIAL_SEED_DATA.learningAreas)) {
-      localStorage.setItem('munyaka_learning_areas', JSON.stringify(INITIAL_SEED_DATA.learningAreas));
+      lsSet('munyaka_learning_areas', INITIAL_SEED_DATA.learningAreas);
     }
 
     // Assessment Scores
     if (INITIAL_SEED_DATA.assessmentScores) {
-      localStorage.setItem('munyaka_assessment_scores', JSON.stringify(INITIAL_SEED_DATA.assessmentScores));
+      lsSet('munyaka_assessment_scores', INITIAL_SEED_DATA.assessmentScores);
     }
 
     // Library Books
     if (Array.isArray(INITIAL_SEED_DATA.libraryBooks)) {
-      localStorage.setItem('munyaka_library_books', JSON.stringify(INITIAL_SEED_DATA.libraryBooks));
+      lsSet('munyaka_library_books', INITIAL_SEED_DATA.libraryBooks);
     }
 
     // ICT Assets
     if (Array.isArray(INITIAL_SEED_DATA.ictAssets)) {
-      localStorage.setItem('munyaka_ict_assets', JSON.stringify(INITIAL_SEED_DATA.ictAssets));
+      lsSet('munyaka_ict_assets', INITIAL_SEED_DATA.ictAssets);
     }
 
     // Notices / Announcements
     if (Array.isArray(INITIAL_SEED_DATA.notices)) {
-      localStorage.setItem('munyaka_notices', JSON.stringify(INITIAL_SEED_DATA.notices));
+      lsSet('munyaka_notices', INITIAL_SEED_DATA.notices);
     }
 
     // System Settings
     if (INITIAL_SEED_DATA.settings) {
-      localStorage.setItem('munyaka_system_settings_v3', JSON.stringify(INITIAL_SEED_DATA.settings));
+      lsSet('munyaka_system_settings_v3', INITIAL_SEED_DATA.settings);
     }
 
     // ── 2. Mark the current seed version so the next launch is a no-op ──
-    localStorage.setItem(SEED_VERSION_KEY, CURRENT_SEED_VERSION);
+    lsSet(SEED_VERSION_KEY, CURRENT_SEED_VERSION);
+
+    // ── 3. Broadcast a global change event so all subscribed hooks refresh ─
+    //    This is important because some hooks only listen for the custom event
+    //    (not the storage event) and would stay stale after seeding.
+    notifyDataChanged();
     console.log(
       `[StorageSync] Root data seeding complete (${CURRENT_SEED_VERSION}). ` +
       `Baseline: ${INITIAL_SEED_DATA.students?.length ?? 0} students, ` +
@@ -132,7 +138,9 @@ export function initializeAppStorage(): void {
  */
 export function forceReseedFromSeed(): void {
   try {
-    localStorage.removeItem(SEED_VERSION_KEY);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem(SEED_VERSION_KEY);
+    }
   } catch {
     /* no-op */
   }

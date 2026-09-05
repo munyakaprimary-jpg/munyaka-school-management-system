@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
-import { NOTICES as initialNotices } from '@/lib/mock-data';
+// Notices are managed through the app's notice board flow.
+const initialNotices: unknown[] = [];
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {

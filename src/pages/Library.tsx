@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import BackButton from '@/components/ui/BackButton';
 import { Book as BookIcon, Search, Plus, BookOpen, History, AlertCircle } from 'lucide-react';
-import { BOOKS } from '@/lib/mock-data';
+// Books are managed through the Library page; no hardcoded seed data.
 import { Book, BorrowLog, getLogBalance } from '@/types/library';
 import { IssueBookModal } from '@/components/library/IssueBookModal';
 import { BookHistoryModal } from '@/components/library/BookHistoryModal';
@@ -68,7 +68,7 @@ const Library = () => {
   // Books State with Local Storage Persistence
   const [books, setBooks] = useState<Book[]>(() => {
     const saved = localStorage.getItem('munyaka_library_books');
-    return saved ? JSON.parse(saved) : BOOKS;
+    return saved ? JSON.parse(saved) : [];
   });
 
   // Borrowing History Logs State with Local Storage Persistence

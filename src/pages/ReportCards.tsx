@@ -17,7 +17,8 @@ import {
   FileSpreadsheet,
   Calendar
 } from 'lucide-react';
-import { STUDENTS, GRADES_DATA, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { downloadCSV, SCHOOL_HEADERS, generateCSVHeader } from '@/utils/downloadHelper';
@@ -167,10 +168,13 @@ const ReportCards = () => {
 
   // Derived Filtered Students based on current Academic Year & Grade/Stream/Search filters
   const filteredStudents = useMemo(() => {
-    return STUDENTS.filter(s => {
-      const matchesSearch = !searchTerm || s.name.toLowerCase().includes(searchTerm.toLowerCase()) || s.assessment.toLowerCase().includes(searchTerm.toLowerCase());
+    const students = getStudents();
+    return students.filter(s => {
+      const matchesSearch = !searchTerm ||
+        String(s.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(s.assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = grade === "all" || s.grade === grade;
-      const matchesStream = stream === "all" || s.stream.toLowerCase() === stream.toLowerCase();
+      const matchesStream = stream === "all" || String(s.stream ?? "").toLowerCase() === stream.toLowerCase();
       return matchesSearch && matchesGrade && matchesStream;
     });
   }, [searchTerm, grade, stream]);

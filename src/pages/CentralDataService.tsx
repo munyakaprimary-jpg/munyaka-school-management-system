@@ -7,6 +7,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
 import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
+import { lsSet } from '@/utils/storage';
 
 export default function CentralDataService() {
   const centralStats = useCentralData();
@@ -93,7 +94,7 @@ export default function CentralDataService() {
       const jsonString = `export const INITIAL_SEED_DATA = ${JSON.stringify(fullExportObject, null, 2)};\n`;
       
       const nowStr = new Date().toLocaleString();
-      localStorage.setItem('munyaka_last_export_date', nowStr);
+      lsSet('munyaka_last_export_date', nowStr);
       setStats(prev => ({ ...prev, lastExportDate: nowStr }));
 
       await seedExport.download({
@@ -152,35 +153,35 @@ export default function CentralDataService() {
       const parsed = JSON.parse(importJsonText);
       
       if (parsed.students && Array.isArray(parsed.students)) {
-        localStorage.setItem('school_learners_data', JSON.stringify(parsed.students));
-        localStorage.setItem('munyaka_students', JSON.stringify(parsed.students));
+        lsSet('school_learners_data', parsed.students);
+        lsSet('munyaka_students', parsed.students);
       }
       if (parsed.staff && Array.isArray(parsed.staff)) {
-        localStorage.setItem('munyaka_staff_directory', JSON.stringify(parsed.staff));
+        lsSet('munyaka_staff_directory', parsed.staff);
       }
       if (parsed.staffPrereg && Array.isArray(parsed.staffPrereg)) {
-        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(parsed.staffPrereg));
+        lsSet('munyaka_staff_prereg', parsed.staffPrereg);
       }
       if (parsed.fees) {
-        localStorage.setItem('munyaka_fees_records', JSON.stringify(parsed.fees));
+        lsSet('munyaka_fees_records', parsed.fees);
       }
       if (parsed.transactions) {
-        localStorage.setItem('munyaka_transactions', JSON.stringify(parsed.transactions));
+        lsSet('munyaka_transactions', parsed.transactions);
       }
       if (parsed.attendance) {
-        localStorage.setItem('munyaka_attendance_records', JSON.stringify(parsed.attendance));
+        lsSet('munyaka_attendance_records', parsed.attendance);
       }
       if (parsed.grades) {
-        localStorage.setItem('munyaka_grades', JSON.stringify(parsed.grades));
+        lsSet('munyaka_grades', parsed.grades);
       }
       if (parsed.examTypes) {
-        localStorage.setItem('munyaka_exam_types', JSON.stringify(parsed.examTypes));
+        lsSet('munyaka_exam_types', parsed.examTypes);
       }
       if (parsed.learningAreas) {
-        localStorage.setItem('munyaka_learning_areas', JSON.stringify(parsed.learningAreas));
+        lsSet('munyaka_learning_areas', parsed.learningAreas);
       }
       if (parsed.assessmentScores) {
-        localStorage.setItem('munyaka_assessment_scores', JSON.stringify(parsed.assessmentScores));
+        lsSet('munyaka_assessment_scores', parsed.assessmentScores);
       }
 
       showSuccess("Central database successfully restored and loaded!");

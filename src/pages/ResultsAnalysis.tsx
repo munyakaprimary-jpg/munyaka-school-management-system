@@ -32,7 +32,8 @@ import {
   X,
   Download
 } from 'lucide-react';
-import { GRADES_DATA, STUDENTS, Grade } from '@/lib/mock-data';
+import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { getStudents } from '@/services/persistentStore';
 import { showSuccess, showError } from '@/utils/toast';
 import { cn } from "@/lib/utils";
 import { useFileDownload } from '@/utils/fileDownloader';
@@ -184,10 +185,11 @@ const ResultsAnalysis = () => {
   const filteredStudents = useMemo(() => {
     if (!currentGrade) return [];
     const gradeNum = currentGrade.name.replace(/[^0-9]/g, '');
+    const students = getStudents();
 
-    return STUDENTS.filter(s => {
-      const matchesGrade = 
-        s.grade === gradeNum || 
+    return students.filter(s => {
+      const matchesGrade =
+        s.grade === gradeNum ||
         s.grade === currentGrade.name ||
         `Grade ${s.grade}` === currentGrade.name;
 
@@ -195,7 +197,7 @@ const ResultsAnalysis = () => {
       if (selectedStreamId !== "all") {
         const streamObj = availableStreams.find(sItem => sItem.id === selectedStreamId);
         if (streamObj) {
-          matchesStream = s.stream.toLowerCase() === streamObj.name.toLowerCase();
+          matchesStream = String(s.stream ?? "").toLowerCase() === streamObj.name.toLowerCase();
         }
       }
 

@@ -13,7 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
-import { MESSAGES as initialMessages } from '@/lib/mock-data';
+// Messages are managed through the app's communication flow.
+const initialMessages: unknown[] = [];
 import { showSuccess } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 

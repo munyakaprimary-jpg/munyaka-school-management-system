@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { RefreshCw, Sparkles, Search, Check, ChevronsUpDown, User, Info, CheckCircle2 } from "lucide-react";
 import Modal from "@/components/ui/Modal";
 import { SystemRole, PreRegisteredStaff } from '@/types/staff-access';
-import { STAFF, StaffMember } from '@/lib/mock-data';
+import type { StaffMember } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
@@ -47,13 +47,13 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
     staffId: ""
   });
 
-  // Get available directory staff members from localStorage or STAFF
+  // Get available directory staff members from localStorage; empty when none.
   const directoryStaffList = useMemo<StaffMember[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_directory');
+    const saved = localStorage?.getItem('munyaka_staff_directory') ?? null;
     if (saved) {
       try { return JSON.parse(saved); } catch (e) { console.error(e); }
     }
-    return STAFF;
+    return [];
   }, [isOpen]);
 
   // Exclude staff members who ALREADY have a pre-registration record

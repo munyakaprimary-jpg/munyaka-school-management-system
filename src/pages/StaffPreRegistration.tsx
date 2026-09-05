@@ -15,7 +15,6 @@ import { notifyDataChanged } from '@/utils/storage';
 import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
-import { STAFF } from '@/lib/mock-data';
 
 // Directory staff entry that doesn't have a pre-registration record yet
 interface UnlinkedStaffEntry {

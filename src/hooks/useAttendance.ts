@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
 import { downloadCSV } from '@/utils/downloadHelper';
+import { lsSet, notifyDataChanged } from '@/utils/storage';
 
 interface SessionAttendance {
   status: string;
@@ -90,20 +91,25 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     };
 
     window.addEventListener('storage', handleStorageChange);
-    return () => window.removeEventListener('storage', handleStorageChange);
+    const onChanged = () => handleStorageChange();
+    window.addEventListener('munyaka:data-changed', onChanged);
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('munyaka:data-changed', onChanged);
+    };
   }, []);
 
   // Persist filter changes
   useEffect(() => {
-    localStorage.setItem(SELECTED_CLASS_KEY, selectedClass);
+    lsSet(SELECTED_CLASS_KEY, selectedClass);
   }, [selectedClass]);
 
   useEffect(() => {
-    localStorage.setItem(SELECTED_STREAM_KEY, selectedStream);
+    lsSet(SELECTED_STREAM_KEY, selectedStream);
   }, [selectedStream]);
 
   useEffect(() => {
-    localStorage.setItem(SELECTED_DATE_KEY, selectedDate);
+    lsSet(SELECTED_DATE_KEY, selectedDate);
   }, [selectedDate]);
 
   // Check if attendance has been submitted globally
@@ -128,7 +134,7 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   useEffect(() => {
     const submissionData = {};
     submissionData[`${selectedClass}_${selectedStream}_${selectedDate}`] = isRegisterSubmitted;
-    localStorage.setItem(SUBMISSION_STATUS_KEY, JSON.stringify(submissionData));
+    lsSet(SUBMISSION_STATUS_KEY, submissionData);
   }, [isRegisterSubmitted, selectedClass, selectedStream, selectedDate]);
 
   // Get available streams for the selected class
@@ -267,7 +273,7 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
 
   useEffect(() => {
     if (isInitialized && Object.keys(markedStudents).length > 0) {
-      localStorage.setItem(currentStorageKey, JSON.stringify(markedStudents));
+      lsSet(currentStorageKey, markedStudents);
     }
   }, [markedStudents, isInitialized, currentStorageKey]);
 

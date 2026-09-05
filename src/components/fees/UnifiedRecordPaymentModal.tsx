@@ -24,7 +24,8 @@ import {
   MapPin,
   Sparkles,
 } from 'lucide-react';
-import { GRADES_DATA, Grade } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data';
+import type { Grade } from '@/types/school';
 import { showSuccess } from '@/utils/toast';
 import { PaymentMethod, PaymentDetails, Transaction } from '@/types/fees';
 import { ValidityDuration, LICENSE_METHOD_LABELS } from '@/types/license';

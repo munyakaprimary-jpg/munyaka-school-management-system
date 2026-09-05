@@ -26,7 +26,6 @@ import {
   Loader2
 } from 'lucide-react';
 import { useParams } from 'react-router-dom';
-import { STAFF } from '@/lib/mock-data';
 import { useAuth } from '@/context/AuthContext';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -500,17 +499,9 @@ const StaffProfile = () => {
               }
       
               if (found) break;
-            }
-      
-            // If no local record matched, try the static mock seed.
-            if (!found) {
-              const mapped = STAFF.find(matches);
-              if (mapped) {
-                found = { ...mapped, full_name: mapped.name || '' };
               }
-            }
-      
-            if (found) {
+        
+              if (found) {
               setMember(found as StaffMemberProfile);
             }
       

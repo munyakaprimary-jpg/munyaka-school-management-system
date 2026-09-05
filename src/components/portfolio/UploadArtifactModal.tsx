@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import { Upload, Paperclip, CheckCircle2 } from 'lucide-react';
-import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
+import { GRADES_DATA } from '@/lib/mock-data';
+import type { Student as LearnerRecord } from '@/services/persistentStore';
+import { getStudents } from '@/services/persistentStore';
 import { Artifact } from '@/types/portfolio';
 import { showError } from '@/utils/toast';
 
@@ -27,7 +29,7 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
   const [filterGrade, setFilterGrade] = useState("all");
   const [filterStream, setFilterStream] = useState("all");
   
-  const [selectedStudent, setSelectedStudent] = useState(STUDENTS[0]?.name || "");
+  const [selectedStudent, setSelectedStudent] = useState("");
   const [title, setTitle] = useState("");
   const [type, setType] = useState<'Image' | 'Audio' | 'Document' | 'Video'>("Image");
   const [learningArea, setLearningArea] = useState("Creative Arts");
@@ -38,20 +40,22 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
   const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [learners, setLearners] = useState<LearnerRecord[]>(() => getStudents());
+
   const uniqueStreams = useMemo(() => {
     const streams = new Set<string>();
     GRADES_DATA.forEach(g => g.streams.forEach(s => streams.add(s.name)));
-    STUDENTS.forEach(s => { if (s.stream) streams.add(s.stream); });
+    learners.forEach(s => { if (s.stream) streams.add(String(s.stream)); });
     return Array.from(streams).sort();
-  }, []);
+  }, [learners]);
 
   const filteredStudents = useMemo(() => {
-    return STUDENTS.filter(s => {
+    return learners.filter(s => {
       const matchesGrade = filterGrade === "all" || s.grade === filterGrade || s.grade === filterGrade.replace(/[^0-9]/g, '');
-      const matchesStream = filterStream === "all" || s.stream.toLowerCase() === filterStream.toLowerCase();
+      const matchesStream = filterStream === "all" || String(s.stream ?? "").toLowerCase() === filterStream.toLowerCase();
       return matchesGrade && matchesStream;
     });
-  }, [filterGrade, filterStream]);
+  }, [filterGrade, filterStream, learners]);
 
   const formatFileSize = (bytes: number): string => {
     if (bytes < 1024) return bytes + ' B';
