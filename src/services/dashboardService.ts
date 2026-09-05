@@ -49,9 +49,9 @@ export interface RecentAlert {
 const getServerUrl = (): string => {
   try {
     const configured = localStorage.getItem('lan_server_url');
-    if (configured && (configured ?? '').trim()) return (configured ?? '').trim();
+    if (configured && configured.trim()) return configured.trim();
     const legacy = localStorage.getItem('munyaka_lan_server_url');
-    if (legacy && (legacy ?? '').trim()) return (legacy ?? '').trim();
+    if (legacy && legacy.trim()) return legacy.trim();
   } catch { /* ignore */ }
   // Development fallback: try to connect to the Vite dev server proxy
   return 'http://localhost:5000';

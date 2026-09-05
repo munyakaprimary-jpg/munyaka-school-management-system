@@ -150,7 +150,7 @@ export function searchArchive(
   query: string
 ): TransferredLearnerArchive[] {
   const all = getArchive();
-  const q = (query ?? '').trim().toLowerCase();
+  const q = query.trim().toLowerCase();
   if (!q) return all;
   return all.filter((r) =>
     [

@@ -66,7 +66,7 @@ export const sortGradesAscending = (grades: string[]): string[] => {
 
   for (const raw of grades) {
     if (!raw) continue;
-    const key = (raw ?? '').toUpperCase().trim();
+    const key = raw.toUpperCase().trim();
     if (key in GRADE_ORDER_MAP) {
       canonical.push(raw);
     } else {
@@ -76,8 +76,8 @@ export const sortGradesAscending = (grades: string[]): string[] => {
 
   canonical.sort(
     (a, b) =>
-      (GRADE_ORDER_MAP[(a ?? '').toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER) -
-      (GRADE_ORDER_MAP[(b ?? '').toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER),
+      (GRADE_ORDER_MAP[a.toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER) -
+      (GRADE_ORDER_MAP[b.toUpperCase().trim()] ?? Number.MAX_SAFE_INTEGER),
   );
 
   others.sort((a, b) =>
@@ -122,7 +122,7 @@ const CANONICAL_GRADE_RANKS: Record<string, GradeRank> = {
  */
 function normalise(name: string): string {
   if (!name) return '';
-  const t = (name ?? '').trim();
+  const t = name.trim();
   const upper = t.toUpperCase();
 
   if (upper === 'PP1') return 'PP1';

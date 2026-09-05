@@ -134,7 +134,7 @@ function normalizeOptions(
     if (opt && typeof opt === "object") {
       const label = opt.label ? `${opt.label}. ` : "";
       const text = opt.text || "";
-      return `${label}${text ?? ''}`.trim();
+      return `${label}${text}`.trim();
     }
     return String(opt ?? "");
   });
@@ -146,7 +146,7 @@ function normalizeOptions(
  */
 function getQuestionPrompt(q: ExamQuestion): string {
   const raw = q.text ?? q.question ?? q.prompt ?? "";
-  return typeof raw === "string" ? (raw ?? '').trim() : String(raw ?? '').trim();
+  return typeof raw === "string" ? raw.trim() : String(raw ?? "").trim();
 }
 
 /**
@@ -155,8 +155,8 @@ function getQuestionPrompt(q: ExamQuestion): string {
  * guidance even if the underlying field is empty.
  */
 function getInstructions(exam: ExamRecord): string {
-  if (exam.instructions && (exam.instructions ?? '').trim().length > 0) {
-    return (exam.instructions ?? '').trim();
+  if (exam.instructions && exam.instructions.trim().length > 0) {
+    return exam.instructions.trim();
   }
   return [
     "1. Answer all questions in the spaces provided.",

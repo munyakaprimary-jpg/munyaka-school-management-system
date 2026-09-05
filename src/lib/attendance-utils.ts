@@ -11,7 +11,7 @@ export const validateDeparture = (
   if (!isEarlyDeparture(date)) {
     return { valid: true };
   }
-  if (!reason || (reason ?? '').trim().length < 10) {
+  if (!reason || reason.trim().length < 10) {
     return {
       valid: false,
       message: 'Early departure requires a reason of at least 10 characters.',

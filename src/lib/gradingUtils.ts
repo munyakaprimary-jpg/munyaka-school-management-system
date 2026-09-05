@@ -78,12 +78,12 @@ export function gradeMathResponse(
     studentInput === undefined ||
     studentInput === null ||
     studentInput === "" ||
-    String(studentInput ?? '').trim() === ""
+    String(studentInput).trim() === ""
   )
     return false;
 
   const clean = (val: unknown) =>
-    String(val ?? '').trim().toLowerCase().replace(/,/g, '');
+    String(val ?? "").trim().toLowerCase().replace(/,/g, "");
 
   const studentStr = clean(studentInput);
   const expectedStr = clean(expectedInput);

@@ -111,8 +111,8 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
           .filter(
             (n): n is string =>
               typeof n === "string" &&
-              (n ?? '').trim().length > 0 &&
-              (n ?? '').toUpperCase().trim() !== "PLAYGROUP",
+              n.trim().length > 0 &&
+              n.toUpperCase().trim() !== "PLAYGROUP",
           );
         if (names.length > 0) {
           return sortGradesAscending(Array.from(new Set(names)));
@@ -223,7 +223,7 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   const filteredExams = useMemo<Exam[]>(() => {
     if (!selectedGrade) return [];
 
-    const currentGrade = String(selectedGrade ?? '').toLowerCase().trim();
+    const currentGrade = String(selectedGrade).toLowerCase().trim();
     const currentStream = String(selectedStream || ALL_STREAMS).toLowerCase().trim();
 
     return allExams.filter((exam: any) => {
@@ -423,11 +423,11 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
   // ── Begin exam handler ──────────────────────────────────────────────────────
   // ── Save new student and auto-select them ───────────────────────────────────
   const handleSaveNewStudent = () => {
-    if (!(regName ?? '').trim()) {
+    if (!regName.trim()) {
       setRegError("Please enter the learner's full name.");
       return;
     }
-    if (!(regAdmissionNo ?? '').trim()) {
+    if (!regAdmissionNo.trim()) {
       setRegError("Please enter an Admission or Assessment number.");
       return;
     }
@@ -435,11 +435,11 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
 
     const newStudent: RegisteredStudent = {
       id: `std_${Date.now()}`,
-      name: (regName ?? '').trim(),
-      admissionNumber: (regAdmissionNo ?? '').trim(),
-      admNo: (regAdmissionNo ?? '').trim(),
-      assessmentNo: (regAdmissionNo ?? '').trim(),
-      birthCertNo: (regAdmissionNo ?? '').trim(),
+      name: regName.trim(),
+      admissionNumber: regAdmissionNo.trim(),
+      admNo: regAdmissionNo.trim(),
+      assessmentNo: regAdmissionNo.trim(),
+      birthCertNo: regAdmissionNo.trim(),
       grade: regGrade || undefined,
       stream: regStream || undefined,
       status: "Active",
