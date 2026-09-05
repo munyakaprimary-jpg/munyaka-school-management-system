@@ -11,6 +11,8 @@ export interface MCQOption {
   text: string;
 }
 
+export type ImagePosition = "above" | "between" | "below";
+
 export interface Question {
   id: string;
   type: QuestionType;
@@ -18,8 +20,12 @@ export interface Question {
   prompt: string;
   points: number;
   order: number;
+  // Context / intro statement — separate from the specific question prompt
+  contextStatement?: string;
   // Optional image attached to the question (Base64 data URL or object URL)
   imageUrl?: string;
+  // Where to render the image relative to the prompt
+  imagePosition?: ImagePosition;
   // MCQ specific
   options?: MCQOption[];
   correctOptionId?: string;

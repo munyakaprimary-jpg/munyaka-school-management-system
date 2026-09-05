@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import QuestionRenderer from "@/components/assessments/QuestionRenderer";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -387,83 +388,83 @@ export default function StudentAssessment() {
 
             {/* Question Card */}
             <Card className="border-0 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 pb-8 pt-6 px-6">
-                <div className="flex items-center justify-between text-white/90 mb-2">
+              <CardHeader className="bg-gradient-to-r from-indigo-500 to-purple-600 pb-6 pt-6 px-6">
+                <div className="flex items-center justify-between text-white/90 flex-wrap gap-2">
                   <Badge className="bg-white/20 text-white border-0 font-medium">
-                    {currentQuestion.type === "mcq" ? "Multiple Choice" : "Structured / Essay"}
+                    Q{currentQuestionIndex + 1} · {currentQuestion.type === "mcq" ? "Multiple Choice" : "Structured / Essay"}
                   </Badge>
                   <span className="text-sm font-semibold">{currentQuestion.points} Points</span>
                 </div>
-                <CardTitle className="text-xl sm:text-2xl text-white leading-relaxed">
-                  {currentQuestion.prompt}
-                </CardTitle>
               </CardHeader>
               <CardContent className="p-6 sm:p-8 space-y-6">
-                {/* Question image */}
-                {currentQuestion.imageUrl && (
-                  <div className="flex justify-center">
-                    <img
-                      src={currentQuestion.imageUrl}
-                      alt="Question diagram"
-                      className="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
-                    />
-                  </div>
-                )}
-
-                {/* MCQ Options */}
-                {currentQuestion.type === "mcq" && currentQuestion.options && (
-                  <div className="space-y-3">
-                    {currentQuestion.options.map((option) => {
-                      const isSelected = currentResponse?.selectedOptionId === option.id;
-                      return (
-                        <button
-                          key={option.id}
-                          onClick={() => handleSelectMCQ(currentQuestion.id, option.id)}
-                          className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
-                            isSelected
-                              ? "border-indigo-500 bg-indigo-50/80 shadow-md shadow-indigo-100"
-                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
-                          }`}
-                        >
-                          <div
-                            className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
-                              isSelected
-                                ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
-                                : "bg-slate-100 text-slate-600 border border-slate-200"
-                            }`}
-                          >
-                            {option.label}
+                <QuestionRenderer
+                  question={currentQuestion}
+                  variant="card"
+                  number={currentQuestionIndex + 1}
+                  contextClassName="text-sm text-slate-600 italic leading-relaxed mb-3 bg-violet-50/60 border-l-4 border-violet-300 px-3 py-2 rounded-r-xl"
+                  promptClassName="text-base sm:text-lg font-bold text-slate-800 leading-relaxed"
+                  className="space-y-3"
+                  imageClassName="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
+                  renderOptions={
+                    currentQuestion.type === "mcq" && currentQuestion.options
+                      ? () => (
+                          <div className="space-y-3">
+                            {currentQuestion.options!.map((option) => {
+                              const isSelected = currentResponse?.selectedOptionId === option.id;
+                              return (
+                                <button
+                                  key={option.id}
+                                  onClick={() => handleSelectMCQ(currentQuestion.id, option.id)}
+                                  className={`w-full flex items-center gap-4 p-4 rounded-2xl border-2 text-left transition-all duration-200 ${
+                                    isSelected
+                                      ? "border-indigo-500 bg-indigo-50/80 shadow-md shadow-indigo-100"
+                                      : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                                  }`}
+                                >
+                                  <div
+                                    className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold text-sm transition-all ${
+                                      isSelected
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-200"
+                                        : "bg-slate-100 text-slate-600 border border-slate-200"
+                                    }`}
+                                  >
+                                    {option.label}
+                                  </div>
+                                  <span
+                                    className={`font-medium text-base ${
+                                      isSelected ? "text-indigo-900" : "text-slate-700"
+                                    }`}
+                                  >
+                                    {option.text || <span className="italic text-slate-400">Empty option</span>}
+                                  </span>
+                                </button>
+                              );
+                            })}
                           </div>
-                          <span
-                            className={`font-medium text-base ${
-                              isSelected ? "text-indigo-900" : "text-slate-700"
-                            }`}
-                          >
-                            {option.text || <span className="italic text-slate-400">Empty option</span>}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {/* Structured Question Response Area */}
-                {currentQuestion.type === "structured" && (
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <label className="text-sm font-semibold text-slate-700">Your Response</label>
-                      <span className="text-xs text-slate-400">
-                        Type your detailed answer below
-                      </span>
-                    </div>
-                    <Textarea
-                      placeholder="Type your multi-paragraph response or step-by-step solution here..."
-                      value={currentResponse?.answerText || ""}
-                      onChange={(e) => handleAnswerStructured(currentQuestion.id, e.target.value)}
-                      className="min-h-[220px] rounded-2xl border-slate-200 p-4 text-base focus:border-indigo-500 focus:ring-indigo-200"
-                    />
-                  </div>
-                )}
+                        )
+                      : undefined
+                  }
+                  renderStructured={
+                    currentQuestion.type === "structured"
+                      ? () => (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <label className="text-sm font-semibold text-slate-700">Your Response</label>
+                              <span className="text-xs text-slate-400">
+                                Type your detailed answer below
+                              </span>
+                            </div>
+                            <Textarea
+                              placeholder="Type your multi-paragraph response or step-by-step solution here..."
+                              value={currentResponse?.answerText || ""}
+                              onChange={(e) => handleAnswerStructured(currentQuestion.id, e.target.value)}
+                              className="min-h-[220px] rounded-2xl border-slate-200 p-4 text-base focus:border-indigo-500 focus:ring-indigo-200"
+                            />
+                          </div>
+                        )
+                      : undefined
+                  }
+                />
               </CardContent>
             </Card>
 

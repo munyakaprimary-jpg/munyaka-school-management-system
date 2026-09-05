@@ -247,6 +247,8 @@ const ExamCreator: React.FC = () => {
   const [draftOptionD, setDraftOptionD] = useState("");
   const [draftCorrectOption, setDraftCorrectOption] = useState<"a" | "b" | "c" | "d">("a");
   const [draftModelAnswer, setDraftModelAnswer] = useState("");
+  const [draftContextStatement, setDraftContextStatement] = useState("");
+  const [draftImagePosition, setDraftImagePosition] = useState<"above" | "between" | "below">("below");
   const draftImageInputRef = useRef<HTMLInputElement>(null);
 
   // ── Image upload handler ────────────────────────────────────────────────
@@ -288,7 +290,9 @@ const ExamCreator: React.FC = () => {
   const resetDraft = useCallback(() => {
     setDraftType("mcq");
     setDraftPrompt("");
+    setDraftContextStatement("");
     setDraftImageUrl(undefined);
+    setDraftImagePosition("below");
     setDraftPoints(1);
     setDraftOptionA("");
     setDraftOptionB("");
@@ -342,7 +346,9 @@ const ExamCreator: React.FC = () => {
               ? {
                   ...q,
                   prompt: draftPrompt.trim(),
+                  contextStatement: draftContextStatement || undefined,
                   imageUrl: draftImageUrl,
+                  imagePosition: draftImagePosition,
                   points: draftPoints,
                   options,
                   correctOptionId: draftCorrectOption,
@@ -356,7 +362,9 @@ const ExamCreator: React.FC = () => {
           id: generateId("q"),
           type: "mcq",
           prompt: draftPrompt.trim(),
+          contextStatement: draftContextStatement || undefined,
           imageUrl: draftImageUrl,
+          imagePosition: draftImagePosition,
           points: draftPoints,
           order: questions.length + 1,
           options,
@@ -374,7 +382,9 @@ const ExamCreator: React.FC = () => {
               ? {
                   ...q,
                   prompt: draftPrompt.trim(),
+                  contextStatement: draftContextStatement || undefined,
                   imageUrl: draftImageUrl,
+                  imagePosition: draftImagePosition,
                   points: draftPoints,
                   modelAnswer: draftModelAnswer.trim(),
                 }
@@ -387,7 +397,9 @@ const ExamCreator: React.FC = () => {
           id: generateId("q"),
           type: "structured",
           prompt: draftPrompt.trim(),
+          contextStatement: draftContextStatement || undefined,
           imageUrl: draftImageUrl,
+          imagePosition: draftImagePosition,
           points: draftPoints,
           order: questions.length + 1,
           modelAnswer: draftModelAnswer.trim(),
@@ -398,13 +410,15 @@ const ExamCreator: React.FC = () => {
       }
     }
     resetDraft();
-  }, [validateDraft, draftType, draftPrompt, draftImageUrl, draftPoints, draftOptionA, draftOptionB, draftOptionC, draftOptionD, draftCorrectOption, draftModelAnswer, editingQuestionId, questions.length, resetDraft]);
+  }, [validateDraft, draftType, draftPrompt, draftContextStatement, draftImageUrl, draftImagePosition, draftPoints, draftOptionA, draftOptionB, draftOptionC, draftOptionD, draftCorrectOption, draftModelAnswer, editingQuestionId, questions.length, resetDraft]);
 
   // ── Edit existing question ────────────────────────────────────────────────
   const handleEditQuestion = useCallback((q: Question) => {
     setDraftType(q.type);
     setDraftPrompt(q.prompt);
+    setDraftContextStatement(q.contextStatement || "");
     setDraftImageUrl(q.imageUrl);
+    setDraftImagePosition(q.imagePosition || "below");
     setDraftPoints(q.points);
     if (q.type === "mcq" && q.options) {
       setDraftOptionA(q.options.find((o) => o.id === "a")?.text || "");
@@ -863,6 +877,20 @@ const ExamCreator: React.FC = () => {
               </button>
             </div>
 
+            {/* Context / Intro Statement */}
+            <div className="space-y-2">
+              <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                Context / Intro Statement
+                <span className="ml-1 normal-case font-medium text-slate-400">(optional)</span>
+              </Label>
+              <Textarea
+                placeholder="Optional general description or intro shown above the question prompt (e.g. a shared reading passage or scenario)."
+                value={draftContextStatement}
+                onChange={(e) => setDraftContextStatement(e.target.value)}
+                className="rounded-xl min-h-[80px]"
+              />
+            </div>
+
             {/* Question prompt */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -881,32 +909,71 @@ const ExamCreator: React.FC = () => {
 
               {/* Image attachment */}
               <div className="space-y-2">
-                {draftImageUrl ? (
-                  <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                    <img
-                      src={draftImageUrl}
-                      alt="Question diagram"
-                      className="max-h-56 mx-auto object-contain"
-                    />
+                <div className="flex items-stretch gap-2">
+                  {draftImageUrl ? (
+                    <div className="relative flex-1 rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                      <img
+                        src={draftImageUrl}
+                        alt="Question diagram"
+                        className="max-h-56 mx-auto object-contain"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleRemoveDraftImage}
+                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
+                        title="Remove image"
+                      >
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
                     <button
                       type="button"
-                      onClick={handleRemoveDraftImage}
-                      className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-                      title="Remove image"
+                      onClick={() => draftImageInputRef.current?.click()}
+                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all cursor-pointer"
                     >
-                      <X size={14} />
+                      <ImagePlus size={15} />
+                      Attach Image / Diagram
                     </button>
+                  )}
+                </div>
+
+                {/* Image Placement Selector */}
+                {draftImageUrl && (
+                  <div className="space-y-1.5">
+                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                      Image Placement
+                    </Label>
+                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+                      {([
+                        { value: "above", label: "Above Prompt", short: "Top" },
+                        { value: "between", label: "Between Context & Question", short: "Between" },
+                        { value: "below", label: "Below Prompt", short: "Below" },
+                      ] as const).map((opt) => (
+                        <button
+                          key={opt.value}
+                          type="button"
+                          onClick={() => setDraftImagePosition(opt.value)}
+                          className={cn(
+                            "px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all text-center leading-tight",
+                            draftImagePosition === opt.value
+                              ? "bg-white text-indigo-700 shadow-sm"
+                              : "text-slate-500 hover:text-slate-700"
+                          )}
+                          title={opt.label}
+                        >
+                          {opt.short}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="text-[10px] text-slate-400">
+                      {draftImagePosition === "above" && "Image renders at the very top of the question."}
+                      {draftImagePosition === "between" && "Image renders between the context statement and the question prompt."}
+                      {draftImagePosition === "below" && "Image renders directly under the question prompt."}
+                    </p>
                   </div>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => draftImageInputRef.current?.click()}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all cursor-pointer"
-                  >
-                    <ImagePlus size={15} />
-                    Attach Image / Diagram
-                  </button>
                 )}
+
                 <input
                   ref={draftImageInputRef}
                   type="file"
@@ -1166,11 +1233,37 @@ const ExamCreator: React.FC = () => {
                   {/* Expanded body */}
                   {isExpanded && (
                     <div className="px-6 pb-5 pl-[88px] space-y-3">
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                      {q.contextStatement && (
+                        <div className="text-xs text-slate-600 italic bg-violet-50/60 border-l-4 border-violet-300 px-3 py-2 rounded-r-lg leading-relaxed">
+                          {q.contextStatement}
+                        </div>
+                      )}
+
+                      {(q.imagePosition || "below") === "above" && q.imageUrl && (
+                        <div className="flex justify-center">
+                          <img
+                            src={q.imageUrl}
+                            alt="Question diagram"
+                            className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                          />
+                        </div>
+                      )}
+
+                      {(q.imagePosition || "below") === "between" && q.imageUrl && (
+                        <div className="flex justify-center">
+                          <img
+                            src={q.imageUrl}
+                            alt="Question diagram"
+                            className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                          />
+                        </div>
+                      )}
+
+                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
                         {q.prompt}
                       </p>
 
-                      {q.imageUrl && (
+                      {(q.imagePosition || "below") === "below" && q.imageUrl && (
                         <div className="flex justify-center">
                           <img
                             src={q.imageUrl}

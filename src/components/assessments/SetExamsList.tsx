@@ -374,6 +374,8 @@ function injectGlobalPrintStyles() {
           .pp-q-pt { font-size: 10pt; color: #555; white-space: nowrap; }
           .pp-q-img { text-align: center; margin: 8px 0; }
           .pp-q-img img { max-height: 200px; max-width: 100%; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
+          .pp-q-img-inner { max-height: 200px; max-width: 100%; object-fit: contain; border: 1px solid #ddd; border-radius: 4px; }
+          .pp-ctx-stmt { font-size: 10pt; color: #333; background: #f9f9f9; border-left: 3px solid #aaa; padding: 4px 8px; margin-bottom: 6px; font-style: italic; }
           .pp-opt-lst { padding-left: 28px; display: flex; flex-direction: column; gap: 4px; }
           .pp-opt-row { display: flex; gap: 8px; }
           .pp-opt-lbl { font-weight: bold; min-width: 18px; }
@@ -389,19 +391,35 @@ function injectGlobalPrintStyles() {
 
 // ─── Printable Question Row ──────────────────────────────────────────────────
 function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
+  const position = q.imagePosition || "below";
+  const scoreLabel = `[${q.points} ${q.points === 1 ? "mark" : "marks"}]`;
+
+  const imageBlock = q.imageUrl ? (
+    <div className="pp-q-img">
+      <img src={q.imageUrl} alt="Question diagram" />
+    </div>
+  ) : null;
+
+  const contextBlock = q.contextStatement ? (
+    <div className="pp-ctx-stmt">{q.contextStatement}</div>
+  ) : null;
+
+  const promptBlock = (
+    <div className="pp-q-hdr">
+      <span className="pp-q-n">{index + 1}.</span>
+      <span className="pp-q-p">{q.prompt}</span>
+      <span className="pp-q-pt">{scoreLabel}</span>
+    </div>
+  );
+
   if (q.type === "mcq" && q.options) {
     return (
       <div className="pp-q-block">
-        <div className="pp-q-hdr">
-          <span className="pp-q-n">{index + 1}.</span>
-          <span className="pp-q-p">{q.prompt}</span>
-          <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
-        </div>
-        {q.imageUrl && (
-          <div className="pp-q-img">
-            <img src={q.imageUrl} alt="Question diagram" />
-          </div>
-        )}
+        {position === "above" && imageBlock}
+        {contextBlock}
+        {position === "between" && imageBlock}
+        {promptBlock}
+        {position === "below" && imageBlock}
         <div className="pp-opt-lst">
           {q.options.map((opt) => (
             <div key={opt.id} className="pp-opt-row">
@@ -419,16 +437,11 @@ function PrintableQuestionRow({ q, index }: { q: Question; index: number }) {
 
   return (
     <div className="pp-q-block">
-      <div className="pp-q-hdr">
-        <span className="pp-q-n">{index + 1}.</span>
-        <span className="pp-q-p">{q.prompt}</span>
-        <span className="pp-q-pt">[{q.points} {q.points === 1 ? "mark" : "marks"}]</span>
-      </div>
-      {q.imageUrl && (
-        <div className="pp-q-img">
-          <img src={q.imageUrl} alt="Question diagram" />
-        </div>
-      )}
+      {position === "above" && imageBlock}
+      {contextBlock}
+      {position === "between" && imageBlock}
+      {promptBlock}
+      {position === "below" && imageBlock}
       {q.modelAnswer && (
         <div className="pp-mod-ans">
           <strong>Model Answer:</strong> {q.modelAnswer}
@@ -717,6 +730,34 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                       </div>
                     </div>
 
+                    {q.contextStatement && (
+                      <div className="px-5 py-3 bg-violet-50/60 border-b border-violet-100">
+                        <p className="text-xs text-slate-700 italic leading-relaxed whitespace-pre-wrap">
+                          {q.contextStatement}
+                        </p>
+                      </div>
+                    )}
+
+                    {(q.imagePosition || "below") === "above" && q.imageUrl && (
+                      <div className="px-5 py-4 flex justify-center bg-white border-b border-slate-50">
+                        <img
+                          src={q.imageUrl}
+                          alt="Question diagram"
+                          className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                        />
+                      </div>
+                    )}
+
+                    {(q.imagePosition || "below") === "between" && q.imageUrl && (
+                      <div className="px-5 py-4 flex justify-center bg-white border-b border-slate-50">
+                        <img
+                          src={q.imageUrl}
+                          alt="Question diagram"
+                          className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                        />
+                      </div>
+                    )}
+
                     {q.type === "mcq" && q.options && q.options.length > 0 && (
                       <div className="px-5 py-4 space-y-2.5 bg-white">
                         {q.options.map((opt) => (
@@ -733,7 +774,7 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
                       </div>
                     )}
 
-                    {q.imageUrl && (
+                    {(q.imagePosition || "below") === "below" && q.imageUrl && (
                       <div className="px-5 py-4 flex justify-center bg-white">
                         <img
                           src={q.imageUrl}

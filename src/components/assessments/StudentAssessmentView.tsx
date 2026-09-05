@@ -20,6 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import QuestionRenderer from "@/components/assessments/QuestionRenderer";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from "@/utils/toast";
 import type {
@@ -924,9 +925,9 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         {/* Question Card */}
         <Card className="border-0 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-7">
-            <div className="flex items-center justify-between text-white/90 mb-3 flex-wrap gap-2">
+            <div className="flex items-center justify-between text-white/90 mb-2 flex-wrap gap-2">
               <Badge className="bg-white/20 text-white border-0 font-semibold">
-                {currentQuestion.type === "mcq"
+                Q{currentQuestionIndex + 1} · {currentQuestion.type === "mcq"
                   ? "Multiple Choice"
                   : currentQuestion.type === "math"
                   ? "Math"
@@ -944,16 +945,14 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           </div>
 
           <CardContent className="p-5 sm:p-8 space-y-6">
-            {/* Question image */}
-            {currentQuestion.imageUrl && (
-              <div className="flex justify-center">
-                <img
-                  src={currentQuestion.imageUrl}
-                  alt="Question diagram"
-                  className="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
-                />
-              </div>
-            )}
+            {/* Dynamic question body (context, image-position, prompt) */}
+            <QuestionRenderer
+              question={currentQuestion}
+              variant="card"
+              number={currentQuestionIndex + 1}
+              className="space-y-4"
+              imageClassName="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
+            />
 
             {/* MCQ */}
             {currentQuestion.type === "mcq" && currentQuestion.options && (
