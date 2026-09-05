@@ -168,7 +168,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
-    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher'] },
+    { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
         { icon: GraduationCap, label: 'Promote Students', path: '/promote', roles: ['admin', 'head_teacher'] },
       ];
 
@@ -182,7 +182,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
       '/admin-dashboard': ['owner', 'teacher', 'head_teacher', 'bursar', 'parent', 'student'],
             '/students': ['owner'],              // operational — owner cannot manage learners
       '/attendance': ['owner'],            // operational — owner cannot take roll call
-            '/settings': ['owner'],              // operational — owner has its own profile settings
+            // '/settings': ['owner'],            // operational — owner has its own profile settings — REMOVED so owner can access Settings
                   '/central-data': ['owner'],          // operational — owner cannot access central data service
                   '/payment-management': ['admin'],     // billing-only — admin cannot access billing console
                 };
