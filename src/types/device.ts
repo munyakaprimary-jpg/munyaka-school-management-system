@@ -46,35 +46,52 @@ export const getMonitoredDevices = (): TeacherDevice[] => {
 
 /** Save a heartbeat into the monitored devices registry */
 export const saveDeviceHeartbeat = (heartbeat: DeviceHeartbeat, teacherName: string): TeacherDevice[] => {
-  const devices = getMonitoredDevices();
-  const existing = devices.find((d) => d.deviceId === heartbeat.deviceId);
+  try {
+    const devices = getMonitoredDevices();
+    const existing = devices.find((d) => d.deviceId === heartbeat.deviceId);
 
-  const updated: TeacherDevice = existing
-    ? { ...existing, ...heartbeat, teacherName }
-    : {
+    const updated: TeacherDevice = existing
+      ? { ...existing, ...heartbeat, teacherName }
+      : {
+          ...heartbeat,
+          teacherName,
+          syncStatus: heartbeat.isOnline ? 'synced' : 'offline',
+          isLocked: existing?.isLocked ?? false,
+        };
+
+    const next = [
+      ...devices.filter((d) => d.deviceId !== heartbeat.deviceId),
+      updated,
+    ];
+
+    localStorage.setItem(MONITORED_DEVICES_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    /* localStorage unavailable — return the updated record but don't persist */
+    return [
+      {
         ...heartbeat,
         teacherName,
         syncStatus: heartbeat.isOnline ? 'synced' : 'offline',
-        isLocked: existing?.isLocked ?? false,
-      };
-
-  const next = [
-    ...devices.filter((d) => d.deviceId !== heartbeat.deviceId),
-    updated,
-  ];
-
-  localStorage.setItem(MONITORED_DEVICES_KEY, JSON.stringify(next));
-  return next;
+        isLocked: false,
+      },
+    ];
+  }
 };
 
 /** Toggle the app-lock state for a specific device */
 export const toggleDeviceLock = (deviceId: string): TeacherDevice[] => {
-  const devices = getMonitoredDevices();
-  const next = devices.map((d) =>
-    d.deviceId === deviceId ? { ...d, isLocked: !d.isLocked } : d
-  );
-  localStorage.setItem(MONITORED_DEVICES_KEY, JSON.stringify(next));
-  return next;
+  try {
+    const devices = getMonitoredDevices();
+    const next = devices.map((d) =>
+      d.deviceId === deviceId ? { ...d, isLocked: !d.isLocked } : d
+    );
+    localStorage.setItem(MONITORED_DEVICES_KEY, JSON.stringify(next));
+    return next;
+  } catch {
+    /* localStorage unavailable — return current devices unchanged */
+    return getMonitoredDevices();
+  }
 };
 
 /**

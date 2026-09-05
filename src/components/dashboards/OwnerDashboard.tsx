@@ -1386,15 +1386,15 @@ const OwnerDashboard: React.FC = () => {
                                       <div className="flex items-center gap-1.5 text-white/90 text-xs">
                                         <Server size={12} />
                                         <span className="font-mono truncate max-w-[180px]">
-                                          {(connectionStatus.serverUrl || '').replace(/^https?:\/\//, '').replace(/\/+$/, '') || 'Not configured'}
+                                          {(connectionStatus?.serverUrl || '').replace(/^https?:\/\//, '').replace(/\/+$/, '') || 'Not configured'}
                                         </span>
                                       </div>
-                                      {connectionStatus.latency !== null && connectionStatus.latency !== undefined && (
+                                      {connectionStatus?.latency != null && (
                                         <>
                                           <span className="w-1 h-1 rounded-full bg-white/40" />
                                           <div className="flex items-center gap-1.5 text-white/90 text-xs">
                                             <Clock size={12} />
-                                            <span>{connectionStatus.latency} ms latency</span>
+                                            <span>{connectionStatus?.latency} ms latency</span>
                                           </div>
                                         </>
                                       )}
@@ -1431,7 +1431,7 @@ const OwnerDashboard: React.FC = () => {
                                       Endpoint
                                     </p>
                                     <p className="text-sm font-bold text-slate-900 truncate">
-                                      {connectionStatus.serverUrl ? 'Configured' : 'Not Set'}
+                                      {connectionStatus?.serverUrl ? 'Configured' : 'Not Set'}
                                     </p>
                                   </div>
                                 </div>

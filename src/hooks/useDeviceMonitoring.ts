@@ -1,4 +1,14 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+/**
+ * Hook: useDeviceMonitoring
+ *
+ * Provides live device registry state, auto-refresh on localStorage changes,
+ * lock/unlock toggles, and simulated heartbeat injection for demo data.
+ *
+ * All localStorage and CustomEvent calls are wrapped in try-catch so that
+ * a blocked storage API (e.g. private-browsing WebView on Android) can
+ * never crash this hook or its consumers.
+ */
+import { useState, useEffect, useCallback } from 'react';
 import {
   TeacherDevice,
   getMonitoredDevices,
@@ -6,20 +16,20 @@ import {
   MONITORED_DEVICES_KEY,
 } from '@/types/device';
 
-/**
- * Hook: useDeviceMonitoring
- *
- * Provides live device registry state, auto-refresh on localStorage changes,
- * lock/unlock toggles, and simulated heartbeat injection for demo data.
- */
 export const useDeviceMonitoring = () => {
   const [devices, setDevices] = useState<TeacherDevice[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const tickRef = useRef(0);
 
   const load = useCallback(() => {
-    setDevices(getMonitoredDevices());
-    setIsLoading(false);
+    try {
+      const fresh = getMonitoredDevices();
+      setDevices(fresh);
+    } catch {
+      // getMonitoredDevices already has try-catch internally; treat empty on error.
+      setDevices([]);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   // Initial load
@@ -30,24 +40,18 @@ export const useDeviceMonitoring = () => {
   // Re-fetch on localStorage changes (from heartbeat writes or other tabs)
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === MONITORED_DEVICES_KEY) {
-        load();
-      }
+      if (e.key === MONITORED_DEVICES_KEY) load();
     };
     const onCustom = (e: Event) => {
       const detail = (e as CustomEvent).detail;
-      if (detail?.key === MONITORED_DEVICES_KEY) {
-        load();
-      }
+      if (detail?.key === MONITORED_DEVICES_KEY) load();
     };
+
     window.addEventListener('storage', onStorage);
     window.addEventListener('munyaka:data-changed', onCustom as EventListener);
 
-    // Polling as fallback (for same-tab updates)
-    const interval = setInterval(() => {
-      tickRef.current += 1;
-      load();
-    }, 5000);
+    // Polling as fallback for same-tab updates
+    const interval = setInterval(load, 5000);
 
     return () => {
       window.removeEventListener('storage', onStorage);
@@ -58,12 +62,22 @@ export const useDeviceMonitoring = () => {
 
   /** Toggle app-lock for a specific device */
   const handleToggleLock = useCallback((deviceId: string) => {
-    const next = toggleDeviceLock(deviceId);
-    setDevices(next);
-    // Notify other tabs
-    window.dispatchEvent(new CustomEvent('munyaka:data-changed', {
-      detail: { key: MONITORED_DEVICES_KEY },
-    }));
+    try {
+      const next = toggleDeviceLock(deviceId);
+      setDevices(next);
+      // Notify other tabs — wrapped so blocked CustomEvent cannot crash
+      try {
+        window.dispatchEvent(
+          new CustomEvent('munyaka:data-changed', {
+            detail: { key: MONITORED_DEVICES_KEY },
+          })
+        );
+      } catch {
+        /* best-effort: some WebViews restrict CustomEvent */
+      }
+    } catch {
+      /* toggleDeviceLock failed — device list remains unchanged */
+    }
   }, []);
 
   /** Force a manual refresh */

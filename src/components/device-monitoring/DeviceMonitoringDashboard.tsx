@@ -18,11 +18,12 @@ import { showSuccess, showError } from '@/utils/toast';
 
 /** Seed demo devices on first render if the registry is empty */
 const SEED_DEMO_DEVICES = (onDevicesReady: () => void) => {
-  const existing = JSON.parse(localStorage.getItem('monitored_devices') || '[]');
-  if (existing.length > 0) {
-    onDevicesReady();
-    return;
-  }
+  try {
+    const existing = JSON.parse(localStorage.getItem('monitored_devices') || '[]');
+    if (existing.length > 0) {
+      onDevicesReady();
+      return;
+    }
 
   const seeds: Array<{
     deviceId: string;
@@ -89,8 +90,12 @@ const SEED_DEMO_DEVICES = (onDevicesReady: () => void) => {
   const locked = devices.map((d: TeacherDevice) =>
     d.teacherId === 'teacher-003' ? { ...d, isLocked: true } : d
   );
-  localStorage.setItem('monitored_devices', JSON.stringify(locked));
+  try { localStorage.setItem('monitored_devices', JSON.stringify(locked)); } catch { /* no-op */ }
   onDevicesReady();
+  } catch {
+    /* localStorage unavailable — continue without demo data */
+    onDevicesReady();
+  }
 };
 
 const SyncStatusBadge: React.FC<{ status: TeacherDevice['syncStatus'] }> = ({ status }) => {
