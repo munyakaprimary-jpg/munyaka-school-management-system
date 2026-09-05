@@ -271,43 +271,43 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
           </button>
           <button onClick={() => setIsOpen(false)} className="lg:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 min-h-[44px] min-w-[44px] flex items-center justify-center active:scale-95" aria-label="Close menu"><X size={20} /></button>
         </div>
-        <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1.5 custom-scrollbar">
-          {filteredMenu.map((item: any) => {
-            const isActive = location.pathname === item.path || (item.subItems && item.subItems.some((sub: any) => location.pathname === sub.path));
-            const hasSubItems = item.subItems && item.subItems.length > 0;
-            return (
-              <div key={item.path} className="space-y-1">
-                <Link to={item.path} onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group ${isActive ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"}`}>
-                  <item.icon size={20} className={isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0"} />
-                  {!isCollapsed && <span className="truncate">{item.label}</span>}
-                </Link>
-                {!isCollapsed && hasSubItems && (
-                  <div className="pl-9 pr-2 space-y-1 py-1">
-                    {item.subItems.map((sub: any) => {
-                      const isSubActive = location.pathname === sub.path;
-                      return <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${isSubActive ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"}`}><span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" /><span className="truncate">{sub.label}</span></Link>;
-                    })}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-          {(() => {
-            const r = (user?.role ?? '').toLowerCase();
-                        // Treat super_admin as admin for Science Lab visibility
-                        const effectiveLabRole = r === 'super_admin' ? 'admin' : r;
-                        const seesLab = ['admin', 'head_teacher', 'teacher'].includes(effectiveLabRole);
-            if (!seesLab) return null;
-            return (
-              <Link to="/science-lab" onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[48px] touch-active group ${location.pathname === '/science-lab' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"}`}>
-                <FlaskConical size={20} className={location.pathname === '/science-lab' ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0"} />
-                {!isCollapsed && <span className="truncate">Science Lab</span>}
-              </Link>
-            );
-          })()}
-        </nav>
-        <div className="p-4 border-t border-slate-100 dark:border-slate-800 shrink-0">
-          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
+        <nav className="flex-1 min-h-0 overflow-y-auto pr-2 pl-3 py-3 space-y-1 custom-scrollbar">
+                  {filteredMenu.map((item: any) => {
+                    const isActive = location.pathname === item.path || (item.subItems && item.subItems.some((sub: any) => location.pathname === sub.path));
+                    const hasSubItems = item.subItems && item.subItems.length > 0;
+                    return (
+                      <div key={item.path} className="space-y-0.5">
+                        <Link to={item.path} onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[40px] touch-active group ${isActive ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"}`}>
+                          <item.icon size={20} className={isActive ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0"} />
+                          {!isCollapsed && <span className="truncate">{item.label}</span>}
+                        </Link>
+                        {!isCollapsed && hasSubItems && (
+                          <div className="pl-9 pr-2 space-y-0.5 py-0.5">
+                            {item.subItems.map((sub: any) => {
+                              const isSubActive = location.pathname === sub.path;
+                              return <Link key={sub.path} to={sub.path} onClick={() => setIsOpen(false)} className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${isSubActive ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 font-bold" : "text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white"}`}><span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" /><span className="truncate">{sub.label}</span></Link>;
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {(() => {
+                    const r = (user?.role ?? '').toLowerCase();
+                                // Treat super_admin as admin for Science Lab visibility
+                                const effectiveLabRole = r === 'super_admin' ? 'admin' : r;
+                                const seesLab = ['admin', 'head_teacher', 'teacher'].includes(effectiveLabRole);
+                    if (!seesLab) return null;
+                    return (
+                      <Link to="/science-lab" onClick={() => setIsOpen(false)} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-sm font-bold transition-all duration-200 min-h-[40px] touch-active group ${location.pathname === '/science-lab' ? "bg-indigo-600 text-white shadow-lg shadow-indigo-200/50 dark:bg-indigo-600 dark:shadow-none" : "text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-indigo-600 dark:hover:text-indigo-400"}`}>
+                        <FlaskConical size={20} className={location.pathname === '/science-lab' ? "text-white" : "text-slate-400 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 shrink-0"} />
+                        {!isCollapsed && <span className="truncate">Science Lab</span>}
+                      </Link>
+                    );
+                  })()}
+                </nav>
+                        <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
+                          <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
               <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">{user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}</div>
