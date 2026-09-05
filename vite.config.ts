@@ -17,7 +17,7 @@ export default defineConfig(() => ({
   build: {
     // Raise the warning threshold to accommodate the heavy vendor stack used
     // for local / Capacitor builds (recharts, pdfjs, sql.js, lucide).
-    chunkSizeWarningLimit: 2000,
+    chunkSizeWarningLimit: 6000,
     rollupOptions: {
       output: {
         manualChunks(id) {
