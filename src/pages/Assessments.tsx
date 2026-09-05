@@ -179,8 +179,8 @@ const Assessments = () => {
 
     // Sort according to cbcOrder with normalization
     const sorted = [...rawGrades].sort((a, b) => {
-      const nameA = String(a?.name ?? a ?? '').trim();
-      const nameB = String(b?.name ?? b ?? '').trim();
+      const nameA = (a?.name || a ?? '').toString().trim().toLowerCase();
+      const nameB = (b?.name || b ?? '').toString().trim().toLowerCase();
       
       const indexA = cbcOrder.indexOf(nameA);
       const indexB = cbcOrder.indexOf(nameB);
@@ -199,7 +199,7 @@ const Assessments = () => {
 
     // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
     return sorted.map((g: any) => {
-      const str = String(g?.name ?? g ?? '').trim();
+      const str = (g?.name || g ?? '').toString().trim();
       // If it starts with grade in lowercase, capitalize Grade
       if (str.toLowerCase().startsWith("grade ")) {
         const numPart = str.substring(6);
