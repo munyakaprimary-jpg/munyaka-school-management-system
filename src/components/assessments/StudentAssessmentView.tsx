@@ -927,7 +927,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-7">
             <div className="flex items-center justify-between text-white/90 flex-wrap gap-2">
               <Badge className="bg-white/20 text-white border-0 font-semibold">
-                Q{currentQuestionIndex + 1} · {currentQuestion.type === "mcq"
+                Q{currentIndex + 1} · {currentQuestion.type === "mcq"
                   ? "Multiple Choice"
                   : currentQuestion.type === "math"
                   ? "Math"
@@ -946,7 +946,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             <QuestionRenderer
               question={currentQuestion}
               variant="card"
-              number={currentQuestionIndex + 1}
+              number={currentIndex + 1}
               className="space-y-4"
               imageClassName="max-h-72 rounded-2xl border border-slate-200 object-contain shadow-sm"
             />
