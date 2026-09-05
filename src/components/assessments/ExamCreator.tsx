@@ -1227,119 +1227,112 @@ const ExamCreator: React.FC = () => {
                       {idx + 1}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Badge
-                          variant="outline"
-                          className={cn(
-                            "font-bold text-[10px] uppercase",
-                            q.type === "mcq"
-                              ? "bg-violet-50 text-violet-600 border-violet-200"
-                              : "bg-teal-50 text-teal-600 border-teal-200"
-                          )}
-                        >
-                          {q.type === "mcq" ? "MCQ" : "Structured"}
-                        </Badge>
-                        <span className="text-xs text-slate-400 font-bold">{q.points} pts</span>
-                      </div>
-                      <p className="text-sm font-semibold text-slate-800 line-clamp-1">
-                        {q.contextStatement?.trim()
-                          ? q.contextStatement
-                          : (q.prompt || (
-                              <span className="italic text-slate-400">No prompt yet…</span>
-                            ))}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMove(q.id, "up");
-                        }}
-                        disabled={idx === 0}
-                        className="rounded-lg h-8 w-8 text-slate-400 hover:text-violet-600 hover:bg-violet-50"
-                        title="Move up"
-                      >
-                        <ChevronUp size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleMove(q.id, "down");
-                        }}
-                        disabled={idx === questions.length - 1}
-                        className="rounded-lg h-8 w-8 text-slate-400 hover:text-violet-600 hover:bg-violet-50"
-                        title="Move down"
-                      >
-                        <ChevronDown size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditQuestion(q);
-                        }}
-                        className="rounded-lg h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                        title="Edit question"
-                      >
-                        <Edit3 size={14} />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteQuestion(q.id);
-                        }}
-                        className="rounded-lg h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
-                        title="Delete question"
-                      >
-                        <Trash2 size={14} />
-                      </Button>
-                      {isExpanded ? (
-                        <ChevronUp className="w-4 h-4 text-slate-400 ml-1" />
-                      ) : (
-                        <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Expanded body */}
-                  {isExpanded && (
-                    <div className="px-6 pb-5 pl-[88px] space-y-3">
-                      {q.contextStatement && (
-                        <div className="text-xs text-slate-600 italic bg-violet-50/60 border-l-4 border-violet-300 px-3 py-2 rounded-r-lg leading-relaxed">
-                          {q.contextStatement}
-                        </div>
-                      )}
-
-                      {(q.imagePosition || "below") === "above" && q.imageUrl && (
-                        <div className="flex justify-center">
-                          <img
-                            src={q.imageUrl}
-                            alt="Question diagram"
-                            className="max-h-56 rounded-xl border border-slate-200 object-contain"
-                          />
-                        </div>
-                      )}
-
-                      {(q.imagePosition || "below") === "between" && q.imageUrl && (
-                        <div className="flex justify-center">
-                          <img
-                            src={q.imageUrl}
-                            alt="Question diagram"
-                            className="max-h-56 rounded-xl border border-slate-200 object-contain"
-                          />
-                        </div>
-                      )}
-
-                      <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
-                        {q.prompt}
-                      </p>
+                                          <div className="flex items-center gap-2">
+                                            <Badge
+                                              variant="outline"
+                                              className={cn(
+                                                "font-bold text-[10px] uppercase",
+                                                q.type === "mcq"
+                                                  ? "bg-violet-50 text-violet-600 border-violet-200"
+                                                  : "bg-teal-50 text-teal-600 border-teal-200"
+                                              )}
+                                            >
+                                              {q.type === "mcq" ? "MCQ" : "Structured"}
+                                            </Badge>
+                                            <span className="text-xs text-slate-400 font-bold">{q.points} pts</span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-1">
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMove(q.id, "up");
+                                            }}
+                                            disabled={idx === 0}
+                                            className="rounded-lg h-8 w-8 text-slate-400 hover:text-violet-600 hover:bg-violet-50"
+                                            title="Move up"
+                                          >
+                                            <ChevronUp size={14} />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleMove(q.id, "down");
+                                            }}
+                                            disabled={idx === questions.length - 1}
+                                            className="rounded-lg h-8 w-8 text-slate-400 hover:text-violet-600 hover:bg-violet-50"
+                                            title="Move down"
+                                          >
+                                            <ChevronDown size={14} />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleEditQuestion(q);
+                                            }}
+                                            className="rounded-lg h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                            title="Edit question"
+                                          >
+                                            <Edit3 size={14} />
+                                          </Button>
+                                          <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDeleteQuestion(q.id);
+                                            }}
+                                            className="rounded-lg h-8 w-8 text-slate-400 hover:text-red-600 hover:bg-red-50"
+                                            title="Delete question"
+                                          >
+                                            <Trash2 size={14} />
+                                          </Button>
+                                          {isExpanded ? (
+                                            <ChevronUp className="w-4 h-4 text-slate-400 ml-1" />
+                                          ) : (
+                                            <ChevronDown className="w-4 h-4 text-slate-400 ml-1" />
+                                          )}
+                                        </div>
+                                      </div>
+                    
+                                      {/* Expanded body */}
+                                      {isExpanded && (
+                                        <div className="px-6 pb-5 pl-[88px] space-y-3">
+                                          {q.contextStatement && (
+                                            <div className="text-xs text-slate-600 italic bg-violet-50/60 border-l-4 border-violet-300 px-3 py-2 rounded-r-lg leading-relaxed">
+                                              {q.contextStatement}
+                                            </div>
+                                          )}
+                    
+                                          {(q.imagePosition || "below") === "above" && q.imageUrl && (
+                                            <div className="flex justify-center">
+                                              <img
+                                                src={q.imageUrl}
+                                                alt="Question diagram"
+                                                className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                                              />
+                                            </div>
+                                          )}
+                    
+                                          {(q.imagePosition || "below") === "between" && q.imageUrl && (
+                                            <div className="flex justify-center">
+                                              <img
+                                                src={q.imageUrl}
+                                                alt="Question diagram"
+                                                className="max-h-56 rounded-xl border border-slate-200 object-contain"
+                                              />
+                                            </div>
+                                          )}
+                    
+                                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap font-medium">
+                                            {q.prompt}
+                                          </p>
 
                       {(q.imagePosition || "below") === "below" && q.imageUrl && (
                         <div className="flex justify-center">
