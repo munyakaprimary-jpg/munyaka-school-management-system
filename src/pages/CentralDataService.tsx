@@ -146,7 +146,7 @@ export default function CentralDataService() {
   };
 
   const handleImportDatabase = () => {
-    if (!importJsonText.trim()) {
+    if (!(importJsonText ?? '').trim()) {
       showError("Please paste or load valid JSON seed data.");
       return;
     }
@@ -336,7 +336,7 @@ export default function CentralDataService() {
             <div className="flex justify-end gap-3">
               <Button 
                 onClick={handleImportDatabase}
-                disabled={isImporting || !importJsonText.trim()}
+                disabled={isImporting || !(importJsonText ?? '').trim()}
                 className="bg-teal-600 hover:bg-teal-700 text-white flex items-center gap-2"
               >
                 {isImporting ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}

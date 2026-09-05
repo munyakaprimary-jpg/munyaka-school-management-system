@@ -443,7 +443,7 @@ export default function GradingReview() {
 
   // Filter students by search term
   const filteredGrades = useMemo(() => {
-    if (!searchTerm.trim()) return studentGrades;
+    if (!(searchTerm ?? '').trim()) return studentGrades;
     const q = searchTerm.toLowerCase();
     return studentGrades.filter(
       (g) =>
@@ -927,8 +927,8 @@ export default function GradingReview() {
                                     <p className="text-xs text-slate-500 mt-0.5">
                                       {question.points} point{question.points !== 1 ? "s" : ""}
                                       {" · "}
-                                      {studentAnswer.trim()
-                                        ? `${studentAnswer.trim().split(/\s+/).length} words typed`
+                                      {(studentAnswer ?? '').trim()
+                                        ? `${(studentAnswer ?? '').trim().split(/\s+/).length} words typed`
                                         : "No answer submitted"}
                                     </p>
                                   </div>
@@ -974,7 +974,7 @@ export default function GradingReview() {
                                           Student&apos;s Response
                                         </Label>
                                       </div>
-                                      {studentAnswer.trim() ? (
+                                      {(studentAnswer ?? '').trim() ? (
                                         <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                                           {studentAnswer}
                                         </p>
@@ -995,7 +995,7 @@ export default function GradingReview() {
                                           Model Answer / Marking Key
                                         </Label>
                                       </div>
-                                      {question.modelAnswer?.trim() ? (
+                                      {(question.modelAnswer ?? '').trim() ? (
                                         <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                                           {question.modelAnswer}
                                         </p>
@@ -1006,7 +1006,7 @@ export default function GradingReview() {
                                       )}
 
                                       {/* Rubric */}
-                                      {question.rubric?.trim() && (
+                                      {(question.rubric ?? '').trim() && (
                                         <div className="mt-3 pt-3 border-t border-emerald-100">
                                           <p className="text-xs font-semibold text-emerald-600 uppercase mb-1">
                                             Rubric / Notes

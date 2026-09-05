@@ -584,7 +584,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         selectedStream === ALL_STREAMS_VALUE ||
         normaliseGrade(g.stream) === normaliseGrade(selectedStream);
       const matchesSearch =
-        !searchTerm.trim() ||
+        !(searchTerm ?? '').trim() ||
         g.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         g.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
         g.classId.toLowerCase().includes(searchTerm.toLowerCase());
@@ -797,8 +797,8 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {q.points} pts
-                      {studentAnswer.trim()
-                        ? ` · ${studentAnswer.trim().split(/\s+/).length} words`
+                      {(studentAnswer ?? '').trim()
+                        ? ` · ${(studentAnswer ?? '').trim().split(/\s+/).length} words`
                         : " · No answer"}
                     </p>
                   </div>
@@ -843,7 +843,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                           Student's Response
                         </Label>
                       </div>
-                      {studentAnswer.trim() ? (
+                      {(studentAnswer ?? '').trim() ? (
                         <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                           {studentAnswer}
                         </p>
@@ -862,7 +862,7 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                           Model Answer / Marking Key
                         </Label>
                       </div>
-                      {q.modelAnswer?.trim() ? (
+                      {(q.modelAnswer ?? '').trim() ? (
                         <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
                           {q.modelAnswer}
                         </p>

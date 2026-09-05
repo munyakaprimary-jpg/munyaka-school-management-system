@@ -73,7 +73,7 @@ const FEE_OVERRIDES_KEY_PREFIX = 'munyaka_fee_';
 // Helper: Get normalized match key for grade (e.g. "Grade 4" -> "grade4")
 const getGradeMatchKey = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = (name ?? '').trim();
   if (!trimmed) return '';
   const lower = trimmed.toLowerCase();
   if (lower === 'pp1' || lower === 'pp2') return lower;
@@ -85,7 +85,7 @@ const getGradeMatchKey = (name: string): string => {
 // Helper: Normalize grade name to title case
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = (name ?? '').trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
@@ -93,7 +93,7 @@ const normalizeGradeName = (name: string): string => {
 // Helper: Normalize stream name to title case
 const normalizeStreamName = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = (name ?? '').trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
@@ -514,7 +514,7 @@ const Fees = () => {
 
   const handleVerifyAuth = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!authPassword.trim()) {
+    if (!(authPassword ?? '').trim()) {
       setAuthError("Admin password is required");
       return;
     }

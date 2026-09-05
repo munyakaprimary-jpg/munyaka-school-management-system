@@ -1449,7 +1449,7 @@ const SetExamsList: React.FC = () => {
     let list = exams;
     if (statusFilter !== "all") list = list.filter((e) => e.status === statusFilter);
     if (categoryFilter !== "all") list = list.filter((e) => e.category === categoryFilter);
-    if (searchTerm.trim()) {
+    if ((searchTerm ?? '').trim()) {
       const q = searchTerm.toLowerCase();
       list = list.filter(
         (e) =>

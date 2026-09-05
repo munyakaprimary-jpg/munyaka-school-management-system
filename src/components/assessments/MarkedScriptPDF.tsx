@@ -318,10 +318,10 @@ const MarkedScriptPDF: React.FC<MarkedScriptPDFProps> = ({
                     : "—";
                 } else {
                   studentAnswerText =
-                    typeof studentAnswer === "string" && studentAnswer.trim()
+                    typeof studentAnswer === "string" && (studentAnswer ?? '').trim()
                       ? studentAnswer
                       : "No answer";
-                  correctAnswerText = q.modelAnswer?.trim() || "—";
+                  correctAnswerText = (q.modelAnswer ?? '').trim() || "—";
                 }
 
                 return (
@@ -513,7 +513,7 @@ const MarkedScriptPDF: React.FC<MarkedScriptPDFProps> = ({
                           whiteSpace: "pre-wrap",
                         }}
                       >
-                        {comment?.trim()
+                        {(comment ?? '').trim()
                           ? comment
                           : "— No comment recorded —"}
                       </p>
@@ -651,7 +651,7 @@ const FallbackBreakdown: React.FC<{
               <strong>Answer:</strong>{" "}
               {typeof ans === "string" ? ans : JSON.stringify(ans)}
             </p>
-            {comment?.trim() && (
+            {(comment ?? '').trim() && (
               <p
                 style={{
                   margin: "4px 0 0 0",

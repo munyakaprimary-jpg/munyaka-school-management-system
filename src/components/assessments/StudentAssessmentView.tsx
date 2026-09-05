@@ -527,7 +527,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
     const r = responses[q.id];
     if (!r) return false;
     if (r.selectedOptionId) return true;
-    if (r.answerText && r.answerText.trim() !== "") return true;
+    if (r.answerText && (r.answerText ?? '').trim() !== "") return true;
     return false;
   }).length;
   const isLastQuestion = currentIndex === activeQuestions.length - 1;
@@ -1011,7 +1011,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               // Live grading for math / numeric / fill_blank questions
               let pillLabel = "Ungraded";
               let pillClass = "bg-slate-100 text-slate-500";
-              if (isMathType && rawAnswer.trim()) {
+              if (isMathType && (rawAnswer ?? '').trim()) {
                 const result = gradeMathQuestion(rawAnswer, expectedAnswer);
                 if (result.isGraded) {
                   pillLabel = result.isCorrect ? "Correct" : "Incorrect";
@@ -1086,7 +1086,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
             {activeQuestions.map((q, idx) => {
               const r = responses[q.id];
               const isAnswered =
-                !!r?.selectedOptionId || (!!r?.answerText && r.answerText.trim() !== "");
+              !!r?.selectedOptionId || (!!r?.answerText && (r.answerText ?? '').trim() !== "");
               const isActive = currentIndex === idx;
               return (
                 <button

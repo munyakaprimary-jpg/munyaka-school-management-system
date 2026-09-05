@@ -110,7 +110,7 @@ const QuestionRenderer: React.FC<QuestionRendererProps> = ({
   }
 
   // 2) Context statement (if present)
-  if (question.contextStatement && question.contextStatement.trim()) {
+  if (question.contextStatement && (question.contextStatement ?? '').trim()) {
     push("context", <div className={contextCls}>{question.contextStatement}</div>);
   }
 

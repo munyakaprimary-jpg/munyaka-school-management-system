@@ -273,26 +273,26 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
   // ─────────────────────────────────────────────
   const validate = (): string => {
     // Either a learner must be selected OR a recipient (license flow)
-    if (!hideLearnerSelection && !selectedStudentId && !issuedTo.trim()) {
+    if (!hideLearnerSelection && !selectedStudentId && !(issuedTo ?? '').trim()) {
       return "Please select a learner or enter an institution / recipient.";
     }
-    if (hideLearnerSelection && !issuedTo.trim()) {
+    if (hideLearnerSelection && !(issuedTo ?? '').trim()) {
       return "Please enter the recipient / institution name.";
     }
     const n = parseFloat(amount);
     if (isNaN(n) || n <= 0) return "Please enter a valid payment amount.";
-    if (paymentMethod === 'cash' && !receivedBy.trim() && !issuedTo.trim()) {
+    if (paymentMethod === 'cash' && !(receivedBy ?? '').trim() && !(issuedTo ?? '').trim()) {
       return "Please enter the staff name who received the cash payment.";
     }
     if (paymentMethod === 'bank') {
-      if (!bankName.trim()) return "Please enter the bank name.";
-      if (!bankRef.trim()) return "Please enter the transaction reference number.";
+      if (!(bankName ?? '').trim()) return "Please enter the bank name.";
+      if (!(bankRef ?? '').trim()) return "Please enter the transaction reference number.";
     }
     if (paymentMethod === 'cheque') {
-      if (!chequeBankName.trim()) return "Please enter the bank name on the cheque.";
-      if (!chequeNumber.trim()) return "Please enter the cheque number.";
+      if (!(chequeBankName ?? '').trim()) return "Please enter the bank name on the cheque.";
+      if (!(chequeNumber ?? '').trim()) return "Please enter the cheque number.";
     }
-    if (paymentMethod === 'mpesa' && !mpesaReceipt.trim()) {
+    if (paymentMethod === 'mpesa' && !(mpesaReceipt ?? '').trim()) {
       return "Please enter the M-Pesa receipt number.";
     }
     return "";
