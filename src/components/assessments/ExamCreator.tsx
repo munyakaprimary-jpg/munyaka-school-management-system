@@ -186,6 +186,106 @@ function loadConfiguredStreams(selectedGrade: string): string[] {
 }
 
 // ─── Component ────────────────────────────────────────────────────────────────
+// ─── Image Field Component ──────────────────────────────────────────────────────
+
+interface ImageFieldProps {
+  imageUrl: string | null;
+  onRemove: () => void;
+  onAttach: () => void;
+  position: "above" | "between" | "below";
+  onPositionChange: (pos: "above" | "between" | "below") => void;
+  fileInputRef: React.RefObject<HTMLInputElement>;
+  onFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+}
+
+const ImageField: React.FC<ImageFieldProps> = ({
+  imageUrl,
+  onRemove,
+  onAttach,
+  position,
+  onPositionChange,
+  fileInputRef,
+  onFileChange,
+}) => {
+  return (
+    <div className="space-y-2">
+      {/* Image preview or upload button */}
+      {imageUrl ? (
+        <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+          <img
+            src={imageUrl}
+            alt="Question diagram"
+            className="max-h-56 mx-auto object-contain"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
+            title="Remove image"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onAttach}
+          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all cursor-pointer"
+        >
+          <ImagePlus size={15} />
+          Attach Image / Diagram
+        </button>
+      )}
+
+      {/* Image Placement Selector */}
+      {imageUrl && (
+        <div className="space-y-1.5">
+          <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+            Image Placement
+          </Label>
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+            {([
+              { value: "above" as const, label: "Above Prompt", short: "Top" },
+              { value: "between" as const, label: "Between Context & Question", short: "Between" },
+              { value: "below" as const, label: "Below Prompt", short: "Below" },
+            ]).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onPositionChange(opt.value)}
+                className={cn(
+                  "px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all text-center leading-tight",
+                  position === opt.value
+                    ? "bg-white text-indigo-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                )}
+                title={opt.label}
+              >
+                {opt.short}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400">
+            {position === "above" && "Image renders at the very top of the question."}
+            {position === "between" && "Image renders between the context statement and the question prompt."}
+            {position === "below" && "Image renders directly under the question prompt."}
+          </p>
+        </div>
+      )}
+
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={onFileChange}
+      />
+    </div>
+  );
+};
+
+// ─── ExamCreator Component ─────────────────────────────────────────────────────
+
 const ExamCreator: React.FC = () => {
   const navigate = useNavigate();
   // Exam meta
@@ -877,6 +977,19 @@ const ExamCreator: React.FC = () => {
               </button>
             </div>
 
+            {/* Image attachment & placement — order depends on the selected placement */}
+            {draftImageUrl && draftImagePosition === "above" && (
+              <ImageField
+                imageUrl={draftImageUrl}
+                onRemove={handleRemoveDraftImage}
+                onAttach={() => draftImageInputRef.current?.click()}
+                position={draftImagePosition}
+                onPositionChange={setDraftImagePosition}
+                fileInputRef={draftImageInputRef}
+                onFileChange={handleDraftImageChange}
+              />
+            )}
+
             {/* Context / Intro Statement */}
             <div className="space-y-2">
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
@@ -890,6 +1003,19 @@ const ExamCreator: React.FC = () => {
                 className="rounded-xl min-h-[80px]"
               />
             </div>
+
+            {/* Image — appears between context and prompt when "Between" is selected */}
+            {draftImageUrl && draftImagePosition === "between" && (
+              <ImageField
+                imageUrl={draftImageUrl}
+                onRemove={handleRemoveDraftImage}
+                onAttach={() => draftImageInputRef.current?.click()}
+                position={draftImagePosition}
+                onPositionChange={setDraftImagePosition}
+                fileInputRef={draftImageInputRef}
+                onFileChange={handleDraftImageChange}
+              />
+            )}
 
             {/* Question prompt */}
             <div className="space-y-2">
@@ -906,83 +1032,33 @@ const ExamCreator: React.FC = () => {
                 onChange={(e) => setDraftPrompt(e.target.value)}
                 className="rounded-xl min-h-[100px]"
               />
-
-              {/* Image attachment */}
-              <div className="space-y-2">
-                <div className="flex items-stretch gap-2">
-                  {draftImageUrl ? (
-                    <div className="relative flex-1 rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                      <img
-                        src={draftImageUrl}
-                        alt="Question diagram"
-                        className="max-h-56 mx-auto object-contain"
-                      />
-                      <button
-                        type="button"
-                        onClick={handleRemoveDraftImage}
-                        className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-                        title="Remove image"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => draftImageInputRef.current?.click()}
-                      className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50/50 transition-all cursor-pointer"
-                    >
-                      <ImagePlus size={15} />
-                      Attach Image / Diagram
-                    </button>
-                  )}
-                </div>
-
-                {/* Image Placement Selector */}
-                {draftImageUrl && (
-                  <div className="space-y-1.5">
-                    <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Image Placement
-                    </Label>
-                    <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
-                      {([
-                        { value: "above", label: "Above Prompt", short: "Top" },
-                        { value: "between", label: "Between Context & Question", short: "Between" },
-                        { value: "below", label: "Below Prompt", short: "Below" },
-                      ] as const).map((opt) => (
-                        <button
-                          key={opt.value}
-                          type="button"
-                          onClick={() => setDraftImagePosition(opt.value)}
-                          className={cn(
-                            "px-2 py-1.5 rounded-lg text-[11px] font-bold transition-all text-center leading-tight",
-                            draftImagePosition === opt.value
-                              ? "bg-white text-indigo-700 shadow-sm"
-                              : "text-slate-500 hover:text-slate-700"
-                          )}
-                          title={opt.label}
-                        >
-                          {opt.short}
-                        </button>
-                      ))}
-                    </div>
-                    <p className="text-[10px] text-slate-400">
-                      {draftImagePosition === "above" && "Image renders at the very top of the question."}
-                      {draftImagePosition === "between" && "Image renders between the context statement and the question prompt."}
-                      {draftImagePosition === "below" && "Image renders directly under the question prompt."}
-                    </p>
-                  </div>
-                )}
-
-                <input
-                  ref={draftImageInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleDraftImageChange}
-                />
-              </div>
             </div>
+
+            {/* Image — appears after the prompt when "Below" is selected */}
+            {draftImageUrl && draftImagePosition === "below" && (
+              <ImageField
+                imageUrl={draftImageUrl}
+                onRemove={handleRemoveDraftImage}
+                onAttach={() => draftImageInputRef.current?.click()}
+                position={draftImagePosition}
+                onPositionChange={setDraftImagePosition}
+                fileInputRef={draftImageInputRef}
+                onFileChange={handleDraftImageChange}
+              />
+            )}
+
+            {/* No image yet — show attach button at the very top of the image area */}
+            {!draftImageUrl && (
+              <ImageField
+                imageUrl={null}
+                onRemove={handleRemoveDraftImage}
+                onAttach={() => draftImageInputRef.current?.click()}
+                position={draftImagePosition}
+                onPositionChange={setDraftImagePosition}
+                fileInputRef={draftImageInputRef}
+                onFileChange={handleDraftImageChange}
+              />
+            )}
 
             {/* Type-specific fields */}
             {draftType === "mcq" ? (

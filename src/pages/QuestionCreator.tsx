@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -81,6 +81,112 @@ const SUBJECTS = [
   { value: "history", label: "History" },
   { value: "geography", label: "Geography" },
 ];
+
+// ─── QuestionCreator Image Field ────────────────────────────────────────────────────
+
+interface QCImageFieldProps {
+  imageUrl: string | null;
+  position: "above" | "between" | "below";
+  onRemove: () => void;
+  onPositionChange: (pos: "above" | "between" | "below") => void;
+  onImageSelected: (dataUrl: string) => void;
+}
+
+const QCImageField: React.FC<QCImageFieldProps> = ({
+  imageUrl,
+  position,
+  onRemove,
+  onPositionChange,
+  onImageSelected,
+}) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file.");
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      alert("Image is too large. Please use an image under 4MB.");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const result = ev.target?.result as string;
+      if (result) onImageSelected(result);
+    };
+    reader.readAsDataURL(file);
+    e.target.value = "";
+  };
+
+  return (
+    <div className="space-y-2">
+      {imageUrl ? (
+        <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+          <img
+            src={imageUrl}
+            alt="Question diagram"
+            className="max-h-56 mx-auto object-contain"
+          />
+          <button
+            type="button"
+            onClick={onRemove}
+            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
+            title="Remove image"
+          >
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      ) : (
+        <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-semibold hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/50 transition-all cursor-pointer">
+          <ImagePlus className="w-4 h-4" />
+          Attach Image / Diagram
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileChange}
+          />
+        </label>
+      )}
+
+      {imageUrl && (
+        <div className="space-y-1.5">
+          <Label className="text-slate-700 font-semibold text-xs">Image Placement</Label>
+          <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
+            {([
+              { value: "above" as const, label: "Top", full: "Above Prompt" },
+              { value: "between" as const, label: "Between", full: "Between Context & Question" },
+              { value: "below" as const, label: "Below", full: "Below Prompt" },
+            ]).map((opt) => (
+              <button
+                key={opt.value}
+                type="button"
+                onClick={() => onPositionChange(opt.value)}
+                className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  position === opt.value
+                    ? "bg-white text-violet-700 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+                title={opt.full}
+              >
+                {opt.label}
+              </button>
+            ))}
+          </div>
+          <p className="text-[10px] text-slate-400">
+            {position === "above" && "Image renders at the very top of the question."}
+            {position === "between" && "Image renders between the context statement and the question prompt."}
+            {position === "below" && "Image renders directly under the question prompt."}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+};
 
 const QuestionCreator = () => {
   // Assessment metadata
@@ -559,6 +665,17 @@ const QuestionCreator = () => {
                   {/* Expanded Content */}
                   {isExpanded && (
                     <CardContent className="p-5 space-y-5 border-t border-slate-100">
+                      {/* Image — appears ABOVE context when "Above Prompt" is selected */}
+                      {(question.imagePosition || "below") === "above" && question.imageUrl && (
+                        <QCImageField
+                          imageUrl={question.imageUrl}
+                          position={question.imagePosition || "below"}
+                          onRemove={() => updateQuestion(question.id, { imageUrl: undefined })}
+                          onPositionChange={(pos) => updateQuestion(question.id, { imagePosition: pos })}
+                          onImageSelected={(dataUrl) => updateQuestion(question.id, { imageUrl: dataUrl })}
+                        />
+                      )}
+
                       {/* Context / Intro Statement */}
                       <div className="space-y-2">
                         <Label className="text-slate-700 font-semibold flex items-center gap-2">
@@ -574,6 +691,28 @@ const QuestionCreator = () => {
                           className="min-h-[80px] rounded-xl"
                         />
                       </div>
+
+                      {/* Image — appears BETWEEN context and prompt when "Between" is selected */}
+                      {(question.imagePosition || "below") === "between" && question.imageUrl && (
+                        <QCImageField
+                          imageUrl={question.imageUrl}
+                          position={question.imagePosition || "below"}
+                          onRemove={() => updateQuestion(question.id, { imageUrl: undefined })}
+                          onPositionChange={(pos) => updateQuestion(question.id, { imagePosition: pos })}
+                          onImageSelected={(dataUrl) => updateQuestion(question.id, { imageUrl: dataUrl })}
+                        />
+                      )}
+
+                      {/* No image yet — show attach button as the first image slot */}
+                      {!question.imageUrl && (
+                        <QCImageField
+                          imageUrl={null}
+                          position={question.imagePosition || "below"}
+                          onRemove={() => updateQuestion(question.id, { imageUrl: undefined })}
+                          onPositionChange={(pos) => updateQuestion(question.id, { imagePosition: pos })}
+                          onImageSelected={(dataUrl) => updateQuestion(question.id, { imageUrl: dataUrl })}
+                        />
+                      )}
 
                       {/* Question Prompt */}
                       <div className="space-y-2">
@@ -593,88 +732,16 @@ const QuestionCreator = () => {
                         />
                       </div>
 
-                      {/* Image attachment + placement */}
-                      <div className="space-y-2">
-                        {question.imageUrl ? (
-                          <div className="relative rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
-                            <img
-                              src={question.imageUrl}
-                              alt="Question diagram"
-                              className="max-h-56 mx-auto object-contain"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => updateQuestion(question.id, { imageUrl: undefined })}
-                              className="absolute top-2 right-2 w-7 h-7 rounded-full bg-red-500 text-white flex items-center justify-center hover:bg-red-600 transition-colors shadow-md"
-                              title="Remove image"
-                            >
-                              <X className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        ) : (
-                          <label className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-semibold hover:border-violet-400 hover:text-violet-600 hover:bg-violet-50/50 transition-all cursor-pointer">
-                            <ImagePlus className="w-4 h-4" />
-                            Attach Image / Diagram
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (!file.type.startsWith("image/")) {
-                                  alert("Please select an image file.");
-                                  return;
-                                }
-                                if (file.size > 4 * 1024 * 1024) {
-                                  alert("Image is too large. Please use an image under 4MB.");
-                                  return;
-                                }
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  const result = ev.target?.result as string;
-                                  if (result) updateQuestion(question.id, { imageUrl: result });
-                                };
-                                reader.readAsDataURL(file);
-                                e.target.value = "";
-                              }}
-                            />
-                          </label>
-                        )}
-
-                        {/* Image Placement Selector */}
-                        {question.imageUrl && (
-                          <div className="space-y-1.5">
-                            <Label className="text-slate-700 font-semibold text-xs">Image Placement</Label>
-                            <div className="grid grid-cols-3 gap-1.5 p-1 bg-slate-100 rounded-xl">
-                              {([
-                                { value: "above" as const, label: "Top", full: "Above Prompt" },
-                                { value: "between" as const, label: "Between", full: "Between Context & Question" },
-                                { value: "below" as const, label: "Below", full: "Below Prompt" },
-                              ]).map((opt) => (
-                                <button
-                                  key={opt.value}
-                                  type="button"
-                                  onClick={() => updateQuestion(question.id, { imagePosition: opt.value })}
-                                  className={`px-2 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                                    (question.imagePosition || "below") === opt.value
-                                      ? "bg-white text-violet-700 shadow-sm"
-                                      : "text-slate-500 hover:text-slate-700"
-                                  }`}
-                                  title={opt.full}
-                                >
-                                  {opt.label}
-                                </button>
-                              ))}
-                            </div>
-                            <p className="text-[10px] text-slate-400">
-                              {(question.imagePosition || "below") === "above" && "Image renders at the very top of the question."}
-                              {(question.imagePosition || "below") === "between" && "Image renders between the context statement and the question prompt."}
-                              {(question.imagePosition || "below") === "below" && "Image renders directly under the question prompt."}
-                            </p>
-                          </div>
-                        )}
-                      </div>
+                      {/* Image — appears BELOW prompt when "Below Prompt" is selected */}
+                      {(question.imagePosition || "below") === "below" && question.imageUrl && (
+                        <QCImageField
+                          imageUrl={question.imageUrl}
+                          position={question.imagePosition || "below"}
+                          onRemove={() => updateQuestion(question.id, { imageUrl: undefined })}
+                          onPositionChange={(pos) => updateQuestion(question.id, { imagePosition: pos })}
+                          onImageSelected={(dataUrl) => updateQuestion(question.id, { imageUrl: dataUrl })}
+                        />
+                      )}
 
                       {/* MCQ Options */}
                       {isMCQ && question.options && (
