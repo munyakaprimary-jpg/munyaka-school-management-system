@@ -40,7 +40,6 @@ import type {
   Assessment,
   Question,
   StudentResponse,
-  StudentSubmission,
   AssessmentResult,
 } from "@/types/questions";
 
@@ -107,6 +106,19 @@ function gradeColor(level: AssessmentResult["gradeLevel"]): string {
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
+// Unified submission type: combines fields from both questions.ts (responses, startedAt)
+// and assessment.ts (marks, admissionNo) sources.
+interface UnifiedSubmission {
+  assessmentId: string;
+  studentId?: string;
+  responses: StudentResponse[];
+  startedAt?: string;
+  submittedAt?: string;
+  marks: Record<string, number>;
+  admissionNo: string;
+  [key: string]: unknown;
+}
+
 interface StudentGrade {
   studentId: string;
   studentName: string;
@@ -116,8 +128,9 @@ interface StudentGrade {
   /** The assessment this row belongs to (used in 'all exams' mode). */
   assessmentId: string;
   assessmentTitle: string;
-  submission: StudentSubmission;
+  submission: UnifiedSubmission;
   responses: Record<string, StudentResponse>;
+  startedAt?: string;
   // Teacher-assigned structured marks: questionId → awarded points
   structuredMarks: Record<string, number>;
   mcqScore: number;
@@ -346,8 +359,13 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         stream: studentMeta.stream,
         assessmentId: sub.assessmentId,
         assessmentTitle: assessment.title,
-        submission: sub,
+        submission: {
+          ...sub,
+          marks: (sub as any).marks ?? {},
+          admissionNo: (sub as any).admissionNo ?? sub.studentId,
+        } as UnifiedSubmission,
         responses: respMap,
+        startedAt: (sub as any).startedAt,
         structuredMarks,
         mcqScore,
         mcqMax,

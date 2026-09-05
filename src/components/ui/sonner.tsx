@@ -18,8 +18,6 @@ const Toaster = ({ ...props }: ToasterProps) => {
               unstyled: false,
               className: "group toast group-[.toaster]:bg-background group-[.toaster]:text-foreground group-[.toaster]:border-border group-[.toaster]:shadow-lg",
             }}
-      /** Limit concurrent visible toasts to 2. */
-      maxVisibleToasts={2}
       /** Show close / dismiss button on every toast. */
       closeButton
       {...props}

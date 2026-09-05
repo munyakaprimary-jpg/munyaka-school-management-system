@@ -14,14 +14,22 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from '@/components/ui/Modal';
 import { MessageSquare, Mail, Send, History, UserCheck } from 'lucide-react';
 // Messages are managed through the app's communication flow.
-const initialMessages: unknown[] = [];
+interface MessageRecord {
+  id: string;
+  recipient: string;
+  subject: string;
+  type: string;
+  date: string;
+  status: string;
+}
+const initialMessages: MessageRecord[] = [];
 import { showSuccess } from '@/utils/toast';
 import { useNotifications } from '@/components/ui/notification-provider'; // Import the notification hook
 
 const Communication = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("outreach");
-  const [messagesList, setMessagesList] = useState(initialMessages);
+  const [messagesList, setMessagesList] = useState<MessageRecord[]>(initialMessages);
   const [isOpen, setIsOpen] = useState(false);
   const [msgType, setMsgType] = useState<'SMS' | 'Email'>('Email');
   const [recipient, setRecipient] = useState("All Parents");

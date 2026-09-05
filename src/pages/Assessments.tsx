@@ -77,6 +77,19 @@ const getLevelNameForGrade = (gradeName: string): string => {
   return "Lower Primary";
 };
 
+interface Student {
+  id?: string;
+  admissionNumber?: string;
+  assessment?: string;
+  grade?: string;
+  gradeLevel?: string;
+  class?: string;
+  stream?: string;
+  classStream?: string;
+  section?: string;
+  name?: string;
+}
+
 const Assessments = () => {
   // Control States bound to localStorage / defaults
   const [academicYear, setAcademicYear] = useState<string>(() => new Date().getFullYear().toString());
@@ -117,7 +130,7 @@ const Assessments = () => {
 
   // 1. Retrieve Students Directory from localStorage with school_learners_data (unified Learner Management state) and fallbacks
   // Cold start: returns [] when localStorage is empty — no mock data.
-  const studentsList = useMemo(() => {
+  const studentsList = useMemo((): Student[] => {
     try {
       const stored =
         localStorage.getItem("school_learners_data") ||
@@ -129,7 +142,7 @@ const Assessments = () => {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed)) {
           // Filter to plain objects so downstream .name / .grade accesses don't crash.
-          return parsed.filter((item): item is Record<string, unknown> =>
+          return parsed.filter((item): item is Student =>
             item !== null && typeof item === "object"
           );
         }

@@ -304,8 +304,8 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
             // Filter to plain objects so downstream .status / .name accesses don't crash.
             if (Array.isArray(parsed) && parsed.length > 0) {
               loadedStudents = parsed.filter(
-                (item): item is Record<string, unknown> =>
-                  item !== null && typeof item === "object"
+                (item): item is RegisteredStudent =>
+                  item !== null && typeof item === "object" && "id" in item && "name" in item
               );
               break;
             }

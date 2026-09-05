@@ -562,8 +562,8 @@ export default function Students() {
       // Empty string is normalized to undefined so the field is omitted from
       // the stored JSON when not supplied.
       birthCertificateNo: bcNo || undefined,
-      status: formData.status ?? 'Active',
-    };
+        status: (formData as any).status ?? 'Active',
+      };
 
     if (editingLearnerId) {
           setLearners((prev) =>

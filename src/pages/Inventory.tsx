@@ -87,8 +87,8 @@ const Inventory = () => {
     try {
       const all = localData.inventory.getAll();
       if (all.length > 0) {
-        setAssets(all);
-        showSuccess(`Stock loaded from local storage (${all.length} assets).`);
+            setAssets(all as AssetItem[]);
+            showSuccess(`Stock loaded from local storage (${all.length} assets).`);
       } else {
         showSuccess('No saved stock yet — add an asset to get started.');
       }

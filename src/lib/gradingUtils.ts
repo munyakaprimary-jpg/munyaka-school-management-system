@@ -11,6 +11,7 @@
  */
 
 import type { StudentSubmission } from "@/types/assessment";
+import type { AssessmentResult } from "@/types/questions";
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -168,7 +169,7 @@ export function processSubmission(
 
     // Resolve the student's answer — supports fallback keys
     const studentAns = String(
-      userAnswers[questionId] ?? userAnswers[String(question.number ?? "")] ?? "",
+      userAnswers[questionId] ?? userAnswers[String((question as any).number ?? "")] ?? "",
     );
 
     // Resolve the correct answer
@@ -215,14 +216,13 @@ export function processSubmission(
 
   return {
     id: `sub_${Date.now()}_${student.id}_${attemptId}`,
-    studentId: student.id,
     studentName: student.name ?? student.fullName ?? student.id,
     examId: exam.id,
     examTitle: exam.title,
     score: totalEarnedMarks,
     totalPoints: totalPossibleMarks,
     percentage,
-    level: performanceLevel,
+    level: performanceLevel as AssessmentResult["gradeLevel"],
     status: "completed",
     hasPendingStructured: false,
     requiresManualGrading: false,

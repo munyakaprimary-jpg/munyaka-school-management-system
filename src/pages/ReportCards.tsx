@@ -172,7 +172,7 @@ const ReportCards = () => {
     return students.filter(s => {
       const matchesSearch = !searchTerm ||
         String(s.name ?? "").toLowerCase().includes(searchTerm.toLowerCase()) ||
-        String(s.assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase());
+        String((s as any).assessment ?? "").toLowerCase().includes(searchTerm.toLowerCase());
       const matchesGrade = grade === "all" || s.grade === grade;
       const matchesStream = stream === "all" || String(s.stream ?? "").toLowerCase() === stream.toLowerCase();
       return matchesSearch && matchesGrade && matchesStream;
@@ -629,7 +629,7 @@ const ReportCards = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">ULI</span>
-                  <span className="font-black font-mono text-slate-900">{s.assessment}</span>
+                  <span className="font-black font-mono text-slate-900">{String((s as any).assessment ?? "")}</span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="font-black uppercase tracking-widest text-slate-400 text-[8.5px]">Grade / Stream</span>

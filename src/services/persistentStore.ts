@@ -418,9 +418,13 @@ export { generateId } from '@/utils/storage';
 export interface Student {
   id: string;
   admNo?: string;
+  admissionNumber?: string;
   name?: string;
   grade?: string;
+  gradeLevel?: string;
+  class?: string;
   stream?: string;
+  classStream?: string;
   gender?: string;
   guardian?: string;
   phone?: string;
@@ -428,6 +432,7 @@ export interface Student {
   schoolId?: string;
   isArchived?: boolean;
   deletedAt?: string;
+  assessment?: string;
   [key: string]: unknown;
 }
 

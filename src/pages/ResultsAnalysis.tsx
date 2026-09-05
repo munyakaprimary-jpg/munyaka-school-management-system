@@ -203,10 +203,9 @@ const ResultsAnalysis = () => {
 
       const matchesSearch =
               !String(searchTerm || '').trim() ||
-              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
+              (s.name && String(s.name).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.admNo && String(s.admNo).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.id && String(s.id).toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });
@@ -240,7 +239,7 @@ const ResultsAnalysis = () => {
       return {
         studentId: student.id,
         name: student.name,
-        assessmentNo: student.admissionNumber || student.assessment || student.id,
+        assessmentNo: String((student as any).admissionNumber || (student as any).assessment || student.id),
         stream: student.stream,
         scores,
         totalMarks: total,

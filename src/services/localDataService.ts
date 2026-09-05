@@ -61,7 +61,7 @@ const IDB_SYSTEM_SETTINGS = 'system_settings';
  * is sufficient for the app to function.
  */
 async function persistToBoth<T extends object>(
-  idbStore: string,
+  idbStoreName: string,
   lsKey: string,
   data: T | T[],
   isArray = false
@@ -76,12 +76,12 @@ async function persistToBoth<T extends object>(
   // 2. IndexedDB (async — durable backup)
   try {
     if (isArray) {
-      await idbStore.putMany(idbStore, data as T[]);
+      await idbStore.putMany(idbStoreName, data as T[]);
     } else {
-      await idbStore.put(idbStore, data as T);
+      await idbStore.put(idbStoreName, data as T);
     }
   } catch (e) {
-    console.error(`[localData] IndexedDB write failed for ${idbStore}:`, e);
+    console.error(`[localData] IndexedDB write failed for ${idbStoreName}:`, e);
   }
 }
 

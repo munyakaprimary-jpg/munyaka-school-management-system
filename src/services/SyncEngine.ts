@@ -197,14 +197,16 @@ export const checkServerConnection = async (): Promise<ConnectionStatus> => {
       isOnline,
       serverReachable: response.ok,
       latency: response.ok ? latency : null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   } catch {
     return {
       isOnline,
       serverReachable: false,
       latency: null,
-      lastChecked: new Date().toISOString()
+      lastChecked: new Date().toISOString(),
+      serverUrl,
     };
   }
 };

@@ -175,7 +175,7 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
   }, [selectedClass, availableStreams, selectedStream]);
 
   // Source of truth: Students filtered by class and stream
-  const learnersInGrade = useMemo(() => {
+  const learnersInGrade = useMemo((): { id: number; name: string; assessment: string }[] => {
     const storedStudents = lsRead<unknown>(STUDENTS_KEY, []);
     const students = Array.isArray(storedStudents)
       ? storedStudents.filter((item): item is Record<string, unknown> =>
@@ -199,18 +199,18 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     // Filter by stream - handle case-insensitive matching
     if (selectedStream !== 'all' && selectedStream !== 'All Streams') {
       return classStudents
-        .filter(s => s?.stream?.toLowerCase?.() === selectedStream?.toLowerCase?.())
-        .map(s => ({
+        .filter((s: Record<string, unknown>) => String(s?.stream ?? '').toLowerCase() === selectedStream?.toLowerCase?.())
+        .map((s: Record<string, unknown>) => ({
           id: parseInt(String(s?.id ?? ''), 10) || Math.random(),
-          name: s?.name ?? 'Unknown',
-          assessment: s?.assessment ?? '',
+          name: String(s?.name ?? 'Unknown'),
+          assessment: String(s?.assessment ?? ''),
         }));
     }
 
-    return classStudents.map(s => ({
+    return classStudents.map((s: Record<string, unknown>) => ({
       id: parseInt(String(s?.id ?? ''), 10) || Math.random(),
-      name: s?.name ?? 'Unknown',
-      assessment: s?.assessment ?? '',
+      name: String(s?.name ?? 'Unknown'),
+      assessment: String(s?.assessment ?? ''),
     }));
   }, [selectedClass, selectedStream]);
 

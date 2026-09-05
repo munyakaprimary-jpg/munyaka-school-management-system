@@ -934,7 +934,7 @@ function loadExamTableData(examId: string): ExamTableData {
         "Grade":
           sub?.grade ||
           targetExam?.classLevel ||
-          targetExam?.targetGrade ||
+          (targetExam as any)?.targetGrade ||
           "",
         "Stream": sub?.stream || "All",
         "Total Score": "0/0",

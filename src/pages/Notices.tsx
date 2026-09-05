@@ -11,11 +11,20 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import Modal from '@/components/ui/Modal';
 import { Megaphone, Calendar, Pin, Plus, Send } from 'lucide-react';
 // Notices are managed through the app's notice board flow.
-const initialNotices: unknown[] = [];
+interface NoticeRecord {
+  id: string;
+  title: string;
+  content: string;
+  description?: string;
+  date: string;
+  category: string;
+  color: string;
+}
+const initialNotices: NoticeRecord[] = [];
 import { showSuccess } from '@/utils/toast';
 
 const Notices = () => {
-  const [noticesList, setNoticesList] = useState(initialNotices);
+  const [noticesList, setNoticesList] = useState<NoticeRecord[]>(initialNotices);
   const [isOpen, setIsOpen] = useState(false);
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState("Notice");

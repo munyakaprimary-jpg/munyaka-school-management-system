@@ -18,8 +18,10 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
     const todayRecord = localData.teacherAttend.getForToday(user.id);
     if (todayRecord) {
       setRecord({
+        student_id: '',
         teacher_id: todayRecord.teacherId,
         date: todayRecord.date,
+        status: 'present',
         arrival_time: todayRecord.arrivalTime || '',
         departure_time: todayRecord.departureTime || '',
         early_departure_reason: todayRecord.earlyDepartureReason,
@@ -59,8 +61,10 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
 
     if (result.ok) {
       setRecord({
+        student_id: '',
         teacher_id: user.id,
         date: newRecord.date,
+        status: 'present',
         arrival_time: now,
         verified_lat: lat,
         verified_lng: lng,

@@ -23,7 +23,7 @@ interface DirectoryStaff {
   email: string;
   phone: string;
   status: string;
-  department: string;
+  department?: string;
 }
 
 type ThemeMode = 'dark' | 'light' | 'sunset';
