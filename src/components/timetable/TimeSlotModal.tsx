@@ -77,7 +77,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
   if (!open) return null;
 
   const resolveCategory = (): string | null => {
-    if (category === 'custom') return (customCategory ?? '').trim() || null;
+    if (category === 'custom') return customCategory.trim() || null;
     if (category === NONE_VALUE || !category) return null;
     return category;
   };
@@ -91,7 +91,7 @@ const TimeSlotModal: React.FC<TimeSlotModalProps> = ({
       setError('End time must be after start time');
       return;
     }
-    if (category === 'custom' && !(customCategory ?? '').trim()) {
+    if (category === 'custom' && !customCategory.trim()) {
       setError('Please enter a custom name');
       return;
     }

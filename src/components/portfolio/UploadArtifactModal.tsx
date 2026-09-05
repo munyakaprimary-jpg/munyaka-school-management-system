@@ -90,7 +90,7 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(title ?? '').trim()) {
+    if (!title.trim()) {
       showError("Please enter an artifact title.");
       return;
     }
@@ -98,12 +98,12 @@ export const UploadArtifactModal: React.FC<UploadArtifactModalProps> = ({
     const newArtifact: Artifact = {
       id: `art-${Date.now()}`,
       student: selectedStudent,
-      title: (title ?? '').trim(),
+      title: title.trim(),
       type,
       learningArea,
       date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       grade,
-      description: (description ?? '').trim() || "Uploaded from computer storage.",
+      description: description.trim() || "Uploaded from computer storage.",
       fileName: selectedFile ? selectedFile.name : undefined,
       fileUrl: filePreviewUrl || undefined,
       fileSize: selectedFile ? formatFileSize(selectedFile.size) : undefined

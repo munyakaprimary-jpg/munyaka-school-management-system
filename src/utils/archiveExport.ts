@@ -166,7 +166,7 @@ export const exportToPDF = (records: TransferredLearnerArchive[]): void => {
       // ── Summary stats row ───────────────────────────────────────────────
       const totalLearners = records.length;
       const feeCleared = records.filter((r) => r.isFeeCleared).length;
-      const withRemarks = records.filter((r) => (r.headteacherRemarks ?? '').trim()).length;
+      const withRemarks = records.filter((r) => r.headteacherRemarks?.trim()).length;
 
       doc.setFillColor(248, 250, 252);
       doc.rect(0, 28, pageWidth, 14, 'F');

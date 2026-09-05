@@ -37,7 +37,7 @@ function validateRow(row: CSVRow, rowIndex: number): ParsedQuestion {
     errors.push("question_text is required");
   }
 
-  const normalizedType = (row.type ?? "").trim().toLowerCase();
+  const normalizedType = (row.type || "").trim().toLowerCase();
   if (!normalizedType) {
     errors.push("type is required");
   } else if (!VALID_TYPES.includes(normalizedType)) {
@@ -49,7 +49,7 @@ function validateRow(row: CSVRow, rowIndex: number): ParsedQuestion {
     if (!row.option_b?.trim()) errors.push("option_b is required for MCQ");
     if (!row.correct_answer?.trim()) {
       errors.push("correct_answer is required for MCQ");
-    } else if (!VALID_ANSWERS_MCQ.includes((row.correct_answer ?? '').trim())) {
+    } else if (!VALID_ANSWERS_MCQ.includes(row.correct_answer.trim())) {
       errors.push("correct_answer must be A, B, C, or D for MCQ");
     }
   }
@@ -72,10 +72,10 @@ function validateRow(row: CSVRow, rowIndex: number): ParsedQuestion {
 // ─── CSV Parser ───────────────────────────────────────────────────────────────
 
 function parseCSV(text: string): CSVRow[] {
-  const lines = text.split(/\r?\n/).filter((line) => (line ?? '').trim());
+  const lines = text.split(/\r?\n/).filter((line) => line.trim());
   if (lines.length < 2) return [];
 
-  const headers = lines[0].split(",").map((h) => (h ?? '').trim().toLowerCase().replace(/['"]/g, ""));
+  const headers = lines[0].split(",").map((h) => h.trim().toLowerCase().replace(/['"]/g, ""));
   const rows: CSVRow[] = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -368,8 +368,8 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
       }
 
       // Append new questions (avoid duplicates by question_text)
-      const existingPrompts = new Set(existingData.questions.map((q) => (q.prompt ?? '').trim().toLowerCase()));
-      const newUnique = questions.filter((q) => !existingPrompts.has((q.prompt ?? '').trim().toLowerCase()));
+      const existingPrompts = new Set(existingData.questions.map((q) => q.prompt.trim().toLowerCase()));
+      const newUnique = questions.filter((q) => !existingPrompts.has(q.prompt.trim().toLowerCase()));
       const mergedQuestions = [...existingData.questions, ...newUnique];
 
       // Re-index order
@@ -713,9 +713,9 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
                         </div>
                       </td>
                       <td className="px-4 py-3">
-                        {(row.correct_answer ?? '').trim() ? (
+                        {row.correct_answer?.trim() ? (
                           <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm">
-                            {(row.correct_answer ?? '').trim().toUpperCase()}
+                            {row.correct_answer.trim().toUpperCase()}
                           </span>
                         ) : (
                           <span className="text-xs text-slate-400 italic">—</span>
@@ -723,7 +723,7 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
                       </td>
                       <td className="px-4 py-3">
                         <span className="text-sm font-bold text-slate-700">
-                          {(row.points ?? '').trim() || "—"}
+                          {row.points?.trim() || "—"}
                         </span>
                       </td>
                       <td className="px-4 py-3">

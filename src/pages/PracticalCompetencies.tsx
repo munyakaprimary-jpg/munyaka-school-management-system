@@ -334,15 +334,15 @@ const PracticalCompetencies = () => {
   }, []);
 
   const handleAddProject = () => {
-    if (!(newProjectTitle ?? '').trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
+    if (!newProjectTitle.trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
     
     const newProject: ProjectRecord = {
       id: `proj-${Date.now()}`,
-      title: (newProjectTitle ?? '').trim(),
+      title: newProjectTitle.trim(),
       grade: newProjectGrade,
       stream: newProjectStream,
       subject: newProjectSubject,
-      rubricCriteria: (newProjectRubric ?? '').trim(),
+      rubricCriteria: newProjectRubric.trim(),
       maxPoints: parseInt(newProjectMaxPoints) || 100,
       submissionsTotal: 0,
       submissionsGraded: 0,

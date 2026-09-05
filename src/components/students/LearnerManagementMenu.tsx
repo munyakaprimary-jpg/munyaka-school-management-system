@@ -110,7 +110,7 @@ interface EmptyStateProps {
   searchTerm?: string;
 }
 function EmptyState({ filterLabel, searchTerm }: EmptyStateProps) {
-  const hasSearch = !!(searchTerm ?? '').trim().length > 0;
+  const hasSearch = !!searchTerm && searchTerm.trim().length > 0;
   return (
     <div className="flex flex-col items-center justify-center text-center px-4 py-10 bg-white border border-dashed border-slate-200 rounded-2xl">
       <div className="p-4 rounded-full bg-slate-50 text-slate-300 mb-3">

@@ -201,12 +201,12 @@ const ResultsAnalysis = () => {
         }
       }
 
-      const matchesSearch =
-        !(searchTerm ?? '').trim() ||
-        (s.name && s.name.toLowerCase().includes((searchTerm ?? '').toLowerCase().trim())) ||
-        (s.admissionNumber && s.admissionNumber.toLowerCase().includes((searchTerm ?? '').toLowerCase().trim())) ||
-        (s.assessment && s.assessment.toLowerCase().includes((searchTerm ?? '').toLowerCase().trim())) ||
-        (s.id && s.id.toLowerCase().includes((searchTerm ?? '').toLowerCase().trim()));
+      const matchesSearch = 
+        !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) || 
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });

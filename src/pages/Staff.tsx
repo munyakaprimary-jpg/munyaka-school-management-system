@@ -316,7 +316,7 @@ const Staff = () => {
   };
 
   const handleSaveStaff = async () => {
-    if (!(formData.full_name ?? '').trim() || !(formData.role ?? '').trim()) {
+    if (!formData.full_name.trim() || !formData.role.trim()) {
       setFormError('Please fill in all required fields (Full Name, Role / Designation).');
       return;
     }

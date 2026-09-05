@@ -583,8 +583,8 @@ const ReportCards = () => {
         {/* Right Side: Page Info */}
         <div className="flex-1 space-y-2">
           <p className="text-slate-500 text-sm font-medium">
-            {(searchTerm ?? '').trim()
-              ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.`
+            {searchTerm.trim() 
+              ? `Filtered individual search: Previewing ${filteredStudents.length} report card(s) for "${searchTerm}". Click "Download Current" to download.` 
               : `Previewing ${filteredStudents.length} report cards for Grade ${grade} (${year}). Type a learner's name in the search box to download an individual report.`}
           </p>
         </div>
@@ -732,8 +732,8 @@ const ReportCards = () => {
         <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
           <Layers size={16} className="text-indigo-600" />
           <span>
-            {(searchTerm ?? '').trim()
-              ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}`
+            {searchTerm.trim() 
+              ? `Ready to download individual 1-page portrait report for ${filteredStudents[0]?.name || 'searched learner'}` 
               : `Type a learner's name in search to download their individual report card`}
           </span>
         </div>

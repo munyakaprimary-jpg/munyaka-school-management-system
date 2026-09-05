@@ -124,7 +124,7 @@ export function matchesQuery<T extends { title: string; description: string }>(
   item: T,
   query: string,
 ): boolean {
-  const q = (query ?? '').trim().toLowerCase();
+  const q = query.trim().toLowerCase();
   if (!q) return true;
   return (
     item.title.toLowerCase().includes(q) ||
@@ -187,7 +187,7 @@ async function searchYouTube(
   apiKey: string,
   signal?: AbortSignal,
 ): Promise<YouTubeVideo[]> {
-  if (!(query ?? '').trim()) return [];
+  if (!query.trim()) return [];
 
   // We hit two endpoints in parallel: search (videos.list snippets) and
   // videos.list (durations). videos.list doesn't accept search terms so
@@ -317,7 +317,7 @@ export function useVideoSearch(
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (abortRef.current) abortRef.current.abort();
 
-    if (!(searchQuery ?? '').trim()) {
+    if (!searchQuery.trim()) {
       setYoutubeResults([]);
       setYoutubeError(null);
       setYoutubeLoading(false);

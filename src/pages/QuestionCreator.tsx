@@ -337,7 +337,7 @@ const QuestionCreator = () => {
   };
 
   const handleSave = () => {
-    if (!(title ?? '').trim()) {
+    if (!title.trim()) {
       setShowSaveDialog(true);
       return;
     }

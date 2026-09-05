@@ -308,30 +308,30 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
 
     switch (paymentMethod) {
       case 'cash':
-        details = { receivedBy: (receivedBy ?? '').trim() || (issuedTo ?? '').trim() };
+        details = { receivedBy: receivedBy.trim() || issuedTo.trim() };
         date = cashDate || new Date().toISOString().slice(0, 10);
         ref = `CASH-${Date.now().toString().slice(-6)}`;
         break;
       case 'bank':
-        details = { bankName: (bankName ?? '').trim(), branch: (bankBranch ?? '').trim(), transactionRef: (bankRef ?? '').trim() };
+        details = { bankName: bankName.trim(), branch: bankBranch.trim(), transactionRef: bankRef.trim() };
         date = bankDate || new Date().toISOString().slice(0, 10);
-        ref = (bankRef ?? '').trim();
+        ref = bankRef.trim();
         break;
       case 'cheque':
-        details = { bankName: (chequeBankName ?? '').trim(), branch: (chequeBranch ?? '').trim(), chequeNumber: (chequeNumber ?? '').trim() };
+        details = { bankName: chequeBankName.trim(), branch: chequeBranch.trim(), chequeNumber: chequeNumber.trim() };
         date = chequeDate || new Date().toISOString().slice(0, 10);
-        ref = `CHQ-${(chequeNumber ?? '').trim()}`;
+        ref = `CHQ-${chequeNumber.trim()}`;
         break;
       case 'mpesa':
-        details = { receiptNumber: (mpesaReceipt ?? '').trim() };
+        details = { receiptNumber: mpesaReceipt.trim() };
         date = mpesaDate || new Date().toISOString().slice(0, 10);
-        ref = (mpesaReceipt ?? '').trim();
+        ref = mpesaReceipt.trim();
         break;
     }
 
-    const txDescription = (subscriptionName ?? '').trim()
-      ? `${(subscriptionName ?? '').trim()} — ${(issuedTo ?? '').trim() || selectedStudent?.name || 'Subscription'}`
-      : `Payment for ${selectedStudent?.name ?? (issuedTo ?? '').trim() ?? 'Subscription'}`;
+    const txDescription = subscriptionName.trim()
+      ? `${subscriptionName.trim()} — ${issuedTo.trim() || selectedStudent?.name || 'Subscription'}`
+      : `Payment for ${selectedStudent?.name ?? issuedTo.trim() ?? 'Subscription'}`;
 
     return {
       id: `TX-${Date.now()}`,
@@ -370,7 +370,7 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
     // If activation-key generation is enabled, issue a license too.
     if (!hideActivationKey) {
       try {
-        const recipient = (issuedTo ?? '').trim() || selectedStudent?.name || 'Munyaka School';
+        const recipient = issuedTo.trim() || selectedStudent?.name || 'Munyaka School';
         const license = issueLicense({
           issuedTo: recipient,
           deviceId: getDeviceId(),
@@ -379,12 +379,12 @@ const UnifiedRecordPaymentModal: React.FC<UnifiedRecordPaymentModalProps> = ({
             method: paymentMethod,
             refNumber: tx.ref,
             amount: tx.amount.toString(),
-            bankName: paymentMethod === 'bank' ? (bankName ?? '').trim() : undefined,
-            branch: paymentMethod === 'bank' ? (bankBranch ?? '').trim() :
-                    paymentMethod === 'cheque' ? (chequeBranch ?? '').trim() : undefined,
+            bankName: paymentMethod === 'bank' ? bankName.trim() : undefined,
+            branch: paymentMethod === 'bank' ? bankBranch.trim() :
+                    paymentMethod === 'cheque' ? chequeBranch.trim() : undefined,
           },
-          notes: (notes ?? '').trim() ||
-            ((subscriptionName ?? '').trim() ? `Subscription: ${(subscriptionName ?? '').trim()}` : undefined),
+          notes: notes.trim() ||
+            (subscriptionName.trim() ? `Subscription: ${subscriptionName.trim()}` : undefined),
         });
 
         onSubmitPayment({
