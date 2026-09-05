@@ -23,6 +23,7 @@ import {
   FileText,
   PlayCircle,
   ArrowLeft,
+  FileSpreadsheet,
 } from "lucide-react";
 import html2pdf from "html2pdf.js";
 import { Button } from "@/components/ui/button";
@@ -812,6 +813,500 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   );
 };
 
+// ─── Results Table Helpers ────────────────────────────────────────────────────
+
+interface ExamTableRow {
+  "Adm No": string;
+  "Student Name": string;
+  "Grade": string;
+  "Stream": string;
+  [questionHeader: string]: string | number;
+  "Total Score": string;
+  "Percentage": string;
+  "Level": string;
+}
+
+interface ExamTableData {
+  headers: string[];
+  rows: ExamTableRow[];
+  totalPossiblePoints: number;
+}
+
+/**
+ * Build the per-question marksheet view for an exam directly from
+ * `all_set_exams` (question metadata) merged with `marked_student_submissions`
+ * (graded student results).
+ *
+ * Returns an empty row set when no submissions are found so the caller can
+ * surface an explicit empty-state message instead of rendering a blank table.
+ */
+function loadExamTableData(examId: string): ExamTableData {
+  const empty: ExamTableData = { headers: [], rows: [], totalPossiblePoints: 0 };
+
+  try {
+    const allExams: Assessment[] = JSON.parse(
+      localStorage.getItem(ALL_SET_EXAMS_KEY) || "[]"
+    );
+    if (!Array.isArray(allExams) || allExams.length === 0) return empty;
+
+    const targetExam = allExams.find(
+      (e: any) => String(e?.id) === String(examId)
+    );
+    if (!targetExam) return empty;
+
+    const ledger = JSON.parse(
+      localStorage.getItem("marked_student_submissions") || "{}"
+    );
+
+    // The ledger may be either a record (id -> submission) or an array.
+    const submissionsList: any[] = Array.isArray(ledger)
+      ? ledger
+      : ledger && typeof ledger === "object"
+        ? Object.values(ledger)
+        : [];
+
+    const examSubmissions = submissionsList
+      .filter((s: any) => s && String(s.examId) === String(examId))
+      // Newest first by submittedAt, fall back to id for stability.
+      .sort((a: any, b: any) => {
+        const ta = a?.submittedAt ? new Date(a.submittedAt).getTime() : 0;
+        const tb = b?.submittedAt ? new Date(b.submittedAt).getTime() : 0;
+        return tb - ta;
+      });
+
+    const questions: any[] = Array.isArray(targetExam.questions)
+      ? targetExam.questions
+      : [];
+
+    const totalPossiblePoints =
+      questions.reduce((sum, q) => sum + (Number(q?.points) || 0), 0) ||
+      questions.length ||
+      0;
+
+    // Build dynamic question headers (Q1, Q2, …)
+    const headers = [
+      "Adm No",
+      "Student Name",
+      "Grade",
+      "Stream",
+      ...questions.map((_: any, idx: number) => `Q${idx + 1}`),
+      "Total Score",
+      "Percentage",
+      "Level",
+    ];
+
+    const rows: ExamTableRow[] = examSubmissions.map((sub: any) => {
+      const row: ExamTableRow = {
+        "Adm No":
+          sub?.admissionNo ||
+          sub?.studentId ||
+          sub?.admNo ||
+          "N/A",
+        "Student Name": sub?.studentName || "Unknown",
+        "Grade":
+          sub?.grade ||
+          targetExam?.classLevel ||
+          targetExam?.targetGrade ||
+          "",
+        "Stream": sub?.stream || "All",
+        "Total Score": "0/0",
+        "Percentage": "0%",
+        "Level": sub?.level || "BE",
+      };
+
+      // Derive awarded points per question. The grading pipeline stores
+      // marks as a record keyed by questionId, but submissions from older
+      // versions may have `answers` with `pointsEarned` or `isCorrect`.
+      const marksRecord: Record<string, number> =
+        sub?.marks && typeof sub.marks === "object" ? sub.marks : {};
+      const answersArr: any[] = Array.isArray(sub?.answers)
+        ? sub.answers
+        : [];
+
+      let earned = 0;
+      questions.forEach((q: any, idx: number) => {
+        const qId = q?.id != null ? String(q.id) : `q${idx + 1}`;
+        const possible = Number(q?.points) || 1;
+
+        // 1) Prefer explicit per-question marks
+        let points = marksRecord[qId];
+        if (typeof points !== "number" || Number.isNaN(points)) {
+          // 2) Look inside the answers array (legacy or auto-graded)
+          const answerObj = answersArr.find(
+            (a: any) => String(a?.questionId) === qId
+          );
+          if (answerObj) {
+            if (typeof answerObj.pointsEarned === "number") {
+              points = answerObj.pointsEarned;
+            } else if (answerObj.isCorrect === true) {
+              points = possible;
+            } else if (typeof answerObj.score === "number") {
+              points = answerObj.score;
+            } else {
+              points = 0;
+            }
+          } else {
+            points = 0;
+          }
+        }
+        points = Math.max(0, Math.min(possible, Number(points) || 0));
+        row[`Q${idx + 1}`] = points;
+        earned += points;
+      });
+
+      // Prefer server-computed totals when present, otherwise recompute.
+      const reportedTotal =
+        typeof sub?.score === "number"
+          ? sub.score
+          : typeof sub?.totalScore === "number"
+            ? sub.totalScore
+            : null;
+      const reportedMax =
+        typeof sub?.totalPoints === "number"
+          ? sub.totalPoints
+          : typeof sub?.maxScore === "number"
+            ? sub.maxScore
+            : null;
+
+      const total =
+        reportedTotal != null ? reportedTotal : earned;
+      const max = reportedMax != null && reportedMax > 0 ? reportedMax : totalPossiblePoints;
+
+      row["Total Score"] = `${total}/${max || 0}`;
+
+      const pct =
+        typeof sub?.percentage === "number"
+          ? sub.percentage
+          : max > 0
+            ? Math.round((total / max) * 100)
+            : 0;
+      row["Percentage"] = `${pct}%`;
+      row["Level"] = sub?.level || (pct >= 80 ? "EE" : pct >= 60 ? "ME" : pct >= 40 ? "AE" : "BE");
+
+      return row;
+    });
+
+    return { headers, rows, totalPossiblePoints };
+  } catch (err) {
+    console.error("[SetExamsList] loadExamTableData failed:", err);
+    return empty;
+  }
+}
+
+// ─── Exam Results Table Modal ─────────────────────────────────────────────────
+
+interface ExamResultsTableModalProps {
+  examId: string;
+  examTitle: string;
+  onClose: () => void;
+}
+
+/**
+ * A read-only marksheet view that renders the per-student, per-question
+ * results for a specific exam and exposes XLSX / CSV download actions.
+ *
+ * Design notes:
+ *  - Always renders a table (headers + an explicit empty-state row) so the
+ *    modal surface never appears blank.
+ *  - Download actions are guarded: if there are no rows, the user gets an
+ *    inline error rather than a corrupt empty file.
+ */
+const ExamResultsTableModal: React.FC<ExamResultsTableModalProps> = ({
+  examId,
+  examTitle,
+  onClose,
+}) => {
+  const [tableData, setTableData] = useState<ExamTableData>({
+    headers: [],
+    rows: [],
+    totalPossiblePoints: 0,
+  });
+  const [isLoading, setIsLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    setTableData(loadExamTableData(examId));
+    setIsLoading(false);
+  }, [examId]);
+
+  useEffect(() => {
+    refresh();
+    const onSubUpdated = () => refresh();
+    window.addEventListener("submissions_updated", onSubUpdated);
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "marked_student_submissions" || e.key === null) refresh();
+    };
+    window.addEventListener("storage", onStorage);
+    return () => {
+      window.removeEventListener("submissions_updated", onSubUpdated);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [refresh]);
+
+  // Close on Escape
+  useEffect(() => {
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKey);
+    return () => document.removeEventListener("keydown", handleKey);
+  }, [onClose]);
+
+  // ── XLSX download ────────────────────────────────────────────────────────
+  const handleDownloadExcel = useCallback(() => {
+    if (tableData.rows.length === 0) {
+      showError("No submission data available to export for this exam.");
+      return;
+    }
+    import("xlsx")
+      .then((XLSX) => {
+        const worksheet = XLSX.utils.json_to_sheet(tableData.rows, {
+          header: tableData.headers,
+        });
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Marksheet");
+        XLSX.writeFile(
+          workbook,
+          `Assessment_Results_${examId}.xlsx`
+        );
+        showSuccess("Marksheet exported as Excel.");
+      })
+      .catch((err) => {
+        console.error("[ExamResultsTableModal] XLSX export failed:", err);
+        showError("Excel export failed. Please try CSV instead.");
+      });
+  }, [tableData, examId]);
+
+  // ── CSV download ─────────────────────────────────────────────────────────
+  const handleDownloadCSV = useCallback(() => {
+    if (tableData.rows.length === 0) {
+      showError("No submission data available to export for this exam.");
+      return;
+    }
+    try {
+      const escapeCell = (val: any) => {
+        const s = val == null ? "" : String(val);
+        // Quote any cell that contains a comma, quote, newline, or carriage return
+        if (/[",\n\r]/.test(s)) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const csvRows: string[] = [];
+      csvRows.push(tableData.headers.map(escapeCell).join(","));
+      tableData.rows.forEach((row) => {
+        csvRows.push(
+          tableData.headers.map((h) => escapeCell(row[h])).join(",")
+        );
+      });
+      // UTF-8 BOM so Excel renders correctly
+      const csv = "\uFEFF" + csvRows.join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `Assessment_Results_${examId}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      showSuccess("Marksheet exported as CSV.");
+    } catch (err) {
+      console.error("[ExamResultsTableModal] CSV export failed:", err);
+      showError("CSV export failed. Please try again.");
+    }
+  }, [tableData, examId]);
+
+  const hasRows = tableData.rows.length > 0;
+  const totalMarksColumnIdx = tableData.headers.indexOf("Total Score");
+  const questionColumnCount = Math.max(
+    0,
+    tableData.headers.length - 7 /* Adm, Name, Grade, Stream, Total, %, Level */
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+
+      <div className="relative bg-white text-slate-900 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[92vh] flex flex-col overflow-hidden">
+        {/* ── Header ── */}
+        <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-5 text-white flex items-start justify-between gap-4 shrink-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-white/80 mb-1">
+              <FileSpreadsheet size={12} />
+              Results Table View
+            </div>
+            <h2 className="text-xl font-black truncate">{examTitle}</h2>
+            <p className="text-white/80 text-xs mt-0.5">
+              {isLoading
+                ? "Loading…"
+                : hasRows
+                  ? `${tableData.rows.length} submission${tableData.rows.length === 1 ? "" : "s"} • ${questionColumnCount} question${questionColumnCount === 1 ? "" : "s"}`
+                  : "No submissions found for this exam yet."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={handleDownloadExcel}
+              disabled={!hasRows}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download as Excel"
+            >
+              <FileSpreadsheet size={15} />
+              <span className="hidden sm:inline">XLSX</span>
+            </button>
+            <button
+              onClick={handleDownloadCSV}
+              disabled={!hasRows}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Download as CSV"
+            >
+              <Download size={15} />
+              <span className="hidden sm:inline">CSV</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="w-9 h-9 rounded-xl bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+          </div>
+        </div>
+
+        {/* ── Body ── */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-4 bg-slate-50">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin" />
+            </div>
+          ) : !hasRows ? (
+            <div className="bg-white border-2 border-dashed border-slate-200 rounded-2xl p-10 text-center">
+              <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center mx-auto mb-3">
+                <FileSpreadsheet className="w-6 h-6 text-slate-400" />
+              </div>
+              <h3 className="text-base font-bold text-slate-700 mb-1">
+                No completed student submissions found for this exam.
+              </h3>
+              <p className="text-sm text-slate-400 max-w-md mx-auto">
+                Once learners submit this exam, their graded results will
+                populate this table automatically.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr className="bg-slate-100">
+                      {tableData.headers.map((head, idx) => (
+                        <th
+                          key={`${head}-${idx}`}
+                          className={cn(
+                            "border border-slate-200 p-2 text-left font-bold text-[11px] uppercase tracking-wider text-slate-600 whitespace-nowrap",
+                            head === "Total Score" ||
+                              head === "Percentage" ||
+                              head === "Level" ||
+                              /^Q\d+$/.test(head)
+                              ? "text-center"
+                              : ""
+                          )}
+                        >
+                          {head}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableData.rows.map((row, rIdx) => (
+                      <tr
+                        key={rIdx}
+                        className="hover:bg-emerald-50/40 transition-colors"
+                      >
+                        {tableData.headers.map((head, cIdx) => {
+                          const isNumericColumn =
+                            head === "Total Score" ||
+                            head === "Percentage" ||
+                            head === "Level" ||
+                            /^Q\d+$/.test(head);
+                          return (
+                            <td
+                              key={`${rIdx}-${cIdx}`}
+                              className={cn(
+                                "border border-slate-100 p-2 text-slate-700",
+                                isNumericColumn
+                                  ? "text-center font-semibold tabular-nums"
+                                  : ""
+                              )}
+                            >
+                              {String(row[head] ?? "")}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Always render a small summary block so the modal never looks empty */}
+          {!isLoading && (
+            <div className="text-[11px] text-slate-500 flex flex-wrap items-center gap-3 px-1">
+              <span>
+                <strong className="font-bold text-slate-700">
+                  {tableData.rows.length}
+                </strong>{" "}
+                student{tableData.rows.length === 1 ? "" : "s"} listed
+              </span>
+              {tableData.totalPossiblePoints > 0 && (
+                <span>
+                  Total marks:{" "}
+                  <strong className="font-bold text-slate-700">
+                    {tableData.totalPossiblePoints}
+                  </strong>
+                </span>
+              )}
+              {hasRows && totalMarksColumnIdx >= 0 && (
+                <span>
+                  Last column:{" "}
+                  <strong className="font-bold text-slate-700">
+                    {tableData.headers[tableData.headers.length - 1]}
+                  </strong>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="p-4 border-t border-slate-100 flex items-center justify-end gap-2 shrink-0 bg-white">
+          <Button variant="outline" onClick={onClose} className="rounded-xl">
+            Close
+          </Button>
+          <Button
+            onClick={handleDownloadCSV}
+            disabled={!hasRows}
+            className="rounded-xl gap-2 bg-slate-700 hover:bg-slate-800 text-white font-bold disabled:opacity-50"
+          >
+            <Download size={15} />
+            Download CSV
+          </Button>
+          <Button
+            onClick={handleDownloadExcel}
+            disabled={!hasRows}
+            className="rounded-xl gap-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold disabled:opacity-50"
+          >
+            <FileSpreadsheet size={15} />
+            Download Excel
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── Main Component ────────────────────────────────────────────────────────────
 const SetExamsList: React.FC = () => {
   const { user } = useAuth();
@@ -826,6 +1321,8 @@ const SetExamsList: React.FC = () => {
   const [view, setView] = useState<"cards" | "table">("cards");
   const [previewExamId, setPreviewExamId] = useState<string | null>(null);
   const [previewExamTitle, setPreviewExamTitle] = useState<string>("");
+  const [resultsExamId, setResultsExamId] = useState<string | null>(null);
+  const [resultsExamTitle, setResultsExamTitle] = useState<string>("");
 
   const refresh = useCallback(() => setExams(loadExams()), []);
 
@@ -896,6 +1393,11 @@ const SetExamsList: React.FC = () => {
   const handleViewExam = useCallback((id: string, title: string) => {
     setPreviewExamId(id);
     setPreviewExamTitle(title);
+  }, []);
+
+  const handleViewResults = useCallback((id: string, title: string) => {
+    setResultsExamId(id);
+    setResultsExamTitle(title);
   }, []);
 
   // ── Derived ───────────────────────────────────────────────────────────────
@@ -1005,6 +1507,14 @@ const SetExamsList: React.FC = () => {
             <Eye size={15} />
             View
           </Button>
+          {/* Results / Marksheet */}
+          <Button
+            onClick={() => handleViewResults(exam.id, exam.title)}
+            className="h-10 w-28 rounded-lg text-sm font-medium gap-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200"
+          >
+            <FileSpreadsheet size={15} />
+            Results
+          </Button>
           {/* Utility: Download PDF */}
           <Button
             variant="outline"
@@ -1100,6 +1610,10 @@ const SetExamsList: React.FC = () => {
                       className="rounded-lg h-8 w-8 text-indigo-600 hover:bg-indigo-50" title="View Exam">
                       <Eye size={14} />
                     </Button>
+                    <Button variant="ghost" size="icon" onClick={() => handleViewResults(exam.id, exam.title)}
+                      className="rounded-lg h-8 w-8 text-emerald-600 hover:bg-emerald-50" title="View Results">
+                      <FileSpreadsheet size={14} />
+                    </Button>
                     <Button variant="ghost" size="icon"
                       onClick={() => {
                         const loaded = loadFullAssessment(exam.id);
@@ -1146,6 +1660,13 @@ const SetExamsList: React.FC = () => {
           examId={previewExamId}
           examTitle={previewExamTitle}
           onClose={() => setPreviewExamId(null)}
+        />
+      )}
+      {resultsExamId && (
+        <ExamResultsTableModal
+          examId={resultsExamId}
+          examTitle={resultsExamTitle}
+          onClose={() => setResultsExamId(null)}
         />
       )}
 
