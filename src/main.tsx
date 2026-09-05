@@ -1,5 +1,6 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import "./globals.css";
 import { initializeAppStorage } from "./services/StorageInitService";
 import { processPasswordResetOverride } from "./services/PasswordResetOverrideService";
@@ -145,7 +146,17 @@ const mountAppSafely = () => {
     return;
   }
   try {
-    createRoot(rootEl).render(<App />);
+    // Wrap the entire app tree in the AppErrorBoundary so any unhandled
+    // exception during the very first paint is caught and the user sees
+    // the friendly fallback instead of a blank white screen on Android.
+    // The same boundary is also used inside App.tsx — doubling it here at
+    // the entry point protects against crashes that happen *before*
+    // App.tsx's tree mounts (e.g. inside an early provider or hook).
+    createRoot(rootEl).render(
+      <AppErrorBoundary>
+        <App />
+      </AppErrorBoundary>
+    );
   } catch (err) {
     // Final safety net — if React itself throws during mount, at least
     // show a user-readable error and a reload button.

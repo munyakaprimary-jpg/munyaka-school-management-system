@@ -89,8 +89,8 @@ const LoadingFallback = () => (
     }}
   >
     <p style={{ color: "#333333", fontFamily: "sans-serif" }}>
-      Loading Munyaka App...
-    </p>
+          Loading Munyaka Portal...
+        </p>
   </div>
 );
 
