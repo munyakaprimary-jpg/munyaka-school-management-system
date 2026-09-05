@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   CheckCircle2,
   XCircle,
@@ -15,6 +16,7 @@ import {
   Loader2,
   AlertCircle,
   GraduationCap,
+  ArrowLeft,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -231,6 +233,7 @@ function loadStudentMeta(studentId: string): {
 
 // ─── Main Component ────────────────────────────────────────────────────────────
 export default function GradingReview() {
+  const navigate = useNavigate();
   const [assessments, setAssessments] = useState<Assessment[]>([]);
   const [selectedAssessmentId, setSelectedAssessmentId] = useState<string>("");
   const [selectedAssessment, setSelectedAssessment] = useState<Assessment | null>(null);
@@ -240,6 +243,13 @@ export default function GradingReview() {
   const [searchTerm, setSearchTerm] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveSuccessId, setSaveSuccessId] = useState<string | null>(null);
+
+  const handleBackToParent = useCallback(() => {
+    setSelectedAssessmentId("");
+    setSelectedAssessment(null);
+    setSelectedStudentId(null);
+    navigate("/assessments");
+  }, [navigate]);
 
   // Load available assessments on mount
   useEffect(() => {
@@ -467,6 +477,13 @@ export default function GradingReview() {
       <header className="bg-white border-b border-slate-200 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleBackToParent}
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center"
+              title="Back to Assessments Menu"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg shadow-indigo-200">
               <Award className="w-5 h-5 text-white" />
             </div>
