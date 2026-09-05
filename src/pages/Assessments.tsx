@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck } from "lucide-react";
+import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
@@ -98,6 +98,13 @@ const Assessments = () => {
 
   // ====== Navigation ======
   const navigate = useNavigate();
+
+  // Returns the user to the parent Assessments menu. Local selection state
+  // is reset so re-entry starts clean, but persisted marks remain intact.
+  const handleBackToParent = useCallback(() => {
+    setSearchTerm("");
+    navigate("/assessments");
+  }, [navigate]);
 
   // ====== Unified file-download state for CSV & PDF ======
   const csvExport = useFileDownload();
@@ -762,6 +769,13 @@ ${filteredStudents.length} learner(s) included.
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
         <div>
           <div className="flex items-center gap-3">
+            <button
+              onClick={handleBackToParent}
+              className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0"
+              title="Back to Assessments Menu"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
             <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Marks Entry & CBC Assessment</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
