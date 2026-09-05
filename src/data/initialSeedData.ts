@@ -5,70 +5,34 @@
  *
  * On first launch (when localStorage is empty), `hydrateAllStores` in
  * `src/utils/storage.ts` reads from this export to populate every store.
+ * All collections are empty by default — learners, staff, fees, and
+ * transactions are created through the app's own registration and
+ * data-entry flows.  Only structural/scaffolding data (grades, exam types,
+ * system settings) is populated so the app is immediately usable.
  *
- * Version: "sample-v1"
+ * Version: "empty-v1"
  */
 export const INITIAL_SEED_DATA = {
-  version: "sample-v1",
-  seedVersion: "sample-v1",
+  version: "empty-v1",
+  seedVersion: "empty-v1",
   exportDate: new Date().toISOString(),
   school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
 
   // ── Students / Learners ───────────────────────────────────────────────────────
-  // Sample learners pre-seeded so the APK is immediately usable for demos.
-  students: [
-    { id: "stu-001", admNo: "MUN-001", name: "Aisha Wanjiku Mwangi",    grade: "Grade 4", stream: "Blue",  gender: "Female", guardian: "James Mwangi",    phone: "+254711001001", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-002", admNo: "MUN-002", name: "Brian Kipkorir Cheruiyot", grade: "Grade 5", stream: "Alpha", gender: "Male",   guardian: "David Cheruiyot", phone: "+254711002002", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-003", admNo: "MUN-003", name: "Cynthia Nafula Ochieng",   grade: "Grade 6", stream: "Yellow", gender: "Female", guardian: "Peter Ochieng",   phone: "+254711003003", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-004", admNo: "MUN-004", name: "Daniel Kipng'eno Ruto",   grade: "Grade 7", stream: "MERCURY", gender: "Male", guardian: "Samuel Ruto",    phone: "+254711004004", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-005", admNo: "MUN-005", name: "Evelyn Adhiambo Otieno",   grade: "Grade 3", stream: "Green",  gender: "Female", guardian: "Joseph Otieno",  phone: "+254711005005", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-006", admNo: "MUN-006", name: "Faith Wanjiru Kamau",      grade: "Grade 8", stream: "Alpha",  gender: "Female", guardian: "George Kamau",   phone: "+254711006006", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-007", admNo: "MUN-007", name: "George Kiptoo Letting",    grade: "Grade 4", stream: "Blue",   gender: "Male",   guardian: "Paul Letting",   phone: "+254711007007", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-008", admNo: "MUN-008", name: "Happiness Muthoni Karanja",grade: "Grade 9", stream: "Alpha",  gender: "Female", guardian: "Peter Karanja",  phone: "+254711008008", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-009", admNo: "MUN-009", name: "Ian Kibet Rotich",         grade: "Grade 5", stream: "Beta",   gender: "Male",   guardian: "Robert Rotich",  phone: "+254711009009", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-010", admNo: "MUN-010", name: "Joyce Chepkoech Kirui",    grade: "Grade 6", stream: "Green",  gender: "Female", guardian: "Sam Kirui",      phone: "+254711010010", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-011", admNo: "MUN-011", name: "Kevin Kipng'etich Yego",   grade: "Grade 7", stream: "VENUS",  gender: "Male",   guardian: "John Yego",     phone: "+254711011011", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-012", admNo: "MUN-012", name: "Laura Achieng Opiyo",     grade: "PP1",     stream: "Yellow", gender: "Female", guardian: "Francis Opiyo",  phone: "+254711012012", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-013", admNo: "MUN-013", name: "Moses Kiptanui Bett",     grade: "Grade 2", stream: "Green",  gender: "Male",   guardian: "Elijah Bett",   phone: "+254711013013", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-014", admNo: "MUN-014", name: "Nancy Wambui Njoroge",    grade: "Grade 1", stream: "Blue",   gender: "Female", guardian: "Simon Njoroge",  phone: "+254711014014", status: "Active", schoolId: "munyaka-sc" },
-  ],
+  // Empty: learners are registered through the app's own onboarding flow.
+  students: [],
 
   // ── Staff / Teachers ──────────────────────────────────────────────────────
-  // Sample staff pre-seeded for immediate APK usability.
-  staff: [
-    { id: "staff-001", name: "Grace Njeri", tscNo: "TSC-88421", idNo: "22345678", phone: "+254720001001", email: "grace.njeri@munyaka.sc.ke", role: "Head Teacher", grade: "—", stream: "—", gender: "Female", status: "Active", salary: 95000, joinedDate: "2018-01-15", emergencyContact: "+254711001001", emergencyName: "John Njeri", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-002", name: "John Kamau",  tscNo: "TSC-77102", idNo: "11223344", phone: "+254720002002", email: "john.kamau@munyaka.sc.ke",  role: "Teacher", grade: "Grade 7", stream: "MERCURY", gender: "Male", status: "Active", salary: 75000, joinedDate: "2020-03-01", emergencyContact: "+254722002002", emergencyName: "Mary Kamau", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-003", name: "Sarah Achieng", tscNo: "TSC-66211", idNo: "33445566", phone: "+254720003003", email: "sarah.achieng@munyaka.sc.ke", role: "Teacher", grade: "Grade 4", stream: "Blue", gender: "Female", status: "Active", salary: 72000, joinedDate: "2021-06-10", emergencyContact: "+254722003003", emergencyName: "Peter Achieng", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-004", name: "Peter Omondi", tscNo: "TSC-55330", idNo: "44556677", phone: "+254720004004", email: "peter.omondi@munyaka.sc.ke", role: "Teacher", grade: "Grade 8", stream: "Alpha", gender: "Male", status: "Active", salary: 73000, joinedDate: "2019-09-01", emergencyContact: "+254722004004", emergencyName: "Jane Omondi", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-005", name: "Mary Wanjiku", tscNo: "TSC-44019", idNo: "55667788", phone: "+254720005005", email: "mary.wanjiku@munyaka.sc.ke", role: "Teacher", grade: "Grade 5", stream: "Alpha", gender: "Female", status: "Active", salary: 71000, joinedDate: "2022-01-20", emergencyContact: "+254722005005", emergencyName: "Joseph Wanjiku", profileComplete: true, schoolId: "munyaka-sc" },
-    { id: "staff-006", name: "David Kiprotich", tscNo: "TSC-33128", idNo: "66778899", phone: "+254720006006", email: "david.kiprotich@munyaka.sc.ke", role: "Bursar", grade: "—", stream: "—", gender: "Male", status: "Active", salary: 80000, joinedDate: "2017-04-05", emergencyContact: "+254722006006", emergencyName: "Grace Kiprotich", profileComplete: true, schoolId: "munyaka-sc" },
-  ],
+  // Empty: staff are pre-registered through the Pre-Registration page.
+  staff: [],
 
   // ── Staff Pre-Registration ────────────────────────────────────────────────
-  // Sample pre-registrations awaiting approval.
-  staffPrereg: [
-    { id: "prereg-001", name: "Faith Chebet", phone: "+254720101101", idNo: "77889900", role: "Teacher", status: "pending", requestedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
-    { id: "prereg-002", name: "Kevin Kipkemoi", phone: "+254720202202", idNo: "88990011", role: "Lab Technician", status: "pending", requestedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), schoolId: "munyaka-sc" },
-  ],
+  // Empty: pre-registration is a UI-driven workflow.
+  staffPrereg: [],
 
   // ── Fee Records ───────────────────────────────────────────────────────────
-  // Sample fee ledgers so the Fees page has data on first launch.
-  fees: {
-    "stu-001": { id: "fees-stu-001", studentId: "stu-001", studentName: "Aisha Wanjiku Mwangi", total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-02-10", status: "Cleared" },
-    "stu-002": { id: "fees-stu-002", studentId: "stu-002", studentName: "Brian Kipkorir Cheruiyot", total: 15000, paid: 10000, balance: 5000, lastPayment: "2026-02-15", status: "Partial" },
-    "stu-003": { id: "fees-stu-003", studentId: "stu-003", studentName: "Cynthia Nafula Ochieng",  total: 15000, paid: 0,     balance: 15000, lastPayment: "",          status: "Pending" },
-    "stu-004": { id: "fees-stu-004", studentId: "stu-004", studentName: "Daniel Kipng'eno Ruto",   total: 18000, paid: 18000, balance: 0,    lastPayment: "2026-01-30", status: "Cleared" },
-    "stu-005": { id: "fees-stu-005", studentId: "stu-005", studentName: "Evelyn Adhiambo Otieno",   total: 12000, paid: 12000, balance: 0,    lastPayment: "2026-02-05", status: "Cleared" },
-    "stu-006": { id: "fees-stu-006", studentId: "stu-006", studentName: "Faith Wanjiru Kamau",       total: 18000, paid: 9000,  balance: 9000, lastPayment: "2026-02-12", status: "Partial" },
-    "stu-007": { id: "fees-stu-007", studentId: "stu-007", studentName: "George Kiptoo Letting",    total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-02-01", status: "Cleared" },
-    "stu-008": { id: "fees-stu-008", studentId: "stu-008", studentName: "Happiness Muthoni Karanja", total: 20000, paid: 0,    balance: 20000, lastPayment: "",         status: "Pending" },
-    "stu-009": { id: "fees-stu-009", studentId: "stu-009", studentName: "Ian Kibet Rotich",         total: 15000, paid: 7500,  balance: 7500, lastPayment: "2026-02-18", status: "Partial" },
-    "stu-010": { id: "fees-stu-010", studentId: "stu-010", studentName: "Joyce Chepkoech Kirui",   total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-01-28", status: "Cleared" },
-    "stu-011": { id: "fees-stu-011", studentId: "stu-011", studentName: "Kevin Kipng'etich Yego",  total: 18000, paid: 18000, balance: 0,    lastPayment: "2026-02-08", status: "Cleared" },
-    "stu-012": { id: "fees-stu-012", studentId: "stu-012", studentName: "Laura Achieng Opiyo",     total: 8000,  paid: 8000,  balance: 0,    lastPayment: "2026-02-20", status: "Cleared" },
-    "stu-013": { id: "fees-stu-013", studentId: "stu-013", studentName: "Moses Kiptanui Bett",     total: 12000, paid: 4000,  balance: 8000, lastPayment: "2026-02-22", status: "Partial" },
-    "stu-014": { id: "fees-stu-014", studentId: "stu-014", studentName: "Nancy Wambui Njoroge",    total: 12000, paid: 12000, balance: 0,    lastPayment: "2026-02-19", status: "Cleared" },
-  },
+  // Empty: fees are recorded through the Fees page.
+  fees: [],
 
   // ── Fee Structures (per grade) ──────────────────────────────────────────
   // Seeded so the Fee Configuration page has a starting structure.
@@ -87,33 +51,12 @@ export const INITIAL_SEED_DATA = {
   ],
 
   // ── Transactions ──────────────────────────────────────────────────────────
-  // Sample fee payment transactions.
-  transactions: [
-    { id: "tx-001", studentId: "stu-001", studentName: "Aisha Wanjiku Mwangi",    amount: 15000, method: "M-PESA", ref: "MG7K8H2J", category: "Term 1 Fees", date: "2026-02-10", status: "Completed", type: "payment" },
-    { id: "tx-002", studentId: "stu-002", studentName: "Brian Kipkorir Cheruiyot", amount: 10000, method: "M-PESA", ref: "NG3P9L4M", category: "Term 1 Fees", date: "2026-02-15", status: "Completed", type: "payment" },
-    { id: "tx-003", studentId: "stu-004", studentName: "Daniel Kipng'eno Ruto",   amount: 18000, method: "Bank Transfer", ref: "BK20260201", category: "Term 1 Fees", date: "2026-01-30", status: "Completed", type: "payment" },
-    { id: "tx-004", studentId: "stu-005", studentName: "Evelyn Adhiambo Otieno",  amount: 12000, method: "M-PESA", ref: "PG1R6W8N", category: "Term 1 Fees", date: "2026-02-05", status: "Completed", type: "payment" },
-    { id: "tx-005", studentId: "stu-007", studentName: "George Kiptoo Letting",   amount: 15000, method: "Cash", ref: "CSH001", category: "Term 1 Fees", date: "2026-02-01", status: "Completed", type: "payment" },
-    { id: "tx-006", studentId: "stu-010", studentName: "Joyce Chepkoech Kirui",  amount: 15000, method: "M-PESA", ref: "RG9T2V5X", category: "Term 1 Fees", date: "2026-01-28", status: "Completed", type: "payment" },
-    { id: "tx-007", studentId: "stu-011", studentName: "Kevin Kipng'etich Yego", amount: 18000, method: "Bank Transfer", ref: "BK20260208", category: "Term 1 Fees", date: "2026-02-08", status: "Completed", type: "payment" },
-    { id: "tx-008", studentId: "stu-012", studentName: "Laura Achieng Opiyo",    amount: 8000,  method: "M-PESA", ref: "TG4Q7Y1Z", category: "Term 1 Fees", date: "2026-02-20", status: "Completed", type: "payment" },
-    { id: "tx-009", studentId: "stu-014", studentName: "Nancy Wambui Njoroge",   amount: 12000, method: "M-PESA", ref: "UG2M5A3B", category: "Term 1 Fees", date: "2026-02-19", status: "Completed", type: "payment" },
-    { id: "tx-010", studentId: "stu-006", studentName: "Faith Wanjiru Kamau",    amount: 9000,  method: "M-PESA", ref: "VH8N6C7D", category: "Term 1 Fees", date: "2026-02-12", status: "Completed", type: "payment" },
-    { id: "tx-011", studentId: "stu-009", studentName: "Ian Kibet Rotich",       amount: 7500,  method: "M-PESA", ref: "WJ5P9E2F", category: "Term 1 Fees", date: "2026-02-18", status: "Completed", type: "payment" },
-    { id: "tx-012", studentId: "stu-013", studentName: "Moses Kiptanui Bett",   amount: 4000,  method: "Cash", ref: "CSH002", category: "Term 1 Fees", date: "2026-02-22", status: "Completed", type: "payment" },
-  ],
+  // Empty: transactions are recorded through the Fees page.
+  transactions: [],
 
   // ── Attendance Records ────────────────────────────────────────────────────
-  // Sample attendance snapshot for today.
-  attendance: (() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const present: Record<string, string> = {};
-    const seedIds = ["stu-001","stu-002","stu-004","stu-005","stu-007","stu-010","stu-011","stu-012","stu-014"];
-    seedIds.forEach((id) => {
-      present[id] = `${today}T08:05:00.000Z`;
-    });
-    return { [today]: { date: today, present, late: {}, absent: ["stu-003","stu-006","stu-008","stu-009","stu-013"] } };
-  })(),
+  // Empty: attendance is taken through the Attendance page.
+  attendance: {},
 
   // ── Grades / Classes ──────────────────────────────────────────────────────
   // Seeded with grade + stream structure so the app has a starting
@@ -192,35 +135,16 @@ export const INITIAL_SEED_DATA = {
   assessmentScores: {},
 
   // ── Library Books ───────────────────────────────────────────────────────────
-  // Sample library catalogue.
-  libraryBooks: [
-    { id: "bk-001", title: "Things Fall Apart",         author: "Chinua Achebe",        isbn: "978-0385474542", category: "Fiction",   copies: 6, available: 4, shelf: "A-12" },
-    { id: "bk-002", title: "The River Between",        author: "Ngugi wa Thiong'o",    isbn: "978-0435901680", category: "Fiction",   copies: 4, available: 2, shelf: "A-13" },
-    { id: "bk-003", title: "Primary Mathematics",      author: "MoE Kenya",            isbn: "978-9966001212", category: "Textbook",  copies: 80, available: 65, shelf: "B-04" },
-    { id: "bk-004", title: "KLB English",              author: "KLB",                  isbn: "978-9966001401", category: "Textbook",  copies: 60, available: 48, shelf: "B-09" },
-    { id: "bk-005", title: "Science & Technology",     author: "KLB",                  isbn: "978-9966001551", category: "Textbook",  copies: 50, available: 35, shelf: "C-02" },
-    { id: "bk-006", title: "Kiswahili Mufti",          author: "KLB",                  isbn: "978-9966001771", category: "Textbook",  copies: 45, available: 38, shelf: "C-11" },
-    { id: "bk-007", title: "Social Studies Atlas",     author: "Oxford",               isbn: "978-0198329882", category: "Reference", copies: 10, available: 8,  shelf: "D-01" },
-    { id: "bk-008", title: "Creative Arts Book 4",     author: "Longhorn",             isbn: "978-9966003011", category: "Textbook",  copies: 40, available: 32, shelf: "C-15" },
-  ],
+  // Empty: books are added through the Library page.
+  libraryBooks: [],
 
   // ── ICT Assets ─────────────────────────────────────────────────────────────
-  // Sample ICT inventory.
-  ictAssets: [
-    { id: "ict-001", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-001", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
-    { id: "ict-002", name: "HP Desktop PC",    type: "Desktop",   serial: "HPDX-2024-002", status: "Working", location: "ICT Lab 1", assignedTo: "", purchaseDate: "2024-05-12", warrantyUntil: "2027-05-12" },
-    { id: "ict-003", name: "Lenovo Laptop",    type: "Laptop",    serial: "LNV-2023-014",  status: "Working", location: "Staff Room",  assignedTo: "Grace Njeri", purchaseDate: "2023-09-04", warrantyUntil: "2026-09-04" },
-    { id: "ict-004", name: "Epson Projector",  type: "Projector", serial: "EPN-2024-003",  status: "Working", location: "Library",     assignedTo: "",         purchaseDate: "2024-01-22", warrantyUntil: "2027-01-22" },
-    { id: "ict-005", name: "Cisco Router",     type: "Network",   serial: "CSC-2024-007",  status: "Working", location: "Server Room", assignedTo: "",         purchaseDate: "2024-02-10", warrantyUntil: "2029-02-10" },
-    { id: "ict-006", name: "iPad Tablet",      type: "Tablet",    serial: "IPD-2024-022",  status: "Repair",  location: "ICT Lab 2",  assignedTo: "",         purchaseDate: "2024-04-18", warrantyUntil: "2026-04-18" },
-  ],
+  // Empty: assets are registered through the ICT Lab Management page.
+  ictAssets: [],
 
   // ── Notices / Announcements ────────────────────────────────────────────────
-  notices: [
-    { id: "nt-001", title: "Term 1 Opening Day",     body: "Welcome back! Term 1 officially begins on Monday. All learners are expected to report in full school uniform.",          date: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString(), priority: "high",   audience: "All" },
-    { id: "nt-002", title: "Parent-Teacher Meeting", body: "Half-term parent-teacher meeting is scheduled for Saturday from 9:00 AM. Please plan to attend.",                        date: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString(),  priority: "medium", audience: "Parents" },
-    { id: "nt-003", title: "Sports Day",             body: "Inter-house athletics competition will be held on the last Friday of the month. All learners are encouraged to participate.", date: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),  priority: "low",    audience: "All" },
-  ],
+  // Empty: notices are published through the Notice Board page.
+  notices: [],
 
   // ── System Settings ────────────────────────────────────────────────────────
   // Seeded with sensible school defaults so the app boots with configuration.
@@ -315,13 +239,13 @@ export const INITIAL_SEED_DATA = {
   },
 
   // ── Portal Statistics Baseline ───────────────────────────────────────────────
-  // Stats reflect the seeded sample dataset.
+  // Empty: stats are computed from real localStorage data at runtime.
   portalStats: {
-    totalStudents: 14,
-    totalTeachers: 5,
-    juniorSchoolCount: 4,
-    feesCollected: 161500,
-    todayAttendanceRate: 64,
+    totalStudents: 0,
+    totalTeachers: 0,
+    juniorSchoolCount: 0,
+    feesCollected: 0,
+    todayAttendanceRate: 0,
     lastUpdated: new Date().toISOString(),
   },
 };

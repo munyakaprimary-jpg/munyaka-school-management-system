@@ -2,7 +2,7 @@ import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { lsSet, notifyDataChanged, lsRead } from '@/utils/storage';
 
 const SEED_VERSION_KEY = 'app_seed_version';
-const CURRENT_SEED_VERSION = 'v_full_sync_v3';
+const CURRENT_SEED_VERSION = 'v_full_sync_v2';
 
 /**
  * Storage Initialization Service
