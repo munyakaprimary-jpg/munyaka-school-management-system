@@ -8,17 +8,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { showSuccess, showError } from "@/utils/toast";
 import { cn } from "@/lib/utils";
 import type { Question, QuestionType } from "@/types/questions";
-// pdfjs-dist v3 is the last version that exports the legacy build compatible
-// with Vite without requiring the .mjs worker rewrite. We use the legacy build
-// for simplicity and broad browser support.
-import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf";
-// Vite-friendly worker registration — point at the same legacy build's worker.
-// This avoids the need to copy the worker into /public and keeps the bundle
-// self-contained.
-import pdfWorker from "pdfjs-dist/legacy/build/pdf.worker.min.js?url";
-
-// Configure pdf.js to use the bundled worker. Done once at module load.
-pdfjsLib.GlobalWorkerOptions.workerSrc = pdfWorker;
+// PDF parsing utility — supports KNEC exam papers, multiple question patterns,
+// sub-questions, and image-only content handling.
+import { parseAssessmentPDF, type CSVRow } from "@/utils/pdfParser";
 
 const QUESTION_BANK_KEY = "question_bank";
 const ASSESSMENTS_KEY = "assessments";
@@ -26,17 +18,6 @@ const ACTIVE_ASSESSMENT_ID_KEY = "csv_importer_active_assessment_id";
 const ALL_SET_EXAMS_KEY = "all_set_exams";
 
 // ─── CSV Row Shape ────────────────────────────────────────────────────────────
-
-interface CSVRow {
-  question_text: string;
-  type: string;
-  option_a: string;
-  option_b: string;
-  option_c: string;
-  option_d: string;
-  correct_answer: string;
-  points: string;
-}
 
 interface ParsedQuestion extends CSVRow {
   rowIndex: number;
@@ -134,224 +115,7 @@ function parseCSVLine(line: string): string[] {
   return result;
 }
 
-// ─── Question Converter ───────────────────────────────────────────────────────
-
-// ─── PDF Text Extractor ───────────────────────────────────────────────────────
-
-/**
- * Common header/instruction patterns to trim from the beginning of PDFs
- */
-const HEADER_PATTERNS = [
-  /^(?:subject|class|topic|module|unit|lesson|chapter)[\s:]+/i,
-  /^(?:instruction[s]?[\s:]*|note[\s:]*|memo[\s:]*)/i,
-  /^(?:duration|time)[\s:]+[\d\s]+(?:minutes?|mins?|hours?)/i,
-  /^(?:total\s+marks?|marks?\s+[:\-]?\s*\d+)/i,
-  /^(?:name[\s:]+|date[\s:]+|roll\s+no[\s:]+|reg\.?\s*no[\s:]+)/i,
-  /^(?:attempt\s+all\s+questions?)/i,
-  /^(?:please\s+(?:read|answer|attempt|complete))/i,
-  /^[-_=]{3,}$/i,
-  /^(?:page\s*\d+\s+of\s+\d+)/i,
-];
-
-/**
- * Checks if a line looks like a header/instruction (not a question)
- */
-function isHeaderOrInstruction(line: string): boolean {
-  const trimmed = line.trim();
-  if (trimmed.length < 3) return true;
-  if (/^\d+\s*(?:pts?|marks?)$/i.test(trimmed)) return true;
-  if (HEADER_PATTERNS.some((p) => p.test(trimmed))) return true;
-  return false;
-}
-
-/**
- * Extracts plain text from an unprotected PDF using pdfjs-dist.
- * Returns an array of non-empty text lines.
- * Logs raw text for debugging.
- */
-async function extractTextFromPDF(file: File): Promise<{ lines: string[]; rawText: string; isScanned: boolean }> {
-  const arrayBuffer = await file.arrayBuffer();
-  const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
-  const pdf = await loadingTask.promise;
-
-  const allPageTexts: string[] = [];
-  const lines: string[] = [];
-
-  for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
-    const page = await pdf.getPage(pageNum);
-    const textContent = await page.getTextContent();
-    const pageText = textContent.items
-      .map((item) => ("str" in item ? (item as { str: string }).str : ""))
-      .join(" ")
-      .trim();
-
-    allPageTexts.push(pageText || "");
-
-    if (pageText) {
-      // Split by paragraph breaks and newlines
-      const paragraphBlocks = pageText
-        .split(/\n{2,}|\s{4,}/)
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-      lines.push(...paragraphBlocks);
-    }
-  }
-
-  // Combine all page text for logging
-  const rawText = allPageTexts.join("\n\n--- Page Break ---\n\n").trim();
-
-  // Log the raw extracted text for debugging
-  console.group(`📄 PDF Text Extraction: ${file.name}`);
-  console.log(`Pages found: ${pdf.numPages}`);
-  console.log(`Text layer detected: ${allPageTexts.some(t => t.length > 0) ? "Yes" : "No (likely scanned)"}`);
-  console.log("─".repeat(60));
-  console.log("RAW TEXT LAYER:");
-  console.log(rawText || "(No text detected - scanned PDF)");
-  console.log("─".repeat(60));
-  console.log("PARSED LINES (after paragraph splitting):");
-  console.log(lines);
-  console.groupEnd();
-
-  // Detect scanned PDF (no text layer)
-  const isScanned = !allPageTexts.some(t => t && t.replace(/\s/g, '').length > 0);
-
-  return { lines, rawText, isScanned };
-}
-
-// ─── PDF Line → CSV Row ────────────────────────────────────────────────────────
-
-/**
- * Multiple question patterns supported. Each pattern is tested in order.
- * Captures the question text (group 1 or 2 depending on pattern).
- * Supports: 1., 1), Q1., Q1), Question 1:, Question 1., QUESTION 1., 1. (a)
- */
-const QUESTION_PATTERNS: RegExp[] = [
-  // 1. Question text OR 1. (a) sub-question
-  /^(?:\d+)\.\s*\(?([a-z]\)?\.?\s*.+)/i,
-  /^(?:\d+)\.\s+(.+)/,
-  // 1) Question text
-  /^(?:\d+)\)\s+(.+)/,
-  // Q1. / Q1) / Q1: Question text
-  /^Q\s*(\d+)\s*[.):]\s*(.+)/i,
-  // Question 1: / Question 1. / Question 1 - Question text
-  /^[Qq]uestion\s+(\d+)\s*[:.\-)]\s*(.+)/,
-  // QUESTION 1. / QUESTION 1: (uppercase)
-  /^QUESTION\s+(\d+)\s*[:.\-)]\s*(.+)/,
-  // (1) Question text
-  /^\((\d+)\)\s*(.+)/,
-];
-
-/**
- * Try to match a question pattern and return the extracted question text,
- * or null if no pattern matched.
- */
-function matchQuestionPattern(raw: string): string | null {
-  for (const pattern of QUESTION_PATTERNS) {
-    const match = raw.match(pattern);
-    if (match) {
-      // Return the last captured group (text portion)
-      return match[match.length - 1]?.trim() || null;
-    }
-  }
-  return null;
-}
-
-const OPTION_PATTERN = /^([A-D])[\.\)]\s*(.+)/i;
-const ANSWER_PATTERN = /^(?:answer|correct|answer\s+is|right\s+answer)[:\s]+([A-D])\b/i;
-const POINTS_PATTERN  = /^(?:points|marks)[:\s]+(\d+)/i;
-const SUB_PART_PATTERN = /^\(([a-z])\)\s*(.+)/i;
-
-/**
- * Detects question-numbering patterns in extracted PDF lines and groups
- * them into individual CSVRow entries.
- * Skips header/instruction lines at the beginning of the document.
- */
-function groupPDFLinesToRows(lines: string[]): CSVRow[] {
-  const rows: CSVRow[] = [];
-  let current: Partial<CSVRow> = {};
-  let startedQuestions = false;
-
-  for (let i = 0; i < lines.length; i++) {
-    const raw = lines[i].trim();
-    if (!raw) continue;
-
-    // Skip header/instruction lines until we hit the first question
-    if (!startedQuestions) {
-      if (isHeaderOrInstruction(raw)) {
-        console.log(`⏭️  Skipping header/instruction: "${raw.substring(0, 60)}..."`);
-        continue;
-      }
-    }
-
-    // Try to match a question pattern
-    const questionText = matchQuestionPattern(raw);
-    if (questionText) {
-      if (current.question_text) {
-        rows.push(current as CSVRow);
-      }
-      current = {
-        question_text: questionText,
-        type: "mcq",
-      };
-      startedQuestions = true;
-      continue;
-    }
-
-    // Match sub-part like "(a)" - append to current question text
-    if (current.question_text) {
-      const subPart = raw.match(SUB_PART_PATTERN);
-      if (subPart && !/^[A-D][\.\)]/i.test(raw)) {
-        current.question_text = `${current.question_text} (${subPart[1]}) ${subPart[2]}`;
-        continue;
-      }
-    }
-
-    const optionMatch = raw.match(OPTION_PATTERN);
-    if (optionMatch && current.question_text) {
-      const key = `option_${optionMatch[1].toLowerCase()}` as keyof CSVRow;
-      (current as Record<string, string>)[key] = optionMatch[2];
-      continue;
-    }
-
-    const answerMatch = raw.match(ANSWER_PATTERN);
-    if (answerMatch && current.question_text) {
-      current.correct_answer = answerMatch[1].toUpperCase();
-      continue;
-    }
-
-    const pointsMatch = raw.match(POINTS_PATTERN);
-    if (pointsMatch && current.question_text) {
-      current.points = pointsMatch[1];
-      continue;
-    }
-
-    if (current.question_text) {
-      current.question_text = (current.question_text as string) + " " + raw;
-    }
-  }
-
-  if (current.question_text) {
-    rows.push(current as CSVRow);
-  }
-
-  return rows;
-}
-
-async function parsePDF(file: File): Promise<{ rows: CSVRow[]; isScanned: boolean; rawText: string }> {
-  const { lines, rawText, isScanned } = await extractTextFromPDF(file);
-  
-  if (isScanned) {
-    return { rows: [], isScanned: true, rawText };
-  }
-  
-  if (lines.length === 0) {
-    return { rows: [], isScanned: false, rawText };
-  }
-  
-  const rows = groupPDFLinesToRows(lines);
-  console.log(`📋 Parsed ${rows.length} question rows from PDF`);
-  return { rows, isScanned: false, rawText };
-}
+// ─── Question Converter ────────────────────────────────────────────────────────
 
 // ─── Question Converter ────────────────────────────────────────────────────────
 
@@ -488,8 +252,8 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
 
       if (isPDF) {
         try {
-          const { rows, isScanned } = await parsePDF(file);
-          
+          const { rows, isScanned } = await parseAssessmentPDF(file);
+
           // Handle scanned PDFs (no text layer)
           if (isScanned) {
             showError(
@@ -499,7 +263,7 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
             );
             return;
           }
-          
+
           if (rows.length === 0) {
             showError(
               "PDF did not contain any detectable questions. " +
