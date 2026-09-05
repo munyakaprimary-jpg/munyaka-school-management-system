@@ -187,7 +187,13 @@ async function handleDownloadScriptPDF(submission: StudentSubmission): Promise<v
 
   const opt = {
     margin: [10, 10, 10, 10] as [number, number, number, number],
-    filename: `${submission.studentName}_${submission.examTitle}_Marked.pdf`,
+    // Coerce names to safe strings so a missing field can't blow up the
+    // filename generation inside html2pdf.js.
+    filename: `${String(submission?.studentName || "Student")
+      .replace(/[^a-zA-Z0-9_\- ]/g, "_")
+      .replace(/\s+/g, "_")}_${String(submission?.examTitle || "Exam")
+      .replace(/[^a-zA-Z0-9_\- ]/g, "_")
+      .replace(/\s+/g, "_")}_Marked.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
     html2canvas: {
       scale: 2,

@@ -39,30 +39,44 @@ import autoTable from "jspdf-autotable";
  * • For external `http(s):` URLs we set crossOrigin = "anonymous" so the
  *   browser sends CORS headers; if the server denies the request the image
  *   will be skipped rather than aborting the whole PDF.
+ *
+ * This helper never throws — any failure (bad URL, CORS error, decoding
+ * issue) resolves to `null` so callers can short-circuit cleanly.
  */
-async function preloadImage(url: string): Promise<HTMLImageElement | null> {
+async function preloadImage(url: string | null | undefined): Promise<HTMLImageElement | null> {
   if (!url || typeof url !== "string") return null;
+  // Strip whitespace, force string type, and bail if empty after trim.
+  const safeUrl = String(url || "").replace(/^\s+|\s+$/g, "");
+  if (!safeUrl) return null;
 
   return new Promise((resolve) => {
-    const img = new Image();
-    img.crossOrigin = "anonymous";
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
 
-    img.onload = () => resolve(img);
-    img.onerror = () => {
-      // Try once more with different CORS policy for external URLs
-      if (url.startsWith("http")) {
-        const retry = new Image();
-        retry.onload = () => resolve(retry);
-        retry.onerror = () => resolve(null);
-        retry.src = url;
-      } else {
-        resolve(null);
-      }
-    };
+      img.onload = () => resolve(img);
+      img.onerror = () => {
+        // Try once more with different CORS policy for external URLs
+        if (safeUrl.startsWith("http")) {
+          try {
+            const retry = new Image();
+            retry.onload = () => resolve(retry);
+            retry.onerror = () => resolve(null);
+            retry.src = safeUrl;
+          } catch {
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      };
 
-    // blob: and data: URLs are always same-origin — set src last to avoid
-    // the crossOrigin attribute triggering a pre-flight for blob: URLs.
-    img.src = url;
+      // blob: and data: URLs are always same-origin — set src last to avoid
+      // the crossOrigin attribute triggering a pre-flight for blob: URLs.
+      img.src = safeUrl;
+    } catch {
+      resolve(null);
+    }
   });
 }
 
@@ -74,17 +88,23 @@ async function preloadImage(url: string): Promise<HTMLImageElement | null> {
  *   - http(s)://…/…            (remote CDN / upload endpoint)
  *
  * `maxHeightMM` caps the rendered height so large nursery-bed photos don't
- * blow out the page layout.
+ * blow out the page layout.  If anything goes wrong (missing url, failed
+ * decode, jsPDF rejection), the function returns the original `yMM` so
+ * the layout continues without throwing.
  */
 async function addImageToPdf(
   doc: jsPDF,
-  url: string,
+  url: string | null | undefined,
   xMM: number,
   yMM: number,
   maxWidthMM: number,
   maxHeightMM: number
 ): Promise<number> {
-  const img = await preloadImage(url);
+  // Defensive coercion: never call .replace on possibly-undefined input.
+  const safeUrl = String(url || "").replace(/^\s+|\s+$/g, "");
+  if (!safeUrl) return yMM;
+
+  const img = await preloadImage(safeUrl);
   if (!img) return yMM; // skip on error
 
   const imgWidth = img.naturalWidth;
@@ -394,17 +414,34 @@ export async function generateExamPDF(
   } else {
     // Pre-load every question image in parallel so the rasterizer is
     // guaranteed to see fully decoded pixels for each diagram / photo.
-    const imageTasks = questions.map(async (q) => {
-      const url = q.imageUrl;
-      if (!url || typeof url !== "string") return null;
-      return preloadImage(url);
-    });
-    const preloadedImages = await Promise.all(imageTasks);
+    // Any failure is isolated per-image so a single broken diagram
+    // can't crash the entire PDF export.
+    let preloadedImages: Array<HTMLImageElement | null> = [];
+    try {
+      const imageTasks = questions.map(async (q) => {
+        const url = q?.imageUrl;
+        if (!url || typeof url !== "string") return null;
+        return preloadImage(url);
+      });
+      preloadedImages = await Promise.all(imageTasks);
+    } catch (err) {
+      console.warn(
+        "[examPdfGenerator] Image pre-load failed; continuing without images:",
+        err
+      );
+      preloadedImages = questions.map(() => null);
+    }
 
     for (let idx = 0; idx < questions.length; idx++) {
-      const q = questions[idx];
+      const q = questions[idx] || {};
       const imageElement = preloadedImages[idx] ?? null;
-      const imagePosition = q.imagePosition || "below";
+      // Safe string coercion so we never call .replace / .startsWith / etc.
+      // on an undefined field.
+      const imageUrl = String(q?.imageUrl || "").replace(/^\s+|\s+$/g, "");
+      const imagePosition =
+        q?.imagePosition === "above" || q?.imagePosition === "between"
+          ? q.imagePosition
+          : "below";
 
       // Helper: ensure the question starts on a fresh page if there's not
       // enough room left (24mm baseline for text questions, 60mm if it
@@ -416,11 +453,11 @@ export async function generateExamPDF(
       }
 
       // ── Image above ──
-      if (imagePosition === "above" && imageElement) {
+      if (imagePosition === "above" && imageElement && imageUrl) {
         const imgHeightMM = 40; // cap to keep layout stable
         yPos = await addImageToPdf(
           doc,
-          q.imageUrl!,
+          imageUrl,
           leftMargin,
           yPos,
           contentWidth,
@@ -444,11 +481,11 @@ export async function generateExamPDF(
       yPos += splitPrompt.length * 5 + 1;
 
       // ── Image between (between prompt and options) ──
-      if (imagePosition === "between" && imageElement) {
+      if (imagePosition === "between" && imageElement && imageUrl) {
         const imgHeightMM = 40;
         yPos = await addImageToPdf(
           doc,
-          q.imageUrl!,
+          imageUrl,
           leftMargin,
           yPos,
           contentWidth,
@@ -457,7 +494,7 @@ export async function generateExamPDF(
       }
 
       // Points badge (right-aligned, on the question's first visual line)
-      const points = Number(q.points ?? q.marks ?? 0) || 0;
+      const points = Number(q?.points ?? q?.marks ?? 0) || 0;
       if (points > 0) {
         doc.setFont("helvetica", "italic");
         doc.setFontSize(9);
@@ -472,7 +509,7 @@ export async function generateExamPDF(
       }
 
       // MCQ options
-      const opts = normalizeOptions(q.options);
+      const opts = normalizeOptions(q?.options);
       if (opts && opts.length > 0) {
         opts.forEach((opt, optIdx) => {
           if (yPos > pageHeight - 16) {
@@ -502,11 +539,11 @@ export async function generateExamPDF(
       }
 
       // ── Image below ──
-      if (imagePosition === "below" && imageElement) {
+      if (imagePosition === "below" && imageElement && imageUrl) {
         const imgHeightMM = 40;
         yPos = await addImageToPdf(
           doc,
-          q.imageUrl!,
+          imageUrl,
           leftMargin,
           yPos,
           contentWidth,
@@ -544,7 +581,9 @@ export async function generateExamPDF(
       // tab is open, so we defer revocation for a couple of minutes.
       setTimeout(() => URL.revokeObjectURL(blobUrl), 120_000);
     } else {
-      const safeTitle = (exam.title || "Exam_Paper").replace(
+      // Explicit string coercion guards against the unlikely case where
+      // exam.title is a non-string value (e.g. a number or object).
+      const safeTitle = String(exam.title || "Exam_Paper").replace(
         /[^a-zA-Z0-9]+/g,
         "_"
       );
