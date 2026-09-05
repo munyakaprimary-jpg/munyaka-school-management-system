@@ -303,7 +303,7 @@ const ScienceLab = () => {
     const newBooking: LabBooking = {
       id: `LBK-${Date.now().toString().slice(-4)}`,
       ...bookingForm,
-      itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean)
+      itemsRequested: bookingForm.itemsRequested.split(',').map(i => String(i || '').trim()).filter(Boolean)
     };
     setBookings([newBooking, ...bookings]);
     setIsAddBookingOpen(false);
@@ -323,7 +323,7 @@ const ScienceLab = () => {
 
   const handleSaveBookingEdit = () => {
     if (!editingBooking) return;
-    setBookings(prev => prev.map(b => b.id === editingBooking.id ? { ...b, ...bookingForm, itemsRequested: bookingForm.itemsRequested.split(',').map(i => i.trim()).filter(Boolean) } : b));
+    setBookings(prev => prev.map(b => b.id === editingBooking.id ? { ...b, ...bookingForm, itemsRequested: bookingForm.itemsRequested.split(',').map(i => String(i || '').trim()).filter(Boolean) } : b));
     setEditingBooking(null);
     setIsAddBookingOpen(false);
     resetBookingForm();

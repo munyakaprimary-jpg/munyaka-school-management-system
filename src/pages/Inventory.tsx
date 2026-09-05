@@ -102,8 +102,8 @@ const Inventory = () => {
 
   // Derived Filtered Data
   const filteredAssets = useMemo(() => {
-    if (!searchQuery.trim()) return assets;
-    const query = searchQuery.toLowerCase();
+      if (!String(searchQuery || '').trim()) return assets;
+      const query = String(searchQuery || '').toLowerCase();
     return assets.filter(a => 
       a.item.toLowerCase().includes(query) || 
       a.category.toLowerCase().includes(query)
@@ -123,13 +123,13 @@ const Inventory = () => {
 
   // Handlers
   const handleAddAsset = () => {
-    if (!newAssetName.trim()) return setAssetError('Please enter an asset name.');
-    if (!newAssetCategory.trim()) return setAssetError('Please select a category.');
-    if (!newAssetQty || parseInt(newAssetQty) < 0) return setAssetError('Please enter a valid quantity.');
-
-    const newAsset: AssetItem = {
-      id: `asset-${Date.now()}`,
-      item: newAssetName.trim(),
+    if (!String(newAssetName || '').trim()) return setAssetError('Please enter an asset name.');
+        if (!String(newAssetCategory || '').trim()) return setAssetError('Please select a category.');
+        if (!newAssetQty || parseInt(newAssetQty) < 0) return setAssetError('Please enter a valid quantity.');
+    
+        const newAsset: AssetItem = {
+          id: `asset-${Date.now()}`,
+          item: String(newAssetName || '').trim(),
       category: newAssetCategory,
       qty: parseInt(newAssetQty),
       status: newAssetStatus,

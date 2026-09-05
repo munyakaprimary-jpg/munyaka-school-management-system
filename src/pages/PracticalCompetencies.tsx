@@ -334,15 +334,15 @@ const PracticalCompetencies = () => {
   }, []);
 
   const handleAddProject = () => {
-    if (!newProjectTitle.trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
+    if (!String(newProjectTitle || '').trim() || !newProjectGrade || !newProjectStream || !newProjectSubject) return;
     
-    const newProject: ProjectRecord = {
-      id: `proj-${Date.now()}`,
-      title: newProjectTitle.trim(),
-      grade: newProjectGrade,
-      stream: newProjectStream,
-      subject: newProjectSubject,
-      rubricCriteria: newProjectRubric.trim(),
+        const newProject: ProjectRecord = {
+          id: `proj-${Date.now()}`,
+          title: String(newProjectTitle || '').trim(),
+          grade: newProjectGrade,
+          stream: newProjectStream,
+          subject: newProjectSubject,
+          rubricCriteria: String(newProjectRubric || '').trim(),
       maxPoints: parseInt(newProjectMaxPoints) || 100,
       submissionsTotal: 0,
       submissionsGraded: 0,
@@ -395,21 +395,21 @@ const PracticalCompetencies = () => {
   };
 
   const handleAddObservation = () => {
-    if (!newObsStudent.trim() || !newObsGrade || !newObsStream || !newObsActivity || !newObsCompetency || !newObsObservation.trim()) return;
+    if (!String(newObsStudent || '').trim() || !newObsGrade || !newObsStream || !newObsActivity || !newObsCompetency || !String(newObsObservation || '').trim()) return;
     
-    const newObs: ObservationRecord = {
-      id: `obs-${Date.now()}`,
-      studentName: newObsStudent.trim(),
-      grade: newObsGrade,
-      stream: newObsStream,
-      activity: newObsActivity.trim(),
-      competency: newObsCompetency,
-      observation: newObsObservation.trim(),
-      rating: newObsRating,
-      observedBy: "Current Teacher",
-      observedDate: new Date().toISOString().split('T')[0],
-      evidence: newObsEvidence.trim() || undefined
-    };
+        const newObs: ObservationRecord = {
+          id: `obs-${Date.now()}`,
+          studentName: String(newObsStudent || '').trim(),
+          grade: newObsGrade,
+          stream: newObsStream,
+          activity: String(newObsActivity || '').trim(),
+          competency: newObsCompetency,
+          observation: String(newObsObservation || '').trim(),
+          rating: newObsRating,
+          observedBy: "Current Teacher",
+          observedDate: new Date().toISOString().split('T')[0],
+          evidence: String(newObsEvidence || '').trim() || undefined
+        };
     
     console.log("New observation created:", newObs);
     
@@ -483,8 +483,8 @@ const PracticalCompetencies = () => {
   };
 
   const getRubricCriteriaArray = (criteria: string) => {
-    return criteria.split(',').map(c => c.trim());
-  };
+      return criteria.split(',').map(c => String(c || '').trim());
+    };
 
   return (
     <div className="p-6 space-y-6">
@@ -841,7 +841,7 @@ const PracticalCompetencies = () => {
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Project</th>
                       {getRubricCriteriaArray((MOCK_RUBRICS[0] as any)?.rubricCriteria || "").map((crit, i) => (
                         <th key={i} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-500 text-center border-r min-w-[90px]">
-                          {crit.split('(')[0].trim()}
+                          {String(crit || '').split('(')[0].trim()}
                         </th>
                       ))}
                       <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
@@ -871,7 +871,7 @@ const PracticalCompetencies = () => {
                               <p className="font-bold text-slate-800 truncate max-w-[200px]">{project?.title || rubric.projectId}</p>
                             </td>
                             {criteria.map((crit, i) => {
-                              const critName = crit.split('(')[0].trim();
+                              const critName = String(crit || '').split('(')[0].trim();
                               const score = rubric.scores[critName] || 0;
                               return (
                                 <td key={i} className="px-4 py-5 border-r text-center font-bold text-slate-700">

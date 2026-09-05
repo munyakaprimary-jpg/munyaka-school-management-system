@@ -642,56 +642,56 @@ const PaymentManagement = () => {
   };
 
   const handleSaveConfig = async () => {
-    if (!configForm.name.trim()) {
-      setConfigError('Please enter a subscription plan name.');
-      return;
-    }
-    if (!configForm.plan.trim()) {
-      setConfigError('Please enter the plan name (e.g., Enterprise Plan).');
-      return;
-    }
-    if (!configForm.amount.trim() || isNaN(parseFloat(configForm.amount))) {
-      setConfigError('Please enter a valid amount.');
-      return;
-    }
-    const seatsRaw = typeof configForm.seats === 'string' ? configForm.seats : String(configForm.seats ?? '');
-    if (seatsRaw.trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
-      setConfigError('Institutional seats must be a non-negative number.');
-      return;
-    }
-
-    setIsSaving(true);
-    await new Promise(r => setTimeout(r, 700));
-
-    const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const seats = seatsRaw.trim() ? parseInt(seatsRaw) : 0;
-
-    const configToSave = {
-      name: configForm.name.trim(),
-      plan: configForm.plan.trim(),
-      amount: configForm.amount.trim(),
-      currency: configForm.currency,
-      nextBilling: nextBillingDate,
-      seats,
-      tier: configForm.tier,
-    };
-
-    lsSet(SUBSCRIPTION_CONFIG_KEY, configToSave);
-
-    const updatedSubscriptions = subscriptions.map((s, idx) =>
-      idx === 0
-        ? {
-            ...s,
-            name: configForm.name.trim(),
-            plan: configForm.plan.trim(),
-            amount: configForm.amount.trim(),
-            currency: configForm.currency,
-            nextBilling: nextBillingDate,
-            seats,
-            tier: configForm.tier,
-          }
-        : s
-    );
+      if (!String(configForm.name || '').trim()) {
+        setConfigError('Please enter a subscription plan name.');
+        return;
+      }
+      if (!String(configForm.plan || '').trim()) {
+        setConfigError('Please enter the plan name (e.g., Enterprise Plan).');
+        return;
+      }
+      if (!String(configForm.amount || '').trim() || isNaN(parseFloat(configForm.amount))) {
+        setConfigError('Please enter a valid amount.');
+        return;
+      }
+      const seatsRaw = typeof configForm.seats === 'string' ? configForm.seats : String(configForm.seats ?? '');
+      if (String(seatsRaw || '').trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
+        setConfigError('Institutional seats must be a non-negative number.');
+        return;
+      }
+  
+      setIsSaving(true);
+      await new Promise(r => setTimeout(r, 700));
+  
+      const nextBillingDate = String(configForm.nextBilling || '').trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+      const seats = String(seatsRaw || '').trim() ? parseInt(seatsRaw) : 0;
+  
+      const configToSave = {
+        name: String(configForm.name || '').trim(),
+        plan: String(configForm.plan || '').trim(),
+        amount: String(configForm.amount || '').trim(),
+        currency: configForm.currency,
+        nextBilling: nextBillingDate,
+        seats,
+        tier: configForm.tier,
+      };
+  
+      lsSet(SUBSCRIPTION_CONFIG_KEY, configToSave);
+  
+      const updatedSubscriptions = subscriptions.map((s, idx) =>
+        idx === 0
+          ? {
+              ...s,
+              name: String(configForm.name || '').trim(),
+              plan: String(configForm.plan || '').trim(),
+              amount: String(configForm.amount || '').trim(),
+              currency: configForm.currency,
+              nextBilling: nextBillingDate,
+              seats,
+              tier: configForm.tier,
+            }
+          : s
+      );
 
     setSubscriptions(updatedSubscriptions);
     lsSet(
@@ -719,8 +719,8 @@ const PaymentManagement = () => {
   }, []);
 
   const addLocalPayment = () => {
-    if (!lpForm.amount.trim()) { showError('Enter an amount.'); return; }
-    if (!lpForm.reference.trim()) { showError('Enter a reference / receipt number.'); return; }
+      if (!String(lpForm.amount || '').trim()) { showError('Enter an amount.'); return; }
+      if (!String(lpForm.reference || '').trim()) { showError('Enter a reference / receipt number.'); return; }
 
     const today = new Date();
     const newNextBilling = new Date(today);
@@ -739,14 +739,14 @@ const PaymentManagement = () => {
     );
 
     const entry: LocalPaymentEntry = {
-      id: `lp-${Date.now()}`,
-      mode: lpForm.mode,
-      amount: lpForm.amount.trim(),
-      currency: lpForm.currency,
-      reference: lpForm.reference.trim(),
-      note: lpForm.note.trim(),
-      loggedAt: new Date().toISOString().slice(0, 10),
-    };
+          id: `lp-${Date.now()}`,
+          mode: lpForm.mode,
+          amount: String(lpForm.amount || '').trim(),
+          currency: lpForm.currency,
+          reference: String(lpForm.reference || '').trim(),
+          note: String(lpForm.note || '').trim(),
+          loggedAt: new Date().toISOString().slice(0, 10),
+        };
     const next = [entry, ...localPayments];
     setLocalPayments(next);
     lsSet('munyaka_local_payments', next);
@@ -762,20 +762,20 @@ const PaymentManagement = () => {
       date: today_iso,
       amount: parseFloat(lpForm.amount),
       method: modeLabel,
-      ref: lpForm.reference.trim(),
-      category: 'Subscription',
-      invoiceId: invoiceNumber,
-      description: lpForm.note?.trim()
-        ? `${subscriptions[0]?.name ?? 'Subscription'} - ${lpForm.note.trim()}`
-        : `${subscriptions[0]?.name ?? 'Subscription'} Payment`,
-      currency: lpForm.currency,
-      status: 'paid',
-      paymentMethod: lpForm.mode,
-      paymentDetails: lpForm.mode === 'mpesa'
-        ? { receiptNumber: lpForm.reference.trim() }
-        : lpForm.mode === 'bank'
-        ? { bankName: 'Bank', branch: '', transactionRef: lpForm.reference.trim() }
-        : { receivedBy: user?.name ?? 'Cashier' },
+      ref: String(lpForm.reference || '').trim(),
+            category: 'Subscription',
+            invoiceId: invoiceNumber,
+            description: String(lpForm.note || '').trim()
+              ? `${subscriptions[0]?.name ?? 'Subscription'} - ${String(lpForm.note || '').trim()}`
+              : `${subscriptions[0]?.name ?? 'Subscription'} Payment`,
+            currency: lpForm.currency,
+            status: 'paid',
+            paymentMethod: lpForm.mode,
+            paymentDetails: lpForm.mode === 'mpesa'
+              ? { receiptNumber: String(lpForm.reference || '').trim() }
+              : lpForm.mode === 'bank'
+              ? { bankName: 'Bank', branch: '', transactionRef: String(lpForm.reference || '').trim() }
+              : { receivedBy: user?.name ?? 'Cashier' },
       paidAt: today_iso,
     };
     pushPaymentToHistory(newPayment);
@@ -926,32 +926,32 @@ const PaymentManagement = () => {
       showError('Please select a subscription.');
       return;
     }
-    if (!mpForm.amount.trim() || isNaN(parseFloat(mpForm.amount))) {
-      showError('Please enter a valid amount.');
-      return;
-    }
-    if (!mpForm.transactionRef.trim()) {
-      showError('Please enter the transaction reference / receipt number.');
-      return;
-    }
-    setIsRecordingPayment(true);
-    await new Promise(r => setTimeout(r, 600));
-
-    const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
-    const subName = sub?.name ?? 'Subscription';
-
-    const issued = issueLicense({
-      issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
-      deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
-      validityDays: 30,
-      payment: {
-        method: mpForm.paymentMode,
-        refNumber: mpForm.transactionRef.trim(),
-        amount: mpForm.amount.trim(),
-        bankName: mpForm.paymentMode === 'bank' ? 'Owner Bank' : undefined,
-      },
-      notes: `Monthly payment for ${subName}`,
-    });
+    if (!String(mpForm.amount || '').trim() || isNaN(parseFloat(mpForm.amount))) {
+          showError('Please enter a valid amount.');
+          return;
+        }
+        if (!String(mpForm.transactionRef || '').trim()) {
+          showError('Please enter the transaction reference / receipt number.');
+          return;
+        }
+        setIsRecordingPayment(true);
+        await new Promise(r => setTimeout(r, 600));
+    
+        const sub = subscriptions.find(s => s.id === mpForm.subscriptionId);
+        const subName = sub?.name ?? 'Subscription';
+    
+        const issued = issueLicense({
+          issuedTo: String(mpForm.issuedTo || '').trim() || 'Munyaka School',
+          deviceId: String(mpForm.deviceId || '').trim() || 'OFFICE-001',
+          validityDays: 30,
+          payment: {
+            method: mpForm.paymentMode,
+            refNumber: String(mpForm.transactionRef || '').trim(),
+            amount: String(mpForm.amount || '').trim(),
+            bankName: mpForm.paymentMode === 'bank' ? 'Owner Bank' : undefined,
+          },
+          notes: `Monthly payment for ${subName}`,
+        });
 
     const today = new Date();
     const newNextBilling = new Date(today);
@@ -971,20 +971,20 @@ const PaymentManagement = () => {
     setHasUnsavedChanges(false);
 
     const record: MonthlyPayment = {
-      id: `mp-${Date.now()}`,
-      subscriptionId: mpForm.subscriptionId,
-      subscriptionName: subName,
-      paymentMode: mpForm.paymentMode,
-      amount: mpForm.amount.trim(),
-      currency: mpForm.currency,
-      transactionRef: mpForm.transactionRef.trim(),
-      paidAt: today.toISOString().slice(0, 10),
-      activationCode: issued.activationKey,
-      codeStatus: 'active',
-      issuedTo: issued.issuedTo,
-      deviceId: issued.deviceId,
-      expiresAt: issued.expiresAt,
-    };
+          id: `mp-${Date.now()}`,
+          subscriptionId: mpForm.subscriptionId,
+          subscriptionName: subName,
+          paymentMode: mpForm.paymentMode,
+          amount: String(mpForm.amount || '').trim(),
+          currency: mpForm.currency,
+          transactionRef: String(mpForm.transactionRef || '').trim(),
+          paidAt: today.toISOString().slice(0, 10),
+          activationCode: issued.activationKey,
+          codeStatus: 'active',
+          issuedTo: issued.issuedTo,
+          deviceId: issued.deviceId,
+          expiresAt: issued.expiresAt,
+        };
     const nextPayments = [record, ...monthlyPayments];
     setMonthlyPayments(nextPayments);
     lsSet('munyaka_monthly_payments', nextPayments);
@@ -1008,21 +1008,21 @@ const PaymentManagement = () => {
       id: `pmt-${Date.now()}`,
       date: today.toISOString().slice(0, 10),
       amount: parseFloat(mpForm.amount),
-      method: paymentMethodLabel,
-      ref: mpForm.transactionRef.trim(),
-      category: 'Subscription',
-      invoiceId: invoiceNumber,
-      description: `${subName} - ${term} ${year}`,
-      currency: mpForm.currency,
-      status: 'paid',
-      paymentMethod: mpForm.paymentMode,
-      paymentDetails: mpForm.paymentMode === 'mpesa'
-        ? { receiptNumber: mpForm.transactionRef.trim() }
-        : mpForm.paymentMode === 'bank'
-        ? { bankName: 'Owner Bank', branch: '', transactionRef: mpForm.transactionRef.trim() }
-        : { receivedBy: user?.name ?? 'Cashier' },
-      paidAt: today.toISOString().slice(0, 10),
-    };
+            method: paymentMethodLabel,
+            ref: String(mpForm.transactionRef || '').trim(),
+            category: 'Subscription',
+            invoiceId: invoiceNumber,
+            description: `${subName} - ${term} ${year}`,
+            currency: mpForm.currency,
+            status: 'paid',
+            paymentMethod: mpForm.paymentMode,
+            paymentDetails: mpForm.paymentMode === 'mpesa'
+              ? { receiptNumber: String(mpForm.transactionRef || '').trim() }
+              : mpForm.paymentMode === 'bank'
+              ? { bankName: 'Owner Bank', branch: '', transactionRef: String(mpForm.transactionRef || '').trim() }
+              : { receivedBy: user?.name ?? 'Cashier' },
+            paidAt: today.toISOString().slice(0, 10),
+          };
     pushPaymentToHistory(newPayment);
 
     setReceiptData({
@@ -2559,7 +2559,7 @@ const PaymentManagement = () => {
             </Button>
             <Button
               onClick={confirmDeleteLicense}
-              disabled={isDeleting || !deletePassword.trim()}
+              disabled={isDeleting || !String(deletePassword || '').trim()}
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
             >
               {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
@@ -2606,7 +2606,7 @@ const PaymentManagement = () => {
                 if (deletePasswordError) setDeletePasswordError('');
               }}
               onKeyDown={e => {
-                if (e.key === 'Enter' && deletePassword.trim()) confirmDeleteLicense();
+                if (e.key === 'Enter' && String(deletePassword || '').trim()) confirmDeleteLicense();
               }}
               placeholder="Enter your owner password"
               className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
@@ -2647,7 +2647,7 @@ const PaymentManagement = () => {
             </Button>
             <Button
               onClick={confirmBulkDelete}
-              disabled={isBulkDeleting || !bulkDeletePassword.trim()}
+              disabled={isBulkDeleting || !String(bulkDeletePassword || '').trim()}
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
             >
               {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
@@ -2677,7 +2677,7 @@ const PaymentManagement = () => {
                 if (bulkDeletePasswordError) setBulkDeletePasswordError('');
               }}
               onKeyDown={e => {
-                if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
+                if (e.key === 'Enter' && String(bulkDeletePassword || '').trim()) confirmBulkDelete();
               }}
               placeholder="Enter your owner password"
               className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"

@@ -196,7 +196,7 @@ const Assessments = () => {
 
     // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
     return sorted.map((g: any) => {
-      const str = (g.name || g).toString().trim();
+      const str = String(g.name || g || '').trim();
       // If it starts with grade in lowercase, capitalize Grade
       if (str.toLowerCase().startsWith("grade ")) {
         const numPart = str.substring(6);
@@ -340,7 +340,7 @@ const Assessments = () => {
   // FILTERED STUDENTS - DECLARED BEFORE USE EFFECT
   // ============================================
   const filteredStudents = useMemo(() => {
-    const selectedGradeNormalized = currentGrade.trim().toLowerCase();
+    const selectedGradeNormalized = String(currentGrade || '').trim().toLowerCase();
 
     return studentsList.filter(s => {
       // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
@@ -355,16 +355,16 @@ const Assessments = () => {
       // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
       const rawStudentStream = s.stream || s.classStream || s.section || "";
       const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
-      const selectedStreamNormalized = stream.trim().toLowerCase();
+      const selectedStreamNormalized = String(stream || '').trim().toLowerCase();
 
       const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
       const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
 
-      const matchesSearch = !searchTerm.trim() ||
-        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
-        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
+      const matchesSearch = !String(searchTerm || '').trim() ||
+              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
+              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });

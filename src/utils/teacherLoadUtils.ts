@@ -27,14 +27,14 @@ const STAFF_STORAGE_KEYS = [
  */
 const normalizeStreamName = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = String(name || '').trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
 
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
-  const trimmed = name.trim();
+  const trimmed = String(name || '').trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
@@ -60,9 +60,9 @@ export const getTeacherTeachingLoad = (
         if (!m) return false;
         if (userId && m.id === userId) return true;
         if (userEmail) {
-          const email = (m.email || '').trim().toLowerCase();
-          if (email === userEmail.trim().toLowerCase()) return true;
-        }
+                  const email = (m.email || '').trim().toLowerCase();
+                  if (email === String(userEmail || '').trim().toLowerCase()) return true;
+                }
         return false;
       });
       if (found?.teaching_load && Array.isArray(found.teaching_load)) {

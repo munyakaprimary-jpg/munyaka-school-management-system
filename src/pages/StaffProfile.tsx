@@ -112,11 +112,11 @@ const StaffProfile = () => {
   // ── View-mode detection ───────────────────────────────────────────
   // isSelfView  : the signed-in user is the staff member on this page.
   // isAdminView : an admin/owner is viewing somebody else's profile.
-  const memberEmail = (member?.email || '').trim().toLowerCase();
-  const userEmail = (user?.email || '').trim().toLowerCase();
-  const memberStaffId = (member?.staff_id || '').trim().toLowerCase();
-  const userStaffId = (user?.staff_id || '').trim().toLowerCase();
-  const memberId = (member?.id || '').trim();
+  const memberEmail = String(member?.email || '').trim().toLowerCase();
+    const userEmail = String(user?.email || '').trim().toLowerCase();
+    const memberStaffId = String(member?.staff_id || '').trim().toLowerCase();
+    const userStaffId = String(user?.staff_id || '').trim().toLowerCase();
+    const memberId = String(member?.id || '').trim();
 
   const isSelfView = !!user && !!member && (
     (userEmail && memberEmail && userEmail === memberEmail) ||
@@ -191,14 +191,14 @@ const StaffProfile = () => {
     const handleSelfChangePassword = async () => {
       setPwError('');
   
-      if (!oldPassword.trim()) {
-        setPwError('Please enter your current password.');
-        return;
-      }
-      if (!newPassword.trim()) {
-        setPwError('Please enter a new password.');
-        return;
-      }
+      if (!String(oldPassword || '').trim()) {
+              setPwError('Please enter your current password.');
+              return;
+            }
+            if (!String(newPassword || '').trim()) {
+              setPwError('Please enter a new password.');
+              return;
+            }
       if (newPassword.length < 4) {
         setPwError('New password must be at least 4 characters.');
         return;
@@ -213,9 +213,9 @@ const StaffProfile = () => {
       const usersJson = localStorage.getItem('munyaka_users');
       if (usersJson) {
         const users = JSON.parse(usersJson);
-        const emailKey = (member?.email || '').trim().toLowerCase();
-        const staffIdKey = (member?.staff_id || '').trim().toLowerCase();
-        const target = users[emailKey] || users[staffIdKey];
+                const emailKey = String(member?.email || '').trim().toLowerCase();
+                const staffIdKey = String(member?.staff_id || '').trim().toLowerCase();
+                const target = users[emailKey] || users[staffIdKey];
   
         if (target) {
           const isValid =
@@ -304,8 +304,8 @@ const StaffProfile = () => {
             
                 // Drop rows where every field is empty (user opened, added, never filled).
                 const cleanLoad: TeachingLoadEntry[] = editLoad.filter(
-                  r => r.subject.trim() || r.grade.trim() || r.stream.trim()
-                );
+                                  r => String(r.subject || '').trim() || String(r.grade || '').trim() || String(r.stream || '').trim()
+                                );
             
                 // Aggregate subjects (for legacy consumers & the chip list display).
                 const subjects = Array.from(

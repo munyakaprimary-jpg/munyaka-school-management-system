@@ -49,7 +49,7 @@ function validateRow(row: CSVRow, rowIndex: number): ParsedQuestion {
     if (!row.option_b?.trim()) errors.push("option_b is required for MCQ");
     if (!row.correct_answer?.trim()) {
       errors.push("correct_answer is required for MCQ");
-    } else if (!VALID_ANSWERS_MCQ.includes(row.correct_answer.trim())) {
+    } else if (!VALID_ANSWERS_MCQ.includes(String(row.correct_answer || '').trim())) {
       errors.push("correct_answer must be A, B, C, or D for MCQ");
     }
   }
@@ -714,9 +714,9 @@ const CSVAssessmentImporter: React.FC<CSVAssessmentImporterProps> = ({
                       </td>
                       <td className="px-4 py-3">
                         {row.correct_answer?.trim() ? (
-                          <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm">
-                            {row.correct_answer.trim().toUpperCase()}
-                          </span>
+                                                  <span className="inline-flex items-center justify-center w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 font-black text-sm">
+                                                    {String(row.correct_answer || '').trim().toUpperCase()}
+                                                  </span>
                         ) : (
                           <span className="text-xs text-slate-400 italic">—</span>
                         )}

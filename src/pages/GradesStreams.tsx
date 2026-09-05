@@ -161,11 +161,11 @@ const GradesStreams = () => {
   }, [grades]);
 
   const normalizeGradeKey = (name: string) => {
-    return name.trim().toLowerCase();
-  };
-
-  const handleAddGrade = () => {
-    const trimmedName = newGradeName.trim();
+      return String(name || '').trim().toLowerCase();
+    };
+  
+    const handleAddGrade = () => {
+      const trimmedName = String(newGradeName || '').trim();
     if (!trimmedName) {
       showError("Please enter a grade name.");
       return;
@@ -197,7 +197,7 @@ const GradesStreams = () => {
   };
 
   const handleAddStream = () => {
-    const trimmedStreamName = newStreamName.trim();
+      const trimmedStreamName = String(newStreamName || '').trim();
 
     if (!selectedGradeId) {
       showError("Please select a grade level.");
@@ -213,7 +213,7 @@ const GradesStreams = () => {
       // Case-normalize the new stream name to deduplicate (e.g. "BLUE" vs "Blue")
       const normalizedNew = trimmedStreamName.charAt(0).toUpperCase() + trimmedStreamName.slice(1).toLowerCase();
       const streamExists = parentGrade.streams.some(
-        s => s.name.trim().toLowerCase() === normalizedNew.toLowerCase()
+        s => String(s.name || '').trim().toLowerCase() === normalizedNew.toLowerCase()
       );
       if (streamExists) {
         showError(`Stream "${trimmedStreamName}" already exists in ${parentGrade.name}.`);
@@ -227,7 +227,7 @@ const GradesStreams = () => {
         const newStream: Stream = {
           id: `s-${Date.now()}`,
           name: trimmedStreamName,
-          teacher: newStreamTeacher.trim() || "Unassigned",
+          teacher: String(newStreamTeacher || '').trim() || "Unassigned",
           studentsCount
         };
         return { ...grade, streams: [...grade.streams, newStream] };
