@@ -57,10 +57,10 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
   }, [isEditing]);
 
   const resolveCategory = (): string | null => {
-    if (category === 'custom') return customCategory.trim() || null;
-    if (category === 'none' || !category) return null;
-    return category;
-  };
+      if (category === 'custom') return String(customCategory || '').trim() || null;
+      if (category === 'none' || !category) return null;
+      return category;
+    };
 
   const handleSave = () => {
     if (!startTime || !endTime) {
@@ -71,7 +71,7 @@ const InlineTimeCell: React.FC<InlineTimeCellProps> = ({
       setError('End must be after start');
       return;
     }
-    if (category === 'custom' && !customCategory.trim()) {
+    if (category === 'custom' && !String(customCategory || '').trim()) {
       setError('Custom name is required');
       return;
     }

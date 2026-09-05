@@ -57,7 +57,7 @@ export const BookReturnModal: React.FC<BookReturnModalProps> = ({
 
     setIsSubmitting(true);
     try {
-      await onProcessReturn(selectedLogId, condition, notes.trim());
+      await onProcessReturn(selectedLogId, condition, String(notes || '').trim());
       setIsSubmitting(false);
       setSelectedLogId('');
       setCondition('Good');

@@ -59,7 +59,7 @@ const ReceiveAssetModal = ({ isOpen, onClose, onReceive, activeLoans }: ReceiveA
       logId: selectedLogId,
       qtyReturned: numQty,
       condition,
-      notes: notes.trim() || undefined,
+      notes: String(notes || '').trim() || undefined,
       returnDate: returnDate || undefined
     });
     onClose();

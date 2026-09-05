@@ -25,7 +25,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!password.trim()) {
+    if (!String(password || '').trim()) {
       setAuthError('Please enter the admin password');
       return;
     }

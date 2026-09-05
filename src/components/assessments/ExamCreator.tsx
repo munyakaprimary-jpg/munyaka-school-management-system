@@ -476,34 +476,34 @@ const ExamCreator: React.FC = () => {
       }
     } else {
       if (editingQuestionId) {
-        setQuestions((prev) =>
-          prev.map((q) =>
-            q.id === editingQuestionId
-              ? {
-                  ...q,
-                  prompt: draftPrompt.trim(),
-                  contextStatement: draftContextStatement || undefined,
-                  imageUrl: draftImageUrl,
-                  imagePosition: draftImagePosition,
-                  points: draftPoints,
-                  modelAnswer: draftModelAnswer.trim(),
-                }
-              : q
-          )
-        );
-        showSuccess("Question updated.");
-      } else {
-        const newQ: Question = {
-          id: generateId("q"),
-          type: "structured",
-          prompt: draftPrompt.trim(),
-          contextStatement: draftContextStatement || undefined,
-          imageUrl: draftImageUrl,
-          imagePosition: draftImagePosition,
-          points: draftPoints,
-          order: questions.length + 1,
-          modelAnswer: draftModelAnswer.trim(),
-        };
+              setQuestions((prev) =>
+                prev.map((q) =>
+                  q.id === editingQuestionId
+                    ? {
+                        ...q,
+                        prompt: String(draftPrompt || '').trim(),
+                        contextStatement: draftContextStatement || undefined,
+                        imageUrl: draftImageUrl,
+                        imagePosition: draftImagePosition,
+                        points: draftPoints,
+                        modelAnswer: String(draftModelAnswer || '').trim(),
+                      }
+                    : q
+                )
+              );
+              showSuccess("Question updated.");
+            } else {
+              const newQ: Question = {
+                id: generateId("q"),
+                type: "structured",
+                prompt: String(draftPrompt || '').trim(),
+                contextStatement: draftContextStatement || undefined,
+                imageUrl: draftImageUrl,
+                imagePosition: draftImagePosition,
+                points: draftPoints,
+                order: questions.length + 1,
+                modelAnswer: String(draftModelAnswer || '').trim(),
+              };
         setQuestions((prev) => [...prev, newQ]);
         setExpandedQuestionId(newQ.id);
         showSuccess("Structured question added.");
@@ -582,22 +582,22 @@ const ExamCreator: React.FC = () => {
       const now = new Date().toISOString();
       const assessmentId = publishedAssessmentId || generateId("asm");
       const calcTotalMarks = totalMarks || questions.reduce((s, q) => s + q.points, 0);
-      const resolvedClassLevel = (classLevel.trim() || selectedGrade).trim();
-      // Persist `"all"` (not an empty string) so the Teacher Grading
-      // Dashboard's stream filter has a canonical sentinel.
-      const resolvedStream =
-        selectedStream && selectedStream !== ALL_STREAMS_VALUE
-          ? selectedStream.trim()
-          : "all";
-
-      // 1. Update question bank so StudentAssessmentView can find this exam.
-      const bankPayload = {
-        metadata: {
-          title: title.trim(),
-          category,
-          classLevel: resolvedClassLevel,
-          subject: subject.trim(),
-          duration,
+            const resolvedClassLevel = (String(classLevel || '').trim() || selectedGrade).trim();
+            // Persist `"all"` (not an empty string) so the Teacher Grading
+            // Dashboard's stream filter has a canonical sentinel.
+            const resolvedStream =
+              selectedStream && selectedStream !== ALL_STREAMS_VALUE
+                ? String(selectedStream || '').trim()
+                : "all";
+      
+            // 1. Update question bank so StudentAssessmentView can find this exam.
+            const bankPayload = {
+              metadata: {
+                title: String(title || '').trim(),
+                category,
+                classLevel: resolvedClassLevel,
+                subject: String(subject || '').trim(),
+                duration,
           totalMarks: calcTotalMarks,
           randomize: false,
           showFeedback: false,
