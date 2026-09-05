@@ -709,3 +709,170 @@ export function isHydrated(): boolean {
   if (!ls) return false;
   return ls.getItem(STORAGE_KEYS.HYDRATION_DONE) === 'true';
 }
+
+// ─── Full Database Export / Import ─────────────────────────────────────────
+
+export interface DatabaseBackup {
+  version: string;
+  exportDate: string;
+  school: string;
+  students: unknown;
+  staff: unknown;
+  staffPrereg: unknown;
+  fees: unknown;
+  feeStructures: unknown;
+  transactions: unknown;
+  attendance: unknown;
+  grades: unknown;
+  examTypes: unknown;
+  learningAreas: unknown;
+  assessmentScores: unknown;
+  libraryBooks: unknown;
+  ictAssets: unknown;
+  notices: unknown;
+  userSettings: unknown;
+  subscriptions: unknown;
+  billingSettings: unknown;
+}
+
+/**
+ * Read ALL known localStorage keys and return a serialisable backup object.
+ * Safe: every read is wrapped in a try-catch so a corrupted key never aborts
+ * the entire export.
+ */
+export function exportAllData(): DatabaseBackup {
+  const ls = getLocalStorage() ?? {} as Storage;
+
+  const safeRead = (key: string): unknown => {
+    try {
+      const raw = ls.getItem(key);
+      if (raw == null) return undefined;
+      return JSON.parse(raw);
+    } catch {
+      return undefined;
+    }
+  };
+
+  return {
+    version: CURRENT_SCHEMA_VERSION,
+    exportDate: new Date().toISOString(),
+    school: 'MUNYAKA PRIMARY AND JUNIOR SCHOOL',
+    students:           safeRead(STORAGE_KEYS.STUDENTS),
+    staff:             safeRead(STORAGE_KEYS.STAFF),
+    staffPrereg:       safeRead(STORAGE_KEYS.STAFF_PREREG),
+    fees:              safeRead(STORAGE_KEYS.PAYMENT_RECORDS),
+    feeStructures:     safeRead('munyaka_fee_structures'),
+    transactions:      safeRead(STORAGE_KEYS.TRANSACTIONS),
+    attendance:        safeRead(STORAGE_KEYS.ATTENDANCE),
+    grades:            safeRead(STORAGE_KEYS.GRADES),
+    examTypes:         safeRead(STORAGE_KEYS.EXAM_TYPES),
+    learningAreas:     safeRead(STORAGE_KEYS.CBC_LEARNING_AREAS),
+    assessmentScores:  safeRead(STORAGE_KEYS.ASSESSMENT_SCORES),
+    libraryBooks:      safeRead(STORAGE_KEYS.LIBRARY_BOOKS),
+    ictAssets:         safeRead(STORAGE_KEYS.ICT_ASSETS),
+    notices:           safeRead('munyaka_notices'),
+    userSettings:      safeRead(STORAGE_KEYS.USER_SETTINGS),
+    subscriptions:     safeRead(STORAGE_KEYS.SUBSCRIPTIONS),
+    billingSettings:   safeRead(STORAGE_KEYS.BILLING_SETTINGS),
+  };
+}
+
+/**
+ * Download the full database as a JSON file using a browser Blob + anchor trick.
+ * Falls back gracefully when Blob download is not supported.
+ */
+export function downloadDatabaseBackup(): void {
+  try {
+    const backup = exportAllData();
+    const json = JSON.stringify(backup, null, 2);
+    const blob = new Blob([json], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    const date = new Date().toISOString().slice(0, 10);
+    link.download = `munyaka_db_backup_${date}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    console.error('[storage] downloadDatabaseBackup failed:', err);
+    throw err;
+  }
+}
+
+export interface ImportResult {
+  success: boolean;
+  keysRestored: string[];
+  errors: string[];
+}
+
+/**
+ * Write every key present in a DatabaseBackup object into localStorage.
+ * Each key is written independently so a corrupt value for one key does NOT
+ * prevent other keys from being restored.
+ *
+ * Returns a report describing what was restored and any errors encountered.
+ */
+export function importAllData(backup: DatabaseBackup): ImportResult {
+  const result: ImportResult = { success: true, keysRestored: [], errors: [] };
+  const ls = getLocalStorage();
+
+  const safeWrite = (key: string, value: unknown, label: string): void => {
+    if (value === undefined) return;
+    try {
+      if (ls) {
+        ls.setItem(key, JSON.stringify(value));
+        result.keysRestored.push(label);
+      }
+    } catch (err) {
+      result.errors.push(`Failed to write "${label}" (${key}): ${err instanceof Error ? err.message : String(err)}`);
+      result.success = false;
+    }
+  };
+
+  if (backup.students)         safeWrite(STORAGE_KEYS.STUDENTS,         backup.students,         'Students');
+  if (backup.students)         safeWrite(STORAGE_KEYS.STUDENTS_LEGACY,   backup.students,         'Students (legacy)');
+  if (backup.staff)           safeWrite(STORAGE_KEYS.STAFF,             backup.staff,            'Staff');
+  if (backup.staffPrereg)     safeWrite(STORAGE_KEYS.STAFF_PREREG,     backup.staffPrereg,      'Staff Pre-registration');
+  if (backup.fees)            safeWrite(STORAGE_KEYS.PAYMENT_RECORDS,   backup.fees,             'Fee Records');
+  if (backup.feeStructures)   safeWrite('munyaka_fee_structures',      backup.feeStructures,    'Fee Structures');
+  if (backup.transactions)    safeWrite(STORAGE_KEYS.TRANSACTIONS,      backup.transactions,     'Transactions');
+  if (backup.attendance)      safeWrite(STORAGE_KEYS.ATTENDANCE,        backup.attendance,       'Attendance');
+  if (backup.grades)          safeWrite(STORAGE_KEYS.GRADES,            backup.grades,           'Grades / Classes');
+  if (backup.examTypes)       safeWrite(STORAGE_KEYS.EXAM_TYPES,        backup.examTypes,        'Exam Types');
+  if (backup.learningAreas)   safeWrite(STORAGE_KEYS.CBC_LEARNING_AREAS,backup.learningAreas,    'Learning Areas');
+  if (backup.assessmentScores)safeWrite(STORAGE_KEYS.ASSESSMENT_SCORES, backup.assessmentScores, 'Assessment Scores');
+  if (backup.libraryBooks)     safeWrite(STORAGE_KEYS.LIBRARY_BOOKS,    backup.libraryBooks,     'Library Books');
+  if (backup.ictAssets)       safeWrite(STORAGE_KEYS.ICT_ASSETS,        backup.ictAssets,        'ICT Assets');
+  if (backup.notices)         safeWrite('munyaka_notices',              backup.notices,          'Notices');
+  if (backup.userSettings)    safeWrite(STORAGE_KEYS.USER_SETTINGS,     backup.userSettings,     'System Settings');
+  if (backup.subscriptions)    safeWrite(STORAGE_KEYS.SUBSCRIPTIONS,    backup.subscriptions,    'Subscriptions');
+  if (backup.billingSettings) safeWrite(STORAGE_KEYS.BILLING_SETTINGS,  backup.billingSettings, 'Billing Settings');
+
+  if (result.keysRestored.length > 0) {
+    notifyDataChanged();
+  }
+
+  return result;
+}
+
+/**
+ * Parse a raw JSON string into a DatabaseBackup and import it.
+ * Used by the file-input handler on the System Configuration page.
+ */
+export function parseAndImportBackup(jsonString: string): ImportResult {
+  try {
+    const parsed = JSON.parse(jsonString) as DatabaseBackup;
+    if (!parsed || typeof parsed !== 'object') {
+      return { success: false, keysRestored: [], errors: ['Invalid backup file: root must be a JSON object.'] };
+    }
+    return importAllData(parsed);
+  } catch (err) {
+    return {
+      success: false,
+      keysRestored: [],
+      errors: [`JSON parse error: ${err instanceof Error ? err.message : String(err)}`],
+    };
+  }
+}
