@@ -7,6 +7,7 @@ import {
   MapPin, User, Moon, Sun, Sparkles, Search, X, Briefcase,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
+import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 interface DirectoryStaff {
   id: string;
@@ -131,11 +132,9 @@ const StaffCheckInSelector = () => {
       }
 
       // Fallback to seed data
-      import('../data/initialSeedData').then((module) => {
-        if (module?.INITIAL_SEED_DATA?.staff && Array.isArray(module.INITIAL_SEED_DATA.staff)) {
-          setStaffDirectory(module.INITIAL_SEED_DATA.staff);
-        }
-      }).catch(() => {});
+      if (INITIAL_SEED_DATA?.staff && Array.isArray(INITIAL_SEED_DATA.staff)) {
+        setStaffDirectory(INITIAL_SEED_DATA.staff);
+      }
     };
 
     loadFromKeys();
