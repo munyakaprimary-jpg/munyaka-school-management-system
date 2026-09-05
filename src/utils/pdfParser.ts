@@ -69,7 +69,7 @@ const HEADER_PATTERNS: RegExp[] = [
  * than an actual question or question content.
  */
 function isHeaderOrInstruction(line: string): boolean {
-  const trimmed = line.trim();
+  const trimmed = (line ?? '').trim();
   if (trimmed.length < 3) return true;
   return HEADER_PATTERNS.some((p) => p.test(trimmed));
 }
@@ -137,7 +137,7 @@ function matchMainQuestion(raw: string): string | null {
   for (const pattern of MAIN_QUESTION_PATTERNS) {
     const match = raw.match(pattern);
     if (match) {
-      return (match[match.length - 1] ?? match[1])?.trim() || null;
+      return (match[match.length - 1] ?? match[1])?.trim?.() ?? null;
     }
   }
   return null;
@@ -152,7 +152,7 @@ function matchSubQuestion(raw: string): { id: string; text: string } | null {
     const match = raw.match(pattern);
     if (match) {
       // Group 1 = identifier (a, b, i, etc.), Group 2 = text
-      return { id: match[1], text: match[2]?.trim() || "" };
+      return { id: match[1], text: match[2]?.trim?.() ?? '' };
     }
   }
   return null;
@@ -214,12 +214,12 @@ function normalizeOrphanedNumbers(lines: string[]): string[] {
   let i = 0;
 
   while (i < lines.length) {
-    const line = lines[i].trim();
+    const line = (lines[i] ?? '').trim();
 
     // Check if this line is ONLY a question number (e.g. "4." or "4)" or "(4)")
     const orphanedMatch = line.match(/^(?:\d+)[.)]$|^\(\d+\)$|^[a-z]\)$|^Q\s*\d+$|^QUESTION\s+\d+$/i);
     if (orphanedMatch && i + 1 < lines.length) {
-      const nextLine = lines[i + 1].trim();
+      const nextLine = (lines[i + 1] ?? '').trim();
       // Only join if the next line isn't also a number
       if (!nextLine.match(/^(?:\d+)[.)]$|^\(\d+\)$/)) {
         result.push(`${line} ${nextLine}`);
@@ -273,7 +273,7 @@ export async function parseAssessmentPDF(file: File): Promise<PDFParseResult> {
 
       for (const block of paragraphBlocks) {
         // Also split long blocks on double newlines within the block
-        const blockLines = block.split(/\n/).map((l) => l.trim()).filter(Boolean);
+        const blockLines = block.split(/\n/).map((l) => (l ?? '').trim()).filter(Boolean);
         allLines.push(...blockLines);
       }
     }
@@ -383,10 +383,10 @@ export function processImageOnlyQuestion(
   availableText: string,
   pageIndex: number
 ): Partial<CSVRow> {
-  if (availableText && availableText.trim().length > 0) {
+  if (availableText && (availableText ?? '').trim().length > 0) {
     // There is some readable text — treat as a normal question with a figure note
     return {
-      question_text: `${availableText.trim()} [Figure reference on page ${pageIndex + 1} — image content not extracted]`,
+      question_text: `${(availableText ?? '').trim()} [Figure reference on page ${pageIndex + 1} — image content not extracted]`,
       type: "structured",
     };
   }

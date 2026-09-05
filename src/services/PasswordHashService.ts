@@ -14,7 +14,7 @@
  * Returns a hex string of the digest.
  */
 export async function hashPassword(plain: string): Promise<string> {
-  const encoded = new TextEncoder().encode(plain.trim());
+  const encoded = new TextEncoder().encode((plain ?? '').trim());
   const hashBuffer = await crypto.subtle.digest('SHA-256', encoded);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');

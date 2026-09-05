@@ -387,7 +387,7 @@ export function useVideoSearch(
 
   // ── "No results" heuristic ─────────────────────────────────────────
   const noResults =
-    searchQuery.trim().length > 0 || activeCategory !== ALL_CATEGORY
+    (searchQuery ?? '').trim().length > 0 || activeCategory !== ALL_CATEGORY
       ? sourceTab === "library"
         ? filteredLibrary.length === 0
         : !youtubeLoading && filteredYouTube.length === 0 && !youtubeError

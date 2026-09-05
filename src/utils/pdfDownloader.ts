@@ -198,7 +198,7 @@ export function redownloadCertificate(
  */
 export function sanitiseFilenamePart(input: string | undefined | null): string {
   if (!input) return 'Unknown';
-  return input
+  return (input ?? '')
     .replace(/[^a-zA-Z0-9_\- ]/g, '')
     .trim()
     .replace(/\s+/g, '_')

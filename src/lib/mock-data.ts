@@ -108,7 +108,7 @@ export const GRADES_DATA: Grade[] = sortGrades([
   ...g,
   name: formatGradeName(g.name),
   streams: Array.from(
-    new Map(g.streams.map((s) => [s.name.trim().toLowerCase(), s])).values()
+    new Map(g.streams.map((s) => [(s.name ?? '').trim().toLowerCase(), s])).values()
   ),
 })) as unknown as Grade[]);
 

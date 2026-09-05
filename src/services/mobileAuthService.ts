@@ -97,8 +97,8 @@ export const getLoginServerUrl = (): string | null => {
   for (const key of ['lan_server_url', 'server_ip', 'munyaka_lan_server_url']) {
     try {
       const stored = localStorage.getItem(key);
-      if (stored && stored.trim()) {
-        const trimmed = stored.trim();
+      if (stored && (stored ?? '').trim()) {
+        const trimmed = (stored ?? '').trim();
         // Normalize: bare IP → http://IP:5000, full URL → used as-is
         if (/^https?:\/\//i.test(trimmed)) return trimmed.replace(/\/$/, '');
         if (/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}/.test(trimmed)) {
@@ -126,7 +126,7 @@ export const getLoginServerUrl = (): string | null => {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 /** Normalize the identifier before sending to the server. */
-const normalizeIdentifier = (raw: string): string => raw.trim().toLowerCase();
+const normalizeIdentifier = (raw: string): string => (raw ?? '').trim().toLowerCase();
 
 // ─── Core login function ──────────────────────────────────────────────────────
 
@@ -172,7 +172,7 @@ export async function teacherLogin(
   //    field-type detection.
   const requestBody = {
     email: normalizedId,
-    password: password.trim(),
+    password: (password ?? '').trim(),
     staff_id: normalizedId,
     identifier: normalizedId,
     tscNumber: normalizedId,
