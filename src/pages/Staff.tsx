@@ -203,54 +203,61 @@ const Staff = () => {
   }, []);
 
   // Unified Staff Master List (Combines Directory & Pre-Registered)
-  const masterStaffList = useMemo(() => {
-    const directoryMap = new Map<string, StaffMember>();
-    staffDirectory.forEach(s => directoryMap.set(s.id_no, s));
-
-    const combined: StaffMember[] = [...staffDirectory];
-
-    // Include pre-registered staff who are not yet in the main directory
-    preRegLedger.forEach((p: any) => {
-      if (!directoryMap.has(p.nationalId)) {
-        combined.push({
-                  id: p.id,
-                  id_no: p.nationalId,
-                  staff_id: p.staffId,
-                  ref: p.id,
-                  access_key: p.tempAccessCode,
-                  tsc_no: p.tscNumber,
-                  full_name: p.fullName,
-                  role: p.systemRole.replace('_', ' ').toUpperCase(),
-                  subjects: p.assignedSubjects || [p.department || 'General'],
-                  phone: p.phone,
-                  email: p.email,
-                  status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
-                  joined: p.datePreRegistered,
-                  department: p.department || 'School Administration'
-                });
-      }
-    });
-
-    return combined;
-  }, [staffDirectory, preRegLedger]);
+    const masterStaffList = useMemo(() => {
+      const directoryMap = new Map<string, StaffMember>();
+      staffDirectory.forEach(s => directoryMap.set(s.id_no, s));
+  
+      const combined: StaffMember[] = [...staffDirectory];
+  
+      // Include pre-registered staff who are not yet in the main directory
+      preRegLedger.forEach((p: any) => {
+        if (!directoryMap.has(p.nationalId)) {
+          combined.push({
+                    id: p.id,
+                    id_no: p.nationalId,
+                    staff_id: p.staffId,
+                    ref: p.id,
+                    access_key: p.tempAccessCode,
+                    tsc_no: p.tscNumber,
+                    full_name: p.fullName,
+                    // Safe null-checking: systemRole may be undefined for legacy
+                    // ledger entries. Use the empty-string fallback so .replace()
+                    // never crashes with TypeError.
+                    role: (p?.systemRole || '').replace('_', ' ').toUpperCase(),
+                    subjects: p.assignedSubjects || [p.department || 'General'],
+                    phone: (p?.phone || ''),
+                    email: (p?.email || ''),
+                    status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
+                    joined: p.datePreRegistered,
+                    department: p.department || 'School Administration'
+                  });
+        }
+      });
+  
+      return combined;
+    }, [staffDirectory, preRegLedger]);
 
   // Filter staff by Search Term & Status Tabs
-  const filteredStaff = useMemo(() => {
-    return masterStaffList.filter(s => {
-      const matchesSearch = 
-        s.full_name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-        s.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.id_no.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.role.toLowerCase().includes(searchTerm.toLowerCase());
-
-      const matchesStatus = 
-        statusFilter === 'All' || 
-        s.status === statusFilter;
-
-      return matchesSearch && matchesStatus;
-    });
-  }, [masterStaffList, searchTerm, statusFilter]);
+    // Safe null-checking: every property is coerced through `String(... || '')`
+    // so undefined / null values can never throw a TypeError when their
+    // string methods (toLowerCase / includes) are called.
+    const filteredStaff = useMemo(() => {
+      const needle = String(searchTerm || '').toLowerCase();
+      return masterStaffList.filter(s => {
+        const matchesSearch =
+          String(s.full_name || '').toLowerCase().includes(needle) ||
+          String(s.id || '').toLowerCase().includes(needle) ||
+          String(s.id_no || '').toLowerCase().includes(needle) ||
+          String(s.email || '').toLowerCase().includes(needle) ||
+          String(s.role || '').toLowerCase().includes(needle);
+  
+        const matchesStatus =
+          statusFilter === 'All' ||
+          s.status === statusFilter;
+  
+        return matchesSearch && matchesStatus;
+      });
+    }, [masterStaffList, searchTerm, statusFilter]);
 
   // Single source of truth for "is this staff record pending activation?".
   // Matches every spelling/variant seen in the system so the banner count,
@@ -747,16 +754,16 @@ const Staff = () => {
                           />
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                              {member.full_name.split(' ').map(n => n[0]).join('')}
-                            </div>
-                            <div className="flex flex-col min-w-0">
-                              <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
-                              <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
-                            </div>
-                          </div>
-                        </td>
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                      {String(member.full_name || '').split(' ').filter(n => n[0]).map(n => n[0]).join('')}
+                                                    </div>
+                                                    <div className="flex flex-col min-w-0">
+                                                      <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
+                                                      <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
+                                                    </div>
+                                                  </div>
+                                                </td>
 
                         <td className="px-8 py-5 min-w-[180px]">
                           <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
