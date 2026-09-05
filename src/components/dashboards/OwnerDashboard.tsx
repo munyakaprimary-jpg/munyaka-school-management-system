@@ -45,6 +45,7 @@ import {
   Wifi,
   WifiOff,
   Server,
+  Monitor,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -59,6 +60,7 @@ import {
 } from '@/services/licenseService';
 import { downloadCSV } from '@/utils/downloadHelper';
 import { showSuccess, showError } from '@/utils/toast';
+import { DeviceMonitoringDashboard } from '@/components/device-monitoring/DeviceMonitoringDashboard';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -1468,8 +1470,31 @@ const OwnerDashboard: React.FC = () => {
                               </div>
                             </CardContent>
                           </Card>
-                  
-                        {/* ── 3. System Billing & Subscription Audit ───────────────────────── */}
+                    
+                          {/* ── 3. Teacher Device Monitoring & Control ─────────────────────────── */}
+                          <div className="space-y-4">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <h2 className="text-lg font-black text-slate-900">
+                                  Teacher Device Monitoring
+                                </h2>
+                                <p className="text-xs text-slate-500 mt-0.5">
+                                  Live telemetry, session status, and app lock controls for teacher mobile devices
+                                </p>
+                              </div>
+                              <Badge
+                                variant="outline"
+                                className="rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-widest border-0 bg-indigo-50 text-indigo-700 gap-1.5"
+                              >
+                                <Monitor size={10} />
+                                Device Control
+                              </Badge>
+                            </div>
+                    
+                            <DeviceMonitoringDashboard />
+                          </div>
+                    
+                          {/* ── 4. System Billing & Subscription Audit ───────────────────────── */}
       <Card className="border-none shadow-sm rounded-2xl bg-white overflow-hidden">
         <CardHeader className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 pb-4">
           <div>
