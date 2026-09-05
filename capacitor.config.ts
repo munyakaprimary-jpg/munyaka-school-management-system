@@ -11,9 +11,9 @@ const config: CapacitorConfig = {
      * network). Required because the on-device LAN backend only serves HTTP.
      */
     cleartext: true,
-    /** Use https:// scheme for secure local asset requests without cross-origin
-     * issues on Android. */
-    androidScheme: 'https'
+    /** Use http:// scheme so http://localhost and http://10.0.2.2 resolve
+     * without TLS — pairs with cleartext: true. */
+    androidScheme: 'http'
   }
 };
 
