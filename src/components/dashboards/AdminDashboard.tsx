@@ -590,23 +590,23 @@ const AdminDashboard: React.FC = () => {
       ALL_GRADES.forEach((g) => { variantsByCanonical[g] = new Set(); });
   
       learners.forEach((l: any) => {
-              if (!isActive(l)) return;
-              const raw = String(l.grade || '').trim();
-              if (!raw) return;
-              const canonical = formatGradeName(raw);
-              if (variantsByCanonical[canonical]) {
-                variantsByCanonical[canonical].add(raw);
-              }
-            });
-        
-            // Render in strict canonical sequence — never skip empty classes.
-            return ALL_GRADES.map((grade) => {
-              const variants = variantsByCanonical[grade];
-              const classLearners = learners.filter((l: any) => {
-                if (!isActive(l)) return false;
-                const raw = String(l.grade || '').trim();
-                return variants.has(raw);
-              });
+        if (!isActive(l)) return;
+        const raw = (l.grade || '').trim();
+        if (!raw) return;
+        const canonical = formatGradeName(raw);
+        if (variantsByCanonical[canonical]) {
+          variantsByCanonical[canonical].add(raw);
+        }
+      });
+  
+      // Render in strict canonical sequence — never skip empty classes.
+      return ALL_GRADES.map((grade) => {
+        const variants = variantsByCanonical[grade];
+        const classLearners = learners.filter((l: any) => {
+          if (!isActive(l)) return false;
+          const raw = (l.grade || '').trim();
+          return variants.has(raw);
+        });
         const boys = classLearners.filter(isBoy).length;
         const girls = classLearners.filter(isGirl).length;
         return { name: grade, boys, girls, total: boys + girls };

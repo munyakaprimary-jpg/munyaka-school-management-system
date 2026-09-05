@@ -52,27 +52,27 @@ const ensurePort = (value: string, port: number): string => {
 const readConfiguredUrl = (): string | null => {
   // 1. Build-time override (Vite)
   const envUrl = (import.meta as any)?.env?.VITE_API_URL as string | undefined;
-  if (envUrl && String(envUrl || '').trim()) return ensurePort(String(envUrl || '').trim(), DEFAULT_PORT);
+  if (envUrl && envUrl.trim()) return ensurePort(envUrl.trim(), DEFAULT_PORT);
 
   if (typeof window === 'undefined' || !window.localStorage) return null;
 
   // 2. Primary runtime key — used by LANServerConfig page
   try {
     const stored = localStorage.getItem('lan_server_url');
-    if (stored && String(stored || '').trim()) return ensurePort(String(stored || '').trim(), DEFAULT_PORT);
+    if (stored && stored.trim()) return ensurePort(stored.trim(), DEFAULT_PORT);
   } catch { /* private mode */ }
 
   // 3. Alternative runtime key — raw IP/hostname; port is auto-appended
   try {
     const stored = localStorage.getItem('server_ip');
-    if (stored && String(stored || '').trim()) return ensurePort(String(stored || '').trim(), DEFAULT_PORT);
+    if (stored && stored.trim()) return ensurePort(stored.trim(), DEFAULT_PORT);
   } catch { /* private mode */ }
 
   // 4. Legacy runtime key — auto-migrate to the primary key on first read
   try {
     const legacy = localStorage.getItem('munyaka_lan_server_url');
-    if (legacy && String(legacy || '').trim()) {
-      const migrated = ensurePort(String(legacy || '').trim(), DEFAULT_PORT);
+    if (legacy && legacy.trim()) {
+      const migrated = ensurePort(legacy.trim(), DEFAULT_PORT);
       try {
         localStorage.setItem('lan_server_url', migrated);
         localStorage.removeItem('munyaka_lan_server_url');

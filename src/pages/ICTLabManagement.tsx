@@ -641,10 +641,10 @@ const ICTLabManagement = () => {
   };
 
   const handleVerifyDeleteAuth = async () => {
-    if (!String(deleteAuthPassword || '').trim()) {
-          setDeleteAuthError("Admin password is required");
-          return;
-        }
+    if (!deleteAuthPassword.trim()) {
+      setDeleteAuthError("Admin password is required");
+      return;
+    }
 
     setIsDeleteVerifying(true);
     setDeleteAuthError("");

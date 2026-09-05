@@ -328,21 +328,21 @@ const MarkedScriptsList: React.FC = () => {
   }, [submissions]);
 
   const filtered = useMemo(() => {
-      const q = String(searchTerm || '').trim().toLowerCase();
+    const q = searchTerm.trim().toLowerCase();
     return submissions.filter((s) => {
       if (examFilter !== "all" && s.examId !== examFilter) return false;
       if (
-              gradeFilter !== "all" &&
-                            String(s.grade || '').trim().toLowerCase() !== String(gradeFilter || '').trim().toLowerCase()
-            ) {
-              return false;
-            }
-            if (
-              streamFilter !== "all" &&
-                            String(s.stream || '').trim().toLowerCase() !== String(streamFilter || '').trim().toLowerCase()
-            ) {
-              return false;
-            }
+        gradeFilter !== "all" &&
+        (s.grade || "").trim().toLowerCase() !== gradeFilter.trim().toLowerCase()
+      ) {
+        return false;
+      }
+      if (
+        streamFilter !== "all" &&
+        (s.stream || "").trim().toLowerCase() !== streamFilter.trim().toLowerCase()
+      ) {
+        return false;
+      }
       if (!q) return true;
       return (
         (s.studentName || "").toLowerCase().includes(q) ||

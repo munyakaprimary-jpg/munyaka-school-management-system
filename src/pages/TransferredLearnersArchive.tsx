@@ -126,20 +126,20 @@ const TransferredLearnersArchive: React.FC = () => {
       ).filter((r) => !activeIds.has(r.id));
 
       // Apply search as well
-      const final = String(searchQuery || '').trim()
-              ? filtered.filter((r) =>
-                  [
-                    r.name,
-                    r.admNo,
-                    r.certificateNumber,
-                    r.destinationSchool,
-                    r.guardian,
-                  ]
-                    .filter(Boolean)
-                    .some((f) =>
-                      f.toLowerCase().includes(String(searchQuery || '').trim().toLowerCase())
-                    )
-                )
+      const final = searchQuery.trim()
+        ? filtered.filter((r) =>
+            [
+              r.name,
+              r.admNo,
+              r.certificateNumber,
+              r.destinationSchool,
+              r.guardian,
+            ]
+              .filter(Boolean)
+              .some((f) =>
+                f.toLowerCase().includes(searchQuery.trim().toLowerCase())
+              )
+          )
         : filtered;
       setRecords(final);
     };
@@ -178,7 +178,7 @@ const TransferredLearnersArchive: React.FC = () => {
     try {
       // 1. Re-verify the admin password on submit (in case it changed mid-modal)
       const storedPass = getActiveAdminPassword();
-      if (String(adminPassword || '').trim() !== storedPass) {
+      if (adminPassword.trim() !== storedPass) {
         return {
           success: false,
           error: 'Admin password is incorrect. Authorization denied.',
@@ -923,17 +923,17 @@ const RestoreAuthorizationModal: React.FC<RestoreAuthorizationModalProps> = ({
 
   const grades = gradesConfig.grades.length > 0 ? gradesConfig.grades : [record.grade];
 
-  const isReady = String(adminPassword || '').trim().length > 0 && targetGrade && targetStream;
+  const isReady = adminPassword.trim().length > 0 && targetGrade && targetStream;
 
   // ── Handlers ────────────────────────────────────────────────────────
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!String(adminPassword || '').trim()) {
-          setError('Please enter the admin password to authorise this restore.');
-          return;
-        }
+    if (!adminPassword.trim()) {
+      setError('Please enter the admin password to authorise this restore.');
+      return;
+    }
     if (!targetGrade) {
       setError('Please select a target grade.');
       return;

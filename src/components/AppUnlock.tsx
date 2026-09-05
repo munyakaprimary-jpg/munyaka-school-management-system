@@ -86,12 +86,12 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
 
   const handleActivate = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(key || '').trim()) { setError('Please enter your activation key.'); return; }
-        setIsActivating(true);
-        setError('');
-        await new Promise(r => setTimeout(r, 800));
-        try {
-          const license = activateLicense(String(key || '').trim());
+    if (!key.trim()) { setError('Please enter your activation key.'); return; }
+    setIsActivating(true);
+    setError('');
+    await new Promise(r => setTimeout(r, 800));
+    try {
+      const license = activateLicense(key.trim());
       showSuccess(`License activated! Valid until ${formatDate(license.expiresAt)}`);
       onSuccess();
     } catch (err) {
@@ -211,7 +211,7 @@ const ActivationForm = ({ onSuccess, onCancel }: ActivationFormProps) => {
             Cancel
           </Button>
         )}
-        <Button type="submit" disabled={isActivating || !String(key || '').trim()}
+        <Button type="submit" disabled={isActivating || !key.trim()}
           className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700 font-black h-12 shadow-xl shadow-indigo-100 text-white gap-2">
           {isActivating ? <Loader2 className="animate-spin" size={18} /> : <Unlock size={18} />}
           {isActivating ? 'Activating...' : 'Activate License'}

@@ -178,25 +178,28 @@ const Assessments = () => {
     }
 
     // Sort according to cbcOrder with normalization
-        const sorted = [...rawGrades].sort((a, b) => {
-          const itemA = typeof a === 'object' && a !== null ? a.name : a;
-          const itemB = typeof b === 'object' && b !== null ? b.name : b;
-    
-          const nameA = String(itemA ?? '').trim();
-          const nameB = String(itemB ?? '').trim();
-    
-          const indexA = cbcOrder.indexOf(nameA);
-          const indexB = cbcOrder.indexOf(nameB);
-    
-          if (indexA !== -1 && indexB !== -1) return indexA - indexB;
-          if (indexA !== -1) return -1;
-          if (indexB !== -1) return 1;
-          return nameA.localeCompare(nameB);
-        });
+    const sorted = [...rawGrades].sort((a, b) => {
+      const nameA = (a.name || a).toString().trim().toLowerCase();
+      const nameB = (b.name || b).toString().trim().toLowerCase();
+      
+      const indexA = cbcOrder.indexOf(nameA);
+      const indexB = cbcOrder.indexOf(nameB);
+
+      if (indexA !== -1 && indexB !== -1) return indexA - indexB;
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+
+      // Extract numeric value if any for ascending order fallback
+      const numA = parseInt(nameA.replace(/[^0-9]/g, ""), 10) || 999;
+      const numB = parseInt(nameB.replace(/[^0-9]/g, ""), 10) || 999;
+      if (numA !== numB) return numA - numB;
+
+      return nameA.localeCompare(nameB);
+    });
 
     // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
     return sorted.map((g: any) => {
-      const str = String(g.name || g || '').trim();
+      const str = (g.name || g).toString().trim();
       // If it starts with grade in lowercase, capitalize Grade
       if (str.toLowerCase().startsWith("grade ")) {
         const numPart = str.substring(6);
@@ -340,7 +343,7 @@ const Assessments = () => {
   // FILTERED STUDENTS - DECLARED BEFORE USE EFFECT
   // ============================================
   const filteredStudents = useMemo(() => {
-    const selectedGradeNormalized = String(currentGrade || '').trim().toLowerCase();
+    const selectedGradeNormalized = currentGrade.trim().toLowerCase();
 
     return studentsList.filter(s => {
       // 3. Debugging / Fallback Data Retrieval checking student.grade, student.gradeLevel, and student.class
@@ -355,16 +358,16 @@ const Assessments = () => {
       // 2. Stream Filtering Flexibility (if Stream selection is set to "All Streams" or empty, ignore stream matching)
       const rawStudentStream = s.stream || s.classStream || s.section || "";
       const studentStreamNormalized = String(rawStudentStream).trim().toLowerCase();
-      const selectedStreamNormalized = String(stream || '').trim().toLowerCase();
+      const selectedStreamNormalized = stream.trim().toLowerCase();
 
       const isAllStreams = !stream || selectedStreamNormalized === "all streams" || selectedStreamNormalized === "";
       const matchesStream = isAllStreams || !studentStreamNormalized || studentStreamNormalized === selectedStreamNormalized;
 
-      const matchesSearch = !String(searchTerm || '').trim() ||
-              (s.name && s.name.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.admissionNumber && s.admissionNumber.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.assessment && s.assessment.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim())) ||
-              (s.id && s.id.toLowerCase().includes(String(searchTerm || '').toLowerCase().trim()));
+      const matchesSearch = !searchTerm.trim() ||
+        (s.name && s.name.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.admissionNumber && s.admissionNumber.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.assessment && s.assessment.toLowerCase().includes(searchTerm.toLowerCase().trim())) ||
+        (s.id && s.id.toLowerCase().includes(searchTerm.toLowerCase().trim()));
 
       return matchesGrade && matchesStream && matchesSearch;
     });

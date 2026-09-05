@@ -584,10 +584,10 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         selectedStream === ALL_STREAMS_VALUE ||
         normaliseGrade(g.stream) === normaliseGrade(selectedStream);
       const matchesSearch =
-              !String(searchTerm || '').trim() ||
-              g.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              g.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              g.classId.toLowerCase().includes(searchTerm.toLowerCase());
+        !searchTerm.trim() ||
+        g.studentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        g.studentId.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        g.classId.toLowerCase().includes(searchTerm.toLowerCase());
       return matchesExam && matchesGrade && matchesStream && matchesSearch;
     });
   }, [studentGrades, searchTerm, selectedGrade, selectedStream, selectedExamId]);
@@ -797,9 +797,9 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                     </p>
                     <p className="text-xs text-slate-500 mt-0.5">
                       {q.points} pts
-                                            {String(studentAnswer || '').trim()
-                                              ? ` · ${String(studentAnswer || '').trim().split(/\s+/).length} words`
-                                              : " · No answer"}
+                      {studentAnswer.trim()
+                        ? ` · ${studentAnswer.trim().split(/\s+/).length} words`
+                        : " · No answer"}
                     </p>
                   </div>
                 </div>
@@ -843,13 +843,13 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
                           Student's Response
                         </Label>
                       </div>
-                      {String(studentAnswer || '').trim() ? (
-                                              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                                                {studentAnswer}
-                                              </p>
-                                            ) : (
-                                              <p className="text-sm text-slate-400 italic">No answer submitted.</p>
-                                            )}
+                      {studentAnswer.trim() ? (
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {studentAnswer}
+                        </p>
+                      ) : (
+                        <p className="text-sm text-slate-400 italic">No answer submitted.</p>
+                      )}
                     </div>
 
                     {/* Model answer */}

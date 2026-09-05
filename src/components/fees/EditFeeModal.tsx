@@ -61,10 +61,10 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!String(adminPassword || '').trim()) {
-          setAuthError("Admin password is required");
-          return;
-        }
+    if (!adminPassword.trim()) {
+      setAuthError("Admin password is required");
+      return;
+    }
 
     const termFeeNum = parseFloat(termFee);
     const feePaidNum = parseFloat(feePaid);
@@ -116,9 +116,9 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
             feePaid: feePaidNum,
             balance,
             status,
-            reason: String(reason || '').trim(),
-                        updatedAt: new Date().toISOString()
-                      };
+            reason: reason.trim(),
+            updatedAt: new Date().toISOString()
+          };
     
           try {
             localStorage.setItem(storageKey, JSON.stringify(feeData));
@@ -154,7 +154,7 @@ const EditFeeModal: React.FC<EditFeeModalProps> = ({
 
     // Success - call the onSave callback with all updated parameters
     if (student) {
-      onSave(student.id, termFeeNum, feePaidNum, String(reason || '').trim());
+      onSave(student.id, termFeeNum, feePaidNum, reason.trim());
     }
 
     setIsSaving(false);

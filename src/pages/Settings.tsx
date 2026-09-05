@@ -296,18 +296,18 @@ const Settings = () => {
 
   // Login handlers
   const handleLogin = async (role: AdminRole, password: string) => {
-    if (!String(password || '').trim()) {
-          setAuthError("Please enter your password.");
-          return;
-        }
-    
-        setIsVerifyingAuth(true);
-        setAuthError("");
-    
-        await new Promise(r => setTimeout(r, 600));
-    
-        const storedPassword = getCredential();
-        const isValid = String(password || '').trim() === storedPassword || String(password || '').trim() === DEFAULT_ADMIN_PASSWORD;
+    if (!password.trim()) {
+      setAuthError("Please enter your password.");
+      return;
+    }
+
+    setIsVerifyingAuth(true);
+    setAuthError("");
+
+    await new Promise(r => setTimeout(r, 600));
+
+    const storedPassword = getCredential();
+    const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
 
     if (isValid) {
           const roleInfo = {
@@ -365,7 +365,7 @@ const Settings = () => {
 
     // Normalise the entered "current" password and the stored value so
     // a stray whitespace / newline never blocks a legitimate update.
-    const enteredCurrent = String(passwordForm.currentPassword || '').trim();
+    const enteredCurrent = passwordForm.currentPassword.trim();
     if (!enteredCurrent) {
       showError("Please enter your current password.");
       return;
@@ -728,21 +728,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-              
-                            <Button
-                              type="submit"
-                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
-                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-                            >
-                              {isVerifyingAuth ? (
-                                <>
-                                  <Loader2 className="animate-spin" size={20} />
-                                  Verifying...
-                                </>
-                              ) : (
-                                <>
-                                  <Unlock size={20} />
-                                  Authorize Access
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Verifying...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Authorize Access
                   </>
                 )}
               </Button>
@@ -868,21 +868,21 @@ const Settings = () => {
                   </button>
                 </div>
               </div>
-              
-                            <Button
-                              type="submit"
-                              disabled={isVerifyingAuth || !String(authPassword || '').trim()}
-                              className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
-                            >
-                              {isVerifyingAuth ? (
-                                <>
-                                  <Loader2 className="animate-spin" size={20} />
-                                  Switching...
-                                </>
-                              ) : (
-                                <>
-                                  <Unlock size={20} />
-                                  Switch Role
+
+              <Button 
+                type="submit" 
+                disabled={isVerifyingAuth || !authPassword.trim()}
+                className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
+              >
+                {isVerifyingAuth ? (
+                  <>
+                    <Loader2 className="animate-spin" size={20} />
+                    Switching...
+                  </>
+                ) : (
+                  <>
+                    <Unlock size={20} />
+                    Switch Role
                   </>
                 )}
               </Button>

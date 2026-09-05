@@ -290,7 +290,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const handlePublishNotice = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(noticeTitle || '').trim() || !String(noticeContent || '').trim()) return;
+    if (!noticeTitle.trim() || !noticeContent.trim()) return;
     
     let badgeColor = 'bg-indigo-50 text-indigo-600 border-indigo-200';
     if (noticePriority === 'Urgent Alert') badgeColor = 'bg-rose-50 text-rose-600 border-rose-200';
@@ -309,9 +309,9 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
     const newNotice: Notice = {
       id: Date.now().toString(),
-      title: String(noticeTitle || '').trim(),
-            content: String(noticeContent || '').trim(),
-            description: String(noticeContent || '').trim().substring(0, 120) + '...',
+      title: noticeTitle.trim(),
+      content: noticeContent.trim(),
+      description: noticeContent.trim().substring(0, 120) + '...',
       date: 'Just now',
       category: noticePriority as any,
       pinned: noticePriority === 'Urgent Alert',
@@ -334,14 +334,14 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
 
   const handleAddEvent = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!String(eventTitle || '').trim() || !eventDate || !eventTime) return;
-    
-        const newEvent: SchoolEvent = {
-          id: Date.now(),
-          title: String(eventTitle || '').trim(),
-          date: eventDate,
-          time: eventTime,
-          location: String(eventLocation || '').trim() || 'School Grounds',
+    if (!eventTitle.trim() || !eventDate || !eventTime) return;
+
+    const newEvent: SchoolEvent = {
+      id: Date.now(),
+      title: eventTitle.trim(),
+      date: eventDate,
+      time: eventTime,
+      location: eventLocation.trim() || 'School Grounds',
       type: eventType
     };
 

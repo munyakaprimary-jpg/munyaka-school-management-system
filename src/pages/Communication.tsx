@@ -41,7 +41,7 @@ const Communication = () => {
   };
 
   const handleSend = () => {
-    if (!String(subject || '').trim() || !String(body || '').trim()) return;
+    if (!subject.trim() || !body.trim()) return;
     const newMsg = { id: Date.now().toString(), recipient, subject, type: msgType, date: "Just now", status: msgType === 'SMS' ? "Delivered" : "Opened" };
     setMessagesList([newMsg, ...messagesList]);
     setIsOpen(false);

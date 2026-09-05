@@ -124,7 +124,7 @@ export function matchesQuery<T extends { title: string; description: string }>(
   item: T,
   query: string,
 ): boolean {
-  const q = String(query || '').trim().toLowerCase();
+  const q = query.trim().toLowerCase();
   if (!q) return true;
   return (
     item.title.toLowerCase().includes(q) ||
@@ -187,7 +187,7 @@ async function searchYouTube(
   apiKey: string,
   signal?: AbortSignal,
 ): Promise<YouTubeVideo[]> {
-  if (!String(query || '').trim()) return [];
+  if (!query.trim()) return [];
 
   // We hit two endpoints in parallel: search (videos.list snippets) and
   // videos.list (durations). videos.list doesn't accept search terms so
@@ -325,12 +325,12 @@ export function useVideoSearch(
     }
 
     setYoutubeLoading(true);
-        setYoutubeError(null);
-    
-        debounceRef.current = setTimeout(() => {
-          const controller = new AbortController();
-          abortRef.current = controller;
-          searchYouTube(String(searchQuery || '').trim(), youtubeApiKey!, controller.signal)
+    setYoutubeError(null);
+
+    debounceRef.current = setTimeout(() => {
+      const controller = new AbortController();
+      abortRef.current = controller;
+      searchYouTube(searchQuery, youtubeApiKey!, controller.signal)
         .then((results) => {
           setYoutubeResults(results);
           setYoutubeError(null);
@@ -386,8 +386,8 @@ export function useVideoSearch(
   }, [sourceTab, searchQuery]);
 
   // ── "No results" heuristic ─────────────────────────────────────────
-    const noResults =
-      String(searchQuery || '').trim().length > 0 || activeCategory !== ALL_CATEGORY
+  const noResults =
+    searchQuery.trim().length > 0 || activeCategory !== ALL_CATEGORY
       ? sourceTab === "library"
         ? filteredLibrary.length === 0
         : !youtubeLoading && filteredYouTube.length === 0 && !youtubeError

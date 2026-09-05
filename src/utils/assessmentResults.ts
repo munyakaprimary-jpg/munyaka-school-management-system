@@ -113,7 +113,7 @@ export function buildAndSaveResult(
       if (question?.correctOptionId === resp.selectedOptionId) {
         totalScore += question.points;
       }
-    } else if (resp.answerText && String(resp.answerText || '').trim() !== "") {
+    } else if (resp.answerText && resp.answerText.trim() !== "") {
       // Structured — award full marks for any non-empty answer
       const question = assessment.questions.find((q) => q.id === resp.questionId);
       if (question) totalScore += question.points;

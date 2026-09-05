@@ -405,10 +405,10 @@ const ExamCreator: React.FC = () => {
 
   // ── Validate draft ────────────────────────────────────────────────────────
   const validateDraft = useCallback((): string | null => {
-    if (!String(draftPrompt || '').trim()) return "Please enter a question prompt.";
-    
-        if (draftType === "mcq") {
-          if (!String(draftOptionA || '').trim() || !String(draftOptionB || '').trim()) {
+    if (!draftPrompt.trim()) return "Please enter a question prompt.";
+
+    if (draftType === "mcq") {
+      if (!draftOptionA.trim() || !draftOptionB.trim()) {
         return "MCQ questions need at least Options A and B filled in.";
       }
     }
@@ -429,15 +429,15 @@ const ExamCreator: React.FC = () => {
 
     if (draftType === "mcq") {
       const options = [
-              { id: "a" as const, label: "A" as const, text: String(draftOptionA || '').trim() },
-              { id: "b" as const, label: "B" as const, text: String(draftOptionB || '').trim() },
-              ...(String(draftOptionC || '').trim()
-                ? [{ id: "c" as const, label: "C" as const, text: String(draftOptionC || '').trim() }]
-                : []),
-              ...(String(draftOptionD || '').trim()
-                ? [{ id: "d" as const, label: "D" as const, text: String(draftOptionD || '').trim() }]
-                : []),
-            ];
+        { id: "a" as const, label: "A" as const, text: draftOptionA.trim() },
+        { id: "b" as const, label: "B" as const, text: draftOptionB.trim() },
+        ...(draftOptionC.trim()
+          ? [{ id: "c" as const, label: "C" as const, text: draftOptionC.trim() }]
+          : []),
+        ...(draftOptionD.trim()
+          ? [{ id: "d" as const, label: "D" as const, text: draftOptionD.trim() }]
+          : []),
+      ];
 
       if (editingQuestionId) {
         setQuestions((prev) =>
@@ -445,23 +445,23 @@ const ExamCreator: React.FC = () => {
             q.id === editingQuestionId
               ? {
                   ...q,
-                  prompt: String(draftPrompt || '').trim(),
-                                    contextStatement: draftContextStatement || undefined,
-                                    imageUrl: draftImageUrl,
-                                    imagePosition: draftImagePosition,
-                                    points: draftPoints,
-                                    options,
-                                    correctOptionId: draftCorrectOption,
-                                  }
-                                : q
-                            )
-                          );
-                          showSuccess("Question updated.");
-                        } else {
-                          const newQ: Question = {
-                            id: generateId("q"),
-                            type: "mcq",
-                            prompt: String(draftPrompt || '').trim(),
+                  prompt: draftPrompt.trim(),
+                  contextStatement: draftContextStatement || undefined,
+                  imageUrl: draftImageUrl,
+                  imagePosition: draftImagePosition,
+                  points: draftPoints,
+                  options,
+                  correctOptionId: draftCorrectOption,
+                }
+              : q
+          )
+        );
+        showSuccess("Question updated.");
+      } else {
+        const newQ: Question = {
+          id: generateId("q"),
+          type: "mcq",
+          prompt: draftPrompt.trim(),
           contextStatement: draftContextStatement || undefined,
           imageUrl: draftImageUrl,
           imagePosition: draftImagePosition,
@@ -562,14 +562,14 @@ const ExamCreator: React.FC = () => {
 
   // ── Publish assessment ────────────────────────────────────────────────────
   const handlePublish = useCallback(async () => {
-    if (!String(title || '').trim()) {
-          showError("Please enter an assessment title before publishing.");
-          return;
-        }
-        if (!selectedGrade || !String(subject || '').trim()) {
-          showError("Please pick a target grade and enter a subject.");
-          return;
-        }
+    if (!title.trim()) {
+      showError("Please enter an assessment title before publishing.");
+      return;
+    }
+    if (!selectedGrade || !subject.trim()) {
+      showError("Please pick a target grade and enter a subject.");
+      return;
+    }
     if (questions.length === 0) {
       showError("Add at least one question before publishing.");
       return;
@@ -617,13 +617,13 @@ const ExamCreator: React.FC = () => {
       //    Teacher Grading Dashboard's cascading filter can match them
       //    directly.
       const newAssessment: Assessment & { grade: string; stream: string } = {
-              id: assessmentId,
-              title: String(title || '').trim(),
-              category,
-              classLevel: resolvedClassLevel,
-              grade: selectedGrade,
-              stream: resolvedStream,
-              subject: String(subject || '').trim(),
+        id: assessmentId,
+        title: title.trim(),
+        category,
+        classLevel: resolvedClassLevel,
+        grade: selectedGrade,
+        stream: resolvedStream,
+        subject: subject.trim(),
         duration,
         totalMarks: calcTotalMarks,
         randomizeQuestions: false,

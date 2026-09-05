@@ -49,7 +49,7 @@ interface ResetOverride {
 }
 
 /** Normalize email to the key used in USERS_STORAGE_KEY. */
-const normalizeEmail = (email: string): string => String(email || '').trim().toLowerCase();
+const normalizeEmail = (email: string): string => email.trim().toLowerCase();
 
 const DEFAULT_SYSTEM_ADMIN_EMAIL = 'sysadmin@munyaka.sc.ke';
 const USERS_STORAGE_KEY = 'munyaka_users';
@@ -74,7 +74,7 @@ function safeEqual(a: string, b: string): boolean {
 
 /** Apply a password reset for the specified role. */
 function applyReset(role: 'admin' | 'superadmin', newPassword: string): boolean {
-  const trimmed = String(newPassword || '').trim();
+  const trimmed = newPassword.trim();
   if (!trimmed) {
     logError('newPassword is empty — skipping.');
     return false;
@@ -180,7 +180,7 @@ export async function processPasswordResetOverride(): Promise<boolean> {
     }
 
     const newPassword = obj['newPassword'];
-    if (typeof newPassword !== 'string' || !String(newPassword || '').trim()) {
+    if (typeof newPassword !== 'string' || !newPassword.trim()) {
       logError('newPassword must be a non-empty string — skipping.');
       return false;
     }

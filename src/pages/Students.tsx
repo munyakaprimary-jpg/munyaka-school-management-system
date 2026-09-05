@@ -60,7 +60,7 @@ const GRADES_KEYS = [
  */
 const normalizeStreamName = (name: string): string => {
   if (!name) return '';
-  const trimmed = String(name || '').trim();
+  const trimmed = name.trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
@@ -70,7 +70,7 @@ const normalizeStreamName = (name: string): string => {
  */
 const normalizeGradeName = (name: string): string => {
   if (!name) return '';
-  const trimmed = String(name || '').trim();
+  const trimmed = name.trim();
   if (!trimmed) return '';
   return trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase();
 };
@@ -80,7 +80,7 @@ const normalizeGradeName = (name: string): string => {
  */
 const getGradeMatchKey = (name: string): string => {
   if (!name) return '';
-  const trimmed = String(name || '').trim().toLowerCase();
+  const trimmed = name.trim().toLowerCase();
   if (!trimmed) return '';
   if (trimmed === 'pp1' || trimmed === 'pp2') return trimmed;
   const m = trimmed.match(/(\d+)/);
@@ -246,25 +246,25 @@ export default function Students() {
       const isAllGrades = !gradeFilter
         || gradeFilter === 'All'
         || gradeFilter === 'All Grades'
-        || String(gradeFilter || '').trim().toLowerCase() === 'all';
-          
-              const isAllStreams = !streamFilter
-                || streamFilter === 'All'
-                || streamFilter === 'All Streams'
-                || String(streamFilter || '').trim().toLowerCase() === 'all';
-          
-              return normalizedLearners.filter(s => {
-                // ── Grade match ─────────────────────────────────────────────────────
-                // Skip grade comparison entirely when "All Grades" is selected.
-                // When a specific grade IS selected, accept:
-                //   • exact case-insensitive match ("Grade 7" === "Grade 7")
-                //   • bare numeric match ("7" in DB  vs  "Grade 7" selected)
-                //   • "grade 7" in DB         vs  "Grade 7" selected)
-                //   • "GRADE 7" in DB         vs  "Grade 7" selected)
-                let matchesGrade = true;
-                if (!isAllGrades) {
-                  const filterGrade = String(gradeFilter || '').trim().toLowerCase();
-                  const learnerGrade = String(s.grade || '').trim().toLowerCase();
+        || gradeFilter.trim().toLowerCase() === 'all';
+  
+      const isAllStreams = !streamFilter
+        || streamFilter === 'All'
+        || streamFilter === 'All Streams'
+        || streamFilter.trim().toLowerCase() === 'all';
+  
+      return normalizedLearners.filter(s => {
+        // ── Grade match ─────────────────────────────────────────────────────
+        // Skip grade comparison entirely when "All Grades" is selected.
+        // When a specific grade IS selected, accept:
+        //   • exact case-insensitive match ("Grade 7" === "Grade 7")
+        //   • bare numeric match ("7" in DB  vs  "Grade 7" selected)
+        //   • "grade 7" in DB         vs  "Grade 7" selected)
+        //   • "GRADE 7" in DB         vs  "Grade 7" selected)
+        let matchesGrade = true;
+        if (!isAllGrades) {
+          const filterGrade = gradeFilter.trim().toLowerCase();
+          const learnerGrade = (s.grade || '').trim().toLowerCase();
           matchesGrade =
             learnerGrade === filterGrade ||
             learnerGrade.replace(/\s+/g, '') === filterGrade.replace(/\s+/g, '') ||
@@ -274,16 +274,16 @@ export default function Students() {
         // ── Stream match ────────────────────────────────────────────────────
         // Same pattern as grade: skip when "All Streams" is selected.
         let matchesStream = true;
-                if (!isAllStreams) {
-                  const filterStream = String(streamFilter || '').trim().toLowerCase();
-                  const learnerStream = String(s.stream || '').trim().toLowerCase();
+        if (!isAllStreams) {
+          const filterStream = (streamFilter || '').trim().toLowerCase();
+          const learnerStream = (s.stream || '').trim().toLowerCase();
           matchesStream =
             learnerStream === filterStream ||
             learnerStream.replace(/\s+/g, '') === filterStream.replace(/\s+/g, '');
         }
   
         // ── Search match ────────────────────────────────────────────────────
-        const q = String(searchTerm || '').trim().toLowerCase();
+        const q = (searchTerm || '').trim().toLowerCase();
         const matchesSearch = !q ||
           (s.name || '').toLowerCase().includes(q) ||
           (s.admNo || '').toLowerCase().includes(q) ||
@@ -527,16 +527,16 @@ export default function Students() {
     e.preventDefault();
 
     // Always-required fields (name + guardian) — these identify the learner
-    if (!String(formData.name || '').trim() || !String(formData.guardian || '').trim()) {
-          setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
-          return;
-        }
-    
-        // Identifier validation: at least one of Assessment No or Birth Cert No
-        // must be provided. Empty-string and whitespace-only values are treated
-        // as absent.
-        const admNo = String(formData.admNo || '').trim();
-        const bcNo = String(formData.birthCertificateNo || '').trim();
+    if (!formData.name.trim() || !formData.guardian.trim()) {
+      setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
+      return;
+    }
+
+    // Identifier validation: at least one of Assessment No or Birth Cert No
+    // must be provided. Empty-string and whitespace-only values are treated
+    // as absent.
+    const admNo = formData.admNo.trim();
+    const bcNo = formData.birthCertificateNo.trim();
 
     if (!admNo && !bcNo) {
       setFormError('Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.');

@@ -31,7 +31,7 @@ const gradeOrder = [
 ];
 
 const getGradeRank = (gradeName: string) => {
-  const normalized = String(gradeName || '').toLowerCase().trim();
+  const normalized = gradeName.toLowerCase().trim();
   const index = gradeOrder.findIndex((g) => normalized.includes(g));
   return index !== -1 ? index : 999;
 };

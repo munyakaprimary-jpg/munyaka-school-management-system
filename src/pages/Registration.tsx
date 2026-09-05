@@ -33,15 +33,15 @@ const Registration = () => {
     e.preventDefault();
 
     // ─── Required fields: full name and guardian ────────────────────
-    if (!String(formData.fullName || '').trim() || !String(formData.guardian || '').trim()) {
-          setFormError('Please enter the learner\'s Full Name and Parent / Guardian name.');
-          return;
-        }
-    
-        // ─── Identifier validation: at least one of Assessment No or ─────
-        // Birth Certificate No must be supplied.
-        const admNo = String(formData.admNo || '').trim();
-        const bcNo = String(formData.birthCertificateNo || '').trim();
+    if (!formData.fullName.trim() || !formData.guardian.trim()) {
+      setFormError('Please enter the learner\'s Full Name and Parent / Guardian name.');
+      return;
+    }
+
+    // ─── Identifier validation: at least one of Assessment No or ─────
+    // Birth Certificate No must be supplied.
+    const admNo = formData.admNo.trim();
+    const bcNo = formData.birthCertificateNo.trim();
 
     if (!admNo && !bcNo) {
       setFormError('Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.');
@@ -65,19 +65,19 @@ const Registration = () => {
         id: Date.now().toString(),
         admNo,
         birthCertificateNo: bcNo || undefined,
-        name: String(formData.fullName || '').trim(),
-                grade: formData.grade,
-                stream: formData.stream,
-                gender: formData.gender,
-                guardian: String(formData.guardian || '').trim(),
-                phone: String(formData.phone || '').trim(),
-                address: String(formData.address || '').trim(),
+        name: formData.fullName.trim(),
+        grade: formData.grade,
+        stream: formData.stream,
+        gender: formData.gender,
+        guardian: formData.guardian.trim(),
+        phone: formData.phone.trim(),
+        address: formData.address.trim(),
       });
       localStorage.setItem('school_learners_data', JSON.stringify(learners));
       notifyDataChanged('school_learners_data');
       logActivity({
         type: 'student_registration',
-        title: `New student registered: ${String(formData.fullName || '').trim()} (${formData.gender}, ${formData.grade})`,
+        title: `New student registered: ${formData.fullName.trim()} (${formData.gender}, ${formData.grade})`,
       });
     } catch (err) {
       console.error('Failed to persist learner:', err);

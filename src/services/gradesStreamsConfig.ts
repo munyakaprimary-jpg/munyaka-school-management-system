@@ -29,19 +29,19 @@ const STORAGE_KEYS = [
 
 function normaliseGradeName(name: string): string {
   if (!name) return '';
-  const t = String(name || '').trim();
+  const t = name.trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
 }
 
 function normaliseStreamName(name: string): string {
   if (!name) return '';
-  const t = String(name || '').trim();
+  const t = name.trim();
   return t ? t.charAt(0).toUpperCase() + t.slice(1).toLowerCase() : '';
 }
 
 function getGradeMatchKey(name: string): string {
   if (!name) return '';
-  const t = String(name || '').trim().toLowerCase();
+  const t = name.trim().toLowerCase();
   if (t === 'pp1' || t === 'pp2') return t;
   const m = t.match(/(\d+)/);
   if (m) return `grade${m[1]}`;

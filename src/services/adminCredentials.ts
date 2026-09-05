@@ -30,9 +30,9 @@ export const getActiveAdminPassword = (): string => {
   try {
     const raw = localStorage.getItem(MUNYAKA_ADMIN_PASSWORD);
     if (raw != null) {
-          const trimmed = String(raw || '').trim();
-          if (trimmed.length > 0) return trimmed;
-        }
+      const trimmed = raw.trim();
+      if (trimmed.length > 0) return trimmed;
+    }
   } catch {
     /* localStorage unavailable */
   }
@@ -46,7 +46,7 @@ export const getActiveAdminPassword = (): string => {
  */
 export const saveAdminPassword = (newPin: string | null | undefined): boolean => {
   if (newPin == null) return false;
-  const trimmed = String(newPin || '').trim();
+  const trimmed = newPin.trim();
   if (!trimmed) return false;
   try {
     localStorage.setItem(MUNYAKA_ADMIN_PASSWORD, trimmed);

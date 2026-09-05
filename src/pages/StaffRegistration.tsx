@@ -50,7 +50,7 @@ const BACKEND_URL_KEY = 'lan_server_url';
 const getConfiguredBackendUrl = (): string | null => {
   try {
     const url = localStorage.getItem(BACKEND_URL_KEY);
-    return url && String(url).trim() ? String(url).trim() : null;
+    return url && url.trim() ? url.trim() : null;
   } catch {
     return null;
   }
