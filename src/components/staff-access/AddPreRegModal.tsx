@@ -121,7 +121,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.fullName.trim() || !formData.email.trim()) return;
+    if (!(formData.fullName ?? '').trim() || !(formData.email ?? '').trim()) return;
     onSubmit(formData);
   };
 

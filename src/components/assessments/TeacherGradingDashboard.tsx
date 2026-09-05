@@ -638,8 +638,8 @@ const TeacherGradingDashboard: React.FC<TeacherGradingDashboardProps> = ({
         markedSubs.some(
           (s) =>
             s.examId === exam.id &&
-            (s.stream || "").trim().toLowerCase() ===
-              (selectedStream || "").trim().toLowerCase()
+            (s.stream ?? "").trim().toLowerCase() ===
+              (selectedStream ?? "").trim().toLowerCase()
         );
 
       return matchesGrade && matchesStream;

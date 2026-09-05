@@ -56,7 +56,7 @@ const ATTENDANCE_RECORDS_KEY = 'munyaka_attendance_records';
 const STUDENTS_KEY = 'school_learners_data';
 
 const normalizeStream = (s: string): string =>
-  s.trim().toLowerCase().replace(/\s+/g, '');
+  (s ?? '').trim().toLowerCase().replace(/\s+/g, '');
 
 const streamMatchesFilter = (registerStream: string, filterStream: string): boolean => {
   if (filterStream === 'all') return true;
@@ -305,7 +305,7 @@ export const useLiveStreamAttendance = (
 
   // ── Apply filter state ─────────────────────────────────────────────────────
   const filteredStreams = useMemo(() => {
-    const q = searchTerm.trim().toLowerCase();
+    const q = (searchTerm ?? '').trim().toLowerCase();
     return rawStreams.filter((s) => {
       const gradeMatch = filterGrade === 'all' || s.grade === filterGrade;
       const streamMatch = filterStream === 'all' ||

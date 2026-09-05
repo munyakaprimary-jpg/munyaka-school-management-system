@@ -179,27 +179,21 @@ const Assessments = () => {
 
     // Sort according to cbcOrder with normalization
     const sorted = [...rawGrades].sort((a, b) => {
-      const nameA = (a?.name || a ?? '').toString().trim().toLowerCase();
-      const nameB = (b?.name || b ?? '').toString().trim().toLowerCase();
-      
+      const nameA = String(typeof a === 'object' && a !== null ? (a.name || '') : (a || '')).trim().toLowerCase();
+      const nameB = String(typeof b === 'object' && b !== null ? (b.name || '') : (b || '')).trim().toLowerCase();
+
       const indexA = cbcOrder.indexOf(nameA);
       const indexB = cbcOrder.indexOf(nameB);
 
       if (indexA !== -1 && indexB !== -1) return indexA - indexB;
       if (indexA !== -1) return -1;
       if (indexB !== -1) return 1;
-
-      // Extract numeric value if any for ascending order fallback
-      const numA = parseInt(nameA.replace(/[^0-9]/g, ""), 10) || 999;
-      const numB = parseInt(nameB.replace(/[^0-9]/g, ""), 10) || 999;
-      if (numA !== numB) return numA - numB;
-
       return nameA.localeCompare(nameB);
     });
 
     // Display Standardization: Format nicely (e.g. capitalize "grade 5" -> "Grade 5")
     return sorted.map((g: any) => {
-      const str = (g?.name || g ?? '').toString().trim();
+      const str = String(typeof g === 'object' && g !== null ? (g.name || '') : (g || '')).trim();
       // If it starts with grade in lowercase, capitalize Grade
       if (str.toLowerCase().startsWith("grade ")) {
         const numPart = str.substring(6);

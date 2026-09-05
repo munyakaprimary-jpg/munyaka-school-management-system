@@ -72,7 +72,7 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
   if (!open || !day || slotIndex === null) return null;
 
   const handleSave = () => {
-    const finalSubject = isCustom ? customSubject.trim() : subject;
+    const finalSubject = isCustom ? (customSubject ?? '').trim() : subject;
     if (!finalSubject) return;
     const preset = PRESET_SUBJECTS.find(p => p.name === finalSubject);
     onSave(finalSubject, preset?.color);
@@ -206,7 +206,7 @@ const LessonDrawer: React.FC<LessonDrawerProps> = ({
           {!isReadOnly && (
             <Button
               onClick={handleSave}
-              disabled={isCustom ? !customSubject.trim() : !subject}
+              disabled={isCustom ? !(customSubject ?? '').trim() : !subject}
               className="flex-1 rounded-xl bg-indigo-600 hover:bg-indigo-700"
             >
               Save Lesson

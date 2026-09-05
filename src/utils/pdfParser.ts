@@ -268,7 +268,7 @@ export async function parseAssessmentPDF(file: File): Promise<PDFParseResult> {
       // Split on paragraph breaks and 4+ spaces (column separators in KNEC papers)
       const paragraphBlocks = pageText
         .split(/\n{2,}|\s{4,}/)
-        .map((l) => l.trim())
+        .map((l) => (l ?? '').trim())
         .filter((l) => l.length > 0);
 
       for (const block of paragraphBlocks) {

@@ -60,7 +60,7 @@ export const getTeacherTeachingLoad = (
         if (!m) return false;
         if (userId && m.id === userId) return true;
         if (userEmail) {
-          const email = (m.email || '').trim().toLowerCase();
+          const email = (m.email ?? '').trim().toLowerCase();
           if (email === (userEmail ?? '').trim().toLowerCase()) return true;
         }
         return false;

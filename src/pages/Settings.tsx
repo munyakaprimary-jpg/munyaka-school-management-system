@@ -296,7 +296,7 @@ const Settings = () => {
 
   // Login handlers
   const handleLogin = async (role: AdminRole, password: string) => {
-    if (!password.trim()) {
+    if (!(password ?? '').trim()) {
       setAuthError("Please enter your password.");
       return;
     }
@@ -307,7 +307,7 @@ const Settings = () => {
     await new Promise(r => setTimeout(r, 600));
 
     const storedPassword = getCredential();
-    const isValid = password.trim() === storedPassword || password.trim() === DEFAULT_ADMIN_PASSWORD;
+    const isValid = (password ?? '').trim() === storedPassword || (password ?? '').trim() === DEFAULT_ADMIN_PASSWORD;
 
     if (isValid) {
           const roleInfo = {
@@ -365,7 +365,7 @@ const Settings = () => {
 
     // Normalise the entered "current" password and the stored value so
     // a stray whitespace / newline never blocks a legitimate update.
-    const enteredCurrent = passwordForm.currentPassword.trim();
+    const enteredCurrent = (passwordForm.currentPassword ?? '').trim();
     if (!enteredCurrent) {
       showError("Please enter your current password.");
       return;
@@ -729,9 +729,9 @@ const Settings = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                disabled={isVerifyingAuth || !authPassword.trim()}
+              <Button
+                type="submit"
+                disabled={isVerifyingAuth || !(authPassword ?? '').trim()}
                 className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
               >
                 {isVerifyingAuth ? (
@@ -869,9 +869,9 @@ const Settings = () => {
                 </div>
               </div>
 
-              <Button 
-                type="submit" 
-                disabled={isVerifyingAuth || !authPassword.trim()}
+              <Button
+                type="submit"
+                disabled={isVerifyingAuth || !(authPassword ?? '').trim()}
                 className="w-full h-12 md:h-14 rounded-xl md:rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-black text-base shadow-xl shadow-indigo-100 gap-2 transition-all active:scale-95"
               >
                 {isVerifyingAuth ? (

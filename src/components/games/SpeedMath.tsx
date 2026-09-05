@@ -129,7 +129,7 @@ const SpeedMath: React.FC<SpeedMathProps> = ({ onBack }) => {
 
   const submit = useCallback(() => {
     if (!isRunning || isOver) return;
-    const trimmed = input.trim();
+    const trimmed = (input ?? '').trim();
     if (trimmed === "") return;
     const guess = parseInt(trimmed, 10);
     if (Number.isNaN(guess)) return;

@@ -642,20 +642,20 @@ const PaymentManagement = () => {
   };
 
   const handleSaveConfig = async () => {
-    if (!configForm.name.trim()) {
+    if (!(configForm.name ?? '').trim()) {
       setConfigError('Please enter a subscription plan name.');
       return;
     }
-    if (!configForm.plan.trim()) {
+    if (!(configForm.plan ?? '').trim()) {
       setConfigError('Please enter the plan name (e.g., Enterprise Plan).');
       return;
     }
-    if (!configForm.amount.trim() || isNaN(parseFloat(configForm.amount))) {
+    if (!(configForm.amount ?? '').trim() || isNaN(parseFloat(configForm.amount))) {
       setConfigError('Please enter a valid amount.');
       return;
     }
     const seatsRaw = typeof configForm.seats === 'string' ? configForm.seats : String(configForm.seats ?? '');
-    if (seatsRaw.trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
+    if ((seatsRaw ?? '').trim() && (isNaN(parseInt(seatsRaw)) || parseInt(seatsRaw) < 0)) {
       setConfigError('Institutional seats must be a non-negative number.');
       return;
     }
@@ -663,13 +663,13 @@ const PaymentManagement = () => {
     setIsSaving(true);
     await new Promise(r => setTimeout(r, 700));
 
-    const nextBillingDate = configForm.nextBilling.trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
-    const seats = seatsRaw.trim() ? parseInt(seatsRaw) : 0;
+    const nextBillingDate = (configForm.nextBilling ?? '').trim() || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const seats = (seatsRaw ?? '').trim() ? parseInt(seatsRaw) : 0;
 
     const configToSave = {
-      name: configForm.name.trim(),
-      plan: configForm.plan.trim(),
-      amount: configForm.amount.trim(),
+      name: (configForm.name ?? '').trim(),
+      plan: (configForm.plan ?? '').trim(),
+      amount: (configForm.amount ?? '').trim(),
       currency: configForm.currency,
       nextBilling: nextBillingDate,
       seats,
@@ -682,9 +682,9 @@ const PaymentManagement = () => {
       idx === 0
         ? {
             ...s,
-            name: configForm.name.trim(),
-            plan: configForm.plan.trim(),
-            amount: configForm.amount.trim(),
+            name: (configForm.name ?? '').trim(),
+            plan: (configForm.plan ?? '').trim(),
+            amount: (configForm.amount ?? '').trim(),
             currency: configForm.currency,
             nextBilling: nextBillingDate,
             seats,
@@ -743,8 +743,8 @@ const PaymentManagement = () => {
       mode: lpForm.mode,
       amount: lpForm.amount.trim(),
       currency: lpForm.currency,
-      reference: lpForm.reference.trim(),
-      note: lpForm.note.trim(),
+      reference: (lpForm.reference ?? '').trim(),
+      note: (lpForm.note ?? '').trim(),
       loggedAt: new Date().toISOString().slice(0, 10),
     };
     const next = [entry, ...localPayments];
@@ -762,19 +762,19 @@ const PaymentManagement = () => {
       date: today_iso,
       amount: parseFloat(lpForm.amount),
       method: modeLabel,
-      ref: lpForm.reference.trim(),
+      ref: (lpForm.reference ?? '').trim(),
       category: 'Subscription',
       invoiceId: invoiceNumber,
-      description: lpForm.note?.trim()
-        ? `${subscriptions[0]?.name ?? 'Subscription'} - ${lpForm.note.trim()}`
+      description: (lpForm.note ?? '').trim()
+        ? `${subscriptions[0]?.name ?? 'Subscription'} - ${(lpForm.note ?? '').trim()}`
         : `${subscriptions[0]?.name ?? 'Subscription'} Payment`,
       currency: lpForm.currency,
       status: 'paid',
       paymentMethod: lpForm.mode,
       paymentDetails: lpForm.mode === 'mpesa'
-        ? { receiptNumber: lpForm.reference.trim() }
+        ? { receiptNumber: (lpForm.reference ?? '').trim() }
         : lpForm.mode === 'bank'
-        ? { bankName: 'Bank', branch: '', transactionRef: lpForm.reference.trim() }
+        ? { bankName: 'Bank', branch: '', transactionRef: (lpForm.reference ?? '').trim() }
         : { receivedBy: user?.name ?? 'Cashier' },
       paidAt: today_iso,
     };
@@ -930,7 +930,7 @@ const PaymentManagement = () => {
       showError('Please enter a valid amount.');
       return;
     }
-    if (!mpForm.transactionRef.trim()) {
+    if (!(mpForm.transactionRef ?? '').trim()) {
       showError('Please enter the transaction reference / receipt number.');
       return;
     }
@@ -941,13 +941,13 @@ const PaymentManagement = () => {
     const subName = sub?.name ?? 'Subscription';
 
     const issued = issueLicense({
-      issuedTo: mpForm.issuedTo.trim() || 'Munyaka School',
-      deviceId: mpForm.deviceId.trim() || 'OFFICE-001',
+      issuedTo: (mpForm.issuedTo ?? '').trim() || 'Munyaka School',
+      deviceId: (mpForm.deviceId ?? '').trim() || 'OFFICE-001',
       validityDays: 30,
       payment: {
         method: mpForm.paymentMode,
-        refNumber: mpForm.transactionRef.trim(),
-        amount: mpForm.amount.trim(),
+        refNumber: (mpForm.transactionRef ?? '').trim(),
+        amount: (mpForm.amount ?? '').trim(),
         bankName: mpForm.paymentMode === 'bank' ? 'Owner Bank' : undefined,
       },
       notes: `Monthly payment for ${subName}`,
@@ -975,9 +975,9 @@ const PaymentManagement = () => {
       subscriptionId: mpForm.subscriptionId,
       subscriptionName: subName,
       paymentMode: mpForm.paymentMode,
-      amount: mpForm.amount.trim(),
+      amount: (mpForm.amount ?? '').trim(),
       currency: mpForm.currency,
-      transactionRef: mpForm.transactionRef.trim(),
+      transactionRef: (mpForm.transactionRef ?? '').trim(),
       paidAt: today.toISOString().slice(0, 10),
       activationCode: issued.activationKey,
       codeStatus: 'active',
@@ -1009,7 +1009,7 @@ const PaymentManagement = () => {
       date: today.toISOString().slice(0, 10),
       amount: parseFloat(mpForm.amount),
       method: paymentMethodLabel,
-      ref: mpForm.transactionRef.trim(),
+      ref: (mpForm.transactionRef ?? '').trim(),
       category: 'Subscription',
       invoiceId: invoiceNumber,
       description: `${subName} - ${term} ${year}`,
@@ -1017,9 +1017,9 @@ const PaymentManagement = () => {
       status: 'paid',
       paymentMethod: mpForm.paymentMode,
       paymentDetails: mpForm.paymentMode === 'mpesa'
-        ? { receiptNumber: mpForm.transactionRef.trim() }
+        ? { receiptNumber: (mpForm.transactionRef ?? '').trim() }
         : mpForm.paymentMode === 'bank'
-        ? { bankName: 'Owner Bank', branch: '', transactionRef: mpForm.transactionRef.trim() }
+        ? { bankName: 'Owner Bank', branch: '', transactionRef: (mpForm.transactionRef ?? '').trim() }
         : { receivedBy: user?.name ?? 'Cashier' },
       paidAt: today.toISOString().slice(0, 10),
     };
@@ -2559,7 +2559,7 @@ const PaymentManagement = () => {
             </Button>
             <Button
               onClick={confirmDeleteLicense}
-              disabled={isDeleting || !deletePassword.trim()}
+              disabled={isDeleting || !(deletePassword ?? '').trim()}
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
             >
               {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
@@ -2606,7 +2606,7 @@ const PaymentManagement = () => {
                 if (deletePasswordError) setDeletePasswordError('');
               }}
               onKeyDown={e => {
-                if (e.key === 'Enter' && deletePassword.trim()) confirmDeleteLicense();
+                if (e.key === 'Enter' && (deletePassword ?? '').trim()) confirmDeleteLicense();
               }}
               placeholder="Enter your owner password"
               className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"
@@ -2647,7 +2647,7 @@ const PaymentManagement = () => {
             </Button>
             <Button
               onClick={confirmBulkDelete}
-              disabled={isBulkDeleting || !bulkDeletePassword.trim()}
+              disabled={isBulkDeleting || !(bulkDeletePassword ?? '').trim()}
               className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold h-12 px-6 gap-2 shadow-lg shadow-red-100"
             >
               {isBulkDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
@@ -2677,7 +2677,7 @@ const PaymentManagement = () => {
                 if (bulkDeletePasswordError) setBulkDeletePasswordError('');
               }}
               onKeyDown={e => {
-                if (e.key === 'Enter' && bulkDeletePassword.trim()) confirmBulkDelete();
+                if (e.key === 'Enter' && (bulkDeletePassword ?? '').trim()) confirmBulkDelete();
               }}
               placeholder="Enter your owner password"
               className="h-12 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold"

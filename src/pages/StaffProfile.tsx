@@ -191,11 +191,11 @@ const StaffProfile = () => {
     const handleSelfChangePassword = async () => {
       setPwError('');
   
-      if (!oldPassword.trim()) {
+      if (!(oldPassword ?? '').trim()) {
         setPwError('Please enter your current password.');
         return;
       }
-      if (!newPassword.trim()) {
+      if (!(newPassword ?? '').trim()) {
         setPwError('Please enter a new password.');
         return;
       }

@@ -606,7 +606,7 @@ const Login: React.FC = () => {
                       </div>
                       <Button
                         type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
+                        disabled={isAdminVerifying || !(adminPassword ?? '').trim()}
                         className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-indigo-600 hover:bg-indigo-700 shadow-indigo-100"
                       >
                         {isAdminVerifying ? (
@@ -711,7 +711,7 @@ const Login: React.FC = () => {
                       </div>
                       <Button
                         type="submit"
-                        disabled={isAdminVerifying || !adminPassword.trim()}
+                        disabled={isAdminVerifying || !(adminPassword ?? '').trim()}
                         className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-amber-600 hover:bg-amber-700 shadow-amber-100"
                       >
                         {isAdminVerifying ? (
@@ -791,7 +791,7 @@ const Login: React.FC = () => {
 
                     <Button
                       type="submit"
-                      disabled={isStaffVerifying || !staffId.trim() || !staffPassword.trim()}
+                      disabled={isStaffVerifying || !(staffId ?? '').trim() || !(staffPassword ?? '').trim()}
                       className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-emerald-600 hover:bg-emerald-700 shadow-emerald-100"
                     >
                       {isStaffVerifying ? (

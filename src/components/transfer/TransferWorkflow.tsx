@@ -505,12 +505,12 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
   const handleExecuteTransfer = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!transferData.destinationSchool?.trim()) {
+    if (!(transferData.destinationSchool ?? '').trim()) {
       showError("Please enter the destination school or reason for transfer.");
       return;
     }
 
-    if (!adminPassword.trim()) {
+    if (!(adminPassword ?? '').trim()) {
       const msg = "Admin password is required to authorize this transfer.";
       setAuthError(msg);
       showError(msg);
@@ -801,7 +801,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
           <Button
             type="submit"
             form="transfer-form"
-            disabled={isExecuting || !adminPassword.trim()}
+            disabled={isExecuting || !(adminPassword ?? '').trim()}
             className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold px-8 shadow-lg shadow-indigo-100 gap-2 text-white"
           >
             {isExecuting ? <Loader2 className="animate-spin mr-2" size={16} /> : <UserCheck size={16} />}
@@ -1015,7 +1015,7 @@ const TransferWorkflow: React.FC<TransferWorkflowProps> = ({
                   type={showPassword ? "text" : "password"}
                   value={adminPassword}
                   onChange={(e) => { 
-                    const trimmed = e.target.value.trim();
+                    const trimmed = (e.target.value ?? '').trim();
                     setAdminPassword(trimmed);
                     if (authError) setAuthError("");
                   }}

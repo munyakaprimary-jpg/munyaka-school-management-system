@@ -40,11 +40,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) {
+    if (!(title ?? '').trim()) {
       setErrorMsg("Book title is required.");
       return;
     }
-    if (!author.trim()) {
+    if (!(author ?? '').trim()) {
       setErrorMsg("Author name is required.");
       return;
     }
@@ -54,11 +54,11 @@ export const RegisterBookModal: React.FC<RegisterBookModalProps> = ({
       return;
     }
 
-    const generatedIsbn = isbn.trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
+    const generatedIsbn = (isbn ?? '').trim() || `978-${Math.floor(1000 + Math.random() * 9000)}`;
 
     onRegisterBook({
-      title: title.trim(),
-      author: author.trim(),
+      title: (title ?? '').trim(),
+      author: (author ?? '').trim(),
       isbn: generatedIsbn,
       category,
       stock: numStock,

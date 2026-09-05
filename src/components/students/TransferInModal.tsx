@@ -197,21 +197,21 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   };
 
   const validate = (): string => {
-    if (!form.fullName.trim()) return 'Please enter the learner\u2019s Full Name.';
+    if (!(form.fullName ?? '').trim()) return 'Please enter the learner\u2019s Full Name.';
     if (!form.gender) return 'Please select a Gender.';
     if (!form.dob) return 'Please provide the Date of Birth.';
-    if (!form.admissionNumber.trim()) return 'Admission Number is required.';
+    if (!(form.admissionNumber ?? '').trim()) return 'Admission Number is required.';
 
     // Assessment-number format check (school convention: starts with a letter).
-    if (!/^[A-Za-z]/.test(form.admissionNumber.trim())) {
+    if (!/^[A-Za-z]/.test((form.admissionNumber ?? '').trim())) {
       return 'Admission Number must start with an alphabetic letter (e.g. A827361).';
     }
 
-    if (!form.previousSchool.trim())
+    if (!(form.previousSchool ?? '').trim())
       return 'Please record the Previous School Name for audit purposes.';
-    if (!form.clearanceRef.trim())
+    if (!(form.clearanceRef ?? '').trim())
       return 'Please capture the Previous School Clearance / Transfer Reference Number.';
-    if (!form.reason.trim()) return 'Please provide a Reason for Transfer.';
+    if (!(form.reason ?? '').trim()) return 'Please provide a Reason for Transfer.';
     if (!form.dateAdmitted) return 'Please select the Date Admitted.';
     if (!form.grade) return 'Please select a Grade Level.';
     if (!form.stream) return 'Please select a Stream.';
@@ -234,7 +234,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     }
 
     // Reject duplicate admission numbers — they MUST be unique.
-    const admNo = form.admissionNumber.trim();
+    const admNo = (form.admissionNumber ?? '').trim();
     if (existing.some((l) => (l.admNo || '').toLowerCase() === admNo.toLowerCase())) {
       showError(
         `Admission Number ${admNo} already exists. Please choose another.`,
@@ -248,7 +248,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
         Math.random() * 1000,
       )}`,
       admNo,
-      name: form.fullName.trim(),
+      name: (form.fullName ?? '').trim(),
       grade: form.grade,
       stream: form.stream,
       gender: form.gender,
@@ -257,10 +257,10 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       status: 'Active',
       dob: form.dob,
       dateOfAdmission: form.dateAdmitted,
-      nemisUpi: form.nemisUpi.trim() || admNo,
-      previousSchool: form.previousSchool.trim(),
-      previousSchoolClearanceRef: form.clearanceRef.trim(),
-      transferReason: form.reason.trim(),
+      nemisUpi: (form.nemisUpi ?? '').trim() || admNo,
+      previousSchool: (form.previousSchool ?? '').trim(),
+      previousSchoolClearanceRef: (form.clearanceRef ?? '').trim(),
+      transferReason: (form.reason ?? '').trim(),
     };
 
     // 1. Insert into the active learner directory.

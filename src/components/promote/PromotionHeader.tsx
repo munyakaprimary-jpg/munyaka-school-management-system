@@ -25,7 +25,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!password.trim()) {
+    if (!(password ?? '').trim()) {
       setAuthError('Please enter the admin password');
       return;
     }
@@ -134,7 +134,7 @@ const PromotionHeader: React.FC<PromotionHeaderProps> = ({ onPromoteClick }) => 
                 </Button>
                 <Button
                   type="submit"
-                  disabled={isVerifying || !password.trim()}
+                  disabled={isVerifying || !(password ?? '').trim()}
                   className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
                 >
                   {isVerifying ? (

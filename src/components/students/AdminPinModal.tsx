@@ -67,7 +67,7 @@ export default function AdminPinModal({
   };
 
   const validateAndSubmit = (code: string) => {
-    if (!code || code.trim().length === 0) {
+    if (!code || !(code ?? '').trim().length === 0) {
       setError("Please enter your admin password to continue.");
       return;
     }
