@@ -9,7 +9,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileDown, FileText, Save, Loader2, Search, CheckCircle2, ClipboardCheck, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { STUDENTS } from "@/lib/mock-data";
 import { DEFAULT_EXAM_TYPES } from "@/lib/assessment-constants";
 import { useFileDownload } from "@/utils/fileDownloader";
 import { MUNYAKA_HEADERS } from "@/utils/downloadHelper";
@@ -117,17 +116,28 @@ const Assessments = () => {
   const defaultTierSubjects = useMemo(() => TIER_SUBJECTS[tierKey] || TIER_SUBJECTS["lower-primary"], [tierKey]);
 
   // 1. Retrieve Students Directory from localStorage with school_learners_data (unified Learner Management state) and fallbacks
+  // Cold start: returns [] when localStorage is empty — no mock data.
   const studentsList = useMemo(() => {
     try {
-      const stored = localStorage.getItem("school_learners_data") || localStorage.getItem("munyaka_students") || localStorage.getItem("students_directory") || localStorage.getItem("learners") || localStorage.getItem("munyaka_students_master");
+      const stored =
+        localStorage.getItem("school_learners_data") ||
+        localStorage.getItem("munyaka_students") ||
+        localStorage.getItem("students_directory") ||
+        localStorage.getItem("learners") ||
+        localStorage.getItem("munyaka_students_master");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        if (Array.isArray(parsed)) {
+          // Filter to plain objects so downstream .name / .grade accesses don't crash.
+          return parsed.filter((item): item is Record<string, unknown> =>
+            item !== null && typeof item === "object"
+          );
+        }
       }
     } catch (e) {
       console.error("Error loading school_learners_data / learners:", e);
     }
-    return STUDENTS;
+    return [];
   }, []);
 
   // 2. Grades & Streams from munyaka_grades with fallback protection

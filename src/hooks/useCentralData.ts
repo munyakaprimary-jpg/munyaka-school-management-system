@@ -131,21 +131,23 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 // ─── Core data selectors (memoized) ───────────────────────────────────────────
 
 const getLearners = (): Learner[] => {
-  const fromLS = safeParse<Learner[]>(localStorage.getItem(STORAGE_KEYS.LEARNERS));
+  const fromLS = safeParse<Learner[]>(localStorage?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
-    return INITIAL_SEED_DATA.students as unknown as Learner[];
+  const seedStudents = INITIAL_SEED_DATA?.students;
+  if (Array.isArray(seedStudents) && seedStudents.length > 0) {
+    return seedStudents as unknown as Learner[];
   }
   return [];
 };
 
 const getTeachers = (): Teacher[] => {
-  const fromLS = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS));
+  const fromLS = safeParse<Teacher[]>(localStorage?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  const fromFallback = safeParse<Teacher[]>(localStorage.getItem(STORAGE_KEYS.TEACHERS_FALLBACK));
+  const fromFallback = safeParse<Teacher[]>(localStorage?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
-  if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-    return INITIAL_SEED_DATA.staff as unknown as Teacher[];
+  const seedStaff = INITIAL_SEED_DATA?.staff;
+  if (Array.isArray(seedStaff) && seedStaff.length > 0) {
+    return seedStaff as unknown as Teacher[];
   }
   return [];
 };
@@ -167,8 +169,9 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
 
   // 2. Per-grade v2 registers
   const logs: AttendanceLog[] = [];
-  Object.keys(localStorage).forEach((key) => {
-    if (!key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
+  if (typeof localStorage === 'undefined') return logs;
+  Object.keys(localStorage ?? {}).forEach((key) => {
+    if (!key?.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) return;
     try {
       const raw = localStorage.getItem(key);
       if (!raw) return;
@@ -177,10 +180,10 @@ const getTodayAttendanceLogs = (): AttendanceLog[] => {
       Object.values(record).forEach((entry: any) => {
         if (!entry || typeof entry !== 'object') return;
         if (entry.date && entry.date !== todayStr) return;
-        const morning = entry.morning?.status || entry.morning;
-        const afternoon = entry.afternoon?.status || entry.afternoon;
+        const morning = entry?.morning?.status ?? entry?.morning;
+        const afternoon = entry?.afternoon?.status ?? entry?.afternoon;
         if (morning === 'P' || afternoon === 'P') {
-          logs.push({ studentId: entry.studentId || '', date: todayStr, status: 'present' });
+          logs.push({ studentId: entry?.studentId || '', date: todayStr, status: 'present' });
         }
       });
     } catch { /* ignore */ }
@@ -226,13 +229,14 @@ const computeStats = (): CentralDataStats => {
     });
     const totalTeachers = allTeacherRecords.length;
     const activeTeacherCount = allTeacherRecords.filter((t) => {
-      const status = String(t.status || '').toLowerCase();
+      const status = String(t?.status || '').toLowerCase();
       if (status) {
         // Server returns 'Active' or 'Pre-Registered' — use it directly
         return status === 'active';
       }
       // Legacy local record: fall back to is_active boolean
-      return t.is_active !== 0 && t.is_active !== false && t.is_active !== '0';
+      const flag = t?.is_active;
+      return flag !== 0 && flag !== false && flag !== '0';
     }).length;
 
     // ── Today's attendance — deduplicated by studentId ──
@@ -257,8 +261,8 @@ const computeStats = (): CentralDataStats => {
     let fallbackStudents = 0;
     let fallbackTeachers = 0;
     try {
-      if (Array.isArray(INITIAL_SEED_DATA.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
-      if (Array.isArray(INITIAL_SEED_DATA.staff))    fallbackTeachers  = INITIAL_SEED_DATA.staff.length;
+      if (Array.isArray(INITIAL_SEED_DATA?.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
+      if (Array.isArray(INITIAL_SEED_DATA?.staff))    fallbackTeachers  = INITIAL_SEED_DATA?.staff?.length ?? 0;
     } catch { /* ignore */ }
     return {
       totalStudents: fallbackStudents,

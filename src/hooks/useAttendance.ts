@@ -1,6 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
 import { format } from "date-fns";
-import { STUDENTS, GRADES_DATA } from '@/lib/mock-data';
 import { downloadCSV } from '@/utils/downloadHelper';
 
 interface SessionAttendance {
@@ -71,7 +70,7 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     } catch (e) {
       console.error("Error loading munyaka_grades:", e);
     }
-    return GRADES_DATA;
+    return [];
   });
 
   // Listen for storage changes
@@ -186,13 +185,17 @@ export const useAttendance = (options: UseAttendanceOptions = {}) => {
     const storedStudents = localStorage.getItem(STUDENTS_KEY);
     if (storedStudents) {
       try {
-        students = JSON.parse(storedStudents);
+        const parsed = JSON.parse(storedStudents);
+        // Filter to plain objects so downstream .name / .grade accesses don't crash.
+        students = Array.isArray(parsed)
+          ? parsed.filter((item): item is Record<string, unknown> => item !== null && typeof item === "object")
+          : [];
       } catch (e) {
         console.error("Error parsing students:", e);
-        students = STUDENTS;
+        students = [];
       }
     } else {
-      students = STUDENTS;
+      students = [];
     }
 
     // Normalize the selected class for comparison

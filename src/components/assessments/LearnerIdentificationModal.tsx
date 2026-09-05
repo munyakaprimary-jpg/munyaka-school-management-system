@@ -299,10 +299,18 @@ export const LearnerIdentificationModal: React.FC<LearnerIdentificationModalProp
       for (const key of allKeys) {
         const raw = localStorage.getItem(key);
         if (raw) {
-          const parsed: RegisteredStudent[] = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            loadedStudents = parsed;
-            break;
+          try {
+            const parsed = JSON.parse(raw);
+            // Filter to plain objects so downstream .status / .name accesses don't crash.
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              loadedStudents = parsed.filter(
+                (item): item is Record<string, unknown> =>
+                  item !== null && typeof item === "object"
+              );
+              break;
+            }
+          } catch {
+            // Continue to next key
           }
         }
       }
