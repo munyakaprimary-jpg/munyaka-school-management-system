@@ -12,13 +12,14 @@ import {
   Clock, 
   GraduationCap, 
   FileText, 
-  Settings, 
-  Save, 
+  Settings,
+  Save,
   RotateCcw,
   CheckCircle2,
   Wifi,
   WifiOff
 } from 'lucide-react';
+import { showSuccess } from '@/utils/toast';
 
 export interface AssessmentConfig {
   examTitle: string;
@@ -119,12 +120,17 @@ export default function AssessmentSettings() {
 
   const handleSave = () => {
     setSaveStatus('saving');
-    
-    // Simulate a brief save delay for UX
+
+    // Persist to localStorage with try/catch + success toast
     setTimeout(() => {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
-      setSaveStatus('saved');
-      
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(config));
+        setSaveStatus('saved');
+        showSuccess('Assessment settings saved successfully.');
+      } catch (e) {
+        console.error('[AssessmentSettings] Failed to save:', e);
+        setSaveStatus('idle');
+      }
       // Reset status after showing saved confirmation
       setTimeout(() => setSaveStatus('idle'), 2000);
     }, 300);

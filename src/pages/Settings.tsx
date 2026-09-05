@@ -44,7 +44,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import { useGeolocation } from '@/hooks/useGeolocation';
 import { getGeofenceConfig, setGeofenceConfig as persistGeofenceConfig, GeofenceConfig, calculateDistance } from '@/lib/geofence';
-import { supabase } from '@/lib/supabase';
+import { localData } from '@/services/localDataService';
 import { cn } from '@/lib/utils';
 import AdminLocationPicker from '@/components/AdminLocationPicker';
 import {
@@ -431,65 +431,25 @@ const Settings = () => {
 
   const fetchSettingsFromDatabase = useCallback(async () => {
     setIsLoadingSettings(true);
-
     try {
-      const { data, error } = await supabase
-        .from('system_settings')
-        .select('*')
-        .eq('id', SETTINGS_ROW_ID)
-        .single();
+      const data = localData.settings.get<Record<string, unknown>>();
 
-      if (!error && data) {
-        setGeneralConfig({
-          schoolName: data.school_name || "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-          motto: data.motto || "KNOWLEDGE IS POWER",
-          postalAddress: data.postal_address || "P.O. BOX 5239-30100 ELDORET",
-          phone: data.phone || "+254 712 345 678",
-          email: data.email || "info@munyaka.sc.ke",
-          location: data.location || "Munyaka, Eldoret East, Uasin Gishu County",
-          maintenanceMode: !!data.maintenance_mode
-        });
-
-        setAcademicConfig({
-          activeYear: data.active_year || "2026",
-          activeTerm: data.active_term || "term1",
-          termStartDate: data.term_start_date || "2026-01-05",
-          termEndDate: data.term_end_date || "2026-04-10",
-          gradingScale: data.grading_scale || academicConfig.gradingScale
-        });
-
-        if (data.rbac_permissions) setPermissions(mergePermissions(data.rbac_permissions));
-        if (data.geofence_lat !== undefined && data.geofence_lng !== undefined) {
-          setGeofenceState({
-            lat: data.geofence_lat,
-            lng: data.geofence_lng,
-            radius: data.geofence_radius || 50
-          });
-        }
-        if (data.geofence_enabled !== undefined) setGeofenceEnabled(!!data.geofence_enabled);
-        if (data.dev_bypass !== undefined) setDevBypass(!!data.dev_bypass);
-        if (data.session_security) setSessionSecurity(data.session_security);
-        if (data.audit_logs) setAuditLogs(data.audit_logs);
-
+      if (data && Object.keys(data).length > 0) {
+        if (data.general) setGeneralConfig(data.general as any);
+        if (data.academic) setAcademicConfig(data.academic as any);
+        if (data.permissions) setPermissions(mergePermissions(data.permissions as any));
+        if (data.geofence) setGeofenceState(data.geofence as any);
+        if (data.geofenceEnabled !== undefined) setGeofenceEnabled(!!data.geofenceEnabled);
+        if (data.devBypass !== undefined) setDevBypass(!!data.devBypass);
+        if (data.sessionSecurity) setSessionSecurity(data.sessionSecurity as any);
+        if (data.auditLogs) setAuditLogs(data.auditLogs as any);
       } else {
-        const savedMaster = localStorage.getItem(SETTINGS_MASTER_KEY);
-        if (savedMaster) {
-          const parsed = JSON.parse(savedMaster);
-          if (parsed.general) setGeneralConfig(parsed.general);
-          if (parsed.academic) setAcademicConfig(parsed.academic);
-          if (parsed.permissions) setPermissions(mergePermissions(parsed.permissions));
-          if (parsed.geofence) setGeofenceState(parsed.geofence);
-          if (parsed.geofenceEnabled !== undefined) setGeofenceEnabled(parsed.geofenceEnabled);
-          if (parsed.devBypass !== undefined) setDevBypass(parsed.devBypass);
-          if (parsed.sessionSecurity) setSessionSecurity(parsed.sessionSecurity);
-          if (parsed.auditLogs) setAuditLogs(parsed.auditLogs);
-        } else {
-          const geoConf = getGeofenceConfig();
-          setGeofenceState(geoConf);
-        }
+        // First launch — use defaults from geofence
+        const geoConf = getGeofenceConfig();
+        setGeofenceState(geoConf);
       }
     } catch (err) {
-      console.warn("Supabase fetch fallback to local state:", err);
+      console.warn("[Settings] Error loading local settings:", err);
     } finally {
       setIsLoadingSettings(false);
       setHasUnsavedChanges(false);
@@ -539,14 +499,6 @@ const Settings = () => {
     };
 
     try {
-      const { error } = await (supabase as any)
-        .from('system_settings')
-        .upsert(payload, { onConflict: 'id' }) as any;
-
-      if (error) {
-        console.warn("Supabase upsert warning:", error.message);
-      }
-
       const masterLocal = {
         general: generalConfig,
         academic: academicConfig,
@@ -557,14 +509,11 @@ const Settings = () => {
         sessionSecurity,
         auditLogs
       };
-      localStorage.setItem(SETTINGS_MASTER_KEY, JSON.stringify(masterLocal));
-      notifyDataChanged('munyaka_system_settings_v3');
+      await localData.settings.save(masterLocal);
       persistGeofenceConfig(geofenceConfig);
-
       setHasUnsavedChanges(false);
-      showSuccess("System settings saved successfully!");
     } catch (err: any) {
-      showError(`Failed to save settings: ${err.message || 'Network error'}`);
+      showError(`Failed to save settings: ${err.message || 'Unknown error'}`);
     } finally {
       setIsSaving(false);
     }

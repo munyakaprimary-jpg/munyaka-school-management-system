@@ -380,26 +380,10 @@ const Staff = () => {
           window.dispatchEvent(new Event('staff-changed'));
           window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
           notifyDataChanged('munyaka_staff_directory');
-    
-          // 5. Try to push to the backend silently — swallow any error
-      const baseUrl = getApiBaseUrl();
-      try {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`${baseUrl}/api/teachers`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(newStaffPayload),
-          signal: controller.signal,
-        });
-        window.clearTimeout(timeoutId);
-        if (response.ok) {
+
+          // 5. Success toast — staff is persisted locally. Backend sync is a
+          //    no-op in offline-first mode (was previously a silent fetch).
           showSuccess(`Staff member "${formData.full_name}" added successfully!`);
-        }
-        // If fetch fails (non-OK or network error), swallow it — local save already done
-      } catch {
-        // Silent offline fallback — no error UI, no toast, record is already saved locally
-      }
 
     } else if (editingStaff) {
           // ── Edit mode: local-first with optional silent backend sync ──────────────
@@ -411,7 +395,7 @@ const Staff = () => {
             email: formData.email,
             tsc_no: formData.tsc_number || undefined,
           };
-    
+
           // 1. Update local UI state immediately
           setStaffDirectory(prev => {
             const updated = prev.map(s => (s.id === editingStaff.id ? updatedRecord : s));
@@ -424,30 +408,8 @@ const Staff = () => {
           window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
           notifyDataChanged('munyaka_staff_directory');
 
-      // 2. Try to push to the backend silently
-      const baseUrl = getApiBaseUrl();
-      try {
-        const controller = new AbortController();
-        const timeoutId = window.setTimeout(() => controller.abort(), 5000);
-        const response = await fetch(`${baseUrl}/api/teachers/${editingStaff.id}`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            full_name: formData.full_name,
-            role: formData.role.toUpperCase(),
-            phone: formData.phone,
-            email: formData.email,
-            tsc_number: formData.tsc_number || undefined,
-          }),
-          signal: controller.signal,
-        });
-        window.clearTimeout(timeoutId);
-        if (response.ok) {
+          // 2. Success toast — staff is persisted locally.
           showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
-        }
-      } catch {
-        // Silent offline fallback
-      }
     }
 
     setIsModalOpen(false);
@@ -506,50 +468,9 @@ const Staff = () => {
     notifyDataChanged('staff');
     window.dispatchEvent(new Event('staff-changed'));
 
-    let apiOk = false;
-    try {
-      const baseUrl = getApiBaseUrl();
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
-
-      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      try {
-        const token = localStorage.getItem('munyaka_auth_token');
-        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
-      } catch { /* ignore */ }
-
-      console.log('[bulk-activate] POST', `${baseUrl}/api/teachers/bulk-activate`, { ids: idsToActivate });
-
-      const response = await fetch(`${baseUrl}/api/teachers/bulk-activate`, {
-        method: 'POST',
-        headers: authHeaders,
-        body: JSON.stringify({ ids: idsToActivate }),
-        signal: controller.signal,
-      });
-      window.clearTimeout(timeoutId);
-      console.log('[bulk-activate] Status:', response.status);
-
-      if (response.ok) {
-        apiOk = true;
-        try {
-          const fresh = await fetchStaffList();
-          setStaffDirectory(fresh);
-        } catch (refetchErr) {
-          console.warn('[bulk-activate] Refetch failed:', refetchErr);
-        }
-      } else {
-        console.warn('[bulk-activate] Server returned non-OK status:', response.status);
-      }
-    } catch (err) {
-      console.warn('[bulk-activate] Server unreachable, activated locally:', err);
-    }
-
+    // Offline-first: success toast fires immediately, no external sync.
     dismissToast();
-    showSuccess(
-      apiOk
-        ? `Activated ${idsToActivate.length} teacher(s).`
-        : `Activated ${idsToActivate.length} teacher(s) locally. Server sync skipped — it will sync on next load.`
-    );
+    showSuccess(`Activated ${idsToActivate.length} teacher(s).`);
 
     setIsBulkActivating(false);
   };
@@ -625,65 +546,10 @@ const Staff = () => {
       return pendingStaff.length;
     };
 
-    // Try server API first — if it fails we still succeed via local fallback
-    let apiActivated = 0;
-    let apiSuccess = false;
-    try {
-      const baseUrl = getApiBaseUrl();
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 15000);
-
-      const authHeaders: Record<string, string> = { 'Content-Type': 'application/json' };
-      try {
-        const token = localStorage.getItem('munyaka_auth_token');
-        if (token) authHeaders['Authorization'] = `Bearer ${token}`;
-      } catch { /* localStorage unavailable */ }
-
-      console.log('[activate-all] POST', `${baseUrl}/api/teachers/activate-all`);
-
-      const response = await fetch(`${baseUrl}/api/teachers/activate-all`, {
-        method: 'POST',
-        headers: authHeaders,
-        signal: controller.signal,
-      });
-      window.clearTimeout(timeoutId);
-      console.log('[activate-all] Status:', response.status, response.statusText);
-
-      if (response.ok) {
-        const result = await response.json().catch(() => null);
-        console.log('[activate-all] Body:', result);
-        apiSuccess = true;
-        apiActivated = result?.activated ?? result?.count ?? 0;
-
-        // Refetch to reconcile with server's canonical state
-        try {
-          const fresh = await fetchStaffList();
-          setStaffDirectory(fresh);
-        } catch (refetchErr) {
-          console.warn('[activate-all] Refetch failed:', refetchErr);
-        }
-      } else {
-        // Non-OK response from server — log but fall through to local success
-        let errBody: any = null;
-        try { errBody = await response.json(); } catch { /* ignore */ }
-        console.error('[activate-all] Server error:', response.status, errBody);
-      }
-    } catch (err) {
-      // Network unreachable / timeout — fall through to local success
-      console.warn('[activate-all] Server unreachable, activating locally:', err);
-    }
-
-    // Local activation always succeeds regardless of server outcome
+    // Activate all pending teachers locally — offline-first, always succeeds
     const localCount = activateLocally();
-
-    if (apiSuccess) {
-      const total = apiActivated || localCount;
-      dismissToast();
-      showSuccess(`All pending teachers activated successfully (${total} activated).`);
-    } else {
-      dismissToast();
-      showSuccess(`All pending teachers activated locally (${localCount} activated). Server sync skipped — it will sync on next load.`);
-    }
+    dismissToast();
+    showSuccess(`All pending teachers activated locally (${localCount} activated).`);
 
     setIsBulkActivating(false);
   };
@@ -968,22 +834,6 @@ const Staff = () => {
                                     window.dispatchEvent(new Event('staff-changed'));
                                     dismissToast();
                                     showSuccess(`${member.full_name} has been activated.`);
-
-                                    // Try to sync with server in background — failure is non-blocking
-                                    try {
-                                      const baseUrl = getApiBaseUrl();
-                                      const controller = new AbortController();
-                                      const timeoutId = window.setTimeout(() => controller.abort(), 8000);
-                                      await fetch(`${baseUrl}/api/teachers/bulk-activate`, {
-                                        method: 'POST',
-                                        headers: { 'Content-Type': 'application/json' },
-                                        body: JSON.stringify({ ids: [member.id] }),
-                                        signal: controller.signal,
-                                      });
-                                      window.clearTimeout(timeoutId);
-                                    } catch (err) {
-                                      console.warn('[activate-one] Background server sync skipped:', err);
-                                    }
                                   }}
                                   className="rounded-xl gap-2 font-bold cursor-pointer text-emerald-600 hover:bg-emerald-50"
                                 >

@@ -16,7 +16,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { notifyDataChanged } from '@/utils/storage';
 import IssueAssetModal from '@/components/inventory/IssueAssetModal';
 import ReceiveAssetModal from '@/components/inventory/ReceiveAssetModal';
-import { supabase } from '@/lib/supabase';
+import { localData } from '@/services/localDataService';
 import { cn } from '@/lib/utils';
 
 export interface AssetItem {
@@ -81,41 +81,20 @@ const Inventory = () => {
     notifyDataChanged('munyaka_asset_logs');
   }, [assetLogs]);
 
-  // Sync Stock Function with Supabase DB & Fallback
+  // Sync Stock Function — Offline-only via localData.inventory
   const handleSyncStock = async () => {
     setIsSyncing(true);
     try {
-      const { data, error } = await (supabase as any)
-        .from('inventory')
-        .select('*') as any;
-
-      if (!error && data && data.length > 0) {
-        const mappedAssets: AssetItem[] = data.map((item: any) => ({
-          id: item.id ? item.id.toString() : `asset-${Date.now()}`,
-          item: item.item || item.name || 'Unnamed Asset',
-          category: item.category || 'General',
-          qty: typeof item.qty === 'number' ? item.qty : (parseInt(item.qty) || 0),
-          status: item.status || 'Available',
-          color: item.color || 'text-indigo-600',
-        }));
-        setAssets(mappedAssets);
-        localStorage.setItem('munyaka_inventory', JSON.stringify(mappedAssets));
-        notifyDataChanged('munyaka_inventory');
-        showSuccess(`Stock synced live from database (${mappedAssets.length} assets).`);
+      const all = localData.inventory.getAll();
+      if (all.length > 0) {
+        setAssets(all);
+        showSuccess(`Stock loaded from local storage (${all.length} assets).`);
       } else {
-        const saved = localStorage.getItem('munyaka_inventory');
-        if (saved) {
-          setAssets(JSON.parse(saved));
-        }
-        showSuccess("Stock synced successfully from storage!");
+        showSuccess('No saved stock yet — add an asset to get started.');
       }
     } catch (err: any) {
       console.error("Error syncing stock:", err);
-      const saved = localStorage.getItem('munyaka_inventory');
-      if (saved) {
-        setAssets(JSON.parse(saved));
-      }
-      showSuccess("Stock synchronized from storage.");
+      showError("Failed to load stock from local storage.");
     } finally {
       setIsSyncing(false);
     }

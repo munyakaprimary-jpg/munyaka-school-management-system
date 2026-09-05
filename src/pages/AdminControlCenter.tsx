@@ -89,7 +89,21 @@ interface User {
 }
 
 const LAN_SERVER_KEY = 'lan_server_url';
+const ADMIN_USERS_KEY = 'munyaka_admin_users';
 const getServerUrl = () => localStorage.getItem(LAN_SERVER_KEY) || getApiBaseUrl();
+
+/** Load admin users from localStorage. Falls back to empty array. */
+const loadLocalUsers = (): User[] => {
+  try {
+    const raw = localStorage.getItem(ADMIN_USERS_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+};
+
+/** Persist admin users to localStorage. */
+const saveLocalUsers = (users: User[]): void => {
+  try { localStorage.setItem(ADMIN_USERS_KEY, JSON.stringify(users)); } catch {}
+};
 
 /**
  * Detect the machine's external LAN IPv4 address via a WebRTC ICE
@@ -231,17 +245,22 @@ export default function AdminControlCenter() {
   }, []);
 
   const fetchData = useCallback(async () => {
-    if (!isOnline) return;
+    // Always load users from localStorage first (offline-first)
+    setUsers(loadLocalUsers());
+
+    if (!isOnline) {
+      setIsLoading(false);
+      return;
+    }
 
     setRefreshing(true);
     const baseUrl = getServerUrl();
 
     try {
-      const [infoRes, devicesRes, statsRes, usersRes] = await Promise.all([
+      const [infoRes, devicesRes, statsRes] = await Promise.all([
         fetch(`${baseUrl}/api/server/info`).catch(() => null),
         fetch(`${baseUrl}/api/devices`).catch(() => null),
         fetch(`${baseUrl}/api/stats`).catch(() => null),
-        fetch(`${baseUrl}/api/users`).catch(() => null)
       ]);
 
       if (infoRes?.ok) {
@@ -258,11 +277,6 @@ export default function AdminControlCenter() {
       if (statsRes?.ok) {
         const data = await statsRes.json();
         setStats(data.data);
-      }
-
-      if (usersRes?.ok) {
-        const data = await usersRes.json();
-        setUsers(data.data || []);
       }
     } catch (err) {
       console.error('Failed to fetch server data:', err);
@@ -284,19 +298,30 @@ export default function AdminControlCenter() {
   };
 
   const handleSaveServerUrl = () => {
-    localStorage.setItem(LAN_SERVER_KEY, serverUrl);
-    setShowServerSettings(false);
-    fetchData();
-    showSuccess('Server URL updated');
+    try {
+      localStorage.setItem(LAN_SERVER_KEY, serverUrl);
+      setShowServerSettings(false);
+      fetchData();
+      showSuccess('Server URL updated');
+    } catch (e) {
+      console.error('Failed to save server URL:', e);
+      showError('Failed to save server URL');
+    }
   };
 
   const handleBackup = async () => {
     try {
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/backup`);
-      if (!response.ok) throw new Error('Backup failed');
-
-      const blob = await response.blob();
+      // Collect all localStorage data and bundle into a single JSON file
+      const all: Record<string, unknown> = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (!k) continue;
+        const v = localStorage.getItem(k);
+        if (v !== null) {
+          try { all[k] = JSON.parse(v); } catch { all[k] = v; }
+        }
+      }
+      const blob = new Blob([JSON.stringify(all, null, 2)], { type: 'application/json' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -306,7 +331,8 @@ export default function AdminControlCenter() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       showSuccess('Database backup downloaded');
-    } catch {
+    } catch (e) {
+      console.error('Backup failed:', e);
       showError('Failed to download backup');
     }
   };
@@ -319,17 +345,23 @@ export default function AdminControlCenter() {
       const text = await file.text();
       const data = JSON.parse(text);
 
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/backup/restore`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      });
+      if (typeof data !== 'object' || data === null) {
+        throw new Error('Invalid backup file format');
+      }
 
-      if (!response.ok) throw new Error('Restore failed');
-      showSuccess('Database restored successfully');
-      fetchData();
-    } catch {
+      // Restore each key into localStorage
+      for (const [key, value] of Object.entries(data)) {
+        try {
+          localStorage.setItem(key, typeof value === 'string' ? value : JSON.stringify(value));
+        } catch (e) {
+          console.error(`Failed to restore key ${key}:`, e);
+        }
+      }
+      showSuccess('Database restored successfully — reloading data…');
+      // Refresh local user list
+      setUsers(loadLocalUsers());
+    } catch (e) {
+      console.error('Restore failed:', e);
       showError('Failed to restore database');
     }
     event.target.value = '';
@@ -337,19 +369,21 @@ export default function AdminControlCenter() {
 
   const handleCreateUser = async () => {
     try {
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/users`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newUser)
-      });
-
-      if (!response.ok) throw new Error('Failed to create user');
+      const all = loadLocalUsers();
+      const created: User = {
+        id: `user-${Date.now()}`,
+        ...newUser,
+        is_active: 1,
+        created_at: new Date().toISOString(),
+      };
+      all.push(created);
+      saveLocalUsers(all);
+      setUsers(all);
       showSuccess('User created successfully');
       setShowAddUser(false);
       setNewUser({ name: '', email: '', phone: '', role: 'teacher', password: '', staff_id: '' });
-      fetchData();
-    } catch {
+    } catch (e) {
+      console.error('Failed to create user:', e);
       showError('Failed to create user');
     }
   };
@@ -357,18 +391,14 @@ export default function AdminControlCenter() {
   const handleUpdateUser = async () => {
     if (!editUser) return;
     try {
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/users/${editUser.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editUser)
-      });
-
-      if (!response.ok) throw new Error('Failed to update user');
+      const all = loadLocalUsers();
+      const updated = all.map(u => u.id === editUser.id ? editUser : u);
+      saveLocalUsers(updated);
+      setUsers(updated);
       showSuccess('User updated successfully');
       setEditUser(null);
-      fetchData();
-    } catch {
+    } catch (e) {
+      console.error('Failed to update user:', e);
       showError('Failed to update user');
     }
   };
@@ -376,32 +406,27 @@ export default function AdminControlCenter() {
   const handleDeleteUser = async (id: string) => {
     if (!confirm('Are you sure you want to delete this user?')) return;
     try {
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/users/${id}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) throw new Error('Failed to delete user');
+      const all = loadLocalUsers().filter(u => u.id !== id);
+      saveLocalUsers(all);
+      setUsers(all);
       showSuccess('User deleted successfully');
-      fetchData();
-    } catch {
+    } catch (e) {
+      console.error('Failed to delete user:', e);
       showError('Failed to delete user');
     }
   };
 
   const handleToggleUserStatus = async (user: User) => {
     try {
-      const baseUrl = getServerUrl();
-      const response = await fetch(`${baseUrl}/api/users/${user.id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...user, is_active: user.is_active ? 0 : 1 })
-      });
-
-      if (!response.ok) throw new Error('Failed to update user');
+      const all = loadLocalUsers();
+      const updated = all.map(u =>
+        u.id === user.id ? { ...u, is_active: u.is_active ? 0 : 1 } : u
+      );
+      saveLocalUsers(updated);
+      setUsers(updated);
       showSuccess(`User ${user.is_active ? 'deactivated' : 'activated'}`);
-      fetchData();
-    } catch {
+    } catch (e) {
+      console.error('Failed to toggle user status:', e);
       showError('Failed to update user status');
     }
   };

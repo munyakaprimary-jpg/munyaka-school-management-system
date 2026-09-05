@@ -1,30 +1,35 @@
-// @ts-nocheck
 import { useState, useEffect } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AttendanceRecord } from '@/types/attendance';
 import { isWithinGeofence, SCHOOL_COORDINATES } from '@/lib/geofence';
 import { validateDeparture } from '@/lib/attendance-utils';
 import { showSuccess, showError } from '@/utils/toast';
+import { localData, TeacherAttendanceRecord } from '@/services/localDataService';
 
 export const useTeacherAttendance = (currentLocation: { lat: number; lng: number } | null) => {
   const { user } = useAuth();
   const [record, setRecord] = useState<AttendanceRecord | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
 
-  const fetchTodayRecord = async () => {
+  const fetchTodayRecord = () => {
     if (!user) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from('teacher_attendance')
-      .select('*')
-      .eq('teacher_id', user.id)
-      .eq('date', new Date().toISOString().split('T')[0])
-      .single();
 
-    if (!error && data) {
-      setRecord(data);
+    const todayRecord = localData.teacherAttend.getForToday(user.id);
+    if (todayRecord) {
+      setRecord({
+        teacher_id: todayRecord.teacherId,
+        date: todayRecord.date,
+        arrival_time: todayRecord.arrivalTime || '',
+        departure_time: todayRecord.departureTime || '',
+        early_departure_reason: todayRecord.earlyDepartureReason,
+        verified_lat: todayRecord.verifiedLat,
+        verified_lng: todayRecord.verifiedLng,
+      } as AttendanceRecord);
+    } else {
+      setRecord(null);
     }
+
     setLoading(false);
   };
 
@@ -40,22 +45,29 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       return;
     }
 
-    const { data, error } = await supabase
-      .from('teacher_attendance')
-      .upsert({
+    const now = new Date().toISOString();
+    const newRecord: TeacherAttendanceRecord = {
+      id: `${user.id}-${now.split('T')[0]}`,
+      teacherId: user.id,
+      date: now.split('T')[0],
+      arrivalTime: now,
+      verifiedLat: lat,
+      verifiedLng: lng,
+    };
+
+    const result = await localData.teacherAttend.save(newRecord);
+
+    if (result.ok) {
+      setRecord({
         teacher_id: user.id,
-        arrival_time: new Date().toISOString(),
+        date: newRecord.date,
+        arrival_time: now,
         verified_lat: lat,
         verified_lng: lng,
-      })
-      .select()
-      .single();
-
-    if (error) {
-      showError('Failed to clock in');
-    } else {
-      setRecord(data);
+      } as AttendanceRecord);
       showSuccess('Clocked in successfully!');
+    } else {
+      showError('Failed to clock in');
     }
   };
 
@@ -73,23 +85,32 @@ export const useTeacherAttendance = (currentLocation: { lat: number; lng: number
       return;
     }
 
-    const { data, error } = await supabase
-      .from('teacher_attendance')
-      .update({
-        departure_time: new Date().toISOString(),
-        early_departure_reason: validation.valid ? reason : null,
+    const now = new Date().toISOString();
+    const todayDate = now.split('T')[0];
+    const updatedRecord: TeacherAttendanceRecord = {
+      id: `${user.id}-${todayDate}`,
+      teacherId: user.id,
+      date: todayDate,
+      arrivalTime: (record as any).arrival_time || now,
+      departureTime: now,
+      earlyDepartureReason: validation.valid ? reason : undefined,
+      verifiedLat: lat,
+      verifiedLng: lng,
+    };
+
+    const result = await localData.teacherAttend.save(updatedRecord);
+
+    if (result.ok) {
+      setRecord(prev => prev ? {
+        ...prev,
+        departure_time: now,
+        early_departure_reason: validation.valid ? reason : undefined,
         verified_lat: lat,
         verified_lng: lng,
-      })
-      .eq('id', record.id)
-      .select()
-      .single();
-
-    if (error) {
-      showError('Failed to clock out');
-    } else {
-      setRecord(data);
+      } : null);
       showSuccess('Clocked out successfully!');
+    } else {
+      showError('Failed to clock out');
     }
   };
 

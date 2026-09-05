@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/context/AuthContext';
 import { AttendanceStatus, StudentAttendance } from '@/types/attendance';
 import { isWithinGeofence } from '@/lib/geofence';
