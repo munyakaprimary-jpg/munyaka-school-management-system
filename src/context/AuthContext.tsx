@@ -219,25 +219,46 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   useInactivityTimeout();
 
   useEffect(() => {
-    initializeUsersStorage();
-    
-    const savedUser = localStorage.getItem('munyaka_session');
-        if (savedUser) {
-          try {
-            const parsed = JSON.parse(savedUser) as User;
-            // Normalize legacy role identifiers so persisted sessions work correctly.
-            if ((parsed.role as string) === 'super_admin') parsed.role = 'admin' as UserRole;
-            setUser(parsed);
-            // Re-sync the role key on app boot so the lock gate always
-            // agrees with the active session.
-            persistCurrentAuthRole(parsed.role);
-      } catch {
+    let cancelled = false;
+    try {
+      initializeUsersStorage();
+    } catch {
+      /* storage may be blocked on some mobile browsers — non-fatal */
+    }
+
+    try {
+      const savedUser = localStorage.getItem('munyaka_session');
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser) as Partial<User> | null;
+        // Guard against partially-written or corrupted sessions.
+        // A session without a `role` is treated as signed-out so that
+        // downstream `user.role` checks do not crash on undefined.
+        if (parsed && typeof parsed === 'object' && parsed.role) {
+          // Normalize legacy role identifiers so persisted sessions work correctly.
+          if ((parsed.role as string) === 'super_admin') parsed.role = 'admin' as UserRole;
+          if (!cancelled) setUser(parsed as User);
+          // Re-sync the role key on app boot so the lock gate always
+          // agrees with the active session.
+          persistCurrentAuthRole(parsed.role as string);
+        } else {
+          if (!cancelled) setUser(null);
+          persistCurrentAuthRole(null);
+          // Corrupt/partial session — drop it so subsequent boots start clean.
+          try { localStorage.removeItem('munyaka_session'); } catch { /* no-op */ }
+        }
+      } else {
+        if (!cancelled) setUser(null);
         persistCurrentAuthRole(null);
       }
-    } else {
+    } catch {
+      if (!cancelled) setUser(null);
       persistCurrentAuthRole(null);
+      // Corrupted JSON — clear it so the next boot starts fresh.
+      try { localStorage.removeItem('munyaka_session'); } catch { /* no-op */ }
+    } finally {
+      if (!cancelled) setIsLoading(false);
     }
-    setIsLoading(false);
+    return () => { cancelled = true; };
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {

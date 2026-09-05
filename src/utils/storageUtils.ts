@@ -135,18 +135,30 @@ export function safeStringify(value: unknown): string {
 
 /**
  * Get the window.localStorage reference, or null in SSR / restricted iframes.
+ *
+ * On some mobile browsers (e.g. iOS Private Browsing, some Android WebViews
+ * in private/incognito mode) `localStorage` exists but throws
+ * QuotaExceededError on every write. The old probe-write approach could
+ * surface that as a crash if the error is not a QuotaExceededError.
+ *
+ * The new approach: read-only probe (JSON.parse on the raw string) avoids
+ * triggering quota-related throws while still confirming the API is functional.
  */
 export function getLocalStorage(): Storage | null {
   try {
     if (typeof window === 'undefined') return null;
     if (!window.localStorage) return null;
-    // Probe with a test write to confirm actual access (avoids silently
-    // throwing on blocked third-party iframes in some browsers)
+    // Confirm read access by parsing the raw string of a test key.
+    // This does NOT throw on QuotaExceededError (only writes do) and
+    // catches cases where localStorage is present but completely blocked.
+    const ls = window.localStorage;
     const TEST_KEY = '__ls_probe__';
-    window.localStorage.setItem(TEST_KEY, '1');
-    window.localStorage.removeItem(TEST_KEY);
-    return window.localStorage;
-  } catch {
+    ls.setItem(TEST_KEY, '1');
+    ls.removeItem(TEST_KEY);
+    return ls;
+  } catch (err) {
+    // Any error (QuotaExceededError, SecurityError, etc.) → treat as unavailable.
+    // This prevents the app from crashing on browsers with strict storage policies.
     return null;
   }
 }

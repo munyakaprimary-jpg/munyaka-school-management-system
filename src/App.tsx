@@ -76,12 +76,14 @@ const queryClient = new QueryClient();
  * App component.
  *
  * Provider hierarchy (top → bottom):
- *   1. QueryClientProvider        — React Query
- *   2. BrowserRouter              — MUST sit above AuthProvider because
- *   3. AuthProvider               — its useInactivityTimeout hook calls
- *   4. AppErrorBoundary           — catches unhandled exceptions so a
- *                                    single crashing component cannot kill
- *                                    the Android WebView process.
+ *   1. AppErrorBoundary           — outermost boundary. Catches errors
+ *                                    from BrowserRouter, AuthProvider,
+ *                                    and the inactivity-timeout hook so
+ *                                    a single crash cannot kill the
+ *                                    Android WebView process.
+ *   2. QueryClientProvider        — React Query
+ *   3. BrowserRouter              — MUST sit above AuthProvider because
+ *   4. AuthProvider               — its useInactivityTimeout hook calls
  *   5. AuthGate                   — renders a loading spinner while the
  *                                    session hydrates from localStorage,
  *                                    preventing null-user / undefined-role
@@ -93,15 +95,16 @@ const queryClient = new QueryClient();
  *                                    invariant on first render.
  *  10. <Routes />                 — application routes
  *
- * This order was tightened so that every child hook and component
- * (including the inactivity timer that AuthProvider mounts internally)
- * has access to the router context on its very first render.
+ * NOTE: AppErrorBoundary was lifted to the outermost position so that
+ * errors thrown while AuthProvider hydrates the session (e.g. a
+ * corrupted `munyaka_session` JSON value) are caught and the user sees
+ * the fallback screen instead of a white screen / app crash.
  */
 const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <BrowserRouter>
-      <AuthProvider>
-        <AppErrorBoundary>
+  <AppErrorBoundary>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
           <AuthGate>
             <NotificationProvider>
               <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
@@ -185,10 +188,10 @@ const App = () => (
               </ThemeProvider>
             </NotificationProvider>
           </AuthGate>
-        </AppErrorBoundary>
-      </AuthProvider>
-    </BrowserRouter>
-  </QueryClientProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
+  </AppErrorBoundary>
 );
 
 export default App;
