@@ -67,6 +67,8 @@ import TeacherGradingPage from "./pages/TeacherGradingPage";
 import ExamCreatorPage from "./pages/ExamCreatorPage";
 import SetExamsListPage from "./pages/SetExamsListPage";
 import MarkedScriptsPage from "./pages/MarkedScriptsPage";
+import { AppErrorBoundary } from "./components/AppErrorBoundary";
+import AuthGate from "./components/AuthGate";
 
 const queryClient = new QueryClient();
 
@@ -77,12 +79,19 @@ const queryClient = new QueryClient();
  *   1. QueryClientProvider        — React Query
  *   2. BrowserRouter              — MUST sit above AuthProvider because
  *   3. AuthProvider               — its useInactivityTimeout hook calls
- *   4. NotificationProvider       —   useNavigate(); if AuthProvider is
- *   5. ThemeProvider               —   above BrowserRouter the hook throws
- *   6. TooltipProvider            —   the "useNavigate() may be used only
- *   7. Toaster / Sonner            —   in the context of a <Router>"
+ *   4. AppErrorBoundary           — catches unhandled exceptions so a
+ *                                    single crashing component cannot kill
+ *                                    the Android WebView process.
+ *   5. AuthGate                   — renders a loading spinner while the
+ *                                    session hydrates from localStorage,
+ *                                    preventing null-user / undefined-role
+ *                                    crashes on first paint.
+ *   6. NotificationProvider       —   useNavigate(); if AuthProvider is
+ *   7. ThemeProvider               —   above BrowserRouter the hook throws
+ *   8. TooltipProvider            —   the "useNavigate() may be used only
+ *   9. Toaster / Sonner            —   in the context of a <Router>"
  *                                    invariant on first render.
- *   8. <Routes />                 — application routes
+ *  10. <Routes />                 — application routes
  *
  * This order was tightened so that every child hook and component
  * (including the inactivity timer that AuthProvider mounts internally)
@@ -92,12 +101,14 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <BrowserRouter>
       <AuthProvider>
-        <NotificationProvider>
-          <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-            <TooltipProvider>
-              <Toaster />
-              <Sonner />
-              <Routes>
+        <AppErrorBoundary>
+          <AuthGate>
+            <NotificationProvider>
+              <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 
@@ -170,9 +181,11 @@ const App = () => (
                 
                                 <Route path="*" element={<NotFound />} />
               </Routes>
-            </TooltipProvider>
-          </ThemeProvider>
-        </NotificationProvider>
+                </TooltipProvider>
+              </ThemeProvider>
+            </NotificationProvider>
+          </AuthGate>
+        </AppErrorBoundary>
       </AuthProvider>
     </BrowserRouter>
   </QueryClientProvider>
