@@ -149,7 +149,7 @@ const initializeUsersStorage = () => {
   };
 
   // Ensure default test teacher account is generated & active
-  const teacherKey = DEFAULT_TEACHER.staffId.toLowerCase();
+  const teacherKey = String(DEFAULT_TEACHER.staffId || '').toLowerCase();
   users[teacherKey] = {
     ...DEFAULT_TEACHER.user,
     password: DEFAULT_TEACHER.password,
@@ -173,7 +173,7 @@ const initializeUsersStorage = () => {
       email: emailKey, // Store normalized
       phone: staff.phone,
       role: mapSystemRoleToUserRole(staff.systemRole),
-      avatar: staff.fullName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+      avatar: String(staff.fullName || '').split(' ').map(n => n[0] || '').join('').substring(0, 2).toUpperCase(),
       password: staff.tempAccessCode, // Plain text - this IS the password for this frontend-only system
       alternativePasswords: [staff.nationalId, 'munyaka5239'],
       isActive: staff.status !== 'Suspended', // Explicit activation flag
@@ -183,7 +183,7 @@ const initializeUsersStorage = () => {
 
     // Also make the staffId (e.g. "T001") a valid login key
     if (staff.staffId) {
-      const staffIdKey = staff.staffId.toLowerCase();
+      const staffIdKey = String(staff.staffId || '').toLowerCase();
       if (!users[staffIdKey]) {
         users[staffIdKey] = { ...users[emailKey] };
       }
@@ -266,7 +266,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // success when the entered value matches it — exactly mirroring
       // the Login page's own dual-mode check so a saved-or-default
       // flow works the same way in both directions.
-      const normalizedRole = foundUser.role.toLowerCase();
+      const normalizedRole = String(foundUser.role || '').toLowerCase();
             const isAdminUser = normalizedRole === 'owner' || normalizedRole === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
@@ -316,7 +316,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
       const isPasswordValid =
         foundUser.password === pass ||
-        (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(pass));
+        (foundUser.alternativePasswords?.includes(pass));
 
       if (isPasswordValid) {
         if (!foundUser.isActive) {
@@ -418,7 +418,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const isPasswordValid =
       foundUser.password === oldPass ||
-      (foundUser.alternativePasswords && foundUser.alternativePasswords.includes(oldPass));
+      (foundUser.alternativePasswords?.includes(oldPass));
 
     if (!isPasswordValid) {
       showError("Incorrect current password");
@@ -430,7 +430,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     if (!foundUser.alternativePasswords) {
       foundUser.alternativePasswords = [];
     }
-    if (!foundUser.alternativePasswords.includes(newPass)) {
+    if (!foundUser.alternativePasswords?.includes(newPass)) {
       foundUser.alternativePasswords.push(newPass);
     }
     users[normalizedEmail] = foundUser;
