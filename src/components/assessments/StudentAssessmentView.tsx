@@ -925,7 +925,7 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
         {/* Question Card */}
         <Card className="border-0 shadow-xl shadow-slate-200/50 rounded-3xl overflow-hidden">
           <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-6 sm:py-7">
-            <div className="flex items-center justify-between text-white/90 mb-2 flex-wrap gap-2">
+            <div className="flex items-center justify-between text-white/90 flex-wrap gap-2">
               <Badge className="bg-white/20 text-white border-0 font-semibold">
                 Q{currentQuestionIndex + 1} · {currentQuestion.type === "mcq"
                   ? "Multiple Choice"
@@ -939,9 +939,6 @@ const StudentAssessmentView: React.FC<StudentAssessmentViewProps> = ({
               </Badge>
               <span className="text-sm font-bold">{currentQuestion.points} Points</span>
             </div>
-            <h2 className="text-lg sm:text-2xl text-white font-semibold leading-relaxed">
-              {currentQuestion.prompt}
-            </h2>
           </div>
 
           <CardContent className="p-5 sm:p-8 space-y-6">
