@@ -572,11 +572,16 @@ const ExamViewModal: React.FC<ExamViewModalProps> = ({ examId, examTitle, onClos
   // Captures the #pdf-paper-content element (only the exam body, with header
   // action buttons and footer action buttons excluded via
   // data-html2canvas-ignore="true") and saves it as a PDF file.
-  const handleDownloadPDF = useCallback(() => {
+  const handleDownloadPDF = useCallback(async () => {
     if (!exam) return;
-    const ok = generateExamPDF(exam.id, "download");
-    if (!ok) showError("Failed to generate PDF. Try the Print button instead.");
-    else showSuccess("Exam paper downloaded.");
+    setIsPdfGenerating(true);
+    try {
+      const ok = await generateExamPDF(exam.id, "download");
+      if (!ok) showError("Failed to generate PDF. Try the Print button instead.");
+      else showSuccess("Exam paper downloaded.");
+    } finally {
+      setIsPdfGenerating(false);
+    }
   }, [exam]);
 
   const totalMarks = useMemo(
@@ -1556,8 +1561,8 @@ const SetExamsList: React.FC = () => {
           {/* Utility: Download PDF */}
           <Button
             variant="outline"
-            onClick={() => {
-              const ok = generateExamPDF(exam.id, "download");
+            onClick={async () => {
+              const ok = await generateExamPDF(exam.id, "download");
               if (!ok) showError("Could not generate the PDF. Please try the Print button in the preview.");
               else showSuccess("Exam paper downloaded.");
             }}
@@ -1634,8 +1639,8 @@ const SetExamsList: React.FC = () => {
                       <FileSpreadsheet size={14} />
                     </Button>
                     <Button variant="ghost" size="icon"
-                      onClick={() => {
-                        const ok = generateExamPDF(exam.id, "download");
+                      onClick={async () => {
+                        const ok = await generateExamPDF(exam.id, "download");
                         if (!ok) showError("Could not generate the PDF.");
                         else showSuccess("PDF saved.");
                       }}

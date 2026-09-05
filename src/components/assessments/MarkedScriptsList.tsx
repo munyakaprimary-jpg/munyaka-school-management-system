@@ -158,18 +158,44 @@ function gradeLetter(pct: number): {
 
 // ─── PDF download handler (the canonical one from the spec) ──────────────────
 
-function handleDownloadScriptPDF(submission: StudentSubmission): void {
+async function handleDownloadScriptPDF(submission: StudentSubmission): Promise<void> {
   const element = document.getElementById(`script-pdf-${submission.id}`);
   if (!element) {
     showError("Could not find the marked script element to export.");
     return;
   }
 
+  // Wait for every image in the export region to fully decode before we
+  // hand the DOM to html2pdf.js.  This prevents blank image placeholders
+  // for nursery beds, diagrams, and CBC visual prompts.
+  const images = Array.from(element.querySelectorAll("img"));
+  await Promise.all(
+    images.map((img) => {
+      // decode() returns a promise that resolves once the image is ready
+      // to be painted.  For already-cached images it's a no-op.
+      if (typeof img.decode === "function") {
+        return img.decode().catch(() => undefined);
+      }
+      // Fallback: wait for the onload event.
+      return new Promise<void>((resolve) => {
+        if (img.complete) return resolve();
+        img.addEventListener("load", () => resolve(), { once: true });
+        img.addEventListener("error", () => resolve(), { once: true });
+      });
+    })
+  );
+
   const opt = {
     margin: [10, 10, 10, 10] as [number, number, number, number],
     filename: `${submission.studentName}_${submission.examTitle}_Marked.pdf`,
     image: { type: "jpeg" as const, quality: 0.98 },
-    html2canvas: { scale: 2, useCORS: true },
+    html2canvas: {
+      scale: 2,
+      useCORS: true,
+      allowTaint: true,
+      logging: false,
+      backgroundColor: "#ffffff",
+    },
     jsPDF: { unit: "mm" as const, format: "a4" as const, orientation: "portrait" as const },
   };
 

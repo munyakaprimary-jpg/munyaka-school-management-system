@@ -15,6 +15,10 @@
  *     `options` either as `string[]` or as `{ label, text }[]` records.
  *   • Renders a clean, multi-page A4 paper with school header, instructions,
  *     numbered questions, MCQ letter options, and lined answer blanks.
+ *   • Embeds question images (nursery beds, diagrams, CBC visual prompts)
+ *     that may be stored as `data:` URIs, `blob:` URLs, or external HTTP
+ *     URLs. Uses `useCORS: true` semantics plus a pre-load step so the
+ *     rasterizer always sees a fully decoded image.
  *   • Supports two output modes: `view` (open in a new tab) and `download`
  *     (save to device).
  *
@@ -25,6 +29,100 @@
 
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+
+/**
+ * Convert a data-URI (base64), blob URL, or HTTP URL into an HTMLImageElement.
+ * Returns a fully-loaded HTMLImageElement (awaited) so the caller can pass
+ * the .src value directly into jsPDF.addImage().
+ *
+ * • For `data:` URIs and `blob:` URLs the image is already self-contained.
+ * • For external `http(s):` URLs we set crossOrigin = "anonymous" so the
+ *   browser sends CORS headers; if the server denies the request the image
+ *   will be skipped rather than aborting the whole PDF.
+ */
+async function preloadImage(url: string): Promise<HTMLImageElement | null> {
+  if (!url || typeof url !== "string") return null;
+
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.onload = () => resolve(img);
+    img.onerror = () => {
+      // Try once more with different CORS policy for external URLs
+      if (url.startsWith("http")) {
+        const retry = new Image();
+        retry.onload = () => resolve(retry);
+        retry.onerror = () => resolve(null);
+        retry.src = url;
+      } else {
+        resolve(null);
+      }
+    };
+
+    // blob: and data: URLs are always same-origin — set src last to avoid
+    // the crossOrigin attribute triggering a pre-flight for blob: URLs.
+    img.src = url;
+  });
+}
+
+/**
+ * Add a rasterised image to the jsPDF document.  Handles all three URL
+ * types that exam questions can contain:
+ *   - data:image/...;base64,…   (already decoded inline)
+ *   - blob:http(s)://…/…       (in-memory blob from FileReader / upload)
+ *   - http(s)://…/…            (remote CDN / upload endpoint)
+ *
+ * `maxHeightMM` caps the rendered height so large nursery-bed photos don't
+ * blow out the page layout.
+ */
+async function addImageToPdf(
+  doc: jsPDF,
+  url: string,
+  xMM: number,
+  yMM: number,
+  maxWidthMM: number,
+  maxHeightMM: number
+): Promise<number> {
+  const img = await preloadImage(url);
+  if (!img) return yMM; // skip on error
+
+  const imgWidth = img.naturalWidth;
+  const imgHeight = img.naturalHeight;
+  const aspectRatio = imgWidth / imgHeight;
+
+  // Scale to fit within the bounding box while preserving aspect ratio.
+  let wMM = maxWidthMM;
+  let hMM = wMM / aspectRatio;
+  if (hMM > maxHeightMM) {
+    hMM = maxHeightMM;
+    wMM = hMM * aspectRatio;
+  }
+
+  // jsPDF.addImage() accepts: data-URI string, HTMLImageElement, or canvas.
+  // Passing the HTMLImageElement directly works for all three URL types.
+  try {
+    doc.addImage(img, "JPEG", xMM, yMM, wMM, hMM);
+    return yMM + hMM + 4; // advance Y and add a small gap
+  } catch {
+    // Fall back: try extracting the canvas from the image element.
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = imgWidth;
+      canvas.height = imgHeight;
+      const ctx = canvas.getContext("2d");
+      if (ctx) {
+        ctx.drawImage(img, 0, 0);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+        doc.addImage(dataUrl, "JPEG", xMM, yMM, wMM, hMM);
+        return yMM + hMM + 4;
+      }
+    } catch {
+      /* skip */
+    }
+  }
+  return yMM;
+}
 
 const ALL_SET_EXAMS_KEY = "all_set_exams";
 const ASSESSMENTS_KEY = "assessments";
@@ -42,6 +140,10 @@ interface ExamQuestion {
   options?: Array<string | { label?: string; text?: string; id?: string }>;
   modelAnswer?: string;
   marks?: number;
+  /** Data URI (base64), blob URL, or HTTP URL of an attached diagram / photo. */
+  imageUrl?: string;
+  /** Where on the page the image renders: "above" | "between" | "below". */
+  imagePosition?: "above" | "between" | "below";
 }
 
 interface ExamRecord {
@@ -185,10 +287,10 @@ function getTimeLimit(exam: ExamRecord): string {
  * @returns `true` if a PDF was produced, `false` if the exam was not
  *          found or the PDF engine threw.
  */
-export function generateExamPDF(
+export async function generateExamPDF(
   examId: string,
   mode: ExamPdfMode = "download"
-): boolean {
+): Promise<boolean> {
   let exam: ExamRecord | null = null;
   try {
     exam = readExamRecord(examId);
@@ -290,14 +392,43 @@ export function generateExamPDF(
     );
     yPos += 8;
   } else {
-    questions.forEach((q, idx) => {
-      // Page-break guard: keep at least 24mm of room per question
-      if (yPos > pageHeight - 24) {
+    // Pre-load every question image in parallel so the rasterizer is
+    // guaranteed to see fully decoded pixels for each diagram / photo.
+    const imageTasks = questions.map(async (q) => {
+      const url = q.imageUrl;
+      if (!url || typeof url !== "string") return null;
+      return preloadImage(url);
+    });
+    const preloadedImages = await Promise.all(imageTasks);
+
+    for (let idx = 0; idx < questions.length; idx++) {
+      const q = questions[idx];
+      const imageElement = preloadedImages[idx] ?? null;
+      const imagePosition = q.imagePosition || "below";
+
+      // Helper: ensure the question starts on a fresh page if there's not
+      // enough room left (24mm baseline for text questions, 60mm if it
+      // also has an image).
+      const reserveMM = imageElement ? 60 : 24;
+      if (yPos > pageHeight - reserveMM) {
         doc.addPage();
         yPos = 20;
       }
 
-      // Question number + prompt
+      // ── Image above ──
+      if (imagePosition === "above" && imageElement) {
+        const imgHeightMM = 40; // cap to keep layout stable
+        yPos = await addImageToPdf(
+          doc,
+          q.imageUrl!,
+          leftMargin,
+          yPos,
+          contentWidth,
+          imgHeightMM
+        );
+      }
+
+      // ── Question number + prompt ──
       doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.text(`Q${idx + 1}.`, leftMargin, yPos);
@@ -311,6 +442,19 @@ export function generateExamPDF(
       );
       doc.text(splitPrompt, leftMargin + 8, yPos);
       yPos += splitPrompt.length * 5 + 1;
+
+      // ── Image between (between prompt and options) ──
+      if (imagePosition === "between" && imageElement) {
+        const imgHeightMM = 40;
+        yPos = await addImageToPdf(
+          doc,
+          q.imageUrl!,
+          leftMargin,
+          yPos,
+          contentWidth,
+          imgHeightMM
+        );
+      }
 
       // Points badge (right-aligned, on the question's first visual line)
       const points = Number(q.points ?? q.marks ?? 0) || 0;
@@ -357,8 +501,21 @@ export function generateExamPDF(
         yPos += 8;
       }
 
+      // ── Image below ──
+      if (imagePosition === "below" && imageElement) {
+        const imgHeightMM = 40;
+        yPos = await addImageToPdf(
+          doc,
+          q.imageUrl!,
+          leftMargin,
+          yPos,
+          contentWidth,
+          imgHeightMM
+        );
+      }
+
       yPos += 3; // spacing between questions
-    });
+    }
   }
 
   // ── Footer on every page ───────────────────────────────────────────────
