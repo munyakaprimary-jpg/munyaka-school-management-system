@@ -51,10 +51,24 @@ const initialsOf = (name: string): string =>
 
 /** Normalises an ID across every possible field variant. */
 const resolveId = (s: Record<string, unknown>): string =>
-  String(
-    (s as any).national_id || (s as any).id_number || (s as any).idNumber ||
-    s.nationalId || s.id || s.staffId || ''
-  ) || 'N/A';
+    String(
+      (s as any).national_id || (s as any).id_number || (s as any).idNumber ||
+      s.nationalId || s.id || s.staffId || ''
+    ) || 'N/A';
+
+/**
+ * Generates a short, user-friendly access key.
+ * Format: PR-XXXXXX  (e.g. PR-A3B7X9)
+ * Uses uppercase alphanumeric to avoid confusion between 0/O and 1/I.
+ */
+const generateAccessKey = (): string => {
+  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+  let key = 'PR-';
+  for (let i = 0; i < 6; i++) {
+    key += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return key;
+};
 
 const StaffPreRegistration = () => {
   const navigate = useNavigate();
@@ -253,26 +267,27 @@ const StaffPreRegistration = () => {
       }, [ledgerEntries, searchTerm, roleFilter, statusFilter]);
   
     // ── Generate Key / Invite for unlinked directory staff ──
-    const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
-      setGeneratingKeyFor(entry.id);
-      await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
-  
-      const accessCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
-      const newPreReg: PreRegisteredStaff = {
-        id: `PR-${Date.now()}`,
-        staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
-        fullName: entry.name,
-        nationalId: entry.nationalId,
-        tscNumber: entry.tscNumber,
-        email: entry.email,
-        phone: entry.phone,
-        systemRole: 'subject_teacher',
-        department: 'School Administration',
-        assignedSubjects: [],
-        tempAccessCode: accessCode,
-        status: 'Pre-Registered',
-        datePreRegistered: new Date().toISOString().split('T')[0],
-      };
+        const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
+          setGeneratingKeyFor(entry.id);
+          await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
+    
+          // Use the clean short key — `generateAccessKey()` returns PR-XXXXXX
+          const accessKey = generateAccessKey();
+          const newPreReg: PreRegisteredStaff = {
+            id: `PR-${Date.now()}`,
+            staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
+            fullName: entry.name,
+            nationalId: entry.nationalId,
+            tscNumber: entry.tscNumber,
+            email: entry.email,
+            phone: entry.phone,
+            systemRole: 'subject_teacher',
+            department: 'School Administration',
+            assignedSubjects: [],
+            tempAccessCode: accessKey,
+            status: 'Pre-Registered',
+            datePreRegistered: new Date().toISOString().split('T')[0],
+          };
   
       const updatedList = [newPreReg, ...staffList];
             setStaffList(updatedList);
@@ -311,6 +326,10 @@ const StaffPreRegistration = () => {
     };
   
     const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
+          // Use the clean short key when one isn't provided in the form
+          const accessKey = staffData.tempAccessCode?.trim()
+            ? staffData.tempAccessCode
+            : generateAccessKey();
           const newStaff: PreRegisteredStaff = {
             id: `PR-${Date.now()}`,
             staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
@@ -324,7 +343,8 @@ const StaffPreRegistration = () => {
             assignedGrade: staffData.assignedGrade,
             assignedStream: staffData.assignedStream,
             assignedSubjects: staffData.assignedSubjects || [],
-            tempAccessCode: staffData.tempAccessCode || "",
+            // Always store the clean PR-XXXXXX key — never the internal UUID
+            tempAccessCode: accessKey,
             status: "Pre-Registered" as AccessStatus,
             datePreRegistered: new Date().toISOString().split('T')[0],
           };
@@ -418,30 +438,33 @@ const StaffPreRegistration = () => {
       setTimeout(() => {
         const headers = ["Staff Ref ID", "Full Name", "National ID", "Email", "Role / System Role", "Access Key", "Status"];
         const rows = filteredLedger.map(entry => {
-          if (entry.type === 'pre-registered') {
-            const s = entry.data as PreRegisteredStaff;
-            return [
-              s.id,
-              s.fullName,
-              s.nationalId,
-              s.email,
-              s.systemRole,
-              s.tempAccessCode,
-              s.status
-            ];
-          } else {
-            const s = entry.data as UnlinkedStaffEntry;
-            return [
-              s.autoKey,
-              s.name,
-              s.nationalId,
-              s.email,
-              s.role,
-              s.autoKey + ' (auto-generated)',
-              'Pre-Registered'
-            ];
-          }
-        });
+                  if (entry.type === 'pre-registered') {
+                    const s = entry.data as PreRegisteredStaff;
+                    return [
+                      s.id,
+                      s.fullName,
+                      s.nationalId,
+                      s.email,
+                      s.systemRole,
+                      // Use the clean, short user-facing key (NOT the raw record id)
+                      s.tempAccessCode || s.activationKey || s.code || s.id,
+                      s.status
+                    ];
+                  } else {
+                    const s = entry.data as UnlinkedStaffEntry;
+                    return [
+                      s.autoKey,
+                      s.name,
+                      s.nationalId,
+                      s.email,
+                      s.role,
+                      // For unlinked directory entries the key isn't generated yet,
+                      // so show the auto-key reference with a "(pending)" suffix
+                      (s.autoKey || s.id) + ' (pending)',
+                      'Pre-Registered'
+                    ];
+                  }
+                });
   
         const csvContent = [
           "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
@@ -616,14 +639,19 @@ const StaffPreRegistration = () => {
                                                                                                                                               </div>
                                                                                                                                             </td>
                                                                                                                                             <td className="px-8 py-5 text-center">
-                                                                                                                                              <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
-                                                                          navigator.clipboard.writeText(staff.tempAccessCode);
-                                                                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
-                                                                        }}>
-                                                                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
-                                                                          <Copy size={13} className="text-slate-400" />
-                                                                        </div>
-                                                                      </td>
+                                                                                                                                                                                                                    <div
+                                                                                                                                                                                                                      className="inline-flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors"
+                                                                                                                                                                                                                      onClick={() => {
+                                                                                                                                                                                                                        const keyToCopy = staff.tempAccessCode || staff.activationKey || staff.code || staff.id;
+                                                                                                                                                                                                                        navigator.clipboard.writeText(keyToCopy);
+                                                                                                                                                                                                                        showSuccess(`Copied Key: ${keyToCopy}`);
+                                                                                                                                                                                                                      }}
+                                                                                                                                                                                                                      title="Click to copy access key"
+                                                                                                                                                                                                                    >
+                                                                                                                                                                                                                      <code className="font-mono font-bold text-indigo-700 text-xs">{staff.tempAccessCode || staff.activationKey || 'N/A'}</code>
+                                                                                                                                                                                                                      <Copy size={13} className="text-indigo-400" />
+                                                                                                                                                                                                                    </div>
+                                                                                                                                                                                                                  </td>
                                                                       <td className="px-8 py-5 text-center">
                                                                         <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
                                                                       </td>

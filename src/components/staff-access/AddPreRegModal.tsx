@@ -70,9 +70,24 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
   }, [directoryStaffList, existingPreRegistered]);
 
   const generateRandomKey = () => {
-    const randDigits = Math.floor(1000 + Math.random() * 9000);
-    setFormData(prev => ({ ...prev, tempAccessCode: `MUNYAKA-${randDigits}` }));
-  };
+      // Clean short key: PR-XXXXXX  (6 uppercase alphanumeric chars)
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let key = 'PR-';
+      for (let i = 0; i < 6; i++) {
+        key += chars[Math.floor(Math.random() * chars.length)];
+      }
+      setFormData(prev => ({ ...prev, tempAccessCode: key }));
+    };
+  
+    /** Pure key generator (no state setter) — used for initial form values. */
+    const generateAccessKey = (): string => {
+      const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+      let key = 'PR-';
+      for (let i = 0; i < 6; i++) {
+        key += chars[Math.floor(Math.random() * chars.length)];
+      }
+      return key;
+    };
 
   const generateStaffId = () => {
     // T007, T008, ... — deterministic per existing ledger length
@@ -98,7 +113,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
         phone: "",
         systemRole: "subject_teacher",
         assignedSubjects: ["Mathematics", "Science & Tech"],
-        tempAccessCode: `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
+        tempAccessCode: generateAccessKey(),
         staffId: generateStaffId()
       });
     }
