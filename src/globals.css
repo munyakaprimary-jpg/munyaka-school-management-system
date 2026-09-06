@@ -234,6 +234,63 @@ button, input, select, textarea, a {
 }
 
 /* ============================================
+   DUAL HORIZONTAL SCROLLBAR STYLES
+   Permanent scrollbar visibility for WebKit/Android
+   ============================================ */
+
+/* Always show scrollbars on WebKit browsers (Chrome, Safari, Edge) */
+.overflow-x-scroll::-webkit-scrollbar,
+.overflow-x-auto::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-track,
+.overflow-x-auto::-webkit-scrollbar-track {
+  background: #f1f5f9; /* slate-100 */
+  border-radius: 4px;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-thumb,
+.overflow-x-auto::-webkit-scrollbar-thumb {
+  background: #94a3b8; /* slate-400 */
+  border-radius: 4px;
+}
+
+.overflow-x-scroll::-webkit-scrollbar-thumb:hover,
+.overflow-x-auto::-webkit-scrollbar-thumb:hover {
+  background: #64748b; /* slate-500 */
+}
+
+/* Force scrollbar to always be visible (not just on hover) - WebKit */
+.overflow-x-scroll::-webkit-scrollbar {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Firefox - force always visible */
+.overflow-x-scroll,
+.overflow-x-auto {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9;
+}
+
+/* Top scrollbar specific styles */
+.scrollbar-top-visible::-webkit-scrollbar {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Android/Mobile touch scrolling optimization */
+@media (hover: none) and (pointer: coarse) {
+  .overflow-x-scroll,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+}
+
+/* ============================================
    COMPACT MOBILE TYPOGRAPHY
    ============================================ */
 @media (max-width: 768px) {

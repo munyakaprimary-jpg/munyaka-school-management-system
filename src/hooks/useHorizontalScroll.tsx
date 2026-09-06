@@ -1,8 +1,8 @@
-import { useRef, useCallback, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect } from 'react';
 
 /**
  * Simplified dual scrollbar wrapper that uses synchronized scrolling
- * to create a mirrored scrollbar at the top
+ * to create a visible mirrored scrollbar at the top
  */
 export function DualScrollContainer({ 
   children, 
@@ -13,18 +13,54 @@ export function DualScrollContainer({
 }) {
   const topScrollRef = useRef<HTMLDivElement>(null);
   const tableContainerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [scrollWidth, setScrollWidth] = useState(0);
 
+  // Sync scroll position from top to bottom
   const handleTopScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (tableContainerRef.current) {
       tableContainerRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
   }, []);
 
+  // Sync scroll position from bottom to top
   const handleTableScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
     if (topScrollRef.current) {
       topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
     }
   }, []);
+
+  // Update the scroll width when content changes
+  const updateScrollWidth = useCallback(() => {
+    if (tableContainerRef.current) {
+      // Use scrollWidth to match the actual scrollable range
+      const width = tableContainerRef.current.scrollWidth;
+      setScrollWidth(width);
+    }
+  }, []);
+
+  // Initial measurement and resize observer
+  useEffect(() => {
+    updateScrollWidth();
+
+    // Set up resize observer for dynamic content
+    const resizeObserver = new ResizeObserver(() => {
+      updateScrollWidth();
+    });
+
+    if (contentRef.current) {
+      resizeObserver.observe(contentRef.current);
+    }
+
+    // Also observe the table container for scroll width changes
+    if (tableContainerRef.current) {
+      resizeObserver.observe(tableContainerRef.current);
+    }
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [children, updateScrollWidth]);
 
   return (
     <div className={`flex flex-col ${className}`}>
@@ -32,11 +68,16 @@ export function DualScrollContainer({
       <div
         ref={topScrollRef}
         onScroll={handleTopScroll}
-        className="overflow-x-auto overflow-y-hidden max-h-0 min-h-0"
+        className="overflow-x-scroll overflow-y-hidden h-3 bg-slate-50 border-b border-slate-200 scrollbar-top-visible scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100"
+        style={{
+          scrollbarWidth: 'thin',
+          opacity: 1,
+          visibility: 'visible',
+        }}
         aria-hidden="true"
       >
-        {/* Spacer to maintain scroll width matching the table */}
-        <div className="h-1" />
+        {/* Spacer with dynamic width matching the table's scrollable range */}
+        <div style={{ width: `${scrollWidth}px`, height: '1px' }} />
       </div>
       
       {/* Main content container with scroll */}
@@ -44,8 +85,11 @@ export function DualScrollContainer({
         ref={tableContainerRef}
         onScroll={handleTableScroll}
         className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100"
+        style={{ scrollbarWidth: 'thin' }}
       >
-        {children}
+        <div ref={contentRef}>
+          {children}
+        </div>
       </div>
     </div>
   );
