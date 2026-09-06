@@ -298,8 +298,8 @@ const StaffPreRegistration = () => {
           </Button>
         </div>
 
-        {/* Table — overflow-x-auto ensures all credential columns stay visible */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        {/* Table — outer card: w-full, no overflow-hidden; scroll wrapper: w-full overflow-x-auto */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full">
           {filteredStaff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Users size={48} className="mb-3 opacity-40" />
@@ -307,16 +307,16 @@ const StaffPreRegistration = () => {
               <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            <div className="overflow-x-auto min-w-[750px]">
-              <table className="w-full text-sm">
+            <div className="w-full overflow-x-auto block clear-both">
+              <table className="w-full min-w-[850px] table-auto text-sm">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
                     <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff</th>
                     <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">System Role</th>
                     <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Registered Email</th>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Temp Access Key</th>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Status</th>
-                    <th className="text-right px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Actions</th>
+                    <th className="text-left px-4 py-3 min-w-[180px] font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Temp Access Key</th>
+                    <th className="text-left px-4 py-3 min-w-[120px] font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Status</th>
+                    <th className="text-right px-4 py-3 min-w-[120px] pr-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -358,7 +358,7 @@ const StaffPreRegistration = () => {
                         </td>
 
                         {/* Col 4: Temp Access Key — MUNYAKA-XXXX badge + copy */}
-                        <td className="px-4 py-3">
+                        <td className="px-4 py-3 min-w-[180px]">
                           <div className="flex items-center gap-2">
                             <span className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono font-black text-xs rounded-lg whitespace-nowrap">
                               {s.tempAccessCode || '—'}
@@ -376,10 +376,10 @@ const StaffPreRegistration = () => {
                         </td>
 
                         {/* Col 5: Status */}
-                        <td className="px-4 py-3">{getStatusBadge(s.status)}</td>
+                        <td className="px-4 py-3 min-w-[120px]">{getStatusBadge(s.status)}</td>
 
-                        {/* Col 6: Actions */}
-                        <td className="px-4 py-3">
+                        {/* Col 6: Actions — right-aligned with breathing room on the right */}
+                        <td className="px-4 py-3 min-w-[120px] pr-4">
                           <div className="flex items-center justify-end gap-1">
                             {canActivate && (
                               <button
