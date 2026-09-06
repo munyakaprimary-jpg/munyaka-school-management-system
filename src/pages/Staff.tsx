@@ -755,15 +755,15 @@ const Staff = () => {
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
                                                   <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                                      {String(member.full_name || '').split(' ').filter(n => n[0]).map(n => n[0]).join('')}
-                                                    </div>
-                                                    <div className="flex flex-col min-w-0">
-                                                      <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
-                                                      <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} • ID: {member.id_no}</p>
-                                                    </div>
-                                                  </div>
-                                                </td>
+                                                                                                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                                                                        {String(member.full_name || member.name || 'PR').split(' ').filter(n => n[0]).map(n => n[0]).join('')}
+                                                                                                      </div>
+                                                                                                      <div className="flex flex-col min-w-0">
+                                                                                                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name || member.name || 'Pre-Registered Staff'}</p>
+                                                                                                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id || member.id_no || 'N/A'} • ID: {member.id_no || member.id || 'N/A'}</p>
+                                                                                                      </div>
+                                                                                                    </div>
+                                                                                                  </td>
 
                         <td className="px-8 py-5 min-w-[180px]">
                                                   <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
@@ -774,12 +774,12 @@ const Staff = () => {
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
                               <Phone size={13} className="text-slate-400 shrink-0" />
-                              <span className="whitespace-nowrap">{member.phone}</span>
+                              <span className="whitespace-nowrap">{member.phone || 'No Phone Provided'}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
-                              <Mail size={13} className="text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[180px]">{member.email}</span>
-                            </div>
+                                                          <Mail size={13} className="text-slate-400 shrink-0" />
+                                                          <span className="truncate max-w-[180px]">{member.email || 'No Email Provided'}</span>
+                                                        </div>
                           </div>
                         </td>
 

@@ -169,7 +169,7 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
                 {selectedStaffId ? (
                   <div className="flex items-center gap-2 truncate">
                     <User size={16} className="text-indigo-600 shrink-0" />
-                    <span>{formData.fullName} ({formData.nationalId})</span>
+                    <span>{formData.fullName || 'Pre-Registered Staff'} ({formData.nationalId || 'No ID'})</span>
                   </div>
                 ) : (
                   <span className="text-slate-400 font-normal">Type staff name or National ID to search...</span>
