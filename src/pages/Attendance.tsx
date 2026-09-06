@@ -627,10 +627,10 @@ const Attendance = () => {
     const gradeSpecificStreams = useMemo(() => {
       if (!filters.grade || filters.grade === 'all') {
         // No grade selected — return all unique streams from the config
-        return config.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+        return gradesConfig.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
       }
-      return getStreamsForGrade(filters.grade, config);
-    }, [filters.grade, config]);
+      return getStreamsForGrade(filters.grade, gradesConfig);
+    }, [filters.grade, gradesConfig]);
   
     // Also gather any streams that actually appear in the student roster for the selected grade
     const rosterStreams = useMemo(() => {
