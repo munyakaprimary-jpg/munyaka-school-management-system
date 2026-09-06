@@ -319,19 +319,136 @@ const MASTER_SEED: MasterStaffRecord[] = [
     profileComplete: true,
     schoolId: 'munyaka-sc',
   },
+  // Non-teaching / Support Staff
+  {
+    id: 'staff-010',
+    staffId: 'S001',
+    name: 'Grace Atieno',
+    nationalId: '22334455',
+    email: 'grace.atieno@munyaka.sc.ke',
+    phone: '+254 720 010 010',
+    systemRole: 'support_staff',
+    role: 'Support Staff',
+    department: 'Administration',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-1234',
+    status: 'Active',
+    datePreRegistered: '2020-03-15',
+    gender: 'Female',
+    salary: 45000,
+    joinedDate: '2020-03-15',
+    emergencyContact: '+254722010010',
+    emergencyName: 'James Atieno',
+    profileComplete: true,
+    schoolId: 'munyaka-sc',
+  },
+  {
+    id: 'staff-011',
+    staffId: 'L001',
+    name: 'Mary Wanjiku',
+    nationalId: '33445566',
+    email: 'mary.wanjiku@munyaka.sc.ke',
+    phone: '+254 720 011 011',
+    systemRole: 'librarian',
+    role: 'Librarian',
+    department: 'Library',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-5678',
+    status: 'Active',
+    datePreRegistered: '2019-08-20',
+    gender: 'Female',
+    salary: 55000,
+    joinedDate: '2019-08-20',
+    emergencyContact: '+254722011011',
+    emergencyName: 'Peter Wanjiku',
+    profileComplete: true,
+    schoolId: 'munyaka-sc',
+  },
+  {
+    id: 'staff-012',
+    staffId: 'K001',
+    name: 'Joseph Kimani',
+    nationalId: '44556677',
+    email: 'joseph.kimani@munyaka.sc.ke',
+    phone: '+254 720 012 012',
+    systemRole: 'storekeeper',
+    role: 'Storekeeper',
+    department: 'Procurement',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-9012',
+    status: 'Active',
+    datePreRegistered: '2018-01-10',
+    gender: 'Male',
+    salary: 50000,
+    joinedDate: '2018-01-10',
+    emergencyContact: '+254722012012',
+    emergencyName: 'Anne Kimani',
+    profileComplete: true,
+    schoolId: 'munyaka-sc',
+  },
+  {
+    id: 'staff-013',
+    staffId: 'LA001',
+    name: 'Samuel Otieno',
+    nationalId: '55667788',
+    email: 'samuel.otieno@munyaka.sc.ke',
+    phone: '+254 720 013 013',
+    systemRole: 'lab_assistant',
+    role: 'Lab Assistant',
+    department: 'Science',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-3456',
+    status: 'Active',
+    datePreRegistered: '2021-06-01',
+    gender: 'Male',
+    salary: 52000,
+    joinedDate: '2021-06-01',
+    emergencyContact: '+254722013013',
+    emergencyName: 'Grace Otieno',
+    profileComplete: true,
+    schoolId: 'munyaka-sc',
+  },
+  {
+    id: 'staff-014',
+    staffId: 'IT001',
+    name: 'Daniel Mutua',
+    nationalId: '66778899',
+    email: 'daniel.mutua@munyaka.sc.ke',
+    phone: '+254 720 014 014',
+    systemRole: 'ict_technician',
+    role: 'ICT Technician',
+    department: 'ICT',
+    assignedSubjects: [],
+    tempAccessCode: 'MUNYAKA-7890',
+    status: 'Active',
+    datePreRegistered: '2020-09-15',
+    gender: 'Male',
+    salary: 65000,
+    joinedDate: '2020-09-15',
+    emergencyContact: '+254722014014',
+    emergencyName: 'Catherine Mutua',
+    profileComplete: true,
+    schoolId: 'munyaka-sc',
+  },
 ];
 
 // ─── Internal helpers ─────────────────────────────────────────────────────────
 
 const mapSystemRoleToRoleLabel = (role: MasterSystemRole): string => {
   switch (role) {
-    case 'head_teacher':   return 'Head Teacher';
-    case 'senior_teacher': return 'Senior Teacher';
-    case 'class_teacher':  return 'Class Teacher';
+    case 'head_teacher':    return 'Head Teacher';
+    case 'senior_teacher':  return 'Senior Teacher';
+    case 'class_teacher':   return 'Class Teacher';
     case 'subject_teacher': return 'Subject Teacher';
-    case 'bursar':         return 'Bursar';
+    case 'ict_teacher':     return 'ICT Teacher';
+    case 'bursar':          return 'Bursar / Finance';
     case 'support_admin':   return 'System Admin';
-    default:               return 'Teacher';
+    case 'support_staff':   return 'Support Staff';
+    case 'librarian':       return 'Librarian';
+    case 'storekeeper':     return 'Storekeeper';
+    case 'lab_assistant':   return 'Lab Assistant';
+    case 'ict_technician':  return 'ICT Technician';
+    default:                 return 'Staff';
   }
 };
 
