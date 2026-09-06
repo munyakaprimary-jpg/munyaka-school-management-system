@@ -1,17 +1,18 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  GraduationCap, 
-  Calendar, 
-  FileText, 
-  Receipt, 
-  LogOut, 
+import {
+  GraduationCap,
+  Calendar,
+  FileText,
+  Receipt,
+  LogOut,
   User,
   CheckCircle2,
   XCircle,
@@ -19,9 +20,11 @@ import {
   TrendingUp,
   AlertCircle,
   ChevronRight,
+  ChevronLeft,
   Users,
   BookOpen,
-  Loader2
+  Loader2,
+  X
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
@@ -147,7 +150,8 @@ const getFeesForStudent = (studentId: string): PaymentRecord[] => {
 
 // ── Login Form ───────────────────────────────────────────────────────────────
 
-const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) => {
+const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => void; onClose: () => void }) => {
+  const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
   const [dob, setDob] = useState('');
   const [isSearching, setIsSearching] = useState(false);
@@ -225,8 +229,28 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md rounded-3xl shadow-xl border-0 overflow-hidden">
+      <Card className="w-full max-w-md rounded-3xl shadow-xl border-0 overflow-hidden relative">
+        {/* Close Button */}
+        <button
+          type="button"
+          onClick={() => navigate('/login')}
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+          title="Back to Staff Login"
+        >
+          <X className="w-5 h-5 text-white opacity-80 hover:opacity-100" />
+        </button>
+
         <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 p-6 text-white text-center">
+          {/* Back button for mobile-friendly navigation */}
+          <button
+            type="button"
+            onClick={() => navigate('/login')}
+            className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl bg-white/20 hover:bg-white/30 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95"
+            title="Back to Staff Login"
+          >
+            <ChevronLeft className="w-5 h-5 text-white" />
+          </button>
+          
           <div className="w-16 h-16 bg-white/20 backdrop-blur-md rounded-2xl mx-auto mb-4 flex items-center justify-center">
             <GraduationCap size={32} className="text-white" />
           </div>
@@ -308,14 +332,15 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
 const Dashboard = ({ 
-  session, 
+  session,
   student,
-  onLogout 
-}: { 
-  session: PortalSession; 
+  onLogout
+}: {
+  session: PortalSession;
   student: Student;
   onLogout: () => void;
 }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees'>('overview');
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
@@ -365,15 +390,24 @@ const Dashboard = ({
                 </p>
               </div>
             </div>
-            <Button
-              onClick={onLogout}
-              variant="outline"
-              size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
-            >
-              <LogOut size={16} className="mr-2" />
-              Logout
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={onLogout}
+                variant="outline"
+                size="sm"
+                className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
+              >
+                <LogOut size={16} className="mr-2" />
+                Logout
+              </Button>
+              <button
+                onClick={() => navigate('/login')}
+                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-white/20"
+                title="Back to Staff Login"
+              >
+                <X className="w-5 h-5 text-white" />
+              </button>
+            </div>
           </div>
 
           {/* Tabs */}
@@ -784,7 +818,7 @@ export default function ParentPortal() {
   }
 
   if (!session || !student) {
-    return <LoginForm onLogin={handleLogin} />;
+    return <LoginForm onLogin={handleLogin} onClose={() => navigate('/login')} />;
   }
 
   return <Dashboard session={session} student={student} onLogout={handleLogout} />;
