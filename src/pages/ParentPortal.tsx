@@ -148,15 +148,20 @@ const getFeesForStudent = (studentId: string): PaymentRecord[] => {
 // ── Login Form ───────────────────────────────────────────────────────────────
 
 const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) => {
-  const [admNo, setAdmNo] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [dob, setDob] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
 
+  // Normalize identifier: remove spaces, dashes, and convert to uppercase
+  const normalizeIdentifier = (id: string): string => {
+    if (!id) return '';
+    return id.trim().toUpperCase().replace(/[\s-]/g, '');
+  };
+
   // Normalize date for comparison (handles multiple formats)
   const normalizeDate = (dateStr: string): string => {
     if (!dateStr) return '';
-    // Try to parse and format as YYYY-MM-DD
     const date = new Date(dateStr);
     if (isNaN(date.getTime())) return dateStr;
     return date.toISOString().split('T')[0];
@@ -166,12 +171,12 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
     e.preventDefault();
     setError('');
 
-    if (!admNo.trim()) {
-      setError('Please enter the Admission Number');
+    if (!identifier.trim()) {
+      setError('Please enter your Assessment Number or Birth Certificate Number');
       return;
     }
     if (!dob.trim()) {
-      setError('Please enter the Date of Birth');
+      setError('Please enter your Date of Birth');
       return;
     }
 
@@ -180,13 +185,23 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
     // Simulate async verification
     setTimeout(() => {
       const students = getStudents();
-      const normalizedAdm = admNo.trim().toUpperCase();
+      const normalizedId = normalizeIdentifier(identifier);
       const normalizedDob = normalizeDate(dob);
 
       const matchedStudent = students.find(s => {
-        const studentAdm = (s.admNo || '').toUpperCase();
+        // Check all possible identifier fields
+        const studentAdm = normalizeIdentifier(s.admNo || '');
+        const studentAssessment = normalizeIdentifier((s as any).assessmentNumber || '');
+        const studentBirthCert = normalizeIdentifier((s as any).birthCertificateNo || '');
         const studentDob = normalizeDate((s as any).dob || '');
-        return studentAdm === normalizedAdm && studentDob === normalizedDob;
+        
+        // Match any of the identifiers AND DOB must match
+        const idMatches =
+          studentAdm === normalizedId ||
+          studentAssessment === normalizedId ||
+          studentBirthCert === normalizedId;
+        
+        return idMatches && studentDob === normalizedDob;
       });
 
       if (matchedStudent) {
@@ -202,7 +217,7 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
         onLogin(session);
         showSuccess(`Welcome, ${matchedStudent.name}!`);
       } else {
-        setError('No matching record found. Please verify your Admission Number and Date of Birth.');
+        setError('No matching record found. Please verify your Assessment/Birth Certificate Number and Date of Birth.');
         setIsSearching(false);
       }
     }, 800);
@@ -229,15 +244,15 @@ const LoginForm = ({ onLogin }: { onLogin: (session: PortalSession) => void }) =
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="admNo" className="text-slate-700 font-bold text-sm">
-                Admission Number
+              <Label htmlFor="identifier" className="text-slate-700 font-bold text-sm">
+                Assessment Number / Birth Certificate No.
               </Label>
               <Input
-                id="admNo"
+                id="identifier"
                 type="text"
-                value={admNo}
-                onChange={(e) => setAdmNo(e.target.value)}
-                placeholder="e.g., 001 or STU-001"
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
+                placeholder="e.g., Assessment No. or Birth Cert No."
                 className="h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-700 font-medium placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-100"
                 autoComplete="off"
               />
