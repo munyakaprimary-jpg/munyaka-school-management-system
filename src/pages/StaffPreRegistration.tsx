@@ -65,34 +65,88 @@ const generateAccessKey = (): string => {
   return `MUNYAKA-${randomDigits}`;
 };
 
+/** All localStorage keys that hold staff or pre-registration data. */
+const STAFF_STORAGE_KEYS: string[] = [
+  'munyaka_staff_directory',
+  'munyaka_staff_prereg',
+  'munyaka_staff',
+  'munyaka_staff_access_keys',
+  'munyaka_staff_purged',
+  'staff_records',
+  'pre_reg_staff',
+  'personnel_directory',
+];
+
+/**
+ * Wipes every staff-related localStorage key and sets the purge flag so
+ * seed data is NOT re-loaded after the purge.
+ * Returns a list of keys that were cleared.
+ */
+const purgeAllStaffData = (): string[] => {
+  const cleared: string[] = [];
+  try {
+    STAFF_STORAGE_KEYS.forEach((key) => {
+      if (localStorage.getItem(key) !== null) {
+        localStorage.removeItem(key);
+        cleared.push(key);
+      }
+    });
+    // Set purge flag so initial state does not re-seed from INITIAL_PRE_REGISTERED_STAFF
+    localStorage.setItem('munyaka_staff_purged', new Date().toISOString());
+    cleared.push('munyaka_staff_purged');
+  } catch (err) {
+    console.error('[StaffPreRegistration] purgeAllStaffData failed:', err);
+  }
+  return cleared;
+};
+
+/** True when the user has previously triggered a full data purge. */
+const wasStaffDataPurged = (): boolean =>
+  localStorage.getItem('munyaka_staff_purged') !== null;
+
 const StaffPreRegistration = () => {
   const navigate = useNavigate();
 
   // ── Boot: scrub legacy dummy test entries from the ledger ─────────────────
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem('munyaka_staff_prereg');
-      if (raw) {
-        const parsed: PreRegisteredStaff[] = JSON.parse(raw);
-        const before = parsed.length;
-        const cleaned = parsed.filter(
-          (s) =>
-            !/^prereg-\d+$/i.test(s.id) &&
-            !/^dummy/i.test(s.fullName || '') &&
-            (s.fullName || '').toLowerCase() !== 'pre-registered staff'
-        );
-        if (cleaned.length < before) {
-          localStorage.setItem('munyaka_staff_prereg', JSON.stringify(cleaned));
-          setStaffList(cleaned);
+    // Also: if a previous "Clear All Staff Data" run set the purge flag,
+    // wipe the ledger so seed data does not respawn on next mount.
+    useEffect(() => {
+      try {
+        if (wasStaffDataPurged()) {
+          // Purge flag present → drop the pre-reg ledger and directory cache
+          const clearedKeys = purgeAllStaffData();
+          if (clearedKeys.length > 0) {
+            setStaffList([]);
+            notifyDataChanged('munyaka_staff_prereg');
+            notifyDataChanged('munyaka_staff_directory');
+          }
+          return;
         }
-      }
-    } catch { /* ignore */ }
-  }, []);
-
-  const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_prereg');
-    return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
-  });
+        const raw = localStorage.getItem('munyaka_staff_prereg');
+        if (raw) {
+          const parsed: PreRegisteredStaff[] = JSON.parse(raw);
+          const before = parsed.length;
+          const cleaned = parsed.filter(
+            (s) =>
+              !/^prereg-\d+$/i.test(s.id) &&
+              !/^dummy/i.test(s.fullName || '') &&
+              (s.fullName || '').toLowerCase() !== 'pre-registered staff'
+          );
+          if (cleaned.length < before) {
+            localStorage.setItem('munyaka_staff_prereg', JSON.stringify(cleaned));
+            setStaffList(cleaned);
+          }
+        }
+      } catch { /* ignore */ }
+    }, []);
+  
+    const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
+      // If the user has previously purged, start with an empty array even on
+      // first load — no `INITIAL_PRE_REGISTERED_STAFF` seed respawns.
+      if (wasStaffDataPurged()) return [];
+      const saved = localStorage.getItem('munyaka_staff_prereg');
+      return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
+    });
 
   // Unified directory staff list — read directly from `munyaka_staff_directory`
   // (the same key Staff.tsx writes to). Falls back to STAFF seed data.
@@ -420,9 +474,25 @@ const StaffPreRegistration = () => {
       setAuthPassword("");
     }
     setIsVerifying(false);
-  };
-
-  const handleExportCSV = () => {
+      };
+    
+      /** Purges every staff-related key from localStorage and resets all state. */
+      const purgeAllStaffData = () => {
+        if (!window.confirm('Delete ALL staff and pre-registration records permanently? This cannot be undone.')) return;
+        const keys = [
+          'munyaka_staff_prereg',
+          'munyaka_staff_directory',
+          'munyaka_staff',
+        ];
+        keys.forEach(k => localStorage.removeItem(k));
+        setStaffList([]);
+        setDirectoryStaff([]);
+        notifyDataChanged('munyaka_staff_prereg');
+        notifyDataChanged('munyaka_staff_directory');
+        showSuccess('All staff data purged. Refresh to start fresh.');
+      };
+    
+      const handleExportCSV = () => {
       if (filteredLedger.length === 0) {
         showSuccess("No records found for the current filters.");
         return;
@@ -502,14 +572,24 @@ const StaffPreRegistration = () => {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button
-            variant="outline"
-            className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
-            onClick={handleExportCSV}
-            disabled={isExporting}
-          >
-            {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-            Export CSV
-          </Button>
+                      variant="outline"
+                      className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
+                      onClick={handleExportCSV}
+                      disabled={isExporting}
+                    >
+                      {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
+                      Export CSV
+                    </Button>
+          
+                    <Button
+                      variant="ghost"
+                      className="h-11 px-4 rounded-2xl text-sm font-bold gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                      onClick={purgeAllStaffData}
+                      title="Permanently delete all staff data"
+                    >
+                      <Trash2 size={18} />
+                      Clear All Staff Data
+                    </Button>
           
           <Button
             variant="default"
