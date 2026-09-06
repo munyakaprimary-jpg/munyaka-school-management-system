@@ -2645,8 +2645,8 @@ const Attendance = () => {
             if (e.target === e.currentTarget) setShowCutoffSettings(false);
           }}
         >
-          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
-            <div className="p-6 border-b bg-indigo-50 border-indigo-100">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full max-h-[85vh] flex flex-col overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b bg-indigo-50 border-indigo-100 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
                   <Clock size={24} />
@@ -2662,7 +2662,7 @@ const Attendance = () => {
               </div>
             </div>
 
-            <div className="p-6 space-y-5">
+            <div className="p-6 space-y-5 overflow-y-auto flex-1">
               {/* Enable/Disable Cutoff Toggle */}
               <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
                 <div className="flex items-center gap-3">
@@ -2762,7 +2762,7 @@ const Attendance = () => {
               </div>
             </div>
 
-            <div className="p-5 border-t bg-slate-50 border-slate-100 flex gap-2 justify-end">
+            <div className="p-5 border-t bg-white border-slate-100 flex gap-2 justify-end shrink-0">
               <Button
                 variant="ghost"
                 onClick={() => setShowCutoffSettings(false)}
