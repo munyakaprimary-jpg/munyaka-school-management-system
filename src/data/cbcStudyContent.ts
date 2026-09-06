@@ -540,7 +540,8 @@ const kicdRevision: ContentItem[] = [
       "Reading: Read aloud simple sentences of 3–5 words.",
       "Writing: Copy sentences correctly; write name and date.",
       "Spelling: Spell 10 grade-appropriate words.",
-      "Sample question: 'Write the missing letter: c _ t'", rubric: "Answer: cat",
+      "Sample question: 'Write the missing letter: c _ t'",
+      "Answer: cat",
     ],
     revisionQuestions: [
       { question: "Write the missing letter: b _ _ k", answer: "book", rubric: "2 marks" },
