@@ -443,18 +443,18 @@ const AdminDashboard: React.FC = () => {
       }
     } catch { /* ignore */ }
 
-    // Build 5-day school week series (Mon–Fri, most recent last)
+    // Build 5-day school week series (Mon–Fri), sorted chronologically
+    // x-axis should show: Mon, Tue, Wed, Thu, Fri
     const result: WeeklyAttendance[] = [];
     
-    // Find the most recent Monday (start of school week)
+    // Find the Monday of the current school week
     // todayDayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
-    // We want to show Mon through Fri of the current week
-    let startDayOffset = 1 - todayDayOfWeek; // Days since Monday
-    if (todayDayOfWeek === 0) startDayOffset = -6; // Sunday = go back 6 days to Monday
+    // Calculate how many days to go back to reach Monday
+    const daysToMonday = todayDayOfWeek === 0 ? 6 : todayDayOfWeek - 1;
     
-    for (let i = 4; i >= 0; i--) {
+    for (let i = 0; i <= 4; i++) {
       const d = new Date(today);
-      d.setDate(today.getDate() - startDayOffset - i); // Go back from Friday
+      d.setDate(today.getDate() - daysToMonday + i); // i=0: Monday, i=4: Friday
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
