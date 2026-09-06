@@ -35,6 +35,8 @@ interface RegisterModalProps {
   setPhone: (value: string) => void;
   dateOfBirth: string;
   setDateOfBirth: (value: string) => void;
+  enrollmentYear: number;
+  setEnrollmentYear: (value: number) => void;
   gender?: 'Male' | 'Female' | 'Other';
   setGender?: (value: 'Male' | 'Female' | 'Other') => void;
   formError?: string;
@@ -64,6 +66,8 @@ export default function RegisterModal({
   setPhone,
   dateOfBirth,
   setDateOfBirth,
+  enrollmentYear,
+  setEnrollmentYear,
   gender = 'Female',
   setGender,
   formError = '',
@@ -72,6 +76,9 @@ export default function RegisterModal({
   currentUserEmail,
   isCurrentUserAdmin = false,
 }: RegisterModalProps) {
+  // Generate enrollment year options (current year + next 2 years)
+  const currentYear = new Date().getFullYear();
+  const yearOptions = [currentYear, currentYear + 1, currentYear + 2];
   const [gradesConfig, setGradesConfig] = useState<GradesStreamsConfig>(() =>
     readGradesAndStreams()
   );
@@ -256,7 +263,27 @@ export default function RegisterModal({
           Both are accepted if available.
         </p>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Enrollment Year
+                    </Label>
+                    <Select
+                      value={String(enrollmentYear)}
+                      onValueChange={(val) => setEnrollmentYear(Number(val))}
+                    >
+                      <SelectTrigger className="rounded-xl h-12 bg-slate-50 border-none font-bold">
+                        <SelectValue placeholder="Select year" />
+                      </SelectTrigger>
+                      <SelectContent className="rounded-xl">
+                        {yearOptions.map((year) => (
+                          <SelectItem key={year} value={String(year)}>
+                            {year}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
                       Grade Level

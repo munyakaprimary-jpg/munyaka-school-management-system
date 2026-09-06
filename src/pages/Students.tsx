@@ -28,6 +28,40 @@ import {
 } from '@/services/gradesStreamsConfig';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
+/**
+ * Generate a unique admission number based on grade and enrollment year.
+ * Format: MUN-G{gradeDigit}-{sequence}/{year}
+ * Example: MUN-G1-001/2026, MUN-G4-015/2027
+ */
+function generateUniqueAdmissionNo(
+  grade: string,
+  enrollmentYear: number,
+  existingStudents: Learner[]
+): string {
+  // Extract numeric grade digit (e.g., "Grade 4" -> 4, "PP1" -> 0, "PP2" -> 2)
+  const gradeMatch = grade.match(/(\d+)/);
+  const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
+  
+  // Filter students by same grade and enrollment year
+  const cohortStudents = existingStudents.filter(s => {
+    const matchesGrade = s.grade.toLowerCase() === grade.toLowerCase();
+    // Check if student has admission year matching (stored in dateOfAdmission)
+    const studentYear = s.dateOfAdmission
+      ? new Date(s.dateOfAdmission).getFullYear()
+      : null;
+    return matchesGrade && studentYear === enrollmentYear;
+  });
+  
+  const nextSeq = cohortStudents.length + 1;
+  return `MUN-G${gradeDigit}-${String(nextSeq).padStart(3, '0')}/${enrollmentYear}`;
+}
+
+// Get available enrollment years (current year + next 2 years)
+function getEnrollmentYears(): number[] {
+  const currentYear = new Date().getFullYear();
+  return [currentYear, currentYear + 1, currentYear + 2];
+}
+
 interface LearnerRowCompat {
   id: string;
   admNo: string;
@@ -39,6 +73,8 @@ interface LearnerRowCompat {
   phone: string;
   birthCertificateNo?: string;
   dob?: string;
+  dateOfAdmission?: string;
+  admissionYear?: number;
   status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
@@ -400,10 +436,11 @@ export default function Students() {
   };
 
   // ─── Modal & form state for RegisterModal ────────────────────────────────
+  const currentYear = new Date().getFullYear();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
-    admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+    admNo: '',
     name: '',
     birthCertificateNo: '',
     grade: 'Grade 4',
@@ -412,6 +449,7 @@ export default function Students() {
     guardian: '',
     phone: '',
     dateOfBirth: '',
+    enrollmentYear: currentYear,
   });
   const [formError, setFormError] = useState('');
     // Holds the full learner object so we can render its name in the PIN modal
@@ -449,27 +487,40 @@ export default function Students() {
     }
   }, [GRADES_LIST]);
 
-  // Open Add Modal — randomizes Assessment No and clears Birth Certificate No
+  // Regenerate admission number when grade or enrollment year changes (only for new registrations)
+  useEffect(() => {
+    if (!editingLearnerId && isModalOpen && formData.grade && formData.enrollmentYear) {
+      const newAdmNo = generateUniqueAdmissionNo(formData.grade, formData.enrollmentYear, learners);
+      setFormData(prev => ({ ...prev, admNo: newAdmNo }));
+    }
+  }, [formData.grade, formData.enrollmentYear, editingLearnerId, isModalOpen, learners]);
+
+  // Open Add Modal — generates unique Admission No and clears form
   const handleOpenAdd = () => {
     setEditingLearnerId(null);
+    const defaultGrade = GRADES_LIST[0] || 'Grade 4';
     setFormData({
-      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+      admNo: generateUniqueAdmissionNo(defaultGrade, currentYear, learners),
       name: '',
       birthCertificateNo: '',
-      grade: GRADES_LIST[0] || 'Grade 4',
+      grade: defaultGrade,
       stream: '',
       gender: 'Female',
       guardian: '',
       phone: '',
       dateOfBirth: '',
+      enrollmentYear: currentYear,
     });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  // Open Edit Modal — populates ALL fields including Birth Certificate No
+  // Open Edit Modal — populates ALL fields including Birth Certificate No and enrollment year
   const handleOpenEdit = (learner: LearnerRowCompat) => {
     setEditingLearnerId(learner.id);
+    const learnerYear = learner.dateOfAdmission
+      ? new Date(learner.dateOfAdmission).getFullYear()
+      : currentYear;
     setFormData({
       admNo: learner.admNo,
       name: learner.name,
@@ -480,6 +531,7 @@ export default function Students() {
       guardian: learner.guardian,
       phone: learner.phone,
       dateOfBirth: (learner as any).dob || '',
+      enrollmentYear: learnerYear,
     });
     setFormError('');
     setIsModalOpen(true);
@@ -583,8 +635,10 @@ export default function Students() {
       birthCertificateNo: bcNo || undefined,
       // Store dateOfBirth as dob in the learner record (ISO format YYYY-MM-DD)
       dob: formData.dateOfBirth || undefined,
-        status: (formData as any).status ?? 'Active',
-      };
+      // Store enrollment year as admissionYear
+      admissionYear: formData.enrollmentYear,
+      status: (formData as any).status ?? 'Active',
+    };
 
     if (editingLearnerId) {
           setLearners((prev) =>
@@ -666,7 +720,7 @@ export default function Students() {
     setFormError('');
     setEditingLearnerId(null);
     setFormData({
-      admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
+      admNo: '',
       name: '',
       birthCertificateNo: '',
       grade: GRADES_LIST[0] || 'Grade 4',
@@ -675,6 +729,7 @@ export default function Students() {
       guardian: '',
       phone: '',
       dateOfBirth: '',
+      enrollmentYear: currentYear,
     });
   };
 
@@ -1047,6 +1102,8 @@ export default function Students() {
               setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
               dateOfBirth={formData.dateOfBirth}
               setDateOfBirth={(v) => setFormData(prev => ({ ...prev, dateOfBirth: v }))}
+              enrollmentYear={formData.enrollmentYear}
+              setEnrollmentYear={(v) => setFormData(prev => ({ ...prev, enrollmentYear: v }))}
               gender={formData.gender}
               setGender={(v) => setFormData(prev => ({ ...prev, gender: v }))}
               formError={formError}
