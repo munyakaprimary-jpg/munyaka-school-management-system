@@ -22,7 +22,6 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError, dismissToast } from '@/utils/toast';
-import { notifyDataChanged } from '@/utils/storage';
 import {
   getStaffMaster,
   addStaffMaster,

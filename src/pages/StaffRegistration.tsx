@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from 'react-router-dom';
 import BackButton from '@/components/ui/BackButton';
+import { addStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
 // ─── Local-first staff storage ───────────────────────────────────────────────
 const STAFF_LOCAL_KEY = 'staff_local';
@@ -113,13 +114,34 @@ const StaffRegistration = () => {
       createdAt: new Date().toISOString(),
     };
 
-    // ── 1. Local-first: write directly to local storage immediately ──────────
+    // ── 1. CRITICAL: write to staffMasterService FIRST — this is the single
+    //    source of truth used by Staff Directory and Access Master Ledger.
+    //    initializeStaffMaster() is idempotent so it's safe to call every time.
+    try {
+      initializeStaffMaster();
+      addStaffMaster({
+        name: formData.fullName.trim(),
+        nationalId: `ID-${Date.now()}`,
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        tscNumber: formData.tscNumber?.trim() || undefined,
+        role: formData.role.toUpperCase().trim(),
+        systemRole: 'subject_teacher',
+        department: 'School Administration',
+        status: 'Pre-Registered',
+      });
+    } catch (err) {
+      console.error('[StaffRegistration] staffMasterService sync failed:', err);
+      // Fall through: still write to local storage and navigate
+    }
+
+    // ── 2. Local backup: also write to staff_local for legacy consumers ─────
     addLocalStaff(record);
 
-    // ── 2. Notify the rest of the app so the staff list updates right away ──
+    // ── 3. Broadcast so all open listeners refresh immediately ─────────────────
     window.dispatchEvent(new Event('staff-changed'));
 
-    // ── 3. Optional backend sync (silent — no error UI on failure) ───────────
+    // ── 4. Optional backend sync (silent — no error UI on failure) ───────────
     const synced = await tryBackendSync('/api/teachers', {
       id: staffId,
       full_name: record.fullName,
@@ -131,7 +153,7 @@ const StaffRegistration = () => {
       created_at: record.createdAt,
     });
 
-    // ── 4. Graceful UI feedback (no hardcoded URL errors) ────────────────────
+    // ── 5. UI feedback ───────────────────────────────────────────────────────
     toast({
       title: synced ? "Staff registered" : "Staff saved locally",
       description: synced
