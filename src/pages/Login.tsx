@@ -24,6 +24,7 @@ import {
   Mail,
   User,
   KeyRound,
+  GraduationCap,
   type LucideIcon,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -813,6 +814,37 @@ const Login: React.FC = () => {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* ── Parent & Student Portal Link ── */}
+          <div className="mt-4">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-200"></div>
+              </div>
+              <div className="relative flex justify-center">
+                <span className="bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 px-4 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                  or
+                </span>
+              </div>
+            </div>
+            
+            <button
+              type="button"
+              onClick={() => navigate('/portal')}
+              className="mt-4 w-full p-4 rounded-2xl bg-gradient-to-r from-indigo-50 via-purple-50 to-indigo-50 border-2 border-indigo-100 hover:border-indigo-200 hover:shadow-lg transition-all duration-300 group active:scale-[0.98]"
+            >
+              <div className="flex items-center justify-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-md group-hover:shadow-lg group-hover:scale-110 transition-all">
+                  <GraduationCap size={20} className="text-white" />
+                </div>
+                <div className="text-left">
+                  <div className="font-black text-slate-800 text-sm">Parent & Student Portal</div>
+                  <div className="text-[11px] text-slate-500 font-medium">View attendance, reports & fees</div>
+                </div>
+                <ArrowRight size={18} className="ml-auto text-indigo-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+            </button>
+          </div>
 
           {/* Footer */}
           <div className="text-center pt-2 space-y-1">
