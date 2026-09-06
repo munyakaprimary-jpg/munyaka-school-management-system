@@ -21,6 +21,8 @@ interface RegisterModalProps {
   onClose: () => void;
   fullName: string;
   setFullName: (value: string) => void;
+  admissionNumber: string;
+  setAdmissionNumber: (value: string) => void;
   assessmentNo: string;
   setAssessmentNo: (value: string) => void;
   birthCertificateNo: string;
@@ -52,6 +54,8 @@ export default function RegisterModal({
   onClose,
   fullName,
   setFullName,
+  admissionNumber,
+  setAdmissionNumber,
   assessmentNo,
   setAssessmentNo,
   birthCertificateNo,
@@ -215,6 +219,7 @@ export default function RegisterModal({
                 </div>
               )}
       
+              {/* 1. Full Name */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                   Full Name <span className="text-rose-500">*</span>
@@ -227,42 +232,52 @@ export default function RegisterModal({
                 />
               </div>
 
+        {/* 2. Admission Number (Auto-generated) */}
+        <div className="space-y-2">
+          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Admission Number
+          </Label>
+          <Input
+            value={admissionNumber}
+            readOnly
+            placeholder="Auto-generated"
+            className="rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700 cursor-not-allowed"
+          />
+          <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+            Auto-generated: MUN-G[Grade]-[Seq]/[Year]
+          </p>
+        </div>
+
+        {/* 3. Assessment No & 4. Birth Certificate No */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
               Assessment No.
               <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">
-                (or Birth Cert.)
+                (KNEC / NEMIS)
               </span>
             </Label>
             <Input
               value={assessmentNo}
               onChange={(e) => setAssessmentNo(e.target.value)}
-              placeholder="A100200"
+              placeholder="Optional"
               className="uppercase rounded-xl h-12 bg-slate-50 border-none font-bold"
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-1.5">
+            <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
               Birth Certificate No.
-              <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">
-                (or Assessment)
-              </span>
             </Label>
             <Input
               value={birthCertificateNo}
               onChange={(e) => setBirthCertificateNo(e.target.value)}
-              placeholder="BC12345"
-              className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+              placeholder="Optional"
+              className="rounded-xl h-12 bg-slate-50 border-none font-bold uppercase"
             />
           </div>
         </div>
 
-        <p className="text-[10px] text-slate-400 font-medium -mt-3 leading-relaxed">
-          Provide <strong className="text-slate-500">at least one</strong> of the two identifiers above.
-          Both are accepted if available.
-        </p>
-
+        {/* 5. Enrollment Year, Grade Level, Stream */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">

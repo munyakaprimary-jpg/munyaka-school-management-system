@@ -75,6 +75,7 @@ interface LearnerRowCompat {
   dob?: string;
   dateOfAdmission?: string;
   admissionYear?: number;
+  assessment?: string;
   status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
@@ -442,6 +443,7 @@ export default function Students() {
   const [formData, setFormData] = useState({
     admNo: '',
     name: '',
+    assessmentNo: '',
     birthCertificateNo: '',
     grade: 'Grade 4',
     stream: '',
@@ -502,6 +504,7 @@ export default function Students() {
     setFormData({
       admNo: generateUniqueAdmissionNo(defaultGrade, currentYear, learners),
       name: '',
+      assessmentNo: '',
       birthCertificateNo: '',
       grade: defaultGrade,
       stream: '',
@@ -524,13 +527,14 @@ export default function Students() {
     setFormData({
       admNo: learner.admNo,
       name: learner.name,
+      assessmentNo: (learner as any).assessment || '',
       birthCertificateNo: learner.birthCertificateNo || '',
       grade: normalizeGradeName(learner.grade),
       stream: normalizeStreamName(learner.stream),
       gender: learner.gender,
       guardian: learner.guardian,
       phone: learner.phone,
-      dateOfBirth: (learner as any).dob || '',
+      dateOfBirth: learner.dob || '',
       enrollmentYear: learnerYear,
     });
     setFormError('');
@@ -637,6 +641,8 @@ export default function Students() {
       dob: formData.dateOfBirth || undefined,
       // Store enrollment year as admissionYear
       admissionYear: formData.enrollmentYear,
+      // Store assessment number (KNEC/NEMIS)
+      assessment: formData.assessmentNo || undefined,
       status: (formData as any).status ?? 'Active',
     };
 
@@ -722,6 +728,7 @@ export default function Students() {
     setFormData({
       admNo: '',
       name: '',
+      assessmentNo: '',
       birthCertificateNo: '',
       grade: GRADES_LIST[0] || 'Grade 4',
       stream: '',
@@ -1088,8 +1095,10 @@ export default function Students() {
               onClose={handleCloseModal}
               fullName={formData.name}
               setFullName={(v) => setFormData(prev => ({ ...prev, name: v }))}
-              assessmentNo={formData.admNo}
-              setAssessmentNo={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
+              admissionNumber={formData.admNo}
+              setAdmissionNumber={(v) => setFormData(prev => ({ ...prev, admNo: v }))}
+              assessmentNo={formData.assessmentNo}
+              setAssessmentNo={(v) => setFormData(prev => ({ ...prev, assessmentNo: v }))}
               birthCertificateNo={formData.birthCertificateNo}
               setBirthCertificateNo={(v) => setFormData(prev => ({ ...prev, birthCertificateNo: v }))}
               regGrade={formData.grade}
