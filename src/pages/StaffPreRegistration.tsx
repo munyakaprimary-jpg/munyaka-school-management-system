@@ -57,17 +57,12 @@ const resolveId = (s: Record<string, unknown>): string =>
     ) || 'N/A';
 
 /**
- * Generates a short, user-friendly access key.
- * Format: PR-XXXXXX  (e.g. PR-A3B7X9)
- * Uses uppercase alphanumeric to avoid confusion between 0/O and 1/I.
+ * Generates a clean numeric access key.
+ * Format: MUNYAKA-XXXX  (e.g. MUNYAKA-4827)
  */
 const generateAccessKey = (): string => {
-  const chars = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
-  let key = 'PR-';
-  for (let i = 0; i < 6; i++) {
-    key += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return key;
+  const randomDigits = Math.floor(1000 + Math.random() * 9000);
+  return `MUNYAKA-${randomDigits}`;
 };
 
 const StaffPreRegistration = () => {
@@ -271,7 +266,7 @@ const StaffPreRegistration = () => {
           setGeneratingKeyFor(entry.id);
           await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
     
-          // Use the clean short key — `generateAccessKey()` returns PR-XXXXXX
+          // Use the clean short key — `generateAccessKey()` returns MUNYAKA-XXXX
           const accessKey = generateAccessKey();
           const newPreReg: PreRegisteredStaff = {
             id: `PR-${Date.now()}`,
@@ -642,13 +637,13 @@ const StaffPreRegistration = () => {
                                                                                                                                                                                                                     <div
                                                                                                                                                                                                                       className="inline-flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors"
                                                                                                                                                                                                                       onClick={() => {
-                                                                                                                                                                                                                        const keyToCopy = staff.tempAccessCode || staff.activationKey || staff.code || staff.id;
+                                                                                                                                                                                                                        const keyToCopy = staff.tempAccessCode || staff.activationKey || 'MUNYAKA-0000';
                                                                                                                                                                                                                         navigator.clipboard.writeText(keyToCopy);
                                                                                                                                                                                                                         showSuccess(`Copied Key: ${keyToCopy}`);
                                                                                                                                                                                                                       }}
                                                                                                                                                                                                                       title="Click to copy access key"
                                                                                                                                                                                                                     >
-                                                                                                                                                                                                                      <code className="font-mono font-bold text-indigo-700 text-xs">{staff.tempAccessCode || staff.activationKey || 'N/A'}</code>
+                                                                                                                                                                                                                      <code className="font-mono font-bold text-indigo-700 text-xs">{staff.tempAccessCode || staff.activationKey || 'MUNYAKA-0000'}</code>
                                                                                                                                                                                                                       <Copy size={13} className="text-indigo-400" />
                                                                                                                                                                                                                     </div>
                                                                                                                                                                                                                   </td>
