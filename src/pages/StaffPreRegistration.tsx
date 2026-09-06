@@ -299,7 +299,7 @@ const StaffPreRegistration = () => {
         </div>
 
         {/* Table */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           {filteredStaff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Users size={48} className="mb-3 opacity-40" />
@@ -307,19 +307,18 @@ const StaffPreRegistration = () => {
               <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            <div className="w-full overflow-x-auto scrollbar-thin scrollbar-thumb-gray-300">
-              <table className="min-w-[650px] w-full text-sm">
-                <thead className="bg-slate-50 border-b border-slate-100">
-                  <tr>
-                    <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Staff</th>
-                    <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden md:table-cell">Role</th>
-                    <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Access Key</th>
-                    <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Email</th>
-                    <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Status</th>
-                    <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-50">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-100">
+                <tr>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Staff</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden md:table-cell">Role</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Access Key</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Email</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Status</th>
+                  <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
                 {filteredStaff.map(s => {
                   const canActivate = s.status === 'Pre-Registered';
                   return (
