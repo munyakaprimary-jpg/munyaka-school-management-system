@@ -12,6 +12,7 @@ import type { StaffMember } from '@/lib/mock-data';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
+import { generateAccessKey } from "@/services/staffAccessService";
 
 interface AddPreRegModalProps {
   isOpen: boolean;
@@ -70,16 +71,9 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
   }, [directoryStaffList, existingPreRegistered]);
 
   const generateRandomKey = () => {
-        // Clean numeric key: MUNYAKA-XXXX
-        const randomDigits = Math.floor(1000 + Math.random() * 9000);
-        setFormData(prev => ({ ...prev, tempAccessCode: `MUNYAKA-${randomDigits}` }));
-      };
-    
-      /** Pure key generator (no state setter) — used for initial form values. */
-      const generateAccessKey = (): string => {
-        const randomDigits = Math.floor(1000 + Math.random() * 9000);
-        return `MUNYAKA-${randomDigits}`;
-      };
+    // Clean numeric key: MUNYAKA-XXXX (sourced from staffAccessService)
+    setFormData(prev => ({ ...prev, tempAccessCode: generateAccessKey() }));
+  };
 
   const generateStaffId = () => {
     // T007, T008, ... — deterministic per existing ledger length

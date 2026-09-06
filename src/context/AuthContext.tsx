@@ -12,6 +12,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
+import { migrateAllStaffAccessKeys } from '@/services/staffAccessService';
 
 export type UserRole = 'owner' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -159,9 +160,12 @@ const initializeUsersStorage = () => {
   };
 
   // Sync pre-registered staff as valid default loggable users
+  // Run access-key migration first so that stale keys are normalised before
+  // they are synced into the users store (where tempAccessCode is the password).
+  migrateAllStaffAccessKeys();
   const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
-  const staffLedger: PreRegisteredStaff[] = savedLedgerJson 
-    ? JSON.parse(savedLedgerJson) 
+  const staffLedger: PreRegisteredStaff[] = savedLedgerJson
+    ? JSON.parse(savedLedgerJson)
     : INITIAL_PRE_REGISTERED_STAFF;
 
   staffLedger.forEach((staff) => {

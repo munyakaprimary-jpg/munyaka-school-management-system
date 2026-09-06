@@ -17,6 +17,12 @@ import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/st
 import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
 import { STAFF } from '@/lib/mock-data';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
+import {
+  generateAccessKey,
+  getMigratedStaffLedger,
+  persistMigratedLedger,
+  migrateAllStaffAccessKeys,
+} from '@/services/staffAccessService';
 
 // Directory staff entry that doesn't have a pre-registration record yet
 interface UnlinkedStaffEntry {
@@ -55,15 +61,6 @@ const resolveId = (s: Record<string, unknown>): string =>
       (s as any).national_id || (s as any).id_number || (s as any).idNumber ||
       s.nationalId || s.id || s.staffId || ''
     ) || 'N/A';
-
-/**
- * Generates a clean numeric access key.
- * Format: MUNYAKA-XXXX  (e.g. MUNYAKA-4827)
- */
-const generateAccessKey = (): string => {
-  const randomDigits = Math.floor(1000 + Math.random() * 9000);
-  return `MUNYAKA-${randomDigits}`;
-};
 
 /** All localStorage keys that hold staff or pre-registration data. */
 const STAFF_STORAGE_KEYS: string[] = [
@@ -122,6 +119,13 @@ const StaffPreRegistration = () => {
           }
           return;
         }
+
+        // 1. Run the access-key migration: any old-format / missing
+        //    `tempAccessCode` is rewritten to a clean MUNYAKA-XXXX value.
+        //    (This is the data-normalisation pass the Access Master Ledger relies on.)
+        const migrationResult = migrateAllStaffAccessKeys();
+
+        // 2. Scrub legacy dummy / test entries.
         const raw = localStorage.getItem('munyaka_staff_prereg');
         if (raw) {
           const parsed: PreRegisteredStaff[] = JSON.parse(raw);
@@ -135,17 +139,34 @@ const StaffPreRegistration = () => {
           if (cleaned.length < before) {
             localStorage.setItem('munyaka_staff_prereg', JSON.stringify(cleaned));
             setStaffList(cleaned);
+          } else if (migrationResult.updated > 0) {
+            // Migration rewrote some keys — reload the now-cleaned ledger
+            // so the Access Master Ledger table reflects MUNYAKA-XXXX values.
+            const reloaded = localStorage.getItem('munyaka_staff_prereg');
+            if (reloaded) setStaffList(JSON.parse(reloaded));
           }
         }
       } catch { /* ignore */ }
     }, []);
-  
+
     const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
       // If the user has previously purged, start with an empty array even on
       // first load — no `INITIAL_PRE_REGISTERED_STAFF` seed respawns.
       if (wasStaffDataPurged()) return [];
       const saved = localStorage.getItem('munyaka_staff_prereg');
-      return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
+      if (saved) {
+        // Use the same normalisation pipeline as the boot effect so that
+        // the initial render already shows the MUNYAKA-XXXX form, even
+        // before the post-mount useEffect runs.
+        const migrated = getMigratedStaffLedger();
+        if (migrated.length > 0) {
+          // Persist the migrated form so subsequent boots are no-ops
+          persistMigratedLedger(migrated);
+          return migrated;
+        }
+        return JSON.parse(saved);
+      }
+      return INITIAL_PRE_REGISTERED_STAFF;
     });
 
   // Unified directory staff list — read directly from `munyaka_staff_directory`
@@ -477,7 +498,7 @@ const StaffPreRegistration = () => {
       };
     
       /** Purges every staff-related key from localStorage and resets all state. */
-      const purgeAllStaffData = () => {
+      const handlePurgeAllStaffData = () => {
         if (!window.confirm('Delete ALL staff and pre-registration records permanently? This cannot be undone.')) return;
         const keys = [
           'munyaka_staff_prereg',
@@ -584,7 +605,7 @@ const StaffPreRegistration = () => {
                     <Button
                       variant="ghost"
                       className="h-11 px-4 rounded-2xl text-sm font-bold gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                      onClick={purgeAllStaffData}
+                      onClick={handlePurgeAllStaffData}
                       title="Permanently delete all staff data"
                     >
                       <Trash2 size={18} />
