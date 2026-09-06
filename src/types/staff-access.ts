@@ -2,6 +2,7 @@
 
 export type MasterSystemRole =
   | 'head_teacher'
+  | 'deputy_head_teacher'
   | 'senior_teacher'
   | 'class_teacher'
   | 'subject_teacher'
@@ -111,6 +112,7 @@ export interface PreRegisteredStaff {
 
 export const SYSTEM_ROLE_LABELS: Record<SystemRole, { label: string; color: string; badgeBg: string }> = {
   head_teacher:    { label: 'Head Teacher',      color: 'text-purple-700',  badgeBg: 'bg-purple-50 border-purple-100'   },
+  deputy_head_teacher: { label: 'Deputy Head Teacher', color: 'text-violet-700', badgeBg: 'bg-violet-50 border-violet-100' },
   senior_teacher:  { label: 'Senior Teacher',    color: 'text-indigo-700',  badgeBg: 'bg-indigo-50 border-indigo-100'  },
   class_teacher:   { label: 'Class Teacher',     color: 'text-blue-700',    badgeBg: 'bg-blue-50 border-blue-100'      },
   subject_teacher: { label: 'Subject Teacher',   color: 'text-emerald-700', badgeBg: 'bg-emerald-50 border-emerald-100'},

@@ -30,7 +30,11 @@ import {
   bulkActivateStaffMaster,
   initializeStaffMaster,
   TEACHING_SYSTEM_ROLES,
+  mapDesignationToSystemRole,
+  isNonTeachingDesignation,
+  isLibrarianDesignation,
   type MasterStaffRecord,
+  type MasterSystemRole,
 } from '@/services/staffMasterService';
 
 interface StaffMember {
@@ -58,6 +62,20 @@ const systemRoleToLabel: Record<string, string> = {
   subject_teacher: 'Subject Teacher',
   bursar:         'Bursar',
   support_admin:   'System Admin',
+};
+
+// Helper to get default department based on system role
+const getDepartmentForRole = (systemRole: string): string => {
+  switch (systemRole) {
+    case 'librarian': return 'Library';
+    case 'bursar': return 'Finance';
+    case 'storekeeper': return 'Procurement';
+    case 'lab_assistant': return 'Science';
+    case 'ict_technician': return 'ICT';
+    case 'support_staff': return 'Administration';
+    case 'support_admin': return 'Administration';
+    default: return 'School Administration';
+  }
 };
 
 function masterToStaffMember(r: MasterStaffRecord): StaffMember {
@@ -118,8 +136,9 @@ const Staff = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkActivating, setIsBulkActivating] = useState(false);
-  const [formData, setFormData] = useState({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+  const [formData, setFormData] = useState({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
   const [formError, setFormError] = useState('');
+  const [showTeachingFields, setShowTeachingFields] = useState(true);
 
   // ── Filter ───────────────────────────────────────────────────────────────────
   const filteredStaff = useMemo(() => {
@@ -152,7 +171,8 @@ const Staff = () => {
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
-    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: 'subject_teacher', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
     setFormError('');
     setIsModalOpen(true);
   };
@@ -160,7 +180,17 @@ const Staff = () => {
   const handleOpenEdit = (staff: StaffMember) => {
     setModalMode('edit');
     setEditingStaff(staff);
-    setFormData({ full_name: staff.full_name, role: staff.role, phone: staff.phone, email: staff.email, tsc_number: staff.tsc_no || '' });
+    const designation = (staff.role || '').toUpperCase().trim();
+    const isNonTeaching = isNonTeachingDesignation(designation);
+    setShowTeachingFields(!isNonTeaching);
+    setFormData({
+      full_name: staff.full_name,
+      role: staff.role,
+      systemRole: staff.systemRole || 'subject_teacher',
+      phone: staff.phone,
+      email: staff.email,
+      tsc_number: staff.tsc_no || ''
+    });
     setFormError('');
     setIsModalOpen(true);
   };
@@ -169,7 +199,21 @@ const Staff = () => {
     setIsModalOpen(false);
     setEditingStaff(null);
     setFormError('');
-    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
+  };
+
+  // Handle role/designation changes and sync system role
+  const handleRoleChange = (designation: string) => {
+    const mappedRole = mapDesignationToSystemRole(designation);
+    const isNonTeaching = mappedRole ? isNonTeachingDesignation(designation) : false;
+    
+    setFormData(prev => ({
+      ...prev,
+      role: designation,
+      systemRole: mappedRole || prev.systemRole,
+    }));
+    setShowTeachingFields(!isNonTeaching);
   };
 
   const handleSaveStaff = () => {
@@ -181,18 +225,27 @@ const Staff = () => {
     setIsSaving(true);
     setFormError('');
 
+    const designation = formData.role.toUpperCase().trim();
+    const mappedSystemRole = mapDesignationToSystemRole(designation);
+    const isNonTeaching = mappedSystemRole ? isNonTeachingDesignation(designation) : false;
+
     if (modalMode === 'add') {
       const natId = `ID-${Date.now()}`;
       try {
+        const resolvedSystemRole: MasterSystemRole = mappedSystemRole || 'subject_teacher';
         addStaffMaster({
           name: formData.full_name.trim(),
           nationalId: natId,
           email: formData.email.trim(),
           phone: formData.phone.trim(),
           tscNumber: formData.tsc_number.trim() || undefined,
-          role: formData.role.toUpperCase().trim(),
-          systemRole: 'subject_teacher',
-          department: 'School Administration',
+          role: designation,
+          systemRole: resolvedSystemRole,
+          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
+          // Clear teaching-specific fields for non-teaching staff
+          assignedGrade: isNonTeaching ? undefined : undefined,
+          assignedStream: isNonTeaching ? undefined : undefined,
+          assignedSubjects: isNonTeaching ? [] : [],
           status: 'Pre-Registered',
         });
         showSuccess(`Staff member "${formData.full_name}" added and pre-registered.`);
@@ -204,13 +257,25 @@ const Staff = () => {
       }
     } else if (editingStaff) {
       try {
-        updateStaffMaster(editingStaff.id, {
+        const resolvedSystemRole: MasterSystemRole = mappedSystemRole || (formData.systemRole as MasterSystemRole) || 'subject_teacher';
+        const updatePayload: Partial<MasterStaffRecord> = {
           name: formData.full_name.trim(),
-          role: formData.role.toUpperCase().trim(),
+          role: designation,
+          systemRole: resolvedSystemRole,
           phone: formData.phone.trim(),
           email: formData.email.trim(),
           tscNumber: formData.tsc_number.trim() || undefined,
-        });
+          department: isNonTeaching ? getDepartmentForRole(resolvedSystemRole) : 'School Administration',
+        };
+
+        // Clear teaching-specific fields for non-teaching staff
+        if (isNonTeaching) {
+          updatePayload.assignedGrade = undefined;
+          updatePayload.assignedStream = undefined;
+          updatePayload.assignedSubjects = [];
+        }
+
+        updateStaffMaster(editingStaff.id, updatePayload);
         showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
       } catch (err) {
         showError('Failed to update staff. Please try again.');
@@ -222,7 +287,8 @@ const Staff = () => {
 
     setIsModalOpen(false);
     setEditingStaff(null);
-    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+    setFormData({ full_name: '', role: '', systemRole: '', phone: '', email: '', tsc_number: '' });
+    setShowTeachingFields(true);
     setIsSaving(false);
   };
 
@@ -532,8 +598,26 @@ const Staff = () => {
               </div>
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
-                <Input value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
-                  placeholder="e.g. TEACHER, ADMINISTRATOR" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
+                <Input
+                  value={formData.role}
+                  onChange={e => handleRoleChange(e.target.value)}
+                  placeholder="e.g. TEACHER, LIBRARIAN, ADMINISTRATOR"
+                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
+                />
+                {formData.systemRole && (
+                  <p className="text-xs text-slate-500 font-medium">
+                    System role: <span className="font-bold text-indigo-600">{formData.systemRole}</span>
+                    {!showTeachingFields && (
+                      <span className="text-amber-600 ml-1">(Non-teaching access)</span>
+                    )}
+                  </p>
+                )}
+                {!showTeachingFields && (
+                  <p className="text-xs text-amber-600 font-medium flex items-center gap-1 mt-1">
+                    <span className="inline-block w-1.5 h-1.5 bg-amber-500 rounded-full"></span>
+                    Non-teaching designation — teaching fields will be cleared on save
+                  </p>
+                )}
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">

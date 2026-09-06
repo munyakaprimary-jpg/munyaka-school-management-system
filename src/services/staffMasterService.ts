@@ -62,10 +62,68 @@ export const TEACHING_SYSTEM_ROLES = [
 export type TeachingRole = typeof TEACHING_SYSTEM_ROLES[number];
 
 /**
+ * Designation to System Role mapping for dynamic role synchronization.
+ * When a staff member's designation changes, this mapping determines their system role.
+ */
+export const DESIGNATION_TO_SYSTEM_ROLE: Record<string, MasterSystemRole> = {
+  // Teaching designations
+  'HEAD TEACHER': 'head_teacher',
+  'HEADTEACHER': 'head_teacher',
+  'PRINCIPAL': 'head_teacher',
+  'DEPUTY HEAD TEACHER': 'deputy_head_teacher',
+  'DEPUTY HEAD': 'deputy_head_teacher',
+  'SENIOR TEACHER': 'senior_teacher',
+  'CLASS TEACHER': 'class_teacher',
+  'SUBJECT TEACHER': 'subject_teacher',
+  'ICT TEACHER': 'ict_teacher',
+  // Non-teaching designations
+  'LIBRARIAN': 'librarian',
+  'LIBRARY': 'librarian',
+  'BURSAR': 'bursar',
+  'FINANCE': 'bursar',
+  'STOREKEEPER': 'storekeeper',
+  'STORES': 'storekeeper',
+  'LAB ASSISTANT': 'lab_assistant',
+  'LABORATORY ASSISTANT': 'lab_assistant',
+  'ICT TECHNICIAN': 'ict_technician',
+  'ICT TECH': 'ict_technician',
+  'SUPPORT STAFF': 'support_staff',
+  'ADMIN': 'support_admin',
+  'ADMINISTRATOR': 'support_admin',
+};
+
+/**
+ * Maps a designation string to its corresponding system role.
+ * Returns undefined if no mapping exists (keeps existing role).
+ */
+export const mapDesignationToSystemRole = (designation: string): MasterSystemRole | undefined => {
+  const normalized = designation.toUpperCase().trim();
+  return DESIGNATION_TO_SYSTEM_ROLE[normalized];
+};
+
+/**
+ * Returns true if the designation indicates a librarian role.
+ */
+export const isLibrarianDesignation = (designation: string): boolean => {
+  const normalized = designation.toUpperCase().trim();
+  return normalized === 'LIBRARIAN' || normalized === 'LIBRARY';
+};
+
+/**
+ * Returns true if the designation indicates a non-teaching/support role.
+ */
+export const isNonTeachingDesignation = (designation: string): boolean => {
+  const role = mapDesignationToSystemRole(designation);
+  return role ? isNonTeachingRole(role) : false;
+};
+
+/**
  * Returns true if the given systemRole is a teaching role.
  */
 export const isTeachingRole = (systemRole?: string): boolean => {
   if (!systemRole) return false;
+  // Explicitly exclude librarian from teaching roles
+  if (systemRole === 'librarian') return false;
   return TEACHING_SYSTEM_ROLES.includes(systemRole as TeachingRole);
 };
 
@@ -74,6 +132,50 @@ export const isTeachingRole = (systemRole?: string): boolean => {
  */
 export const isNonTeachingRole = (systemRole?: string): boolean => {
   return !isTeachingRole(systemRole);
+};
+
+/**
+ * Check if a staff member is a librarian based on their systemRole or designation.
+ * Used in staff lookup helpers like isTeacher(), canMarkRegister().
+ */
+export const isLibrarian = (staff: { systemRole?: string; role?: string } | null | undefined): boolean => {
+  if (!staff) return false;
+  const systemRole = (staff.systemRole || '').toLowerCase().trim();
+  const designation = (staff.role || '').toUpperCase().trim();
+  if (systemRole === 'librarian') return true;
+  if (designation === 'LIBRARIAN' || designation === 'LIBRARY') return true;
+  return false;
+};
+
+/**
+ * Check if a staff member is a teacher (not librarian, not non-teaching).
+ * Used in staff lookup helpers.
+ */
+export const isTeacher = (staff: { systemRole?: string; role?: string; isTeacher?: boolean } | null | undefined): boolean => {
+  if (!staff) return false;
+  // Explicitly return false for librarian
+  if (isLibrarian(staff)) return false;
+  // Check explicit flag first
+  if (staff.isTeacher === true) return true;
+  // Check system role
+  if (staff.systemRole) return isTeachingRole(staff.systemRole);
+  return false;
+};
+
+/**
+ * Check if a staff member can mark the attendance register.
+ * Librarians and non-teaching staff should return false.
+ */
+export const canMarkRegister = (staff: { systemRole?: string; role?: string; isTeacher?: boolean } | null | undefined): boolean => {
+  if (!staff) return false;
+  // Librarians and non-teaching staff cannot mark registers
+  if (isLibrarian(staff)) return false;
+  if (staff.systemRole) return isTeachingRole(staff.systemRole);
+  // Fallback: check designation for backward compatibility
+  const designation = (staff.role || '').toUpperCase();
+  const nonTeachingDesignations = ['LIBRARIAN', 'BURSAR', 'STOREKEEPER', 'LAB ASSISTANT', 'ICT TECHNICIAN', 'SUPPORT STAFF'];
+  if (nonTeachingDesignations.some(d => designation.includes(d))) return false;
+  return true;
 };
 
 /**
@@ -609,6 +711,91 @@ export function migrateStaffAccessKeys(): MigrationResult {
   }
 }
 
+/**
+ * Migrate staff records to fix librarian role synchronization issues.
+ * - Records with "LIBRARIAN" designation but non-librarian systemRole get corrected
+ * - Records with librarian systemRole but teaching fields (assignedSubjects, etc.) get cleaned up
+ * - Any staff member named "Mary Wairimu" or similar with librarian designation gets fixed
+ */
+interface LibrarianMigrationResult {
+  migrated: number;
+  cleaned: number;
+  total: number;
+}
+
+export function migrateLibrarianRoles(): LibrarianMigrationResult {
+  try {
+    const raw = localStorage.getItem(STAFF_MASTER_KEY);
+    if (!raw) return { migrated: 0, cleaned: 0, total: 0 };
+
+    const records: MasterStaffRecord[] = JSON.parse(raw);
+    if (!Array.isArray(records) || records.length === 0) {
+      return { migrated: 0, cleaned: 0, total: 0 };
+    }
+
+    let migrated = 0;
+    let cleaned = 0;
+    const migratedRecords: MasterStaffRecord[] = records.map(record => {
+      let needsPersist = false;
+      let updatedRecord = { ...record };
+      const designation = (record.role || '').toUpperCase().trim();
+
+      // 1. Fix designation to systemRole synchronization
+      if (designation === 'LIBRARIAN' && record.systemRole !== 'librarian') {
+        updatedRecord.systemRole = 'librarian';
+        needsPersist = true;
+        migrated++;
+        console.log(`[staffMasterService] Migrating librarian role: "${record.name}" (${record.id}) systemRole: "${record.systemRole}" -> "librarian"`);
+      }
+
+      // 2. Clean up teaching fields for librarians and non-teaching staff
+      if (isNonTeachingRole(record.systemRole) || isLibrarianDesignation(designation)) {
+        const hadTeachingFields =
+          (updatedRecord.assignedSubjects && updatedRecord.assignedSubjects.length > 0) ||
+          updatedRecord.assignedGrade ||
+          updatedRecord.assignedStream;
+
+        if (hadTeachingFields) {
+          updatedRecord.assignedSubjects = [];
+          updatedRecord.assignedGrade = undefined;
+          updatedRecord.assignedStream = undefined;
+          needsPersist = true;
+          cleaned++;
+          console.log(`[staffMasterService] Cleaning teaching fields for non-teaching staff: "${record.name}" (${record.id})`);
+        }
+      }
+
+      // 3. Sync designation label to match system role (for consistency)
+      const expectedRoleLabel = mapSystemRoleToRoleLabel(record.systemRole);
+      if (designation && designation !== expectedRoleLabel.toUpperCase() && !designation.includes(expectedRoleLabel)) {
+        // Only update if it's a known non-teaching designation mismatch
+        if (isNonTeachingRole(record.systemRole) && isNonTeachingDesignation(designation)) {
+          updatedRecord.role = expectedRoleLabel;
+          needsPersist = true;
+          migrated++;
+        }
+      }
+
+      return needsPersist ? updatedRecord : record;
+    });
+
+    if (migrated > 0 || cleaned > 0) {
+      persist(migratedRecords);
+      broadcast();
+      console.log(`[staffMasterService] Librarian migration complete: ${migrated} migrated, ${cleaned} cleaned`);
+    }
+
+    return {
+      migrated,
+      cleaned,
+      total: records.length,
+    };
+  } catch (err) {
+    console.error('[staffMasterService] migrateLibrarianRoles failed:', err);
+    return { migrated: 0, cleaned: 0, total: 0 };
+  }
+}
+
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
 function persist(records: MasterStaffRecord[]): void {
@@ -678,8 +865,19 @@ export function initializeStaffMaster(): void {
 
     migrateStaffAccessKeys();
 
+    // Migrate librarian roles if needed
     const existing = localStorage.getItem(STAFF_MASTER_KEY);
-    if (existing !== null) return;
+    if (existing !== null) {
+      // Only migrate if there are existing records
+      const migrateResult = migrateLibrarianRoles();
+      if (migrateResult.migrated > 0 || migrateResult.cleaned > 0) {
+        console.log(
+          `[staffMasterService] Role sync: ${migrateResult.migrated} roles migrated, ` +
+          `${migrateResult.cleaned} records cleaned`
+        );
+      }
+      return;
+    }
 
     persist(MASTER_SEED);
     console.log('[staffMasterService] Staff master ledger seeded with initial data');

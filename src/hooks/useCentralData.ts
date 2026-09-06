@@ -121,10 +121,23 @@ const TEACHER_SYSTEM_ROLES = new Set([
   'subject_teacher', 'senior_teacher', 'class_teacher', 'head_teacher', 'ict_teacher', 'teacher',
 ]);
 
+// Non-teaching keywords to explicitly exclude from teacher classification
+const NON_TEACHING_KEYWORDS = /(librarian|bursar|storekeeper|lab assistant|support staff|ict technician|admin)/i;
+
 const isTeacherRecord = (t: Teacher): boolean => {
   if (!t) return false;
   if (t.isTeacher === true) return true;
+  
   const systemRole = (t.systemRole || '').toLowerCase().trim();
+  const role = (t.role || '').toUpperCase().trim();
+  
+  // Explicitly exclude librarian and non-teaching roles
+  if (systemRole === 'librarian') return false;
+  if (role === 'LIBRARIAN') return false;
+  
+  // Check if designation suggests non-teaching role
+  if (NON_TEACHING_KEYWORDS.test(t.role || '')) return false;
+  
   if (systemRole && TEACHER_SYSTEM_ROLES.has(systemRole)) return true;
   if (TEACHER_KEYWORDS.test(t.role || '')) return true;
   return false;
