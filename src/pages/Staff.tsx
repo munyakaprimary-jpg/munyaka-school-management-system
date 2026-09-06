@@ -766,9 +766,9 @@ const Staff = () => {
                                                 </td>
 
                         <td className="px-8 py-5 min-w-[180px]">
-                          <p className="font-bold text-slate-800 whitespace-nowrap">{member.role}</p>
-                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
-                        </td>
+                                                  <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
+                                                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
+                                                </td>
 
                         <td className="px-8 py-5 min-w-[220px]">
                           <div className="space-y-0.5">

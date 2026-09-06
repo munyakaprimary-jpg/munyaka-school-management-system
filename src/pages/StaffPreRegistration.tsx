@@ -478,110 +478,116 @@ const StaffPreRegistration = () => {
               <tbody className="divide-y">
                               {filteredLedger.map((entry) => {
                                 if (entry.type === 'pre-registered') {
-                                  const staff = entry.data;
-                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
-                                  return (
-                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                                      <td className="px-8 py-5">
-                                        <p className="font-bold text-slate-900">{staff.fullName}</p>
-                                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {staff.nationalId}</p>
-                                      </td>
-                                      <td className="px-8 py-5">
-                                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{roleInfo.label}</Badge>
-                                      </td>
-                                      <td className="px-8 py-5">
-                                        <div className="flex items-center gap-2 text-slate-700">
-                                          <Mail size={14} className="text-slate-400 shrink-0" />
-                                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
-                                        </div>
-                                      </td>
-                                      <td className="px-8 py-5 text-center">
-                                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
-                                          navigator.clipboard.writeText(staff.tempAccessCode);
-                                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
-                                        }}>
-                                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
-                                          <Copy size={13} className="text-slate-400" />
-                                        </div>
-                                      </td>
-                                      <td className="px-8 py-5 text-center">
-                                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
-                                      </td>
-                                      <td className="px-8 py-5 text-right">
-                                        <div className="flex items-center justify-end gap-1.5">
-                                          <Button
-                                            variant="ghost"
-                                            size="sm"
-                                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
-                                          >
-                                            <Send size={14} /> Send Key
-                                          </Button>
-                                          <Button
-                                            variant="ghost"
-                                            size="icon"
-                                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                                            onClick={() => requestDelete(staff)}
-                                            title="Delete Pre-Registration"
-                                          >
-                                            <Trash2 size={16} />
-                                          </Button>
-                                        </div>
-                                      </td>
-                                    </tr>
-                                  );
-                                }
+                                                                  const staff = entry.data;
+                                                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
+                                                                  const displayName = staff.fullName || 'Pre-Registered Staff';
+                                                                  const displayId = staff.nationalId || staff.id || staff.ref || 'N/A';
+                                                                  const displayRole = roleInfo.label || 'Pending Assignment';
+                                                                  return (
+                                                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                      <td className="px-8 py-5">
+                                                                        <p className="font-bold text-slate-900">{displayName}</p>
+                                                                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {displayId}</p>
+                                                                      </td>
+                                                                      <td className="px-8 py-5">
+                                                                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{displayRole}</Badge>
+                                                                      </td>
+                                                                      <td className="px-8 py-5">
+                                                                        <div className="flex items-center gap-2 text-slate-700">
+                                                                          <Mail size={14} className="text-slate-400 shrink-0" />
+                                                                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
+                                                                        </div>
+                                                                      </td>
+                                                                      <td className="px-8 py-5 text-center">
+                                                                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
+                                                                          navigator.clipboard.writeText(staff.tempAccessCode);
+                                                                          showSuccess(`Copied Key: ${staff.tempAccessCode}`);
+                                                                        }}>
+                                                                          <code className="font-bold text-slate-800 text-xs">{staff.tempAccessCode}</code>
+                                                                          <Copy size={13} className="text-slate-400" />
+                                                                        </div>
+                                                                      </td>
+                                                                      <td className="px-8 py-5 text-center">
+                                                                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
+                                                                      </td>
+                                                                      <td className="px-8 py-5 text-right">
+                                                                        <div className="flex items-center justify-end gap-1.5">
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="sm"
+                                                                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
+                                                                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
+                                                                          >
+                                                                            <Send size={14} /> Send Key
+                                                                          </Button>
+                                                                          <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
+                                                                            onClick={() => requestDelete(staff)}
+                                                                            title="Delete Pre-Registration"
+                                                                          >
+                                                                            <Trash2 size={16} />
+                                                                          </Button>
+                                                                        </div>
+                                                                      </td>
+                                                                    </tr>
+                                                                  );
+                                                                }
               
                                 // Auto-linked directory staff (no ledger entry yet)
-                                const unlinked = entry.data;
-                                return (
-                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
-                                    <td className="px-8 py-5">
-                                      <p className="font-bold text-slate-900">{unlinked.name}</p>
-                                      <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {unlinked.nationalId}</p>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
-                                        {unlinked.role}
-                                      </Badge>
-                                    </td>
-                                    <td className="px-8 py-5">
-                                      <div className="flex items-center gap-2 text-slate-700">
-                                        <Mail size={14} className="text-slate-400 shrink-0" />
-                                        <span className="font-medium truncate max-w-[200px]">{unlinked.email}</span>
-                                      </div>
-                                    </td>
-                                    <td className="px-8 py-5 text-center">
-                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
-                                        <Key size={12} /> {unlinked.autoKey}
-                                      </span>
-                                    </td>
-                                    <td className="px-8 py-5 text-center">
-                                      <Badge className="rounded-xl border-none font-bold text-xs px-3 py-1 bg-rose-50 text-rose-700">
-                                        Pre-Registered
-                                      </Badge>
-                                    </td>
-                                    <td className="px-8 py-5 text-right">
-                                      <div className="flex items-center justify-end gap-1.5">
-                                        <Button
-                                          variant="ghost"
-                                          size="sm"
-                                          className="h-9 px-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 gap-1.5 shadow-md shadow-indigo-100"
-                                          disabled={generatingKeyFor === unlinked.id}
-                                          onClick={() => handleGenerateKeyAndInvite(unlinked)}
-                                          title="Generate Key / Invite"
-                                        >
-                                          {generatingKeyFor === unlinked.id ? (
-                                            <Loader2 className="animate-spin" size={14} />
-                                          ) : (
-                                            <Sparkles size={14} />
-                                          )}
-                                          Generate Key / Invite
-                                        </Button>
-                                      </div>
-                                    </td>
-                                  </tr>
-                                );
+                                                                const unlinked = entry.data;
+                                                                const displayName = unlinked.name || 'Pre-Registered Staff';
+                                                                const displayId = unlinked.nationalId || unlinked.id || 'N/A';
+                                                                const displayRole = unlinked.role || 'Pending Assignment';
+                                                                return (
+                                                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
+                                                                    <td className="px-8 py-5">
+                                                                      <p className="font-bold text-slate-900">{displayName}</p>
+                                                                      <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {displayId}</p>
+                                                                    </td>
+                                                                    <td className="px-8 py-5">
+                                                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
+                                                                        {displayRole}
+                                                                      </Badge>
+                                                                    </td>
+                                                                    <td className="px-8 py-5">
+                                                                      <div className="flex items-center gap-2 text-slate-700">
+                                                                        <Mail size={14} className="text-slate-400 shrink-0" />
+                                                                        <span className="font-medium truncate max-w-[200px]">{unlinked.email}</span>
+                                                                      </div>
+                                                                    </td>
+                                                                    <td className="px-8 py-5 text-center">
+                                                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
+                                                                        <Key size={12} /> {unlinked.autoKey}
+                                                                      </span>
+                                                                    </td>
+                                                                    <td className="px-8 py-5 text-center">
+                                                                      <Badge className="rounded-xl border-none font-bold text-xs px-3 py-1 bg-rose-50 text-rose-700">
+                                                                        Pre-Registered
+                                                                      </Badge>
+                                                                    </td>
+                                                                    <td className="px-8 py-5 text-right">
+                                                                      <div className="flex items-center justify-end gap-1.5">
+                                                                        <Button
+                                                                          variant="ghost"
+                                                                          size="sm"
+                                                                          className="h-9 px-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 gap-1.5 shadow-md shadow-indigo-100"
+                                                                          disabled={generatingKeyFor === unlinked.id}
+                                                                          onClick={() => handleGenerateKeyAndInvite(unlinked)}
+                                                                          title="Generate Key / Invite"
+                                                                        >
+                                                                          {generatingKeyFor === unlinked.id ? (
+                                                                            <Loader2 className="animate-spin" size={14} />
+                                                                          ) : (
+                                                                            <Sparkles size={14} />
+                                                                          )}
+                                                                          Generate Key / Invite
+                                                                        </Button>
+                                                                      </div>
+                                                                    </td>
+                                                                  </tr>
+                                                                );
                               })}
                               {filteredLedger.length === 0 && (
                                 <tr>
