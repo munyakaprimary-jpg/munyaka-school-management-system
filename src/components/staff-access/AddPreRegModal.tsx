@@ -21,7 +21,8 @@ interface AddPreRegModalProps {
 }
 
 const mapRoleToSystemRole = (role: string): SystemRole => {
-  const normalized = role.toLowerCase();
+  // Safe null-checking: role may be undefined when called with staff?.role
+  const normalized = (role || '').toLowerCase();
   if (normalized.includes('head') || normalized.includes('principal')) return 'head_teacher';
   if (normalized.includes('senior')) return 'senior_teacher';
   if (normalized.includes('class')) return 'class_teacher';
@@ -58,13 +59,14 @@ const AddPreRegModal = ({ isOpen, onClose, onSubmit, existingPreRegistered = [] 
 
   // Exclude staff members who ALREADY have a pre-registration record
   const availableStaff = useMemo(() => {
-    const preRegEmailSet = new Set(existingPreRegistered.map(s => s.email.toLowerCase()));
-    const preRegNatIdSet = new Set(existingPreRegistered.map(s => s.nationalId));
-
-    return directoryStaffList.filter(s => 
-      !preRegEmailSet.has(s.email.toLowerCase()) && 
-      !preRegNatIdSet.has(s.id_no)
-    );
+    // Safe null-checking: email may be undefined for incomplete directory records
+        const preRegEmailSet = new Set(existingPreRegistered.map(s => (s.email || '').toLowerCase()));
+        const preRegNatIdSet = new Set(existingPreRegistered.map(s => s.nationalId));
+    
+        return directoryStaffList.filter(s =>
+          !preRegEmailSet.has((s.email || '').toLowerCase()) &&
+          !preRegNatIdSet.has(s.id_no)
+        );
   }, [directoryStaffList, existingPreRegistered]);
 
   const generateRandomKey = () => {
