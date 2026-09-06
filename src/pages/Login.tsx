@@ -464,7 +464,7 @@ const Login: React.FC = () => {
     }
   
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col">
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-amber-50/20 flex flex-col overflow-y-auto">
         <div className="flex-1 flex items-center justify-center p-4 py-8">
           <div className="w-full max-w-2xl space-y-6 animate-in fade-in zoom-in-95 duration-500">
   
@@ -836,11 +836,11 @@ const Login: React.FC = () => {
                   Select Your Role
                 </p>
 
-                {/* Support Staff Card */}
+                {/* Non-Teaching Staff Card */}
                 <button
                   type="button"
                   onClick={() => {
-                    setStaffId('support@munyaka.sc.ke');
+                    setStaffId('non_teaching@munyaka.sc.ke?role=non_teaching');
                     (document.getElementById('staff-id') as HTMLInputElement)?.focus();
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
@@ -850,7 +850,7 @@ const Login: React.FC = () => {
                       <Users size={24} />
                     </div>
                     <div className="flex-1">
-                      <div className="font-black text-slate-800">Support Staff</div>
+                      <div className="font-black text-slate-800">Non-Teaching Staff</div>
                       <div className="text-xs text-slate-500">General support &amp; administration</div>
                     </div>
                     <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
@@ -861,7 +861,7 @@ const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setStaffId('librarian@munyaka.sc.ke');
+                    setStaffId('librarian@munyaka.sc.ke?role=librarian');
                     (document.getElementById('staff-id') as HTMLInputElement)?.focus();
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
@@ -882,7 +882,7 @@ const Login: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => {
-                    setStaffId('storekeeper@munyaka.sc.ke');
+                    setStaffId('storekeeper@munyaka.sc.ke?role=storekeeper');
                     (document.getElementById('staff-id') as HTMLInputElement)?.focus();
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-yellow-200 bg-white hover:shadow-lg hover:border-yellow-300 transition-all text-left group active:scale-[0.98]"
@@ -899,11 +899,11 @@ const Login: React.FC = () => {
                   </div>
                 </button>
 
-                {/* Lab Assistant Card */}
+                {/* Science Lab Assistant Card */}
                 <button
                   type="button"
                   onClick={() => {
-                    setStaffId('labassistant@munyaka.sc.ke');
+                    setStaffId('lab_assistant@munyaka.sc.ke?role=lab_assistant');
                     (document.getElementById('staff-id') as HTMLInputElement)?.focus();
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-teal-200 bg-white hover:shadow-lg hover:border-teal-300 transition-all text-left group active:scale-[0.98]"
@@ -913,18 +913,18 @@ const Login: React.FC = () => {
                       <Beaker size={24} />
                     </div>
                     <div className="flex-1">
-                      <div className="font-black text-slate-800">Lab Assistant</div>
+                      <div className="font-black text-slate-800">Science Lab Assistant</div>
                       <div className="text-xs text-slate-500">Science lab &amp; materials management</div>
                     </div>
                     <ArrowRight size={16} className="text-teal-400 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </button>
 
-                {/* ICT Technician Card */}
+                {/* ICT Lab Technician Card */}
                 <button
                   type="button"
                   onClick={() => {
-                    setStaffId('icttech@munyaka.sc.ke');
+                    setStaffId('ict_technician@munyaka.sc.ke?role=ict_technician');
                     (document.getElementById('staff-id') as HTMLInputElement)?.focus();
                   }}
                   className="w-full p-4 rounded-2xl border-2 border-violet-200 bg-white hover:shadow-lg hover:border-violet-300 transition-all text-left group active:scale-[0.98]"
@@ -934,7 +934,7 @@ const Login: React.FC = () => {
                       <Monitor size={24} />
                     </div>
                     <div className="flex-1">
-                      <div className="font-black text-slate-800">ICT Technician</div>
+                      <div className="font-black text-slate-800">ICT Lab Technician</div>
                       <div className="text-xs text-slate-500">IT systems &amp; technical support</div>
                     </div>
                     <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform" />
