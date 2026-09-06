@@ -62,6 +62,8 @@ interface PaymentRecord {
   paid?: number;
   total?: number;
   status?: string;
+  date?: string;
+  method?: string;
 }
 
 interface AssessmentScore {
@@ -774,6 +776,7 @@ const Dashboard = ({
 // ── Main Component ───────────────────────────────────────────────────────────
 
 export default function ParentPortal() {
+  const navigate = useNavigate();
   const [session, setSession] = useState<PortalSession | null>(null);
   const [student, setStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(true);

@@ -1056,11 +1056,12 @@ const Attendance = () => {
 
         // Create attendance entries for this stream
         const streamBulk: Record<string, StudentAttendance> = {};
+        const streamStorageKey = `munyaka_attendance_v2_${filters.grade}_${stream}_${filters.date}`;
+        
         streamStudents.forEach(s => {
-          const storageKey = `munyaka_attendance_v2_${filters.grade}_${stream}_${filters.date}`;
           const existingStreamAttendance = (() => {
             try {
-              const raw = localStorage.getItem(storageKey);
+              const raw = localStorage.getItem(streamStorageKey);
               return raw ? JSON.parse(raw) : {};
             } catch { return {}; }
           })();
@@ -1072,8 +1073,8 @@ const Attendance = () => {
         });
 
         // Save to localStorage for this stream
-        localStorage.setItem(storageKey, JSON.stringify(streamBulk));
-        notifyDataChanged(storageKey);
+        localStorage.setItem(streamStorageKey, JSON.stringify(streamBulk));
+        notifyDataChanged(streamStorageKey);
         totalMarked += streamStudents.length;
         streamsApplied.push(stream);
       });
