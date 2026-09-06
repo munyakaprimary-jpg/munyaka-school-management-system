@@ -29,6 +29,7 @@ import {
   activateStaffMaster,
   bulkActivateStaffMaster,
   initializeStaffMaster,
+  TEACHING_SYSTEM_ROLES,
   type MasterStaffRecord,
 } from '@/services/staffMasterService';
 
@@ -41,6 +42,7 @@ interface StaffMember {
   tsc_no?: string;
   full_name: string;
   role: string;
+  systemRole?: string;
   subjects: string[];
   phone: string;
   email: string;
@@ -67,6 +69,7 @@ function masterToStaffMember(r: MasterStaffRecord): StaffMember {
     tsc_no: r.tscNumber,
     full_name: r.name,
     role: r.role || systemRoleToLabel[r.systemRole] || 'Teacher',
+    systemRole: r.systemRole,
     subjects: r.assignedSubjects ?? [],
     phone: r.phone,
     email: r.email,
@@ -107,6 +110,7 @@ const Staff = () => {
   // ── UI state ─────────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
+  const [categoryFilter, setCategoryFilter] = useState<'All' | 'Teaching' | 'Non-Teaching'>('All');
   const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
@@ -128,9 +132,17 @@ const Staff = () => {
         String(s.email || '').toLowerCase().includes(needle) ||
         String(s.role || '').toLowerCase().includes(needle);
       const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
-      return matchesSearch && matchesStatus;
+      
+      // Category filter: Teaching vs Non-Teaching
+      const isTeaching = s.systemRole ? TEACHING_SYSTEM_ROLES.has(s.systemRole as any) : false;
+      const matchesCategory =
+        categoryFilter === 'All' ||
+        (categoryFilter === 'Teaching' && isTeaching) ||
+        (categoryFilter === 'Non-Teaching' && !isTeaching);
+      
+      return matchesSearch && matchesStatus && matchesCategory;
     });
-  }, [masterStaffList, searchTerm, statusFilter]);
+  }, [masterStaffList, searchTerm, statusFilter, categoryFilter]);
 
   const isPending = (s: StaffMember): boolean => s.status !== 'Active';
   const activeCount  = useMemo(() => masterStaffList.filter(s => !isPending(s)).length, [masterStaffList]);
@@ -325,6 +337,18 @@ const Staff = () => {
             </Button>
           ))}
         </div>
+      </div>
+
+      {/* Category Filter: Teaching vs Non-Teaching */}
+      <div className="flex items-center gap-3 p-1.5 bg-slate-100 rounded-2xl w-fit mx-auto md:mx-0">
+        {(['All', 'Teaching', 'Non-Teaching'] as const).map(cat => (
+          <Button key={cat} variant="ghost" onClick={() => setCategoryFilter(cat)}
+            className={categoryFilter === cat
+              ? "rounded-xl h-9 px-4 font-bold text-xs bg-white text-indigo-600 shadow-sm border border-indigo-100"
+              : "rounded-xl h-9 px-4 font-bold text-xs text-slate-500 hover:bg-white hover:text-slate-700"}>
+            {cat === 'All' ? 'All Staff' : cat === 'Teaching' ? '👩‍🏫 Teaching Staff' : '👔 Non-Teaching Staff'}
+          </Button>
+        ))}
       </div>
 
       {/* Bulk Action Bar */}

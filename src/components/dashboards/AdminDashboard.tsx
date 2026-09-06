@@ -24,6 +24,7 @@ import {
   TrendingUp,
   Loader2,
   Clock,
+  Briefcase,
 } from 'lucide-react';
 import { useCentralData } from '@/hooks/useCentralData';
 import { useAuth } from '@/context/AuthContext';
@@ -35,6 +36,7 @@ import {
 import { cn } from '@/lib/utils';
 import { formatGradeName } from '@/utils/gradeSort';
 import { useToast } from '@/hooks/use-toast';
+import { getCategorizedMetrics } from '@/services/staffMasterService';
 
 // Demo mode — set to false in production
 const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
@@ -43,7 +45,6 @@ const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
 
 interface SystemVitals {
   totalStudents: number;
-  totalTeachers: number;
   teachingStaff: {
     count: number;
     active: number;
@@ -307,7 +308,7 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { totalStudents, totalTeachers, categorizedMetrics, todayAttendanceRate, isLoading } = useCentralData();
+  const { totalStudents, todayAttendanceRate, isLoading } = useCentralData();
 
   // Local state for re-rendering alerts when the activity log changes
   const [activityVersion, setActivityVersion] = useState(0);
@@ -328,28 +329,29 @@ const AdminDashboard: React.FC = () => {
       return g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9') || g.includes('junior');
     }).length;
 
-    const teaching = categorizedMetrics?.teaching ?? { count: 0, active: 0, pending: 0 };
-    const nonTeaching = categorizedMetrics?.nonTeaching ?? { count: 0, active: 0, pending: 0 };
+    // Use centralized categorized metrics for Teaching vs Non-Teaching breakdown
+    const metrics = getCategorizedMetrics();
+    const teaching = metrics.teaching;
+    const nonTeaching = metrics.nonTeaching;
 
     return {
       totalStudents: isLoading ? 0 : totalStudents,
-      totalTeachers: isLoading ? 0 : totalTeachers,
       teachingStaff: {
-        count: teaching.count,
-        active: teaching.active,
-        pending: teaching.pending,
+        count: isLoading ? 0 : teaching.count,
+        active: isLoading ? 0 : teaching.active,
+        pending: isLoading ? 0 : teaching.pending,
       },
       nonTeachingStaff: {
-        count: nonTeaching.count,
-        active: nonTeaching.active,
-        pending: nonTeaching.pending,
+        count: isLoading ? 0 : nonTeaching.count,
+        active: isLoading ? 0 : nonTeaching.active,
+        pending: isLoading ? 0 : nonTeaching.pending,
       },
       todayAttendanceRate: isLoading ? 0 : todayAttendanceRate,
       primarySchoolCount: isLoading ? 0 : Math.max(0, totalStudents - juniorCount),
       juniorSchoolCount: juniorCount,
-      systemStatus: 'Live',
+      systemStatus: 'Live' as const,
     };
-  }, [isLoading, totalStudents, totalTeachers, categorizedMetrics, todayAttendanceRate, activityVersion]);
+  }, [isLoading, totalStudents, todayAttendanceRate, activityVersion]);
 
   // ── Weekly attendance — last 7 days, fully driven by real DB-style data
   //   No mock percentages. If a day has no records, the bar shows 0% and
@@ -746,7 +748,7 @@ const AdminDashboard: React.FC = () => {
       {/* ── Summary Metric Cards ── */}
       <div className="space-y-4 w-full">
         {/* Row 1: Overall Vitals */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 w-full">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 w-full">
           <VitalCard
             icon={<Users size={20} className="text-blue-600" />}
             iconBg="bg-blue-50"
@@ -756,9 +758,16 @@ const AdminDashboard: React.FC = () => {
           <VitalCard
             icon={<User size={20} className="text-purple-600" />}
             iconBg="bg-purple-50"
-            title="Total Teachers"
-            value={vitals.totalTeachers.toLocaleString()}
-            subtitle={`Active: ${vitals.activeTeacherCount} | Pending: ${vitals.pendingTeacherCount}`}
+            title="Teaching Staff"
+            value={vitals.teachingStaff.count.toLocaleString()}
+            subtitle={`Active: ${vitals.teachingStaff.active} | Pending: ${vitals.teachingStaff.pending}`}
+          />
+          <VitalCard
+            icon={<Briefcase size={20} className="text-orange-600" />}
+            iconBg="bg-orange-50"
+            title="Non-Teaching Staff"
+            value={vitals.nonTeachingStaff.count.toLocaleString()}
+            subtitle={`Active: ${vitals.nonTeachingStaff.active} | Pending: ${vitals.nonTeachingStaff.pending}`}
           />
           <VitalCard
             icon={<UserCheck size={20} className="text-emerald-600" />}

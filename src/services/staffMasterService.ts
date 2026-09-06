@@ -738,47 +738,42 @@ export function getStaffMetrics(schoolId: string | null = null): {
 // ─── Teaching vs Non-Teaching Classification ───────────────────────────────────
 
 /** Canonical teaching system roles */
-export const TEACHING_SYSTEM_ROLES = new Set([
+export const TEACHING_SYSTEM_ROLES = [
   'head_teacher',
   'deputy_head_teacher',
   'senior_teacher',
   'class_teacher',
   'subject_teacher',
   'ict_teacher',
-]);
+] as const;
 
-/**
- * Return categorized staff metrics split by teaching vs non-teaching roles.
- * Used by Dashboard, Central Hub, and APK views for precise staffing displays.
- */
-export function getCategorizedMetrics(schoolId: string | null = null): {
-  totalStaff: number;
-  teachingStaff: { total: number; active: number; pending: number };
-  nonTeachingStaff: { total: number; active: number; pending: number };
-} {
-  const records = schoolId
-    ? getStaffMasterBySchool(schoolId)
-    : getStaffMaster();
+export type TeachingRole = typeof TEACHING_SYSTEM_ROLES[number];
 
-  const isActive = (r: MasterStaffRecord) => (r.status || '').toLowerCase() === 'active';
-  const isPending = (r: MasterStaffRecord) => (r.status || '').toLowerCase() === 'pre-registered';
+/** Helper to check if a system role is a teaching role */
+export function isTeachingRole(systemRole?: string): boolean {
+  return TEACHING_SYSTEM_ROLES.includes(systemRole as TeachingRole);
+}
 
-  const teaching = records.filter(r => TEACHING_SYSTEM_ROLES.has(r.systemRole));
-  const nonTeaching = records.filter(r => !TEACHING_SYSTEM_ROLES.has(r.systemRole));
+/** Helper to check if a system role is a non-teaching role */
+export function isNonTeachingRole(systemRole?: string): boolean {
+  return !isTeachingRole(systemRole);
+}
 
-  return {
-    totalStaff: records.length,
-    teachingStaff: {
-      total: teaching.length,
-      active: teaching.filter(isActive).length,
-      pending: teaching.filter(isPending).length,
-    },
-    nonTeachingStaff: {
-      total: nonTeaching.length,
-      active: nonTeaching.filter(isActive).length,
-      pending: nonTeaching.filter(isPending).length,
-    },
-  };
+/** Count active staff in an array */
+function countActive(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'active').length;
+}
+
+/** Count pending/pre-registered staff in an array */
+function countPending(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'pre-registered').length;
+}
+
+/** Return type for categorized staff metrics */
+export interface CategorizedStaffMetrics {
+  total: { count: number; active: number; pending: number };
+  teaching: { count: number; active: number; pending: number };
+  nonTeaching: { count: number; active: number; pending: number };
 }
 
 /**
