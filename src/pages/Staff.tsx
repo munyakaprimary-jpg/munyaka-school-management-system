@@ -134,7 +134,7 @@ const Staff = () => {
       const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
       
       // Category filter: Teaching vs Non-Teaching
-      const isTeaching = s.systemRole ? TEACHING_SYSTEM_ROLES.has(s.systemRole as any) : false;
+      const isTeaching = s.systemRole ? TEACHING_SYSTEM_ROLES.includes(s.systemRole) : false;
       const matchesCategory =
         categoryFilter === 'All' ||
         (categoryFilter === 'Teaching' && isTeaching) ||
