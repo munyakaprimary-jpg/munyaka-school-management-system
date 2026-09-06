@@ -21,6 +21,8 @@ import { useFileDownload } from "@/utils/fileDownloader";
 import { cn } from "@/lib/utils";
 import { logActivity } from '@/services/activityLog';
 import { useLiveStreamAttendance } from '@/hooks/useLiveStreamAttendance';
+import { useGradesStreamsConfig, useStreamsForGrade } from '@/hooks/useGradesStreams';
+import { getStreamsForGrade } from '@/services/gradesStreamsConfig';
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
 type SessionType = 'morning' | 'afternoon';
@@ -613,118 +615,49 @@ const Attendance = () => {
   }, [filters.grade, filters.stream, filters.date]);
 
   // ============================================
-    // Dynamic stream options — derived from the full
-    // student roster so the dropdown only shows
-    // streams that actually exist for the selected
-    // Grade. Includes school-settings fallback
-    // streams when the roster is sparse.
     // ============================================
-    const SETTINGS_STORAGE_KEYS = [
-      'munyaka_school_settings',
-      'school_settings',
-      'munyaka_settings',
-      'schoolStreams',
-      'streams_config',
-    ];
+    // Dynamic stream options — sourced from the GradesStreamsConfig
+    // and filtered to only show streams assigned to the selected grade.
+    // ============================================
   
-    // Default stream list — used as fallback when neither roster nor settings
-    // provide a stream for the selected grade.
-    const DEFAULT_STREAM_FALLBACK = [
-      'YELLOW', 'BLUE', 'GREEN', 'RED',
-      'ALPHA', 'BETA',
-      'MERCURY', 'VENUS', 'JUPITER', 'NEPTUNE',
-    ];
+    // Read the centralized grades/streams configuration from localStorage
+    const gradesConfig = useGradesStreamsConfig();
   
-    const availableStreams = useMemo(() => {
-      const fromRoster = Array.from(
+    // Get grade-specific streams; if no grade is selected, fall back to all configured streams
+    const gradeSpecificStreams = useMemo(() => {
+      if (!filters.grade || filters.grade === 'all') {
+        // No grade selected — return all unique streams from the config
+        return config.streams.slice().sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+      }
+      return getStreamsForGrade(filters.grade, config);
+    }, [filters.grade, config]);
+  
+    // Also gather any streams that actually appear in the student roster for the selected grade
+    const rosterStreams = useMemo(() => {
+      return Array.from(
         new Set(
           allStudents
             .filter(s => matchGrade(s.grade, filters.grade))
-            .map(s => String(s.stream || '').toUpperCase().trim())
+            .map(s => String(s.stream || '').trim())
             .filter(Boolean)
         )
-      );
-  
-      // Try to pull an additional stream list from school settings
-      let fromSettings: string[] = [];
-      if (typeof window !== 'undefined') {
-        for (const key of SETTINGS_STORAGE_KEYS) {
-          try {
-            const raw = localStorage.getItem(key);
-            if (!raw) continue;
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) {
-              // Could be a flat array of stream strings
-              fromSettings = parsed
-                .filter(v => typeof v === 'string')
-                .map(v => String(v || '').toUpperCase().trim())
-                .filter(Boolean);
-              if (fromSettings.length > 0) break;
-            } else if (parsed && typeof parsed === 'object') {
-              // Look for common keys mapping grade → streams
-              const gradeMap: any = (parsed as any).gradeStreams
-                || (parsed as any).streams
-                || (parsed as any).grade_streams
-                || (parsed as any);
-              if (gradeMap && typeof gradeMap === 'object') {
-                // Direct match on grade
-                const direct = (gradeMap as any)[filters.grade];
-                if (Array.isArray(direct)) {
-                  fromSettings = direct.map((v: any) => String(v).toUpperCase().trim()).filter(Boolean);
-                  if (fromSettings.length > 0) break;
-                }
-                // Numeric match (e.g., "6" → "Grade 6")
-                const numeric = normalizeGrade(filters.grade);
-                if (numeric && Array.isArray((gradeMap as any)[numeric])) {
-                  fromSettings = ((gradeMap as any)[numeric] as any[])
-                    .map((v: any) => String(v).toUpperCase().trim())
-                    .filter(Boolean);
-                  if (fromSettings.length > 0) break;
-                }
-                // Iterate to find a matching grade key (loose match)
-                for (const k of Object.keys(gradeMap)) {
-                  if (matchGrade(k, filters.grade)) {
-                    const v = (gradeMap as any)[k];
-                    if (Array.isArray(v)) {
-                      fromSettings = v.map((x: any) => String(x).toUpperCase().trim()).filter(Boolean);
-                      if (fromSettings.length > 0) break;
-                    }
-                  }
-                }
-                if (fromSettings.length > 0) break;
-              }
-            }
-          } catch {
-            // ignore parse errors and try next key
-            continue;
-          }
-        }
-      }
-  
-      const merged = Array.from(new Set([...fromRoster, ...fromSettings]));
-      // If still empty, fall back to defaults so the dropdown isn't disabled
-      return merged.length > 0 ? merged : DEFAULT_STREAM_FALLBACK;
+      ).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
     }, [allStudents, filters.grade]);
   
-    // Whether the Stream dropdown should be disabled
-    const isStreamDisabled = !filters.grade || availableStreams.length === 0;
+    // Merge configured streams with roster-derived streams, then add "All Streams" as default
+    const availableStreams = useMemo(() => {
+      const merged = Array.from(new Set([...gradeSpecificStreams, ...rosterStreams]));
+      return merged;
+    }, [gradeSpecificStreams, rosterStreams]);
   
-    // Reset the Stream selection when the Grade changes and the current
-    // stream is not in the new available list. This avoids stale
-    // selections like keeping "YELLOW" after switching from Grade 6 to Grade 7.
+    // Whether the Stream dropdown should be disabled (no grade selected)
+    const isStreamDisabled = !filters.grade || filters.grade === 'all';
+  
+    // Reset the Stream selection back to "All Streams" whenever the Grade changes
     useEffect(() => {
-      if (!filters.grade) {
-        if (filters.stream) setFilters(prev => ({ ...prev, stream: '' }));
-        return;
-      }
-      const normCurrent = String(filters.stream || '').toLowerCase().trim();
-      const isCurrentInList = availableStreams.some(
-        s => String(s).toLowerCase().trim() === normCurrent
-      );
-      if (!isCurrentInList) {
-        setFilters(prev => ({ ...prev, stream: availableStreams[0] || '' }));
-      }
-    }, [filters.grade, availableStreams]);
+      // Always reset to "All Streams" (empty string means "all") when grade changes
+      setFilters(prev => ({ ...prev, stream: '' }));
+    }, [filters.grade]);
   
     const filteredLearners = useMemo(() => {
       if (!String(searchTerm || '').trim()) return liveStudents;
@@ -1457,8 +1390,8 @@ const Attendance = () => {
                         Stream
                       </label>
                       <Select
-                        value={filters.stream}
-                        onValueChange={(val) => setFilters(prev => ({ ...prev, stream: val }))}
+                        value={filters.stream || 'all'}
+                        onValueChange={(val) => setFilters(prev => ({ ...prev, stream: val === 'all' ? '' : val }))}
                         disabled={isStreamDisabled}
                       >
                         <SelectTrigger
@@ -1469,18 +1402,18 @@ const Attendance = () => {
                               : "bg-slate-50"
                           )}
                         >
-                          <SelectValue placeholder={isStreamDisabled ? "No streams available" : "Select Stream"} />
+                          <SelectValue placeholder={isStreamDisabled ? "Select a grade first" : "All Streams"} />
                         </SelectTrigger>
                         <SelectContent>
-                          {availableStreams.length > 0 ? (
-                            availableStreams.map(stream => (
-                              <SelectItem key={stream} value={stream}>
-                                {stream}
-                              </SelectItem>
-                            ))
-                          ) : (
+                          <SelectItem value="all">All Streams</SelectItem>
+                          {availableStreams.map(stream => (
+                            <SelectItem key={stream} value={stream}>
+                              {stream}
+                            </SelectItem>
+                          ))}
+                          {availableStreams.length === 0 && !isStreamDisabled && (
                             <SelectItem value="__none__" disabled>
-                              No streams configured
+                              No streams configured for this grade
                             </SelectItem>
                           )}
                         </SelectContent>
