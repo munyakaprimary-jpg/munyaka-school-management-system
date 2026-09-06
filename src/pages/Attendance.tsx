@@ -67,6 +67,51 @@ interface SessionWindow {
   description: string;
 }
 
+const ATTENDANCE_CUTOFF_CONFIG_KEY = 'munyaka_attendance_cutoffs';
+
+interface CutoffConfig {
+  morning: { hour: number; minute: number }; // Default: 8:00 AM
+  afternoon: { hour: number; minute: number }; // Default: 2:00 PM
+  enabled: boolean;
+}
+
+const DEFAULT_CUTOFFS: CutoffConfig = {
+  morning: { hour: 8, minute: 0 },  // 8:00 AM cutoff - register locks after this time
+  afternoon: { hour: 14, minute: 0 }, // 2:00 PM cutoff
+  enabled: true,
+};
+
+const getCutoffConfig = (): CutoffConfig => {
+  if (typeof window === 'undefined') return DEFAULT_CUTOFFS;
+  try {
+    const raw = localStorage.getItem(ATTENDANCE_CUTOFF_CONFIG_KEY);
+    if (!raw) return DEFAULT_CUTOFFS;
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object') return parsed as CutoffConfig;
+    return DEFAULT_CUTOFFS;
+  } catch {
+    return DEFAULT_CUTOFFS;
+  }
+};
+
+const saveCutoffConfig = (config: CutoffConfig): void => {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(ATTENDANCE_CUTOFF_CONFIG_KEY, JSON.stringify(config));
+    notifyDataChanged(ATTENDANCE_CUTOFF_CONFIG_KEY);
+  } catch (e) {
+    console.error('Error saving cutoff config:', e);
+  }
+};
+
+const isPastCutoff = (session: SessionType, now: Date, config: CutoffConfig): boolean => {
+  if (!config.enabled) return false;
+  const cutoff = session === 'morning' ? config.morning : config.afternoon;
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const cutoffMinutes = cutoff.hour * 60 + cutoff.minute;
+  return nowMinutes >= cutoffMinutes;
+};
+
 const SESSION_WINDOWS: Record<SessionType, SessionWindow> = {
   morning: {
     startHour: 6,
@@ -162,6 +207,13 @@ const formatLockedAt = (iso: string | undefined): string => {
     month: 'short', day: 'numeric', year: 'numeric',
     hour: '2-digit', minute: '2-digit'
   });
+};
+
+const formatCutoffTime = (cutoff: { hour: number; minute: number }): string => {
+  const ampm = cutoff.hour >= 12 ? 'PM' : 'AM';
+  const hour12 = cutoff.hour % 12 || 12;
+  const min = String(cutoff.minute).padStart(2, '0');
+  return `${hour12}:${min} ${ampm}`;
 };
 
 const Attendance = () => {
@@ -267,6 +319,14 @@ const Attendance = () => {
   // Time-window state
   const [currentTime, setCurrentTime] = useState<Date>(() => new Date());
 
+  // Cutoff configuration state
+  const [cutoffConfig, setCutoffConfig] = useState<CutoffConfig>(() => getCutoffConfig());
+  const [showCutoffSettings, setShowCutoffSettings] = useState(false);
+
+  // Derive whether a session is past its cutoff time
+  const isMorningPastCutoff = useMemo(() => isPastCutoff('morning', currentTime, cutoffConfig), [currentTime, cutoffConfig]);
+  const isAfternoonPastCutoff = useMemo(() => isPastCutoff('afternoon', currentTime, cutoffConfig), [currentTime, cutoffConfig]);
+
   // Admin override persisted to localStorage so it survives page reloads.
   const [adminBypass, setAdminBypass] = useState<boolean>(() => {
     if (typeof window === 'undefined') return false;
@@ -319,14 +379,39 @@ const Attendance = () => {
 
   const isSessionEditable = (session: SessionType): boolean => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
+    // Explicit admin lock always blocks editing (unless admin bypass is on)
     if (sessionLock.locked) return false;
+    // Admin bypass can override both time windows and cutoff restrictions
     if (adminBypass) return true;
+    // Only allow editing for today's date
     if (!isSelectedDateToday) return false;
-    return getActiveSession(currentTime) === session;
+    // Check if current time is within the active session window
+    if (getActiveSession(currentTime) !== session) return false;
+    // Check if past the cutoff time for this session
+    const isPastCutoff = session === 'morning' ? isMorningPastCutoff : isAfternoonPastCutoff;
+    if (isPastCutoff && !adminBypass) return false;
+    return true;
   };
 
   const isMorningEditable = isSessionEditable('morning');
   const isAfternoonEditable = isSessionEditable('afternoon');
+
+  // Determine lock reason for display purposes
+  const getMorningLockReason = (): string | null => {
+    if (morningLock.locked) return morningLock.reason || 'Manually sealed';
+    if (!isSelectedDateToday) return 'Viewing past date';
+    if (!getActiveSession(currentTime) && !adminBypass) return 'Morning session not active';
+    if (isMorningPastCutoff && !adminBypass) return `Cutoff time (${formatCutoffTime(cutoffConfig.morning)}) exceeded`;
+    return null;
+  };
+
+  const getAfternoonLockReason = (): string | null => {
+    if (afternoonLock.locked) return afternoonLock.reason || 'Manually sealed';
+    if (!isSelectedDateToday) return 'Viewing past date';
+    if (!getActiveSession(currentTime) && !adminBypass) return 'Afternoon session not active';
+    if (isAfternoonPastCutoff && !adminBypass) return `Cutoff time (${formatCutoffTime(cutoffConfig.afternoon)}) exceeded`;
+    return null;
+  };
 
   const activeSession = isSelectedDateToday ? getActiveSession(currentTime) : null;
 
@@ -1113,10 +1198,16 @@ const Attendance = () => {
     const sessionLock = session === 'morning' ? morningLock : afternoonLock;
     const isEditable = session === 'morning' ? isMorningEditable : isAfternoonEditable;
     const isLocked = sessionLock.locked;
+    const isPastCutoff = session === 'morning' ? isMorningPastCutoff : isAfternoonPastCutoff;
     const sessionColor = session === 'morning'
       ? { dot: 'bg-amber-500', tint: 'bg-amber-50', text: 'text-amber-700', sub: 'text-amber-600/80' }
       : { dot: 'bg-indigo-500', tint: 'bg-indigo-50', text: 'text-indigo-700', sub: 'text-indigo-600/80' };
     const isLive = !isLocked && activeSession === session;
+
+    // Determine lock reason for tooltip
+    const lockReason = session === 'morning' ? getMorningLockReason() : getAfternoonLockReason();
+    const showLockedBadge = !isEditable && !isLocked;
+    const showSealedBadge = isLocked;
 
     return (
       <div className="flex flex-col items-center justify-center gap-0.5">
@@ -1126,13 +1217,24 @@ const Attendance = () => {
           {isLive && !isLocked && (
             <span className="ml-1 px-1.5 py-0.5 rounded-md bg-emerald-500 text-white text-[9px] font-black tracking-widest animate-pulse">LIVE</span>
           )}
-          {!isEditable && !isLocked && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-slate-300 text-slate-700 text-[9px] font-black tracking-widest flex items-center gap-1">
-              <Lock size={9} /> LOCKED
+          {/* Register Locked Badge - shows when outside time window OR past cutoff */}
+          {showLockedBadge && (
+            <span
+              className={cn(
+                "ml-1 px-1.5 py-0.5 rounded-md text-white text-[9px] font-black tracking-widest flex items-center gap-1",
+                isPastCutoff ? "bg-orange-500" : "bg-slate-300 text-slate-700"
+              )}
+              title={lockReason || 'Register locked'}
+            >
+              <Lock size={9} /> {isPastCutoff ? 'CUTOFF' : 'LOCKED'}
             </span>
           )}
-          {isLocked && (
-            <span className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1">
+          {/* Admin Sealed Badge - shows when explicitly sealed by admin */}
+          {showSealedBadge && (
+            <span
+              className="ml-1 px-1.5 py-0.5 rounded-md bg-rose-500 text-white text-[9px] font-black tracking-widest flex items-center gap-1"
+              title={lockReason || 'Manually sealed by admin'}
+            >
               <Lock size={9} /> SEALED
             </span>
           )}
@@ -1140,6 +1242,11 @@ const Attendance = () => {
         <span className={`text-[9px] font-black tracking-widest ${sessionColor.sub}`}>
           {SESSION_WINDOWS[session].description}
         </span>
+        {isPastCutoff && cutoffConfig.enabled && !adminBypass && (
+          <span className="text-[8px] font-medium text-orange-500 mt-0.5">
+            Cutoff: {formatCutoffTime(session === 'morning' ? cutoffConfig.morning : cutoffConfig.afternoon)}
+          </span>
+        )}
       </div>
     );
   };
@@ -1178,6 +1285,55 @@ const Attendance = () => {
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
+          {/* Admin: Lock/Unlock Register Toggle */}
+          {isAdminRole && viewMode === 'marking' && (
+            <Button
+              onClick={() => {
+                // Quick toggle: if any session is locked, unlock it; otherwise lock morning
+                if (morningLock.locked || afternoonLock.locked) {
+                  // Show unlock options
+                  if (morningLock.locked) openLockAuthModal('unlock', 'morning');
+                  else if (afternoonLock.locked) openLockAuthModal('unlock', 'afternoon');
+                } else {
+                  // Lock morning register
+                  openLockAuthModal('lock', 'morning');
+                }
+              }}
+              className={cn(
+                "rounded-xl gap-2 text-sm font-bold h-11 px-4 shadow-lg transition-all",
+                (morningLock.locked || afternoonLock.locked)
+                  ? "bg-amber-500 hover:bg-amber-600 text-white shadow-amber-100"
+                  : "bg-slate-600 hover:bg-slate-700 text-white shadow-slate-100"
+              )}
+              title={(morningLock.locked || afternoonLock.locked) ? "Unlock Register" : "Lock Register"}
+            >
+              {(morningLock.locked || afternoonLock.locked) ? (
+                <>
+                  <Unlock size={16} />
+                  Unlock
+                </>
+              ) : (
+                <>
+                  <Lock size={16} />
+                  Lock Register
+                </>
+              )}
+            </Button>
+          )}
+
+          {/* Admin: Cutoff Settings Button */}
+          {isAdminRole && viewMode === 'marking' && (
+            <Button
+              variant="outline"
+              onClick={() => setShowCutoffSettings(true)}
+              className="rounded-xl border-slate-200 bg-white gap-2 text-sm font-bold h-11 px-4 hover:bg-slate-50"
+              title="Configure Register Cutoff Times"
+            >
+              <Clock size={16} />
+              Cutoff Settings
+            </Button>
+          )}
+
           {/* Admin: prominent Manual Register Override / Edit Attendance toggle */}
           {isAdminRole && (
             <Button
@@ -1383,60 +1539,126 @@ const Attendance = () => {
       )}
 
       {/* ============================================
-          2a. PER-SESSION AUTO-LOCK BANNER (when applicable)
+          2a. REGISTER STATUS BANNER (Locked / Sealed / Cutoff)
           ============================================ */}
-      {viewMode === 'marking' && (isMorningLocked || isAfternoonLocked) && (
-        <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5 min-w-0">
-            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
-              <LockKeyhole size={24} className="text-white animate-pulse" />
-            </div>
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
-                  {isMorningLocked && isAfternoonLocked
-                    ? 'Both Sessions Sealed'
-                    : isMorningLocked
-                    ? 'Morning Sealed'
-                    : 'Afternoon Sealed'}
-                </span>
-                <span className="text-xs font-medium text-rose-100 truncate">
-                  {isMorningLocked && isAfternoonLocked
-                    ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
-                    : isMorningLocked
-                    ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
-                    : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
-                </span>
+      {viewMode === 'marking' && (
+        <>
+          {/* Sealed Sessions Banner (manually locked) */}
+          {(isMorningLocked || isAfternoonLocked) && (
+            <div className="rounded-3xl p-5 bg-gradient-to-r from-rose-500 via-rose-600 to-rose-700 text-white shadow-xl shadow-rose-500/20 flex flex-col md:flex-row md:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0 ring-2 ring-white/30">
+                  <LockKeyhole size={24} className="text-white animate-pulse" />
+                </div>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="bg-white/25 backdrop-blur-md text-white text-[10px] font-black uppercase tracking-widest px-2.5 py-0.5 rounded-full border border-white/30">
+                      {isMorningLocked && isAfternoonLocked
+                        ? 'Both Sessions Sealed'
+                        : isMorningLocked
+                        ? 'Morning Sealed'
+                        : 'Afternoon Sealed'}
+                    </span>
+                    <span className="text-xs font-medium text-rose-100 truncate">
+                      {isMorningLocked && isAfternoonLocked
+                        ? `Morning locked at ${formatLockedAt(morningLock.lockedAt)} • Afternoon locked at ${formatLockedAt(afternoonLock.lockedAt)}`
+                        : isMorningLocked
+                        ? `Locked at ${formatLockedAt(morningLock.lockedAt)}`
+                        : `Locked at ${formatLockedAt(afternoonLock.lockedAt)}`}
+                    </span>
+                  </div>
+                  <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
+                    Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
+                    {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
+                      <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
+                    )}
+                  </p>
+                </div>
               </div>
-              <p className="font-bold text-sm sm:text-base mt-0.5 truncate">
-                Attendance saved. Status toggles and bulk actions are read-only for sealed sessions.
-                {(morningLock.reason || afternoonLock.reason) && (morningLock.reason || afternoonLock.reason) !== 'Auto-locked after saving attendance' && (
-                  <span className="font-medium text-rose-100/80 ml-2">Reason: {morningLock.reason || afternoonLock.reason}</span>
+              <div className="flex flex-wrap items-center gap-2 shrink-0">
+                {isMorningLocked && (
+                  <Button
+                    onClick={() => openLockAuthModal('unlock', 'morning')}
+                    className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+                  >
+                    <Unlock size={14} />
+                    Unlock Morning
+                  </Button>
                 )}
-              </p>
+                {isAfternoonLocked && (
+                  <Button
+                    onClick={() => openLockAuthModal('unlock', 'afternoon')}
+                    className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+                  >
+                    <Unlock size={14} />
+                    Unlock Afternoon
+                  </Button>
+                )}
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2 shrink-0">
-            {isMorningLocked && (
+          )}
+
+          {/* Cutoff Warning Banner (past cutoff but not manually locked) */}
+          {(() => {
+            const isPastCutoff = (isMorningPastCutoff || isAfternoonPastCutoff) && cutoffConfig.enabled;
+            const showBanner = !isMorningLocked && !isAfternoonLocked && !adminBypass && isSelectedDateToday && isPastCutoff;
+            if (!showBanner) return null;
+            return (
+              <div className="rounded-3xl p-4 bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                    <Lock size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <p className="font-bold text-sm">Register Cutoff {isMorningPastCutoff && isAfternoonPastCutoff ? 'Exceeded' : 'Reached'}</p>
+                    <p className="text-xs text-orange-100">
+                      {isMorningPastCutoff && isAfternoonPastCutoff
+                        ? `Morning (${formatCutoffTime(cutoffConfig.morning)}) and Afternoon (${formatCutoffTime(cutoffConfig.afternoon)}) cutoffs have passed`
+                        : isMorningPastCutoff
+                        ? `Morning cutoff (${formatCutoffTime(cutoffConfig.morning)}) has passed`
+                        : `Afternoon cutoff (${formatCutoffTime(cutoffConfig.afternoon)}) has passed`}
+                      {'. '}Contact admin to unlock.
+                    </p>
+                  </div>
+                </div>
+                {isAdminRole && (
+                  <Button
+                    onClick={() => setAdminBypass(true)}
+                    className="bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold text-xs h-9 px-4 gap-1.5 shrink-0"
+                  >
+                    <Unlock size={14} />
+                    Enable Override
+                  </Button>
+                )}
+              </div>
+            );
+          })()}
+
+          {/* Admin Override Active Banner */}
+          {adminBypass && isAdminRole && !isMorningLocked && !isAfternoonLocked && (
+            <div className="rounded-3xl p-4 bg-gradient-to-r from-emerald-500 to-emerald-600 text-white shadow-lg flex flex-col md:flex-row md:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
+                  <Unlock size={20} className="text-white" />
+                </div>
+                <div>
+                  <p className="font-bold text-sm">Admin Override Active</p>
+                  <p className="text-xs text-emerald-100">
+                    You can edit all sessions regardless of time windows or cutoff settings.
+                    Disable the toggle above to return to normal restrictions.
+                  </p>
+                </div>
+              </div>
               <Button
-                onClick={() => openLockAuthModal('unlock', 'morning')}
-                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
+                onClick={() => setAdminBypass(false)}
+                className="bg-white text-emerald-600 hover:bg-emerald-50 rounded-xl font-bold text-xs h-9 px-4 gap-1.5 shrink-0"
               >
-                <Unlock size={14} />
-                Unlock Morning
+                <Lock size={14} />
+                Disable Override
               </Button>
-            )}
-            {isAfternoonLocked && (
-              <Button
-                onClick={() => openLockAuthModal('unlock', 'afternoon')}
-                className="bg-white text-rose-600 hover:bg-rose-50 rounded-xl font-bold shrink-0 text-xs shadow-md gap-1.5"
-              >
-                <Unlock size={14} />
-                Unlock Afternoon
-              </Button>
-            )}
-          </div>
-        </div>
+            </div>
+          )}
+        </>
       )}
 
       {/* ============================================
@@ -1472,6 +1694,14 @@ const Attendance = () => {
                   </div>
 
                   <div className="flex items-center gap-2">
+                    {adminBypass && (
+                      <div className="flex items-center gap-2 px-3 py-1.5 rounded-2xl bg-emerald-50 border border-emerald-200">
+                        <Unlock size={14} className="text-emerald-600" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-700 whitespace-nowrap">
+                          Override Active
+                        </span>
+                      </div>
+                    )}
                     {isAdminRole ? (
                       <>
                         <div className="hidden lg:flex items-center gap-2 px-3 py-2 rounded-2xl bg-slate-50 border border-slate-100">
@@ -2403,6 +2633,157 @@ const Attendance = () => {
           </div>
         )}
       </Card>
+      )}
+
+      {/* ============================================
+          4b. CUTOFF TIME SETTINGS MODAL (Admin Only)
+          ============================================ */}
+      {showCutoffSettings && isAdminRole && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowCutoffSettings(false);
+          }}
+        >
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in zoom-in-95 duration-200">
+            <div className="p-6 border-b bg-indigo-50 border-indigo-100">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center">
+                  <Clock size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                    Register Cutoff Times
+                  </h3>
+                  <p className="text-xs font-bold text-slate-500 mt-0.5">
+                    Configure when each session becomes locked (non-editable) for teachers.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 space-y-5">
+              {/* Enable/Disable Cutoff Toggle */}
+              <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border border-slate-200">
+                <div className="flex items-center gap-3">
+                  <div className={cn(
+                    "w-10 h-10 rounded-xl flex items-center justify-center",
+                    cutoffConfig.enabled ? "bg-emerald-100 text-emerald-600" : "bg-slate-200 text-slate-400"
+                  )}>
+                    <Lock size={18} />
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-900">Enable Cutoff Enforcement</p>
+                    <p className="text-xs text-slate-500">When enabled, registers auto-lock after cutoff time</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    const next = { ...cutoffConfig, enabled: !cutoffConfig.enabled };
+                    setCutoffConfig(next);
+                    saveCutoffConfig(next);
+                  }}
+                  className={cn(
+                    "relative w-12 h-7 rounded-full transition-colors",
+                    cutoffConfig.enabled ? "bg-emerald-500" : "bg-slate-300"
+                  )}
+                  aria-label="Toggle cutoff enforcement"
+                >
+                  <span
+                    className={cn(
+                      "absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform",
+                      cutoffConfig.enabled ? "translate-x-5" : "translate-x-0.5"
+                    )}
+                  />
+                </button>
+              </div>
+
+              {/* Morning Cutoff Time */}
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <Sun size={14} className="text-amber-500" />
+                  Morning Session Cutoff
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={`${String(cutoffConfig.morning.hour).padStart(2, '0')}:${String(cutoffConfig.morning.minute).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(':').map(Number);
+                      const next = { ...cutoffConfig, morning: { hour: h, minute: m } };
+                      setCutoffConfig(next);
+                      saveCutoffConfig(next);
+                    }}
+                    className="flex-1 h-12 px-4 rounded-xl bg-amber-50 border border-amber-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-amber-100"
+                  />
+                  <span className="text-sm font-medium text-slate-500">
+                    {formatCutoffTime(cutoffConfig.morning)}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  After this time, the morning register becomes locked for teachers.
+                </p>
+              </div>
+
+              {/* Afternoon Cutoff Time */}
+              <div className="space-y-2">
+                <label className="text-xs font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                  <Moon size={14} className="text-indigo-500" />
+                  Afternoon Session Cutoff
+                </label>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={`${String(cutoffConfig.afternoon.hour).padStart(2, '0')}:${String(cutoffConfig.afternoon.minute).padStart(2, '0')}`}
+                    onChange={(e) => {
+                      const [h, m] = e.target.value.split(':').map(Number);
+                      const next = { ...cutoffConfig, afternoon: { hour: h, minute: m } };
+                      setCutoffConfig(next);
+                      saveCutoffConfig(next);
+                    }}
+                    className="flex-1 h-12 px-4 rounded-xl bg-indigo-50 border border-indigo-200 text-slate-900 font-bold focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                  />
+                  <span className="text-sm font-medium text-slate-500">
+                    {formatCutoffTime(cutoffConfig.afternoon)}
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500">
+                  After this time, the afternoon register becomes locked for teachers.
+                </p>
+              </div>
+
+              {/* Info Box */}
+              <div className="p-3 bg-blue-50 border border-blue-100 rounded-2xl flex items-start gap-2">
+                <Info size={14} className="text-blue-600 shrink-0 mt-0.5" />
+                <p className="text-xs text-blue-800 font-medium">
+                  Admins with <strong>Admin Override</strong> enabled can always edit registers regardless of cutoff times.
+                  Sessions can also be manually locked/unlocked from the header or session banner.
+                </p>
+              </div>
+            </div>
+
+            <div className="p-5 border-t bg-slate-50 border-slate-100 flex gap-2 justify-end">
+              <Button
+                variant="ghost"
+                onClick={() => setShowCutoffSettings(false)}
+                className="rounded-xl font-bold h-11 px-5"
+              >
+                Close
+              </Button>
+              <Button
+                onClick={() => {
+                  saveCutoffConfig(cutoffConfig);
+                  setShowCutoffSettings(false);
+                  showSuccess('Cutoff settings saved successfully');
+                }}
+                className="rounded-xl font-bold h-11 px-6 bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg gap-2"
+              >
+                <Save size={16} />
+                Save Settings
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ============================================
