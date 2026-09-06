@@ -81,16 +81,20 @@ const REASON_PRESETS = [
  */
 const generateUniqueAdmissionNo = (
   grade: string,
-  enrollmentYear: number,
-  existingStudents: Learner[]
+  existingStudents: Learner[],
+  enrollmentYear: number
 ): string => {
+  // Ensure grade has a safe default
+  const safeGrade = grade || 'Grade 1';
+  const safeStudents = existingStudents || [];
+  
   // Extract numeric grade digit (e.g., "Grade 4" -> 4, "PP1" -> 0, "PP2" -> 2)
-  const gradeMatch = grade.match(/(\d+)/);
+  const gradeMatch = safeGrade.match(/(\d+)/);
   const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
   
   // Filter students by same grade and enrollment year
-  const cohortStudents = existingStudents.filter(s => {
-    const matchesGrade = s.grade?.toLowerCase() === grade.toLowerCase();
+  const cohortStudents = safeStudents.filter((s: Learner) => {
+    const matchesGrade = (s.grade || '').toLowerCase() === safeGrade.toLowerCase();
     // Check if student has admission year matching (stored in dateOfAdmission)
     const studentYear = s.dateOfAdmission
       ? new Date(s.dateOfAdmission).getFullYear()
@@ -177,7 +181,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       gender: 'Male',
       dob: '',
       birthCertificateNo: '',
-      admissionNumber: generateUniqueAdmissionNo(defaultGrade, currentYear, existingStudents),
+      admissionNumber: generateUniqueAdmissionNo(defaultGrade, existingStudents, currentYear),
       assessmentNo: '',
       nemisUpi: '',
       previousSchool: '',
@@ -222,12 +226,13 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
 
   /* Auto-regenerate admission number when grade changes. */
   useEffect(() => {
-    if (form.grade) {
-      const existingStudents = getExistingLearners();
-      const year = form.dateAdmitted ? new Date(form.dateAdmitted).getFullYear() : currentYear;
-      const newAdmNo = generateUniqueAdmissionNo(form.grade, year, existingStudents);
-      setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
-    }
+    const grade = form.grade || gradesConfig.grades[0] || 'Grade 1';
+    const existingStudents = getExistingLearners() || [];
+    const selectedYear = form.dateAdmitted
+      ? new Date(form.dateAdmitted).getFullYear()
+      : new Date().getFullYear();
+    const newAdmNo = generateUniqueAdmissionNo(grade, existingStudents, selectedYear);
+    setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [form.grade]);
 
@@ -237,9 +242,17 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
   };
 
   const handleRegenerateAdmNo = () => {
-    const existingStudents = getExistingLearners();
-    const year = form.dateAdmitted ? new Date(form.dateAdmitted).getFullYear() : currentYear;
-    const newAdmNo = generateUniqueAdmissionNo(form.grade || gradesConfig.grades[0] ?? 'Grade 1', year, existingStudents);
+    const existingStudents = getExistingLearners() || [];
+    const selectedYear = form.dateAdmitted
+      ? new Date(form.dateAdmitted).getFullYear()
+      : new Date().getFullYear();
+    
+    const newAdmNo = generateUniqueAdmissionNo(
+      form.grade || 'Grade 1',
+      existingStudents,
+      selectedYear
+    );
+
     setForm((prev) => ({ ...prev, admissionNumber: newAdmNo }));
   };
 
