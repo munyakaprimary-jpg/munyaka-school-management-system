@@ -81,7 +81,23 @@ const MODULES = [
   { id: 'student_records', title: 'Student & Guardian Records', desc: 'Enrollment, Bio Data, Attendance' },
   { id: 'finance_fees', title: 'Fee Management & Finance', desc: 'Billing, Invoices, Payment Collections' },
   { id: 'payment_subscriptions', title: 'Payment & Subscriptions', desc: 'Software Payments, Subscriptions, Financial Gateway' },
-  { id: 'staff_mgmt', title: 'Staff Management & Geofence', desc: 'Staff Profiles, Compound GPS Tracking' }
+  { id: 'staff_mgmt', title: 'Staff Management & Geofence', desc: 'Staff Profiles, Compound GPS Tracking' },
+  // Support Staff Modules
+  { id: 'library_catalog', title: 'Library Catalog', desc: 'Book catalog, search, and classification' },
+  { id: 'book_operations', title: 'Book Checkout & Returns', desc: 'Circulation, returns, and overdue tracking' },
+  { id: 'library_inventory', title: 'Library Inventory Logs', desc: 'Stock tracking, damaged books, acquisitions' },
+  { id: 'stock_requisitions', title: 'Stock Requisitions', desc: 'Request supplies from central store' },
+  { id: 'inventory_audits', title: 'Inventory Audits', desc: 'Stock counts and audit trails' },
+  { id: 'supply_requests', title: 'Supply Requests', desc: 'Requisition workflow and approvals' },
+  { id: 'science_lab_inventory', title: 'Science Lab Inventory', desc: 'Equipment, materials, and consumables' },
+  { id: 'reagent_logs', title: 'Reagent & Equipment Logs', desc: 'Chemical tracking and equipment maintenance' },
+  { id: 'lab_maintenance', title: 'Lab Maintenance Requests', desc: 'Equipment repair and service requests' },
+  { id: 'computer_lab_assets', title: 'Computer Lab Assets', desc: 'Hardware inventory and software licensing' },
+  { id: 'it_tickets', title: 'IT Maintenance Tickets', desc: 'Support requests and troubleshooting' },
+  { id: 'device_assignment', title: 'Device Assignment', desc: 'Assign devices to users and locations' },
+  { id: 'duty_roster', title: 'General Duty Roster', desc: 'Staff duty schedules and assignments' },
+  { id: 'internal_messaging', title: 'Internal Messaging', desc: 'Staff communication and announcements' },
+  { id: 'staff_attendance', title: 'Staff Attendance', desc: 'Check-in, check-out, and attendance reports' }
 ];
 
 const ROLES = [
@@ -90,6 +106,11 @@ const ROLES = [
   { id: 'head_teacher', label: 'Principal / Head' },
   { id: 'bursar', label: 'Bursar / Accountant' },
   { id: 'teacher', label: 'Class Teacher' },
+  { id: 'librarian', label: 'Librarian' },
+  { id: 'storekeeper', label: 'Storekeeper' },
+  { id: 'lab_assistant', label: 'Lab Assistant' },
+  { id: 'ict_tech', label: 'ICT Lab Technician' },
+  { id: 'non_teaching_staff', label: 'Non-Teaching Staff' },
   { id: 'parent', label: 'Parent / Guardian' },
   { id: 'student', label: 'Learner' }
 ];
@@ -136,6 +157,142 @@ const buildDefaultPermissions = (): Record<string, PermissionState> => {
         initialState[roleId]['payment_subscriptions'] = { read: false, create: false, edit: false, delete: false };
       }
     });
+
+  // Librarian role defaults - Library focus, no academic access
+  if (initialState['librarian']) {
+    initialState['librarian'] = {
+      sys_config: { read: false, create: false, edit: false, delete: false },
+      academic_grading: { read: false, create: false, edit: false, delete: false },
+      student_records: { read: false, create: false, edit: false, delete: false },
+      finance_fees: { read: false, create: false, edit: false, delete: false },
+      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+      staff_mgmt: { read: false, create: false, edit: false, delete: false },
+      library_catalog: { read: true, create: true, edit: true, delete: false },
+      book_operations: { read: true, create: true, edit: true, delete: false },
+      library_inventory: { read: true, create: true, edit: true, delete: false },
+      stock_requisitions: { read: false, create: false, edit: false, delete: false },
+      inventory_audits: { read: false, create: false, edit: false, delete: false },
+      supply_requests: { read: false, create: false, edit: false, delete: false },
+      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
+      reagent_logs: { read: false, create: false, edit: false, delete: false },
+      lab_maintenance: { read: false, create: false, edit: false, delete: false },
+      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
+      it_tickets: { read: false, create: false, edit: false, delete: false },
+      device_assignment: { read: false, create: false, edit: false, delete: false },
+      duty_roster: { read: true, create: false, edit: false, delete: false },
+      internal_messaging: { read: true, create: true, edit: false, delete: false },
+      staff_attendance: { read: true, create: true, edit: true, delete: false }
+    };
+  }
+
+  // Storekeeper role defaults - Inventory focus, no academic access
+  if (initialState['storekeeper']) {
+    initialState['storekeeper'] = {
+      sys_config: { read: false, create: false, edit: false, delete: false },
+      academic_grading: { read: false, create: false, edit: false, delete: false },
+      student_records: { read: false, create: false, edit: false, delete: false },
+      finance_fees: { read: false, create: false, edit: false, delete: false },
+      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+      staff_mgmt: { read: false, create: false, edit: false, delete: false },
+      library_catalog: { read: false, create: false, edit: false, delete: false },
+      book_operations: { read: false, create: false, edit: false, delete: false },
+      library_inventory: { read: false, create: false, edit: false, delete: false },
+      stock_requisitions: { read: true, create: true, edit: true, delete: false },
+      inventory_audits: { read: true, create: true, edit: true, delete: false },
+      supply_requests: { read: true, create: true, edit: true, delete: false },
+      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
+      reagent_logs: { read: false, create: false, edit: false, delete: false },
+      lab_maintenance: { read: false, create: false, edit: false, delete: false },
+      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
+      it_tickets: { read: false, create: false, edit: false, delete: false },
+      device_assignment: { read: false, create: false, edit: false, delete: false },
+      duty_roster: { read: true, create: false, edit: false, delete: false },
+      internal_messaging: { read: true, create: true, edit: false, delete: false },
+      staff_attendance: { read: true, create: true, edit: true, delete: false }
+    };
+  }
+
+  // Lab Assistant role defaults - Science Lab focus, no academic access
+  if (initialState['lab_assistant']) {
+    initialState['lab_assistant'] = {
+      sys_config: { read: false, create: false, edit: false, delete: false },
+      academic_grading: { read: false, create: false, edit: false, delete: false },
+      student_records: { read: false, create: false, edit: false, delete: false },
+      finance_fees: { read: false, create: false, edit: false, delete: false },
+      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+      staff_mgmt: { read: false, create: false, edit: false, delete: false },
+      library_catalog: { read: false, create: false, edit: false, delete: false },
+      book_operations: { read: false, create: false, edit: false, delete: false },
+      library_inventory: { read: false, create: false, edit: false, delete: false },
+      stock_requisitions: { read: false, create: false, edit: false, delete: false },
+      inventory_audits: { read: false, create: false, edit: false, delete: false },
+      supply_requests: { read: false, create: false, edit: false, delete: false },
+      science_lab_inventory: { read: true, create: true, edit: true, delete: false },
+      reagent_logs: { read: true, create: true, edit: true, delete: false },
+      lab_maintenance: { read: true, create: true, edit: true, delete: false },
+      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
+      it_tickets: { read: false, create: false, edit: false, delete: false },
+      device_assignment: { read: false, create: false, edit: false, delete: false },
+      duty_roster: { read: true, create: false, edit: false, delete: false },
+      internal_messaging: { read: true, create: true, edit: false, delete: false },
+      staff_attendance: { read: true, create: true, edit: true, delete: false }
+    };
+  }
+
+  // ICT Lab Technician role defaults - IT focus, no academic access
+  if (initialState['ict_tech']) {
+    initialState['ict_tech'] = {
+      sys_config: { read: false, create: false, edit: false, delete: false },
+      academic_grading: { read: false, create: false, edit: false, delete: false },
+      student_records: { read: false, create: false, edit: false, delete: false },
+      finance_fees: { read: false, create: false, edit: false, delete: false },
+      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+      staff_mgmt: { read: false, create: false, edit: false, delete: false },
+      library_catalog: { read: false, create: false, edit: false, delete: false },
+      book_operations: { read: false, create: false, edit: false, delete: false },
+      library_inventory: { read: false, create: false, edit: false, delete: false },
+      stock_requisitions: { read: false, create: false, edit: false, delete: false },
+      inventory_audits: { read: false, create: false, edit: false, delete: false },
+      supply_requests: { read: false, create: false, edit: false, delete: false },
+      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
+      reagent_logs: { read: false, create: false, edit: false, delete: false },
+      lab_maintenance: { read: false, create: false, edit: false, delete: false },
+      computer_lab_assets: { read: true, create: true, edit: true, delete: false },
+      it_tickets: { read: true, create: true, edit: true, delete: false },
+      device_assignment: { read: true, create: true, edit: true, delete: false },
+      duty_roster: { read: true, create: false, edit: false, delete: false },
+      internal_messaging: { read: true, create: true, edit: false, delete: false },
+      staff_attendance: { read: true, create: true, edit: true, delete: false }
+    };
+  }
+
+  // Non-Teaching Staff role defaults - General support, no academic access
+  if (initialState['non_teaching_staff']) {
+    initialState['non_teaching_staff'] = {
+      sys_config: { read: false, create: false, edit: false, delete: false },
+      academic_grading: { read: false, create: false, edit: false, delete: false },
+      student_records: { read: false, create: false, edit: false, delete: false },
+      finance_fees: { read: false, create: false, edit: false, delete: false },
+      payment_subscriptions: { read: false, create: false, edit: false, delete: false },
+      staff_mgmt: { read: false, create: false, edit: false, delete: false },
+      library_catalog: { read: false, create: false, edit: false, delete: false },
+      book_operations: { read: false, create: false, edit: false, delete: false },
+      library_inventory: { read: false, create: false, edit: false, delete: false },
+      stock_requisitions: { read: false, create: false, edit: false, delete: false },
+      inventory_audits: { read: false, create: false, edit: false, delete: false },
+      supply_requests: { read: false, create: false, edit: false, delete: false },
+      science_lab_inventory: { read: false, create: false, edit: false, delete: false },
+      reagent_logs: { read: false, create: false, edit: false, delete: false },
+      lab_maintenance: { read: false, create: false, edit: false, delete: false },
+      computer_lab_assets: { read: false, create: false, edit: false, delete: false },
+      it_tickets: { read: false, create: false, edit: false, delete: false },
+      device_assignment: { read: false, create: false, edit: false, delete: false },
+      duty_roster: { read: true, create: true, edit: true, delete: false },
+      internal_messaging: { read: true, create: true, edit: true, delete: false },
+      staff_attendance: { read: true, create: true, edit: true, delete: false }
+    };
+  }
+
   return initialState;
 };
 
