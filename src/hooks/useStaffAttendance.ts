@@ -6,6 +6,7 @@ import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff } from '@/types/staff-access';
 import { startOfWeek, addDays, format, isAfter } from 'date-fns';
 import { lsSet, lsRead } from '@/utils/storage';
+import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
 const PERSONAL_STORAGE_PREFIX = 'munyaka_staff_attendance_';
 const MASTER_REGISTER_PREFIX = 'munyaka_master_staff_register_';
@@ -57,17 +58,18 @@ export const useStaffAttendance = (currentLocation: { lat: number; lng: number }
     const savedMaster = lsRead<Record<string, StaffAttendanceRecord>>(masterKey, {});
     let currentMaster: Record<string, StaffAttendanceRecord> = savedMaster;
 
-    // Dynamic Fetch: Populate register from the actual staff ledger
-    const staffLedger: PreRegisteredStaff[] = lsRead<unknown>('munyaka_staff_prereg', []) as PreRegisteredStaff[] ?? [];
+    // Dynamic Fetch: Populate register from staffMasterService (single source of truth)
+    initializeStaffMaster();
+    const staffLedger = getStaffMaster();
     const totalActiveStaff = staffLedger.length;
 
     staffLedger.forEach(staff => {
       if (!currentMaster[staff.id]) {
         currentMaster[staff.id] = {
           staffId: staff.id,
-          staffName: staff.fullName || '',
-          name: staff.fullName || '',
-          role: (staff?.systemRole || '').replace('_', ' '),
+          staffName: staff.name || '',
+          name: staff.name || '',
+          role: (staff.systemRole || '').replace('_', ' '),
           date: todayStr,
         };
       }
