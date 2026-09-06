@@ -37,6 +37,7 @@ import {
   Moon,
   X,
   GraduationCap,
+  Briefcase,
   LogIn,
   MoreHorizontal,
   Laptop,
@@ -55,6 +56,7 @@ import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { NotificationBell } from '@/components/ui/NotificationBell';
 import { useMobileBackButton } from '@/hooks/useMobileBackButton';
+import { getCategorizedMetrics } from '@/services/staffMasterService';
 
 const Sidebar = ({ children }: { children: React.ReactNode }) => {
   const [isOpen, setIsOpen] = useState(false);
@@ -306,6 +308,34 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                     );
                   })()}
                 </nav>
+                {/* Staff Metrics Summary */}
+                {(() => {
+                  const metrics = getCategorizedMetrics();
+                  if (metrics.total.count === 0) return null;
+                  return (
+                    <div className="shrink-0 mx-3 mb-2 p-3 bg-gradient-to-br from-indigo-50 to-purple-50 dark:from-indigo-950/50 dark:to-purple-950/50 rounded-2xl border border-indigo-100 dark:border-indigo-900/50">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-indigo-500 mb-2">Staff Overview</p>
+                      <div className="space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                            <GraduationCap size={12} className="text-purple-500" /> Teaching
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{metrics.teaching.count}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-medium text-slate-600 dark:text-slate-400 flex items-center gap-1.5">
+                            <Briefcase size={12} className="text-amber-500" /> Non-Teaching
+                          </span>
+                          <span className="text-xs font-bold text-slate-900 dark:text-white">{metrics.nonTeaching.count}</span>
+                        </div>
+                        <div className="pt-1.5 border-t border-indigo-100 dark:border-indigo-800/50 flex items-center justify-between">
+                          <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">Total Staff</span>
+                          <span className="text-sm font-black text-indigo-700 dark:text-indigo-300">{metrics.total.count}</span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
                         <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
