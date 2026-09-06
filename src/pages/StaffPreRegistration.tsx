@@ -10,899 +10,434 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Download, Loader2, X, Eye, Trash2, Lock, AlertCircle, Mail, Copy, Send, Key, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
-import { notifyDataChanged } from '@/utils/storage';
-import { PreRegisteredStaff, AccessStatus, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
-import { INITIAL_PRE_REGISTERED_STAFF } from '@/lib/mock-staff-access';
-import { STAFF } from '@/lib/mock-data';
+import { PreRegisteredStaff, AccessStatus, SystemRole, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
 import {
-  generateAccessKey,
-  getMigratedStaffLedger,
-  persistMigratedLedger,
-  migrateAllStaffAccessKeys,
-} from '@/services/staffAccessService';
+  getStaffMaster,
+  addStaffMaster,
+  updateStaffMaster,
+  deleteStaffMaster,
+  activateStaffMaster,
+  initializeStaffMaster,
+  STAFF_MASTER_KEY,
+  type MasterStaffRecord,
+} from '@/services/staffMasterService';
+import { notifyDataChanged } from '@/utils/storage';
 
-// Directory staff entry that doesn't have a pre-registration record yet
-interface UnlinkedStaffEntry {
-  id: string;
-  nationalId: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  tscNumber?: string;
-  source: 'directory' | 'mock';
-  autoKey: string; // Auto-generated PR- key reference
-}
+// ── Helpers ────────────────────────────────────────────────────────────────────
 
-/**
- * Normalises a name across every possible field variant used in staff records.
- * Falls back to email → phone → "Unnamed Staff" so we always render *something*.
- */
-const resolveName = (s: Record<string, unknown>): string => {
-  const first = String(s.firstName || (s as any)['first-name'] || (s as any)['first_name'] || '');
-  const last  = String(s.lastName  || (s as any)['last-name']  || (s as any)['last_name']  || '');
-  return String(
-    s.name       || s.fullName || s.full_name ||
-    (first || last ? `${first} ${last}`.trim() : null) ||
-    s.email      || s.phone    || s.staffId   || 'Unnamed Staff'
-  );
-};
-
-/** Builds safe display initials from a name string. */
 const initialsOf = (name: string): string =>
   name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
 
-/** Normalises an ID across every possible field variant. */
-const resolveId = (s: Record<string, unknown>): string =>
-    String(
-      (s as any).national_id || (s as any).id_number || (s as any).idNumber ||
-      s.nationalId || s.id || s.staffId || ''
-    ) || 'N/A';
-
-/** All localStorage keys that hold staff or pre-registration data. */
-const STAFF_STORAGE_KEYS: string[] = [
-  'munyaka_staff_directory',
-  'munyaka_staff_prereg',
-  'munyaka_staff',
-  'munyaka_staff_access_keys',
-  'munyaka_staff_purged',
-  'staff_records',
-  'pre_reg_staff',
-  'personnel_directory',
-];
-
-/**
- * Wipes every staff-related localStorage key and sets the purge flag so
- * seed data is NOT re-loaded after the purge.
- * Returns a list of keys that were cleared.
- */
-const purgeAllStaffData = (): string[] => {
-  const cleared: string[] = [];
-  try {
-    STAFF_STORAGE_KEYS.forEach((key) => {
-      if (localStorage.getItem(key) !== null) {
-        localStorage.removeItem(key);
-        cleared.push(key);
-      }
-    });
-    // Set purge flag so initial state does not re-seed from INITIAL_PRE_REGISTERED_STAFF
-    localStorage.setItem('munyaka_staff_purged', new Date().toISOString());
-    cleared.push('munyaka_staff_purged');
-  } catch (err) {
-    console.error('[StaffPreRegistration] purgeAllStaffData failed:', err);
-  }
-  return cleared;
-};
-
-/** True when the user has previously triggered a full data purge. */
-const wasStaffDataPurged = (): boolean =>
-  localStorage.getItem('munyaka_staff_purged') !== null;
+/** Maps a MasterStaffRecord to the PreRegisteredStaff shape used by the UI */
+function toPreReg(record: MasterStaffRecord): PreRegisteredStaff {
+  return {
+    id: record.id,
+    staffId: record.staffId || record.id,
+    fullName: record.name,
+    nationalId: record.nationalId,
+    email: record.email,
+    phone: record.phone,
+    tscNumber: record.tscNumber,
+    systemRole: record.systemRole as SystemRole,
+    department: record.department,
+    assignedGrade: record.assignedGrade,
+    assignedStream: record.assignedStream,
+    assignedSubjects: record.assignedSubjects,
+    gender: record.gender,
+    salary: record.salary,
+    joinedDate: record.joinedDate,
+    emergencyContact: record.emergencyContact,
+    emergencyName: record.emergencyName,
+    schoolId: record.schoolId,
+    tempAccessCode: record.tempAccessCode,
+    status: record.status as AccessStatus,
+    datePreRegistered: record.datePreRegistered,
+    profileComplete: record.profileComplete,
+  };
+}
 
 const StaffPreRegistration = () => {
   const navigate = useNavigate();
 
-  // ── Boot: scrub legacy dummy test entries from the ledger ─────────────────
-    // Also: if a previous "Clear All Staff Data" run set the purge flag,
-    // wipe the ledger so seed data does not respawn on next mount.
-    useEffect(() => {
-      try {
-        if (wasStaffDataPurged()) {
-          // Purge flag present → drop the pre-reg ledger and directory cache
-          const clearedKeys = purgeAllStaffData();
-          if (clearedKeys.length > 0) {
-            setStaffList([]);
-            notifyDataChanged('munyaka_staff_prereg');
-            notifyDataChanged('munyaka_staff_directory');
-          }
-          return;
-        }
+  // ── Staff list sourced exclusively from staffMasterService ─────────────────
+  const [staffList, setStaffList] = useState<PreRegisteredStaff[]>([]);
 
-        // 1. Run the access-key migration: any old-format / missing
-        //    `tempAccessCode` is rewritten to a clean MUNYAKA-XXXX value.
-        //    (This is the data-normalisation pass the Access Master Ledger relies on.)
-        const migrationResult = migrateAllStaffAccessKeys();
+  // ── Boot: load from staffMasterService ─────────────────────────────────────
+  useEffect(() => {
+    initializeStaffMaster(); // safe to call multiple times — idempotent
+    const records = getStaffMaster();
+    setStaffList(records.map(toPreReg));
+  }, []);
 
-        // 2. Scrub legacy dummy / test entries.
-        const raw = localStorage.getItem('munyaka_staff_prereg');
-        if (raw) {
-          const parsed: PreRegisteredStaff[] = JSON.parse(raw);
-          const before = parsed.length;
-          const cleaned = parsed.filter(
-            (s) =>
-              !/^prereg-\d+$/i.test(s.id) &&
-              !/^dummy/i.test(s.fullName || '') &&
-              (s.fullName || '').toLowerCase() !== 'pre-registered staff'
-          );
-          if (cleaned.length < before) {
-            localStorage.setItem('munyaka_staff_prereg', JSON.stringify(cleaned));
-            setStaffList(cleaned);
-          } else if (migrationResult.updated > 0) {
-            // Migration rewrote some keys — reload the now-cleaned ledger
-            // so the Access Master Ledger table reflects MUNYAKA-XXXX values.
-            const reloaded = localStorage.getItem('munyaka_staff_prereg');
-            if (reloaded) setStaffList(JSON.parse(reloaded));
-          }
-        }
-      } catch { /* ignore */ }
-    }, []);
+  // ── Listen for external changes broadcast by staffMasterService mutations ──
+  useEffect(() => {
+    const refresh = () => {
+      const records = getStaffMaster();
+      setStaffList(records.map(toPreReg));
+    };
+    window.addEventListener('staff-changed', refresh);
+    window.addEventListener('munyaka:staff-directory-changed', refresh);
+    return () => {
+      window.removeEventListener('staff-changed', refresh);
+      window.removeEventListener('munyaka:staff-directory-changed', refresh);
+    };
+  }, []);
 
-    const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
-      // If the user has previously purged, start with an empty array even on
-      // first load — no `INITIAL_PRE_REGISTERED_STAFF` seed respawns.
-      if (wasStaffDataPurged()) return [];
-      const saved = localStorage.getItem('munyaka_staff_prereg');
-      if (saved) {
-        // Use the same normalisation pipeline as the boot effect so that
-        // the initial render already shows the MUNYAKA-XXXX form, even
-        // before the post-mount useEffect runs.
-        const migrated = getMigratedStaffLedger();
-        if (migrated.length > 0) {
-          // Persist the migrated form so subsequent boots are no-ops
-          persistMigratedLedger(migrated);
-          return migrated;
-        }
-        return JSON.parse(saved);
-      }
-      return INITIAL_PRE_REGISTERED_STAFF;
-    });
-
-  // Unified directory staff list — read directly from `munyaka_staff_directory`
-  // (the same key Staff.tsx writes to). Falls back to STAFF seed data.
-  const [directoryStaff, setDirectoryStaff] = useState<any[]>(() => {
-    try {
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      return saved ? JSON.parse(saved) : [];
-    } catch {
-      return [];
-    }
-  });
-
+  // ── UI State ───────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isExporting, setIsExporting] = useState(false);
   const [isDeleteAuthOpen, setIsDeleteAuthOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null);
-  const [generatingKeyFor, setGeneratingKeyFor] = useState<string | null>(null);
-
-  // Auth state for deletion
   const [authPassword, setAuthPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
 
-  // ── Re-read directory staff from localStorage on changes ──
-  const refreshDirectory = useCallback(() => {
+  // ── Pre-computed lookup sets for AddPreRegModal ─────────────────────────────
+  const existingNatIds = useMemo(() => new Set(staffList.map(s => s.nationalId)), [staffList]);
+  const existingEmails = useMemo(() => new Set(staffList.map(s => (s.email || '').toLowerCase())), [staffList]);
+
+  // ── Filter ─────────────────────────────────────────────────────────────────
+  const filteredStaff = useMemo(() => {
+    return staffList.filter(s => {
+      const term = searchTerm.toLowerCase();
+      const matchName  = s.fullName.toLowerCase().includes(term);
+      const matchEmail = (s.email || '').toLowerCase().includes(term);
+      const matchNatId = (s.nationalId || '').toLowerCase().includes(term);
+      const matchKey   = (s.tempAccessCode || '').toLowerCase().includes(term);
+      if (!matchName && !matchEmail && !matchNatId && !matchKey) return false;
+
+      if (roleFilter !== 'all' && s.systemRole !== roleFilter) return false;
+      if (statusFilter !== 'all' && s.status !== statusFilter) return false;
+
+      return true;
+    });
+  }, [staffList, searchTerm, roleFilter, statusFilter]);
+
+  // ── CRUD handlers ───────────────────────────────────────────────────────────
+  const handleAddStaff = useCallback((formData: Partial<PreRegisteredStaff>) => {
+    const name = (formData.fullName || '').trim();
+    if (!name || !(formData.email || '').trim()) {
+      showError('Full name and email are required.');
+      return;
+    }
     try {
-      const saved = localStorage.getItem('munyaka_staff_directory');
-      setDirectoryStaff(saved ? JSON.parse(saved) : []);
-    } catch {
-      setDirectoryStaff([]);
+      const record = addStaffMaster({
+        name,
+        nationalId: formData.nationalId || '',
+        email: formData.email || '',
+        phone: formData.phone || '',
+        tscNumber: formData.tscNumber,
+        systemRole: (formData.systemRole as MasterStaffRecord['systemRole']) || 'subject_teacher',
+        department: formData.department || 'School Administration',
+        assignedGrade: formData.assignedGrade,
+        assignedStream: formData.assignedStream,
+        assignedSubjects: formData.assignedSubjects || [],
+        gender: formData.gender,
+        salary: formData.salary,
+        joinedDate: formData.joinedDate || new Date().toISOString().split('T')[0],
+        emergencyContact: formData.emergencyContact,
+        emergencyName: formData.emergencyName,
+        schoolId: formData.schoolId || 'munyaka-sc',
+        tempAccessCode: formData.tempAccessCode || '',
+        status: 'Pre-Registered',
+        datePreRegistered: formData.datePreRegistered || new Date().toISOString().split('T')[0],
+        profileComplete: false,
+      });
+      // staffMasterService already called broadcast() — no extra notify needed
+      showSuccess(`${name} pre-registered with access key ${record.tempAccessCode}`);
+      setIsAddModalOpen(false);
+    } catch (err) {
+      showError('Failed to add staff. Please try again.');
+      console.error('[StaffPreRegistration] handleAddStaff:', err);
     }
   }, []);
 
-  useEffect(() => {
-    // Initial read on mount
-    refreshDirectory();
-
-    // Listen for staff-directory and data-changed events for live sync
-    const handleDirectoryChange = () => {
-      refreshDirectory();
-      // Also re-read the pre-registration ledger so both views stay in sync
-      try {
-        const saved = localStorage.getItem('munyaka_staff_prereg');
-        if (saved) setStaffList(JSON.parse(saved));
-      } catch { /* ignore */ }
-    };
-    const handleStaffChanged = () => handleDirectoryChange();
-
-    window.addEventListener('munyaka:staff-directory-changed', handleDirectoryChange);
-    window.addEventListener('staff-changed', handleStaffChanged);
-    window.addEventListener('munyaka:data-changed', handleDirectoryChange);
-
-    return () => {
-      window.removeEventListener('munyaka:staff-directory-changed', handleDirectoryChange);
-      window.removeEventListener('staff-changed', handleStaffChanged);
-      window.removeEventListener('munyaka:data-changed', handleDirectoryChange);
-    };
-  }, [refreshDirectory]);
-
-  // ── Build unified ledger entries from BOTH the directory and the ledger ──
-  // Staff with a PR- entry in the ledger render as "Pre-Registered / Active".
-  // Directory staff without a ledger entry are auto-rendered with status
-  // "Pre-Registered" and an auto-generated PR- key reference.
-  const ledgerEntries = useMemo(() => {
-    type Entry =
-      | { type: 'pre-registered'; data: PreRegisteredStaff }
-      | { type: 'auto-linked'; data: UnlinkedStaffEntry };
-
-    const preRegNatIds = new Set(staffList.map(s => s.nationalId));
-        // Safe null-checking: email may be undefined for incomplete records
-        const preRegEmails = new Set(staffList.map(s => (s.email || '').toLowerCase()));
-
-    // Build the auto-linked list from BOTH the localStorage directory and the
-    // seed STAFF data so seeded personnel like James Ndiki appear too.
-    const sourceStaff: UnlinkedStaffEntry[] = [];
-    directoryStaff.forEach((s: any) => {
-      const natId = s.id_no || s.nationalId;
-      const email = (s.email || '').toLowerCase();
-      sourceStaff.push({
-        id: s.id || natId,
-        nationalId: natId,
-        name: s.full_name || s.name || '',
-        email: s.email || '',
-        phone: s.phone || '',
-        role: s.role || 'Staff',
-        tscNumber: s.tsc_no || s.tscNumber,
-        source: 'directory',
-        autoKey: `PR-${s.id || natId}`,
-      });
-    });
-
-    // Seed mock staff (covers personnel like James Ndiki who exist in STAFF)
-    STAFF.forEach(s => {
-      sourceStaff.push({
-        id: s.id,
-        nationalId: s.id_no,
-        name: s.name || '',
-        email: s.email || '',
-        phone: s.phone || '',
-        role: s.role || 'Staff',
-        tscNumber: s.tsc_no,
-        source: 'mock',
-        autoKey: `PR-${s.id}`,
-      });
-    });
-
-    // Deduplicate by nationalId (prefer directory over mock)
-    const deduped = new Map<string, UnlinkedStaffEntry>();
-    sourceStaff.forEach(entry => {
-      if (!deduped.has(entry.nationalId)) deduped.set(entry.nationalId, entry);
-    });
-
-    const entries: Entry[] = [];
-
-    // 1. Existing pre-registration ledger entries
-    staffList.forEach(data => entries.push({ type: 'pre-registered', data }));
-
-    // 2. Directory/mock staff without a ledger entry → auto-render as Pre-Registered
-    deduped.forEach(data => {
-      const emailLower = (data.email || '').toLowerCase();
-      if (!preRegNatIds.has(data.nationalId) && !preRegEmails.has(emailLower)) {
-        entries.push({ type: 'auto-linked', data });
+  const handleDeleteStaff = useCallback((id: string) => {
+    try {
+      const ok = deleteStaffMaster(id);
+      if (ok) {
+        showSuccess('Staff record deleted.');
       }
-    });
+    } catch (err) {
+      showError('Failed to delete staff.');
+      console.error('[StaffPreRegistration] handleDeleteStaff:', err);
+    }
+  }, []);
 
-    return entries;
-  }, [staffList, directoryStaff]);
+  const handleActivateStaff = useCallback((id: string) => {
+    try {
+      const updated = activateStaffMaster(id);
+      if (updated) {
+        showSuccess('Staff activated successfully.');
+      }
+    } catch (err) {
+      showError('Failed to activate staff.');
+      console.error('[StaffPreRegistration] handleActivateStaff:', err);
+    }
+  }, []);
 
-  // ── Filter the unified ledger entries by search/role/status ──
-      // Safe null-checking: every string field is coerced through `String(... || '')`
-      // so undefined / null values never throw a TypeError when their string
-      // methods (toLowerCase / includes) are called.
-      const filteredLedger = useMemo(() => {
-        const needle = String(searchTerm || '').toLowerCase();
-        return ledgerEntries.filter(entry => {
-          const isPreReg = entry.type === 'pre-registered';
-          const name = isPreReg
-            ? (entry.data as PreRegisteredStaff).fullName
-            : (entry.data as UnlinkedStaffEntry).name;
-          const natId = isPreReg
-            ? (entry.data as PreRegisteredStaff).nationalId
-            : (entry.data as UnlinkedStaffEntry).nationalId;
-          const email = isPreReg
-            ? (entry.data as PreRegisteredStaff).email
-            : (entry.data as UnlinkedStaffEntry).email;
-  
-          const matchesSearch =
-            String(name || '').toLowerCase().includes(needle) ||
-            String(natId || '').toLowerCase().includes(needle) ||
-            String(email || '').toLowerCase().includes(needle);
-  
-          const matchesRole = roleFilter === 'all' ||
-            (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
-  
-          const matchesStatus = statusFilter === 'all' ||
-            (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
-            (statusFilter === 'Pre-Registered' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Pre-Registered') ||
-            (statusFilter === 'Unlinked' && !isPreReg) ||
-            (statusFilter === 'Suspended' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Suspended');
-  
-          return matchesSearch && matchesRole && matchesStatus;
-        });
-      }, [ledgerEntries, searchTerm, roleFilter, statusFilter]);
-  
-    // ── Generate Key / Invite for unlinked directory staff ──
-        const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
-          setGeneratingKeyFor(entry.id);
-          await new Promise(r => setTimeout(r, 500)); // Brief delay for UX
-    
-          // Use the clean short key — `generateAccessKey()` returns MUNYAKA-XXXX
-          const accessKey = generateAccessKey();
-          const newPreReg: PreRegisteredStaff = {
-            id: `PR-${Date.now()}`,
-            staffId: `T${String(staffList.length + 7).padStart(3, '0')}`,
-            fullName: entry.name,
-            nationalId: entry.nationalId,
-            tscNumber: entry.tscNumber,
-            email: entry.email,
-            phone: entry.phone,
-            systemRole: 'subject_teacher',
-            department: 'School Administration',
-            assignedSubjects: [],
-            tempAccessCode: accessKey,
-            status: 'Pre-Registered',
-            datePreRegistered: new Date().toISOString().split('T')[0],
-          };
-  
-      const updatedList = [newPreReg, ...staffList];
-            setStaffList(updatedList);
-            localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-      
-            // Mirror into munyaka_staff_directory so the Dashboard + Staff.tsx
-            // both reflect this newly pre-registered record.
-            try {
-              const savedDir = localStorage.getItem('munyaka_staff_directory');
-              const dir: any[] = savedDir ? JSON.parse(savedDir) : [];
-              const directoryEntry = {
-                id: newPreReg.id,
-                id_no: newPreReg.nationalId,
-                full_name: newPreReg.fullName,
-                role: (newPreReg.systemRole || 'TEACHER').replace('_', ' ').toUpperCase(),
-                systemRole: newPreReg.systemRole,
-                department: newPreReg.department || 'School Administration',
-                phone: newPreReg.phone,
-                email: newPreReg.email,
-                status: newPreReg.status,
-                is_active: 0,
-                tsc_no: newPreReg.tscNumber,
-              };
-              if (!dir.some(e => e.id === directoryEntry.id)) {
-                dir.unshift(directoryEntry);
-              }
-              localStorage.setItem('munyaka_staff_directory', JSON.stringify(dir));
-            } catch (err) {
-              console.error('[StaffPreRegistration] Failed to mirror directory:', err);
-            }
-      
-            notifyDataChanged('munyaka_staff_prereg');
-            notifyDataChanged('munyaka_staff_directory');
-      setGeneratingKeyFor(null);
-      showSuccess(`Access key generated for "${entry.name}"! Invite dispatched.`);
-    };
-  
-    const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
-          // Use the clean short key when one isn't provided in the form
-          const accessKey = staffData.tempAccessCode?.trim()
-            ? staffData.tempAccessCode
-            : generateAccessKey();
-          const newStaff: PreRegisteredStaff = {
-            id: `PR-${Date.now()}`,
-            staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
-            fullName: staffData.fullName || "",
-            nationalId: staffData.nationalId || "",
-            tscNumber: staffData.tscNumber,
-            email: staffData.email || "",
-            phone: staffData.phone || "",
-            systemRole: staffData.systemRole || "subject_teacher",
-            department: (staffData as any).department || "",
-            assignedGrade: staffData.assignedGrade,
-            assignedStream: staffData.assignedStream,
-            assignedSubjects: staffData.assignedSubjects || [],
-            // Always store the clean PR-XXXXXX key — never the internal UUID
-            tempAccessCode: accessKey,
-            status: "Pre-Registered" as AccessStatus,
-            datePreRegistered: new Date().toISOString().split('T')[0],
-          };
-    
-          const updatedList = [newStaff, ...staffList];
-          setStaffList(updatedList);
-          localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-    
-          // Also write to `munyaka_staff_directory` so that:
-          //   (a) `useCentralData` / Dashboard sees the new staff immediately
-          //   (b) `Staff.tsx` directory merges include this record without a
-          //       page-reload gap
-          try {
-            const savedDir = localStorage.getItem('munyaka_staff_directory');
-            const dir: any[] = savedDir ? JSON.parse(savedDir) : [];
-            const directoryEntry = {
-              id: newStaff.id,
-              id_no: newStaff.nationalId,
-              full_name: newStaff.fullName,
-              role: (newStaff.systemRole || 'TEACHER').replace('_', ' ').toUpperCase(),
-              systemRole: newStaff.systemRole,
-              department: newStaff.department || 'School Administration',
-              phone: newStaff.phone,
-              email: newStaff.email,
-              status: newStaff.status,
-              is_active: 0,
-              tsc_no: newStaff.tscNumber,
-            };
-            // Avoid duplicates (idempotent)
-            if (!dir.some(e => e.id === directoryEntry.id)) {
-              dir.unshift(directoryEntry);
-            }
-            localStorage.setItem('munyaka_staff_directory', JSON.stringify(dir));
-          } catch (err) {
-            console.error('[StaffPreRegistration] Failed to update staff directory:', err);
-          }
-    
-          notifyDataChanged('munyaka_staff_prereg');
-          notifyDataChanged('munyaka_staff_directory');
-          setIsAddModalOpen(false);
-          showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
-        };
-
-  const requestDelete = (staff: PreRegisteredStaff) => {
-    setDeleteTarget({ id: staff.id, name: staff.fullName });
-    setAuthPassword("");
-    setAuthError("");
+  // ── Auth guard for deletion ────────────────────────────────────────────────
+  const openDeleteAuth = (id: string, name: string) => {
+    setDeleteTarget({ id, name });
+    setAuthPassword('');
+    setAuthError('');
     setIsDeleteAuthOpen(true);
   };
 
-  const handleVerifyAuth = async () => {
-    if (!String(authPassword || '').trim()) {
-          setAuthError("Password is required");
-          return;
-        }
-
+  const confirmDelete = async () => {
     setIsVerifying(true);
-    setAuthError("");
-    
-    await new Promise(r => setTimeout(r, 600));
-
-    const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka5239';
-
-    if (authPassword === currentAdminPass) {
-      if (deleteTarget) {
-        const updatedList = staffList.filter(s => s.id !== deleteTarget.id);
-        setStaffList(updatedList);
-        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-        notifyDataChanged('munyaka_staff_prereg');
-        showSuccess(`Staff "${deleteTarget.name}" deleted successfully.`);
+    setAuthError('');
+    try {
+      const res = await fetch('/api/auth/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: authPassword }),
+      });
+      if (res.ok) {
+        setIsDeleteAuthOpen(false);
+        if (deleteTarget) handleDeleteStaff(deleteTarget.id);
+      } else {
+        setAuthError('Incorrect password. Access denied.');
       }
-      setIsDeleteAuthOpen(false);
-      setDeleteTarget(null);
-      setAuthPassword("");
-    } else {
-      setAuthError("Invalid admin password");
-      showError("Authorization failed");
-      setAuthPassword("");
+    } catch {
+      setAuthError('Verification failed. Try again.');
+    } finally {
+      setIsVerifying(false);
     }
-    setIsVerifying(false);
-      };
-    
-      /** Purges every staff-related key from localStorage and resets all state. */
-      const handlePurgeAllStaffData = () => {
-        if (!window.confirm('Delete ALL staff and pre-registration records permanently? This cannot be undone.')) return;
-        const keys = [
-          'munyaka_staff_prereg',
-          'munyaka_staff_directory',
-          'munyaka_staff',
-        ];
-        keys.forEach(k => localStorage.removeItem(k));
-        setStaffList([]);
-        setDirectoryStaff([]);
-        notifyDataChanged('munyaka_staff_prereg');
-        notifyDataChanged('munyaka_staff_directory');
-        showSuccess('All staff data purged. Refresh to start fresh.');
-      };
-    
-      const handleExportCSV = () => {
-      if (filteredLedger.length === 0) {
-        showSuccess("No records found for the current filters.");
-        return;
-      }
-  
-      setIsExporting(true);
-  
-      setTimeout(() => {
-        const headers = ["Staff Ref ID", "Full Name", "National ID", "Email", "Role / System Role", "Access Key", "Status"];
-        const rows = filteredLedger.map(entry => {
-                  if (entry.type === 'pre-registered') {
-                    const s = entry.data as PreRegisteredStaff;
-                    return [
-                      s.id,
-                      s.fullName,
-                      s.nationalId,
-                      s.email,
-                      s.systemRole,
-                      // Use the clean, short user-facing key (NOT the raw record id)
-                      s.tempAccessCode || s.activationKey || s.code || s.id,
-                      s.status
-                    ];
-                  } else {
-                    const s = entry.data as UnlinkedStaffEntry;
-                    return [
-                      s.autoKey,
-                      s.name,
-                      s.nationalId,
-                      s.email,
-                      s.role,
-                      // For unlinked directory entries the key isn't generated yet,
-                      // so show the auto-key reference with a "(pending)" suffix
-                      (s.autoKey || s.id) + ' (pending)',
-                      'Pre-Registered'
-                    ];
-                  }
-                });
-  
-        const csvContent = [
-          "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
-          "P.O. BOX 5239-30100,ELDORET",
-          "MOTTO: KNOWLEDGE POWER",
-          "",
-          headers.join(","),
-          ...rows.map(r => r.join(","))
-        ].join("\n");
-  
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement("a");
-        link.setAttribute("href", url);
-        link.setAttribute("download", `staff_access_master_${new Date().toISOString().split('T')[0]}.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-  
-        setIsExporting(false);
-        showSuccess(`Exported ${filteredLedger.length} staff records to CSV`);
-      }, 800);
-    };
-
-  const clearFilters = () => {
-    setSearchTerm("");
-    setRoleFilter("all");
-    setStatusFilter("all");
   };
 
+  // ── Render helpers ─────────────────────────────────────────────────────────
+  const getStatusBadge = (status: string) => {
+    const map: Record<string, { variant: 'default' | 'secondary' | 'destructive' | 'outline'; className: string }> = {
+      'Pre-Registered': { variant: 'secondary', className: 'bg-amber-100 text-amber-800 border-amber-200 rounded-full' },
+      'Active':        { variant: 'default',   className: 'bg-emerald-100 text-emerald-800 border-emerald-200 rounded-full' },
+      'Inactive':      { variant: 'destructive', className: 'bg-red-100 text-red-800 border-red-200 rounded-full' },
+    };
+    const cfg = map[status] || { variant: 'secondary' as const, className: 'rounded-full' };
+    return <Badge variant={cfg.variant} className={cfg.className}>{status}</Badge>;
+  };
+
+  const copyToClipboard = (text: string) => {
+    navigator.clipboard.writeText(text)
+      .then(() => showSuccess('Copied to clipboard!'))
+      .catch(() => showError('Copy failed.'));
+  };
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/staff" />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50/30 p-4 md:p-8">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <div className="flex items-center gap-4">
+          <BackButton />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff Pre-Registration</h1>
-            <p className="text-muted-foreground">Pre-authorize teacher system access credentials and manage activation keys.</p>
+            <h1 className="text-3xl font-black text-slate-900">Staff Access Master</h1>
+            <p className="text-sm text-slate-500 mt-1">Manage pre-registration and system access keys</p>
           </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-                      variant="outline"
-                      className="h-11 px-5 rounded-2xl border-slate-200 bg-white text-sm font-bold gap-2 shadow-sm hover:bg-slate-50 transition-colors"
-                      onClick={handleExportCSV}
-                      disabled={isExporting}
-                    >
-                      {isExporting ? <Loader2 className="animate-spin" size={18} /> : <Download size={18} />}
-                      Export CSV
-                    </Button>
-          
-                    <Button
-                      variant="ghost"
-                      className="h-11 px-4 rounded-2xl text-sm font-bold gap-2 text-rose-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                      onClick={handlePurgeAllStaffData}
-                      title="Permanently delete all staff data"
-                    >
-                      <Trash2 size={18} />
-                      Clear All Staff Data
-                    </Button>
-          
-          <Button
-            variant="default"
-            className="h-11 px-6 rounded-2xl shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold gap-2 transition-all active:scale-95"
-            onClick={() => setIsAddModalOpen(true)}
-          >
-            <Plus size={18} /> Onboard Staff
-          </Button>
-        </div>
-      </div>
 
-      {/* Filters Card */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative md:col-span-2">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-            <Input 
-              placeholder="Search by name/ID..." 
-              className="pl-11 h-12 rounded-2xl border-none bg-slate-50 font-medium" 
-              value={searchTerm} 
-              onChange={(e) => setSearchTerm(e.target.value)} 
+        {/* Counter cards — always reflect staffMasterService counts */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Card className="rounded-2xl border border-amber-200 bg-amber-50/60 shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-amber-700">Pre-Registered</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black text-amber-600">{staffList.filter(s => s.status === 'Pre-Registered').length}</p></CardContent>
+          </Card>
+          <Card className="rounded-2xl border border-emerald-200 bg-emerald-50/60 shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-emerald-700">Active</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black text-emerald-600">{staffList.filter(s => s.status === 'Active').length}</p></CardContent>
+          </Card>
+          <Card className="rounded-2xl border border-slate-200 bg-slate-50/60 shadow-sm">
+            <CardHeader className="pb-2"><CardTitle className="text-sm font-bold text-slate-600">Total</CardTitle></CardHeader>
+            <CardContent><p className="text-3xl font-black text-slate-500">{staffList.length}</p></CardContent>
+          </Card>
+        </div>
+
+        {/* Search & Filters */}
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+            <Input
+              placeholder="Search by name, email, national ID, or access key…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10 rounded-xl border-slate-200 bg-white h-11 shadow-sm"
             />
+            {searchTerm && (
+              <button onClick={() => setSearchTerm('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                <X size={16} />
+              </button>
+            )}
           </div>
-          
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Role</Label>
-            <Select value={roleFilter} onValueChange={setRoleFilter}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Roles" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All System Roles</SelectItem>
-                {Object.keys(SYSTEM_ROLE_LABELS).map(role => (
-                  <SelectItem key={role} value={role}>
-                    {SYSTEM_ROLE_LABELS[role as keyof typeof SYSTEM_ROLE_LABELS].label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest px-1">Status</Label>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-12 rounded-2xl bg-slate-50 border-none font-bold text-slate-700">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent className="rounded-2xl">
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="Active">Active</SelectItem>
-                <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
-                <SelectItem value="Suspended">Suspended</SelectItem>
-                <SelectItem value="Unlinked">Unlinked (No Key)</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-
-          <Button 
-            variant="ghost" 
-            className="h-12 rounded-2xl text-slate-500 hover:text-slate-900 hover:bg-slate-50 gap-2 font-bold transition-colors"
-            onClick={clearFilters}
+          <Select value={roleFilter} onValueChange={setRoleFilter}>
+            <SelectTrigger className="w-full md:w-44 rounded-xl h-11 shadow-sm"><SelectValue placeholder="All Roles" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Roles</SelectItem>
+              {Object.entries(SYSTEM_ROLE_LABELS).map(([val, { label }]) => (
+                <SelectItem key={val} value={val}>{label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-44 rounded-xl h-11 shadow-sm"><SelectValue placeholder="All Statuses" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              <SelectItem value="Pre-Registered">Pre-Registered</SelectItem>
+              <SelectItem value="Active">Active</SelectItem>
+              <SelectItem value="Inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
+            className="rounded-xl bg-indigo-600 hover:bg-indigo-700 font-bold h-11 px-6 gap-2 shadow-lg shadow-indigo-100"
           >
-            <X size={18} /> Clear Filters
+            <Plus size={18} /> Pre-Register
           </Button>
         </div>
-      </Card>
 
-      {/* Staff Table Section */}
-      <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
-        <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
-                  <div>
-                    <CardTitle className="text-2xl font-black text-slate-900 tracking-tight">Access Master Ledger</CardTitle>
-                    <p className="text-sm text-slate-500 font-medium">Pre-approved credentials, activation keys, and unlinked personnel directory.</p>
-                  </div>
-          <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
-                      {filteredLedger.length} Records
-                    </Badge>
-        </CardHeader>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left">
-              <thead className="text-slate-500 bg-slate-50/50 border-b">
+        {/* Table */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+          {filteredStaff.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-20 text-slate-400">
+              <Users size={48} className="mb-3 opacity-40" />
+              <p className="font-bold">No staff found</p>
+              <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
+            </div>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 border-b border-slate-100">
                 <tr>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Staff Credentials</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">System Role</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400">Registered Email</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Temp Access Key</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center">Status</th>
-                  <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right">Actions</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Staff</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden md:table-cell">Role</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Access Key</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Email</th>
+                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Status</th>
+                  <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y">
-                              {filteredLedger.map((entry) => {
-                                if (entry.type === 'pre-registered') {
-                                                                                                  const staff = entry.data;
-                                                                                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
-                                                                                                  const displayName = resolveName(staff as any);
-                                                                                                  const avatarInitials = initialsOf(displayName);
-                                                                                                  const displayId = resolveId(staff as any);
-                                                                                                  const displayRole = roleInfo.label || 'Pending Assignment';
-                                                                                                  const displayEmail = staff.email || 'No Email Provided';
-                                                                                                  return (
-                                                                                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                                                                                                      <td className="px-8 py-5">
-                                                                                                        <div className="flex items-center gap-3">
-                                                                                                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
-                                                                                                            {avatarInitials}
-                                                                                                          </div>
-                                                                                                          <div className="flex flex-col min-w-0">
-                                                                                                            <p className="font-bold text-slate-900 whitespace-nowrap">{displayName}</p>
-                                                                                                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {staff.id || staff.ref || 'N/A'} • ID: {displayId}</p>
-                                                                                                          </div>
-                                                                                                        </div>
-                                                                                                      </td>
-                                                                      <td className="px-8 py-5">
-                                                                        <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{displayRole}</Badge>
-                                                                      </td>
-                                                                      <td className="px-8 py-5">
-                                                                                                                                              <div className="flex items-center gap-2 text-slate-700">
-                                                                                                                                                <Mail size={14} className="text-slate-400 shrink-0" />
-                                                                                                                                                <span className="font-medium truncate max-w-[200px]">{displayEmail}</span>
-                                                                                                                                              </div>
-                                                                                                                                            </td>
-                                                                                                                                            <td className="px-8 py-5 text-center">
-                                                                                                                                                                                                                    <div
-                                                                                                                                                                                                                      className="inline-flex items-center gap-2 bg-indigo-50 px-3 py-1.5 rounded-xl border border-indigo-100 cursor-pointer hover:bg-indigo-100 transition-colors"
-                                                                                                                                                                                                                      onClick={() => {
-                                                                                                                                                                                                                        const keyToCopy = staff.tempAccessCode || staff.activationKey || 'MUNYAKA-0000';
-                                                                                                                                                                                                                        navigator.clipboard.writeText(keyToCopy);
-                                                                                                                                                                                                                        showSuccess(`Copied Key: ${keyToCopy}`);
-                                                                                                                                                                                                                      }}
-                                                                                                                                                                                                                      title="Click to copy access key"
-                                                                                                                                                                                                                    >
-                                                                                                                                                                                                                      <code className="font-mono font-bold text-indigo-700 text-xs">{staff.tempAccessCode || staff.activationKey || 'MUNYAKA-0000'}</code>
-                                                                                                                                                                                                                      <Copy size={13} className="text-indigo-400" />
-                                                                                                                                                                                                                    </div>
-                                                                                                                                                                                                                  </td>
-                                                                      <td className="px-8 py-5 text-center">
-                                                                        <Badge className={`rounded-xl border-none font-bold text-xs px-3 py-1 ${staff.status === 'Active' ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-700"}`}>{staff.status}</Badge>
-                                                                      </td>
-                                                                      <td className="px-8 py-5 text-right">
-                                                                        <div className="flex items-center justify-end gap-1.5">
-                                                                          <Button
-                                                                            variant="ghost"
-                                                                            size="sm"
-                                                                            className="h-9 px-3 rounded-xl text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 gap-1.5"
-                                                                            onClick={() => showSuccess(`Access key ${staff.tempAccessCode} dispatched to ${staff.email}`)}
-                                                                          >
-                                                                            <Send size={14} /> Send Key
-                                                                          </Button>
-                                                                          <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-9 w-9 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-all"
-                                                                            onClick={() => requestDelete(staff)}
-                                                                            title="Delete Pre-Registration"
-                                                                          >
-                                                                            <Trash2 size={16} />
-                                                                          </Button>
-                                                                        </div>
-                                                                      </td>
-                                                                    </tr>
-                                                                  );
-                                                                }
-              
-                                // Auto-linked directory staff (no ledger entry yet)
-                                                                                                const unlinked = entry.data;
-                                                                                                const displayName = resolveName(unlinked as any);
-                                                                                                const avatarInitials = initialsOf(displayName);
-                                                                                                const displayId = resolveId(unlinked as any);
-                                                                                                const displayRole = unlinked.role || 'Pending Assignment';
-                                                                                                const displayEmail = unlinked.email || 'No Email Provided';
-                                                                                                return (
-                                                                                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
-                                                                                                    <td className="px-8 py-5">
-                                                                                                      <div className="flex items-center gap-3">
-                                                                                                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
-                                                                                                          {avatarInitials}
-                                                                                                        </div>
-                                                                                                        <div className="flex flex-col min-w-0">
-                                                                                                          <p className="font-bold text-slate-900 whitespace-nowrap">{displayName}</p>
-                                                                                                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {unlinked.id || 'N/A'} • ID: {displayId}</p>
-                                                                                                        </div>
-                                                                                                      </div>
-                                                                                                    </td>
-                                                                                                    <td className="px-8 py-5">
-                                                                                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
-                                                                                                        {displayRole}
-                                                                                                      </Badge>
-                                                                                                    </td>
-                                                                                                    <td className="px-8 py-5">
-                                                                                                      <div className="flex items-center gap-2 text-slate-700">
-                                                                                                        <Mail size={14} className="text-slate-400 shrink-0" />
-                                                                                                        <span className="font-medium truncate max-w-[200px]">{displayEmail}</span>
-                                                                                                      </div>
-                                                                                                    </td>
-                                                                    <td className="px-8 py-5 text-center">
-                                                                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
-                                                                        <Key size={12} /> {unlinked.autoKey}
-                                                                      </span>
-                                                                    </td>
-                                                                    <td className="px-8 py-5 text-center">
-                                                                      <Badge className="rounded-xl border-none font-bold text-xs px-3 py-1 bg-rose-50 text-rose-700">
-                                                                        Pre-Registered
-                                                                      </Badge>
-                                                                    </td>
-                                                                    <td className="px-8 py-5 text-right">
-                                                                      <div className="flex items-center justify-end gap-1.5">
-                                                                        <Button
-                                                                          variant="ghost"
-                                                                          size="sm"
-                                                                          className="h-9 px-3 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 gap-1.5 shadow-md shadow-indigo-100"
-                                                                          disabled={generatingKeyFor === unlinked.id}
-                                                                          onClick={() => handleGenerateKeyAndInvite(unlinked)}
-                                                                          title="Generate Key / Invite"
-                                                                        >
-                                                                          {generatingKeyFor === unlinked.id ? (
-                                                                            <Loader2 className="animate-spin" size={14} />
-                                                                          ) : (
-                                                                            <Sparkles size={14} />
-                                                                          )}
-                                                                          Generate Key / Invite
-                                                                        </Button>
-                                                                      </div>
-                                                                    </td>
-                                                                  </tr>
-                                                                );
-                              })}
-                              {filteredLedger.length === 0 && (
-                                <tr>
-                                  <td colSpan={6} className="px-8 py-20 text-center">
-                                    <div className="flex flex-col items-center gap-3">
-                                      <Users size={32} className="text-slate-200" />
-                                      <p className="text-slate-500 font-bold">No personnel records match the current filters.</p>
-                                    </div>
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
+              <tbody className="divide-y divide-slate-50">
+                {filteredStaff.map(s => {
+                  const canActivate = s.status === 'Pre-Registered';
+                  return (
+                    <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center flex-shrink-0">
+                            {initialsOf(s.fullName)}
+                          </div>
+                          <div>
+                            <p className="font-bold text-slate-800">{s.fullName}</p>
+                            <p className="text-xs text-slate-400">{s.nationalId}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden md:table-cell">
+                        <span className="text-slate-600">{SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole}</span>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <div className="flex items-center gap-2">
+                          <code className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-1 rounded-lg">
+                            {s.tempAccessCode || '—'}
+                          </code>
+                          {s.tempAccessCode && (
+                            <button onClick={() => copyToClipboard(s.tempAccessCode)} className="text-slate-400 hover:text-indigo-600 transition-colors">
+                              <Copy size={12} />
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        <span className="text-slate-500">{s.email || '—'}</span>
+                      </td>
+                      <td className="px-4 py-3">{getStatusBadge(s.status)}</td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {canActivate && (
+                            <button
+                              onClick={() => handleActivateStaff(s.id)}
+                              title="Activate"
+                              className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                            >
+                              <ShieldCheck size={15} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => openDeleteAuth(s.id, s.fullName)}
+                            title="Delete"
+                            className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
             </table>
-          </div>
-        </CardContent>
-      </Card>
+          )}
+        </div>
 
-      {/* Add Staff Modal */}
+        <p className="text-xs text-slate-400 text-center">
+          Records sourced from <code className="bg-slate-100 px-1 rounded">{STAFF_MASTER_KEY}</code> — the single source of truth
+        </p>
+      </div>
+
+      {/* Add Pre-Registration Modal */}
       <AddPreRegModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
         onSubmit={handleAddStaff}
         existingPreRegistered={staffList}
+        existingNatIds={existingNatIds}
+        existingEmails={existingEmails}
       />
 
-      {/* Admin Auth Modal for Deletion */}
+      {/* Delete Auth Modal */}
       <Modal
         isOpen={isDeleteAuthOpen}
         onClose={() => setIsDeleteAuthOpen(false)}
-        title="Admin Authorization Required"
-        description={`Enter your admin password to delete "${deleteTarget?.name}".`}
+        title="Confirm Deletion"
+        maxWidth="max-w-md"
         footer={
-          <>
-            <Button variant="ghost" className="rounded-xl font-bold flex-1" onClick={() => setIsDeleteAuthOpen(false)}>Cancel</Button>
-            <Button 
-              className="rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold flex-1" 
-              onClick={handleVerifyAuth}
-              disabled={isVerifying}
+          <div className="flex gap-3 justify-end w-full">
+            <Button variant="ghost" onClick={() => setIsDeleteAuthOpen(false)} className="rounded-xl font-bold h-11 px-6">Cancel</Button>
+            <Button
+              onClick={confirmDelete}
+              disabled={isVerifying || !authPassword}
+              className="rounded-xl bg-red-600 hover:bg-red-700 font-bold h-11 px-6 gap-2"
             >
-              {isVerifying ? <Loader2 className="animate-spin mr-2" size={16} /> : null}
-              Authorize Delete
+              {isVerifying ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
+              Delete
             </Button>
-          </>
+          </div>
         }
       >
         <div className="space-y-4">
-          {authError && (
-            <div className="p-3 bg-red-50 border border-red-100 rounded-xl flex items-center gap-2 text-red-600 text-xs font-bold animate-in slide-in-from-top-2">
-              <AlertCircle size={14} /> {authError}
-            </div>
-          )}
-          <div className="space-y-2">
-            <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Admin Password</Label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-              <Input 
-                type="password" 
-                value={authPassword} 
-                onChange={(e) => { setAuthPassword(e.target.value); setAuthError(""); }} 
-                placeholder="••••••••" 
-                className="pl-10 rounded-xl h-12 bg-slate-50 border-none font-bold"
-                autoFocus
-              />
+          <div className="flex items-start gap-3 p-4 bg-red-50 rounded-xl border border-red-100">
+            <AlertCircle className="text-red-500 flex-shrink-0 mt-0.5" size={18} />
+            <div>
+              <p className="font-bold text-red-800">You are about to delete a staff record.</p>
+              <p className="text-sm text-red-600 mt-1">
+                This action cannot be undone. All data for <strong>{deleteTarget?.name}</strong> will be permanently removed.
+              </p>
             </div>
           </div>
+          <div>
+            <Label className="text-xs font-black uppercase text-slate-500 tracking-widest mb-2 block">Admin Password</Label>
+            <Input
+              type="password"
+              value={authPassword}
+              onChange={e => setAuthPassword(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && authPassword && confirmDelete()}
+              placeholder="Enter admin password"
+              className="rounded-xl h-12"
+            />
+          </div>
+          {authError && <p className="text-sm text-red-600 font-medium">{authError}</p>}
         </div>
       </Modal>
     </div>

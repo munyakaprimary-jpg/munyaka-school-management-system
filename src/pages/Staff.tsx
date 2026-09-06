@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,25 +9,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import BackButton from '@/components/ui/BackButton';
-import { 
-  UserPlus, 
-  Phone, 
-  Mail, 
-  Briefcase, 
-  MoreHorizontal, 
-  Search, 
-  Eye, 
-  Edit, 
-  Key, 
-  ShieldCheck, 
-  UserCheck, 
-  Clock, 
-  Plus,
-  X,
-  Save,
-  AlertCircle,
-  Users,
-  Loader2
+import {
+  UserPlus, Phone, Mail, Briefcase, MoreHorizontal, Search,
+  Eye, Edit, Key, ShieldCheck, UserCheck, Clock, Plus,
+  X, Save, AlertCircle, Users, Loader2
 } from 'lucide-react';
 import {
   DropdownMenu,
@@ -37,11 +22,16 @@ import {
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
 import { showSuccess, showError, dismissToast } from '@/utils/toast';
-import { api } from '@/lib/api';
-import { getApiBaseUrl } from '@/lib/apiBase';
-import { getLocalStaff, addLocalStaff, type StaffRecord } from './StaffRegistration';
 import { notifyDataChanged } from '@/utils/storage';
-import type { PreRegisteredStaff as PreRegEntry } from '@/types/staff-access';
+import {
+  getStaffMaster,
+  addStaffMaster,
+  updateStaffMaster,
+  activateStaffMaster,
+  bulkActivateStaffMaster,
+  initializeStaffMaster,
+  type MasterStaffRecord,
+} from '@/services/staffMasterService';
 
 interface StaffMember {
   id: string;
@@ -60,250 +50,98 @@ interface StaffMember {
   department: string;
 }
 
-interface PreRegisteredStaff {
-  id: string;
-  fullName: string;
-  nationalId: string;
-  tscNumber?: string;
-  email: string;
-  phone: string;
-  systemRole: string;
-  department: string;
-  assignedSubjects: string[];
-  tempAccessCode: string;
-  status: 'Pre-Registered' | 'Active' | 'Suspended';
-  datePreRegistered: string;
+const systemRoleToLabel: Record<string, string> = {
+  head_teacher:   'Head Teacher',
+  senior_teacher: 'Senior Teacher',
+  class_teacher:  'Class Teacher',
+  subject_teacher: 'Subject Teacher',
+  bursar:         'Bursar',
+  support_admin:   'System Admin',
+};
+
+function masterToStaffMember(r: MasterStaffRecord): StaffMember {
+  return {
+    id: r.id,
+    id_no: r.nationalId,
+    staff_id: r.staffId,
+    access_key: r.tempAccessCode,
+    tsc_no: r.tscNumber,
+    full_name: r.name,
+    role: r.role || systemRoleToLabel[r.systemRole] || 'Teacher',
+    subjects: r.assignedSubjects ?? [],
+    phone: r.phone,
+    email: r.email,
+    status: (r.status === 'Active' ? 'Active' : r.status === 'Suspended' ? 'Suspended' : 'Pre-Registered') as StaffMember['status'],
+    joined: r.joinedDate || '',
+    department: r.department || 'School Administration',
+  };
 }
 
 const Staff = () => {
   const navigate = useNavigate();
+
+  // ── Source of truth: staffMasterService ─────────────────────────────────────
+  const [masterRecords, setMasterRecords] = useState<MasterStaffRecord[]>([]);
+
+  useEffect(() => {
+    initializeStaffMaster();
+    setMasterRecords(getStaffMaster());
+  }, []);
+
+  // Keep in sync with mutations from any component
+  useEffect(() => {
+    const refresh = () => setMasterRecords(getStaffMaster());
+    window.addEventListener('staff-changed', refresh);
+    window.addEventListener('munyaka:staff-directory-changed', refresh);
+    return () => {
+      window.removeEventListener('staff-changed', refresh);
+      window.removeEventListener('munyaka:staff-directory-changed', refresh);
+    };
+  }, []);
+
+  // ── Derive display list from master ───────────────────────────────────────────
+  const masterStaffList = useMemo<StaffMember[]>(
+    () => masterRecords.map(masterToStaffMember),
+    [masterRecords]
+  );
+
+  // ── UI state ─────────────────────────────────────────────────────────────────
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<'All' | 'Active' | 'Pre-Registered'>('All');
-  const [isLoading, setIsLoading] = useState(true);
-  
-  // Edit Modal State
+  const [isLoading, setIsLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
   const [modalMode, setModalMode] = useState<'add' | 'edit'>('edit');
   const [isSaving, setIsSaving] = useState(false);
-
-  // Bulk activation state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [isBulkActivating, setIsBulkActivating] = useState(false);
-
-  // Form state for new/edit staff
-  const [formData, setFormData] = useState({
-    full_name: '',
-    role: '',
-    phone: '',
-    email: '',
-    tsc_number: ''
-  });
+  const [formData, setFormData] = useState({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
   const [formError, setFormError] = useState('');
 
-  // Load staff directory from local API + merge any locally-saved records
-  const fetchStaffList = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const res = await api.get<{ success?: boolean; data: any[] }>('/api/teachers');
-      const records = Array.isArray(res) ? res : (res.data || []);
+  // ── Filter ───────────────────────────────────────────────────────────────────
+  const filteredStaff = useMemo(() => {
+    const needle = String(searchTerm || '').toLowerCase();
+    return masterStaffList.filter(s => {
+      const matchesSearch =
+        String(s.full_name || '').toLowerCase().includes(needle) ||
+        String(s.id || '').toLowerCase().includes(needle) ||
+        String(s.id_no || '').toLowerCase().includes(needle) ||
+        String(s.email || '').toLowerCase().includes(needle) ||
+        String(s.role || '').toLowerCase().includes(needle);
+      const matchesStatus = statusFilter === 'All' || s.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [masterStaffList, searchTerm, statusFilter]);
 
-      // Write raw server response to the same localStorage key that
-      // useCentralData reads from — this keeps the Dashboard in sync
-      // with whatever the Staff page has fetched from the server.
-      try {
-        localStorage.setItem('munyaka_staff_directory', JSON.stringify(records));
-        // Fire both event flavours so any listener re-computes
-        notifyDataChanged('munyaka_staff_directory');
-        notifyDataChanged('staff');
-      } catch { /* ignore storage quota errors */ }
+  const isPending = (s: StaffMember): boolean => s.status !== 'Active';
+  const activeCount  = useMemo(() => masterStaffList.filter(s => !isPending(s)).length, [masterStaffList]);
+  const preRegCount  = useMemo(() => masterStaffList.filter(isPending).length, [masterStaffList]);
 
-      const staffList: StaffMember[] = records.map((r: any) => {
-        // The server derives a `status` field ('Active' | 'Pre-Registered')
-        // from the integer is_active column. Use it directly when present.
-        // Otherwise fall back to deriving from is_active for legacy records.
-        let status: 'Active' | 'Pre-Registered' | 'Suspended' = 'Active';
-        if (r.status) {
-          const s = String(r.status).toLowerCase();
-          if (s === 'pre-registered' || s === 'pre_registered' || s === 'preregistered') {
-            status = 'Pre-Registered';
-          } else if (s === 'suspended') {
-            status = 'Suspended';
-          } else {
-            status = 'Active';
-          }
-        } else if (r.is_active === 0 || r.is_active === false || r.is_active === '0') {
-          status = 'Pre-Registered';
-        }
-
-        return {
-          id: r.id,
-          id_no: r.id_number || r.id_no || r.staff_id || '',
-          tsc_no: r.tsc_number || r.tsc_no,
-          full_name: r.full_name || `${r.first_name || ''} ${r.last_name || ''}`.trim(),
-          role: r.role || 'TEACHER',
-          subjects: r.subjects || [],
-          phone: r.phone || '',
-          email: r.email || '',
-          status,
-          joined: r.joined || r.created_at || '',
-          department: r.department || 'School Administration'
-        };
-      });
-
-      // Merge in any staff saved locally (offline-first registrations)
-      const localStaff = getLocalStaff();
-      const existingIds = new Set(staffList.map(s => s.id));
-      localStaff.forEach((ls: StaffRecord) => {
-        if (existingIds.has(ls.id)) return;
-        staffList.push({
-          id: ls.id,
-          id_no: `ID-${ls.id.slice(-6)}`,
-          tsc_no: ls.tscNumber,
-          full_name: ls.fullName,
-          role: ls.role.toUpperCase(),
-          subjects: [],
-          phone: ls.phone,
-          email: ls.email,
-          status: 'Active',
-          joined: ls.createdAt,
-          department: 'School Administration',
-        });
-      });
-
-      return staffList;
-    } catch (err: any) {
-      console.error('Failed to fetch staff from local API:', err);
-      // Server unreachable — fall back to local-only staff
-      const localStaff = getLocalStaff();
-      return localStaff.map((ls: StaffRecord) => ({
-        id: ls.id,
-        id_no: `ID-${ls.id.slice(-6)}`,
-        tsc_no: ls.tscNumber,
-        full_name: ls.fullName,
-        role: ls.role.toUpperCase(),
-        subjects: [],
-        phone: ls.phone,
-        email: ls.email,
-        status: 'Active' as const,
-        joined: ls.createdAt,
-        department: 'School Administration',
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  const [staffDirectory, setStaffDirectory] = useState<StaffMember[]>([]);
-
-  // Load pre-registered ledger from localStorage (unchanged)
-  const preRegLedger = useMemo<PreRegisteredStaff[]>(() => {
-    const saved = localStorage.getItem('munyaka_staff_prereg');
-    return saved ? JSON.parse(saved) : [];
-  }, []);
-
-  // Unified Staff Master List (Combines Directory & Pre-Registered)
-    const masterStaffList = useMemo(() => {
-      const directoryMap = new Map<string, StaffMember>();
-      staffDirectory.forEach(s => directoryMap.set(s.id_no, s));
-  
-      const combined: StaffMember[] = [...staffDirectory];
-  
-      // Include pre-registered staff who are not yet in the main directory
-      preRegLedger.forEach((p: any) => {
-        if (!directoryMap.has(p.nationalId)) {
-          combined.push({
-                    id: p.id,
-                    id_no: p.nationalId,
-                    staff_id: p.staffId,
-                    ref: p.id,
-                    access_key: p.tempAccessCode,
-                    tsc_no: p.tscNumber,
-                    full_name: p.fullName,
-                    // Safe null-checking: systemRole may be undefined for legacy
-                    // ledger entries. Use the empty-string fallback so .replace()
-                    // never crashes with TypeError.
-                    role: (p?.systemRole || '').replace('_', ' ').toUpperCase(),
-                    subjects: p.assignedSubjects || [p.department || 'General'],
-                    phone: (p?.phone || ''),
-                    email: (p?.email || ''),
-                    status: p.status === 'Active' ? 'Active' : 'Pre-Registered',
-                    joined: p.datePreRegistered,
-                    department: p.department || 'School Administration'
-                  });
-        }
-      });
-  
-      return combined;
-    }, [staffDirectory, preRegLedger]);
-
-  // Filter staff by Search Term & Status Tabs
-    // Safe null-checking: every property is coerced through `String(... || '')`
-    // so undefined / null values can never throw a TypeError when their
-    // string methods (toLowerCase / includes) are called.
-    const filteredStaff = useMemo(() => {
-      const needle = String(searchTerm || '').toLowerCase();
-      return masterStaffList.filter(s => {
-        const matchesSearch =
-          String(s.full_name || '').toLowerCase().includes(needle) ||
-          String(s.id || '').toLowerCase().includes(needle) ||
-          String(s.id_no || '').toLowerCase().includes(needle) ||
-          String(s.email || '').toLowerCase().includes(needle) ||
-          String(s.role || '').toLowerCase().includes(needle);
-  
-        const matchesStatus =
-          statusFilter === 'All' ||
-          s.status === statusFilter;
-  
-        return matchesSearch && matchesStatus;
-      });
-    }, [masterStaffList, searchTerm, statusFilter]);
-
-  // Single source of truth for "is this staff record pending activation?".
-  // Matches every spelling/variant seen in the system so the banner count,
-  // the action button guard, and the actual mutation loop all stay in sync.
-  const isPending = (s: StaffMember): boolean => {
-    const raw = String(s.status ?? '').trim().toLowerCase();
-    if (raw !== '' && raw !== 'active') return true;
-    // Also treat legacy records with `isActivated === false` as pending
-    if ((s as any).isActivated === false) return true;
-    return false;
-  };
-
-  const activeCount = useMemo(() => masterStaffList.filter(s => !isPending(s)).length, [masterStaffList]);
-  const preRegCount = useMemo(() => masterStaffList.filter(isPending).length, [masterStaffList]);
-
-  // Initial load + listen for changes
-  useEffect(() => {
-    let mounted = true;
-    
-    const load = async () => {
-      const list = await fetchStaffList();
-      if (mounted) setStaffDirectory(list);
-    };
-    
-    load();
-
-    // Listen for staff changes from Add/Edit modal
-    const handleStaffChange = () => load();
-    window.addEventListener('staff-changed', handleStaffChange);
-    
-    return () => {
-      mounted = false;
-      window.removeEventListener('staff-changed', handleStaffChange);
-    };
-  }, [fetchStaffList]);
-
+  // ── Modal handlers ───────────────────────────────────────────────────────────
   const handleOpenAdd = () => {
     setModalMode('add');
     setEditingStaff(null);
-    setFormData({
-      full_name: '',
-      role: '',
-      phone: '',
-      email: '',
-      tsc_number: ''
-    });
+    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
     setFormError('');
     setIsModalOpen(true);
   };
@@ -311,112 +149,64 @@ const Staff = () => {
   const handleOpenEdit = (staff: StaffMember) => {
     setModalMode('edit');
     setEditingStaff(staff);
-    setFormData({
-      full_name: staff.full_name,
-      role: staff.role,
-      phone: staff.phone,
-      email: staff.email,
-      tsc_number: staff.tsc_no || ''
-    });
+    setFormData({ full_name: staff.full_name, role: staff.role, phone: staff.phone, email: staff.email, tsc_number: staff.tsc_no || '' });
     setFormError('');
     setIsModalOpen(true);
   };
 
-  const handleSaveStaff = async () => {
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingStaff(null);
+    setFormError('');
+    setFormData({ full_name: '', role: '', phone: '', email: '', tsc_number: '' });
+  };
+
+  const handleSaveStaff = () => {
     if (!String(formData.full_name || '').trim() || !String(formData.role || '').trim()) {
-          setFormError('Please fill in all required fields (Full Name, Role / Designation).');
-          return;
-        }
+      setFormError('Please fill in all required fields (Full Name, Role / Designation).');
+      return;
+    }
 
     setIsSaving(true);
     setFormError('');
 
     if (modalMode === 'add') {
-          // ── Add mode: local-first with optional silent backend sync ───────────────
-          const staffId = `staff-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
-          const nationalId = `ID-${Date.now()}`;
-          const newStaffPayload = {
-            id: staffId,
-            full_name: formData.full_name,
-            role: formData.role.toUpperCase(),
-            phone: formData.phone,
-            email: formData.email,
-            tsc_number: formData.tsc_number || undefined,
-            id_number: nationalId,
-          };
-    
-          // 1. Always persist to local storage first so the UI updates immediately
-          addLocalStaff({
-            id: staffId,
-            fullName: formData.full_name,
-            role: formData.role.toUpperCase(),
-            phone: formData.phone,
-            email: formData.email,
-            tscNumber: formData.tsc_number,
-            createdAt: new Date().toISOString(),
-          });
-    
-          // 2. Update local UI state right away (optimistic)
-          setStaffDirectory(prev => [
-            ...prev,
-            {
-              id: staffId,
-              id_no: nationalId,
-              tsc_no: formData.tsc_number,
-              full_name: formData.full_name,
-              role: formData.role.toUpperCase(),
-              subjects: [],
-              phone: formData.phone,
-              email: formData.email,
-              status: 'Pre-Registered',
-              joined: new Date().toISOString(),
-              department: 'School Administration',
-            },
-          ]);
-    
-          // 3. Persist the unified staff directory to munyaka_staff_directory so the
-          //    Access Master Ledger can read directly from the same source of truth.
-          setStaffDirectory(current => {
-            try {
-              localStorage.setItem('munyaka_staff_directory', JSON.stringify(current));
-            } catch { /* localStorage may be full — best-effort */ }
-            return current;
-          });
-    
-          // 4. Notify other components (Staff page list AND Access Master Ledger)
-          window.dispatchEvent(new Event('staff-changed'));
-          window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
-          notifyDataChanged('munyaka_staff_directory');
-
-          // 5. Success toast — staff is persisted locally. Backend sync is a
-          //    no-op in offline-first mode (was previously a silent fetch).
-          showSuccess(`Staff member "${formData.full_name}" added successfully!`);
-
+      const natId = `ID-${Date.now()}`;
+      try {
+        addStaffMaster({
+          name: formData.full_name.trim(),
+          nationalId: natId,
+          email: formData.email.trim(),
+          phone: formData.phone.trim(),
+          tscNumber: formData.tsc_number.trim() || undefined,
+          role: formData.role.toUpperCase().trim(),
+          systemRole: 'subject_teacher',
+          department: 'School Administration',
+          status: 'Pre-Registered',
+        });
+        showSuccess(`Staff member "${formData.full_name}" added and pre-registered.`);
+      } catch (err) {
+        showError('Failed to add staff. Please try again.');
+        console.error('[Staff] handleSaveStaff (add):', err);
+        setIsSaving(false);
+        return;
+      }
     } else if (editingStaff) {
-          // ── Edit mode: local-first with optional silent backend sync ──────────────
-          const updatedRecord = {
-            ...editingStaff,
-            full_name: formData.full_name,
-            role: formData.role.toUpperCase(),
-            phone: formData.phone,
-            email: formData.email,
-            tsc_no: formData.tsc_number || undefined,
-          };
-
-          // 1. Update local UI state immediately
-          setStaffDirectory(prev => {
-            const updated = prev.map(s => (s.id === editingStaff.id ? updatedRecord : s));
-            try {
-              localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
-            } catch { /* best-effort */ }
-            return updated;
-          });
-          window.dispatchEvent(new Event('staff-changed'));
-          window.dispatchEvent(new CustomEvent('munyaka:staff-directory-changed'));
-          notifyDataChanged('munyaka_staff_directory');
-
-          // 2. Success toast — staff is persisted locally.
-          showSuccess(`Staff member "${formData.full_name}" updated successfully!`);
+      try {
+        updateStaffMaster(editingStaff.id, {
+          name: formData.full_name.trim(),
+          role: formData.role.toUpperCase().trim(),
+          phone: formData.phone.trim(),
+          email: formData.email.trim(),
+          tscNumber: formData.tsc_number.trim() || undefined,
+        });
+        showSuccess(`Staff member "${formData.full_name}" updated successfully.`);
+      } catch (err) {
+        showError('Failed to update staff. Please try again.');
+        console.error('[Staff] handleSaveStaff (edit):', err);
+        setIsSaving(false);
+        return;
+      }
     }
 
     setIsModalOpen(false);
@@ -425,142 +215,69 @@ const Staff = () => {
     setIsSaving(false);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setEditingStaff(null);
-    setFormError('');
-    setFormData({
-      full_name: '',
-      role: '',
-      phone: '',
-      email: '',
-      tsc_number: ''
-    });
-  };
-
-  // ── Bulk Selection ──────────────────────────────────────────────────────────
+  // ── Bulk activation — via staffMasterService ─────────────────────────────────
   const toggleSelectAll = () => {
-    if (selectedIds.size === filteredStaff.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filteredStaff.map(s => s.id)));
-    }
+    if (selectedIds.size === filteredStaff.length) setSelectedIds(new Set());
+    else setSelectedIds(new Set(filteredStaff.map(s => s.id)));
   };
 
   const toggleSelectOne = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
   };
 
-  // ── Bulk Activate Selected — local-first with server sync ───────────────────
   const handleBulkActivate = async () => {
     if (selectedIds.size === 0) return;
     setIsBulkActivating(true);
-
-    const idsToActivate = [...selectedIds];
-
-    // Always update local state first
-    setStaffDirectory(prev =>
-      prev.map(s =>
-        idsToActivate.includes(s.id)
-          ? { ...s, status: 'Active' as const }
-          : s
-      )
-    );
-    setSelectedIds(new Set());
-    notifyDataChanged('staff');
-    window.dispatchEvent(new Event('staff-changed'));
-
-    // Offline-first: success toast fires immediately, no external sync.
-    dismissToast();
-    showSuccess(`Activated ${idsToActivate.length} teacher(s).`);
-
-    setIsBulkActivating(false);
-  };
-
-  // ── Activate All Pre-Registered — local-first with server sync ─────────────
-  const handleActivateAll = async () => {
-    // Use the SAME isPending helper as the banner counter so the numbers
-    // always agree. Iterate over `masterStaffList` (includes both the
-    // server-fetched directory AND the localStorage pre-registration ledger)
-    // so we catch every pending record regardless of where it lives.
-    const pendingStaff = masterStaffList.filter(isPending);
-    if (pendingStaff.length === 0) {
+    const ids = [...selectedIds];
+    try {
+      bulkActivateStaffMaster(ids);
       dismissToast();
-      showError('No pre-registered teachers to activate.');
-      return;
-    }
-    if (!window.confirm(`Activate all pre-registered teachers? This will set ${pendingStaff.length} teacher(s) to Active.`)) return;
-
-    setIsBulkActivating(true);
-
-    // Build a Set of pending IDs so we can match both directory rows AND
-    // ledger rows by their shared `id`.
-    const pendingIds = new Set(pendingStaff.map(p => p.id));
-
-    // Always succeed — update local state first, then try to sync with server.
-    const activateLocally = () => {
-      // 1. Update React state for staffDirectory (server-fetched rows)
-      setStaffDirectory(prev =>
-        prev.map(s =>
-          pendingIds.has(s.id)
-            ? { ...s, status: 'Active' as const, isActivated: true } as StaffMember
-            : s
-        )
-      );
+      showSuccess(`Activated ${ids.length} staff member(s).`);
+    } catch (err) {
+      showError('Failed to activate staff.');
+      console.error('[Staff] handleBulkActivate:', err);
+    } finally {
       setSelectedIds(new Set());
-
-      // 2. Update localStorage pre-registration ledger so ledger-sourced
-      //    rows also flip to Active on the next master-list rebuild.
-      try {
-        const saved = localStorage.getItem('munyaka_staff_prereg');
-        if (saved) {
-          const ledger: PreRegisteredStaff[] = JSON.parse(saved);
-          const updated = ledger.map(e =>
-            pendingIds.has(e.id)
-              ? { ...e, status: 'Active' as const }
-              : e
-          );
-          localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updated));
-        }
-      } catch { /* best-effort */ }
-
-      // 3. Also patch the canonical munyaka_staff_directory cache that
-      //    useCentralData + AdminDashboard read from so the Dashboard
-      //    counts update immediately.
-      try {
-        const cachedRaw = localStorage.getItem('munyaka_staff_directory');
-        if (cachedRaw) {
-          const cached: any[] = JSON.parse(cachedRaw);
-          const updated = cached.map(row =>
-            pendingIds.has(row.id)
-              ? { ...row, status: 'Active', is_active: 1 }
-              : row
-          );
-          localStorage.setItem('munyaka_staff_directory', JSON.stringify(updated));
-        }
-      } catch { /* best-effort */ }
-
-      // 4. Propagate events so other components refresh
-      notifyDataChanged('staff');
-      notifyDataChanged('munyaka_staff_directory');
-      window.dispatchEvent(new Event('staff-changed'));
-
-      return pendingStaff.length;
-    };
-
-    // Activate all pending teachers locally — offline-first, always succeeds
-    const localCount = activateLocally();
-    dismissToast();
-    showSuccess(`All pending teachers activated locally (${localCount} activated).`);
-
-    setIsBulkActivating(false);
+      setIsBulkActivating(false);
+    }
   };
 
+  const handleActivateAll = async () => {
+    const pending = masterStaffList.filter(isPending);
+    if (pending.length === 0) { dismissToast(); showError('No pre-registered staff to activate.'); return; }
+    if (!window.confirm(`Activate all ${pending.length} pre-registered staff member(s)?`)) return;
+    setIsBulkActivating(true);
+    try {
+      bulkActivateStaffMaster(pending.map(s => s.id));
+      dismissToast();
+      showSuccess(`All ${pending.length} pending staff activated.`);
+    } catch (err) {
+      showError('Failed to activate all staff.');
+      console.error('[Staff] handleActivateAll:', err);
+    } finally {
+      setIsBulkActivating(false);
+    }
+  };
+
+  const handleActivateOne = (member: StaffMember) => {
+    try {
+      activateStaffMaster(member.id);
+      dismissToast();
+      showSuccess(`${member.full_name} has been activated.`);
+    } catch (err) {
+      showError('Failed to activate staff.');
+      console.error('[Staff] handleActivateOne:', err);
+    }
+  };
+
+  const initialsOf = (name: string): string =>
+    String(name || 'PR').split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase();
+
+  // ── Render ───────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Page Header */}
@@ -568,121 +285,69 @@ const Staff = () => {
         <div className="flex items-center gap-3">
           <BackButton parentPath="/" />
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff & Personnel</h1>
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff &amp; Personnel</h1>
             <p className="text-muted-foreground">Master directory of teachers, administrators, and support staff.</p>
           </div>
         </div>
-
-        <div className="flex gap-2">
-          <Button 
-            className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
-            onClick={handleOpenAdd}
-          >
-            <UserPlus size={18} /> Add Staff
-          </Button>
-        </div>
+        <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100" onClick={handleOpenAdd}>
+          <UserPlus size={18} /> Add Staff
+        </Button>
       </div>
 
-      {/* Metrics Summary Bar */}
+      {/* Metrics */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
-          <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl">
-            <Briefcase size={22} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p>
-            <p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
-          <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl">
-            <UserCheck size={22} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Accounts</p>
-            <p className="text-2xl font-black text-slate-900">{activeCount}</p>
-          </div>
-        </div>
-
-        <div className="bg-white p-6 rounded-[2rem] shadow-sm flex items-center gap-4 border-none">
-          <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl">
-            <Clock size={22} />
-          </div>
-          <div>
-            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered Keys</p>
-            <p className="text-2xl font-black text-slate-900">{preRegCount}</p>
-          </div>
-        </div>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p><p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p></div>
+        </Card>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-emerald-50 text-emerald-600 rounded-2xl"><UserCheck size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Active Accounts</p><p className="text-2xl font-black text-slate-900">{activeCount}</p></div>
+        </Card>
+        <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
+          <div className="p-3.5 bg-amber-50 text-amber-600 rounded-2xl"><Clock size={22} /></div>
+          <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Pre-Registered Keys</p><p className="text-2xl font-black text-slate-900">{preRegCount}</p></div>
+        </Card>
       </div>
 
-      {/* Search & Status Filter Bar */}
+      {/* Search & Status Filter */}
       <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-          <Input
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+          <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search staff by name, ID or email..."
-            className="h-12 rounded-2xl bg-white border-none shadow-sm pl-11 text-sm font-medium focus:ring-2 ring-indigo-50"
-          />
+            className="h-12 rounded-2xl bg-white border-none shadow-sm pl-11 text-sm font-medium focus:ring-2 ring-indigo-50" />
         </div>
-
         <div className="flex gap-1.5 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-full md:w-auto">
-          {(['All', 'Active', 'Pre-Registered'] as const).map((status) => (
-            <Button
-              key={status}
-              variant="ghost"
-              onClick={() => setStatusFilter(status)}
-              className={
-                statusFilter === status
-                  ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100"
-                  : "rounded-xl h-10 px-5 font-bold text-xs text-slate-500 hover:bg-slate-50"
-              }
-            >
+          {(['All', 'Active', 'Pre-Registered'] as const).map(status => (
+            <Button key={status} variant="ghost" onClick={() => setStatusFilter(status)}
+              className={statusFilter === status ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100" : "rounded-xl h-10 px-5 font-bold text-xs text-slate-500 hover:bg-slate-50"}>
               {status}
             </Button>
           ))}
         </div>
       </div>
 
-      {/* Bulk Action Bar — visible when there are pre-registered teachers */}
+      {/* Bulk Action Bar */}
       {preRegCount > 0 && (
         <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3 p-4 md:p-5 bg-amber-50 border border-amber-200 rounded-2xl">
           <div className="flex items-center gap-3 flex-1">
-            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0">
-              <ShieldCheck size={20} />
-            </div>
+            <div className="p-2 bg-amber-100 text-amber-700 rounded-xl shrink-0"><ShieldCheck size={20} /></div>
             <div>
-              <p className="text-sm font-bold text-amber-900">
-                {preRegCount} teacher{preRegCount === 1 ? '' : 's'} pending activation
-              </p>
-              <p className="text-xs text-amber-700 font-medium">
-                Pre-registered staff can sign in but haven't been approved for full system access yet.
-              </p>
+              <p className="text-sm font-bold text-amber-900">{preRegCount} staff member{preRegCount === 1 ? '' : 's'} pending activation</p>
+              <p className="text-xs text-amber-700 font-medium">Pre-registered staff can sign in but haven't been approved for full system access yet.</p>
             </div>
           </div>
           <div className="flex gap-2 shrink-0">
             {selectedIds.size > 0 && (
-              <Button
-                onClick={handleBulkActivate}
-                disabled={isBulkActivating}
-                className="h-11 px-5 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100"
-              >
-                {isBulkActivating ? (
-                  <Loader2 className="animate-spin" size={16} />
-                ) : (
-                  <UserCheck size={16} />
-                )}
+              <Button onClick={handleBulkActivate} disabled={isBulkActivating}
+                className="h-11 px-5 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100">
+                {isBulkActivating ? <Loader2 className="animate-spin" size={16} /> : <UserCheck size={16} />}
                 Approve Selected ({selectedIds.size})
               </Button>
             )}
-            <Button
-              onClick={handleActivateAll}
-              disabled={isBulkActivating}
-              variant="outline"
-              className="h-11 px-5 rounded-2xl gap-2 border-amber-300 text-amber-800 hover:bg-amber-100 font-bold"
-            >
+            <Button onClick={handleActivateAll} disabled={isBulkActivating} variant="outline"
+              className="h-11 px-5 rounded-2xl gap-2 border-amber-300 text-amber-800 hover:bg-amber-100 font-bold">
               {isBulkActivating ? <Loader2 className="animate-spin" size={16} /> : <UserCheck size={16} />}
               Activate All
             </Button>
@@ -694,24 +359,17 @@ const Staff = () => {
       {masterStaffList.length === 0 && (
         <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm p-12 text-center">
           <div className="flex flex-col items-center gap-3 max-w-md mx-auto">
-            <div className="p-4 bg-amber-50 rounded-full">
-              <Users className="w-10 h-10 text-amber-500" />
-            </div>
+            <div className="p-4 bg-amber-50 rounded-full"><Users className="w-10 h-10 text-amber-500" /></div>
             <h3 className="text-lg font-bold text-slate-900">No staff members registered yet</h3>
-            <p className="text-sm text-slate-500">
-              The staff directory is currently empty. Add your first staff member to get started.
-            </p>
-            <Button 
-              onClick={handleOpenAdd}
-              className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100"
-            >
+            <p className="text-sm text-slate-500">The staff directory is currently empty. Add your first staff member to get started.</p>
+            <Button onClick={handleOpenAdd} className="mt-2 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
               <UserPlus size={18} /> Add New Staff Member
             </Button>
           </div>
         </Card>
       )}
 
-      {/* Master Staff Data Table */}
+      {/* Data Table */}
       {masterStaffList.length > 0 && (
         <div className="table-scroll-viewport">
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
@@ -721,7 +379,8 @@ const Staff = () => {
                 <p className="text-sm text-slate-500 font-medium">Full master ledger of internal school staff.</p>
               </div>
               <Badge className="bg-indigo-50 text-indigo-700 border-none font-bold px-4 py-1.5 rounded-xl">
-                Showing {filteredStaff.length} Record{filteredStaff.length === 1 ? '' : 's'}{selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
+                {filteredStaff.length} Record{filteredStaff.length === 1 ? '' : 's'}
+                {selectedIds.size > 0 ? ` · ${selectedIds.size} selected` : ''}
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
@@ -730,13 +389,9 @@ const Staff = () => {
                   <thead className="text-slate-500 bg-slate-50/50 border-b">
                     <tr>
                       <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
-                        <Checkbox
-                          checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length}
-                          onCheckedChange={toggleSelectAll}
-                          aria-label="Select all staff"
-                        />
+                        <Checkbox checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length} onCheckedChange={toggleSelectAll} aria-label="Select all staff" />
                       </th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID & Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID &amp; Name</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
@@ -744,55 +399,43 @@ const Staff = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {filteredStaff.map((member) => (
+                    {filteredStaff.map(member => (
                       <tr key={member.id} className="hover:bg-slate-50/60 transition-colors group">
                         <td className="px-4 py-5 w-12">
-                          <Checkbox
-                            checked={selectedIds.has(member.id)}
-                            onCheckedChange={() => toggleSelectOne(member.id)}
-                            aria-label={`Select ${member.full_name}`}
-                          />
+                          <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
-                                                  <div className="flex items-center gap-3">
-                                                                                                      <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                                                                                                        {String(member.full_name || member.name || 'PR').split(' ').filter(n => n[0]).map(n => n[0]).join('')}
-                                                                                                      </div>
-                                                                                                      <div className="flex flex-col min-w-0">
-                                                                                                        <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name || member.name || 'Pre-Registered Staff'}</p>
-                                                                                                        <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id || member.id_no || 'N/A'} • ID: {member.id_no || member.id || 'N/A'}</p>
-                                                                                                      </div>
-                                                                                                    </div>
-                                                                                                  </td>
-
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                              {initialsOf(member.full_name)}
+                            </div>
+                            <div className="flex flex-col min-w-0">
+                              <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
+                              <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} &bull; ID: {member.id_no}</p>
+                            </div>
+                          </div>
+                        </td>
                         <td className="px-8 py-5 min-w-[180px]">
-                                                  <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
-                                                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
-                                                </td>
-
+                          <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
+                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
+                        </td>
                         <td className="px-8 py-5 min-w-[220px]">
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
                               <Phone size={13} className="text-slate-400 shrink-0" />
-                              <span className="whitespace-nowrap">{member.phone || 'No Phone Provided'}</span>
+                              <span>{member.phone || 'No Phone Provided'}</span>
                             </div>
                             <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
-                                                          <Mail size={13} className="text-slate-400 shrink-0" />
-                                                          <span className="truncate max-w-[180px]">{member.email || 'No Email Provided'}</span>
-                                                        </div>
+                              <Mail size={13} className="text-slate-400 shrink-0" />
+                              <span className="truncate max-w-[180px]">{member.email || 'No Email Provided'}</span>
+                            </div>
                           </div>
                         </td>
-
                         <td className="px-8 py-5 text-center min-w-[140px]">
-                          <Badge className={
-                            member.status === 'Active'
-                              ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
-                              : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"
-                          }>
+                          <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
                             {member.status}
                           </Badge>
                         </td>
-
                         <td className="px-8 py-5 text-right min-w-[120px]">
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
@@ -801,58 +444,24 @@ const Staff = () => {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end" className="rounded-2xl p-2 min-w-[180px] shadow-xl border-slate-100">
-                              <DropdownMenuItem 
-                                onClick={() => navigate(`/staff/${member.id}`)}
-                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
-                              >
+                              <DropdownMenuItem onClick={() => navigate(`/staff/${member.id}`)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600">
                                 <Eye size={15} /> View Profile
                               </DropdownMenuItem>
-                              
-                              <DropdownMenuItem 
-                                onClick={() => handleOpenEdit(member)}
-                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600"
-                              >
+                              <DropdownMenuItem onClick={() => handleOpenEdit(member)}
+                                className="rounded-xl gap-2 font-bold cursor-pointer text-slate-700 hover:text-indigo-600">
                                 <Edit size={15} /> Edit Profile
                               </DropdownMenuItem>
-                              
                               <DropdownMenuSeparator className="my-1" />
-
                               {isPending(member) && (
-                                <DropdownMenuItem
-                                  onClick={async () => {
-                                    // Local-first: always update state immediately
-                                    setStaffDirectory(prev =>
-                                      prev.map(s => s.id === member.id ? { ...s, status: 'Active' as const, isActivated: true } as StaffMember : s)
-                                    );
-
-                                    // Update localStorage ledger if applicable
-                                    try {
-                                      const saved = localStorage.getItem('munyaka_staff_prereg');
-                                      if (saved) {
-                                        const ledger: PreRegisteredStaff[] = JSON.parse(saved);
-                                        const updated = ledger.map(e =>
-                                          e.id === member.id ? { ...e, status: 'Active' as const } : e
-                                        );
-                                        localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updated));
-                                      }
-                                    } catch { /* best-effort */ }
-
-                                    notifyDataChanged('staff');
-                                    window.dispatchEvent(new Event('staff-changed'));
-                                    dismissToast();
-                                    showSuccess(`${member.full_name} has been activated.`);
-                                  }}
-                                  className="rounded-xl gap-2 font-bold cursor-pointer text-emerald-600 hover:bg-emerald-50"
-                                >
-                                  <UserCheck size={15} /> Activate Teacher
+                                <DropdownMenuItem onClick={() => handleActivateOne(member)}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-emerald-600 hover:bg-emerald-50">
+                                  <UserCheck size={15} /> Activate Staff
                                 </DropdownMenuItem>
                               )}
-
                               {!isPending(member) && (
-                                <DropdownMenuItem
-                                  onClick={() => navigate('/staff/pre-registration')}
-                                  className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50"
-                                >
+                                <DropdownMenuItem onClick={() => navigate('/staff/pre-registration')}
+                                  className="rounded-xl gap-2 font-bold cursor-pointer text-indigo-600 hover:bg-indigo-50">
                                   <Key size={15} /> Manage Access Keys
                                 </DropdownMenuItem>
                               )}
@@ -861,7 +470,6 @@ const Staff = () => {
                         </td>
                       </tr>
                     ))}
-
                     {filteredStaff.length === 0 && (
                       <tr>
                         <td colSpan={6} className="px-8 py-20 text-center">
@@ -880,20 +488,13 @@ const Staff = () => {
         </div>
       )}
 
-      {/* Add/Edit Staff Modal */}
+      {/* Add/Edit Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 animate-in fade-in">
           <div className="bg-white rounded-2xl shadow-xl max-w-xl w-full max-h-[90vh] overflow-y-auto animate-in zoom-in-95">
             <div className="p-6 border-b flex justify-between items-center">
-              <h3 className="text-lg font-bold text-slate-900">
-                {modalMode === 'add' ? 'Add New Staff Member' : 'Edit Staff Profile'}
-              </h3>
-              <button 
-                onClick={handleCloseModal}
-                className="p-1 text-slate-400 hover:text-slate-600"
-              >
-                <X size={20} />
-              </button>
+              <h3 className="text-lg font-bold text-slate-900">{modalMode === 'add' ? 'Add New Staff Member' : 'Edit Staff Profile'}</h3>
+              <button onClick={handleCloseModal} className="p-1 text-slate-400 hover:text-slate-600"><X size={20} /></button>
             </div>
             <div className="p-6 space-y-4">
               {formError && (
@@ -903,70 +504,35 @@ const Staff = () => {
               )}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Full Name</Label>
-                <Input 
-                  value={formData.full_name} 
-                  onChange={(e) => setFormData({...formData, full_name: e.target.value})} 
-                  placeholder="e.g. Jane Mwangi" 
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold" 
-                />
+                <Input value={formData.full_name} onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                  placeholder="e.g. Jane Mwangi" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
               </div>
-              {/* Role / Designation stays as a full-width input at the top */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Role / Designation *</Label>
-                <Input
-                  value={formData.role}
-                  onChange={(e) => setFormData({...formData, role: e.target.value})}
-                  placeholder="e.g. TEACHER, ADMINISTRATOR"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
+                <Input value={formData.role} onChange={e => setFormData({ ...formData, role: e.target.value })}
+                  placeholder="e.g. TEACHER, ADMINISTRATOR" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
               </div>
-
-              {/* Phone and Email should sit side-by-side in a 2-column grid directly below Role/Designation */}
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Phone</Label>
-                  <Input
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    placeholder="+254..."
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  />
+                  <Input value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                    placeholder="+254..." className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
                 </div>
                 <div className="space-y-2">
                   <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">Email</Label>
-                  <Input
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                    placeholder="email@school.ac.ke"
-                    className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                  />
+                  <Input type="email" value={formData.email} onChange={e => setFormData({ ...formData, email: e.target.value })}
+                    placeholder="email@school.ac.ke" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
                 </div>
               </div>
-
-              {/* TSC Number (Optional) should be placed full-width right below the Phone/Email row */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase text-slate-400 tracking-widest">TSC Number (Optional)</Label>
-                <Input
-                  value={formData.tsc_number}
-                  onChange={(e) => setFormData({...formData, tsc_number: e.target.value})}
-                  placeholder="e.g. TSC-482910"
-                  className="rounded-xl h-12 bg-slate-50 border-none font-bold"
-                />
+                <Input value={formData.tsc_number} onChange={e => setFormData({ ...formData, tsc_number: e.target.value })}
+                  placeholder="e.g. TSC-482910" className="rounded-xl h-12 bg-slate-50 border-none font-bold" />
               </div>
               <div className="flex gap-3 pt-4 border-t">
-                <Button 
-                  variant="ghost" 
-                  className="flex-1 rounded-xl h-11 font-bold"
-                  onClick={handleCloseModal}
-                >
-                  Cancel
-                </Button>
-                <Button 
-                  className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2"
-                  onClick={handleSaveStaff}
-                  disabled={isSaving}
-                >
+                <Button variant="ghost" className="flex-1 rounded-xl h-11 font-bold" onClick={handleCloseModal}>Cancel</Button>
+                <Button onClick={handleSaveStaff} disabled={isSaving}
+                  className="flex-1 rounded-xl h-11 bg-indigo-600 hover:bg-indigo-700 font-bold shadow-lg shadow-indigo-100 gap-2">
                   {isSaving ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                   {modalMode === 'add' ? 'Add Staff' : 'Save Changes'}
                 </Button>

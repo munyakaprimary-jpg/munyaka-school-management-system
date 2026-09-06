@@ -8,6 +8,7 @@ import BackButton from '@/components/ui/BackButton';
 import { useFileDownload } from '@/utils/fileDownloader';
 import { useCentralData, notifyDataChanged, getActiveLearners, getActiveTeachers } from '@/hooks/useCentralData';
 import { lsSet, lsRead } from '@/utils/storage';
+import { STAFF_MASTER_KEY } from '@/services/staffMasterService';
 import { tryParse } from '@/utils/storageUtils';
 
 export default function CentralDataService() {
@@ -30,13 +31,13 @@ export default function CentralDataService() {
   const loadStats = () => {
     try {
       const students = getActiveLearners();
-      const staff = getActiveTeachers();
+      const masterStaff = lsRead<unknown>(STAFF_MASTER_KEY, []);
       const attendance = lsRead<Record<string, unknown>>('munyaka_attendance_records', {});
       const fees = lsRead<Record<string, unknown>>('munyaka_fees_records', {});
 
       setStats({
-        studentsCount: students?.length ?? 0,
-        staffCount: staff?.length ?? 0,
+        studentsCount: Array.isArray(students) ? students.length : 0,
+        staffCount: Array.isArray(masterStaff) ? masterStaff.length : 0,
         attendanceCount: Object.keys(attendance ?? {}).length,
         feesCount: Object.keys(fees ?? {}).length,
         lastExportDate: lsRead<string>('munyaka_last_export_date', '') || 'Never'
@@ -55,12 +56,13 @@ export default function CentralDataService() {
   const handleExportDatabase = async () => {
     try {
       const dbBundle = {
-        version: "4.0",
+        version: "5.0", // v5.0: includes munyaka_master_staff_list
         exportDate: new Date().toISOString(),
         school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
         students: lsRead<unknown>('school_learners_data', lsRead<unknown>('munyaka_students', [])),
         staff: lsRead<unknown>('munyaka_staff_directory', []),
         staffPrereg: lsRead<unknown>('munyaka_staff_prereg', []),
+        staffMaster: lsRead<unknown>(STAFF_MASTER_KEY, []),   // canonical master ledger
         fees: lsRead<unknown>('munyaka_fees_records', {}),
         transactions: lsRead<unknown>('munyaka_transactions', []),
         attendance: lsRead<unknown>('munyaka_attendance_records', {}),

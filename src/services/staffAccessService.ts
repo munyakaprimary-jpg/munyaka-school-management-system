@@ -1,9 +1,9 @@
 /**
- * Staff Access Key Service
+ * Staff Access Key Utilities
+ * ==========================
  *
- * Centralises all logic for generating, validating, normalising, and migrating
- * staff temporary-access-key values so that the Access Master Ledger always
- * displays the consistent `MUNYAKA-XXXX` (4-digit) format.
+ * Pure functions for generating, validating, normalising, and detecting
+ * legacy-format staff temporary-access-key values.
  *
  * Key format rules
  * ───────────────
@@ -13,14 +13,14 @@
  *   - starts with `PR-` followed by a timestamp / long numeric string
  *   - contains bare UUIDs or long raw IDs
  *   - empty / undefined
+ *
+ * All storage I/O for access keys is handled exclusively by staffMasterService.
  */
 
 import { PreRegisteredStaff } from '@/types/staff-access';
-import { notifyDataChanged } from '@/utils/storage';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const STAFF_LEDGER_KEY = 'munyaka_staff_prereg';
 const MUNYAKA_PREFIX = 'MUNYAKA-';
 
 /**
@@ -44,7 +44,7 @@ export function generateAccessKey(): string {
   return `${MUNYAKA_PREFIX}${randomDigits}`;
 }
 
-// ─── Key Validation ───────────────────────────────────────────────────────────
+// ─── Key Validation ─────────────────────────────────────────────────────────
 
 /**
  * Returns true when `key` is a valid MUNYAKA-XXXX key.
@@ -89,7 +89,7 @@ export function isOldAccessKeyFormat(key?: string | null): boolean {
   return false;
 }
 
-// ─── Key Normalisation ────────────────────────────────────────────────────────
+// ─── Key Normalisation ──────────────────────────────────────────────────────
 
 /**
  * Returns a normalised access key.
@@ -100,109 +100,4 @@ export function isOldAccessKeyFormat(key?: string | null): boolean {
 export function normalizeAccessKey(key?: string | null): string {
   if (isValidAccessKey(key)) return key as string;
   return generateAccessKey();
-}
-
-// ─── Ledger Migration ────────────────────────────────────────────────────────
-
-interface MigrationResult {
-  /** Number of records that were updated */
-  updated: number;
-  /** Number of records that were already valid */
-  unchanged: number;
-  /** Total records processed */
-  total: number;
-}
-
-/**
- * Loads the staff pre-registration ledger from localStorage, normalises every
- * access-key value, and writes the cleaned records back.
- *
- * Returns a brief summary of what changed.
- *
- * Call this function:
- *   • On app boot (before any read of the ledger)
- *   • Any time the ledger is about to be read for display or auth
- *
- * This function is idempotent — it is safe to call multiple times.
- */
-export function migrateAllStaffAccessKeys(): MigrationResult {
-  try {
-    const raw = localStorage.getItem(STAFF_LEDGER_KEY);
-    if (!raw) {
-      return { updated: 0, unchanged: 0, total: 0 };
-    }
-
-    const ledger: PreRegisteredStaff[] = JSON.parse(raw);
-    if (!Array.isArray(ledger) || ledger.length === 0) {
-      return { updated: 0, unchanged: 0, total: 0 };
-    }
-
-    let updated = 0;
-    const migrated: PreRegisteredStaff[] = ledger.map(record => {
-      const currentKey = record.tempAccessCode;
-      if (isOldAccessKeyFormat(currentKey)) {
-        const newKey = generateAccessKey();
-        updated++;
-        return { ...record, tempAccessCode: newKey };
-      }
-      return record;
-    });
-
-    if (updated > 0) {
-      localStorage.setItem(STAFF_LEDGER_KEY, JSON.stringify(migrated));
-      // Notify any listening components to re-render with the cleaned data
-      notifyDataChanged(STAFF_LEDGER_KEY);
-      // Also sync the users store since AuthContext reads tempAccessCode as password
-      notifyDataChanged('munyaka_users');
-    }
-
-    return {
-      updated,
-      unchanged: ledger.length - updated,
-      total: ledger.length,
-    };
-  } catch (err) {
-    // Non-fatal: log and return a zero-result so callers can proceed
-    console.error('[staffAccessService] migrateAllStaffAccessKeys failed:', err);
-    return { updated: 0, unchanged: 0, total: 0 };
-  }
-}
-
-/**
- * Synchronous version of `migrateAllStaffAccessKeys` that returns the
- * already-migrated ledger without triggering a re-render notification.
- * Useful inside React `useState` initialiser functions where setState
- * is called directly.
- */
-export function getMigratedStaffLedger(): PreRegisteredStaff[] {
-  try {
-    const raw = localStorage.getItem(STAFF_LEDGER_KEY);
-    if (!raw) return [];
-
-    const ledger: PreRegisteredStaff[] = JSON.parse(raw);
-    if (!Array.isArray(ledger)) return [];
-
-    return ledger.map(record => {
-      if (isOldAccessKeyFormat(record.tempAccessCode)) {
-        return { ...record, tempAccessCode: generateAccessKey() };
-      }
-      return record;
-    });
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Re-writes the migrated ledger to localStorage after a synchronous migration.
- * Call this immediately after `getMigratedStaffLedger()` to persist changes.
- */
-export function persistMigratedLedger(ledger: PreRegisteredStaff[]): void {
-  try {
-    localStorage.setItem(STAFF_LEDGER_KEY, JSON.stringify(ledger));
-    notifyDataChanged(STAFF_LEDGER_KEY);
-    notifyDataChanged('munyaka_users');
-  } catch (err) {
-    console.error('[staffAccessService] persistMigratedLedger failed:', err);
-  }
 }

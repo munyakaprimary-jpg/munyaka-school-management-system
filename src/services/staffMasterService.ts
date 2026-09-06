@@ -33,6 +33,10 @@
 
 import { notifyDataChanged } from '@/utils/storage';
 import { generateAccessKey, isOldAccessKeyFormat } from './staffAccessService';
+import type { MasterAccessStatus, MasterSystemRole } from '@/types/staff-access';
+
+// Re-export for consumers that import from this service
+export type { MasterAccessStatus, MasterSystemRole };
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -43,11 +47,6 @@ const LEGACY_DIRECTORY_KEY = 'munyaka_staff_directory';
 const LEGACY_PREREG_KEY   = 'munyaka_staff_prereg';
 
 // ─── Type ────────────────────────────────────────────────────────────────────
-
-export type MasterAccessStatus = 'Active' | 'Pre-Registered' | 'Suspended';
-export type MasterSystemRole =
-  | 'head_teacher' | 'senior_teacher' | 'class_teacher'
-  | 'subject_teacher' | 'bursar' | 'support_admin' | 'teacher';
 
 export interface MasterStaffRecord {
   // Directory / operational fields
@@ -72,6 +71,7 @@ export interface MasterStaffRecord {
 
   // Pre-registration / auth fields
   staffId: string;      // login username e.g. "T001"
+  accessKey?: string;   // alias for staffId in MUNYAKA-XXXX format (added for compatibility)
   tempAccessCode: string; // primary password (MUNYAKA-XXXX)
   status: MasterAccessStatus;
   datePreRegistered?: string;
@@ -339,10 +339,19 @@ export function migrateStaffAccessKeys(): MigrationResult {
 
     let updated = 0;
     const migrated: MasterStaffRecord[] = records.map(record => {
-      if (isOldAccessKeyFormat(record.tempAccessCode)) {
+      const tempNeedsFix   = isOldAccessKeyFormat(record.tempAccessCode);
+      const idNeedsFix     = isOldAccessKeyFormat(record.id);
+      const accessKeyNeedsFix = isOldAccessKeyFormat(record.accessKey);
+
+      if (tempNeedsFix || idNeedsFix || accessKeyNeedsFix) {
         const newKey = generateAccessKey();
         updated++;
-        return { ...record, tempAccessCode: newKey };
+        return {
+          ...record,
+          id:            idNeedsFix        ? newKey : record.id,
+          accessKey:     accessKeyNeedsFix ? newKey : record.accessKey,
+          tempAccessCode: tempNeedsFix      ? newKey : record.tempAccessCode,
+        };
       }
       return record;
     });
@@ -524,7 +533,8 @@ export function addStaffMaster(
     emergencyContact: data.emergencyContact,
     emergencyName: data.emergencyName,
     schoolId: data.schoolId ?? 'munyaka-sc',
-    accessKey,                           // use the same MUNYAKA-XXXX key
+    accessKey,                           // MUNYAKA-XXXX key
+    tempAccessCode: accessKey,           // password matches accessKey for simplicity
     status: data.status ?? 'Pre-Registered',
     datePreRegistered: data.datePreRegistered ?? new Date().toISOString().split('T')[0],
     profileComplete: data.profileComplete ?? false,
