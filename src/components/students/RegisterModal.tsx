@@ -365,12 +365,12 @@ export default function RegisterModal({
                   </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                      Phone <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(optional)</span>
+                      Guardian Name <span className="text-rose-500">*</span>
                     </Label>
                     <Input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="+254"
+                      value={guardianName}
+                      onChange={(e) => setGuardianName(e.target.value)}
+                      placeholder="Parent / Guardian full name"
                       className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                     />
                   </div>
@@ -379,12 +379,12 @@ export default function RegisterModal({
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                      Guardian Name <span className="text-rose-500">*</span>
+                      Phone <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(optional)</span>
                     </Label>
                     <Input
-                      value={guardianName}
-                      onChange={(e) => setGuardianName(e.target.value)}
-                      placeholder="Parent / Guardian full name"
+                      value={phone}
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder="+254"
                       className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                     />
                   </div>
