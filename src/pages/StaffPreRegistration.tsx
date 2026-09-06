@@ -233,7 +233,7 @@ const StaffPreRegistration = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50/30 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
         <div className="flex items-center gap-4">
-          <BackButton />
+          <BackButton parentPath="/staff" />
           <div>
             <h1 className="text-3xl font-black text-slate-900">Staff Access Master</h1>
             <p className="text-sm text-slate-500 mt-1">Manage pre-registration and system access keys</p>
