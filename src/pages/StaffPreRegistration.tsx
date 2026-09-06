@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -30,7 +31,55 @@ interface UnlinkedStaffEntry {
   autoKey: string; // Auto-generated PR- key reference
 }
 
+/**
+ * Normalises a name across every possible field variant used in staff records.
+ * Falls back to email → phone → "Unnamed Staff" so we always render *something*.
+ */
+const resolveName = (s: Record<string, unknown>): string => {
+  const first = String(s.firstName || (s as any)['first-name'] || (s as any)['first_name'] || '');
+  const last  = String(s.lastName  || (s as any)['last-name']  || (s as any)['last_name']  || '');
+  return String(
+    s.name       || s.fullName || s.full_name ||
+    (first || last ? `${first} ${last}`.trim() : null) ||
+    s.email      || s.phone    || s.staffId   || 'Unnamed Staff'
+  );
+};
+
+/** Builds safe display initials from a name string. */
+const initialsOf = (name: string): string =>
+  name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
+
+/** Normalises an ID across every possible field variant. */
+const resolveId = (s: Record<string, unknown>): string =>
+  String(
+    (s as any).national_id || (s as any).id_number || (s as any).idNumber ||
+    s.nationalId || s.id || s.staffId || ''
+  ) || 'N/A';
+
 const StaffPreRegistration = () => {
+  const navigate = useNavigate();
+
+  // ── Boot: scrub legacy dummy test entries from the ledger ─────────────────
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('munyaka_staff_prereg');
+      if (raw) {
+        const parsed: PreRegisteredStaff[] = JSON.parse(raw);
+        const before = parsed.length;
+        const cleaned = parsed.filter(
+          (s) =>
+            !/^prereg-\d+$/i.test(s.id) &&
+            !/^dummy/i.test(s.fullName || '') &&
+            (s.fullName || '').toLowerCase() !== 'pre-registered staff'
+        );
+        if (cleaned.length < before) {
+          localStorage.setItem('munyaka_staff_prereg', JSON.stringify(cleaned));
+          setStaffList(cleaned);
+        }
+      }
+    } catch { /* ignore */ }
+  }, []);
+
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>(() => {
     const saved = localStorage.getItem('munyaka_staff_prereg');
     return saved ? JSON.parse(saved) : INITIAL_PRE_REGISTERED_STAFF;
@@ -226,9 +275,37 @@ const StaffPreRegistration = () => {
       };
   
       const updatedList = [newPreReg, ...staffList];
-      setStaffList(updatedList);
-      localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-      notifyDataChanged('munyaka_staff_prereg');
+            setStaffList(updatedList);
+            localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+      
+            // Mirror into munyaka_staff_directory so the Dashboard + Staff.tsx
+            // both reflect this newly pre-registered record.
+            try {
+              const savedDir = localStorage.getItem('munyaka_staff_directory');
+              const dir: any[] = savedDir ? JSON.parse(savedDir) : [];
+              const directoryEntry = {
+                id: newPreReg.id,
+                id_no: newPreReg.nationalId,
+                full_name: newPreReg.fullName,
+                role: (newPreReg.systemRole || 'TEACHER').replace('_', ' ').toUpperCase(),
+                systemRole: newPreReg.systemRole,
+                department: newPreReg.department || 'School Administration',
+                phone: newPreReg.phone,
+                email: newPreReg.email,
+                status: newPreReg.status,
+                is_active: 0,
+                tsc_no: newPreReg.tscNumber,
+              };
+              if (!dir.some(e => e.id === directoryEntry.id)) {
+                dir.unshift(directoryEntry);
+              }
+              localStorage.setItem('munyaka_staff_directory', JSON.stringify(dir));
+            } catch (err) {
+              console.error('[StaffPreRegistration] Failed to mirror directory:', err);
+            }
+      
+            notifyDataChanged('munyaka_staff_prereg');
+            notifyDataChanged('munyaka_staff_directory');
       setGeneratingKeyFor(null);
       showSuccess(`Access key generated for "${entry.name}"! Invite dispatched.`);
     };
@@ -509,28 +586,37 @@ const StaffPreRegistration = () => {
               <tbody className="divide-y">
                               {filteredLedger.map((entry) => {
                                 if (entry.type === 'pre-registered') {
-                                                                  const staff = entry.data;
-                                                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
-                                                                  const displayName = staff.fullName || 'Pre-Registered Staff';
-                                                                  const displayId = staff.nationalId || staff.id || staff.ref || 'N/A';
-                                                                  const displayRole = roleInfo.label || 'Pending Assignment';
-                                                                  return (
-                                                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                                                                      <td className="px-8 py-5">
-                                                                        <p className="font-bold text-slate-900">{displayName}</p>
-                                                                        <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {displayId}</p>
-                                                                      </td>
+                                                                                                  const staff = entry.data;
+                                                                                                  const roleInfo = SYSTEM_ROLE_LABELS[staff.systemRole] || SYSTEM_ROLE_LABELS.subject_teacher;
+                                                                                                  const displayName = resolveName(staff as any);
+                                                                                                  const avatarInitials = initialsOf(displayName);
+                                                                                                  const displayId = resolveId(staff as any);
+                                                                                                  const displayRole = roleInfo.label || 'Pending Assignment';
+                                                                                                  const displayEmail = staff.email || 'No Email Provided';
+                                                                                                  return (
+                                                                                                    <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
+                                                                                                      <td className="px-8 py-5">
+                                                                                                        <div className="flex items-center gap-3">
+                                                                                                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
+                                                                                                            {avatarInitials}
+                                                                                                          </div>
+                                                                                                          <div className="flex flex-col min-w-0">
+                                                                                                            <p className="font-bold text-slate-900 whitespace-nowrap">{displayName}</p>
+                                                                                                            <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {staff.id || staff.ref || 'N/A'} • ID: {displayId}</p>
+                                                                                                          </div>
+                                                                                                        </div>
+                                                                                                      </td>
                                                                       <td className="px-8 py-5">
                                                                         <Badge className={`rounded-xl font-bold border text-xs px-3 py-1 ${roleInfo.badgeBg} ${roleInfo.color}`}>{displayRole}</Badge>
                                                                       </td>
                                                                       <td className="px-8 py-5">
-                                                                        <div className="flex items-center gap-2 text-slate-700">
-                                                                          <Mail size={14} className="text-slate-400 shrink-0" />
-                                                                          <span className="font-medium truncate max-w-[200px]">{staff.email}</span>
-                                                                        </div>
-                                                                      </td>
-                                                                      <td className="px-8 py-5 text-center">
-                                                                        <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
+                                                                                                                                              <div className="flex items-center gap-2 text-slate-700">
+                                                                                                                                                <Mail size={14} className="text-slate-400 shrink-0" />
+                                                                                                                                                <span className="font-medium truncate max-w-[200px]">{displayEmail}</span>
+                                                                                                                                              </div>
+                                                                                                                                            </td>
+                                                                                                                                            <td className="px-8 py-5 text-center">
+                                                                                                                                              <div className="inline-flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-xl border border-slate-200 cursor-pointer" onClick={() => {
                                                                           navigator.clipboard.writeText(staff.tempAccessCode);
                                                                           showSuccess(`Copied Key: ${staff.tempAccessCode}`);
                                                                         }}>
@@ -567,27 +653,36 @@ const StaffPreRegistration = () => {
                                                                 }
               
                                 // Auto-linked directory staff (no ledger entry yet)
-                                                                const unlinked = entry.data;
-                                                                const displayName = unlinked.name || 'Pre-Registered Staff';
-                                                                const displayId = unlinked.nationalId || unlinked.id || 'N/A';
-                                                                const displayRole = unlinked.role || 'Pending Assignment';
-                                                                return (
-                                                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
-                                                                    <td className="px-8 py-5">
-                                                                      <p className="font-bold text-slate-900">{displayName}</p>
-                                                                      <p className="text-xs text-slate-400 font-medium mt-0.5">ID: {displayId}</p>
-                                                                    </td>
-                                                                    <td className="px-8 py-5">
-                                                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
-                                                                        {displayRole}
-                                                                      </Badge>
-                                                                    </td>
-                                                                    <td className="px-8 py-5">
-                                                                      <div className="flex items-center gap-2 text-slate-700">
-                                                                        <Mail size={14} className="text-slate-400 shrink-0" />
-                                                                        <span className="font-medium truncate max-w-[200px]">{unlinked.email}</span>
-                                                                      </div>
-                                                                    </td>
+                                                                                                const unlinked = entry.data;
+                                                                                                const displayName = resolveName(unlinked as any);
+                                                                                                const avatarInitials = initialsOf(displayName);
+                                                                                                const displayId = resolveId(unlinked as any);
+                                                                                                const displayRole = unlinked.role || 'Pending Assignment';
+                                                                                                const displayEmail = unlinked.email || 'No Email Provided';
+                                                                                                return (
+                                                                                                  <tr key={`auto-${unlinked.id}`} className="hover:bg-amber-50/40 transition-colors">
+                                                                                                    <td className="px-8 py-5">
+                                                                                                      <div className="flex items-center gap-3">
+                                                                                                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center font-bold text-xs shrink-0">
+                                                                                                          {avatarInitials}
+                                                                                                        </div>
+                                                                                                        <div className="flex flex-col min-w-0">
+                                                                                                          <p className="font-bold text-slate-900 whitespace-nowrap">{displayName}</p>
+                                                                                                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {unlinked.id || 'N/A'} • ID: {displayId}</p>
+                                                                                                        </div>
+                                                                                                      </div>
+                                                                                                    </td>
+                                                                                                    <td className="px-8 py-5">
+                                                                                                      <Badge className="rounded-xl font-bold border text-xs px-3 py-1 bg-slate-100 text-slate-700 border-slate-200">
+                                                                                                        {displayRole}
+                                                                                                      </Badge>
+                                                                                                    </td>
+                                                                                                    <td className="px-8 py-5">
+                                                                                                      <div className="flex items-center gap-2 text-slate-700">
+                                                                                                        <Mail size={14} className="text-slate-400 shrink-0" />
+                                                                                                        <span className="font-medium truncate max-w-[200px]">{displayEmail}</span>
+                                                                                                      </div>
+                                                                                                    </td>
                                                                     <td className="px-8 py-5 text-center">
                                                                       <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-50 text-slate-400 text-xs font-bold border border-dashed border-slate-200">
                                                                         <Key size={12} /> {unlinked.autoKey}
