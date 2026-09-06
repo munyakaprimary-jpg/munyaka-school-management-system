@@ -13,6 +13,7 @@ import {
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
 import { migrateAllStaffAccessKeys } from '@/services/staffAccessService';
+import { getStaffMaster } from '@/services/staffMasterService';
 
 export type UserRole = 'owner' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -163,9 +164,30 @@ const initializeUsersStorage = () => {
   // Run access-key migration first so that stale keys are normalised before
   // they are synced into the users store (where tempAccessCode is the password).
   migrateAllStaffAccessKeys();
-  const savedLedgerJson = localStorage.getItem('munyaka_staff_prereg');
-  const staffLedger: PreRegisteredStaff[] = savedLedgerJson
-    ? JSON.parse(savedLedgerJson)
+
+  // Primary: read from the staff master ledger (single source of truth).
+  // Convert MasterStaffRecord → PreRegisteredStaff shape for the code below.
+  const masterRecords = getStaffMaster();
+  const staffLedger: PreRegisteredStaff[] = masterRecords.length > 0
+    ? masterRecords.map(r => ({
+        id: r.id,
+        staffId: r.staffId,
+        fullName: r.name,
+        nationalId: r.nationalId,
+        tscNumber: r.tscNumber,
+        email: r.email,
+        phone: r.phone,
+        systemRole: r.systemRole as any,
+        department: r.department,
+        assignedGrade: r.assignedGrade,
+        assignedStream: r.assignedStream,
+        assignedSubjects: r.assignedSubjects ?? [],
+        tempAccessCode: r.tempAccessCode,
+        status: r.status,
+        datePreRegistered: r.datePreRegistered,
+        activatedAt: r.activatedAt,
+        lastLogin: r.lastLogin,
+      }))
     : INITIAL_PRE_REGISTERED_STAFF;
 
   staffLedger.forEach((staff) => {

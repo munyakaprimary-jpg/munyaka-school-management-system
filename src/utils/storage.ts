@@ -20,6 +20,7 @@
 import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { buildDefaultClusters } from '@/data/defaultCbcLearningAreas';
 import { safeParse, isQuotaExceeded, handleQuotaError, getLocalStorage } from './storageUtils';
+import { initializeStaffMaster } from '@/services/staffMasterService';
 
 /**
  * Re-export the safe localStorage accessor so existing imports of
@@ -350,6 +351,16 @@ export function hydrateAllStores(): HydrationReport {
       seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
     }
     report.keys.push(STORAGE_KEYS.STAFF);
+
+    // 1b'. Unified Staff Master ledger — single source of truth for ALL
+    //       staff records. Seeds with the merged pre-reg + directory set
+    //       and writes the legacy keys for backwards compatibility.
+    try {
+      initializeStaffMaster();
+      report.keys.push('munyaka_staff_master');
+    } catch (err) {
+      console.error('[storage] staff-master seed failed:', err);
+    }
 
     // 1c. Staff pre-registration
     if (Array.isArray(INITIAL_SEED_DATA?.staffPrereg)) {

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
+import { STAFF_MASTER_KEY, getStaffMaster } from '@/services/staffMasterService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +47,8 @@ interface DashboardStats {
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
-  TEACHERS:             'munyaka_staff_directory',
+  TEACHERS:             STAFF_MASTER_KEY,          // single source of truth
+  TEACHERS_LEGACY:      'munyaka_staff_directory',  // legacy, still written by mutations
   TEACHERS_FALLBACK:    'munyaka_staff',
   TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
@@ -146,40 +148,10 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
-        let teachers: Teacher[] = [];
-        const teachersFromLS = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
-        if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
-          teachers = teachersFromLS;
-        } else {
-          const teachersFromFallback = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
-          if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
-            teachers = teachersFromFallback;
-          } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-            teachers = INITIAL_SEED_DATA.staff as unknown as Teacher[];
-          }
-        }
-        // Also merge pre-registered staff from `munyaka_staff_prereg` so the
-        // Dashboard count matches the Staff Directory list (which already merges
-        // both sources via `masterStaffList`).
-        const preRegRaw = tryParse<Record<string, unknown>[]>(
-          lsForRead?.getItem(STORAGE_KEYS.TEACHERS_PREREG) ?? null
-        ) ?? [];
-        const directoryIds = new Set(teachers.map((t) => String(t.id)));
-        preRegRaw.forEach((p) => {
-          if (!p) return;
-          const id = String(p.id ?? p.nationalId ?? '');
-          if (!id || directoryIds.has(id)) return;
-          teachers.push({
-            id,
-            name: String(p.fullName ?? p.name ?? ''),
-            role: String(p.systemRole ?? p.role ?? 'TEACHER').replace('_', ' '),
-            systemRole: String(p.systemRole ?? p.role ?? 'subject_teacher'),
-            department: String(p.department ?? 'School Administration'),
-            status: String(p.status ?? 'Pre-Registered'),
-            isTeacher: true,
-            is_active: p.status === 'Active' ? 1 : 0,
-          });
-        });
+        // Read from the single master ledger — no more merging pre-reg + directory
+        // since the master already contains all staff in one place.
+        const master = getStaffMaster();
+        const teachers: Teacher[] = master as unknown as Teacher[];
 
     const totalTeachers = teachers.filter((t) => {
       if (!t) return false;
@@ -300,7 +272,8 @@ export const useDashboardData = (): DashboardStats => {
   useEffect(() => {
     const watchedKeys = [
           STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS,          // munyaka_staff_master (primary)
+          STORAGE_KEYS.TEACHERS_LEGACY,   // munyaka_staff_directory (legacy, still written)
           STORAGE_KEYS.TEACHERS_FALLBACK,
           STORAGE_KEYS.TEACHERS_PREREG,
           STORAGE_KEYS.ATTENDANCE,
@@ -330,6 +303,7 @@ export const useDashboardData = (): DashboardStats => {
         const watched = [
                   STORAGE_KEYS.LEARNERS,
                   STORAGE_KEYS.TEACHERS,
+                  STORAGE_KEYS.TEACHERS_LEGACY,
                   STORAGE_KEYS.TEACHERS_FALLBACK,
                   STORAGE_KEYS.TEACHERS_PREREG,
                   STORAGE_KEYS.ATTENDANCE,

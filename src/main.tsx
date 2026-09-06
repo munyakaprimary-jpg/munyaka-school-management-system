@@ -7,6 +7,7 @@ import { processPasswordResetOverride } from "./services/PasswordResetOverrideSe
 import { hydrateAllStores } from "./utils/storage";
 import { runMigrations } from "./services/schemaMigrations";
 import { simulateDeviceHeartbeat } from "./types/device";
+import { initializeStaffMaster } from "./services/staffMasterService";
 
 /**
  * Boot orchestrator.
@@ -98,6 +99,13 @@ const seedInitialDataSafely = (): void => {
   } catch (err) {
     // eslint-disable-next-line no-console
     console.error("[StorageInitService] Seed failed — continuing boot:", err);
+  }
+  // ── 2b. Seed staff master (single source of truth for all staff records) ──
+  try {
+    initializeStaffMaster();
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("[StaffMasterService] Seed failed — continuing boot:", err);
   }
 };
 

@@ -9,6 +9,12 @@ import { useState, useEffect, useCallback, useMemo } from 'react';
 import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
+import {
+  STAFF_MASTER_KEY,
+  initializeStaffMaster,
+  getStaffMasterCount,
+  getStaffMaster,
+} from '@/services/staffMasterService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -66,7 +72,8 @@ export interface CentralDataStats {
 
 const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
-  TEACHERS:             'munyaka_staff_directory',
+  TEACHERS:             STAFF_MASTER_KEY,         // single source of truth
+  TEACHERS_LEGACY:      'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
   TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
@@ -136,8 +143,14 @@ const getLearners = (): Learner[] => {
 };
 
 const getTeachers = (): Teacher[] => {
+  // Primary: read from the unified staff master ledger
+  const master = getStaffMaster();
+  if (master.length > 0) {
+    return master as unknown as Teacher[];
+  }
+  // Fallback: legacy keys (for apps that haven't been seeded yet)
   const ls = getLocalStorage();
-  const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
+  const fromLS = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_LEGACY) ?? null);
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
   const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
@@ -147,20 +160,6 @@ const getTeachers = (): Teacher[] => {
   }
   return [];
 };
-
-/** Normalise a pre-registration ledger entry into a Teacher shape so it can
- *  be counted alongside the main directory in `getTeachers()`.
- *  This ensures the Dashboard staff count includes pre-registered teachers. */
-const normalisePreRegEntry = (p: Record<string, unknown>): Teacher => ({
-  id: String(p.id ?? p.nationalId ?? ''),
-  name: String(p.fullName ?? p.name ?? ''),
-  role: String(p.systemRole ?? p.role ?? 'TEACHER').replace('_', ' '),
-  systemRole: String(p.systemRole ?? p.role ?? 'subject_teacher'),
-  department: String(p.department ?? 'School Administration'),
-  status: String(p.status ?? 'Pre-Registered'),
-  isTeacher: true,
-  is_active: p.status === 'Active' ? 1 : 0,
-});
 
 const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const todayStr = getTodayDate();
@@ -225,34 +224,16 @@ const computeStats = (): CentralDataStats => {
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
-        const directoryTeachers = getTeachers();
-        // Also merge in pre-registered staff from `munyaka_staff_prereg` so the
-        // Dashboard and the Staff page count the SAME people. Pre-reg entries
-        // that aren't yet in the directory are added here.
-        const preRegRaw = tryParse<Record<string, unknown>[]>(
-          getLocalStorage()?.getItem(STORAGE_KEYS.TEACHERS_PREREG) ?? null
-        ) ?? [];
-        const directoryIds = new Set(directoryTeachers.map((t) => String(t.id)));
-        const directoryNatIds = new Set(
-          directoryTeachers
-            .map((t) => String((t as Record<string, unknown>).id_no ?? ''))
-            .filter(Boolean)
-        );
-        const preRegTeachers: Teacher[] = preRegRaw
-          .filter((p) => p && !directoryIds.has(String(p.id ?? '')) && !directoryNatIds.has(String(p.nationalId ?? '')))
-          .map((p) => normalisePreRegEntry(p));
-        const allTeachers: Teacher[] = [...directoryTeachers, ...preRegTeachers];
-    
+        // The master ledger is the single source of truth — no need to
+        // separately merge the pre-reg ledger since the master already
+        // contains every staff record (directory + pre-reg).
+        const allTeachers: Teacher[] = getTeachers();
+
         // Track BOTH totals separately so callers can distinguish:
         //   - totalTeachers       → every teacher-classified record (active + pending)
         //   - activeTeacherCount  → only Active status rows
         // The dashboard "Registered Teachers" card shows the total, while
         // an "Active" badge can show the active sub-count.
-        //
-        // The server now returns a `status` field ('Active' | 'Pre-Registered')
-        // derived from `is_active`. Use it directly instead of inferring
-        // from the integer column. Fall back to the legacy is_active
-        // boolean for locally-created records that haven't been synced.
         const allTeacherRecords = allTeachers.filter((t) => {
           if (!t) return false;
           if (!matchesActiveSchool(t, activeSchoolId)) return false;
@@ -317,6 +298,10 @@ export const useCentralData = (): CentralDataStats => {
   });
 
   const refresh = useCallback(() => {
+    // Defensive: ensure the master ledger has been seeded. Safe to call
+    // multiple times — `initializeStaffMaster` is a no-op if the key
+    // already exists.
+    initializeStaffMaster();
     setStats(computeStats());
   }, []);
 
@@ -336,7 +321,8 @@ export const useCentralData = (): CentralDataStats => {
   useEffect(() => {
     const watchedKeys = [
           STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS,         // munyaka_staff_master
+          STORAGE_KEYS.TEACHERS_LEGACY,  // munyaka_staff_directory
           STORAGE_KEYS.TEACHERS_FALLBACK,
           STORAGE_KEYS.TEACHERS_PREREG,
           STORAGE_KEYS.ATTENDANCE,
@@ -361,6 +347,7 @@ export const useCentralData = (): CentralDataStats => {
         const watched = [
                   STORAGE_KEYS.LEARNERS,
                   STORAGE_KEYS.TEACHERS,
+                  STORAGE_KEYS.TEACHERS_LEGACY,
                   STORAGE_KEYS.TEACHERS_FALLBACK,
                   STORAGE_KEYS.TEACHERS_PREREG,
                   STORAGE_KEYS.ATTENDANCE,
