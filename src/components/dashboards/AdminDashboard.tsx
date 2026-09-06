@@ -44,8 +44,16 @@ const IS_DEMO_MODE = import.meta.env.VITE_DEMO_MODE === 'true' || true;
 interface SystemVitals {
   totalStudents: number;
   totalTeachers: number;
-  activeTeacherCount: number;
-  pendingTeacherCount: number;
+  teachingStaff: {
+    count: number;
+    active: number;
+    pending: number;
+  };
+  nonTeachingStaff: {
+    count: number;
+    active: number;
+    pending: number;
+  };
   todayAttendanceRate: number;
   primarySchoolCount: number;
   juniorSchoolCount: number;
@@ -299,7 +307,7 @@ const AttendanceTrendsChart: React.FC<{ data: WeeklyAttendance[] }> = ({ data })
 
 const AdminDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { totalStudents, totalTeachers, activeTeacherCount, pendingTeacherCount, todayAttendanceRate, isLoading } = useCentralData();
+  const { totalStudents, totalTeachers, categorizedMetrics, todayAttendanceRate, isLoading } = useCentralData();
 
   // Local state for re-rendering alerts when the activity log changes
   const [activityVersion, setActivityVersion] = useState(0);
@@ -320,17 +328,28 @@ const AdminDashboard: React.FC = () => {
       return g.includes('grade 7') || g.includes('grade 8') || g.includes('grade 9') || g.includes('junior');
     }).length;
 
+    const teaching = categorizedMetrics?.teaching ?? { count: 0, active: 0, pending: 0 };
+    const nonTeaching = categorizedMetrics?.nonTeaching ?? { count: 0, active: 0, pending: 0 };
+
     return {
       totalStudents: isLoading ? 0 : totalStudents,
       totalTeachers: isLoading ? 0 : totalTeachers,
-      activeTeacherCount: isLoading ? 0 : (activeTeacherCount ?? 0),
-      pendingTeacherCount: isLoading ? 0 : (pendingTeacherCount ?? 0),
+      teachingStaff: {
+        count: teaching.count,
+        active: teaching.active,
+        pending: teaching.pending,
+      },
+      nonTeachingStaff: {
+        count: nonTeaching.count,
+        active: nonTeaching.active,
+        pending: nonTeaching.pending,
+      },
       todayAttendanceRate: isLoading ? 0 : todayAttendanceRate,
       primarySchoolCount: isLoading ? 0 : Math.max(0, totalStudents - juniorCount),
       juniorSchoolCount: juniorCount,
       systemStatus: 'Live',
     };
-  }, [isLoading, totalStudents, totalTeachers, activeTeacherCount, pendingTeacherCount, todayAttendanceRate, activityVersion]);
+  }, [isLoading, totalStudents, totalTeachers, categorizedMetrics, todayAttendanceRate, activityVersion]);
 
   // ── Weekly attendance — last 7 days, fully driven by real DB-style data
   //   No mock percentages. If a day has no records, the bar shows 0% and

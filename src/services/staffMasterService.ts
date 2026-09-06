@@ -46,6 +46,81 @@ export const STAFF_MASTER_KEY = 'munyaka_master_staff_list';
 const LEGACY_DIRECTORY_KEY = 'munyaka_staff_directory';
 const LEGACY_PREREG_KEY   = 'munyaka_staff_prereg';
 
+/**
+ * Teaching staff system roles — these roles are directly involved in
+ * classroom instruction and student academic development.
+ */
+export const TEACHING_SYSTEM_ROLES: readonly MasterSystemRole[] = [
+  'head_teacher',
+  'deputy_head_teacher',
+  'senior_teacher',
+  'class_teacher',
+  'subject_teacher',
+];
+
+/**
+ * Non-teaching staff system roles — administrative, support, and
+ * auxiliary personnel who do not have classroom teaching duties.
+ */
+export const NON_TEACHING_SYSTEM_ROLES: readonly MasterSystemRole[] = [
+  'bursar',
+  'support_admin',
+  'ict_admin',
+  'librarian',
+  'nurse',
+  'counselor',
+  'cleaner',
+  'security',
+  'cook',
+  'driver',
+];
+
+/**
+ * Categorized staff metrics for UI display.
+ * Breaks down total staff into Teaching vs Non-Teaching with active/pending counts.
+ */
+export interface CategorizedStaffMetrics {
+  total: {
+    count: number;
+    active: number;
+    pending: number;
+  };
+  teaching: {
+    count: number;
+    active: number;
+    pending: number;
+  };
+  nonTeaching: {
+    count: number;
+    active: number;
+    pending: number;
+  };
+}
+
+/** Returns true if the given systemRole is a teaching role. */
+export function isTeachingRole(systemRole: string): boolean {
+  return TEACHING_SYSTEM_ROLES.includes(systemRole as MasterSystemRole);
+}
+
+/** Returns true if the given systemRole is a non-teaching role. */
+export function isNonTeachingRole(systemRole: string): boolean {
+  return NON_TEACHING_SYSTEM_ROLES.includes(systemRole as MasterSystemRole);
+}
+
+/**
+ * Count active records (status is 'active', case-insensitive).
+ */
+function countActive(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'active').length;
+}
+
+/**
+ * Count pending records (status is 'pre-registered', case-insensitive).
+ */
+function countPending(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'pre-registered').length;
+}
+
 // ─── Type ────────────────────────────────────────────────────────────────────
 
 export interface MasterStaffRecord {
@@ -658,6 +733,91 @@ export function getStaffMetrics(schoolId: string | null = null): {
   }).length;
 
   return { total, active, pending };
+}
+
+// ─── Teaching vs Non-Teaching Classification ───────────────────────────────────
+
+/** Canonical teaching system roles */
+export const TEACHING_SYSTEM_ROLES = new Set([
+  'head_teacher',
+  'deputy_head_teacher',
+  'senior_teacher',
+  'class_teacher',
+  'subject_teacher',
+  'ict_teacher',
+]);
+
+/**
+ * Return categorized staff metrics split by teaching vs non-teaching roles.
+ * Used by Dashboard, Central Hub, and APK views for precise staffing displays.
+ */
+export function getCategorizedMetrics(schoolId: string | null = null): {
+  totalStaff: number;
+  teachingStaff: { total: number; active: number; pending: number };
+  nonTeachingStaff: { total: number; active: number; pending: number };
+} {
+  const records = schoolId
+    ? getStaffMasterBySchool(schoolId)
+    : getStaffMaster();
+
+  const isActive = (r: MasterStaffRecord) => (r.status || '').toLowerCase() === 'active';
+  const isPending = (r: MasterStaffRecord) => (r.status || '').toLowerCase() === 'pre-registered';
+
+  const teaching = records.filter(r => TEACHING_SYSTEM_ROLES.has(r.systemRole));
+  const nonTeaching = records.filter(r => !TEACHING_SYSTEM_ROLES.has(r.systemRole));
+
+  return {
+    totalStaff: records.length,
+    teachingStaff: {
+      total: teaching.length,
+      active: teaching.filter(isActive).length,
+      pending: teaching.filter(isPending).length,
+    },
+    nonTeachingStaff: {
+      total: nonTeaching.length,
+      active: nonTeaching.filter(isActive).length,
+      pending: nonTeaching.filter(isPending).length,
+    },
+  };
+}
+
+/**
+ * Return categorized staff metrics for UI display.
+ * Splits total staff into Teaching vs Non-Teaching categories with
+ * active/pending breakdowns for each.
+ */
+export function getCategorizedMetrics(schoolId: string | null = null): CategorizedStaffMetrics {
+  const records = schoolId
+    ? getStaffMasterBySchool(schoolId)
+    : getStaffMaster();
+
+  const teachingRecords = records.filter(r => isTeachingRole(r.systemRole));
+  const nonTeachingRecords = records.filter(r => isNonTeachingRole(r.systemRole));
+
+  // For records with unrecognized/empty roles, include them in non-teaching
+  const unclassifiedRecords = records.filter(
+    r => !isTeachingRole(r.systemRole) && !isNonTeachingRole(r.systemRole)
+  );
+
+  const allNonTeaching = [...nonTeachingRecords, ...unclassifiedRecords];
+
+  return {
+    total: {
+      count: records.length,
+      active: countActive(records),
+      pending: countPending(records),
+    },
+    teaching: {
+      count: teachingRecords.length,
+      active: countActive(teachingRecords),
+      pending: countPending(teachingRecords),
+    },
+    nonTeaching: {
+      count: allNonTeaching.length,
+      active: countActive(allNonTeaching),
+      pending: countPending(allNonTeaching),
+    },
+  };
 }
 
 // ─── Mutations ────────────────────────────────────────────────────────────────

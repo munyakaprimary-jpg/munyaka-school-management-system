@@ -14,7 +14,9 @@ import {
   initializeStaffMaster,
   getStaffMasterCount,
   getStaffMetrics,
+  getCategorizedMetrics,
   getStaffMaster,
+  type CategorizedStaffMetrics,
 } from '@/services/staffMasterService';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -70,6 +72,11 @@ export interface CentralDataStats {
    * Used for Dashboard/Hub pending breakdown display.
    */
   pendingTeacherCount?: number;
+  /**
+   * Categorized staff metrics for Teaching vs Non-Teaching breakdown.
+   * Use this for displaying separate Teaching Staff and Support/Admin counts.
+   */
+  categorizedMetrics?: CategorizedStaffMetrics;
   todayAttendanceRate: number;
   isLoading: boolean;
 }
@@ -230,8 +237,10 @@ const computeStats = (): CentralDataStats => {
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
-        // Use centralized getStaffMetrics() for consistent counts across all views.
-        // This ensures Dashboard, Central Hub, and APK menus all show identical totals.
+        // Use centralized getCategorizedMetrics() for consistent counts across all views.
+        // This ensures Dashboard, Central Hub, and APK menus all show identical totals
+        // with Teaching vs Non-Teaching breakdown.
+        const categorizedMetrics = getCategorizedMetrics(activeSchoolId);
         const staffMetrics = getStaffMetrics(activeSchoolId);
 
         // For display purposes, we still need teacher-role filtering.
@@ -265,6 +274,7 @@ const computeStats = (): CentralDataStats => {
       totalTeachers,
       activeTeacherCount,
       pendingTeacherCount,
+      categorizedMetrics,
       todayAttendanceRate,
       isLoading: false,
     };
@@ -281,6 +291,7 @@ const computeStats = (): CentralDataStats => {
       totalTeachers: fallbackTeachers,
       activeTeacherCount: fallbackTeachers,
       pendingTeacherCount: 0,
+      categorizedMetrics: undefined,
       todayAttendanceRate: 0,
       isLoading: false,
     };
