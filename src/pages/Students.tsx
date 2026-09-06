@@ -37,6 +37,7 @@ interface LearnerRowCompat {
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
+  dob?: string;
   status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
 }
 
@@ -409,6 +410,7 @@ export default function Students() {
     gender: 'Female' as 'Male' | 'Female' | 'Other',
     guardian: '',
     phone: '',
+    dateOfBirth: '',
   });
   const [formError, setFormError] = useState('');
     // Holds the full learner object so we can render its name in the PIN modal
@@ -458,6 +460,7 @@ export default function Students() {
       gender: 'Female',
       guardian: '',
       phone: '',
+      dateOfBirth: '',
     });
     setFormError('');
     setIsModalOpen(true);
@@ -475,6 +478,7 @@ export default function Students() {
       gender: learner.gender,
       guardian: learner.guardian,
       phone: learner.phone,
+      dateOfBirth: (learner as any).dob || '',
     });
     setFormError('');
     setIsModalOpen(true);
@@ -526,11 +530,17 @@ export default function Students() {
   const validateAndSave = (e: React.FormEvent) => {
     e.preventDefault();
 
-    // Always-required fields (name + guardian) — these identify the learner
+    // Always-required fields (name + guardian + dateOfBirth) — these identify the learner
     if (!String(formData.name || '').trim() || !String(formData.guardian || '').trim()) {
           setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
           return;
         }
+    
+    // Date of Birth is required for Parent Portal lookup verification
+    if (!String(formData.dateOfBirth || '').trim()) {
+      setFormError('Please provide the learner\'s Date of Birth.');
+      return;
+    }
     
         // Identifier validation: at least one of Assessment No or Birth Cert No
         // must be provided. Empty-string and whitespace-only values are treated
@@ -562,6 +572,8 @@ export default function Students() {
       // Empty string is normalized to undefined so the field is omitted from
       // the stored JSON when not supplied.
       birthCertificateNo: bcNo || undefined,
+      // Store dateOfBirth as dob in the learner record (ISO format YYYY-MM-DD)
+      dob: formData.dateOfBirth || undefined,
         status: (formData as any).status ?? 'Active',
       };
 
@@ -644,6 +656,7 @@ export default function Students() {
       gender: 'Female',
       guardian: '',
       phone: '',
+      dateOfBirth: '',
     });
   };
 
@@ -1014,6 +1027,8 @@ export default function Students() {
               setGuardianName={(v) => setFormData(prev => ({ ...prev, guardian: v }))}
               phone={formData.phone}
               setPhone={(v) => setFormData(prev => ({ ...prev, phone: v }))}
+              dateOfBirth={formData.dateOfBirth}
+              setDateOfBirth={(v) => setFormData(prev => ({ ...prev, dateOfBirth: v }))}
               gender={formData.gender}
               setGender={(v) => setFormData(prev => ({ ...prev, gender: v }))}
               formError={formError}

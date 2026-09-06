@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, ShieldCheck, Info } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Info, Calendar } from 'lucide-react';
 import {
   readGradesAndStreams,
   getStreamsForGrade,
@@ -33,6 +33,8 @@ interface RegisterModalProps {
   setGuardianName: (value: string) => void;
   phone: string;
   setPhone: (value: string) => void;
+  dateOfBirth: string;
+  setDateOfBirth: (value: string) => void;
   gender?: 'Male' | 'Female' | 'Other';
   setGender?: (value: 'Male' | 'Female' | 'Other') => void;
   formError?: string;
@@ -60,6 +62,8 @@ export default function RegisterModal({
   setGuardianName,
   phone,
   setPhone,
+  dateOfBirth,
+  setDateOfBirth,
   gender = 'Female',
   setGender,
   formError = '',
@@ -325,7 +329,22 @@ export default function RegisterModal({
                   </div>
                 </div>
         
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-50">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-50">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Date of Birth <span className="text-rose-500">*</span>
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        type="date"
+                        value={dateOfBirth}
+                        onChange={(e) => setDateOfBirth(e.target.value)}
+                        className="rounded-xl h-12 bg-slate-50 border-none font-bold pl-10 [color-scheme:light]"
+                        max={new Date().toISOString().split('T')[0]}
+                      />
+                      <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+                    </div>
+                  </div>
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Gender <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(optional)</span>
