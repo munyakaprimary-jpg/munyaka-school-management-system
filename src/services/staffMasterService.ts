@@ -503,10 +503,10 @@ export function addStaffMaster(
   data: Partial<MasterStaffRecord> & { name: string; nationalId: string; email: string; phone: string }
 ): MasterStaffRecord {
   const existing = getStaffMaster();
-  const nextIndex = existing.length + 10; // T010, T011…
+  const accessKey = generateAccessKey();
   const newRecord: MasterStaffRecord = {
-    id: `PR-${Date.now()}`,
-    staffId: `T${String(nextIndex).padStart(3, '0')}`,
+    id: accessKey,                        // MUNYAKA-XXXX format (consistent with accessKey)
+    staffId: accessKey,
     name: data.name,
     nationalId: data.nationalId,
     email: data.email,
@@ -524,7 +524,7 @@ export function addStaffMaster(
     emergencyContact: data.emergencyContact,
     emergencyName: data.emergencyName,
     schoolId: data.schoolId ?? 'munyaka-sc',
-    tempAccessCode: data.tempAccessCode ?? generateAccessKey(),
+    accessKey,                           // use the same MUNYAKA-XXXX key
     status: data.status ?? 'Pre-Registered',
     datePreRegistered: data.datePreRegistered ?? new Date().toISOString().split('T')[0],
     profileComplete: data.profileComplete ?? false,
