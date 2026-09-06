@@ -108,7 +108,8 @@ const StaffPreRegistration = () => {
       | { type: 'auto-linked'; data: UnlinkedStaffEntry };
 
     const preRegNatIds = new Set(staffList.map(s => s.nationalId));
-    const preRegEmails = new Set(staffList.map(s => s.email.toLowerCase()));
+        // Safe null-checking: email may be undefined for incomplete records
+        const preRegEmails = new Set(staffList.map(s => (s.email || '').toLowerCase()));
 
     // Build the auto-linked list from BOTH the localStorage directory and the
     // seed STAFF data so seeded personnel like James Ndiki appear too.
@@ -167,36 +168,40 @@ const StaffPreRegistration = () => {
   }, [staffList, directoryStaff]);
 
   // ── Filter the unified ledger entries by search/role/status ──
-    const filteredLedger = useMemo(() => {
-      return ledgerEntries.filter(entry => {
-        const isPreReg = entry.type === 'pre-registered';
-        const name = isPreReg
-          ? (entry.data as PreRegisteredStaff).fullName
-          : (entry.data as UnlinkedStaffEntry).name;
-        const natId = isPreReg
-          ? (entry.data as PreRegisteredStaff).nationalId
-          : (entry.data as UnlinkedStaffEntry).nationalId;
-        const email = isPreReg
-          ? (entry.data as PreRegisteredStaff).email
-          : (entry.data as UnlinkedStaffEntry).email;
+      // Safe null-checking: every string field is coerced through `String(... || '')`
+      // so undefined / null values never throw a TypeError when their string
+      // methods (toLowerCase / includes) are called.
+      const filteredLedger = useMemo(() => {
+        const needle = String(searchTerm || '').toLowerCase();
+        return ledgerEntries.filter(entry => {
+          const isPreReg = entry.type === 'pre-registered';
+          const name = isPreReg
+            ? (entry.data as PreRegisteredStaff).fullName
+            : (entry.data as UnlinkedStaffEntry).name;
+          const natId = isPreReg
+            ? (entry.data as PreRegisteredStaff).nationalId
+            : (entry.data as UnlinkedStaffEntry).nationalId;
+          const email = isPreReg
+            ? (entry.data as PreRegisteredStaff).email
+            : (entry.data as UnlinkedStaffEntry).email;
   
-        const matchesSearch =
-          name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          natId.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          email.toLowerCase().includes(searchTerm.toLowerCase());
+          const matchesSearch =
+            String(name || '').toLowerCase().includes(needle) ||
+            String(natId || '').toLowerCase().includes(needle) ||
+            String(email || '').toLowerCase().includes(needle);
   
-        const matchesRole = roleFilter === 'all' ||
-          (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
+          const matchesRole = roleFilter === 'all' ||
+            (isPreReg ? (entry.data as PreRegisteredStaff).systemRole === roleFilter : false);
   
-        const matchesStatus = statusFilter === 'all' ||
-          (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
-          (statusFilter === 'Pre-Registered' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Pre-Registered') ||
-          (statusFilter === 'Unlinked' && !isPreReg) ||
-          (statusFilter === 'Suspended' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Suspended');
+          const matchesStatus = statusFilter === 'all' ||
+            (statusFilter === 'Active' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Active') ||
+            (statusFilter === 'Pre-Registered' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Pre-Registered') ||
+            (statusFilter === 'Unlinked' && !isPreReg) ||
+            (statusFilter === 'Suspended' && isPreReg && (entry.data as PreRegisteredStaff).status === 'Suspended');
   
-        return matchesSearch && matchesRole && matchesStatus;
-      });
-    }, [ledgerEntries, searchTerm, roleFilter, statusFilter]);
+          return matchesSearch && matchesRole && matchesStatus;
+        });
+      }, [ledgerEntries, searchTerm, roleFilter, statusFilter]);
   
     // ── Generate Key / Invite for unlinked directory staff ──
     const handleGenerateKeyAndInvite = async (entry: UnlinkedStaffEntry) => {
