@@ -10,7 +10,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users } from 'lucide-react';
+import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users, Mail } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SystemRole, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
@@ -298,7 +298,7 @@ const StaffPreRegistration = () => {
           </Button>
         </div>
 
-        {/* Table */}
+        {/* Table — overflow-x-auto ensures all credential columns stay visible */}
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
           {filteredStaff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -307,77 +307,104 @@ const StaffPreRegistration = () => {
               <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            <table className="w-full text-sm">
-              <thead className="bg-slate-50 border-b border-slate-100">
-                <tr>
-                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Staff</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden md:table-cell">Role</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Access Key</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider hidden lg:table-cell">Email</th>
-                  <th className="text-left px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Status</th>
-                  <th className="text-right px-4 py-3 font-bold text-slate-500 uppercase text-xs tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredStaff.map(s => {
-                  const canActivate = s.status === 'Pre-Registered';
-                  return (
-                    <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center flex-shrink-0">
-                            {initialsOf(s.fullName)}
+            <div className="overflow-x-auto min-w-[750px]">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-50 border-b border-slate-100">
+                  <tr>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">System Role</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Registered Email</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Temp Access Key</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Status</th>
+                    <th className="text-right px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {filteredStaff.map(s => {
+                    const canActivate = s.status === 'Pre-Registered';
+                    const roleLabel = SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole;
+                    const roleCfg = SYSTEM_ROLE_LABELS[s.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
+
+                    return (
+                      <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
+                        {/* Col 1: Staff — name + national ID */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center flex-shrink-0">
+                              {initialsOf(s.fullName)}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-bold text-slate-800 truncate max-w-[160px]">{s.fullName}</p>
+                              <p className="text-xs text-slate-400 font-mono">ID: {s.nationalId}</p>
+                            </div>
                           </div>
-                          <div>
-                            <p className="font-bold text-slate-800">{s.fullName}</p>
-                            <p className="text-xs text-slate-400">{s.nationalId}</p>
+                        </td>
+
+                        {/* Col 2: System Role — styled badge */}
+                        <td className="px-4 py-3">
+                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${roleCfg.badgeBg} ${roleCfg.color}`}>
+                            {roleLabel}
+                          </span>
+                        </td>
+
+                        {/* Col 3: Registered Email — with icon */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <Mail size={13} className="text-slate-400 shrink-0 flex-shrink-0" />
+                            <span className="text-slate-600 text-xs truncate max-w-[200px]" title={s.email}>
+                              {s.email || <span className="italic text-slate-400">No email</span>}
+                            </span>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell">
-                        <span className="text-slate-600">{SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole}</span>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <div className="flex items-center gap-2">
-                          <code className="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-1 rounded-lg">
-                            {s.tempAccessCode || '—'}
-                          </code>
-                          {s.tempAccessCode && (
-                            <button onClick={() => copyToClipboard(s.tempAccessCode)} className="text-slate-400 hover:text-indigo-600 transition-colors">
-                              <Copy size={12} />
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        <span className="text-slate-500">{s.email || '—'}</span>
-                      </td>
-                      <td className="px-4 py-3">{getStatusBadge(s.status)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          {canActivate && (
+                        </td>
+
+                        {/* Col 4: Temp Access Key — MUNYAKA-XXXX badge + copy */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono font-black text-xs rounded-lg whitespace-nowrap">
+                              {s.tempAccessCode || '—'}
+                            </span>
+                            {s.tempAccessCode && (
+                              <button
+                                onClick={() => copyToClipboard(s.tempAccessCode)}
+                                title="Copy access key"
+                                className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded"
+                              >
+                                <Copy size={13} />
+                              </button>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* Col 5: Status */}
+                        <td className="px-4 py-3">{getStatusBadge(s.status)}</td>
+
+                        {/* Col 6: Actions */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            {canActivate && (
+                              <button
+                                onClick={() => handleActivateStaff(s.id)}
+                                title="Activate"
+                                className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                              >
+                                <ShieldCheck size={15} />
+                              </button>
+                            )}
                             <button
-                              onClick={() => handleActivateStaff(s.id)}
-                              title="Activate"
-                              className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                              onClick={() => openDeleteAuth(s.id, s.fullName)}
+                              title="Delete"
+                              className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
                             >
-                              <ShieldCheck size={15} />
+                              <Trash2 size={15} />
                             </button>
-                          )}
-                          <button
-                            onClick={() => openDeleteAuth(s.id, s.fullName)}
-                            title="Delete"
-                            className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
-                          >
-                            <Trash2 size={15} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
 
