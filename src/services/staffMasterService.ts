@@ -634,6 +634,32 @@ export function getStaffMasterCount(schoolId: string | null = null): {
   return { total: records.length, active: active.length };
 }
 
+/**
+ * Return detailed staff metrics for UI counters.
+ * All status comparisons are case-insensitive for robustness.
+ */
+export function getStaffMetrics(schoolId: string | null = null): {
+  total: number;
+  active: number;
+  pending: number;
+} {
+  const records = schoolId
+    ? getStaffMasterBySchool(schoolId)
+    : getStaffMaster();
+
+  const total = records.length;
+  const active = records.filter(r => {
+    const status = (r.status || '').toLowerCase();
+    return status === 'active';
+  }).length;
+  const pending = records.filter(r => {
+    const status = (r.status || '').toLowerCase();
+    return status === 'pre-registered';
+  }).length;
+
+  return { total, active, pending };
+}
+
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
 /**

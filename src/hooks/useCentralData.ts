@@ -13,6 +13,7 @@ import {
   STAFF_MASTER_KEY,
   initializeStaffMaster,
   getStaffMasterCount,
+  getStaffMetrics,
   getStaffMaster,
 } from '@/services/staffMasterService';
 
@@ -64,6 +65,11 @@ export interface CentralDataStats {
    * the consumer should treat `totalTeachers` as the canonical count.
    */
   activeTeacherCount?: number;
+  /**
+   * Sub-count of teachers whose status is "Pre-Registered".
+   * Used for Dashboard/Hub pending breakdown display.
+   */
+  pendingTeacherCount?: number;
   todayAttendanceRate: number;
   isLoading: boolean;
 }
@@ -224,33 +230,25 @@ const computeStats = (): CentralDataStats => {
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
-        // The master ledger is the single source of truth — no need to
-        // separately merge the pre-reg ledger since the master already
-        // contains every staff record (directory + pre-reg).
-        const allTeachers: Teacher[] = getTeachers();
+        // Use centralized getStaffMetrics() for consistent counts across all views.
+        // This ensures Dashboard, Central Hub, and APK menus all show identical totals.
+        const staffMetrics = getStaffMetrics(activeSchoolId);
 
-        // Track BOTH totals separately so callers can distinguish:
-        //   - totalTeachers       → every teacher-classified record (active + pending)
-        //   - activeTeacherCount  → only Active status rows
-        // The dashboard "Registered Teachers" card shows the total, while
-        // an "Active" badge can show the active sub-count.
-        const allTeacherRecords = allTeachers.filter((t) => {
+        // For display purposes, we still need teacher-role filtering.
+        // Apply same filtering as staffMasterService but capture metrics.
+        const allTeachers: Teacher[] = getTeachers();
+        const teacherRecords = allTeachers.filter((t) => {
           if (!t) return false;
           if (!matchesActiveSchool(t, activeSchoolId)) return false;
           if (!isActiveRecord(t)) return false;
           return isTeacherRecord(t);
         });
-        const totalTeachers = allTeacherRecords.length;
-        const activeTeacherCount = allTeacherRecords.filter((t) => {
-          const status = String(t?.status || '').toLowerCase();
-          if (status) {
-            // Server returns 'Active' or 'Pre-Registered' — use it directly
-            return status === 'active';
-          }
-          // Legacy local record: fall back to is_active boolean
-          const flag = t?.is_active;
-          return flag !== 0 && flag !== false && flag !== '0';
-        }).length;
+
+        // Use staffMasterService counts as source of truth for staff metrics,
+        // then filter by teacher role for display-specific counts.
+        const totalTeachers = staffMetrics.total;
+        const activeTeacherCount = staffMetrics.active;
+        const pendingTeacherCount = staffMetrics.pending;
 
     // ── Today's attendance — deduplicated by studentId ──
     const todayLogs = getTodayAttendanceLogs();
@@ -266,6 +264,7 @@ const computeStats = (): CentralDataStats => {
       totalStudents,
       totalTeachers,
       activeTeacherCount,
+      pendingTeacherCount,
       todayAttendanceRate,
       isLoading: false,
     };
@@ -281,6 +280,7 @@ const computeStats = (): CentralDataStats => {
       totalStudents: fallbackStudents,
       totalTeachers: fallbackTeachers,
       activeTeacherCount: fallbackTeachers,
+      pendingTeacherCount: 0,
       todayAttendanceRate: 0,
       isLoading: false,
     };
@@ -292,7 +292,7 @@ const computeStats = (): CentralDataStats => {
 export const useCentralData = (): CentralDataStats => {
   const [stats, setStats] = useState<CentralDataStats>(() => {
     if (typeof window === 'undefined') {
-      return { totalStudents: 0, totalTeachers: 0, activeTeacherCount: 0, todayAttendanceRate: 0, isLoading: true };
+      return { totalStudents: 0, totalTeachers: 0, activeTeacherCount: 0, pendingTeacherCount: 0, todayAttendanceRate: 0, isLoading: true };
     }
     return computeStats();
   });
