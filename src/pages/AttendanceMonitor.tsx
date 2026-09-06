@@ -30,7 +30,7 @@ interface AttendanceRecord {
   date: string;
   arrival: string;
   departure: string;
-  status: 'Present' | 'Departed' | 'Early Departure' | 'Absent';
+  status: 'Present' | 'Departed' | 'Early Departure' | 'Absent' | 'Not Marked';
   earlyDepartureReason?: string;
   avatarUrl?: string;
 }
@@ -344,7 +344,7 @@ export default function AttendanceMonitor() {
         date: today,
         arrival: '-',
         departure: '-',
-        status: 'Present' as const,
+        status: 'Not Marked' as const,
       }));
     
     setRecords(attendanceRecords);
@@ -366,7 +366,7 @@ export default function AttendanceMonitor() {
           date: today,
           arrival: '-',
           departure: '-',
-          status: 'Present' as const,
+          status: 'Not Marked' as const,
         }));
       
       setRecords(attendanceRecords);
