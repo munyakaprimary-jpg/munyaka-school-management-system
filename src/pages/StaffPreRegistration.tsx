@@ -234,31 +234,62 @@ const StaffPreRegistration = () => {
     };
   
     const handleAddStaff = (staffData: Partial<PreRegisteredStaff>) => {
-      const newStaff: PreRegisteredStaff = {
-        id: `PR-${Date.now()}`,
-        staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
-        fullName: staffData.fullName || "",
-        nationalId: staffData.nationalId || "",
-        tscNumber: staffData.tscNumber,
-        email: staffData.email || "",
-        phone: staffData.phone || "",
-        systemRole: staffData.systemRole || "subject_teacher",
-        department: (staffData as any).department || "",
-        assignedGrade: staffData.assignedGrade,
-        assignedStream: staffData.assignedStream,
-        assignedSubjects: staffData.assignedSubjects || [],
-        tempAccessCode: staffData.tempAccessCode || "",
-        status: "Pre-Registered" as AccessStatus,
-        datePreRegistered: new Date().toISOString().split('T')[0],
-      };
-  
-      const updatedList = [newStaff, ...staffList];
-      setStaffList(updatedList);
-      localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
-      notifyDataChanged('munyaka_staff_prereg');
-      setIsAddModalOpen(false);
-      showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
-    };
+          const newStaff: PreRegisteredStaff = {
+            id: `PR-${Date.now()}`,
+            staffId: staffData.staffId || `T${String(staffList.length + 7).padStart(3, '0')}`,
+            fullName: staffData.fullName || "",
+            nationalId: staffData.nationalId || "",
+            tscNumber: staffData.tscNumber,
+            email: staffData.email || "",
+            phone: staffData.phone || "",
+            systemRole: staffData.systemRole || "subject_teacher",
+            department: (staffData as any).department || "",
+            assignedGrade: staffData.assignedGrade,
+            assignedStream: staffData.assignedStream,
+            assignedSubjects: staffData.assignedSubjects || [],
+            tempAccessCode: staffData.tempAccessCode || "",
+            status: "Pre-Registered" as AccessStatus,
+            datePreRegistered: new Date().toISOString().split('T')[0],
+          };
+    
+          const updatedList = [newStaff, ...staffList];
+          setStaffList(updatedList);
+          localStorage.setItem('munyaka_staff_prereg', JSON.stringify(updatedList));
+    
+          // Also write to `munyaka_staff_directory` so that:
+          //   (a) `useCentralData` / Dashboard sees the new staff immediately
+          //   (b) `Staff.tsx` directory merges include this record without a
+          //       page-reload gap
+          try {
+            const savedDir = localStorage.getItem('munyaka_staff_directory');
+            const dir: any[] = savedDir ? JSON.parse(savedDir) : [];
+            const directoryEntry = {
+              id: newStaff.id,
+              id_no: newStaff.nationalId,
+              full_name: newStaff.fullName,
+              role: (newStaff.systemRole || 'TEACHER').replace('_', ' ').toUpperCase(),
+              systemRole: newStaff.systemRole,
+              department: newStaff.department || 'School Administration',
+              phone: newStaff.phone,
+              email: newStaff.email,
+              status: newStaff.status,
+              is_active: 0,
+              tsc_no: newStaff.tscNumber,
+            };
+            // Avoid duplicates (idempotent)
+            if (!dir.some(e => e.id === directoryEntry.id)) {
+              dir.unshift(directoryEntry);
+            }
+            localStorage.setItem('munyaka_staff_directory', JSON.stringify(dir));
+          } catch (err) {
+            console.error('[StaffPreRegistration] Failed to update staff directory:', err);
+          }
+    
+          notifyDataChanged('munyaka_staff_prereg');
+          notifyDataChanged('munyaka_staff_directory');
+          setIsAddModalOpen(false);
+          showSuccess(`Staff member "${newStaff.fullName}" pre-registered successfully!`);
+        };
 
   const requestDelete = (staff: PreRegisteredStaff) => {
     setDeleteTarget({ id: staff.id, name: staff.fullName });
