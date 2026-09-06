@@ -312,6 +312,127 @@ const mapSystemRoleToRoleLabel = (role: MasterSystemRole): string => {
   }
 };
 
+// ─── Hard Purge ───────────────────────────────────────────────────────────────
+
+interface PurgeResult {
+  storageKeysRemoved: number;
+  recordsPurged: number;
+  recordIdsRemoved: string[];
+}
+
+/**
+ * Execute a hard purge on every app boot.
+ *
+ * 1. Scans localStorage and sessionStorage for keys matching:
+ *      "james", "ndiki", "PR-staff-1788", "prereg", "u3uh5j"
+ *    and removes every match — no stale or ghost records can survive a page reload.
+ *
+ * 2. Explicitly calls `localStorage.removeItem()` on:
+ *      munyaka_staff_prereg, prereg_staff, munyaka_staff_migrated,
+ *      MUNYAKA_STAFF_PREREG, prereg_staff_list, staff_prereg_backup
+ *
+ * 3. Filters the master ledger (`munyaka_master_staff_list`) and permanently
+ *    removes records where:
+ *      - name contains "james" or "ndiki" (case-insensitive)
+ *      - email contains "james", "ndiki", or "u3uh5j" (case-insensitive)
+ *      - id contains "PR-staff-1788" (the broken timestamp-ID generator)
+ *      - nationalId contains "u3uh5j"
+ *    Saves the cleaned array back and broadcasts the change.
+ *
+ * Returns a summary of what was removed so callers can log it.
+ */
+export function purgeLegacyAndSuspectRecords(): PurgeResult {
+  const PURGE_KEY_PATTERNS = [
+    /james/i, /ndiki/i, /PR-staff-1788/i,
+    /prereg/i,               // catches munyaka_staff_prereg, prereg_staff, etc.
+    /u3uh5j/i,
+  ];
+  const PURGE_NAME_PATTERNS = [/james/i, /ndiki/i];
+  const PURGE_EMAIL_PATTERNS = [/james/i, /ndiki/i, /u3uh5j/i];
+  // Only remove records with the specific broken ID format "PR-staff-1788...".
+  // Legitimate seed IDs like "PR-1787658909839" (PR-1787…) are NOT targeted;
+  // migrateStaffAccessKeys() will normalise them to MUNYAKA-XXXX on the same boot.
+  const PURGE_ID_PATTERNS = [/PR-staff-1788/i];
+  const EXPLICIT_KEYS = [
+    'munyaka_staff_prereg',
+    'prereg_staff',
+    'munyaka_staff_migrated',
+    // Also nuke the orphan migrated variant (different casing)
+    'MUNYAKA_STAFF_PREREG',
+    'prereg_staff_list',
+    'staff_prereg_backup',
+  ];
+
+  const matchesAny = (text: string, patterns: RegExp[]): boolean =>
+    patterns.some(p => p.test(text));
+
+  // ── 1. Scan & purge localStorage keys ────────────────────────────────────────
+  let storageKeysRemoved = 0;
+  const toRemove: string[] = [];
+
+  for (let i = 0; i < localStorage.length; i++) {
+    const key = localStorage.key(i) ?? '';
+    if (matchesAny(key, PURGE_KEY_PATTERNS)) toRemove.push(key);
+    if (EXPLICIT_KEYS.includes(key)) toRemove.push(key);
+  }
+  for (const key of toRemove) {
+    localStorage.removeItem(key);
+    storageKeysRemoved++;
+    console.log(`[staffMasterService] PURGE removed localStorage key: "${key}"`);
+  }
+
+  // ── 2. Scan & purge sessionStorage keys ─────────────────────────────────────
+  for (let i = 0; i < sessionStorage.length; i++) {
+    const key = sessionStorage.key(i) ?? '';
+    if (matchesAny(key, PURGE_KEY_PATTERNS)) {
+      sessionStorage.removeItem(key);
+      storageKeysRemoved++;
+      console.log(`[staffMasterService] PURGE removed sessionStorage key: "${key}"`);
+    }
+  }
+
+  // ── 3. Sanitize the master ledger ────────────────────────────────────────────
+  let recordsPurged = 0;
+  const recordIdsRemoved: string[] = [];
+
+  try {
+    const raw = localStorage.getItem(STAFF_MASTER_KEY);
+    if (raw) {
+      const records: MasterStaffRecord[] = JSON.parse(raw);
+      const cleaned: MasterStaffRecord[] = records.filter(record => {
+        const shouldRemove =
+          matchesAny(record.name ?? '', PURGE_NAME_PATTERNS) ||
+          matchesAny(record.email ?? '', PURGE_EMAIL_PATTERNS) ||
+          matchesAny(record.id ?? '', PURGE_ID_PATTERNS) ||
+          matchesAny(record.nationalId ?? '', [/u3uh5j/i]);
+
+        if (shouldRemove) {
+          recordsPurged++;
+          recordIdsRemoved.push(record.id);
+          console.log(
+            `[staffMasterService] PURGE removed staff record: "${record.name}" ` +
+            `<${record.email}> id="${record.id}"`
+          );
+        }
+        return !shouldRemove;
+      });
+
+      if (recordsPurged > 0) {
+        persist(cleaned);
+        broadcast();
+        console.log(
+          `[staffMasterService] PURGE complete — ${recordsPurged} record(s) removed, ` +
+          `${cleaned.length} remain in ledger`
+        );
+      }
+    }
+  } catch (err) {
+    console.error('[staffMasterService] PURGE failed during master ledger sanitisation:', err);
+  }
+
+  return { storageKeysRemoved, recordsPurged, recordIdsRemoved };
+}
+
 // ─── Migration ────────────────────────────────────────────────────────────────
 
 interface MigrationResult {
@@ -441,18 +562,30 @@ function broadcast(): void {
  * any component reads `STAFF_MASTER_KEY`. Safe to call multiple times —
  * if `munyaka_master_staff_list` already exists it is left unchanged.
  *
- * Also runs the access key migration to ensure all keys are in the
- * MUNYAKA-XXXX format.
+ * Execution order on every boot:
+ *   1. purgeLegacyAndSuspectRecords()  — nuke James Ndiki, all prereg orphans,
+ *      legacy keys, and any PR-staff-1788 timestamp IDs from storage.
+ *   2. migrateStaffAccessKeys()        — normalise remaining keys to MUNYAKA-XXXX.
+ *   3. Seed with MASTER_SEED only if no ledger exists.
  */
 export function initializeStaffMaster(): void {
   try {
-    const existing = localStorage.getItem(STAFF_MASTER_KEY);
-    if (existing !== null) {
-      // Key exists: run migration to normalize any old access key formats
-      migrateStaffAccessKeys();
-      return;
+    // ── Step 1: hard purge — runs every boot so no polluted state can survive ───
+    const purge = purgeLegacyAndSuspectRecords();
+    if (purge.recordsPurged > 0 || purge.storageKeysRemoved > 0) {
+      console.log(
+        `[staffMasterService] Purge results: ${purge.recordsPurged} records removed, ` +
+        `${purge.storageKeysRemoved} storage keys removed`
+      );
     }
-    // First time: seed with master data
+
+    // ── Step 2: access key migration ────────────────────────────────────────────
+    migrateStaffAccessKeys();
+
+    // ── Step 3: seed if empty ───────────────────────────────────────────────────
+    const existing = localStorage.getItem(STAFF_MASTER_KEY);
+    if (existing !== null) return;
+
     persist(MASTER_SEED);
     console.log('[staffMasterService] Staff master ledger seeded with initial data');
   } catch (err) {
