@@ -532,13 +532,17 @@ export default function Students() {
 
     // Always-required fields (name + guardian + dateOfBirth) — these identify the learner
     if (!String(formData.name || '').trim() || !String(formData.guardian || '').trim()) {
-          setFormError('Please fill in the learner\'s Full Name and Parent / Guardian name.');
-          return;
-        }
+      const errorMsg = 'Please fill in the learner\'s Full Name and Parent / Guardian name.';
+      setFormError(errorMsg);
+      console.error('[Registration Error]', errorMsg, { field: 'name/guardian', value: { name: formData.name, guardian: formData.guardian } });
+      return;
+    }
     
     // Date of Birth is required for Parent Portal lookup verification
     if (!String(formData.dateOfBirth || '').trim()) {
-      setFormError('Please provide the learner\'s Date of Birth.');
+      const errorMsg = 'Please provide the learner\'s Date of Birth.';
+      setFormError(errorMsg);
+      console.error('[Registration Error]', errorMsg, { field: 'dateOfBirth', value: formData.dateOfBirth });
       return;
     }
     
@@ -549,7 +553,9 @@ export default function Students() {
         const bcNo = String(formData.birthCertificateNo || '').trim();
 
     if (!admNo && !bcNo) {
-      setFormError('Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.');
+      const errorMsg = 'Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.';
+      setFormError(errorMsg);
+      console.error('[Registration Error]', errorMsg, { field: 'identifier', value: { admNo, birthCertificateNo: bcNo } });
       return;
     }
 
@@ -559,7 +565,9 @@ export default function Students() {
     if (admNo) {
       const assessmentRegex = /^[A-Za-z].*/;
       if (!assessmentRegex.test(admNo)) {
-        setFormError('Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).');
+        const errorMsg = 'Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).';
+        setFormError(errorMsg);
+        console.error('[Registration Error]', errorMsg, { field: 'assessmentNo', value: admNo });
         return;
       }
     }
@@ -585,6 +593,7 @@ export default function Students() {
                 : item
             )
           );
+          console.log('[Registration Success] Learner updated:', { id: editingLearnerId, name: normalizedEntry.name });
           showSuccess(`${normalizedEntry.name || 'Learner'} updated successfully.`);
         } else {
           const newLearner: LearnerRowCompat = {
@@ -633,6 +642,14 @@ export default function Students() {
           // Update the active React state immediately so the table re-renders
           // without requiring a page reload.
           setLearners((prev) => [newLearner, ...prev]);
+    
+          console.log('[Registration Success] New learner registered:', {
+            id: newLearner.id,
+            name: newLearner.name,
+            grade: newLearner.grade,
+            stream: newLearner.stream,
+            dob: newLearner.dob,
+          });
     
           showSuccess(
             `${newLearner.name} has been registered under ${newLearner.grade} ${newLearner.stream}. Saved offline.`
