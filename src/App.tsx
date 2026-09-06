@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
 import TransferredLearnersArchive from "./pages/TransferredLearnersArchive";
@@ -152,6 +153,7 @@ const App = () => {
                     <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
+                <Route path="/portal" element={<ParentPortal />} />
                 
                 {/* Protected Application Routes — wrapped with AppUnlock (license gate) */}
                 <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
