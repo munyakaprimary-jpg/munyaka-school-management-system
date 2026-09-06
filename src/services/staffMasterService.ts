@@ -50,75 +50,40 @@ const LEGACY_PREREG_KEY   = 'munyaka_staff_prereg';
  * Teaching staff system roles — these roles are directly involved in
  * classroom instruction and student academic development.
  */
-export const TEACHING_SYSTEM_ROLES: readonly MasterSystemRole[] = [
+export const TEACHING_SYSTEM_ROLES = [
   'head_teacher',
   'deputy_head_teacher',
   'senior_teacher',
   'class_teacher',
   'subject_teacher',
-];
+  'ict_teacher',
+] as const;
+
+export type TeachingRole = typeof TEACHING_SYSTEM_ROLES[number];
 
 /**
- * Non-teaching staff system roles — administrative, support, and
- * auxiliary personnel who do not have classroom teaching duties.
+ * Returns true if the given systemRole is a teaching role.
  */
-export const NON_TEACHING_SYSTEM_ROLES: readonly MasterSystemRole[] = [
-  'bursar',
-  'support_admin',
-  'ict_admin',
-  'librarian',
-  'nurse',
-  'counselor',
-  'cleaner',
-  'security',
-  'cook',
-  'driver',
-];
+export const isTeachingRole = (systemRole?: string): boolean => {
+  if (!systemRole) return false;
+  return TEACHING_SYSTEM_ROLES.includes(systemRole as TeachingRole);
+};
+
+/**
+ * Returns true if the given systemRole is a non-teaching role.
+ */
+export const isNonTeachingRole = (systemRole?: string): boolean => {
+  return !isTeachingRole(systemRole);
+};
 
 /**
  * Categorized staff metrics for UI display.
  * Breaks down total staff into Teaching vs Non-Teaching with active/pending counts.
  */
 export interface CategorizedStaffMetrics {
-  total: {
-    count: number;
-    active: number;
-    pending: number;
-  };
-  teaching: {
-    count: number;
-    active: number;
-    pending: number;
-  };
-  nonTeaching: {
-    count: number;
-    active: number;
-    pending: number;
-  };
-}
-
-/** Returns true if the given systemRole is a teaching role. */
-export function isTeachingRole(systemRole: string): boolean {
-  return TEACHING_SYSTEM_ROLES.includes(systemRole as MasterSystemRole);
-}
-
-/** Returns true if the given systemRole is a non-teaching role. */
-export function isNonTeachingRole(systemRole: string): boolean {
-  return NON_TEACHING_SYSTEM_ROLES.includes(systemRole as MasterSystemRole);
-}
-
-/**
- * Count active records (status is 'active', case-insensitive).
- */
-function countActive(records: MasterStaffRecord[]): number {
-  return records.filter(r => (r.status || '').toLowerCase() === 'active').length;
-}
-
-/**
- * Count pending records (status is 'pre-registered', case-insensitive).
- */
-function countPending(records: MasterStaffRecord[]): number {
-  return records.filter(r => (r.status || '').toLowerCase() === 'pre-registered').length;
+  total: { count: number; active: number; pending: number };
+  teaching: { count: number; active: number; pending: number };
+  nonTeaching: { count: number; active: number; pending: number };
 }
 
 // ─── Type ────────────────────────────────────────────────────────────────────
@@ -157,20 +122,7 @@ export interface MasterStaffRecord {
 
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
-/**
- * The canonical seed set for `munyaka_master_staff_list`.
- *
- * Combines staff from:
- *   - `INITIAL_PRE_REGISTERED_STAFF` (the 6 pre-registration records with
- *     `tempAccessCode` and `staffId` needed for portal authentication)
- *   - `INITIAL_SEED_DATA.staff` (the directory entries with operational
- *     fields like salary, emergency contact, department)
- *
- * Where a person appears in both, their records are merged so every field
- * is present in the master ledger.
- */
 const MASTER_SEED: MasterStaffRecord[] = [
-  // ── From INITIAL_PRE_REGISTERED_STAFF (auth fields + core identity) ─────────
   {
     id: 'PR-1787658909839',
     staffId: 'T001',
@@ -186,7 +138,6 @@ const MASTER_SEED: MasterStaffRecord[] = [
     tempAccessCode: 'MUNYAKA-9632',
     status: 'Active',
     datePreRegistered: '2026-08-25',
-    // Enriched from INITIAL_SEED_DATA.staff
     gender: 'Female',
     salary: 95000,
     joinedDate: '2018-01-15',
@@ -210,7 +161,6 @@ const MASTER_SEED: MasterStaffRecord[] = [
     tempAccessCode: 'MUNYAKA-2647',
     status: 'Active',
     datePreRegistered: '2026-08-25',
-    // Enriched from INITIAL_SEED_DATA.staff
     gender: 'Male',
     salary: 73000,
     joinedDate: '2019-09-01',
@@ -270,7 +220,6 @@ const MASTER_SEED: MasterStaffRecord[] = [
     tempAccessCode: 'MUNYAKA-2116',
     status: 'Active',
     datePreRegistered: '2026-08-25',
-    // Enriched from INITIAL_SEED_DATA.staff
     gender: 'Male',
     salary: 75000,
     joinedDate: '2020-03-01',
@@ -297,7 +246,6 @@ const MASTER_SEED: MasterStaffRecord[] = [
     profileComplete: true,
     schoolId: 'munyaka-sc',
   },
-  // ── Additional staff from INITIAL_SEED_DATA.staff not in pre-reg seed ────────
   {
     id: 'staff-003',
     staffId: 'T007',
@@ -387,6 +335,16 @@ const mapSystemRoleToRoleLabel = (role: MasterSystemRole): string => {
   }
 };
 
+/** Count active records (status is 'active', case-insensitive). */
+function countActive(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'active').length;
+}
+
+/** Count pending records (status is 'pre-registered', case-insensitive). */
+function countPending(records: MasterStaffRecord[]): number {
+  return records.filter(r => (r.status || '').toLowerCase() === 'pre-registered').length;
+}
+
 // ─── Hard Purge ───────────────────────────────────────────────────────────────
 
 interface PurgeResult {
@@ -395,44 +353,19 @@ interface PurgeResult {
   recordIdsRemoved: string[];
 }
 
-/**
- * Execute a hard purge on every app boot.
- *
- * 1. Scans localStorage and sessionStorage for keys matching:
- *      "james", "ndiki", "PR-staff-1788", "prereg", "u3uh5j"
- *    and removes every match — no stale or ghost records can survive a page reload.
- *
- * 2. Explicitly calls `localStorage.removeItem()` on:
- *      munyaka_staff_prereg, prereg_staff, munyaka_staff_migrated,
- *      MUNYAKA_STAFF_PREREG, prereg_staff_list, staff_prereg_backup
- *
- * 3. Filters the master ledger (`munyaka_master_staff_list`) and permanently
- *    removes records where:
- *      - name contains "james" or "ndiki" (case-insensitive)
- *      - email contains "james", "ndiki", or "u3uh5j" (case-insensitive)
- *      - id contains "PR-staff-1788" (the broken timestamp-ID generator)
- *      - nationalId contains "u3uh5j"
- *    Saves the cleaned array back and broadcasts the change.
- *
- * Returns a summary of what was removed so callers can log it.
- */
 export function purgeLegacyAndSuspectRecords(): PurgeResult {
   const PURGE_KEY_PATTERNS = [
     /james/i, /ndiki/i, /PR-staff-1788/i,
-    /prereg/i,               // catches munyaka_staff_prereg, prereg_staff, etc.
+    /prereg/i,
     /u3uh5j/i,
   ];
   const PURGE_NAME_PATTERNS = [/james/i, /ndiki/i];
   const PURGE_EMAIL_PATTERNS = [/james/i, /ndiki/i, /u3uh5j/i];
-  // Only remove records with the specific broken ID format "PR-staff-1788...".
-  // Legitimate seed IDs like "PR-1787658909839" (PR-1787…) are NOT targeted;
-  // migrateStaffAccessKeys() will normalise them to MUNYAKA-XXXX on the same boot.
   const PURGE_ID_PATTERNS = [/PR-staff-1788/i];
   const EXPLICIT_KEYS = [
     'munyaka_staff_prereg',
     'prereg_staff',
     'munyaka_staff_migrated',
-    // Also nuke the orphan migrated variant (different casing)
     'MUNYAKA_STAFF_PREREG',
     'prereg_staff_list',
     'staff_prereg_backup',
@@ -441,7 +374,6 @@ export function purgeLegacyAndSuspectRecords(): PurgeResult {
   const matchesAny = (text: string, patterns: RegExp[]): boolean =>
     patterns.some(p => p.test(text));
 
-  // ── 1. Scan & purge localStorage keys ────────────────────────────────────────
   let storageKeysRemoved = 0;
   const toRemove: string[] = [];
 
@@ -456,7 +388,6 @@ export function purgeLegacyAndSuspectRecords(): PurgeResult {
     console.log(`[staffMasterService] PURGE removed localStorage key: "${key}"`);
   }
 
-  // ── 2. Scan & purge sessionStorage keys ─────────────────────────────────────
   for (let i = 0; i < sessionStorage.length; i++) {
     const key = sessionStorage.key(i) ?? '';
     if (matchesAny(key, PURGE_KEY_PATTERNS)) {
@@ -466,7 +397,6 @@ export function purgeLegacyAndSuspectRecords(): PurgeResult {
     }
   }
 
-  // ── 3. Sanitize the master ledger ────────────────────────────────────────────
   let recordsPurged = 0;
   const recordIdsRemoved: string[] = [];
 
@@ -516,13 +446,6 @@ interface MigrationResult {
   total: number;
 }
 
-/**
- * Migrate all staff access keys to the MUNYAKA-XXXX format on startup.
- * This converts any old-format keys (PR-staff-*, timestamps, UUIDs) to
- * the standardized MUNYAKA-XXXX format.
- *
- * Returns migration summary: counts of updated, unchanged, and total records.
- */
 export function migrateStaffAccessKeys(): MigrationResult {
   try {
     const raw = localStorage.getItem(STAFF_MASTER_KEY);
@@ -571,11 +494,9 @@ export function migrateStaffAccessKeys(): MigrationResult {
 
 // ─── Persistence ─────────────────────────────────────────────────────────────
 
-/** Write to master key AND update legacy keys for backwards compatibility. */
 function persist(records: MasterStaffRecord[]): void {
   const json = JSON.stringify(records);
   localStorage.setItem(STAFF_MASTER_KEY, json);
-  // Legacy directory format (flat fields, no tempAccessCode)
   localStorage.setItem(LEGACY_DIRECTORY_KEY, JSON.stringify(records.map(r => ({
     id: r.id,
     id_no: r.nationalId,
@@ -597,7 +518,6 @@ function persist(records: MasterStaffRecord[]): void {
     subjects: r.assignedSubjects ?? [],
     profileComplete: r.profileComplete,
   }))));
-  // Legacy pre-reg format (PreRegisteredStaff fields)
   localStorage.setItem(LEGACY_PREREG_KEY, JSON.stringify(records.map(r => ({
     id: r.id,
     staffId: r.staffId,
@@ -619,7 +539,6 @@ function persist(records: MasterStaffRecord[]): void {
   }))));
 }
 
-/** Fire change events so all hooks and components refresh. */
 function broadcast(): void {
   notifyDataChanged(STAFF_MASTER_KEY);
   notifyDataChanged(LEGACY_DIRECTORY_KEY);
@@ -630,22 +549,8 @@ function broadcast(): void {
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
-/**
- * Initialise the staff master ledger on app boot.
- *
- * Call this once (e.g. in `hydrateAllStores` or `AuthProvider`) before
- * any component reads `STAFF_MASTER_KEY`. Safe to call multiple times —
- * if `munyaka_master_staff_list` already exists it is left unchanged.
- *
- * Execution order on every boot:
- *   1. purgeLegacyAndSuspectRecords()  — nuke James Ndiki, all prereg orphans,
- *      legacy keys, and any PR-staff-1788 timestamp IDs from storage.
- *   2. migrateStaffAccessKeys()        — normalise remaining keys to MUNYAKA-XXXX.
- *   3. Seed with MASTER_SEED only if no ledger exists.
- */
 export function initializeStaffMaster(): void {
   try {
-    // ── Step 1: hard purge — runs every boot so no polluted state can survive ───
     const purge = purgeLegacyAndSuspectRecords();
     if (purge.recordsPurged > 0 || purge.storageKeysRemoved > 0) {
       console.log(
@@ -654,10 +559,8 @@ export function initializeStaffMaster(): void {
       );
     }
 
-    // ── Step 2: access key migration ────────────────────────────────────────────
     migrateStaffAccessKeys();
 
-    // ── Step 3: seed if empty ───────────────────────────────────────────────────
     const existing = localStorage.getItem(STAFF_MASTER_KEY);
     if (existing !== null) return;
 
@@ -668,7 +571,6 @@ export function initializeStaffMaster(): void {
   }
 }
 
-/** Return the full staff master ledger. Empty array if not yet initialised. */
 export function getStaffMaster(): MasterStaffRecord[] {
   try {
     const raw = localStorage.getItem(STAFF_MASTER_KEY);
@@ -680,22 +582,16 @@ export function getStaffMaster(): MasterStaffRecord[] {
   }
 }
 
-/** Return staff filtered by `schoolId` (or all if `schoolId` is null). */
 export function getStaffMasterBySchool(schoolId: string | null): MasterStaffRecord[] {
   return getStaffMaster().filter(r =>
     !schoolId || !r.schoolId || r.schoolId === schoolId
   );
 }
 
-/** Return staff matching the `Active` status. */
 export function getActiveStaffMaster(): MasterStaffRecord[] {
   return getStaffMaster().filter(r => r.status === 'Active');
 }
 
-/**
- * Return a stable count suitable for Dashboard / Central Data counters.
- * Filters out archived / deleted records.
- */
 export function getStaffMasterCount(schoolId: string | null = null): {
   total: number;
   active: number;
@@ -709,10 +605,6 @@ export function getStaffMasterCount(schoolId: string | null = null): {
   return { total: records.length, active: active.length };
 }
 
-/**
- * Return detailed staff metrics for UI counters.
- * All status comparisons are case-insensitive for robustness.
- */
 export function getStaffMetrics(schoolId: string | null = null): {
   total: number;
   active: number;
@@ -733,47 +625,6 @@ export function getStaffMetrics(schoolId: string | null = null): {
   }).length;
 
   return { total, active, pending };
-}
-
-// ─── Teaching vs Non-Teaching Classification ───────────────────────────────────
-
-/** Canonical teaching system roles */
-export const TEACHING_SYSTEM_ROLES = [
-  'head_teacher',
-  'deputy_head_teacher',
-  'senior_teacher',
-  'class_teacher',
-  'subject_teacher',
-  'ict_teacher',
-] as const;
-
-export type TeachingRole = typeof TEACHING_SYSTEM_ROLES[number];
-
-/** Helper to check if a system role is a teaching role */
-export function isTeachingRole(systemRole?: string): boolean {
-  return TEACHING_SYSTEM_ROLES.includes(systemRole as TeachingRole);
-}
-
-/** Helper to check if a system role is a non-teaching role */
-export function isNonTeachingRole(systemRole?: string): boolean {
-  return !isTeachingRole(systemRole);
-}
-
-/** Count active staff in an array */
-function countActive(records: MasterStaffRecord[]): number {
-  return records.filter(r => (r.status || '').toLowerCase() === 'active').length;
-}
-
-/** Count pending/pre-registered staff in an array */
-function countPending(records: MasterStaffRecord[]): number {
-  return records.filter(r => (r.status || '').toLowerCase() === 'pre-registered').length;
-}
-
-/** Return type for categorized staff metrics */
-export interface CategorizedStaffMetrics {
-  total: { count: number; active: number; pending: number };
-  teaching: { count: number; active: number; pending: number };
-  nonTeaching: { count: number; active: number; pending: number };
 }
 
 /**
@@ -817,18 +668,13 @@ export function getCategorizedMetrics(schoolId: string | null = null): Categoriz
 
 // ─── Mutations ────────────────────────────────────────────────────────────────
 
-/**
- * Add a new staff record to the master ledger.
- * Generates a `staffId` (T010, T011…) and a `tempAccessCode` (MUNYAKA-XXXX).
- * Returns the newly created record.
- */
 export function addStaffMaster(
   data: Partial<MasterStaffRecord> & { name: string; nationalId: string; email: string; phone: string }
 ): MasterStaffRecord {
   const existing = getStaffMaster();
   const accessKey = generateAccessKey();
   const newRecord: MasterStaffRecord = {
-    id: accessKey,                        // MUNYAKA-XXXX format (consistent with accessKey)
+    id: accessKey,
     staffId: accessKey,
     name: data.name,
     nationalId: data.nationalId,
@@ -847,8 +693,8 @@ export function addStaffMaster(
     emergencyContact: data.emergencyContact,
     emergencyName: data.emergencyName,
     schoolId: data.schoolId ?? 'munyaka-sc',
-    accessKey,                           // MUNYAKA-XXXX key
-    tempAccessCode: accessKey,           // password matches accessKey for simplicity
+    accessKey,
+    tempAccessCode: accessKey,
     status: data.status ?? 'Pre-Registered',
     datePreRegistered: data.datePreRegistered ?? new Date().toISOString().split('T')[0],
     profileComplete: data.profileComplete ?? false,
@@ -859,7 +705,6 @@ export function addStaffMaster(
   return newRecord;
 }
 
-/** Update an existing staff record by `id`. Returns the updated record or null. */
 export function updateStaffMaster(
   id: string,
   patch: Partial<MasterStaffRecord>
@@ -874,7 +719,6 @@ export function updateStaffMaster(
   return updated[idx];
 }
 
-/** Delete a staff record by `id`. Returns true if a record was removed. */
 export function deleteStaffMaster(id: string): boolean {
   const existing = getStaffMaster();
   const idx = existing.findIndex(r => r.id === id);
@@ -885,10 +729,6 @@ export function deleteStaffMaster(id: string): boolean {
   return true;
 }
 
-/**
- * Activate a pre-registered staff member (flip status to Active, set activatedAt).
- * Returns the updated record or null.
- */
 export function activateStaffMaster(id: string): MasterStaffRecord | null {
   return updateStaffMaster(id, {
     status: 'Active',
@@ -896,10 +736,6 @@ export function activateStaffMaster(id: string): MasterStaffRecord | null {
   });
 }
 
-/**
- * Bulk-activate multiple staff members.
- * Returns the number of records updated.
- */
 export function bulkActivateStaffMaster(ids: string[]): number {
   const idSet = new Set(ids);
   const existing = getStaffMaster();
@@ -916,12 +752,6 @@ export function bulkActivateStaffMaster(ids: string[]): number {
   return updatedCount;
 }
 
-/**
- * Merge a PreRegisteredStaff-shaped record into the master ledger.
- * If a record with the same `nationalId` already exists, it is updated
- * with the provided data. Otherwise a new record is added.
- * This is used by the Access Master Ledger when onboarding a new staff member.
- */
 export function upsertFromPreReg(data: {
   fullName: string;
   nationalId: string;
@@ -938,7 +768,6 @@ export function upsertFromPreReg(data: {
   const existing = getStaffMaster();
   const byNatId = existing.findIndex(r => r.nationalId === data.nationalId);
   if (byNatId >= 0) {
-    // Merge into existing record
     const updated = [...existing];
     updated[byNatId] = {
       ...existing[byNatId],
@@ -972,5 +801,4 @@ export function upsertFromPreReg(data: {
 }
 
 // ─── Re-exports ───────────────────────────────────────────────────────────────
-// Re-export the canonical access key generator for consumers of this service.
 export { generateAccessKey } from './staffAccessService';
