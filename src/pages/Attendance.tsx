@@ -812,16 +812,97 @@ const Attendance = () => {
     setLockTargetSession(null);
   };
 
-  const buildAndPersistLock = (session: SessionType, opts: { reason: string }): SessionLock => {
-    const next: SessionLock = {
-      locked: true,
-      lockedAt: new Date().toISOString(),
-      lockedBy: isAdminRole ? 'Administrator' : 'Class Teacher',
-      reason: String(opts?.reason || '').trim() || 'Auto-locked after saving attendance',
-    };
+  // Helper to build a lock object
+  const buildLockObject = (opts: { reason: string }): SessionLock => ({
+    locked: true,
+    lockedAt: new Date().toISOString(),
+    lockedBy: isAdminRole ? 'Administrator' : 'Class Teacher',
+    reason: String(opts?.reason || '').trim() || 'Auto-locked after saving attendance',
+  });
+
+  // Lock a single stream for a given session and date
+  const lockStreamSession = (grade: string, stream: string, date: string, session: SessionType, lock: SessionLock) => {
+    const streamLockKey = `munyaka_attendance_lock_${grade}_${stream}_${date}_${session}`;
+    localStorage.setItem(streamLockKey, JSON.stringify(lock));
+    notifyDataChanged(streamLockKey);
+  };
+
+  // Unlock a single stream for a given session and date
+  const unlockStreamSession = (grade: string, stream: string, date: string, session: SessionType) => {
+    const streamLockKey = `munyaka_attendance_lock_${grade}_${stream}_${date}_${session}`;
+    localStorage.removeItem(streamLockKey);
+    notifyDataChanged(streamLockKey);
+  };
+
+  // Check if "All Grades" is selected
+  const isAllGrades = !filters.grade || filters.grade === 'all';
+  // Check if "All Streams" is selected
+  const isAllStreams = !filters.stream;
+
+  // Lock/unlock all streams under the selected grade (for "All Streams" scope)
+  const applyLockToAllStreams = (session: SessionType, lock: SessionLock) => {
+    const grades = isAllGrades ? gradesConfig.grades : [filters.grade];
+    let totalLocked = 0;
+    
+    grades.forEach(grade => {
+      const gradeStreams = getStreamsForGrade(grade, gradesConfig);
+      const streamsToLock = isAllStreams ? gradeStreams : [filters.stream];
+      
+      streamsToLock.forEach(stream => {
+        if (stream) {
+          lockStreamSession(grade, stream, filters.date, session, lock);
+          totalLocked++;
+        }
+      });
+    });
+
+    // Also update in-memory locks map for current stream
     const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
-    setLocksMap(prev => ({ ...prev, [targetKey]: next }));
-    return next;
+    setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
+    
+    return totalLocked;
+  };
+
+  const applyUnlockToAllStreams = (session: SessionType) => {
+    const grades = isAllGrades ? gradesConfig.grades : [filters.grade];
+    let totalUnlocked = 0;
+    
+    grades.forEach(grade => {
+      const gradeStreams = getStreamsForGrade(grade, gradesConfig);
+      const streamsToUnlock = isAllStreams ? gradeStreams : [filters.stream];
+      
+      streamsToUnlock.forEach(stream => {
+        if (stream) {
+          unlockStreamSession(grade, stream, filters.date, session);
+          totalUnlocked++;
+        }
+      });
+    });
+
+    // Also update in-memory locks map for current stream
+    const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
+    setLocksMap(prev => {
+      const updated = { ...prev };
+      delete updated[targetKey];
+      return updated;
+    });
+    
+    return totalUnlocked;
+  };
+
+  const buildAndPersistLock = (session: SessionType, opts: { reason: string }): SessionLock => {
+    const lock = buildLockObject(opts);
+    const isAllStreams = !filters.stream;
+    
+    if (isAllStreams && availableStreams.length > 0) {
+      // Apply lock to all streams under the selected grade
+      applyLockToAllStreams(session, lock);
+    } else {
+      // Single stream lock (current behavior)
+      const targetKey = session === 'morning' ? morningLockKey : afternoonLockKey;
+      setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
+    }
+    return lock;
   };
 
   const applySessionLock = (session: SessionType) => {
@@ -854,21 +935,41 @@ const Attendance = () => {
       return;
     }
 
-    const targetLockKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
     const sessionLabel = SESSION_WINDOWS[lockTargetSession].label;
+    const isAllStreams = !filters.stream;
 
     if (lockAction === 'lock') {
-      const lock = buildAndPersistLock(lockTargetSession, { reason: lockReason });
-      showSuccess(
-        `${sessionLabel} session locked at ${formatLockedAt(lock.lockedAt)}.`
-      );
+      if (isAllStreams && availableStreams.length > 0) {
+        // Lock ALL streams under the selected grade
+        const lock = buildLockObject({ reason: lockReason });
+        applyLockToAllStreams(lockTargetSession, lock);
+        showSuccess(
+          `${sessionLabel} session locked across ${availableStreams.length} stream${availableStreams.length > 1 ? 's' : ''} (${availableStreams.slice(0, 3).join(', ')}${availableStreams.length > 3 ? '...' : ''}) in ${filters.grade} at ${formatLockedAt(lock.lockedAt)}.`
+        );
+      } else {
+        // Single stream lock (current behavior)
+        const lock = buildLockObject({ reason: lockReason });
+        const targetKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
+        setLocksMap(prev => ({ ...prev, [targetKey]: lock }));
+        showSuccess(`${sessionLabel} session locked at ${formatLockedAt(lock.lockedAt)}.`);
+      }
     } else {
-      setLocksMap(prev => {
-        const updated = { ...prev };
-        delete updated[targetLockKey];
-        return updated;
-      });
-      showSuccess(`${sessionLabel} session unlocked. You may make corrections now.`);
+      if (isAllStreams && availableStreams.length > 0) {
+        // Unlock ALL streams under the selected grade
+        applyUnlockToAllStreams(lockTargetSession);
+        showSuccess(
+          `${sessionLabel} session unlocked across ${availableStreams.length} stream${availableStreams.length > 1 ? 's' : ''} (${availableStreams.slice(0, 3).join(', ')}${availableStreams.length > 3 ? '...' : ''}) in ${filters.grade}. You may make corrections now.`
+        );
+      } else {
+        // Single stream unlock
+        const targetKey = lockTargetSession === 'morning' ? morningLockKey : afternoonLockKey;
+        setLocksMap(prev => {
+          const updated = { ...prev };
+          delete updated[targetKey];
+          return updated;
+        });
+        showSuccess(`${sessionLabel} session unlocked. You may make corrections now.`);
+      }
     }
 
     setIsAdminAuthVerifying(false);
@@ -931,19 +1032,86 @@ const Attendance = () => {
       return;
     }
 
-    const bulk: Record<string, StudentAttendance> = {};
-    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    filteredLearners.forEach(s => {
-      const existing = attendance[s.id] || {};
-      bulk[s.id] = {
-        ...existing,
-        [session]: { status, time: timestamp }
-      };
-    });
-    setAttendance(prev => ({ ...prev, ...bulk }));
     const labels = { P: 'Present', A: 'Absent', L: 'Late', E: 'Excused' } as const;
     const sessionLabel = session === 'morning' ? 'morning' : 'afternoon';
-    showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
+    const timestamp = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+
+    // Check if "All Streams" is selected (empty string means "all")
+    const isAllStreams = !filters.stream;
+
+    if (isAllStreams && availableStreams.length > 0) {
+      // Apply to ALL streams under the selected grade
+      let totalMarked = 0;
+      const streamsApplied: string[] = [];
+
+      availableStreams.forEach(stream => {
+        // Get students for this specific stream
+        const streamStudents = allStudents.filter(s => {
+          if (!matchGrade(s.grade, filters.grade)) return false;
+          if (!matchStream(s.stream, stream)) return false;
+          return true;
+        });
+
+        if (streamStudents.length === 0) return;
+
+        // Create attendance entries for this stream
+        const streamBulk: Record<string, StudentAttendance> = {};
+        streamStudents.forEach(s => {
+          const storageKey = `munyaka_attendance_v2_${filters.grade}_${stream}_${filters.date}`;
+          const existingStreamAttendance = (() => {
+            try {
+              const raw = localStorage.getItem(storageKey);
+              return raw ? JSON.parse(raw) : {};
+            } catch { return {}; }
+          })();
+          const existing = existingStreamAttendance[s.id] || {};
+          streamBulk[s.id] = {
+            ...existing,
+            [session]: { status, time: timestamp }
+          };
+        });
+
+        // Save to localStorage for this stream
+        localStorage.setItem(storageKey, JSON.stringify(streamBulk));
+        notifyDataChanged(storageKey);
+        totalMarked += streamStudents.length;
+        streamsApplied.push(stream);
+      });
+
+      // Update master records
+      const masterRaw = localStorage.getItem('munyaka_attendance_records') || '{}';
+      const master = JSON.parse(masterRaw);
+      availableStreams.forEach(stream => {
+        const masterKey = `${filters.grade}_${stream}_${filters.date}`;
+        master[masterKey] = {
+          class: filters.grade,
+          stream: stream,
+          date: filters.date,
+          savedAt: new Date().toISOString()
+        };
+      });
+      localStorage.setItem('munyaka_attendance_records', JSON.stringify(master));
+      notifyDataChanged('munyaka_attendance_records');
+
+      showSuccess(
+        `Marked all ${totalMarked} learners across ${streamsApplied.length} stream${streamsApplied.length > 1 ? 's' : ''} (${streamsApplied.slice(0, 3).join(', ')}${streamsApplied.length > 3 ? '...' : ''}) as ${labels[status]} in the ${sessionLabel} session.`
+      );
+
+      // Refresh the current view
+      loadLiveStudents();
+    } else {
+      // Apply to single stream (current behavior)
+      const bulk: Record<string, StudentAttendance> = {};
+      filteredLearners.forEach(s => {
+        const existing = attendance[s.id] || {};
+        bulk[s.id] = {
+          ...existing,
+          [session]: { status, time: timestamp }
+        };
+      });
+      setAttendance(prev => ({ ...prev, ...bulk }));
+      showSuccess(`Marked all ${filteredLearners.length} learners as ${labels[status]} in the ${sessionLabel} session.`);
+    }
   };
 
   /**
@@ -1369,6 +1537,7 @@ const Attendance = () => {
                           <SelectValue placeholder="Select Grade" />
                         </SelectTrigger>
                         <SelectContent>
+                          <SelectItem value="all">All Grades</SelectItem>
                           <SelectItem value="PP1">PP1</SelectItem>
                           <SelectItem value="PP2">PP2</SelectItem>
                           <SelectItem value="Grade 1">Grade 1</SelectItem>
@@ -1422,11 +1591,24 @@ const Attendance = () => {
 
           {/* Global bulk action buttons */}
           <div className="md:col-span-4 space-y-1.5">
-            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 flex items-center justify-between">
+            <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 px-1 flex items-center justify-between flex-wrap gap-1">
               <span>Bulk Actions ({bulkSessionLabel})</span>
-              {adminBypass && (
-                <span className="text-emerald-600 normal-case font-bold tracking-normal">Override on</span>
-              )}
+              <div className="flex items-center gap-2">
+                {adminBypass && (
+                  <span className="text-emerald-600 normal-case font-bold tracking-normal">Override on</span>
+                )}
+                {/* All Streams visual indicator */}
+                {!filters.stream && filters.grade && filters.grade !== 'all' && availableStreams.length > 0 && (
+                  <span className="bg-indigo-100 text-indigo-700 text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border border-indigo-200">
+                    All {availableStreams.length} Streams in {filters.grade}
+                  </span>
+                )}
+                {!filters.stream && (!filters.grade || filters.grade === 'all') && (
+                  <span className="bg-amber-100 text-amber-700 text-[9px] font-black uppercase tracking-wide px-2 py-0.5 rounded-full border border-amber-200">
+                    ALL GRADES × ALL STREAMS
+                  </span>
+                )}
+              </div>
             </label>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
               <button
