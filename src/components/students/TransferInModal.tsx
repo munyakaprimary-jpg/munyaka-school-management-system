@@ -48,6 +48,7 @@ interface FormState {
   fullName: string;
   gender: 'Male' | 'Female' | 'Other';
   dob: string;
+  birthCertificateNo: string;
   admissionNumber: string;
   nemisUpi: string;
 
@@ -141,6 +142,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
     fullName: '',
     gender: 'Male',
     dob: '',
+    birthCertificateNo: '',
     admissionNumber: generateAdmissionNumber(),
     nemisUpi: '',
     previousSchool: '',
@@ -200,13 +202,19 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       if (!String(form.fullName || '').trim()) return 'Please enter the learner\u2019s Full Name.';
       if (!form.gender) return 'Please select a Gender.';
       if (!form.dob) return 'Please provide the Date of Birth.';
-      if (!String(form.admissionNumber || '').trim()) return 'Admission Number is required.';
-  
-      // Assessment-number format check (school convention: starts with a letter).
-      if (!/^[A-Za-z]/.test(String(form.admissionNumber || '').trim())) {
-        return 'Admission Number must start with an alphabetic letter (e.g. A827361).';
+      
+      // At least one identifier must be provided
+      const hasBirthCert = String(form.birthCertificateNo || '').trim();
+      const hasAdmNo = String(form.admissionNumber || '').trim();
+      if (!hasBirthCert && !hasAdmNo) {
+        return 'Please provide either a Birth Certificate Number or an Assessment Number.';
       }
-  
+      
+      // Assessment-number format check (school convention: starts with a letter).
+      if (hasAdmNo && !/^[A-Za-z]/.test(hasAdmNo)) {
+        return 'Assessment Number must start with an alphabetic letter (e.g. A827361).';
+      }
+ 
       if (!String(form.previousSchool || '').trim())
         return 'Please record the Previous School Name for audit purposes.';
       if (!String(form.clearanceRef || '').trim())
@@ -235,9 +243,11 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
 
     // Reject duplicate admission numbers — they MUST be unique.
     const admNo = String(form.admissionNumber || '').trim();
-    if (existing.some((l) => (l.admNo || '').toLowerCase() === admNo.toLowerCase())) {
+    const birthCertNo = String(form.birthCertificateNo || '').trim();
+    
+    if (admNo && existing.some((l) => (l.admNo || '').toLowerCase() === admNo.toLowerCase())) {
       showError(
-        `Admission Number ${admNo} already exists. Please choose another.`,
+        `Assessment Number ${admNo} already exists. Please choose another.`,
       );
       return null;
     }
@@ -247,7 +257,8 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
       id: `txfr-in-${Date.now().toString()}-${Math.floor(
         Math.random() * 1000,
       )}`,
-      admNo,
+      admNo: admNo || undefined,
+      birthCertificateNo: birthCertNo || undefined,
       name: String(form.fullName || '').trim(),
       grade: form.grade,
       stream: form.stream,
@@ -464,7 +475,24 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                Admission Number <span className="text-rose-500">*</span>
+                Birth Certificate Number
+              </Label>
+              <Input
+                value={form.birthCertificateNo}
+                onChange={(e) =>
+                  update('birthCertificateNo', e.target.value.toUpperCase())
+                }
+                placeholder="e.g. BC12345"
+                className="rounded-xl h-12 bg-slate-50 border-none font-bold uppercase"
+              />
+              <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                Enter the official Birth Certificate number. Required for Parent Portal verification.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                Assessment / Admission Number
               </Label>
               <div className="flex gap-2">
                 <div className="relative flex-1">
@@ -493,8 +521,7 @@ const TransferInModal: React.FC<TransferInModalProps> = ({
                 </Button>
               </div>
               <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-                Use the Auto button to generate a unique assessment number, or
-                type your own.
+                Use the Auto button to generate a unique Assessment Number, or enter manually.
               </p>
             </div>
           </div>
