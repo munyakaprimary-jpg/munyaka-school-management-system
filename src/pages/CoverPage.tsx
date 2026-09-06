@@ -219,8 +219,8 @@ const CoverPage: React.FC<CoverPageProps> = ({ onEnter }) => {
                   className="ml-2 transition-transform group-hover:translate-x-1"
                 />
               </Button>
-              <p className="text-[10px] text-white/40 font-medium text-center tracking-wide">
-                For Staff, Teachers &amp; Administrators
+              <p className="text-[10px] text-white/40 font-medium text-center tracking-wide whitespace-normal px-2">
+                For Staff, Teachers, Administrators, Parents &amp; Learners
               </p>
             </div>
           </div>
