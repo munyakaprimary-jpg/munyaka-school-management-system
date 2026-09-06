@@ -353,14 +353,14 @@ const AdminDashboard: React.FC = () => {
     };
   }, [isLoading, totalStudents, todayAttendanceRate, activityVersion]);
 
-  // ── Weekly attendance — last 7 days, fully driven by real DB-style data
+  // ── Weekly attendance — last 5 school days (Mon–Fri only), fully driven by real DB-style data
   //   No mock percentages. If a day has no records, the bar shows 0% and
   //   the tooltip says "No records". Formula:
   //     rate = (present_students / total_enrolled_students) * 100
   const weeklyAttendance = useMemo<WeeklyAttendance[]>(() => {
-    const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const schoolDays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri']; // Only Mon–Fri
     const today = new Date();
-    const todayIdx = (today.getDay() + 6) % 7; // Monday = 0
+    const todayDayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon, ..., 6 = Sat
 
     // Total enrolled students (denominator) — read once
     const learners = safeRead<any[]>('school_learners_data', []);
@@ -443,12 +443,18 @@ const AdminDashboard: React.FC = () => {
       }
     } catch { /* ignore */ }
 
-    // Build 7-day series (most recent last)
+    // Build 5-day school week series (Mon–Fri, most recent last)
     const result: WeeklyAttendance[] = [];
-    for (let i = 6; i >= 0; i--) {
-      const dayIdx = (todayIdx - i + 7) % 7;
+    
+    // Find the most recent Monday (start of school week)
+    // todayDayOfWeek: 0=Sun, 1=Mon, ..., 6=Sat
+    // We want to show Mon through Fri of the current week
+    let startDayOffset = 1 - todayDayOfWeek; // Days since Monday
+    if (todayDayOfWeek === 0) startDayOffset = -6; // Sunday = go back 6 days to Monday
+    
+    for (let i = 4; i >= 0; i--) {
       const d = new Date(today);
-      d.setDate(today.getDate() - i);
+      d.setDate(today.getDate() - startDayOffset - i); // Go back from Friday
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
@@ -469,7 +475,7 @@ const AdminDashboard: React.FC = () => {
         ? Math.min(100, Math.round((presentCount / totalEnrolled) * 100))
         : 0;
 
-      result.push({ day: days[dayIdx], dateStr, rate, hasRecord });
+      result.push({ day: schoolDays[i], dateStr, rate, hasRecord });
     }
 
     return result;
@@ -803,7 +809,7 @@ const AdminDashboard: React.FC = () => {
                 Attendance Trends (Weekly)
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Average daily attendance for the current week
+                Average daily attendance for the school week (Mon–Fri)
               </p>
             </div>
             <Badge
