@@ -203,7 +203,7 @@ export default function CentralDataService() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-gradient-to-r from-emerald-900 via-teal-900 to-slate-900 p-6 rounded-2xl text-white shadow-xl">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <BackButton />
+            <BackButton parentPath="/" />
             <Badge variant="outline" className="border-emerald-400 text-emerald-300 px-3 py-1 text-xs uppercase tracking-wider">
               Centralized Data & APK Backups
             </Badge>

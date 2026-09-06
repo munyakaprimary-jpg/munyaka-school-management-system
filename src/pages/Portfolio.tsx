@@ -101,7 +101,7 @@ const Portfolio = () => {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learner Portfolio</h1>
             <p className="text-muted-foreground">Upload and manage student artifacts directly from your computer storage.</p>

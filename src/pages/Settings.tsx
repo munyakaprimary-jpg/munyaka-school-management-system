@@ -617,12 +617,12 @@ const Settings = () => {
     return (
       <div className="max-w-xl mx-auto py-12 px-4 animate-in fade-in zoom-in-95 duration-500">
         <div className="flex items-center gap-3 mb-6">
-          <BackButton fallback="/" />
-          <div>
-            <h1 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h1>
-            <p className="text-xs text-slate-500 font-medium">Restricted Administrative Settings</p>
-          </div>
-        </div>
+                  <BackButton parentPath="/" />
+                  <div>
+                    <h1 className="text-2xl font-black text-slate-900 tracking-tight">System Configuration</h1>
+                    <p className="text-xs text-slate-500 font-medium">Restricted Administrative Settings</p>
+                  </div>
+                </div>
 
         <Card className="border-none shadow-2xl rounded-[2.5rem] bg-white overflow-hidden p-2">
           <CardContent className="p-6 md:p-8 sm:p-10">
@@ -916,11 +916,11 @@ const Settings = () => {
       
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
-          <div className="min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
+              <div className="flex items-center gap-3">
+                <BackButton parentPath="/" />
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h1 style={{ fontSize: 'clamp(1.25rem, 4.5vw, 1.875rem)' }} className="font-black tracking-tight text-slate-900">System Configuration</h1>
               <Badge className={cn(
                               "border-none font-bold text-[10px] px-2.5 py-0.5",
                               session.role === 'owner' ? "bg-amber-50 text-amber-700" : "bg-emerald-50 text-emerald-700"

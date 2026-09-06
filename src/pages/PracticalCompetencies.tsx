@@ -490,7 +490,7 @@ const PracticalCompetencies = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <BackButton fallback="/" />
+          <BackButton parentPath="/" />
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Practical Competencies</h1>
             <p className="text-gray-500">CBC project assessments, observational rubrics, and practical task logs.</p>
