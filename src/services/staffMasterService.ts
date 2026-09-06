@@ -6,17 +6,23 @@
  *
  * Storage layout
  * ─────────────
- * `munyaka_staff_master` — the canonical ledger. Every staff member lives here
+ * `munyaka_master_staff_list` — the canonical ledger. Every staff member lives here
  *   once, with fields covering both the directory view (role, department, email)
  *   and the pre-registration view (tempAccessCode, status, systemRole).
  *
  * Bootstrap
  * ────────
- * On first launch `initializeStaffMaster()` seeds `munyaka_staff_master` from
+ * On first launch `initializeStaffMaster()` seeds `munyaka_master_staff_list` from
  * the merged seed set (INITIAL_PRE_REGISTERED_STAFF + INITIAL_SEED_DATA.staff).
  * All subsequent reads/writes go through this service so every view —
  * Dashboard counters, Central Data Service, Staff Directory, and Access Master
  * Ledger — always sees the same data.
+ *
+ * Migration
+ * ────────
+ * On startup, `migrateStaffAccessKeys()` normalises every access key to the
+ * strict `MUNYAKA-XXXX` format (e.g. MUNYAKA-4827) by converting any old
+ * formats (PR-staff-178845..., bare timestamps, UUIDs, etc.).
  *
  * Backwards compatibility
  * ─────────────────────
@@ -26,10 +32,11 @@
  */
 
 import { notifyDataChanged } from '@/utils/storage';
+import { generateAccessKey, isOldAccessKeyFormat } from './staffAccessService';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-export const STAFF_MASTER_KEY = 'munyaka_staff_master';
+export const STAFF_MASTER_KEY = 'munyaka_master_staff_list';
 
 /** Legacy keys still written by mutations for backwards compatibility. */
 const LEGACY_DIRECTORY_KEY = 'munyaka_staff_directory';
@@ -76,7 +83,7 @@ export interface MasterStaffRecord {
 // ─── Seed data ────────────────────────────────────────────────────────────────
 
 /**
- * The canonical seed set for `munyaka_staff_master`.
+ * The canonical seed set for `munyaka_master_staff_list`.
  *
  * Combines staff from:
  *   - `INITIAL_PRE_REGISTERED_STAFF` (the 6 pre-registration records with
@@ -305,15 +312,59 @@ const mapSystemRoleToRoleLabel = (role: MasterSystemRole): string => {
   }
 };
 
-const mapRoleLabelToSystemRole = (label: string): MasterSystemRole => {
-  const lower = label.toLowerCase();
-  if (lower.includes('head'))       return 'head_teacher';
-  if (lower.includes('senior'))     return 'senior_teacher';
-  if (lower.includes('class'))      return 'class_teacher';
-  if (lower.includes('bursar'))     return 'bursar';
-  if (lower.includes('admin'))      return 'support_admin';
-  return 'subject_teacher';
-};
+// ─── Migration ────────────────────────────────────────────────────────────────
+
+interface MigrationResult {
+  updated: number;
+  unchanged: number;
+  total: number;
+}
+
+/**
+ * Migrate all staff access keys to the MUNYAKA-XXXX format on startup.
+ * This converts any old-format keys (PR-staff-*, timestamps, UUIDs) to
+ * the standardized MUNYAKA-XXXX format.
+ *
+ * Returns migration summary: counts of updated, unchanged, and total records.
+ */
+export function migrateStaffAccessKeys(): MigrationResult {
+  try {
+    const raw = localStorage.getItem(STAFF_MASTER_KEY);
+    if (!raw) return { updated: 0, unchanged: 0, total: 0 };
+
+    const records: MasterStaffRecord[] = JSON.parse(raw);
+    if (!Array.isArray(records) || records.length === 0) {
+      return { updated: 0, unchanged: 0, total: 0 };
+    }
+
+    let updated = 0;
+    const migrated: MasterStaffRecord[] = records.map(record => {
+      if (isOldAccessKeyFormat(record.tempAccessCode)) {
+        const newKey = generateAccessKey();
+        updated++;
+        return { ...record, tempAccessCode: newKey };
+      }
+      return record;
+    });
+
+    if (updated > 0) {
+      persist(migrated);
+      broadcast();
+      console.log(`[staffMasterService] Migrated ${updated} staff access keys to MUNYAKA-XXXX format`);
+    }
+
+    return {
+      updated,
+      unchanged: records.length - updated,
+      total: records.length,
+    };
+  } catch (err) {
+    console.error('[staffMasterService] migrateStaffAccessKeys failed:', err);
+    return { updated: 0, unchanged: 0, total: 0 };
+  }
+}
+
+// ─── Persistence ─────────────────────────────────────────────────────────────
 
 /** Write to master key AND update legacy keys for backwards compatibility. */
 function persist(records: MasterStaffRecord[]): void {
@@ -379,13 +430,22 @@ function broadcast(): void {
  *
  * Call this once (e.g. in `hydrateAllStores` or `AuthProvider`) before
  * any component reads `STAFF_MASTER_KEY`. Safe to call multiple times —
- * if `munyaka_staff_master` already exists it is left unchanged.
+ * if `munyaka_master_staff_list` already exists it is left unchanged.
+ *
+ * Also runs the access key migration to ensure all keys are in the
+ * MUNYAKA-XXXX format.
  */
 export function initializeStaffMaster(): void {
   try {
     const existing = localStorage.getItem(STAFF_MASTER_KEY);
-    if (existing !== null) return; // already seeded
+    if (existing !== null) {
+      // Key exists: run migration to normalize any old access key formats
+      migrateStaffAccessKeys();
+      return;
+    }
+    // First time: seed with master data
     persist(MASTER_SEED);
+    console.log('[staffMasterService] Staff master ledger seeded with initial data');
   } catch (err) {
     console.error('[staffMasterService] initializeStaffMaster failed:', err);
   }
@@ -587,7 +647,6 @@ export function upsertFromPreReg(data: {
   });
 }
 
-// ─── Re-export the access key generator from staffAccessService ──────────────
-
-import { generateAccessKey } from './staffAccessService';
-export { generateAccessKey };
+// ─── Re-exports ───────────────────────────────────────────────────────────────
+// Re-export the canonical access key generator for consumers of this service.
+export { generateAccessKey } from './staffAccessService';

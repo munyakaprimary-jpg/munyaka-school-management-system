@@ -12,8 +12,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
-import { migrateAllStaffAccessKeys } from '@/services/staffAccessService';
-import { getStaffMaster } from '@/services/staffMasterService';
+import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
 export type UserRole = 'owner' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
 
@@ -160,10 +159,10 @@ const initializeUsersStorage = () => {
     emailConfirmed: true
   };
 
-  // Sync pre-registered staff as valid default loggable users
-  // Run access-key migration first so that stale keys are normalised before
-  // they are synced into the users store (where tempAccessCode is the password).
-  migrateAllStaffAccessKeys();
+  // Sync pre-registered staff as valid default loggable users.
+  // initializeStaffMaster() seeds the master ledger on first run and migrates
+  // any old-format access keys to the MUNYAKA-XXXX standard.
+  initializeStaffMaster();
 
   // Primary: read from the staff master ledger (single source of truth).
   // Convert MasterStaffRecord → PreRegisteredStaff shape for the code below.
