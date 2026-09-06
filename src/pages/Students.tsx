@@ -26,6 +26,7 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
+import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 interface LearnerRowCompat {
   id: string;
@@ -889,9 +890,9 @@ export default function Students() {
         </div>
       </div>
 
-      {/* 4. Table Layout & Styling */}
+      {/* 4. Table Layout & Styling with Dual Horizontal Scrollbars */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        <DualScrollContainer className="min-w-full">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
@@ -1023,7 +1024,7 @@ export default function Students() {
               )}
             </tbody>
           </table>
-        </div>
+        </DualScrollContainer>
       </div>
 
       {/* 5. RegisterModal — Add / Edit Learner (Dynamic Grades & Streams, Teacher Restrictions) */}
