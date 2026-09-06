@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { AlertCircle, ShieldCheck, Info, Calendar } from 'lucide-react';
+import { AlertCircle, ShieldCheck, Info, Calendar, Hash, Sparkles } from 'lucide-react';
 import {
   readGradesAndStreams,
   getStreamsForGrade,
@@ -21,6 +21,9 @@ interface RegisterModalProps {
   onClose: () => void;
   fullName: string;
   setFullName: (value: string) => void;
+  admissionNumber: string;
+  setAdmissionNumber: (value: string) => void;
+  onRegenerateAdmissionNo: () => void;
   assessmentNo: string;
   setAssessmentNo: (value: string) => void;
   birthCertificateNo: string;
@@ -50,6 +53,9 @@ export default function RegisterModal({
   onClose,
   fullName,
   setFullName,
+  admissionNumber,
+  setAdmissionNumber,
+  onRegenerateAdmissionNo,
   assessmentNo,
   setAssessmentNo,
   birthCertificateNo,
@@ -218,6 +224,39 @@ export default function RegisterModal({
                   placeholder="John Doe"
                   className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                  Admission Number <span className="text-rose-500">*</span>
+                </Label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Hash
+                      size={14}
+                      className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                    />
+                    <Input
+                      value={admissionNumber}
+                      onChange={(e) => setAdmissionNumber(e.target.value.toUpperCase())}
+                      placeholder="MUNYAKA0012026"
+                      className="pl-9 uppercase rounded-xl h-12 bg-slate-50 border-none font-bold"
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={onRegenerateAdmissionNo}
+                    className="h-12 rounded-xl border-slate-200 bg-white hover:bg-slate-50 px-3 font-bold text-slate-600 gap-1.5"
+                    title="Generate a new admission number"
+                  >
+                    <Sparkles size={14} />
+                    Auto
+                  </Button>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                  Auto-generated based on student count and enrollment year. Can be edited manually.
+                </p>
               </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

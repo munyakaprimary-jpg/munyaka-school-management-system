@@ -90,6 +90,26 @@ const getGradeMatchKey = (name: string): string => {
   return trimmed.replace(/\s+/g, '');
 };
 
+/**
+ * Generate a sequential admission number in format: MUNYAKA[Sequence][Year]
+ * e.g., MUNYAKA0012026, MUNYAKA0022026
+ * Sequence is based on total student count + 1, padded to 3 digits.
+ */
+const generateAdmissionNumber = (): string => {
+  const year = new Date().getFullYear();
+  try {
+    const saved = localStorage.getItem('school_learners_data');
+    const existingLearners = saved ? JSON.parse(saved) : [];
+    const nextIndex = (existingLearners.length || 0) + 1;
+    const sequence = String(nextIndex).padStart(3, '0');
+    return `MUNYAKA${sequence}${year}`;
+  } catch {
+    const nextIndex = 1;
+    const sequence = String(nextIndex).padStart(3, '0');
+    return `MUNYAKA${sequence}${year}`;
+  }
+};
+
 export default function Students() {
   // 1. LocalStorage Persistence Setup for Learners
   const [learners, setLearners] = useState<Learner[]>(() => {
@@ -403,6 +423,7 @@ export default function Students() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingLearnerId, setEditingLearnerId] = useState<string | null>(null);
   const [formData, setFormData] = useState({
+    admissionNumber: generateAdmissionNumber(),
     admNo: `A${Math.floor(100000 + Math.random() * 900000)}`,
     name: '',
     birthCertificateNo: '',
