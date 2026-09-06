@@ -378,24 +378,29 @@ const StaffPreRegistration = () => {
                         {/* Col 5: Status */}
                         <td className="px-4 py-3 min-w-[120px]">{getStatusBadge(s.status)}</td>
 
-                        {/* Col 6: Actions — right-aligned with breathing room on the right */}
-                        <td className="px-4 py-3 min-w-[120px] pr-4">
-                          <div className="flex items-center justify-end gap-1">
-                            {canActivate && (
+                        {/* Col 6: Actions — Activate + Delete */}
+                        <td className="px-4 py-3 min-w-[180px] pr-4">
+                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                            {canActivate ? (
                               <button
                                 onClick={() => handleActivateStaff(s.id)}
-                                title="Activate"
-                                className="p-2 rounded-lg hover:bg-emerald-50 text-emerald-600 transition-colors"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 hover:text-emerald-800 text-xs font-bold transition-colors"
                               >
-                                <ShieldCheck size={15} />
+                                <ShieldCheck size={13} />
+                                Activate
                               </button>
+                            ) : (
+                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
+                                <ShieldCheck size={13} />
+                                Active
+                              </span>
                             )}
                             <button
                               onClick={() => openDeleteAuth(s.id, s.fullName)}
-                              title="Delete"
-                              className="p-2 rounded-lg hover:bg-red-50 text-red-500 transition-colors"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-500 hover:text-red-600 text-xs font-bold transition-colors"
                             >
-                              <Trash2 size={15} />
+                              <Trash2 size={13} />
+                              Delete
                             </button>
                           </div>
                         </td>
