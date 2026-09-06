@@ -48,6 +48,7 @@ const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
   TEACHERS:             'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
+  TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
   ATTENDANCE_V2_PREFIX: 'munyaka_attendance_v2_',
   ACTIVE_SCHOOL_ID:     'munyaka_active_school_id',
@@ -145,18 +146,40 @@ const computeStats = (): DashboardStats => {
     }).length;
 
     // ── 2. Teachers ─────────────────────────────────────────────────────────
-    let teachers: Teacher[] = [];
-    const teachersFromLS = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
-    if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
-      teachers = teachersFromLS;
-    } else {
-      const teachersFromFallback = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
-      if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
-        teachers = teachersFromFallback;
-      } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-        teachers = INITIAL_SEED_DATA.staff as unknown as Teacher[];
-      }
-    }
+        let teachers: Teacher[] = [];
+        const teachersFromLS = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS) ?? null);
+        if (Array.isArray(teachersFromLS) && teachersFromLS.length > 0) {
+          teachers = teachersFromLS;
+        } else {
+          const teachersFromFallback = tryParse<Teacher[]>(lsForRead?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
+          if (Array.isArray(teachersFromFallback) && teachersFromFallback.length > 0) {
+            teachers = teachersFromFallback;
+          } else if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
+            teachers = INITIAL_SEED_DATA.staff as unknown as Teacher[];
+          }
+        }
+        // Also merge pre-registered staff from `munyaka_staff_prereg` so the
+        // Dashboard count matches the Staff Directory list (which already merges
+        // both sources via `masterStaffList`).
+        const preRegRaw = tryParse<Record<string, unknown>[]>(
+          lsForRead?.getItem(STORAGE_KEYS.TEACHERS_PREREG) ?? null
+        ) ?? [];
+        const directoryIds = new Set(teachers.map((t) => String(t.id)));
+        preRegRaw.forEach((p) => {
+          if (!p) return;
+          const id = String(p.id ?? p.nationalId ?? '');
+          if (!id || directoryIds.has(id)) return;
+          teachers.push({
+            id,
+            name: String(p.fullName ?? p.name ?? ''),
+            role: String(p.systemRole ?? p.role ?? 'TEACHER').replace('_', ' '),
+            systemRole: String(p.systemRole ?? p.role ?? 'subject_teacher'),
+            department: String(p.department ?? 'School Administration'),
+            status: String(p.status ?? 'Pre-Registered'),
+            isTeacher: true,
+            is_active: p.status === 'Active' ? 1 : 0,
+          });
+        });
 
     const totalTeachers = teachers.filter((t) => {
       if (!t) return false;
@@ -276,13 +299,14 @@ export const useDashboardData = (): DashboardStats => {
   // For same-tab updates we expose a CustomEvent below.
   useEffect(() => {
     const watchedKeys = [
-      STORAGE_KEYS.LEARNERS,
-      STORAGE_KEYS.TEACHERS,
-      STORAGE_KEYS.TEACHERS_FALLBACK,
-      STORAGE_KEYS.ATTENDANCE,
-      STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-      STORAGE_KEYS.SCHOOL_PROFILE,
-    ];
+          STORAGE_KEYS.LEARNERS,
+          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS_FALLBACK,
+          STORAGE_KEYS.TEACHERS_PREREG,
+          STORAGE_KEYS.ATTENDANCE,
+          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+          STORAGE_KEYS.SCHOOL_PROFILE,
+        ];
 
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
@@ -304,13 +328,14 @@ export const useDashboardData = (): DashboardStats => {
       // If a specific key changed, only refresh when relevant
       if (detail?.key) {
         const watched = [
-          STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,
-          STORAGE_KEYS.TEACHERS_FALLBACK,
-          STORAGE_KEYS.ATTENDANCE,
-          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-          STORAGE_KEYS.SCHOOL_PROFILE,
-        ];
+                  STORAGE_KEYS.LEARNERS,
+                  STORAGE_KEYS.TEACHERS,
+                  STORAGE_KEYS.TEACHERS_FALLBACK,
+                  STORAGE_KEYS.TEACHERS_PREREG,
+                  STORAGE_KEYS.ATTENDANCE,
+                  STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+                  STORAGE_KEYS.SCHOOL_PROFILE,
+                ];
         if (!watched.includes(detail.key) && !detail.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
           return;
         }

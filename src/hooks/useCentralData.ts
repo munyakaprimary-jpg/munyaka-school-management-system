@@ -68,6 +68,7 @@ const STORAGE_KEYS = {
   LEARNERS:             'school_learners_data',
   TEACHERS:             'munyaka_staff_directory',
   TEACHERS_FALLBACK:    'munyaka_staff',
+  TEACHERS_PREREG:      'munyaka_staff_prereg',
   ATTENDANCE:           'school_attendance_logs',
   ATTENDANCE_V2_PREFIX: 'munyaka_attendance_v2_',
   ACTIVE_SCHOOL_ID:     'munyaka_active_school_id',
@@ -147,6 +148,20 @@ const getTeachers = (): Teacher[] => {
   return [];
 };
 
+/** Normalise a pre-registration ledger entry into a Teacher shape so it can
+ *  be counted alongside the main directory in `getTeachers()`.
+ *  This ensures the Dashboard staff count includes pre-registered teachers. */
+const normalisePreRegEntry = (p: Record<string, unknown>): Teacher => ({
+  id: String(p.id ?? p.nationalId ?? ''),
+  name: String(p.fullName ?? p.name ?? ''),
+  role: String(p.systemRole ?? p.role ?? 'TEACHER').replace('_', ' '),
+  systemRole: String(p.systemRole ?? p.role ?? 'subject_teacher'),
+  department: String(p.department ?? 'School Administration'),
+  status: String(p.status ?? 'Pre-Registered'),
+  isTeacher: true,
+  is_active: p.status === 'Active' ? 1 : 0,
+});
+
 const getTodayAttendanceLogs = (): AttendanceLog[] => {
   const todayStr = getTodayDate();
   const activeSchoolId = getActiveSchoolId();
@@ -210,34 +225,51 @@ const computeStats = (): CentralDataStats => {
     const totalStudents = activeLearners.length;
 
     // ── Teachers ──
-    const allTeachers = getTeachers();
-    // Track BOTH totals separately so callers can distinguish:
-    //   - totalTeachers       → every teacher-classified record (active + pending)
-    //   - activeTeacherCount  → only Active status rows
-    // The dashboard "Registered Teachers" card shows the total, while
-    // an "Active" badge can show the active sub-count.
-    //
-    // The server now returns a `status` field ('Active' | 'Pre-Registered')
-    // derived from `is_active`. Use it directly instead of inferring
-    // from the integer column. Fall back to the legacy is_active
-    // boolean for locally-created records that haven't been synced.
-    const allTeacherRecords = allTeachers.filter((t) => {
-      if (!t) return false;
-      if (!matchesActiveSchool(t, activeSchoolId)) return false;
-      if (!isActiveRecord(t)) return false;
-      return isTeacherRecord(t);
-    });
-    const totalTeachers = allTeacherRecords.length;
-    const activeTeacherCount = allTeacherRecords.filter((t) => {
-      const status = String(t?.status || '').toLowerCase();
-      if (status) {
-        // Server returns 'Active' or 'Pre-Registered' — use it directly
-        return status === 'active';
-      }
-      // Legacy local record: fall back to is_active boolean
-      const flag = t?.is_active;
-      return flag !== 0 && flag !== false && flag !== '0';
-    }).length;
+        const directoryTeachers = getTeachers();
+        // Also merge in pre-registered staff from `munyaka_staff_prereg` so the
+        // Dashboard and the Staff page count the SAME people. Pre-reg entries
+        // that aren't yet in the directory are added here.
+        const preRegRaw = tryParse<Record<string, unknown>[]>(
+          getLocalStorage()?.getItem(STORAGE_KEYS.TEACHERS_PREREG) ?? null
+        ) ?? [];
+        const directoryIds = new Set(directoryTeachers.map((t) => String(t.id)));
+        const directoryNatIds = new Set(
+          directoryTeachers
+            .map((t) => String((t as Record<string, unknown>).id_no ?? ''))
+            .filter(Boolean)
+        );
+        const preRegTeachers: Teacher[] = preRegRaw
+          .filter((p) => p && !directoryIds.has(String(p.id ?? '')) && !directoryNatIds.has(String(p.nationalId ?? '')))
+          .map((p) => normalisePreRegEntry(p));
+        const allTeachers: Teacher[] = [...directoryTeachers, ...preRegTeachers];
+    
+        // Track BOTH totals separately so callers can distinguish:
+        //   - totalTeachers       → every teacher-classified record (active + pending)
+        //   - activeTeacherCount  → only Active status rows
+        // The dashboard "Registered Teachers" card shows the total, while
+        // an "Active" badge can show the active sub-count.
+        //
+        // The server now returns a `status` field ('Active' | 'Pre-Registered')
+        // derived from `is_active`. Use it directly instead of inferring
+        // from the integer column. Fall back to the legacy is_active
+        // boolean for locally-created records that haven't been synced.
+        const allTeacherRecords = allTeachers.filter((t) => {
+          if (!t) return false;
+          if (!matchesActiveSchool(t, activeSchoolId)) return false;
+          if (!isActiveRecord(t)) return false;
+          return isTeacherRecord(t);
+        });
+        const totalTeachers = allTeacherRecords.length;
+        const activeTeacherCount = allTeacherRecords.filter((t) => {
+          const status = String(t?.status || '').toLowerCase();
+          if (status) {
+            // Server returns 'Active' or 'Pre-Registered' — use it directly
+            return status === 'active';
+          }
+          // Legacy local record: fall back to is_active boolean
+          const flag = t?.is_active;
+          return flag !== 0 && flag !== false && flag !== '0';
+        }).length;
 
     // ── Today's attendance — deduplicated by studentId ──
     const todayLogs = getTodayAttendanceLogs();
@@ -303,13 +335,14 @@ export const useCentralData = (): CentralDataStats => {
   // Cross-tab storage events
   useEffect(() => {
     const watchedKeys = [
-      STORAGE_KEYS.LEARNERS,
-      STORAGE_KEYS.TEACHERS,
-      STORAGE_KEYS.TEACHERS_FALLBACK,
-      STORAGE_KEYS.ATTENDANCE,
-      STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-      STORAGE_KEYS.SCHOOL_PROFILE,
-    ];
+          STORAGE_KEYS.LEARNERS,
+          STORAGE_KEYS.TEACHERS,
+          STORAGE_KEYS.TEACHERS_FALLBACK,
+          STORAGE_KEYS.TEACHERS_PREREG,
+          STORAGE_KEYS.ATTENDANCE,
+          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+          STORAGE_KEYS.SCHOOL_PROFILE,
+        ];
     const onStorage = (e: StorageEvent) => {
       if (!e.key) return;
       if (watchedKeys.includes(e.key as any) || e.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
@@ -326,13 +359,14 @@ export const useCentralData = (): CentralDataStats => {
       const detail = (e as CustomEvent).detail;
       if (detail?.key) {
         const watched = [
-          STORAGE_KEYS.LEARNERS,
-          STORAGE_KEYS.TEACHERS,
-          STORAGE_KEYS.TEACHERS_FALLBACK,
-          STORAGE_KEYS.ATTENDANCE,
-          STORAGE_KEYS.ACTIVE_SCHOOL_ID,
-          STORAGE_KEYS.SCHOOL_PROFILE,
-        ];
+                  STORAGE_KEYS.LEARNERS,
+                  STORAGE_KEYS.TEACHERS,
+                  STORAGE_KEYS.TEACHERS_FALLBACK,
+                  STORAGE_KEYS.TEACHERS_PREREG,
+                  STORAGE_KEYS.ATTENDANCE,
+                  STORAGE_KEYS.ACTIVE_SCHOOL_ID,
+                  STORAGE_KEYS.SCHOOL_PROFILE,
+                ];
         if (!watched.includes(detail.key) && !detail.key.startsWith(STORAGE_KEYS.ATTENDANCE_V2_PREFIX)) {
           return;
         }
