@@ -65,6 +65,7 @@ function getEnrollmentYears(): number[] {
 interface LearnerRowCompat {
   id: string;
   admNo: string;
+  admissionNo?: string;
   name: string;
   grade: string;
   stream: string;
@@ -326,6 +327,7 @@ export default function Students() {
         const matchesSearch = !q ||
           (s.name || '').toLowerCase().includes(q) ||
           (s.admNo || '').toLowerCase().includes(q) ||
+          ((s as any).admissionNo || '').toLowerCase().includes(q) ||
           ((s as any).birthCertificateNo || '').toLowerCase().includes(q) ||
           (s.id || '').toLowerCase().includes(q);
   
@@ -910,7 +912,7 @@ export default function Students() {
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
             type="text"
-            placeholder="Search by learner Name, Assessment No, or Birth Certificate No..."
+            placeholder="Search by learner Name, Admission No, Assessment No, or Birth Certificate No..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2.5 bg-slate-50/50 border border-slate-200 rounded-xl text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
@@ -959,6 +961,7 @@ export default function Students() {
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-4 whitespace-nowrap">ASSESSMENT NO.</th>
+                <th className="py-3 px-4 whitespace-nowrap">ADMISSION NO.</th>
                 <th className="py-3 px-4 whitespace-nowrap">NAME</th>
                 <th className="py-3 px-4 whitespace-nowrap">BIRTH CERT NO.</th>
                 <th className="py-3 px-4 whitespace-nowrap">GRADE</th>
@@ -984,6 +987,9 @@ export default function Students() {
                     <tr key={rowKey} className="hover:bg-slate-50/60 transition-colors group">
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs font-semibold text-indigo-600">
                         {learner.admNo}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
+                        {(learner as any).admissionNo || '—'}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap font-bold text-slate-900">
                         <Link
@@ -1071,7 +1077,7 @@ export default function Students() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={9} className="py-16 text-center text-slate-400">
+                  <td colSpan={10} className="py-16 text-center text-slate-400">
                     <div className="flex flex-col items-center gap-3">
                       <div className="p-4 bg-slate-50 rounded-full text-slate-300">
                         <Search size={32} />

@@ -10,6 +10,8 @@ export interface Learner {
   admNo: string;
   /** Alias for admNo — used by some result analysis views. */
   admissionNumber?: string;
+  /** School-issued admission number (distinct from the assessment / NEMIS number). */
+  admissionNo?: string;
   name: string;
   grade: string;
   stream: string;
