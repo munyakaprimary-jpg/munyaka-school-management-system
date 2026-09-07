@@ -83,12 +83,6 @@ const FeeStatement = ({ student, transactions, year, term, gradeName }: FeeState
         </div>
       </div>
     </div>
-  );
-};
-          </tfoot>
-        </table>
-      </div>
-    </div>
   </div>
 );
 

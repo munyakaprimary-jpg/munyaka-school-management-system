@@ -656,11 +656,6 @@ const StudentProfile = () => {
               </div>
             </CardContent>
           </Card>
-                  ))}
-                </tbody>
-              </table>
-            </CardContent>
-          </Card>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <Card className="border-none shadow-sm rounded-[2rem] bg-white p-8">
