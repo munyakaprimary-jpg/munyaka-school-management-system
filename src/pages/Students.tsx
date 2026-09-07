@@ -403,7 +403,7 @@ export default function Students() {
   
     const buildCsvForDataset = (datasetToExport: LearnerRowCompat[]): string => {
       const dataHeaders = [
-        'Assessment No', 'Full Name', 'Birth Certificate No',
+        'Admission No', 'Full Name', 'Birth Certificate No',
         'Grade', 'Stream', 'Gender', 'Parent/Guardian', 'Phone'
       ];
       const dataRows = datasetToExport.map((l) => [
@@ -645,29 +645,31 @@ export default function Students() {
       console.error('[Registration Error]', errorMsg, { field: 'dateOfBirth', value: formData.dateOfBirth });
       return;
     }
-    
-        // Identifier validation: at least one of Assessment No or Birth Cert No
-        // must be provided. Empty-string and whitespace-only values are treated
-        // as absent.
-        const admNo = String(formData.admNo || '').trim();
-        const bcNo = String(formData.birthCertificateNo || '').trim();
 
-    if (!admNo && !bcNo) {
-      const errorMsg = 'Please provide at least one identifier — either an Assessment Number or a Birth Certificate Number.';
+    // Identifier validation: at least one of Assessment No or Birth Cert No
+    // must be provided. Empty-string and whitespace-only values are treated
+    // as absent.
+    // The auto-generated `admNo` is NEVER accepted as an identifier here —
+    // it is always produced by the system, not the user.
+    const assessmentInput = String(formData.assessmentNo || '').trim();
+    const bcNo = String(formData.birthCertificateNo || '').trim();
+
+    if (!assessmentInput && !bcNo) {
+      const errorMsg = 'Please provide at least one official identifier — either a KNEC Assessment Number (NEMIS/UPI) or a Birth Certificate Number.';
       setFormError(errorMsg);
-      console.error('[Registration Error]', errorMsg, { field: 'identifier', value: { admNo, birthCertificateNo: bcNo } });
+      console.error('[Registration Error]', errorMsg, { field: 'identifier', value: { assessmentInput, birthCertificateNo: bcNo } });
       return;
     }
 
     // When the Assessment Number is supplied, it must still start with a
     // letter (the existing convention for the school ID). We skip this check
     // if the user only provided a Birth Certificate Number.
-    if (admNo) {
+    if (assessmentInput) {
       const assessmentRegex = /^[A-Za-z].*/;
-      if (!assessmentRegex.test(admNo)) {
+      if (!assessmentRegex.test(assessmentInput)) {
         const errorMsg = 'Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).';
         setFormError(errorMsg);
-        console.error('[Registration Error]', errorMsg, { field: 'assessmentNo', value: admNo });
+        console.error('[Registration Error]', errorMsg, { field: 'assessmentNo', value: assessmentInput });
         return;
       }
     }
@@ -684,8 +686,10 @@ export default function Students() {
       dob: formData.dateOfBirth || undefined,
       // Store enrollment year as admissionYear
       admissionYear: formData.enrollmentYear,
-      // Store assessment number (KNEC/NEMIS)
-      assessment: formData.assessmentNo || undefined,
+      // Store assessment number (KNEC/NEMIS). User-entered only — never
+      // auto-generated. If empty, the field is omitted from the record
+      // entirely so the table renders it as "—".
+      assessment: assessmentInput || undefined,
       status: (formData as any).status ?? 'Active',
     };
 
@@ -1042,7 +1046,14 @@ export default function Students() {
                         </Link>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
-                        {learner.birthCertificateNo || <span className="text-slate-300">—</span>}
+                        {(learner as any).assessment && (learner as any).assessment.trim() !== ''
+                          ? (learner as any).assessment
+                          : <span className="text-slate-300">—</span>}
+                      </td>
+                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
+                        {learner.birthCertificateNo && learner.birthCertificateNo.trim() !== ''
+                          ? learner.birthCertificateNo
+                          : <span className="text-slate-300">—</span>}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">

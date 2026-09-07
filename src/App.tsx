@@ -72,17 +72,27 @@ import Inventory from "./pages/Inventory";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
+import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 
 const queryClient = new QueryClient();
 
 const App = () => {
-  // ── One-time admission-number backfill ─────────────────────────────────
-  // Learners registered before the ADMISSION NO. column was introduced
-  // have no `admissionNo` value. On first mount we walk every known
-  // learner storage key, generate a missing admission number for each
-  // row, and persist the result. The migration is idempotent and gated
-  // by a localStorage flag, so it runs at most once per browser.
+  // ── One-time learner-data migrations ───────────────────────────────────
+  // Three sequential, independently-gated migrations run on first launch:
+  //
+  //   1. Assessment-number cleanup — removes fake MUN-XXX values that
+  //      may have leaked into the `assessment` (KNEC/NEMIS) field.
+  //
+  //   2. Legacy admNo → admissionNo — copies the old-school admission
+  //      number from `admNo` into `admissionNo` for pre-column records.
+  //
+  //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
+  //      for any learner still missing `admissionNo`. Supports PP1/PP2.
+  //
+  // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
+    runOneTimeAssessmentCleanup();
+    runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();
   }, []);
 

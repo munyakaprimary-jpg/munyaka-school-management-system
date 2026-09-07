@@ -44,7 +44,7 @@ export const LEARNER_STORAGE_KEYS: readonly string[] = [
   'munyaka_students',
 ] as const;
 
-const BACKFILL_FLAG_KEY = 'munyaka_admission_no_backfill_v4';
+const BACKFILL_FLAG_KEY = 'munyaka_admission_no_backfill_v6';
 
 // ─── Parsing helpers ──────────────────────────────────────────────────────────
 
