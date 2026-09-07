@@ -18,6 +18,7 @@ import TransferInModal from '@/components/students/TransferInModal';
 import { StudentTransferInfo } from '@/types/transfer';
 import { Learner } from '@/types/learners';
 import { showSuccess } from '@/utils/toast';
+import { generateAdmissionNo } from '@/utils/backfillAdmissionNumbers';
 import { logDeletionAudit } from '@/services/deletionAuditLog';
 import { useAuth } from '@/context/AuthContext';
 import { notifyDataChanged } from '@/utils/storage';
@@ -30,7 +31,14 @@ import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**
  * Generate a unique admission number based on grade and enrollment year.
- * Format: MUN-G{gradeDigit}-{sequence}/{year}
+ *
+ * Thin local wrapper that delegates to the global admission-number engine
+ * in `@/utils/backfillAdmissionNumbers`. The engine scans every known
+ * storage key for the absolute highest sequence integer in the target
+ * (grade, year) cohort and returns `max + 1`, so collisions are
+ * impossible even when legacy keys contain pre-existing numbers.
+ *
+ * Format: MUN-G{gradeDigit}-{sequence:03d}/{year}
  * Example: MUN-G1-001/2026, MUN-G4-015/2027
  */
 function generateUniqueAdmissionNo(
@@ -38,22 +46,7 @@ function generateUniqueAdmissionNo(
   enrollmentYear: number,
   existingStudents: Learner[]
 ): string {
-  // Extract numeric grade digit (e.g., "Grade 4" -> 4, "PP1" -> 0, "PP2" -> 2)
-  const gradeMatch = grade.match(/(\d+)/);
-  const gradeDigit = gradeMatch ? gradeMatch[1] : '0';
-  
-  // Filter students by same grade and enrollment year
-  const cohortStudents = existingStudents.filter(s => {
-    const matchesGrade = s.grade.toLowerCase() === grade.toLowerCase();
-    // Check if student has admission year matching (stored in dateOfAdmission)
-    const studentYear = s.dateOfAdmission
-      ? new Date(s.dateOfAdmission).getFullYear()
-      : null;
-    return matchesGrade && studentYear === enrollmentYear;
-  });
-  
-  const nextSeq = cohortStudents.length + 1;
-  return `MUN-G${gradeDigit}-${String(nextSeq).padStart(3, '0')}/${enrollmentYear}`;
+  return generateAdmissionNo(grade, enrollmentYear, existingStudents as unknown as Array<Record<string, unknown>>);
 }
 
 // Get available enrollment years (current year + next 2 years)
