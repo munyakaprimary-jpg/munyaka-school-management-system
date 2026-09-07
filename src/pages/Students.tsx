@@ -163,6 +163,54 @@ export default function Students() {
     }
   }, [learners]);
 
+  // ── React to external learner-data changes ─────────────────────────────
+  // The one-time admission-number backfill (run on app mount in App.tsx)
+  // may write to `school_learners_data` from outside this component. We
+  // listen for the cross-component change event and re-hydrate so the
+  // table immediately reflects the newly assigned admission numbers
+  // instead of the em-dash placeholders.
+  useEffect(() => {
+    const LEARNER_KEYS = [
+      'school_learners_data',
+      'students',
+      'learners',
+      'pupils',
+      'school_students',
+      'registered_students',
+      'munyaka_students',
+    ];
+    const isLearnerKey = (key: string | null) => !!key && LEARNER_KEYS.includes(key);
+
+    const reload = (key: string | null) => {
+      if (!isLearnerKey(key) && key !== undefined) return;
+      try {
+        const raw = localStorage.getItem('school_learners_data');
+        if (!raw) return;
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          setLearners(parsed as Learner[]);
+        }
+      } catch (e) {
+        console.error('Error reloading learners after external update', e);
+      }
+    };
+
+    const handleCustom = (e: Event) => {
+      const detail = (e as CustomEvent<{ key?: string }>).detail;
+      reload(detail?.key ?? null);
+    };
+    const handleStorage = (e: StorageEvent) => {
+      if (isLearnerKey(e.key)) reload(e.key);
+    };
+
+    window.addEventListener('munyaka:data-changed', handleCustom as EventListener);
+    window.addEventListener('storage', handleStorage);
+    return () => {
+      window.removeEventListener('munyaka:data-changed', handleCustom as EventListener);
+      window.removeEventListener('storage', handleStorage);
+    };
+  }, []);
+
   // 3. Read the grades & streams configuration. We re-read on a tick so that
   // changes made in the "Grades & Streams" page reflect here immediately.
   const [gradesConfig, setGradesConfig] = useState(() => readGradesAndStreams());

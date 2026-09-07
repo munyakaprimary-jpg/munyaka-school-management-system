@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { ThemeProvider } from "next-themes";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -70,10 +71,21 @@ import Library from "./pages/Library";
 import Inventory from "./pages/Inventory";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
+import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 
 const queryClient = new QueryClient();
 
 const App = () => {
+  // ── One-time admission-number backfill ─────────────────────────────────
+  // Learners registered before the ADMISSION NO. column was introduced
+  // have no `admissionNo` value. On first mount we walk every known
+  // learner storage key, generate a missing admission number for each
+  // row, and persist the result. The migration is idempotent and gated
+  // by a localStorage flag, so it runs at most once per browser.
+  useEffect(() => {
+    runOneTimeAdmissionNoBackfill();
+  }, []);
+
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
