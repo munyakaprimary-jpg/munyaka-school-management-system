@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   X,
   BookOpen,
@@ -8,6 +8,11 @@ import {
   Star,
   AlertCircle,
   CheckCircle2,
+  UploadCloud,
+  Paperclip,
+  Trash2,
+  FileSpreadsheet,
+  Image,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -17,8 +22,14 @@ import {
   type StrandCategory,
   type MemoryVerse,
   type RevisionQuestion,
+  type Attachment,
 } from "@/data/cbcStudyContent";
 import { useAuth } from "@/context/AuthContext";
+import {
+  fileToAttachment,
+  formatBytes,
+  attachmentIconKey,
+} from "@/utils/attachmentHelpers";
 
 const LS_KEY = "custom_study_materials";
 
@@ -31,6 +42,7 @@ export interface NewMaterialForm {
   subStrand: string;
   contentType: ContentType;
   body: string;
+  attachment?: Attachment;
 }
 
 const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ReactNode }[] = [
@@ -77,11 +89,15 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     subStrand: "",
     contentType: "notes",
     body: "",
+    attachment: undefined,
   });
 
-  const [errors, setErrors] = useState<Partial<Record<keyof NewMaterialForm, string>>>({});
+  const [errors, setErrors] = useState<Partial<Record<keyof NewMaterialForm | "attachment", string>>>({});
   const [isSaving, setIsSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [isReadingFile, setIsReadingFile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Trap focus inside modal
   useEffect(() => {
@@ -99,6 +115,42 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
   const set = (field: keyof NewMaterialForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  /** Process a file (from input or drag-and-drop) into an Attachment. */
+  const processFile = async (file: File) => {
+    setErrors((prev) => ({ ...prev, attachment: undefined }));
+    setIsReadingFile(true);
+    try {
+      const attachment = await fileToAttachment(file);
+      setForm((prev) => ({ ...prev, attachment }));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to read file.";
+      setErrors((prev) => ({ ...prev, attachment: message }));
+    } finally {
+      setIsReadingFile(false);
+    }
+  };
+
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processFile(file);
+    // Reset so the same file can be re-selected after removal
+    e.target.value = "";
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const removeAttachment = () => {
+    setForm((prev) => ({ ...prev, attachment: undefined }));
+    setErrors((prev) => ({ ...prev, attachment: undefined }));
+    if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
   const validate = (): boolean => {
@@ -193,6 +245,7 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
         form.contentType,
         "custom",
       ],
+      ...(form.attachment ? { attachment: form.attachment } : {}),
     };
 
     saveCustomMaterial(item);
@@ -320,6 +373,108 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
                 placeholder='e.g. "Strand 2: Christian Living"'
                 className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-shadow"
               />
+            </div>
+
+            {/* File / Attachment Upload */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+                Upload File / Attachment
+                <span className="ml-1 text-gray-400 normal-case font-normal">
+                  (PDF, DOCX, TXT, Images — optional)
+                </span>
+              </label>
+
+              {form.attachment ? (
+                // ── Preview badge when a file is selected ──
+                <div className="flex items-center gap-3 px-3.5 py-3 rounded-xl border border-indigo-200 bg-indigo-50/60">
+                  <div className="shrink-0 w-10 h-10 rounded-lg bg-white flex items-center justify-center text-indigo-600 border border-indigo-200">
+                    {attachmentIconKey(form.attachment) === "pdf" ? (
+                      <FileText size={18} />
+                    ) : attachmentIconKey(form.attachment) === "image" ? (
+                      <Image size={18} />
+                    ) : attachmentIconKey(form.attachment) === "doc" ? (
+                      <FileText size={18} />
+                    ) : attachmentIconKey(form.attachment) === "sheet" ? (
+                      <FileSpreadsheet size={18} />
+                    ) : (
+                      <FileText size={18} />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-gray-800 truncate">
+                      {form.attachment.name}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {form.attachment.type || "file"} · {formatBytes(form.attachment.size)}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={removeAttachment}
+                    className="flex items-center gap-1 text-xs px-2.5 py-1.5 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <Trash2 size={13} />
+                    Remove
+                  </button>
+                </div>
+              ) : (
+                // ── Drag-and-drop zone + button ──
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setIsDragOver(true);
+                  }}
+                  onDragLeave={() => setIsDragOver(false)}
+                  onDrop={handleDrop}
+                  className={`relative flex flex-col items-center justify-center gap-2 px-4 py-6 rounded-xl border-2 border-dashed text-center transition-colors ${
+                    isDragOver
+                      ? "border-indigo-400 bg-indigo-50"
+                      : "border-gray-200 bg-gray-50/60 hover:border-indigo-300 hover:bg-indigo-50/40"
+                  } ${isReadingFile ? "opacity-60 pointer-events-none" : ""}`}
+                >
+                  <div className="w-11 h-11 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    {isReadingFile ? (
+                      <span className="w-5 h-5 border-2 border-indigo-300 border-t-indigo-600 rounded-full animate-spin" />
+                    ) : (
+                      <UploadCloud size={22} />
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-gray-700">
+                      {isReadingFile
+                        ? "Reading file…"
+                        : "Drag & drop a file here, or"}
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      Stored offline in your browser (Base64)
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isReadingFile}
+                    className="flex items-center gap-1.5 mt-1 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold transition-colors disabled:opacity-50"
+                  >
+                    <Paperclip size={13} />
+                    Upload File
+                  </button>
+
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.txt,.md,.png,.jpg,.jpeg,.gif,.webp,.svg,.csv,.xls,.xlsx,application/pdf,image/*,text/plain"
+                    onChange={handleFileInputChange}
+                    className="hidden"
+                  />
+                </div>
+              )}
+
+              {errors.attachment && (
+                <p className="flex items-center gap-1 text-xs text-red-500">
+                  <AlertCircle size={12} /> {errors.attachment}
+                </p>
+              )}
             </div>
 
             {/* Content Type */}

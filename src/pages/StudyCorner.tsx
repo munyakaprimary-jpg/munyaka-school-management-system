@@ -27,6 +27,9 @@ import {
   PlusCircle,
   Download,
   Printer,
+  Paperclip,
+  Image,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
@@ -35,6 +38,13 @@ import {
   printAssessment,
   exportAssessmentBulk,
 } from "@/utils/exportAssessment";
+import {
+  openAttachment,
+  downloadAttachment,
+  formatBytes,
+  attachmentIconKey,
+  type Attachment,
+} from "@/utils/attachmentHelpers";
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const LS_BOOKMARKS = "studyCorner_bookmarks";
@@ -105,6 +115,7 @@ function ReaderModal({
   onDownload,
   onPrint,
   isDownloading,
+  onOpenAttachment,
 }: {
   item: ContentItem;
   onClose: () => void;
@@ -115,6 +126,7 @@ function ReaderModal({
   onDownload: () => void;
   onPrint: () => void;
   isDownloading?: boolean;
+  onOpenAttachment?: (att: Attachment) => void;
 }) {
   const meta = strandMeta[item.strand];
 
@@ -162,6 +174,55 @@ function ReaderModal({
               {item.summary}
             </p>
           </div>
+
+          {/* Attachment */}
+          {item.attachment && (
+            <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
+              <h3 className="text-sm font-semibold text-indigo-800 mb-3 flex items-center gap-2">
+                <Paperclip size={14} className="text-indigo-600" />
+                Attached File
+              </h3>
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-white flex items-center justify-center text-indigo-600 border border-indigo-200">
+                  {attachmentIconKey(item.attachment) === "pdf" ? (
+                    <FileText size={22} />
+                  ) : attachmentIconKey(item.attachment) === "image" ? (
+                    <Image size={22} />
+                  ) : attachmentIconKey(item.attachment) === "doc" ? (
+                    <FileText size={22} />
+                  ) : attachmentIconKey(item.attachment) === "sheet" ? (
+                    <FileSpreadsheet size={22} />
+                  ) : (
+                    <FileText size={22} />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {item.attachment.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {item.attachment.type || "file"} · {formatBytes(item.attachment.size)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={() => onOpenAttachment?.(item.attachment!)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  Open
+                </button>
+                <button
+                  onClick={() => downloadAttachment(item.attachment!)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                >
+                  <Download size={13} />
+                  Download
+                </button>
+              </div>
+            </div>
+          )}
 
           {/* Notes */}
           {item.notes.length > 0 && (
@@ -319,6 +380,7 @@ function ContentCard({
   onOpen,
   onToggleBookmark,
   onDownload,
+  onOpenAttachment,
 }: {
   item: ContentItem;
   isBookmarked: boolean;
@@ -327,6 +389,7 @@ function ContentCard({
   onOpen: () => void;
   onToggleBookmark: () => void;
   onDownload?: () => void;
+  onOpenAttachment?: (att: Attachment) => void;
 }) {
   const meta = strandMeta[item.strand];
 
@@ -374,6 +437,42 @@ function ContentCard({
         <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">
           {item.summary}
         </p>
+
+        {/* Attachment badge (only if a file is attached) */}
+        {item.attachment && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenAttachment?.(item.attachment!);
+            }}
+            className="mt-3 w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-left transition-colors"
+            title="Open attached file"
+          >
+            <span className="shrink-0 w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 border border-indigo-200">
+              {attachmentIconKey(item.attachment) === "pdf" ? (
+                <FileText size={15} />
+              ) : attachmentIconKey(item.attachment) === "image" ? (
+                <Image size={15} />
+              ) : attachmentIconKey(item.attachment) === "doc" ? (
+                <FileText size={15} />
+              ) : attachmentIconKey(item.attachment) === "sheet" ? (
+                <FileSpreadsheet size={15} />
+              ) : (
+                <FileText size={15} />
+              )}
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-xs font-semibold text-indigo-700 truncate">
+                <Paperclip size={11} className="inline -mt-0.5 mr-1" />
+                Attached file
+              </span>
+              <span className="block text-[11px] text-gray-500 truncate">
+                {item.attachment.name} · {formatBytes(item.attachment.size)}
+              </span>
+            </span>
+            <Download size={14} className="shrink-0 text-indigo-500" />
+          </button>
+        )}
       </div>
 
       {/* Footer */}
@@ -555,6 +654,10 @@ export default function StudyCorner() {
 
   const handlePrintItem = useCallback((item: ContentItem) => {
     printAssessment(item);
+  }, []);
+
+  const handleOpenAttachment = useCallback((att: Attachment) => {
+    openAttachment(att);
   }, []);
 
   const handleDownloadAllForGrade = useCallback(async () => {
@@ -847,6 +950,7 @@ export default function StudyCorner() {
                       onOpen={() => handleOpenItem(item)}
                       onToggleBookmark={() => toggleBookmark(item.id)}
                       onDownload={() => handleDownloadItem(item)}
+                      onOpenAttachment={handleOpenAttachment}
                     />
                   ))}
                 </div>
@@ -877,6 +981,7 @@ export default function StudyCorner() {
                           onOpen={() => handleOpenItem(item)}
                           onToggleBookmark={() => toggleBookmark(item.id)}
                           onDownload={() => handleDownloadItem(item)}
+                          onOpenAttachment={handleOpenAttachment}
                         />
                       ))}
                     </div>
@@ -900,6 +1005,7 @@ export default function StudyCorner() {
           onDownload={() => handleDownloadItem(activeItem)}
           onPrint={() => handlePrintItem(activeItem)}
           isDownloading={isDownloading}
+          onOpenAttachment={handleOpenAttachment}
         />
       )}
 

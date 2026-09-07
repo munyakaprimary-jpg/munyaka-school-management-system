@@ -20,6 +20,17 @@ export interface RevisionQuestion {
   rubric?: string;
 }
 
+/** Offline-capable file attachment stored as a Base64 data URL. */
+export interface Attachment {
+  name: string;
+  /** MIME type, e.g. "application/pdf" or "image/png" */
+  type: string;
+  /** File size in bytes */
+  size: number;
+  /** Base64 data URL — self-contained, works offline with no server */
+  dataUrl: string;
+}
+
 export interface ContentItem {
   id: string;
   grade: number; // 1–9
@@ -32,6 +43,8 @@ export interface ContentItem {
   revisionQuestions?: RevisionQuestion[];
   difficulty: "beginner" | "intermediate" | "advanced";
   tags: string[];
+  /** Optional offline attachment — stored as Base64 so no server required */
+  attachment?: Attachment;
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
