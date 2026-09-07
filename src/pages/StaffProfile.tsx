@@ -125,7 +125,7 @@ const StaffProfile = () => {
   );
 
   const isAdminView = !!user && (
-    user.role === 'admin' || user.role === 'owner'
+    user.role === 'admin'
   ) && !isSelfView;
 
   // ── Modal / dialog state ─────────────────────────────────────────

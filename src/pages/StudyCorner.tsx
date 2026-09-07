@@ -811,7 +811,6 @@ export default function StudyCorner() {
   const { user } = useAuth();
   const isAdminOrTeacher =
     user?.role === "admin" ||
-    user?.role === "head_teacher" ||
     user?.role === "teacher";
 
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);

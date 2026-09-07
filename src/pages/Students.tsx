@@ -530,10 +530,8 @@ export default function Students() {
     const { user } = useAuth();
 
     // Admin-only flag: controls visibility of sensitive management actions.
-    // NOTE: 'owner' is a BILLING-ONLY role — it must NOT be included here.
-    // The owner has no operational access to learner management, transfers,
-    // or archive.  Only admin (full admin) and head_teacher qualify.
-    const isAdmin = user?.role === 'admin' || user?.role === 'head_teacher';
+    // Only admin qualifies for learner management, transfers, or archive.
+    const isAdmin = user?.role === 'admin';
 
   // Ensure default grade is in the list only on initial mount when formData.grade is empty
   useEffect(() => {

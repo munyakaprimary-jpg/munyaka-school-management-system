@@ -1203,8 +1203,8 @@ const Dashboard: React.FC = () => {
   const { activeTerm, activeYear } = useAcademicCalendar();
   const termBadge = formatTermBadge(activeTerm, activeYear);
 
-  // Owner sees the full Owner Dashboard; no wrapper header needed there
-  if (role === 'owner') {
+  // Owner-level sees the full Owner Dashboard; no wrapper header needed there
+  if (role === 'librarian') {
     return <OwnerDashboard />;
   }
 

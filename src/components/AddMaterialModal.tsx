@@ -117,7 +117,7 @@ interface AddMaterialModalProps {
 export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }: AddMaterialModalProps) {
   const { user } = useAuth();
   const isAdminOrTeacher =
-    user?.role === "admin" || user?.role === "head_teacher" || user?.role === "teacher";
+    user?.role === "admin" || user?.role === "teacher";
 
   const [form, setForm] = useState<NewMaterialForm>({
     title: "",

@@ -270,8 +270,8 @@ function daysUntilNextBilling(nextBilling: string): number {
 const PaymentManagement = () => {
   const { user } = useAuth();
 
-  if (!user || user.role !== 'owner') {
-    // Admin and all other non-owner roles are redirected to the admin dashboard.
+  if (!user || user.role !== 'admin') {
+    // Admin and all other non-admin roles are redirected to the admin dashboard.
     return <Navigate to="/dashboard" replace />;
   }
 

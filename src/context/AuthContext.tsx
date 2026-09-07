@@ -14,8 +14,16 @@ import {
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
-export type UserRole = 'owner' | 'admin' | 'head_teacher' | 'teacher' | 'bursar' | 'parent' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'librarian' | 'staff' | 'student';
 
+// 'librarian' maps to the owner-level dashboard in Dashboard.tsx (the role
+// formerly named 'owner' — kept as a separate role to preserve the hierarchy).
+export const OWNER_LEVEL_ROLE: UserRole = 'librarian';
+
+/**
+ * Lightweight session user shape — the subset persisted in
+ * `munyaka_session` and returned by the AuthContext `user` field.
+ */
 interface User {
   id: string;
   name: string;
@@ -23,14 +31,26 @@ interface User {
   phone?: string;
   role: UserRole;
   avatar?: string;
-  /** Optional persisted password (used by admin/owner PIN flows). */
-  password?: string;
   /** Optional staff identifier for staffId-based login. */
   staff_id?: string;
   /** Whether the account is currently active. */
   is_active?: number | boolean;
   /** ISO timestamp the record was created. */
   created_at?: string;
+}
+
+/**
+ * Full user record as stored in `munyaka_users` localStorage.
+ * Extends User with storage-specific fields.
+ */
+interface StoredUser extends User {
+  password?: string;
+  alternativePasswords?: string[];
+  isActive?: boolean | number;
+  emailConfirmed?: boolean;
+  staffId?: string;
+  department?: string;
+  createdAt?: string;
 }
 
 interface AuthContextType {
@@ -101,20 +121,28 @@ const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
   switch (systemRole) {
-    case 'owner':
-      return 'owner';
     // Normalize legacy identifiers to the canonical 'admin' role.
+    case 'owner':
     case 'super_admin':
     case 'support_admin':
+    case 'head_teacher':
     case 'admin':
       return 'admin';
-    case 'head_teacher':
-      return 'head_teacher';
     case 'bursar':
-      return 'bursar';
+    case 'accountant':
+      return 'accountant';
+    case 'librarian':
+    case 'library':
+    case 'library_assistant':
+      return 'librarian';
+    case 'student':
+      return 'student';
+    case 'parent':
+      return 'staff';
     case 'senior_teacher':
     case 'class_teacher':
     case 'subject_teacher':
+    case 'teacher':
     default:
       return 'teacher';
   }
@@ -295,10 +323,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     initializeUsersStorage();
 
-    let users: Record<string, unknown> = {};
+    let users: Record<string, StoredUser> = {};
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? JSON.parse(usersJson) : {};
+      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
     } catch {
       /* corrupted users store — treat as empty */
     }
@@ -318,7 +346,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // the Login page's own dual-mode check so a saved-or-default
       // flow works the same way in both directions.
       const normalizedRole = String(foundUser.role || '').toLowerCase();
-            const isAdminUser = normalizedRole === 'owner' || normalizedRole === 'admin';
+      // Admin pre-check applies to any admin-level role (owner/admin are equivalent here).
+      const isAdminUser = normalizedRole === 'admin';
       if (isAdminUser) {
         const activeAdminPin = getActiveAdminPassword();
         const entered = String(pass || '').trim();
@@ -408,10 +437,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
     const normalizedEmail = normalizeEmail(userData.email);
 
-    let users: Record<string, unknown> = {};
+    let users: Record<string, StoredUser> = {};
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? JSON.parse(usersJson) : {};
+      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
     } catch {
       /* corrupted users store — treat as empty */
     }
@@ -463,10 +492,10 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const normalizedEmail = normalizeEmail(user.email);
-    let users: Record<string, unknown> = {};
+    let users: Record<string, StoredUser> = {};
     try {
       const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-      users = usersJson ? JSON.parse(usersJson) : {};
+      users = usersJson ? (JSON.parse(usersJson) as Record<string, StoredUser>) : {};
     } catch {
       /* corrupted users store — treat as empty */
     }

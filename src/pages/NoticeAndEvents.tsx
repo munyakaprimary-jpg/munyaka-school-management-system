@@ -165,7 +165,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // creator of the notice may delete it. All other roles see no action menu.
   const canDeleteNotice = (notice: Notice): boolean => {
     if (!user) return false;
-    const isAdmin = user.role === 'admin' || user.role === 'head_teacher';
+    const isAdmin = user.role === 'admin';
     const isCreator = notice.createdBy === user.id;
     return isAdmin || isCreator;
   };
@@ -173,7 +173,7 @@ export default function NoticeAndEvents({ defaultTab = 'announcements' }: { defa
   // Permission helper for deleting events. Same RBAC logic as notices for consistency.
   const canDeleteEvent = (): boolean => {
     if (!user) return false;
-    return user.role === 'admin' || user.role === 'head_teacher' || user.role === 'bursar';
+    return user.role === 'admin' || user.role === 'accountant';
   };
   // LocalStorage Persistence for Notices and Events
   const [notices, setNotices] = useState<Notice[]>(() => {

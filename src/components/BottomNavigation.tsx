@@ -29,17 +29,17 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   // ADMIN has unrestricted access to every navigation item
-  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-  { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'head_teacher', 'teacher', 'bursar'] },
-  { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'head_teacher', 'teacher'] },
-  { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
-  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['owner'] },
-  { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-    { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin', 'head_teacher'] },
-  { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin', 'head_teacher'] },
-  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
-  { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
-  { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+  { icon: LayoutDashboard, label: 'Home', path: '/', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
+  { icon: Users, label: 'Learners', path: '/students', roles: ['admin', 'teacher', 'accountant'] },
+  { icon: ClipboardCheck, label: 'Roll Call', path: '/attendance', roles: ['admin', 'teacher'] },
+  { icon: Wallet, label: 'Fees', path: '/fees', roles: ['admin', 'accountant', 'staff'] },
+  { icon: CreditCard, label: 'Payments', path: '/payment-management', roles: ['admin'] },
+  { icon: Server, label: 'Settings', path: '/mobile/settings', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
+    { icon: Shield, label: 'Staff Access', path: '/staff/pre-registration', roles: ['admin'] },
+  { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin'] },
+  { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'teacher', 'accountant', 'staff', 'student'] },
+  { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin'] },
+  { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'teacher', 'student', 'staff', 'librarian'] },
 ];
 
 export const BottomNavigation = () => {
