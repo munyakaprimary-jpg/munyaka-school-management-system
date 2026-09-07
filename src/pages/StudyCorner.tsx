@@ -184,6 +184,27 @@ const strandMeta: Record<
     bg: "bg-purple-50 border-purple-200",
     icon: <Palette size={16} />,
   },
+  // ── KICD Junior Secondary (Grades 7–9) Additional Categories ─────────────
+  "Health Education": {
+    color: "text-rose-700",
+    bg: "bg-rose-50 border-rose-200",
+    icon: <Sprout size={16} />,
+  },
+  "Business Studies": {
+    color: "text-amber-700",
+    bg: "bg-amber-50 border-amber-200",
+    icon: <Calculator size={16} />,
+  },
+  "Physical Education and Sports": {
+    color: "text-green-700",
+    bg: "bg-green-50 border-green-200",
+    icon: <Wrench size={16} />,
+  },
+  "Computer Science / Foreign Languages": {
+    color: "text-cyan-700",
+    bg: "bg-cyan-50 border-cyan-200",
+    icon: <FlaskConical size={16} />,
+  },
 };
 
 // ─── Fallback icon for unknown categories ────────────────────────────────────
