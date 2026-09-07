@@ -505,6 +505,41 @@ export default function StudyCorner() {
     localStorage.setItem(LS_PROGRESS, JSON.stringify(readProgress));
   }, [readProgress]);
 
+  // ── Filtered & grouped data — declared BEFORE handlers ───────────────────
+  const filtered = allContent.filter((item) => {
+    if (selectedGrade !== null && item.grade !== selectedGrade) return false;
+    if (selectedStrands.length > 0 && !selectedStrands.includes(item.strand))
+      return false;
+    if (showBookmarksOnly && !bookmarks.includes(item.id)) return false;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      return (
+        item.topic.toLowerCase().includes(q) ||
+        item.subStrand.toLowerCase().includes(q) ||
+        item.strand.toLowerCase().includes(q) ||
+        item.summary.toLowerCase().includes(q) ||
+        item.tags.some((t) => t.toLowerCase().includes(q))
+      );
+    }
+    return true;
+  });
+
+  // Group by strand for display
+  const grouped = filtered.reduce<Record<StrandCategory, ContentItem[]>>(
+    (acc, item) => {
+      if (!acc[item.strand]) acc[item.strand] = [];
+      acc[item.strand].push(item);
+      return acc;
+    },
+    {} as Record<StrandCategory, ContentItem[]>
+  );
+
+  // ── Ref so handleDownloadAllForGrade reads current filter state without ──
+  //    needing `filtered` as a useCallback dependency (avoids stale closure).
+  const filteredRef = useRef(filtered);
+  filteredRef.current = filtered;
+
+  // ── Handler callbacks ──────────────────────────────────────────────────
   const handleCustomSave = useCallback((item: ContentItem) => {
     setCustomItems((prev) => [item, ...prev]);
   }, []);
@@ -529,7 +564,7 @@ export default function StudyCorner() {
     setIsDownloading(true);
     try {
       await exportAssessmentBulk({
-        items: filtered,
+        items: filteredRef.current, // read latest value from ref
         grade: selectedGrade,
         subject: subjectLabel,
         format: "html",
@@ -537,7 +572,7 @@ export default function StudyCorner() {
     } finally {
       setIsDownloading(false);
     }
-  }, [filtered, selectedGrade, selectedStrands]);
+  }, [selectedGrade, selectedStrands]); // no `filtered` dependency
 
   const toggleBookmark = useCallback((id: string) => {
     setBookmarks((prev) =>
@@ -573,35 +608,6 @@ export default function StudyCorner() {
     }
     setActiveItem(null);
   }, [activeItem]);
-
-  // Filter logic — operates on merged content
-  const filtered = allContent.filter((item) => {
-    if (selectedGrade !== null && item.grade !== selectedGrade) return false;
-    if (selectedStrands.length > 0 && !selectedStrands.includes(item.strand))
-      return false;
-    if (showBookmarksOnly && !bookmarks.includes(item.id)) return false;
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase();
-      return (
-        item.topic.toLowerCase().includes(q) ||
-        item.subStrand.toLowerCase().includes(q) ||
-        item.strand.toLowerCase().includes(q) ||
-        item.summary.toLowerCase().includes(q) ||
-        item.tags.some((t) => t.toLowerCase().includes(q))
-      );
-    }
-    return true;
-  });
-
-  // Group by strand for display
-  const grouped = filtered.reduce<Record<StrandCategory, ContentItem[]>>(
-    (acc, item) => {
-      if (!acc[item.strand]) acc[item.strand] = [];
-      acc[item.strand].push(item);
-      return acc;
-    },
-    {} as Record<StrandCategory, ContentItem[]>
-  );
 
   const bookmarkCount = bookmarks.length;
   const completedCount = Object.values(completionMap).filter(Boolean).length;
