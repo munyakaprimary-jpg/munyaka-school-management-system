@@ -82,11 +82,15 @@ function createPersistentHook<T>(
 ) {
   return function usePersistentStore() {
     const [state, setState] = useState<T>(() => {
-      const parsed = lsRead<unknown>(storageKey, null);
-      if (parsed != null) {
-        return selector ? selector(parsed as T) : (parsed as T);
+      try {
+        const parsed = lsRead<unknown>(storageKey, null);
+        if (parsed != null) {
+          return selector ? selector(parsed as T) : (parsed as T);
+        }
+        return initialValue;
+      } catch {
+        return initialValue;
       }
-      return initialValue;
     });
 
     const isInternalUpdate = useRef(false);
@@ -95,16 +99,24 @@ function createPersistentHook<T>(
     useEffect(() => {
       const handleStorage = (e: StorageEvent) => {
         if (e.key === storageKey || e.key === null) {
-          const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
-          setState(selector ? selector(value) : value);
+          try {
+            const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+            setState(selector ? selector(value) : value);
+          } catch {
+            setState(initialValue);
+          }
         }
       };
 
       const handleCustom = (e: Event) => {
         const detail = (e as CustomEvent).detail;
         if (!detail?.key || detail.key === storageKey) {
-          const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
-          setState(selector ? selector(value) : value);
+          try {
+            const value = lsRead<unknown>(storageKey, initialValue as unknown) as T;
+            setState(selector ? selector(value) : value);
+          } catch {
+            setState(initialValue);
+          }
         }
       };
 
@@ -228,21 +240,33 @@ export interface PersistentStorage {
 
 export function usePersistentStorage(): PersistentStorage {
   // ── Individual reactive slices ──
-  const [students, setStudentsRaw] = useState<Student[]>(getStudents);
-  const [learningAreas, setLearningAreasRaw] = useState<LearningAreaCluster[]>(getLearningAreas);
-  const [paymentRecords, setPaymentRecordsRaw] = useState<PaymentRecord[]>(getPaymentRecords);
-  const [transactions, setTransactionsRaw] = useState<PaymentRecord[]>(getTransactions);
-  const [userSettings, setUserSettingsRaw] = useState<UserSettings>(getUserSettings);
-  const [subscriptions, setSubscriptionsRaw] = useState<Subscription[]>(getSubscriptions);
+  const [students, setStudentsRaw] = useState<Student[]>(() => {
+    try { return getStudents(); } catch { return []; }
+  });
+  const [learningAreas, setLearningAreasRaw] = useState<LearningAreaCluster[]>(() => {
+    try { return getLearningAreas(); } catch { return []; }
+  });
+  const [paymentRecords, setPaymentRecordsRaw] = useState<PaymentRecord[]>(() => {
+    try { return getPaymentRecords(); } catch { return []; }
+  });
+  const [transactions, setTransactionsRaw] = useState<PaymentRecord[]>(() => {
+    try { return getTransactions(); } catch { return []; }
+  });
+  const [userSettings, setUserSettingsRaw] = useState<UserSettings>(() => {
+    try { return getUserSettings(); } catch { return {} as UserSettings; }
+  });
+  const [subscriptions, setSubscriptionsRaw] = useState<Subscription[]>(() => {
+    try { return getSubscriptions(); } catch { return []; }
+  });
 
   // ── Re-read from localStorage on external change ──
   const refreshAll = useCallback(() => {
-    setStudentsRaw(getStudents());
-    setLearningAreasRaw(getLearningAreas());
-    setPaymentRecordsRaw(getPaymentRecords());
-    setTransactionsRaw(getTransactions());
-    setUserSettingsRaw(getUserSettings());
-    setSubscriptionsRaw(getSubscriptions());
+    try { setStudentsRaw(getStudents()); } catch { setStudentsRaw([]); }
+    try { setLearningAreasRaw(getLearningAreas()); } catch { setLearningAreasRaw([]); }
+    try { setPaymentRecordsRaw(getPaymentRecords()); } catch { setPaymentRecordsRaw([]); }
+    try { setTransactionsRaw(getTransactions()); } catch { setTransactionsRaw([]); }
+    try { setUserSettingsRaw(getUserSettings()); } catch { setUserSettingsRaw({} as UserSettings); }
+    try { setSubscriptionsRaw(getSubscriptions()); } catch { setSubscriptionsRaw([]); }
   }, []);
 
   useEffect(() => {

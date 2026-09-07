@@ -295,9 +295,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     
     initializeUsersStorage();
 
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : {};
-    
+    let users: Record<string, unknown> = {};
+    try {
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {
+      /* corrupted users store — treat as empty */
+    }
+
     // Look up by email first, then fall back to staffId (case-insensitive)
     const foundUser = users[normalizedEmail] || users[normalizedStaffId];
     
@@ -402,10 +407,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     await new Promise(resolve => setTimeout(resolve, 800));
 
     const normalizedEmail = normalizeEmail(userData.email);
-    
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : {};
-    
+
+    let users: Record<string, unknown> = {};
+    try {
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {
+      /* corrupted users store — treat as empty */
+    }
+
     if (users[normalizedEmail]) {
       showError("A user with this email already exists.");
       return false;
@@ -453,8 +463,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
 
     const normalizedEmail = normalizeEmail(user.email);
-    const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
-    const users = usersJson ? JSON.parse(usersJson) : {};
+    let users: Record<string, unknown> = {};
+    try {
+      const usersJson = localStorage.getItem(USERS_STORAGE_KEY);
+      users = usersJson ? JSON.parse(usersJson) : {};
+    } catch {
+      /* corrupted users store — treat as empty */
+    }
     const foundUser = users[normalizedEmail];
 
     if (!foundUser) {

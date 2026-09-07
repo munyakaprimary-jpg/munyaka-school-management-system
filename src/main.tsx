@@ -98,23 +98,31 @@ window.onerror = function (
   return true;
 };
 
+// Catch Asynchronous & Lifecycle Errors — on-screen error rendering
+window.addEventListener("error", (event) => {
+  try {
+    document.body.innerHTML = `<div style="color:red; padding:20px; font-family:sans-serif;">
+      <h2>Startup Error Detected</h2>
+      <p><b>Message:</b> ${event.message}</p>
+      <p><b>Source:</b> ${event.filename}:${event.lineno}:${event.colno}</p>
+      <pre style="background:#eee; padding:10px;">${event.error?.stack || "No stack trace"}</pre>
+    </div>`;
+  } catch {
+    /* last-ditch: at least make the body visible */
+    document.body.style.color = "red";
+  }
+});
+
 window.addEventListener("unhandledrejection", (event) => {
-  const reason = event.reason;
-  const message =
-    reason instanceof Error
-      ? reason.message
-      : typeof reason === "string"
-      ? reason
-      : reason
-      ? JSON.stringify(reason)
-      : "Unknown rejection";
-  const stack =
-    reason instanceof Error
-      ? reason.stack || "(no stack trace available)"
-      : "(no stack trace available)";
-  // eslint-disable-next-line no-console
-  console.error("[unhandledrejection]", message, reason);
-  renderFatalError("Unhandled promise rejection: " + message, stack);
+  try {
+    document.body.innerHTML = `<div style="color:red; padding:20px; font-family:sans-serif;">
+      <h2>Unhandled Promise Rejection</h2>
+      <p><b>Reason:</b> ${event.reason?.message || event.reason}</p>
+      <pre style="background:#eee; padding:10px;">${event.reason?.stack || "No stack trace"}</pre>
+    </div>`;
+  } catch {
+    document.body.style.color = "red";
+  }
 });
 
 const safeLogDev = (...args: unknown[]) => {
