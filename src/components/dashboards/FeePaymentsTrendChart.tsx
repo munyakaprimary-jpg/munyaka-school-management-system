@@ -139,29 +139,10 @@ const FeePaymentsTrendChart: React.FC = () => {
     }
   }, []);
 
-  // Generate mock historical data for previous years if needed
-  const generateMockDataForYear = (year: string): Transaction[] => {
-    const yearNum = parseInt(year, 10);
-    
-    // Generate realistic fee payment data for the year
-    const mockData: Transaction[] = [
-      // Term 1 (Jan-Mar)
-      { id: `${year}-T1-1`, date: `${year}/01/15`, amount: 45000, method: 'M-Pesa', ref: 'REF001', category: 'Tuition' },
-      { id: `${year}-T1-2`, date: `${year}/02/10`, amount: 52000, method: 'M-Pesa', ref: 'REF002', category: 'Tuition' },
-      { id: `${year}-T1-3`, date: `${year}/03/05`, amount: 38000, method: 'Bank', ref: 'REF003', category: 'Activity' },
-      
-      // Term 2 (May-Jul)
-      { id: `${year}-T2-1`, date: `${year}/05/12`, amount: 68000, method: 'M-Pesa', ref: 'REF004', category: 'Tuition' },
-      { id: `${year}-T2-2`, date: `${year}/06/08`, amount: 72000, method: 'M-Pesa', ref: 'REF005', category: 'Tuition' },
-      { id: `${year}-T2-3`, date: `${year}/07/20`, amount: 55000, method: 'Bank', ref: 'REF006', category: 'Boarding' },
-      
-      // Term 3 (Sep-Nov)
-      { id: `${year}-T3-1`, date: `${year}/09/15`, amount: 89000, method: 'M-Pesa', ref: 'REF007', category: 'Tuition' },
-      { id: `${year}-T3-2`, date: `${year}/10/10`, amount: 95000, method: 'M-Pesa', ref: 'REF008', category: 'Tuition' },
-      { id: `${year}-T3-3`, date: `${year}/11/25`, amount: 61000, method: 'Bank', ref: 'REF009', category: 'Activity' },
-    ];
-    
-    return mockData;
+  // Generate empty data when no real transactions exist for the year.
+  // All KES values have been removed — the chart shows real data only.
+  const generateEmptyDataForYear = (_year: string): Transaction[] => {
+    return [];
   };
 
   // Aggregate transactions by term for selected year
@@ -172,9 +153,9 @@ const FeePaymentsTrendChart: React.FC = () => {
       return year === parseInt(selectedYear, 10);
     });
 
-    // If no real data for this year, use mock data
+    // If no real data for this year, show empty state (no mock data).
     if (yearTransactions.length === 0) {
-      yearTransactions = generateMockDataForYear(selectedYear);
+      yearTransactions = generateEmptyDataForYear(selectedYear);
     }
 
     // Aggregate by term
@@ -289,8 +270,19 @@ const FeePaymentsTrendChart: React.FC = () => {
           </div>
         </div>
 
-        {/* Chart Container */}
+        {/* Chart Container — empty state when no real data for the year */}
         <div className="h-[280px] w-full">
+          {termData.every(t => t.amount === 0) ? (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <TrendingUp size={40} className="mb-3 opacity-30" />
+              <p className="text-sm font-bold text-slate-500">
+                No fee collection data for {selectedYear}
+              </p>
+              <p className="text-xs text-slate-400 mt-1">
+                Fee records will appear here once payments are recorded.
+              </p>
+            </div>
+          ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={termData}
@@ -363,9 +355,11 @@ const FeePaymentsTrendChart: React.FC = () => {
               </Bar>
             </BarChart>
           </ResponsiveContainer>
+          )}
         </div>
 
-        {/* Footer stats */}
+        {/* Footer stats — hidden when no real data for the year */}
+        {termData.some(t => t.amount > 0) && (
         <div className="flex items-center justify-between mt-4 pt-4 border-t border-slate-100">
           <div>
             <p className="text-xs text-[#64748B]">Total Collected ({selectedYear})</p>
@@ -380,6 +374,7 @@ const FeePaymentsTrendChart: React.FC = () => {
             </p>
           </div>
         </div>
+        )}
       </CardContent>
     </Card>
   );

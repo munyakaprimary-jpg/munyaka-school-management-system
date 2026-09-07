@@ -178,6 +178,41 @@ function runOneTimeFeeSanitizer(): void {
       }
     }
 
+    // 3. Hard purge — remove any pre-seeded mock transaction entries that
+    //    reference the legacy hardcoded amounts (45000, 52000, 38000, 68000,
+    //    72000, 55000, 89000, 95000, 61000). These were used to fake the
+    //    school-wide fee trend chart and must be wiped so the chart shows
+    //    real data only.
+    const LEGACY_MOCK_AMOUNTS = new Set([
+      45000, 52000, 38000, 68000, 72000, 55000, 89000, 95000, 61000,
+      12000, 8000, 4000, 15000, 18000, 20000,
+    ]);
+    for (const key of FEE_LEDGER_KEYS) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        let parsed: unknown;
+        try { parsed = JSON.parse(raw); } catch { continue; }
+        if (!Array.isArray(parsed) || parsed.length === 0) continue;
+        // Keep only entries that are NOT pre-seeded mock values.
+        const cleaned = parsed.filter((row: any) => {
+          if (!row || typeof row !== 'object') return true;
+          const amt = typeof row.amount === 'number' ? row.amount : null;
+          if (amt === null) return true;
+          // Drop rows whose only evidence of being a mock is the exact
+          // legacy amount AND a REF-style reference.
+          const isLegacyRef = typeof row.ref === 'string' && /^REF00\d$/.test(row.ref);
+          if (LEGACY_MOCK_AMOUNTS.has(amt) && isLegacyRef) return false;
+          return true;
+        });
+        if (cleaned.length !== parsed.length) {
+          window.localStorage.setItem(key, JSON.stringify(cleaned));
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+
     window.localStorage.setItem(FEE_SANITIZER_FLAG, 'done');
     console.info('[fee-sanitizer] Reset hardcoded fee fields on stored learners.');
   } catch (err) {
@@ -206,14 +241,19 @@ const App = () => {
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
     // ── TEMP: hard-fix migration ────────────────────────────────────────
-    // Clear stale learner storage that may contain legacy MUN-XXX
-    // placeholders so the app re-initializes with clean data on next
-    // hydrate. Safe to remove once every browser has been refreshed.
+    // Clear stale learner + fee storage so the app re-initializes with
+    // clean data on next hydrate. Safe to remove once every browser has
+    // been refreshed.
     try {
       const KEYS_TO_RESET = [
         'munyaka_learners',
         'school_learners_data',
         'munyaka_students',
+        // Fee ledgers so previously-seeded mock data never resurfaces.
+        'munyaka_fees_records',
+        'munyaka_student_fees',
+        'munyaka_payment_records',
+        'munyaka_transactions',
       ];
       for (const k of KEYS_TO_RESET) {
         window.localStorage.removeItem(k);
