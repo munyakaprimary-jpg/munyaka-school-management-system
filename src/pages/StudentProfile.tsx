@@ -287,12 +287,29 @@ const StudentProfile = () => {
   const performanceRows = useMemo(() => computeSubjectPerformance(), [activeLearner]);
 
   // ── Fee metrics (component-level so the bottom card can re-use them) ──
-  // Total Invoiced comes from `munyaka_fee_structures` filtered by the
-  // learner's grade. If no structure is assigned, both Invoiced and
-  // Outstanding default to 0 — there is no hardcoded KES 15,000 figure.
+  // All values are computed strictly from recorded data. No hardcoded
+  // KES 15,000 / 12,500 / 8,000 fallback. Any missing piece collapses
+  // to 0 via the `?? 0` pattern.
+  interface TransactionRow {
+    id?: string;
+    studentId?: string;
+    amount?: number;
+    date?: string;
+    type?: string;
+    status?: string;
+    method?: string;
+    ref?: string;
+    category?: string;
+  }
   const feeMetrics = useMemo(() => {
     if (!activeLearner) {
-      return { totalInvoiced: 0, totalPaid: 0, outstandingBalance: 0, lastTx: null as null | { amount?: number; date?: string } };
+      return {
+        totalInvoiced: 0,
+        totalPaid: 0,
+        outstandingBalance: 0,
+        lastTx: null as TransactionRow | null,
+        transactions: [] as TransactionRow[],
+      };
     }
     interface FeeStructure {
       id: string;
@@ -313,13 +330,6 @@ const StudentProfile = () => {
       0,
     );
 
-    interface TransactionRow {
-      studentId?: string;
-      amount?: number;
-      date?: string;
-      type?: string;
-      status?: string;
-    }
     const allTx: TransactionRow[] = [
       ...safeRead<TransactionRow[]>(TRANSACTIONS_KEY, []),
       ...safeRead<TransactionRow[]>(PAYMENT_RECORDS_KEY, []),
@@ -327,20 +337,20 @@ const StudentProfile = () => {
     const studentTx = allTx
       .filter((tx) => tx && tx.studentId === activeLearner.id)
       .filter((tx) => (tx.status ?? 'Completed') === 'Completed')
-      .filter((tx) => !tx.type || tx.type === 'payment');
-    const totalPaid = studentTx.reduce(
-      (acc, tx) => acc + (typeof tx.amount === 'number' ? tx.amount : 0),
-      0,
-    );
-    const outstandingBalance = Math.max(0, totalInvoiced - totalPaid);
-    const lastTx = studentTx
+      .filter((tx) => !tx.type || tx.type === 'payment')
       .slice()
       .sort((a, b) => {
         const ta = a.date ? new Date(a.date).getTime() : 0;
         const tb = b.date ? new Date(b.date).getTime() : 0;
         return tb - ta;
-      })[0] ?? null;
-    return { totalInvoiced, totalPaid, outstandingBalance, lastTx };
+      });
+    const totalPaid = studentTx.reduce(
+      (acc, tx) => acc + (typeof tx.amount === 'number' ? tx.amount : 0),
+      0,
+    );
+    const outstandingBalance = Math.max(0, totalInvoiced - totalPaid);
+    const lastTx = studentTx[0] ?? null;
+    return { totalInvoiced, totalPaid, outstandingBalance, lastTx, transactions: studentTx };
   }, [activeLearner]);
 
   const formatKsh = (n: number) =>
@@ -807,6 +817,72 @@ const StudentProfile = () => {
                   <p className="text-sm font-bold text-slate-500">No assessment records available for this learner.</p>
                 </div>
               )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Payment History — strict empty state, no mock rows */}
+          <Card className="border-none shadow-sm rounded-[2rem] bg-white overflow-hidden">
+            <CardHeader className="px-8 pt-8 border-b pb-4">
+              <CardTitle className="text-lg">Payment History</CardTitle>
+              <p className="text-sm text-slate-500 mt-1">
+                Every recorded transaction for this learner.
+              </p>
+            </CardHeader>
+            <CardContent className="p-0">
+              <div className="overflow-x-auto">
+                {feeMetrics.transactions.length === 0 ? (
+                  <div className="py-16 text-center">
+                    <div className="p-4 bg-slate-50 rounded-full text-slate-300 inline-flex mb-3">
+                      <Receipt size={32} />
+                    </div>
+                    <p className="text-sm font-bold text-slate-500">
+                      No fee records found for this learner.
+                    </p>
+                  </div>
+                ) : (
+                  <table className="w-full text-sm min-w-max">
+                    <thead>
+                      <tr className="bg-slate-50/50 text-slate-400 uppercase tracking-widest text-[10px]">
+                        <th className="px-8 py-4 text-left font-bold">Date</th>
+                        <th className="px-8 py-4 text-left font-bold">Reference</th>
+                        <th className="px-8 py-4 text-left font-bold">Method</th>
+                        <th className="px-8 py-4 text-left font-bold">Category</th>
+                        <th className="px-8 py-4 text-right font-bold">Amount</th>
+                        <th className="px-8 py-4 text-right font-bold">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {feeMetrics.transactions.map((tx, i) => {
+                        const amount = typeof tx.amount === 'number' ? tx.amount : 0;
+                        return (
+                          <tr key={tx.id ?? `${tx.date ?? ''}-${i}`}>
+                            <td className="px-8 py-5 text-slate-600">
+                              {tx.date ? new Date(tx.date).toLocaleDateString() : '—'}
+                            </td>
+                            <td className="px-8 py-5 font-mono text-xs text-slate-700">
+                              {tx.ref || '—'}
+                            </td>
+                            <td className="px-8 py-5 text-slate-600">
+                              {tx.method || '—'}
+                            </td>
+                            <td className="px-8 py-5 text-slate-600">
+                              {tx.category || '—'}
+                            </td>
+                            <td className="px-8 py-5 text-right font-bold text-slate-900">
+                              {formatKsh(amount)}
+                            </td>
+                            <td className="px-8 py-5 text-right">
+                              <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-100">
+                                {tx.status || 'Completed'}
+                              </Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </CardContent>
           </Card>

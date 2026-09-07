@@ -756,7 +756,7 @@ const Dashboard = ({
               ) : (
                 <div className="text-center py-8 text-slate-500">
                   <Receipt size={40} className="mx-auto mb-3 opacity-30" />
-                  <p className="font-medium">No payment records found</p>
+                  <p className="font-medium">No fee records found for this learner.</p>
                 </div>
               )}
 
