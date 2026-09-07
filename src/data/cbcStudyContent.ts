@@ -114,6 +114,8 @@ export interface ContentItem {
   id: string;
   grade: number; // 1–9
   strand: StrandCategory;
+  /** Legacy alias for strand — used for filtering assessments tab */
+  category?: StrandCategory;
   subStrand: string;
   topic: string;
   summary: string;           // short preview shown on the card

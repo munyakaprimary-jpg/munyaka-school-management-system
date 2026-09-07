@@ -55,6 +55,8 @@ import {
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const LS_BOOKMARKS = "studyCorner_bookmarks";
 const LS_PROGRESS = "studyCorner_progress";
+const LS_CUSTOM_MATERIALS = "custom_study_materials";
+const CUSTOM_MATERIALS_EVENT = "custom_study_materials_updated";
 
 const loadBookmarks = (): string[] => {
   try {
@@ -826,8 +828,31 @@ export default function StudyCorner() {
   const [isDownloading, setIsDownloading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
-  // Custom materials loaded from localStorage
+  // Custom materials loaded from localStorage.
+  // Listen to both:
+  //   1. The native "storage" event (fires in OTHER tabs when localStorage
+  //      changes — browsers don't fire it in the originating tab).
+  //   2. A custom DOM event dispatched by AddMaterialModal right after it
+  //      writes to localStorage. This gives us the same-tab refresh we need
+  //      so the new assessment appears under the tab instantly without a reload.
   const [customItems, setCustomItems] = useState<ContentItem[]>(() => loadCustomMaterials());
+
+  const refreshCustomItems = useCallback(() => {
+    setCustomItems(loadCustomMaterials());
+  }, []);
+
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === LS_CUSTOM_MATERIALS) refreshCustomItems();
+    };
+    const onCustomUpdate = () => refreshCustomItems();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener(CUSTOM_MATERIALS_EVENT, onCustomUpdate);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener(CUSTOM_MATERIALS_EVENT, onCustomUpdate);
+    };
+  }, [refreshCustomItems]);
 
   // Full content: default + custom
   const allContent: ContentItem[] = [...cbcStudyContent, ...customItems];
@@ -843,16 +868,33 @@ export default function StudyCorner() {
   }, [readProgress]);
 
   // ── Filtered & grouped data — declared BEFORE handlers ───────────────────
+
+  // Helper: determines the effective "category" for an item.
+  // Custom assessment uploads store the value in `category`; legacy items use `strand`.
+  const itemCategory = (item: ContentItem): StrandCategory =>
+    (item.category as StrandCategory) || item.strand;
+
+  // Helper: is this item an assessment?
+  const isAssessmentItem = (item: ContentItem): boolean =>
+    itemCategory(item) === "Assessments & Quizzes";
+
   const filtered = allContent.filter((item) => {
     if (selectedGrade !== null && item.grade !== selectedGrade) return false;
 
     // Handle strand + subject filter
     if (selectedStrands.length > 0) {
       if (selectedStrands[0] === "Assessments & Quizzes") {
-        if (item.strand !== "Assessments & Quizzes") return false;
+        // Assessments tab: strictly use the `category` field to identify assessments.
+        // This prevents any item (even custom uploads) from accidentally appearing
+        // in the wrong tab, and also catches items whose strand differs from category.
+        if (!isAssessmentItem(item)) return false;
         // Second filter dimension: subject (subStrand)
         if (selectedStrands[1] && item.subStrand !== selectedStrands[1]) return false;
       } else {
+        // Other subject tabs: exclude any item tagged as an assessment.
+        // Assessments (whether custom-uploaded or built-in) must only appear
+        // inside the "Assessments & Quizzes" tab, never in subject-specific tabs.
+        if (isAssessmentItem(item)) return false;
         if (!selectedStrands.includes(item.strand)) return false;
       }
     }
@@ -871,11 +913,16 @@ export default function StudyCorner() {
     return true;
   });
 
-  // Group by strand for display
+  // Group by strand for display.
+  // Use `itemCategory` so that assessment items are always grouped under
+  // "Assessments & Quizzes" regardless of their individual strand value.
   const grouped = filtered.reduce<Record<StrandCategory, ContentItem[]>>(
     (acc, item) => {
-      if (!acc[item.strand]) acc[item.strand] = [];
-      acc[item.strand].push(item);
+      const key = isAssessmentItem(item)
+        ? ("Assessments & Quizzes" as StrandCategory)
+        : item.strand;
+      if (!acc[key]) acc[key] = [];
+      acc[key].push(item);
       return acc;
     },
     {} as Record<StrandCategory, ContentItem[]>
@@ -888,8 +935,10 @@ export default function StudyCorner() {
 
   // ── Handler callbacks ──────────────────────────────────────────────────
   const handleCustomSave = useCallback((item: ContentItem) => {
-    setCustomItems((prev) => [item, ...prev]);
-  }, []);
+    // Re-read from localStorage so the state stays in sync with what was
+    // persisted (e.g. the `category` field was set at save time).
+    refreshCustomItems();
+  }, [refreshCustomItems]);
 
   const handleDownloadItem = useCallback(async (item: ContentItem) => {
     setIsDownloading(true);
@@ -1018,7 +1067,11 @@ export default function StudyCorner() {
               {strandCategories.map((cat) => {
                 const meta = getStrandMeta(cat);
                 const active = selectedStrands.length === 1 && selectedStrands[0] === cat;
-                const count = allContent.filter((i) => i.strand === cat).length;
+                // Use itemCategory so that assessment items (whose strand may differ
+                // from "Assessments & Quizzes") are counted under the correct tab.
+                const count = allContent.filter(
+                  (i) => (cat === "Assessments & Quizzes" ? isAssessmentItem(i) : i.strand === cat)
+                ).length;
                 return (
                   <button
                     key={cat}
@@ -1263,7 +1316,7 @@ export default function StudyCorner() {
               </div>
             </div>
 
-            {/* Learning area (subject) chips — pulled from items in the Assessments strand */}
+            {/* Learning area (subject) chips — pulled from assessment items using category field */}
             <div>
               <p className="text-[11px] text-gray-500 font-medium mb-1.5">Learning Area</p>
               <div className="flex flex-wrap gap-1.5">
@@ -1271,7 +1324,7 @@ export default function StudyCorner() {
                   const subjects = Array.from(
                     new Set(
                       allContent
-                        .filter((i) => i.strand === "Assessments & Quizzes")
+                        .filter((i) => isAssessmentItem(i))
                         .map((i) => i.subStrand || "General")
                     )
                   ).sort();

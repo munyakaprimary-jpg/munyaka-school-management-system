@@ -82,6 +82,10 @@ export function saveCustomMaterial(item: ContentItem): void {
     category: (item as any).category ?? item.strand,
   };
   localStorage.setItem(LS_KEY, JSON.stringify([enriched, ...existing]));
+  // Notify same-tab listeners (e.g., the StudyCorner page) that
+  // `custom_study_materials` was updated so they can refresh their state
+  // and the new material shows up immediately under the correct tab.
+  window.dispatchEvent(new CustomEvent("custom_study_materials_updated"));
 }
 
 /** Read a single stored custom material by id (helper for assessment view). */
@@ -372,14 +376,24 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
 
     // Persist to localStorage. When the user picks the "Assessments &
     // Quizzes" strand, the item's `strand` field already carries that exact
-    // value, so any consumer filtering by `category` or `strand ===
-    // "Assessments & Quizzes"` will see it. The legacy `category` alias
-    // is also included so older code paths keep working.
-    const lsPayload = { ...item, category: item.strand };
-    saveCustomMaterial(lsPayload as ContentItem);
+    // value. The `category` field is also explicitly set to mirror `strand`
+    // so the "Assessments & Quizzes" tab can filter by it strictly.
+    // When the modal is opened from the assessments tab, `category` is
+    // forcefully set to "Assessments & Quizzes" regardless of any other
+    // user changes.
+    const forcedCategory: StrandCategory =
+      preSelectedStrand === "Assessments & Quizzes"
+        ? "Assessments & Quizzes"
+        : item.strand;
+    const lsPayload: ContentItem = {
+      ...item,
+      strand: forcedCategory,
+      category: forcedCategory,
+    };
+    saveCustomMaterial(lsPayload);
     setIsSaving(false);
     setSaved(true);
-    onSave(item);
+    onSave(lsPayload);
 
     setTimeout(onClose, 1200);
   };
@@ -456,19 +470,33 @@ export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }:
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Learning Area / Subject <span className="text-red-500">*</span>
+                  {preSelectedStrand === "Assessments & Quizzes" && (
+                    <span className="ml-1.5 inline-flex items-center gap-1 normal-case font-normal text-[10px] px-1.5 py-0.5 rounded bg-rose-50 text-rose-600 border border-rose-200">
+                      🔒 Locked
+                    </span>
+                  )}
                 </label>
-                <select
-                  value={form.strand}
-                  onChange={(e) => set("strand", e.target.value)}
-                  className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer ${
-                    errors.strand ? "border-red-400 bg-red-50" : "border-gray-200"
-                  }`}
-                >
-                  <option value="">Select subject…</option>
-                  {strandCategories.map((cat) => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+                {preSelectedStrand === "Assessments & Quizzes" ? (
+                  // ── Locked read-only display when opened from Assessments tab ──
+                  <div className="w-full px-3.5 py-2.5 rounded-xl border border-rose-200 bg-rose-50/60 text-sm text-rose-800 font-semibold flex items-center gap-2">
+                    <Award size={14} className="text-rose-600" />
+                    Assessments & Quizzes
+                    <input type="hidden" value={form.strand} readOnly />
+                  </div>
+                ) : (
+                  <select
+                    value={form.strand}
+                    onChange={(e) => set("strand", e.target.value)}
+                    className={`w-full px-3.5 py-2.5 rounded-xl border text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer ${
+                      errors.strand ? "border-red-400 bg-red-50" : "border-gray-200"
+                    }`}
+                  >
+                    <option value="">Select subject…</option>
+                    {strandCategories.map((cat) => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                )}
                 {errors.strand && (
                   <p className="flex items-center gap-1 text-xs text-red-500">
                     <AlertCircle size={12} /> {errors.strand}
