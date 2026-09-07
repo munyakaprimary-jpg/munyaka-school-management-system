@@ -31,6 +31,11 @@ import {
   Image,
   FileSpreadsheet,
   Award,
+  Calculator,
+  Sprout,
+  BookHeart,
+  Wrench,
+  Palette,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
@@ -121,7 +126,7 @@ const strandMeta: Record<
   "Mathematical Activities": {
     color: "text-indigo-700",
     bg: "bg-indigo-50 border-indigo-200",
-    icon: <FlaskConical size={16} />,
+    icon: <Calculator size={16} />,
   },
   "Environmental Activities": {
     color: "text-green-700",
@@ -131,19 +136,65 @@ const strandMeta: Record<
   "Hygiene and Nutrition Activities": {
     color: "text-pink-700",
     bg: "bg-pink-50 border-pink-200",
-    icon: <BookOpen size={16} />,
+    icon: <Sprout size={16} />,
   },
   "Religious Education Activities": {
     color: "text-amber-700",
     bg: "bg-amber-50 border-amber-200",
-    icon: <BookOpen size={16} />,
+    icon: <BookHeart size={16} />,
   },
   "Movement and Creative Activities": {
     color: "text-purple-700",
     bg: "bg-purple-50 border-purple-200",
-    icon: <Award size={16} />,
+    icon: <Palette size={16} />,
+  },
+  // ── Upper Primary & Junior School Categories ────────────────────────────
+  "Science and Technology": {
+    color: "text-emerald-700",
+    bg: "bg-emerald-50 border-emerald-200",
+    icon: <FlaskConical size={16} />,
+  },
+  "Mathematics": {
+    color: "text-indigo-700",
+    bg: "bg-indigo-50 border-indigo-200",
+    icon: <Calculator size={16} />,
+  },
+  "Integrated Science": {
+    color: "text-teal-700",
+    bg: "bg-teal-50 border-teal-200",
+    icon: <FlaskConical size={16} />,
+  },
+  "Agriculture and Nutrition": {
+    color: "text-green-700",
+    bg: "bg-green-50 border-green-200",
+    icon: <Sprout size={16} />,
+  },
+  "Religious Education": {
+    color: "text-amber-700",
+    bg: "bg-amber-50 border-amber-200",
+    icon: <BookHeart size={16} />,
+  },
+  "Pre-Technical and Pre-Career Studies": {
+    color: "text-slate-700",
+    bg: "bg-slate-50 border-slate-200",
+    icon: <Wrench size={16} />,
+  },
+  "Creative Arts": {
+    color: "text-purple-700",
+    bg: "bg-purple-50 border-purple-200",
+    icon: <Palette size={16} />,
   },
 };
+
+// ─── Fallback icon for unknown categories ────────────────────────────────────
+const defaultStrandMeta = {
+  color: "text-gray-700",
+  bg: "bg-gray-50 border-gray-200",
+  icon: <BookOpen size={16} />,
+};
+
+const getStrandMeta = (strand: StrandCategory) =>
+  strandMeta[strand] ?? defaultStrandMeta;
 
 const difficultyColour = {
   beginner: "bg-green-100 text-green-700",
@@ -175,7 +226,7 @@ function ReaderModal({
   isDownloading?: boolean;
   onOpenAttachment?: (att: Attachment) => void;
 }) {
-  const meta = strandMeta[item.strand];
+  const meta = getStrandMeta(item.strand);
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
@@ -509,7 +560,7 @@ function ContentCard({
   onDownload?: () => void;
   onOpenAttachment?: (att: Attachment) => void;
 }) {
-  const meta = strandMeta[item.strand];
+  const meta = getStrandMeta(item.strand);
 
   return (
     <div
@@ -710,7 +761,7 @@ function FilterPills({
     <div className="flex flex-wrap gap-2">
       {categories.map((cat) => {
         const active = selected.includes(cat);
-        const meta = strandMeta[cat];
+        const meta = getStrandMeta(cat);
         return (
           <button
             key={cat}
@@ -938,7 +989,7 @@ export default function StudyCorner() {
                 All
               </button>
               {strandCategories.map((cat) => {
-                const meta = strandMeta[cat];
+                const meta = getStrandMeta(cat);
                 const active = selectedStrands.length === 1 && selectedStrands[0] === cat;
                 const count = allContent.filter((i) => i.strand === cat).length;
                 return (
@@ -1276,7 +1327,7 @@ export default function StudyCorner() {
             ) : (
               // Grouped by strand
               Object.entries(grouped).map(([strand, items]) => {
-                const meta = strandMeta[strand as StrandCategory];
+                const meta = getStrandMeta(strand as StrandCategory);
                 return (
                   <div key={strand}>
                     <div className="flex items-center gap-2 mb-4">
