@@ -49,8 +49,8 @@ import {
   downloadAttachment,
   formatBytes,
   attachmentIconKey,
-  type Attachment,
 } from "@/utils/attachmentHelpers";
+import type { Attachment } from "@/data/cbcStudyContent";
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const LS_BOOKMARKS = "studyCorner_bookmarks";
@@ -206,6 +206,32 @@ const strandMeta: Record<
     color: "text-cyan-700",
     bg: "bg-cyan-50 border-cyan-200",
     icon: <FlaskConical size={16} />,
+  },
+  // ── Upper Primary strands (Grades 4–6) ───────────────────────────────────
+  English: {
+    color: "text-blue-700",
+    bg: "bg-blue-50 border-blue-200",
+    icon: <Languages size={16} />,
+  },
+  "Kiswahili / Kenya Sign Language": {
+    color: "text-cyan-700",
+    bg: "bg-cyan-50 border-cyan-200",
+    icon: <Languages size={16} />,
+  },
+  "Social Studies": {
+    color: "text-blue-700",
+    bg: "bg-blue-50 border-blue-200",
+    icon: <Globe size={16} />,
+  },
+  "Physical and Health Education": {
+    color: "text-rose-700",
+    bg: "bg-rose-50 border-rose-200",
+    icon: <Sprout size={16} />,
+  },
+  "Pastoral Instruction Programme": {
+    color: "text-violet-700",
+    bg: "bg-violet-50 border-violet-200",
+    icon: <BookHeart size={16} />,
   },
 };
 
@@ -1347,7 +1373,7 @@ export default function StudyCorner() {
                               if (active) {
                                 setSelectedStrands(["Assessments & Quizzes"]);
                               } else {
-                                setSelectedStrands(["Assessments & Quizzes", sub]);
+                                setSelectedStrands(["Assessments & Quizzes", sub as StrandCategory]);
                               }
                             }}
                             className={`text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
