@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HashRouter } from "react-router-dom";
 import App from "./App.tsx";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import "./globals.css";
@@ -38,11 +39,11 @@ import { initializeStaffMaster } from "./services/staffMasterService";
 
 // ── Global error trap ───────────────────────────────────────────────────────
 // On Android WebView, an uncaught error in synchronous or promise code can
-// otherwise leave the screen blank with no feedback. We intercept both
-// window.onerror and window.onunhandledrejection and dump the message +
-// stack trace directly into the document body in red text so the failure
-// is visible to anyone (developer, support, end user) who can see the
-// screen.
+// otherwise leave the screen blank with no feedback. We assign a global
+// window.onerror handler that dumps the message and stack trace directly
+// into document.body as raw red text so the failure is visible to anyone
+// who can see the screen. A second unhandledrejection listener is added
+// to cover promise failures.
 const renderFatalError = (title: string, details: string) => {
   try {
     const safeTitle = String(title).replace(/[<>]/g, (ch) =>
@@ -51,8 +52,7 @@ const renderFatalError = (title: string, details: string) => {
     const safeDetails = String(details).replace(/[<>]/g, (ch) =>
       ch === "<" ? "&lt;" : "&gt;"
     );
-    // Preserve any pre-existing <h1>Loading Munyaka Portal...</h1> by
-    // prepending our error block above it instead of overwriting it.
+    // Raw red text fallback — must work even if the rest of the app is broken.
     const errorBlock = `
       <div style="
         font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
@@ -76,15 +76,27 @@ const renderFatalError = (title: string, details: string) => {
   }
 };
 
-window.addEventListener("error", (event) => {
-  // event.error is the original Error object; event.message is a string copy.
-  const err = event.error;
-  const message = err?.message || event.message || "Unknown error";
-  const stack = err?.stack || "(no stack trace available)";
+// window.onerror is a direct property assignment (not addEventListener) so
+// it acts as a single, top-priority safety net for any startup error.
+window.onerror = function (
+  _message: string | Event,
+  source?: string,
+  lineno?: number,
+  colno?: number,
+  error?: Error
+): boolean {
+  const message =
+    (typeof _message === "string" ? _message : "") ||
+    error?.message ||
+    "Unknown error";
+  const stack =
+    error?.stack || `(no stack trace — ${source}:${lineno}:${colno})`;
   // eslint-disable-next-line no-console
-  console.error("[window.error]", message, err);
+  console.error("[window.onerror]", message, error);
   renderFatalError("Uncaught error: " + message, stack);
-});
+  // Returning true suppresses the browser's default error dialog.
+  return true;
+};
 
 window.addEventListener("unhandledrejection", (event) => {
   const reason = event.reason;
@@ -231,15 +243,16 @@ const mountAppSafely = () => {
   }
 
   try {
-    // Wrap the entire app tree in the AppErrorBoundary so any unhandled
-    // exception during the very first paint is caught and the user sees
-    // the friendly fallback instead of a blank white screen on Android.
-    // The same boundary is also used inside App.tsx — doubling it here at
-    // the entry point protects against crashes that happen *before*
-    // App.tsx's tree mounts (e.g. inside an early provider or hook).
+    // Force HashRouter around the entire app tree. It must wrap App here
+    // (not inside App.tsx) so that any code running before React mounts
+    // — including synchronous storage reads in providers — is already
+    // inside a routing context. AppErrorBoundary remains the outermost
+    // layer to catch errors that escape the React tree itself.
     createRoot(rootEl).render(
       <AppErrorBoundary>
-        <App />
+        <HashRouter>
+          <App />
+        </HashRouter>
       </AppErrorBoundary>
     );
   } catch (err) {

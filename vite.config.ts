@@ -4,8 +4,9 @@ import path from "path";
 import dyadComponentTagger from '@dyad-sh/react-vite-component-tagger';
 
 export default defineConfig(() => ({
-  // Use relative base path so all bundled assets work from any sub-path or
-  // local file URL (critical for Capacitor / Android WebView file:// access).
+  // Force relative base path at the root of the config so all bundled
+  // assets work from any sub-path or local file URL (critical for
+  // Capacitor / Android WebView file:// access).
   base: "./",
   server: {
     host: "::",

@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { HashRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import { NotificationProvider } from "@/components/ui/notification-provider";
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -101,21 +101,22 @@ const LoadingFallback = () => (
  *
  * Provider hierarchy (top → bottom):
  *   1. AppErrorBoundary           — outermost boundary. Catches errors
- *                                    from BrowserRouter, AuthProvider,
+ *                                    from HashRouter, AuthProvider,
  *                                    and the inactivity-timeout hook so
  *                                    a single crash cannot kill the
  *                                    Android WebView process.
  *   2. QueryClientProvider        — React Query
- *   3. BrowserRouter              — MUST sit above AuthProvider because
+ *   3. HashRouter                 — enforced at app root in main.tsx;
+ *                                    must sit above AuthProvider because
  *   4. AuthProvider               — its useInactivityTimeout hook calls
  *   5. AuthGate                   — renders a loading spinner while the
  *                                    session hydrates from localStorage,
  *                                    preventing null-user / undefined-role
  *                                    crashes on first paint.
  *   6. NotificationProvider       —   useNavigate(); if AuthProvider is
- *   7. ThemeProvider               —   above BrowserRouter the hook throws
+ *   7. ThemeProvider              —   above HashRouter the hook throws
  *   8. TooltipProvider            —   the "useNavigate() may be used only
- *   9. Toaster / Sonner            —   in the context of a <Router>"
+ *   9. Toaster / Sonner           —   in the context of a <Router>"
  *                                    invariant on first render.
  *  10. <Routes />                 — application routes
  *
@@ -143,15 +144,14 @@ const App = () => {
   return (
     <AppErrorBoundary>
       <QueryClientProvider client={queryClient}>
-        <HashRouter>
-          <AuthProvider>
-            <AuthGate>
-              <NotificationProvider>
-                <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
-                  <TooltipProvider>
-                    <Toaster />
-                    <Sonner />
-                    <Routes>
+        <AuthProvider>
+          <AuthGate>
+            <NotificationProvider>
+              <ThemeProvider attribute="class" defaultTheme="light" enableSystem>
+                <TooltipProvider>
+                  <Toaster />
+                  <Sonner />
+                  <Routes>
                 {/* Public Routes */}
                 <Route path="/login" element={<Login />} />
                 <Route path="/portal" element={<ParentPortal />} />
@@ -231,9 +231,8 @@ const App = () => {
                                             </NotificationProvider>
                                           </AuthGate>
                                         </AuthProvider>
-                                      </HashRouter>
-                                    </QueryClientProvider>
-                                  </AppErrorBoundary>
+                                      </QueryClientProvider>
+                                    </AppErrorBoundary>
                                   );
                                 };
                                 
