@@ -165,7 +165,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
@@ -188,24 +189,29 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                 };
 
   const filteredMenu = menuItems.filter(item => {
-      if (!user) return false;
-      const role = user.role ?? '';
-      const roleLower = role.toLowerCase();
-
-      // Global items are visible to every authenticated user.
-      if (item.global) return true;
-
-      // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
-      // EXCEPT owner-only items (e.g. Payment & Subscriptions).
-      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
-          if (isAdminRole) {
-        // Exclude items that are strictly owner-only (roles = ['owner'] only).
-        const itemRoles = item.roles ?? [];
-        if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-          return false;
+        if (!user) return false;
+        const role = user.role ?? '';
+        const roleLower = role.toLowerCase();
+  
+        // Bypass role filtering for Study Corner
+        if (item.path === '/study-corner') {
+          return true;
         }
-        return true;
-      }
+  
+        // Global items are visible to every authenticated user.
+        if (item.global) return true;
+  
+        // ADMIN (and the legacy "super_admin" alias) always sees every sidebar item
+        // EXCEPT owner-only items (e.g. Payment & Subscriptions).
+        const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
+            if (isAdminRole) {
+          // Exclude items that are strictly owner-only (roles = ['owner'] only).
+          const itemRoles = item.roles ?? [];
+          if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
+            return false;
+          }
+          return true;
+        }
 
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
                   // plus global items (Games Hub).
@@ -259,15 +265,18 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
             { icon: Database, label: 'Central', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
             { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
             { icon: Gamepad2, label: 'Games', path: '/games', global: true },
-            { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
+                        { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+                        { icon: Wifi, label: 'LAN Server', path: '/lan-config', roles: ['owner'] },
     ].filter(item => {
-      if (!user) return false;
-      if (item.global) return true;
-      const roleLower = user.role?.toLowerCase() ?? '';
-      // Treat super_admin as admin for bottom-nav role matching
-      const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
-      return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
-        });
+          if (!user) return false;
+          if (item.global) return true;
+          // Bypass role filtering for Study Corner
+          if (item.path === '/study-corner') return true;
+          const roleLower = user.role?.toLowerCase() ?? '';
+          // Treat super_admin as admin for bottom-nav role matching
+          const effectiveRole = roleLower === 'super_admin' ? 'admin' : roleLower;
+          return item.roles.map(r => r.toLowerCase()).includes(effectiveRole);
+            });
 
   return (
     <div className={cn("flex h-screen w-full overflow-hidden bg-slate-50 dark:bg-slate-950", isDarkMode ? "dark" : "")}>

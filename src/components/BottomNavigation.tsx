@@ -14,6 +14,7 @@ import {
   GraduationCap,
   CreditCard,
   Server,
+  BookOpen,
     } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -38,6 +39,7 @@ const NAV_ITEMS: NavItem[] = [
   { icon: Key, label: 'Licenses', path: '/licenses', roles: ['admin', 'head_teacher'] },
   { icon: Database, label: 'Central Data', path: '/central-data', roles: ['admin', 'head_teacher', 'teacher', 'bursar', 'parent', 'student'] },
   { icon: GraduationCap, label: 'Promote', path: '/promote', roles: ['admin', 'head_teacher'] },
+  { icon: BookOpen, label: 'Study', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
 ];
 
 export const BottomNavigation = () => {

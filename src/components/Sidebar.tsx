@@ -130,8 +130,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
     { icon: Target, label: 'Practical Competencies', path: '/practical-competencies', roles: ['admin', 'head_teacher', 'teacher'] },
     { icon: FolderHeart, label: 'Portfolios', path: '/portfolio', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
     { icon: Library, label: 'Library & E-Resources', path: '/library', roles: ['admin', 'head_teacher', 'teacher', 'student'] },
-    { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
-    { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
+        { icon: BookOpen, label: 'Study Corner', path: '/study-corner', roles: ['admin', 'head_teacher', 'teacher', 'student', 'parent', 'librarian'] },
+        { icon: Box, label: 'Tools & Inventory', path: '/inventory', roles: ['admin', 'head_teacher'] },
     { icon: Wallet, label: 'Fees & Finance', path: '/fees', roles: ['admin', 'head_teacher', 'bursar', 'parent'] },
     { icon: FileText, label: 'Report Cards', path: '/reports', roles: ['admin', 'head_teacher', 'teacher', 'parent', 'student'] },
     { icon: Settings, label: 'Settings', path: '/settings', roles: ['admin', 'head_teacher', 'owner'] },
@@ -154,14 +154,18 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       // always sees every sidebar item EXCEPT owner-only items (e.g. Payment & Subscriptions).
       const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
               if (isAdminRole) {
-                return menuItems.filter(item => {
-                  // Exclude items that are strictly owner-only (roles = ['owner'] only).
-                  const itemRoles = item.roles ?? [];
-                  if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-                    return false;
-                  }
-                  return true;
-                }).map(item => {
+                              return menuItems.filter(item => {
+                                // Bypass role filtering for Study Corner
+                                if (item.path === '/study-corner') {
+                                  return true;
+                                }
+                                // Exclude items that are strictly owner-only (roles = ['owner'] only).
+                                const itemRoles = item.roles ?? [];
+                                if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
+                                  return false;
+                                }
+                                return true;
+                              }).map(item => {
                   if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
                   return item;
                 });
@@ -170,10 +174,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       // OWNER is billing-only — gets Dashboard + Payment & Subscriptions +
             // Profile Settings, plus global items (Games Hub).
       if (roleLower === 'owner') {
-        const roleFiltered = menuItems.filter(item => {
-          if (item.global) return true;
-          return item.roles.map(r => r.toLowerCase()).includes('owner');
-        });
+              const roleFiltered = menuItems.filter(item => {
+                // Bypass role filtering for Study Corner
+                if (item.path === '/study-corner') {
+                  return true;
+                }
+                if (item.global) return true;
+                return item.roles.map(r => r.toLowerCase()).includes('owner');
+              });
         // Ensure Dashboard is always present.
         const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
           ? [dashboardItem, ...roleFiltered]
@@ -205,11 +213,15 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
       // For teacher role, show "Teacher's Dashboard" label
       if (roleLower === 'teacher') {
-        return menuItems.filter(item => {
-          if (item.global) return true;
-          if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
-          return true;
-        }).map(item => {
+              return menuItems.filter(item => {
+                // Bypass role filtering for Study Corner
+                if (item.path === '/study-corner') {
+                  return true;
+                }
+                if (item.global) return true;
+                if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+                return true;
+              }).map(item => {
           if (item.path === '/') {
             return { ...item, label: "Teacher's Dashboard" };
           }
@@ -218,16 +230,20 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
       }
 
       return menuItems.filter(item => {
-        // Global items are visible to every authenticated user.
-        if (item.global) return true;
-        // Check if user has the required role.  Match either the literal role
-        // or the legacy "super_admin" alias so persisted sessions keep working.
-        const itemRoles = item.roles.map(r => r.toLowerCase());
-        const roleMatches = itemRoles.includes(roleLower) ||
-          (roleLower === 'super_admin' && itemRoles.includes('admin'));
-        if (!roleMatches) return false;
-        return true;
-      });
+              // Bypass role filtering for Study Corner
+              if (item.path === '/study-corner') {
+                return true;
+              }
+              // Global items are visible to every authenticated user.
+              if (item.global) return true;
+              // Check if user has the required role.  Match either the literal role
+              // or the legacy "super_admin" alias so persisted sessions keep working.
+              const itemRoles = item.roles.map(r => r.toLowerCase());
+              const roleMatches = itemRoles.includes(roleLower) ||
+                (roleLower === 'super_admin' && itemRoles.includes('admin'));
+              if (!roleMatches) return false;
+              return true;
+            });
     }, [user?.role]);
 
   // OWNER is BILLING-ONLY: gets Dashboard, Payments, Profile Settings,
