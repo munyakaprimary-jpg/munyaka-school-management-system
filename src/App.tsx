@@ -65,6 +65,9 @@ import TeacherGradingPage from "./pages/TeacherGradingPage";
 import ExamCreatorPage from "./pages/ExamCreatorPage";
 import SetExamsListPage from "./pages/SetExamsListPage";
 import MarkedScriptsPage from "./pages/MarkedScriptsPage";
+import Communication from "./pages/Communication";
+import Library from "./pages/Library";
+import Inventory from "./pages/Inventory";
 import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 
