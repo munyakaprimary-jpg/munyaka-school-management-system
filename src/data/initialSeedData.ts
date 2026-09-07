@@ -15,29 +15,10 @@ export const INITIAL_SEED_DATA = {
   school: "MUNYAKA PRIMARY AND JUNIOR SCHOOL",
 
   // ── Students / Learners ───────────────────────────────────────────────────────
-  // Sample learners pre-seeded so the APK is immediately usable for demos.
-  //
-  // NOTE: Legacy MUN-XXX placeholders have been cleared from both `admNo`
-  //       and `assessmentNo`.  `assessmentNo` is intentionally "" so the
-  //       Learners table renders "—" until a real KNEC/NEMIS number is
-  //       entered.  The school-admission number (MUN-FAMILY-SEQ/YEAR)
-  //       is assigned automatically by the one-time backfill in App.tsx.
-  students: [
-    { id: "stu-001", admNo: "", assessmentNo: "", name: "Aisha Wanjiku Mwangi",    grade: "Grade 4", stream: "Blue",  gender: "Female", guardian: "James Mwangi",    phone: "+254711001001", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-002", admNo: "", assessmentNo: "", name: "Brian Kipkorir Cheruiyot", grade: "Grade 5", stream: "Alpha", gender: "Male",   guardian: "David Cheruiyot", phone: "+254711002002", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-003", admNo: "", assessmentNo: "", name: "Cynthia Nafula Ochieng",   grade: "Grade 6", stream: "Yellow", gender: "Female", guardian: "Peter Ochieng",   phone: "+254711003003", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-004", admNo: "", assessmentNo: "", name: "Daniel Kipng'eno Ruto",   grade: "Grade 7", stream: "MERCURY", gender: "Male", guardian: "Samuel Ruto",    phone: "+254711004004", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-005", admNo: "", assessmentNo: "", name: "Evelyn Adhiambo Otieno",   grade: "Grade 3", stream: "Green",  gender: "Female", guardian: "Joseph Otieno",  phone: "+254711005005", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-006", admNo: "", assessmentNo: "", name: "Faith Wanjiru Kamau",      grade: "Grade 8", stream: "Alpha",  gender: "Female", guardian: "George Kamau",   phone: "+254711006006", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-007", admNo: "", assessmentNo: "", name: "George Kiptoo Letting",    grade: "Grade 4", stream: "Blue",   gender: "Male",   guardian: "Paul Letting",   phone: "+254711007007", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-008", admNo: "", assessmentNo: "", name: "Happiness Muthoni Karanja",grade: "Grade 9", stream: "Alpha",  gender: "Female", guardian: "Peter Karanja",  phone: "+254711008008", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-009", admNo: "", assessmentNo: "", name: "Ian Kibet Rotich",         grade: "Grade 5", stream: "Beta",   gender: "Male",   guardian: "Robert Rotich",  phone: "+254711009009", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-010", admNo: "", assessmentNo: "", name: "Joyce Chepkoech Kirui",    grade: "Grade 6", stream: "Green",  gender: "Female", guardian: "Sam Kirui",      phone: "+254711010010", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-011", admNo: "", assessmentNo: "", name: "Kevin Kipng'etich Yego",   grade: "Grade 7", stream: "VENUS",  gender: "Male",   guardian: "John Yego",     phone: "+254711011011", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-012", admNo: "", assessmentNo: "", name: "Laura Achieng Opiyo",     grade: "PP1",     stream: "Yellow", gender: "Female", guardian: "Francis Opiyo",  phone: "+254711012012", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-013", admNo: "", assessmentNo: "", name: "Moses Kiptanui Bett",     grade: "Grade 2", stream: "Green",  gender: "Male",   guardian: "Elijah Bett",   phone: "+254711013013", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-014", admNo: "", assessmentNo: "", name: "Nancy Wambui Njoroge",    grade: "Grade 1", stream: "Blue",   gender: "Female", guardian: "Simon Njoroge",  phone: "+254711014014", status: "Active", schoolId: "munyaka-sc" },
-  ],
+  // EMPTY by default. The app boots with zero registered students; the
+  // Learners page reads exclusively from localStorage and shows the empty
+  // state until an admin registers the first learner through the UI.
+  students: [],
 
   // ── Staff / Teachers ──────────────────────────────────────────────────────
   // Sample staff pre-seeded for immediate APK usability.
@@ -82,33 +63,13 @@ export const INITIAL_SEED_DATA = {
   ],
 
   // ── Transactions ──────────────────────────────────────────────────────────
-  // Sample fee payment transactions.
-  transactions: [
-    { id: "tx-001", studentId: "stu-001", studentName: "Aisha Wanjiku Mwangi",    amount: 15000, method: "M-PESA", ref: "MG7K8H2J", category: "Term 1 Fees", date: "2026-02-10", status: "Completed", type: "payment" },
-    { id: "tx-002", studentId: "stu-002", studentName: "Brian Kipkorir Cheruiyot", amount: 10000, method: "M-PESA", ref: "NG3P9L4M", category: "Term 1 Fees", date: "2026-02-15", status: "Completed", type: "payment" },
-    { id: "tx-003", studentId: "stu-004", studentName: "Daniel Kipng'eno Ruto",   amount: 18000, method: "Bank Transfer", ref: "BK20260201", category: "Term 1 Fees", date: "2026-01-30", status: "Completed", type: "payment" },
-    { id: "tx-004", studentId: "stu-005", studentName: "Evelyn Adhiambo Otieno",  amount: 12000, method: "M-PESA", ref: "PG1R6W8N", category: "Term 1 Fees", date: "2026-02-05", status: "Completed", type: "payment" },
-    { id: "tx-005", studentId: "stu-007", studentName: "George Kiptoo Letting",   amount: 15000, method: "Cash", ref: "CSH001", category: "Term 1 Fees", date: "2026-02-01", status: "Completed", type: "payment" },
-    { id: "tx-006", studentId: "stu-010", studentName: "Joyce Chepkoech Kirui",  amount: 15000, method: "M-PESA", ref: "RG9T2V5X", category: "Term 1 Fees", date: "2026-01-28", status: "Completed", type: "payment" },
-    { id: "tx-007", studentId: "stu-011", studentName: "Kevin Kipng'etich Yego", amount: 18000, method: "Bank Transfer", ref: "BK20260208", category: "Term 1 Fees", date: "2026-02-08", status: "Completed", type: "payment" },
-    { id: "tx-008", studentId: "stu-012", studentName: "Laura Achieng Opiyo",    amount: 8000,  method: "M-PESA", ref: "TG4Q7Y1Z", category: "Term 1 Fees", date: "2026-02-20", status: "Completed", type: "payment" },
-    { id: "tx-009", studentId: "stu-014", studentName: "Nancy Wambui Njoroge",   amount: 12000, method: "M-PESA", ref: "UG2M5A3B", category: "Term 1 Fees", date: "2026-02-19", status: "Completed", type: "payment" },
-    { id: "tx-010", studentId: "stu-006", studentName: "Faith Wanjiru Kamau",    amount: 9000,  method: "M-PESA", ref: "VH8N6C7D", category: "Term 1 Fees", date: "2026-02-12", status: "Completed", type: "payment" },
-    { id: "tx-011", studentId: "stu-009", studentName: "Ian Kibet Rotich",       amount: 7500,  method: "M-PESA", ref: "WJ5P9E2F", category: "Term 1 Fees", date: "2026-02-18", status: "Completed", type: "payment" },
-    { id: "tx-012", studentId: "stu-013", studentName: "Moses Kiptanui Bett",   amount: 4000,  method: "Cash", ref: "CSH002", category: "Term 1 Fees", date: "2026-02-22", status: "Completed", type: "payment" },
-  ],
+  // Empty by default — transactions are recorded through the Fees page.
+  transactions: [],
 
   // ── Attendance Records ────────────────────────────────────────────────────
-  // Sample attendance snapshot for today.
-  attendance: (() => {
-    const today = new Date().toISOString().slice(0, 10);
-    const present: Record<string, string> = {};
-    const seedIds = ["stu-001","stu-002","stu-004","stu-005","stu-007","stu-010","stu-011","stu-012","stu-014"];
-    seedIds.forEach((id) => {
-      present[id] = `${today}T08:05:00.000Z`;
-    });
-    return { [today]: { date: today, present, late: {}, absent: ["stu-003","stu-006","stu-008","stu-009","stu-013"] } };
-  })(),
+  // Empty by default — attendance records are created when teachers submit
+  // the daily register through the Attendance page.
+  attendance: {},
 
   // ── Grades / Classes ──────────────────────────────────────────────────────
   // Seeded with grade + stream structure so the app has a starting
@@ -310,13 +271,13 @@ export const INITIAL_SEED_DATA = {
   },
 
   // ── Portal Statistics Baseline ───────────────────────────────────────────────
-  // Stats reflect the seeded sample dataset.
+  // Zero baseline: all counts are driven from live localStorage reads.
   portalStats: {
-    totalStudents: 14,
-    totalTeachers: 5,
-    juniorSchoolCount: 4,
-    feesCollected: 161500,
-    todayAttendanceRate: 64,
+    totalStudents: 0,
+    totalTeachers: 0,
+    juniorSchoolCount: 0,
+    feesCollected: 0,
+    todayAttendanceRate: 0,
     lastUpdated: new Date().toISOString(),
   },
 };

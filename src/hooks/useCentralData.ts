@@ -6,7 +6,6 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { useState, useEffect, useCallback, useMemo } from 'react';
-import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { lsSet, notifyDataChanged as fireDataChanged, lsRead } from '@/utils/storage';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 import {
@@ -160,12 +159,9 @@ const isActiveRecord = (row: { isArchived?: boolean; deletedAt?: string }): bool
 const getLearners = (): Learner[] => {
   const ls = getLocalStorage();
   const fromLS = tryParse<Learner[]>(ls?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-  if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
-  const seedStudents = INITIAL_SEED_DATA?.students;
-  if (Array.isArray(seedStudents) && seedStudents.length > 0) {
-    return seedStudents as unknown as Learner[];
-  }
-  return [];
+  // Pure localStorage read — no seed fallback. The empty array is the
+  // authoritative answer when the store has never been written to.
+  return Array.isArray(fromLS) ? fromLS : [];
 };
 
 const getTeachers = (): Teacher[] => {
@@ -180,10 +176,7 @@ const getTeachers = (): Teacher[] => {
   if (Array.isArray(fromLS) && fromLS.length > 0) return fromLS;
   const fromFallback = tryParse<Teacher[]>(ls?.getItem(STORAGE_KEYS.TEACHERS_FALLBACK) ?? null);
   if (Array.isArray(fromFallback) && fromFallback.length > 0) return fromFallback;
-  const seedStaff = INITIAL_SEED_DATA?.staff;
-  if (Array.isArray(seedStaff) && seedStaff.length > 0) {
-    return seedStaff as unknown as Teacher[];
-  }
+  // Pure localStorage read — no seed fallback.
   return [];
 };
 
@@ -293,16 +286,12 @@ const computeStats = (): CentralDataStats => {
     };
   } catch (err) {
     console.error('useCentralData compute error:', err);
-    let fallbackStudents = 0;
-    let fallbackTeachers = 0;
-    try {
-      if (Array.isArray(INITIAL_SEED_DATA?.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
-      if (Array.isArray(INITIAL_SEED_DATA?.staff))    fallbackTeachers  = INITIAL_SEED_DATA?.staff?.length ?? 0;
-    } catch { /* ignore */ }
+    // On error, fall back to zero counts. We never read the seed dataset
+    // for fallback metrics — the app must reflect real localStorage state.
     return {
-      totalStudents: fallbackStudents,
-      totalTeachers: fallbackTeachers,
-      activeTeacherCount: fallbackTeachers,
+      totalStudents: 0,
+      totalTeachers: 0,
+      activeTeacherCount: 0,
       pendingTeacherCount: 0,
       categorizedMetrics: undefined,
       todayAttendanceRate: 0,

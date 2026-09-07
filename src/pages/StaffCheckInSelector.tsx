@@ -7,7 +7,6 @@ import {
   MapPin, User, Moon, Sun, Sparkles, Search, X, Briefcase,
 } from 'lucide-react';
 import { Card } from '@/components/ui/card';
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 
 interface DirectoryStaff {
   id: string;
@@ -129,13 +128,12 @@ const StaffCheckInSelector = () => {
         } catch {
           continue;
         }
-      }
+    }
 
-      // Fallback to seed data
-      if (INITIAL_SEED_DATA?.staff && Array.isArray(INITIAL_SEED_DATA.staff)) {
-        setStaffDirectory(INITIAL_SEED_DATA.staff);
-      }
-    };
+    // No localStorage keys found — leave staffDirectory empty.
+    // (Previously fell back to INITIAL_SEED_DATA, but that path is now
+    //  disconnected: staff start at zero and are added through the UI.)
+  };
 
     loadFromKeys();
   }, []);

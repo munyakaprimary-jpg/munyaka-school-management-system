@@ -39,17 +39,14 @@ export function initializeAppStorage(): void {
     // keys that older code paths may read from.
     // All lsSet calls are already try-catch wrapped internally.
 
-    // Students / Learners
-    if (Array.isArray(INITIAL_SEED_DATA?.students) && INITIAL_SEED_DATA.students.length > 0) {
-      lsSet('school_learners_data', INITIAL_SEED_DATA.students);
-      lsSet('munyaka_students', INITIAL_SEED_DATA.students);
-    }
+    // Students / Learners — NEVER pre-seed. The app boots with an empty roster.
+    lsSet('school_learners_data', []);
+    lsSet('munyaka_students', []);
 
-    // Staff
-    if (Array.isArray(INITIAL_SEED_DATA?.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-      lsSet('munyaka_staff_directory', INITIAL_SEED_DATA.staff);
-      lsSet('munyaka_staff', INITIAL_SEED_DATA.staff);
-    }
+    // Staff — also starts empty. Staff are added via pre-registration and
+    // the Add Staff modal (stored in the staff master service, not here).
+    lsSet('munyaka_staff_directory', []);
+    lsSet('munyaka_staff', []);
 
     // Staff Pre-Registration
     if (Array.isArray(INITIAL_SEED_DATA?.staffPrereg) && INITIAL_SEED_DATA.staffPrereg.length > 0) {

@@ -1,5 +1,4 @@
 import { useState, useEffect, useCallback } from 'react';
-import { INITIAL_SEED_DATA } from '../data/initialSeedData';
 import { getLocalStorage, tryParse } from '@/utils/storageUtils';
 import { STAFF_MASTER_KEY, getStaffMaster } from '@/services/staffMasterService';
 
@@ -133,12 +132,8 @@ const computeStats = (): DashboardStats => {
     // ── 1. Learners ─────────────────────────────────────────────────────────
     const lsForRead = getLocalStorage();
     const learnersFromLS = tryParse<Learner[]>(lsForRead?.getItem(STORAGE_KEYS.LEARNERS) ?? null);
-    let learners: Learner[] = [];
-    if (Array.isArray(learnersFromLS) && learnersFromLS.length > 0) {
-      learners = learnersFromLS;
-    } else if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
-      learners = INITIAL_SEED_DATA.students as unknown as Learner[];
-    }
+    // Pure localStorage read — no seed fallback. Empty array = zero learners.
+    const learners: Learner[] = Array.isArray(learnersFromLS) ? learnersFromLS : [];
 
     const totalStudents = learners.filter((l) => {
       if (!l) return false;
@@ -219,17 +214,10 @@ const computeStats = (): DashboardStats => {
     };
   } catch (err) {
     console.error('useDashboardData compute error:', err);
-
-    let fallbackStudents = 0;
-    let fallbackTeachers = 0;
-    try {
-      if (Array.isArray(INITIAL_SEED_DATA.students)) fallbackStudents = INITIAL_SEED_DATA.students.length;
-      if (Array.isArray(INITIAL_SEED_DATA.staff))    fallbackTeachers  = INITIAL_SEED_DATA.staff.length;
-    } catch { /* ignore */ }
-
+    // On error, return zero counts — never fall back to seed data.
     return {
-      totalStudents: fallbackStudents,
-      totalTeachers: fallbackTeachers,
+      totalStudents: 0,
+      totalTeachers: 0,
       todayAttendanceRate: 0,
       isLoading: false,
     };

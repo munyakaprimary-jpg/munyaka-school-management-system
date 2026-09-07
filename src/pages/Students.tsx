@@ -9,7 +9,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAcademicCalendar, formatTermBadge } from '@/hooks/useAcademicCalendar';
-import { INITIAL_SEED_DATA } from '@/data/initialSeedData';
 import { useFileDownload } from '@/utils/fileDownloader';
 import RegisterModal from '@/components/students/RegisterModal';
 import AdminPinModal from '@/components/students/AdminPinModal';
@@ -78,8 +77,6 @@ interface LearnerRowCompat {
   feeBalance?: number;
   feeHistory?: unknown[];
 }
-
-const DEFAULT_LEARNERS: LearnerRowCompat[] = INITIAL_SEED_DATA.students as LearnerRowCompat[];
 
 // Key for persisting filter state in localStorage
 const FILTER_STATE_KEY = 'learners_filter_state';

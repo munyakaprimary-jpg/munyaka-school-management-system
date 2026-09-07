@@ -330,17 +330,15 @@ export function hydrateFromSeed(): void {
     }
   };
 
-  // Learners
-  if (Array.isArray(INITIAL_SEED_DATA.students) && INITIAL_SEED_DATA.students.length > 0) {
-    seedIfAbsent('school_learners_data', INITIAL_SEED_DATA.students);
-    seedIfAbsent('munyaka_students', INITIAL_SEED_DATA.students);
-  }
+  // Learners — NEVER pre-seed. The store starts empty and is populated
+  // only when an admin registers a learner through the UI.
+  seedIfAbsent('school_learners_data', []);
+  seedIfAbsent('munyaka_students', []);
 
-  // Staff
-  if (Array.isArray(INITIAL_SEED_DATA.staff) && INITIAL_SEED_DATA.staff.length > 0) {
-    seedIfAbsent('munyaka_staff_directory', INITIAL_SEED_DATA.staff);
-    seedIfAbsent('munyaka_staff', INITIAL_SEED_DATA.staff);
-  }
+  // Staff — also starts empty. Staff are populated through the Staff
+  // pre-registration flow and the Add Staff modal.
+  seedIfAbsent('munyaka_staff_directory', []);
+  seedIfAbsent('munyaka_staff', []);
 
   // Staff pre-registration
   if (Array.isArray(INITIAL_SEED_DATA.staffPrereg)) {
