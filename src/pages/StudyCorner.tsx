@@ -656,7 +656,7 @@ function ContentCard({
               onOpenAttachment?.(item.attachment!);
             }}
             className="mt-3 w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-indigo-200 bg-indigo-50/60 hover:bg-indigo-100 text-left transition-colors"
-            title="Open attached file"
+            title="Open / Download Document"
           >
             <span className="shrink-0 w-8 h-8 rounded-lg bg-white flex items-center justify-center text-indigo-600 border border-indigo-200">
               {attachmentIconKey(item.attachment) === "pdf" ? (
@@ -674,7 +674,9 @@ function ContentCard({
             <span className="flex-1 min-w-0">
               <span className="block text-xs font-semibold text-indigo-700 truncate">
                 <Paperclip size={11} className="inline -mt-0.5 mr-1" />
-                Attached file
+                {item.strand === "Assessments & Quizzes"
+                  ? "Open / Download Document"
+                  : "Attached file"}
               </span>
               <span className="block text-[11px] text-gray-500 truncate">
                 {item.attachment.name} · {formatBytes(item.attachment.size)}
@@ -820,6 +822,7 @@ export default function StudyCorner() {
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [preSelectedStrand, setPreSelectedStrand] = useState<StrandCategory | undefined>(undefined);
   const [isDownloading, setIsDownloading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -986,7 +989,10 @@ export default function StudyCorner() {
           {/* Add Material — Admin / Teacher only */}
             {isAdminOrTeacher && (
               <button
-                onClick={() => setShowAddModal(true)}
+                onClick={() => {
+                  setPreSelectedStrand(undefined);
+                  setShowAddModal(true);
+                }}
                 className="flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors"
               >
                 <PlusCircle size={16} />
@@ -1201,11 +1207,27 @@ export default function StudyCorner() {
         {/* Assessment-specific filters — Grade & Subject chips when the Assessments tab is active */}
         {selectedStrands.length === 1 && selectedStrands[0] === "Assessments & Quizzes" && (
           <div className="bg-rose-50/40 border border-rose-200 rounded-xl p-4 space-y-3">
-            <div className="flex items-center gap-2">
-              <Award size={14} className="text-rose-600" />
-              <p className="text-xs font-medium text-rose-700 uppercase tracking-wide">
-                Filter Assessments
-              </p>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Award size={14} className="text-rose-600" />
+                <p className="text-xs font-medium text-rose-700 uppercase tracking-wide">
+                  Filter Assessments
+                </p>
+              </div>
+
+              {/* Prominent Upload Assessment / Quiz Document button */}
+              {isAdminOrTeacher && (
+                <button
+                  onClick={() => {
+                    setPreSelectedStrand("Assessments & Quizzes");
+                    setShowAddModal(true);
+                  }}
+                  className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                >
+                  <PlusCircle size={14} />
+                  + Upload Assessment / Quiz Document
+                </button>
+              )}
             </div>
 
             {/* Grade chips */}
@@ -1349,16 +1371,32 @@ export default function StudyCorner() {
               // Grouped by strand
               Object.entries(grouped).map(([strand, items]) => {
                 const meta = getStrandMeta(strand as StrandCategory);
+                const isAssessmentsStrand = strand === "Assessments & Quizzes";
                 return (
                   <div key={strand}>
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className={meta.color}>{meta.icon}</span>
-                      <h2 className={`text-sm font-bold ${meta.color} uppercase tracking-wide`}>
-                        {strand}
-                      </h2>
-                      <span className="text-xs text-gray-400 font-medium">
-                        ({items.length} {items.length === 1 ? "topic" : "topics"})
-                      </span>
+                    <div className="flex items-center justify-between gap-2 mb-4 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <span className={meta.color}>{meta.icon}</span>
+                        <h2 className={`text-sm font-bold ${meta.color} uppercase tracking-wide`}>
+                          {strand}
+                        </h2>
+                        <span className="text-xs text-gray-400 font-medium">
+                          ({items.length} {items.length === 1 ? "topic" : "topics"})
+                        </span>
+                      </div>
+                      {/* Upload button visible only for Assessments & Quizzes strand */}
+                      {isAdminOrTeacher && isAssessmentsStrand && (
+                        <button
+                          onClick={() => {
+                            setPreSelectedStrand("Assessments & Quizzes");
+                            setShowAddModal(true);
+                          }}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-semibold shadow-sm transition-colors"
+                        >
+                          <PlusCircle size={13} />
+                          + Upload Assessment
+                        </button>
+                      )}
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       {items.map((item) => (
@@ -1402,8 +1440,12 @@ export default function StudyCorner() {
       {/* Add Material Modal */}
       {showAddModal && (
         <AddMaterialModal
-          onClose={() => setShowAddModal(false)}
+          onClose={() => {
+            setShowAddModal(false);
+            setPreSelectedStrand(undefined);
+          }}
           onSave={handleCustomSave}
+          preSelectedStrand={preSelectedStrand}
         />
       )}
     </div>

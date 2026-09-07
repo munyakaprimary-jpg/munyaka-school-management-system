@@ -106,19 +106,21 @@ function slugify(str: string): string {
 interface AddMaterialModalProps {
   onClose: () => void;
   onSave: (item: ContentItem) => void;
+  /** When provided, pre-selects this strand and sets content type to "assessment". */
+  preSelectedStrand?: StrandCategory;
 }
 
-export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalProps) {
+export default function AddMaterialModal({ onClose, onSave, preSelectedStrand }: AddMaterialModalProps) {
   const { user } = useAuth();
   const isAdminOrTeacher =
     user?.role === "admin" || user?.role === "head_teacher" || user?.role === "teacher";
 
   const [form, setForm] = useState<NewMaterialForm>({
     title: "",
-    strand: "",
+    strand: preSelectedStrand ?? "",
     grade: "",
     subStrand: "",
-    contentType: "notes",
+    contentType: preSelectedStrand ? "assessment" : "notes",
     body: "",
     attachment: undefined,
     assessmentType: undefined,
@@ -249,7 +251,9 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     if (!form.strand) next.strand = "Please select a Learning Area";
     if (!form.grade) next.grade = "Please select a Grade Level";
     // Body is required only when no attachment is present
-    if (!form.body.trim() && !form.attachment) {
+    // For assessments with a document file, body is always optional
+    const needsBody = !form.attachment && !(isAssessment || effectiveContentType === "assessment");
+    if (!form.body.trim() && needsBody) {
       next.body = "Body / Lesson Notes are required (or upload an attachment instead)";
     }
     setErrors(next);
@@ -262,10 +266,13 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
     // If a file is uploaded but body is empty, auto-fill with a friendly
     // placeholder so the material has a meaningful summary / notes.
+    const isAssessmentStrand = form.strand === "Assessments & Quizzes" || form.contentType === "assessment";
     const effectiveBody =
       form.body.trim() ||
       (form.attachment
-        ? `Document file attached: ${form.attachment.name}`
+        ? isAssessmentStrand
+          ? `Attached assessment document: ${form.attachment.name}`
+          : `Document file attached: ${form.attachment.name}`
         : "");
 
     const gradeNum = form.grade as number;
@@ -381,14 +388,26 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
       <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl flex flex-col">
         {/* Header */}
-        <div className="sticky top-0 z-10 flex items-center justify-between px-6 py-4 bg-indigo-600 rounded-t-2xl shrink-0">
+        <div className={`sticky top-0 z-10 flex items-center justify-between px-6 py-4 rounded-t-2xl shrink-0 ${
+          preSelectedStrand === "Assessments & Quizzes"
+            ? "bg-rose-600"
+            : "bg-indigo-600"
+        }`}>
           <div className="flex items-center gap-2.5">
             <div className="p-1.5 rounded-lg bg-white/20">
-              <BookOpen size={18} className="text-white" />
+              {preSelectedStrand === "Assessments & Quizzes" ? (
+                <Award size={18} className="text-white" />
+              ) : (
+                <BookOpen size={18} className="text-white" />
+              )}
             </div>
             <div>
-              <h2 className="text-base font-bold text-white">Add Study Material</h2>
-              <p className="text-xs text-indigo-200">
+              <h2 className="text-base font-bold text-white">
+                {preSelectedStrand === "Assessments & Quizzes"
+                  ? "Upload Assessment / Quiz Document"
+                  : "Add Study Material"}
+              </h2>
+              <p className="text-xs text-white/80">
                 {isAdminOrTeacher ? "Administrator" : "Teacher"} · Study Corner
               </p>
             </div>
@@ -842,7 +861,11 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
             <Button
               onClick={handleSave}
               disabled={isSaving}
-              className="ml-auto flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-xl px-5 py-2.5 text-sm shadow-sm"
+              className={`ml-auto flex items-center gap-2 font-semibold rounded-xl px-5 py-2.5 text-sm shadow-sm ${
+                preSelectedStrand === "Assessments & Quizzes"
+                  ? "bg-rose-600 hover:bg-rose-700 text-white"
+                  : "bg-indigo-600 hover:bg-indigo-700 text-white"
+              }`}
             >
               {isSaving ? (
                 <>
@@ -852,7 +875,9 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
               ) : (
                 <>
                   <CheckCircle2 size={15} />
-                  Save Material
+                  {preSelectedStrand === "Assessments & Quizzes"
+                    ? "Save Assessment"
+                    : "Save Material"}
                 </>
               )}
             </Button>
