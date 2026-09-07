@@ -29,7 +29,7 @@
 import { notifyDataChanged } from '@/utils/storage';
 import { LEARNER_STORAGE_KEYS } from '@/utils/backfillAdmissionNumbers';
 
-const ASSESSMENT_CLEANUP_FLAG = 'munyaka_assessment_cleanup_v1';
+const ASSESSMENT_CLEANUP_FLAG = 'munyaka_assessment_cleanup_v2';
 const LEGACY_ADMNO_FLAG = 'munyaka_legacy_admno_to_admission_v1';
 
 // ─── Fake assessment-number detection ────────────────────────────────────────
@@ -38,20 +38,21 @@ const LEGACY_ADMNO_FLAG = 'munyaka_legacy_admno_to_admission_v1';
  * Returns true if a value looks like a fake, system-generated
  * assessment number rather than a real KNEC/NEMIS identifier.
  *
- * Matches:
- *   • MUN-001  (legacy sequential placeholder)
- *   • MUN-001/2026
- *   • MUN-G1-001/2026  (any family prefix)
- *   • MUN-PP1-001/2026
- *   • MUN-PG-001/2026
+ * The strict pattern matches the legacy auto-generated placeholders:
+ *   • MUN-001
+ *   • MUN-0010
+ *   • MUN-12345
+ *   …and any case-insensitive variant.
+ *
+ * Real KNEC/NEMIS numbers start with a letter (e.g. "A827361", "UPI-
+ * XXXX") and do NOT match the MUN- prefix, so they are safely left
+ * alone by this check.
  */
 export function isFakeAssessmentNumber(value: unknown): boolean {
   if (typeof value !== 'string') return false;
   const s = value.trim();
   if (!s) return false;
-  // Anything that looks like a system-generated MUN-* admission number
-  // is considered fake if it ever leaked into the assessment field.
-  return /^MUN-(\w+-\d+\/\d{4}|\d+(?:\/\d{4})?)$/i.test(s);
+  return /^MUN-\d{3,}$/i.test(s);
 }
 
 // ─── Migration 1: clean fake assessment values ───────────────────────────────
@@ -100,12 +101,13 @@ export function migrateFakeAssessmentNumbers(): AssessmentCleanupReport {
       report.inspected += 1;
 
       const obj = row as Record<string, unknown>;
-      // Only act on rows whose `assessment` field carries a fake value.
-      // KNEC/NEMIS values (which start with a letter and do NOT match
-      // the MUN-* pattern) are left alone.
-      if (!isFakeAssessmentNumber(obj.assessment)) continue;
+      const rawAssessment = obj.assessment ?? obj.assessmentNo;
+      // Only act on rows whose assessment field carries a MUN-XXX fake value.
+      // Clear both `assessment` and `assessmentNo` to "" so the table
+      // guard always renders "—" for these rows.
+      if (!isFakeAssessmentNumber(rawAssessment)) continue;
 
-      parsed[i] = { ...obj, assessment: undefined };
+      parsed[i] = { ...obj, assessment: '', assessmentNo: '' };
       mutated = true;
       perKeyCleared += 1;
     }
