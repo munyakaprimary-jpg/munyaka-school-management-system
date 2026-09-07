@@ -21,6 +21,9 @@ export default defineConfig(() => ({
   build: {
     // Set target to es2015 for Android WebView compatibility
     target: 'es2015',
+    // Disable module preloading to prevent cross-origin script loading blocks
+    // in native local file:// contexts (Capacitor / Android WebView).
+    modulePreload: false,
     // Raise the warning threshold to accommodate the heavy vendor stack used
     // for local / Capacitor builds (recharts, pdfjs, sql.js, lucide).
     chunkSizeWarningLimit: 6000,
