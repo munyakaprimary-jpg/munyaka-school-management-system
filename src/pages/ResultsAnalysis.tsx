@@ -763,33 +763,33 @@ const ResultsAnalysis = () => {
         </CardHeader>
 
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm text-left border-collapse">
+          <div className="w-full overflow-x-auto block">
+            <table className="w-full text-sm text-left border-collapse min-w-[650px] table-auto">
               <thead className="bg-slate-50/80 border-b">
                 <tr>
-                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 border-r w-16 text-center">
                     Rank
                   </th>
-                  <th className="px-6 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 border-r min-w-[200px]">
                     Student Name & Admin No
                   </th>
                   {selectedStreamId === "all" && (
-                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
+                    <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-400 text-center border-r">
                       Stream
                     </th>
                   )}
                   {learningAreas.map(area => (
-                    <th key={area} className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
+                    <th key={area} className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-600 text-center border-r min-w-[90px]">
                       {area}
                     </th>
                   ))}
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
                     Total Marks
                   </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-indigo-700 text-center bg-indigo-50/50 min-w-[90px]">
                     Mean (%)
                   </th>
-                  <th className="px-5 py-5 font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
+                  <th className="px-4 py-3 whitespace-nowrap font-black text-[10px] uppercase tracking-widest text-slate-700 text-center min-w-[90px]">
                     Level
                   </th>
                 </tr>
@@ -798,26 +798,26 @@ const ResultsAnalysis = () => {
                 {studentResults.length > 0 ? (
                   studentResults.map((student) => (
                     <tr key={student.studentId} className="hover:bg-slate-50 transition-colors">
-                      <td className="px-6 py-4 font-black text-center border-r text-slate-900">
+                      <td className="px-4 py-3 whitespace-nowrap font-black text-center border-r text-slate-900">
                         #{student.rank}
                       </td>
-                      <td className="px-6 py-4 border-r">
+                      <td className="px-4 py-3 whitespace-nowrap border-r">
                         <p className="font-bold text-slate-900">{student.name}</p>
                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
                       </td>
                       {selectedStreamId === "all" && (
-                        <td className="px-4 py-4 text-center font-bold text-slate-600 border-r">
+                        <td className="px-4 py-3 whitespace-nowrap text-center font-bold text-slate-600 border-r">
                           <Badge variant="outline" className="rounded-lg border-slate-200 text-xs">
                             {student.stream}
                           </Badge>
                         </td>
                       )}
                       {learningAreas.map(area => (
-                        <td key={area} className="px-3 py-4 border-r text-center font-bold text-slate-700">
+                        <td key={area} className="px-3 py-3 whitespace-nowrap border-r text-center font-bold text-slate-700">
                           {student.scores[area] !== undefined ? student.scores[area] : "—"}
                         </td>
                       ))}
-                      <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-900">
+                      <td className="px-4 py-3 whitespace-nowrap text-center bg-indigo-50/20 font-black text-indigo-900">
                         {student.totalMarks}
                       </td>
                       <td className="px-4 py-4 text-center bg-indigo-50/20 font-black text-indigo-700 text-base">
