@@ -23,6 +23,7 @@ import { logActivity } from '@/services/activityLog';
 import { useLiveStreamAttendance } from '@/hooks/useLiveStreamAttendance';
 import { useGradesStreamsConfig, useStreamsForGrade } from '@/hooks/useGradesStreams';
 import { getStreamsForGrade } from '@/services/gradesStreamsConfig';
+import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 type AttendanceStatus = 'P' | 'A' | 'L' | 'E'; // Present, Absent, Late, Excused
 type SessionType = 'morning' | 'afternoon';
@@ -2156,7 +2157,8 @@ const Attendance = () => {
               </div>
             )}
 
-            <div className="overflow-x-auto">
+            <div className="p-2">
+              <DualScrollContainer>
               <table className="w-full text-sm text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-200">
@@ -2249,6 +2251,7 @@ const Attendance = () => {
                   )}
                 </tbody>
               </table>
+              </DualScrollContainer>
             </div>
 
             <div className="px-6 sm:px-8 py-4 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 bg-slate-50/50">
@@ -2491,7 +2494,8 @@ const Attendance = () => {
           </div>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="p-2">
+          <DualScrollContainer>
           <table className="w-full text-sm text-left border-collapse min-w-[900px]">
             <thead>
               <tr className="bg-slate-100/80 border-b border-slate-200">
@@ -2729,6 +2733,7 @@ const Attendance = () => {
                             )}
             </tbody>
           </table>
+          </DualScrollContainer>
         </div>
 
         {filteredLearners.length > 0 && (

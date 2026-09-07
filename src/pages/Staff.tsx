@@ -36,6 +36,7 @@ import {
   type MasterStaffRecord,
   type MasterSystemRole,
 } from '@/services/staffMasterService';
+import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 interface StaffMember {
   id: string;
@@ -460,7 +461,7 @@ const Staff = () => {
 
       {/* Data Table */}
       {masterStaffList.length > 0 && (
-        <div className="table-scroll-viewport">
+        <div>
           <Card className="border-none shadow-sm rounded-[2.5rem] bg-white overflow-hidden">
             <CardHeader className="p-8 border-b flex flex-row items-center justify-between">
               <div>
@@ -473,8 +474,9 @@ const Staff = () => {
               </Badge>
             </CardHeader>
             <CardContent className="p-0">
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm text-left min-w-[900px]">
+              <div className="p-2">
+                <DualScrollContainer>
+                  <table className="w-full text-sm text-left min-w-[900px]">
                   <thead className="text-slate-500 bg-slate-50/50 border-b">
                     <tr>
                       <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
@@ -571,6 +573,7 @@ const Staff = () => {
                     )}
                   </tbody>
                 </table>
+                </DualScrollContainer>
               </div>
             </CardContent>
           </Card>

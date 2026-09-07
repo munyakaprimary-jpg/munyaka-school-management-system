@@ -1,74 +1,103 @@
-import { useRef, useCallback, useState, useEffect } from 'react';
+import { useRef, useCallback, useState, useEffect, useLayoutEffect } from 'react';
+
+const useIsoLayoutEffect = typeof window !== 'undefined' ? useLayoutEffect : useEffect;
 
 /**
- * Simplified dual scrollbar wrapper that uses synchronized scrolling
- * to create a visible mirrored scrollbar at the top
+ * Synchronized dual scrollbar wrapper.
+ *
+ * Renders a visible, always-mounted horizontal scrollbar above the main
+ * table container. The top track mirrors the main container's `scrollLeft`
+ * (and vice-versa), so dragging either bar scrolls the entire table in
+ * tandem. Designed for wide data tables on mobile/tablet where the native
+ * bottom scrollbar is often hard to reach.
+ *
+ * Structure:
+ *   Top Track     → `.top-scrollbar overflow-x-auto overflow-y-hidden w-full h-4 mb-1`
+ *                   (inner placeholder width = content scrollWidth)
+ *   Main Container → `.main-table-container overflow-x-auto w-full`
+ *
+ * Sync is implemented as direct `scrollLeft` writes with a `isScrolling`
+ * re-entrancy guard so the two scroll handlers don't ping-pong.
  */
-export function DualScrollContainer({ 
-  children, 
-  className = '' 
-}: { 
-  children: React.ReactNode; 
+export function DualScrollContainer({
+  children,
+  className = '',
+}: {
+  children: React.ReactNode;
   className?: string;
 }) {
-  const topScrollRef = useRef<HTMLDivElement>(null);
-  const tableContainerRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const [scrollWidth, setScrollWidth] = useState(0);
+  const isSyncing = useRef(false);
+  const [contentWidth, setContentWidth] = useState(0);
 
-  // Sync scroll position from top to bottom
+  // Sync from top → bottom
   const handleTopScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    if (tableContainerRef.current) {
-      tableContainerRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    if (isSyncing.current) return;
+    const target = e.currentTarget;
+    if (bottomRef.current && bottomRef.current.scrollLeft !== target.scrollLeft) {
+      isSyncing.current = true;
+      bottomRef.current.scrollLeft = target.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncing.current = false;
+      });
     }
   }, []);
 
-  // Sync scroll position from bottom to top
-  const handleTableScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
-    if (topScrollRef.current) {
-      topScrollRef.current.scrollLeft = e.currentTarget.scrollLeft;
+  // Sync from bottom → top
+  const handleBottomScroll = useCallback((e: React.UIEvent<HTMLDivElement>) => {
+    if (isSyncing.current) return;
+    const target = e.currentTarget;
+    if (topRef.current && topRef.current.scrollLeft !== target.scrollLeft) {
+      isSyncing.current = true;
+      topRef.current.scrollLeft = target.scrollLeft;
+      requestAnimationFrame(() => {
+        isSyncing.current = false;
+      });
     }
   }, []);
 
-  // Update the scroll width when content changes
-  const updateScrollWidth = useCallback(() => {
-    if (tableContainerRef.current) {
-      // Use scrollWidth to match the actual scrollable range
-      const width = tableContainerRef.current.scrollWidth;
-      setScrollWidth(width);
-    }
+  // Keep the top track's placeholder width equal to the bottom container's
+  // scrollable range. We read `scrollWidth` (not `offsetWidth`) so the track
+  // matches the actual scrollable extent regardless of viewport.
+  const measure = useCallback(() => {
+    const bottom = bottomRef.current;
+    if (!bottom) return;
+    // Use the inner content's scrollWidth when available — it stays accurate
+    // even when the bottom container itself is constrained by padding/borders.
+    const width = contentRef.current
+      ? contentRef.current.scrollWidth
+      : bottom.scrollWidth;
+    const client = bottom.clientWidth;
+    setContentWidth(Math.max(width, client));
   }, []);
 
-  // Initial measurement and resize observer
+  useIsoLayoutEffect(() => {
+    measure();
+  }, [measure, children]);
+
   useEffect(() => {
-    updateScrollWidth();
+    measure();
 
-    // Set up resize observer for dynamic content
-    const resizeObserver = new ResizeObserver(() => {
-      updateScrollWidth();
-    });
+    const ro = new ResizeObserver(() => measure());
+    if (contentRef.current) ro.observe(contentRef.current);
+    if (bottomRef.current) ro.observe(bottomRef.current);
 
-    if (contentRef.current) {
-      resizeObserver.observe(contentRef.current);
-    }
-
-    // Also observe the table container for scroll width changes
-    if (tableContainerRef.current) {
-      resizeObserver.observe(tableContainerRef.current);
-    }
-
+    window.addEventListener('resize', measure);
     return () => {
-      resizeObserver.disconnect();
+      ro.disconnect();
+      window.removeEventListener('resize', measure);
     };
-  }, [children, updateScrollWidth]);
+  }, [measure, children]);
 
   return (
-    <div className={`flex flex-col ${className}`}>
-      {/* Top scrollbar container - mirrors the main scroll position */}
+    <div className={`flex flex-col w-full ${className}`}>
+      {/* Top horizontal scrollbar track — always visible on mobile/tablet */}
       <div
-        ref={topScrollRef}
+        ref={topRef}
         onScroll={handleTopScroll}
-        className="overflow-x-scroll overflow-y-hidden h-3 bg-slate-50 border-b border-slate-200 scrollbar-top-visible scrollbar-thin scrollbar-thumb-slate-400 scrollbar-track-slate-100"
+        className="top-scrollbar overflow-x-auto overflow-y-hidden w-full h-4 mb-1 bg-slate-50 border border-slate-200 rounded-md scrollbar-top-visible"
         style={{
           scrollbarWidth: 'thin',
           opacity: 1,
@@ -76,18 +105,18 @@ export function DualScrollContainer({
         }}
         aria-hidden="true"
       >
-        {/* Spacer with dynamic width matching the table's scrollable range */}
-        <div style={{ width: `${scrollWidth}px`, height: '1px' }} />
+        {/* Placeholder that establishes the scrollable range of the top track */}
+        <div style={{ width: `${contentWidth}px`, height: '1px' }} />
       </div>
-      
-      {/* Main content container with scroll */}
+
+      {/* Main table container — scrolling here drives the top track */}
       <div
-        ref={tableContainerRef}
-        onScroll={handleTableScroll}
-        className="overflow-x-auto scrollbar-thin scrollbar-thumb-slate-300 scrollbar-track-slate-100"
+        ref={bottomRef}
+        onScroll={handleBottomScroll}
+        className="main-table-container overflow-x-auto w-full"
         style={{ scrollbarWidth: 'thin' }}
       >
-        <div ref={contentRef}>
+        <div ref={contentRef} className="min-w-full">
           {children}
         </div>
       </div>

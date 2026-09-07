@@ -1023,8 +1023,9 @@ export default function Students() {
 
       {/* 4. Table Layout & Styling with Dual Horizontal Scrollbars */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden w-full max-w-full">
-        <div className="w-full overflow-x-auto block">
-          <table className="w-full text-left border-collapse min-w-[1100px] table-auto">
+        <div className="p-2">
+          <DualScrollContainer>
+            <table className="w-full text-left border-collapse min-w-[1100px] table-auto">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                 <th className="py-3 px-4 whitespace-nowrap">ADMISSION NO.</th>
@@ -1172,6 +1173,7 @@ export default function Students() {
               )}
             </tbody>
           </table>
+          </DualScrollContainer>
         </div>
       </div>
 
