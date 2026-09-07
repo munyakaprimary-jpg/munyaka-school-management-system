@@ -24,7 +24,10 @@ import {
   ChevronLeft,
   ChevronRight,
   RotateCcw,
+  PlusCircle,
 } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
+import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const LS_BOOKMARKS = "studyCorner_bookmarks";
@@ -409,6 +412,12 @@ function FilterPills({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function StudyCorner() {
+  const { user } = useAuth();
+  const isAdminOrTeacher =
+    user?.role === "admin" ||
+    user?.role === "head_teacher" ||
+    user?.role === "teacher";
+
   const [selectedGrade, setSelectedGrade] = useState<number | null>(null);
   const [selectedStrands, setSelectedStrands] = useState<StrandCategory[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
@@ -418,7 +427,13 @@ export default function StudyCorner() {
   const [readProgress, setReadProgress] = useState<Record<string, number>>(loadProgress);
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
-  const searchRef = useRef<HTMLInputElement>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  // Custom materials loaded from localStorage
+  const [customItems, setCustomItems] = useState<ContentItem[]>(() => loadCustomMaterials());
+
+  // Full content: default + custom
+  const allContent: ContentItem[] = [...cbcStudyContent, ...customItems];
 
   // Persist bookmarks
   useEffect(() => {
@@ -429,6 +444,10 @@ export default function StudyCorner() {
   useEffect(() => {
     localStorage.setItem(LS_PROGRESS, JSON.stringify(readProgress));
   }, [readProgress]);
+
+  const handleCustomSave = useCallback((item: ContentItem) => {
+    setCustomItems((prev) => [item, ...prev]);
+  }, []);
 
   const toggleBookmark = useCallback((id: string) => {
     setBookmarks((prev) =>
@@ -465,8 +484,8 @@ export default function StudyCorner() {
     setActiveItem(null);
   }, [activeItem]);
 
-  // Filter logic
-  const filtered = cbcStudyContent.filter((item) => {
+  // Filter logic — operates on merged content
+  const filtered = allContent.filter((item) => {
     if (selectedGrade !== null && item.grade !== selectedGrade) return false;
     if (selectedStrands.length > 0 && !selectedStrands.includes(item.strand))
       return false;
@@ -496,21 +515,40 @@ export default function StudyCorner() {
 
   const bookmarkCount = bookmarks.length;
   const completedCount = Object.values(completionMap).filter(Boolean).length;
+  const totalTopics = allContent.length;
 
   return (
     <div className="min-h-screen bg-gray-50/50">
       {/* Page Header */}
       <div className="bg-white border-b border-gray-200 px-6 py-5">
-        <div className="flex items-center gap-3 mb-1">
-          <div className="p-2 rounded-xl bg-blue-100">
-            <GraduationCap size={22} className="text-blue-700" />
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-center gap-3 mb-1">
+            <div className="p-2 rounded-xl bg-blue-100">
+              <GraduationCap size={22} className="text-blue-700" />
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">Study Corner</h1>
+              <p className="text-sm text-gray-500">
+                CBC learning resources — Grades 1–9 · {totalTopics} topics
+                {customItems.length > 0 && (
+                  <span className="ml-1 text-indigo-500 font-medium">
+                    ({customItems.length} custom)
+                  </span>
+                )}
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Study Corner</h1>
-            <p className="text-sm text-gray-500">
-              CBC learning resources — Grades 1–9 · {cbcStudyContent.length} topics
-            </p>
-          </div>
+
+          {/* Add Material — Admin / Teacher only */}
+          {isAdminOrTeacher && (
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors"
+            >
+              <PlusCircle size={16} />
+              Add Learning Material
+            </button>
+          )}
         </div>
 
         {/* Stats row */}
@@ -743,6 +781,14 @@ export default function StudyCorner() {
           onToggleBookmark={() => toggleBookmark(activeItem.id)}
           onMarkComplete={() => markComplete(activeItem.id)}
           isComplete={!!completionMap[activeItem.id]}
+        />
+      )}
+
+      {/* Add Material Modal */}
+      {showAddModal && (
+        <AddMaterialModal
+          onClose={() => setShowAddModal(false)}
+          onSave={handleCustomSave}
         />
       )}
     </div>
