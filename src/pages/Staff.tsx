@@ -482,7 +482,8 @@ const Staff = () => {
                       <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
                         <Checkbox checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length} onCheckedChange={toggleSelectAll} aria-label="Select all staff" />
                       </th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff ID &amp; Name</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
@@ -495,15 +496,17 @@ const Staff = () => {
                         <td className="px-4 py-5 w-12">
                           <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
                         </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                            {member.tsc_no || member.staff_id || member.id || '—'}
+                          </span>
+                        </td>
                         <td className="px-8 py-5 min-w-[200px]">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                               {initialsOf(member.full_name)}
                             </div>
-                            <div className="flex flex-col min-w-0">
-                              <p className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</p>
-                              <p className="text-xs text-slate-400 font-medium whitespace-nowrap">Ref: {member.id} &bull; ID: {member.id_no}</p>
-                            </div>
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</span>
                           </div>
                         </td>
                         <td className="px-8 py-5 min-w-[180px]">
@@ -563,7 +566,7 @@ const Staff = () => {
                     ))}
                     {filteredStaff.length === 0 && (
                       <tr>
-                        <td colSpan={6} className="px-8 py-20 text-center">
+                        <td colSpan={7} className="px-8 py-20 text-center">
                           <div className="flex flex-col items-center gap-3">
                             <Search size={32} className="text-slate-200" />
                             <p className="text-slate-500 font-bold">No personnel match your search criteria.</p>
