@@ -36,6 +36,75 @@ import { initializeStaffMaster } from "./services/staffMasterService";
  * for debugging but never propagate to the user as a white screen.
  */
 
+// ── Global error trap ───────────────────────────────────────────────────────
+// On Android WebView, an uncaught error in synchronous or promise code can
+// otherwise leave the screen blank with no feedback. We intercept both
+// window.onerror and window.onunhandledrejection and dump the message +
+// stack trace directly into the document body in red text so the failure
+// is visible to anyone (developer, support, end user) who can see the
+// screen.
+const renderFatalError = (title: string, details: string) => {
+  try {
+    const safeTitle = String(title).replace(/[<>]/g, (ch) =>
+      ch === "<" ? "&lt;" : "&gt;"
+    );
+    const safeDetails = String(details).replace(/[<>]/g, (ch) =>
+      ch === "<" ? "&lt;" : "&gt;"
+    );
+    // Preserve any pre-existing <h1>Loading Munyaka Portal...</h1> by
+    // prepending our error block above it instead of overwriting it.
+    const errorBlock = `
+      <div style="
+        font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        background:#fef2f2;
+        color:#b91c1c;
+        border:2px solid #b91c1c;
+        border-radius:12px;
+        padding:20px;
+        margin:20px;
+        white-space:pre-wrap;
+        word-break:break-word;
+      ">
+        <h1 style="font-size:18px;margin:0 0 8px;color:#991b1b;">${safeTitle}</h1>
+        <pre style="margin:0;font-size:13px;line-height:1.5;">${safeDetails}</pre>
+      </div>
+    `;
+    document.body.innerHTML = errorBlock + (document.body.innerHTML || "");
+  } catch {
+    // Last-ditch effort: at least make the page red so something is visible.
+    document.body.style.color = "red";
+  }
+};
+
+window.addEventListener("error", (event) => {
+  // event.error is the original Error object; event.message is a string copy.
+  const err = event.error;
+  const message = err?.message || event.message || "Unknown error";
+  const stack = err?.stack || "(no stack trace available)";
+  // eslint-disable-next-line no-console
+  console.error("[window.error]", message, err);
+  renderFatalError("Uncaught error: " + message, stack);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  const reason = event.reason;
+  const message =
+    reason instanceof Error
+      ? reason.message
+      : typeof reason === "string"
+      ? reason
+      : reason
+      ? JSON.stringify(reason)
+      : "Unknown rejection";
+  const stack =
+    reason instanceof Error
+      ? reason.stack || "(no stack trace available)"
+      : "(no stack trace available)";
+  // eslint-disable-next-line no-console
+  console.error("[unhandledrejection]", message, reason);
+  renderFatalError("Unhandled promise rejection: " + message, stack);
+});
+
 const safeLogDev = (...args: unknown[]) => {
   if (import.meta.env.DEV) {
     // eslint-disable-next-line no-console
@@ -153,6 +222,14 @@ const mountAppSafely = () => {
     `;
     return;
   }
+
+  // Ensure the loading fallback is present in #root before React mounts.
+  // This prevents a white flash on Android WebView where the initial DOM
+  // may have been stripped by the host page.
+  if (rootEl.childElementCount === 0) {
+    rootEl.innerHTML = `<h1 style="font-family:system-ui,-apple-system,sans-serif;padding:20px;color:#2563eb;">Loading Munyaka Portal...</h1>`;
+  }
+
   try {
     // Wrap the entire app tree in the AppErrorBoundary so any unhandled
     // exception during the very first paint is caught and the user sees
