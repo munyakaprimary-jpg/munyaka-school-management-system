@@ -102,6 +102,47 @@ const strandMeta: Record<
     bg: "bg-rose-50 border-rose-200",
     icon: <Award size={16} />,
   },
+  // ── KICD Lower Primary (Grades 1–3) ──────────────────────────────────────
+  "Indigenous Language Activities": {
+    color: "text-orange-700",
+    bg: "bg-orange-50 border-orange-200",
+    icon: <Languages size={16} />,
+  },
+  "Kiswahili Language / Kenya Sign Language Activities": {
+    color: "text-cyan-700",
+    bg: "bg-cyan-50 border-cyan-200",
+    icon: <Languages size={16} />,
+  },
+  "English Language Activities": {
+    color: "text-blue-700",
+    bg: "bg-blue-50 border-blue-200",
+    icon: <Languages size={16} />,
+  },
+  "Mathematical Activities": {
+    color: "text-indigo-700",
+    bg: "bg-indigo-50 border-indigo-200",
+    icon: <FlaskConical size={16} />,
+  },
+  "Environmental Activities": {
+    color: "text-green-700",
+    bg: "bg-green-50 border-green-200",
+    icon: <Globe size={16} />,
+  },
+  "Hygiene and Nutrition Activities": {
+    color: "text-pink-700",
+    bg: "bg-pink-50 border-pink-200",
+    icon: <BookOpen size={16} />,
+  },
+  "Religious Education Activities": {
+    color: "text-amber-700",
+    bg: "bg-amber-50 border-amber-200",
+    icon: <BookOpen size={16} />,
+  },
+  "Movement and Creative Activities": {
+    color: "text-purple-700",
+    bg: "bg-purple-50 border-purple-200",
+    icon: <Award size={16} />,
+  },
 };
 
 const difficultyColour = {

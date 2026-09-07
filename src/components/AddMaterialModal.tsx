@@ -468,10 +468,24 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
                     errors.grade ? "border-red-400 bg-red-50" : "border-gray-200"
                   }`}
                 >
-                  <option value="">Select grade…</option>
-                  {gradeLevels.map((g) => (
-                    <option key={g} value={g}>Grade {g}</option>
-                  ))}
+                  <optgroup label="──────────────────────────">
+                    <option value="" disabled>Select grade…</option>
+                  </optgroup>
+                  <optgroup label="◀ Lower Primary (Grades 1–3)">
+                    <option value="1">Grade 1</option>
+                    <option value="2">Grade 2</option>
+                    <option value="3">Grade 3</option>
+                  </optgroup>
+                  <optgroup label="◀ Upper Primary (Grades 4–6)">
+                    {gradeLevels.filter((g) => g >= 4 && g <= 6).map((g) => (
+                      <option key={g} value={g}>Grade {g}</option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="◀ Junior Secondary (Grades 7–9)">
+                    {gradeLevels.filter((g) => g >= 7).map((g) => (
+                      <option key={g} value={g}>Grade {g}</option>
+                    ))}
+                  </optgroup>
                 </select>
                 {errors.grade && (
                   <p className="flex items-center gap-1 text-xs text-red-500">

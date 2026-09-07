@@ -8,7 +8,28 @@ export type StrandCategory =
   | "STEM & Agriculture"
   | "Social Studies & Arts"
   | "KICD Revision Bank"
-  | "Assessments & Quizzes";
+  | "Assessments & Quizzes"
+  // ── KICD Lower Primary (Grades 1–3) Learning Areas ────────────────────────
+  | "Indigenous Language Activities"
+  | "Kiswahili Language / Kenya Sign Language Activities"
+  | "English Language Activities"
+  | "Mathematical Activities"
+  | "Environmental Activities"
+  | "Hygiene and Nutrition Activities"
+  | "Religious Education Activities"
+  | "Movement and Creative Activities";
+
+// ── KICD Lower Primary Learning Areas (exact names from KICD curriculum) ─────
+export const LOWER_PRIMARY_LEARNING_AREAS: StrandCategory[] = [
+  "Indigenous Language Activities",
+  "Kiswahili Language / Kenya Sign Language Activities",
+  "English Language Activities",
+  "Mathematical Activities",
+  "Environmental Activities",
+  "Hygiene and Nutrition Activities",
+  "Religious Education Activities",
+  "Movement and Creative Activities",
+];
 
 export interface MemoryVerse {
   reference: string;
@@ -800,6 +821,499 @@ const assessmentsQuizzes: ContentItem[] = [
   },
 ];
 
+// ─── KICD Lower Primary Samples ───────────────────────────────────────────────
+const lowerPrimary: ContentItem[] = [
+  // ── Grade 1 ────────────────────────────────────────────────────────────────
+  {
+    id: "lp-1-english-oral",
+    grade: g(1),
+    strand: "English Language Activities",
+    subStrand: "Listening & Speaking",
+    topic: "Greetings and Introductions",
+    summary: "Pupils learn to greet others and introduce themselves using simple English phrases.",
+    notes: [
+      "Greetings: 'Good morning', 'Good afternoon', 'Good evening'.",
+      "How are you? — I am fine, I am happy, I am sad.",
+      "My name is… — Introduce yourself by name.",
+      "I am (age) years old.",
+      "Practice in pairs: greet your partner and ask their name.",
+      "Songs and rhymes help reinforce greetings.",
+      "Role-play greeting a visitor or teacher.",
+    ],
+    revisionQuestions: [
+      { question: "How do you greet someone in the morning?", answer: "Good morning", rubric: "1 mark" },
+      { question: "Complete: 'My name is ______.'", answer: "Any appropriate name", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["english", "greetings", "speaking", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-kiswahili-maghairi",
+    grade: g(1),
+    strand: "Kiswahili Language / Kenya Sign Language Activities",
+    subStrand: "Kusikiliza na Kusema",
+    topic: "Magrohani na Majina",
+    summary: "Wanafunzi hukusanya maneno ya kawaida na kujifunza kujtdhihirisha kwa Kiswahili.",
+    notes: [
+      "Salamu: 'Asubuhi njema', 'Mchana mwema', 'Jioni njema'.",
+      "Habari yako? — Njema sana, nzuri, ya kawaida.",
+      "Jina langu ni… — Jtdhihirisha jina lako.",
+      "Somo jipya: 'sana', 'vipi', 'kwa', 'hapa'.",
+      "Oga taratibu dhana mpya kwa sentensi fupi.",
+      "Tumia picha na michoro kujifunza msamiati mpya.",
+      "Cheza mchezo wa 'sema jina lako' darasani.",
+    ],
+    revisionQuestions: [
+      { question: "Je. Unavyoghustania aje mtu alfasi ya subuhi?", answer: "Asubuhi njema", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["kiswahili", "maghairi", "kusoma", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-math-numbers",
+    grade: g(1),
+    strand: "Mathematical Activities",
+    subStrand: "Numbers",
+    topic: "Counting Numbers 1–20",
+    summary: "Count objects up to 20 and write the corresponding numerals.",
+    notes: [
+      "Count objects in the classroom: desks, chairs, pencils.",
+      "Numbers 1–10: one, two, three, four, five, six, seven, eight, nine, ten.",
+      "Numbers 11–20: eleven, twelve, thirteen, fourteen, fifteen, sixteen, seventeen, eighteen, nineteen, twenty.",
+      "Use fingers to count from 1 to 10.",
+      "Match numbers to objects: 'How many books? — Three books.'",
+      "Practice writing numerals 0–9 correctly.",
+      "Skip-count by 2s using objects like pairs of socks.",
+    ],
+    revisionQuestions: [
+      { question: "Count aloud: 1, 2, 3, 4, _______, 6.", answer: "5", rubric: "1 mark" },
+      { question: "Write the numeral for 'twelve'.", answer: "12", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["math", "counting", "numbers", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-environmental",
+    grade: g(1),
+    strand: "Environmental Activities",
+    subStrand: "Living Things",
+    topic: "Plants in Our Environment",
+    summary: "Identify different types of plants and their basic parts.",
+    notes: [
+      "Plants are living things — they grow, need water and sunlight.",
+      "Basic parts of a plant: root, stem, leaf, flower.",
+      "Common plants: grass, maize, bean plant, mango tree, rose.",
+      "Plants give us food, oxygen, and shade.",
+      "Look around your home and school — name three plants you see.",
+      "A seed grows into a plant — plant a bean seed and observe.",
+      "Take care of plants: water them, keep them clean.",
+    ],
+    revisionQuestions: [
+      { question: "Name two things a plant needs to grow.", answer: "Water and sunlight", rubric: "2 marks" },
+      { question: "Name one part of a plant.", answer: "Root, stem, leaf, or flower (any one)", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["environmental", "plants", "living things", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-hygiene",
+    grade: g(1),
+    strand: "Hygiene and Nutrition Activities",
+    subStrand: "Personal Hygiene",
+    topic: "Keeping Our Bodies Clean",
+    summary: "Learn daily habits to keep the body clean and healthy.",
+    notes: [
+      "Wash hands with soap and water before eating and after using the toilet.",
+      "Brush teeth twice a day — morning and night.",
+      "Take a bath every day to keep the body clean.",
+      "Cut fingernails regularly to keep them short and clean.",
+      "Wear clean clothes every day.",
+      "Clean nose properly — use a tissue or handkerchief.",
+      "Sleep early so the body rests and grows well.",
+    ],
+    revisionQuestions: [
+      { question: "When should we wash our hands?", answer: "Before eating and after using the toilet", rubric: "2 marks" },
+      { question: "How many times should we brush our teeth in a day?", answer: "Twice a day", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["hygiene", "health", "cleanliness", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-cre",
+    grade: g(1),
+    strand: "Religious Education Activities",
+    subStrand: "God's Love",
+    topic: "God Made Everything",
+    summary: "Understand that God created the world and loves us.",
+    notes: [
+      "God created the sun, moon, stars, animals, and human beings.",
+      "God loves every child — you are special to God.",
+      "We say 'Thank you, God' for food, family, and the world.",
+      "Genesis 1:1 — 'In the beginning God created the heavens and the earth.'",
+      "Ways to show love to God: praying, singing, sharing, being kind.",
+      "God gives us nature to enjoy and take care of.",
+      "Jesus taught us to love one another.",
+    ],
+    memoryVerses: [
+      { reference: "Genesis 1:1", text: "In the beginning God created the heavens and the earth." },
+    ],
+    revisionQuestions: [
+      { question: "Who created the world?", answer: "God", rubric: "1 mark" },
+      { question: "Name one way we can show love to God.", answer: "Praying, singing hymns, sharing with others, being kind", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["cre", "religious education", "creation", "grade 1", "lower primary"],
+  },
+  {
+    id: "lp-1-creative-movement",
+    grade: g(1),
+    strand: "Movement and Creative Activities",
+    subStrand: "Physical Education",
+    topic: "Moving Our Bodies — Running, Jumping, and Balancing",
+    summary: "Practice basic movement skills through fun physical activities.",
+    notes: [
+      "Warm up before exercise — stretch your arms and legs.",
+      "Run in a straight line, then in a zigzag path.",
+      "Jump with both feet together — frog jumps.",
+      "Balance on one foot for 10 seconds.",
+      "Dance to music — move your body to the rhythm.",
+      "Play simple relay games in teams.",
+      "Cool down after exercise — slow breathing, gentle stretching.",
+    ],
+    revisionQuestions: [
+      { question: "What should you do before starting exercise?", answer: "Warm up — stretch your arms and legs", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["physical education", "movement", "creative", "grade 1", "lower primary"],
+  },
+
+  // ── Grade 2 ────────────────────────────────────────────────────────────────
+  {
+    id: "lp-2-english-reading",
+    grade: g(2),
+    strand: "English Language Activities",
+    subStrand: "Reading",
+    topic: "Reading Simple Sentences",
+    summary: "Read simple sentences of 3–5 words with understanding.",
+    notes: [
+      "Read each word slowly before putting them together.",
+      "Look at the picture clues — they help you understand the story.",
+      "Point to each word as you read.",
+      "Sentences: 'The cat is on the mat.', 'I like mangoes.', 'We go to school.'",
+      "Read aloud every day — practice with classmates and teachers.",
+      "Use the library corner in class to read picture books.",
+      "Ask your teacher if you don't know a word.",
+    ],
+    revisionQuestions: [
+      { question: "Read this sentence aloud: 'The dog runs fast.'", answer: "The dog runs fast.", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["english", "reading", "sentences", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-kiswahili-insha",
+    grade: g(2),
+    strand: "Kiswahili Language / Kenya Sign Language Activities",
+    subStrand: "Kuandika",
+    topic: "Kuandika Sentensi Fupi",
+    summary: "Wanafunzi hujifunza kuandika sentensi fupi kwa Kiswahili.",
+    notes: [
+      "Sentensi ina mwanzilishi, kitenzi, na mwisho.",
+      "Mfano: 'Mimi ni mwanafunzi.' (subject + verb + object).",
+      "Andika herufi kubwa mwanzoni mwa sentensi.",
+      "Tumia nukushi katika mwisho wa sentensi.",
+      "Fanya mazoezi: 'Nina mkate.' 'Unaumba nini?'",
+      "Oga kuandika maneno mapya kwa makini.",
+      "Soma insha yako kwa sauti baada ya kuandika.",
+    ],
+    revisionQuestions: [
+      { question: "Andika sentensi moja kwa Kiswahili kuhusu darasani.", answer: "Mimi ni mwanafunzi. / Nina daftari.", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["kiswahili", "kuandika", "sentensi", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-math-addition",
+    grade: g(2),
+    strand: "Mathematical Activities",
+    subStrand: "Numbers",
+    topic: "Addition of Two-Digit Numbers Without Renaming",
+    summary: "Add two-digit numbers where the sum of ones is less than 10.",
+    notes: [
+      "Addition means putting groups together.",
+      "The '+' sign means 'plus' or 'add'.",
+      "Add the ones first, then the tens.",
+      "Example: 23 + 15 → 3 + 5 = 8 (ones), 20 + 10 = 30 (tens), so 23 + 15 = 38.",
+      "Use counters or number lines to help you visualise.",
+      "Check your answer by counting backwards (subtraction).",
+      "Practice: 12 + 24 = ?    31 + 45 = ?    20 + 19 = ?",
+    ],
+    revisionQuestions: [
+      { question: "Calculate: 23 + 15 = ?", answer: "38", rubric: "2 marks" },
+      { question: "Calculate: 31 + 48 = ?", answer: "79", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["math", "addition", "numbers", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-environmental-weather",
+    grade: g(2),
+    strand: "Environmental Activities",
+    subStrand: "Weather",
+    topic: "Types of Weather and Their Effects",
+    summary: "Observe and describe different types of weather and how they affect us.",
+    notes: [
+      "Types of weather: sunny, cloudy, rainy, windy, foggy.",
+      "Sunny weather: bright, hot — we play outside, clothes dry fast.",
+      "Rainy weather: wet, cool — we carry umbrellas, wear raincoats.",
+      "Cloudy weather: grey sky — it may rain soon.",
+      "Keep a weather chart — draw or write what the weather is like each day.",
+      "Farmers need sunshine and rain to grow food.",
+      "Too much sun can cause sunburn — use sunscreen or stay in shade.",
+    ],
+    revisionQuestions: [
+      { question: "Name two types of weather.", answer: "Sunny, cloudy, rainy, windy (any two)", rubric: "2 marks" },
+      { question: "What do farmers need from weather to grow food?", answer: "Sunshine and rain", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["environmental", "weather", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-hygiene-food",
+    grade: g(2),
+    strand: "Hygiene and Nutrition Activities",
+    subStrand: "Nutrition",
+    topic: "Types of Food and Why We Need Them",
+    summary: "Learn about the different food groups and why each one is important.",
+    notes: [
+      "We need food to grow, give us energy, and stay healthy.",
+      "Carbohydrates: bread, rice, ugali, potatoes — give energy.",
+      "Proteins: meat, eggs, fish, beans — build and repair the body.",
+      "Vitamins: fruits and vegetables — protect us from sickness.",
+      "Drink water every day — at least 8 glasses.",
+      "Eat three meals a day: breakfast, lunch, and supper.",
+      "Avoid too much sugar and salty foods.",
+    ],
+    revisionQuestions: [
+      { question: "Which food group gives us energy?", answer: "Carbohydrates (e.g., bread, rice, ugali)", rubric: "1 mark" },
+      { question: "Name one food that contains protein.", answer: "Meat, eggs, fish, or beans", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["hygiene", "nutrition", "food groups", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-cre-family",
+    grade: g(2),
+    strand: "Religious Education Activities",
+    subStrand: "Family in Faith",
+    topic: "God's Family and Our Family",
+    summary: "Understand that our family is a gift from God and how to care for one another.",
+    notes: [
+      "Every family is a gift from God.",
+      "In a family we have: mother, father, brothers, sisters, grandparents.",
+      "Families care for each other — parents provide food, shelter, and love.",
+      "We should love, respect, and help our family members.",
+      "Church family: Christians belong to a bigger family — the church.",
+      "Prayer: 'Thank you, God, for my family.'",
+      "Being honest, sharing, and forgiving are signs of a loving family.",
+    ],
+    memoryVerses: [
+      { reference: "1 Timothy 5:4", text: "Family members should care for each other." },
+    ],
+    revisionQuestions: [
+      { question: "Name two members of a family.", answer: "Mother, father, brother, sister, grandfather, grandmother (any two)", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["cre", "religious education", "family", "grade 2", "lower primary"],
+  },
+  {
+    id: "lp-2-art-craft",
+    grade: g(2),
+    strand: "Movement and Creative Activities",
+    subStrand: "Art & Craft",
+    topic: "Drawing and Colouring with Natural Materials",
+    summary: "Create art using crayons, coloured pencils, and natural materials from the environment.",
+    notes: [
+      "Use crayons and coloured pencils to draw pictures.",
+      "Draw your family, school, or favourite animal.",
+      "Use leaves, petals, and soil to make natural art (leaf printing).",
+      "Colour inside the lines neatly.",
+      "Mix primary colours (red, yellow, blue) to make secondary colours.",
+      "Display your artwork in the classroom.",
+      "Art helps us express our feelings and creativity.",
+    ],
+    revisionQuestions: [
+      { question: "What colours do you mix to make green?", answer: "Blue and yellow", rubric: "1 mark" },
+    ],
+    difficulty: "beginner",
+    tags: ["art", "craft", "creative", "grade 2", "lower primary"],
+  },
+
+  // ── Grade 3 ────────────────────────────────────────────────────────────────
+  {
+    id: "lp-3-english-composition",
+    grade: g(3),
+    strand: "English Language Activities",
+    subStrand: "Writing",
+    topic: "Writing a Simple Paragraph — About My School",
+    summary: "Write a short paragraph of 3–5 sentences about your school.",
+    notes: [
+      "A paragraph is a group of sentences about one idea.",
+      "Start with a topic sentence: 'My school is called...'",
+      "Add details: what subjects you learn, who your teachers are.",
+      "End with a concluding sentence: 'I love my school because...'",
+      "Use capital letters at the beginning of sentences and for names.",
+      "Use full stops (.) at the end of each sentence.",
+      "Read your paragraph aloud to check it makes sense.",
+    ],
+    revisionQuestions: [
+      { question: "Write three sentences about your school.", answer: "Paragraph with at least 3 correct sentences about school", rubric: "6 marks (2 per sentence)" },
+    ],
+    difficulty: "intermediate",
+    tags: ["english", "writing", "composition", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-kiswahili-maswali",
+    grade: g(3),
+    strand: "Kiswahili Language / Kenya Sign Language Activities",
+    subStrand: "Kusoma na Kutunga",
+    topic: "Kusoma Swali na Jibu",
+    summary: "Wanafunzi hujifunza kusoma maswali na kutoa jibu sahihi.",
+    notes: [
+      "Swali huwa na nukushi ya 'ni' au 'je' mwanzoni.",
+      "Mfano: 'Je, wewe ni nani?' — Jibu: 'Mimi ni Juma.'",
+      "Soma kwa sauti, kisha jibu kwa maneno yako mwenyewe.",
+      "Fahamu aina za maswali: 'Nani?', 'Lini?', 'Wapi?', 'Vipi?'",
+      "Mazoezi: 'Je, unaenda shuleni?' — Ndiyo / Hapana.",
+      "Jibu kwa sentensi kamili, si tu 'ndiyo' au 'hapana'.",
+      "Tumia msamiati mpya uliyojifunza katika sentensi.",
+    ],
+    revisionQuestions: [
+      { question: "Jibu swali hili: 'Je, una mama w有几人?'", answer: "Mimi ni Juma. / Jibu lenye maana", rubric: "2 marks" },
+    ],
+    difficulty: "intermediate",
+    tags: ["kiswahili", "kusoma", "maswali", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-math-multiplication",
+    grade: g(3),
+    strand: "Mathematical Activities",
+    subStrand: "Numbers",
+    topic: "Multiplication as Repeated Addition (2×, 3×, 5×, 10× Tables)",
+    summary: "Understand multiplication as repeated addition and learn the 2×, 3×, 5×, and 10× tables.",
+    notes: [
+      "Multiplication is repeated addition: 3 × 4 means 4 + 4 + 4 = 12.",
+      "The '×' sign means 'times' or 'groups of'.",
+      "2× table: 1×2=2, 2×2=4, 3×2=6, 4×2=8, 5×2=10, 6×2=12, 7×2=14, 8×2=16, 9×2=18, 10×2=20.",
+      "3× table: 1×3=3, 2×3=6, 3×3=9, 4×3=12, 5×3=15, 6×3=18, 7×3=21, 8×3=24, 9×3=27, 10×3=30.",
+      "5× table: 1×5=5, 2×5=10, 3×5=15, 4×5=20, 5×5=25, 6×5=30, 7×5=35, 8×5=40, 9×5=45, 10×5=50.",
+      "10× table: simply add a zero: 1×10=10, 2×10=20, 3×10=30, ..., 10×10=100.",
+      "Use objects to build groups: 3 groups of 4 pencils = 3 × 4 = 12 pencils.",
+    ],
+    revisionQuestions: [
+      { question: "Calculate: 4 × 3 = ?", answer: "12", rubric: "1 mark" },
+      { question: "What is 7 × 5?", answer: "35", rubric: "1 mark" },
+      { question: "What does 6 × 10 equal?", answer: "60", rubric: "1 mark" },
+    ],
+    difficulty: "intermediate",
+    tags: ["math", "multiplication", "tables", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-environmental-animals",
+    grade: g(3),
+    strand: "Environmental Activities",
+    subStrand: "Living Things",
+    topic: "Farm Animals — Their Uses and Care",
+    summary: "Identify farm animals, their products, and how to care for them.",
+    notes: [
+      "Farm animals: cows, goats, sheep, chickens, rabbits, donkeys.",
+      "Cows give milk and beef; goats give milk and meat.",
+      "Chickens give eggs and meat.",
+      "Sheep give wool (for clothes) and meat.",
+      "Donkeys and oxen are used for work — carrying loads and ploughing.",
+      "Care for animals: give them clean water, food, and shelter.",
+      "Keep animal shelters clean to prevent disease.",
+    ],
+    revisionQuestions: [
+      { question: "Name two products we get from cows.", answer: "Milk and beef (or hide for leather)", rubric: "2 marks" },
+      { question: "Why should we keep animal shelters clean?", answer: "To prevent diseases", rubric: "1 mark" },
+    ],
+    difficulty: "intermediate",
+    tags: ["environmental", "farm animals", "living things", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-hygiene-diseases",
+    grade: g(3),
+    strand: "Hygiene and Nutrition Activities",
+    subStrand: "Health",
+    topic: "Common Diseases and How to Prevent Them",
+    summary: "Learn about common childhood diseases and ways to stay healthy.",
+    notes: [
+      "Common diseases: malaria, diarrhoea, cough and cold, typhoid.",
+      "Malaria is spread by mosquitoes — sleep under a mosquito net.",
+      "Diarrhoea is caused by dirty water and food — wash hands before eating.",
+      "Cough and cold spread through air and sharing items — cover your mouth when coughing.",
+      "Prevent diseases: wash hands, drink clean water, eat well, sleep enough.",
+      "Vaccinations protect us from serious diseases — go for regular check-ups.",
+      "When you feel sick, tell your teacher or parent and see a doctor.",
+    ],
+    revisionQuestions: [
+      { question: "How is malaria spread?", answer: "By mosquitoes", rubric: "1 mark" },
+      { question: "Name two ways to prevent diseases.", answer: "Wash hands; drink clean water; eat well; sleep enough; sleep under mosquito net", rubric: "2 marks" },
+    ],
+    difficulty: "intermediate",
+    tags: ["hygiene", "health", "diseases", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-cre-stories",
+    grade: g(3),
+    strand: "Religious Education Activities",
+    subStrand: "Bible Stories",
+    topic: "David and Goliath — Trusting God",
+    summary: "Learn how David defeated Goliath by trusting in God.",
+    notes: [
+      "David was a shepherd boy who loved God.",
+      "The Philistine giant Goliath challenged Israel's army — no one was brave enough to fight him.",
+      "David volunteered to fight Goliath with just a sling and five smooth stones.",
+      "David said: 'You come against me with sword and spear, but I come against you in the name of the LORD.'",
+      "David struck Goliath with a stone from his sling and Goliath fell.",
+      "The story teaches us: with God on our side, we can overcome any fear.",
+      "Trust God in difficult situations — pray and be brave.",
+    ],
+    memoryVerses: [
+      { reference: "1 Samuel 17:45", text: "You come against me with sword and spear, but I come against you in the name of the LORD." },
+    ],
+    revisionQuestions: [
+      { question: "Who defeated Goliath?", answer: "David", rubric: "1 mark" },
+      { question: "What did David use to fight Goliath?", answer: "A sling and five smooth stones", rubric: "1 mark" },
+    ],
+    difficulty: "intermediate",
+    tags: ["cre", "religious education", "bible story", "david", "grade 3", "lower primary"],
+  },
+  {
+    id: "lp-3-music-rhythms",
+    grade: g(3),
+    strand: "Movement and Creative Activities",
+    subStrand: "Music",
+    topic: "Singing Songs and Clapping Rhythms",
+    summary: "Learn traditional and modern Kenyan songs with correct rhythm and melody.",
+    notes: [
+      "Kenyan songs express joy, culture, and unity.",
+      "Sing national songs: 'Ee Mungu Nguvu Yetu' and school anthems.",
+      "Traditional songs: folk songs from your community.",
+      "Clap or tap to keep the rhythm while singing.",
+      "Sing in groups — blend your voice with others.",
+      "Learn call-and-response songs: leader sings a line, class responds.",
+      "Music builds confidence and brings people together.",
+    ],
+    revisionQuestions: [
+      { question: "Name Kenya's national anthem in Swahili.", answer: "Ee Mungu Nguvu Yetu", rubric: "1 mark" },
+    ],
+    difficulty: "intermediate",
+    tags: ["music", "singing", "creative", "grade 3", "lower primary"],
+  },
+];
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const cbcStudyContent: ContentItem[] = [
   ...creValues,
@@ -808,6 +1322,7 @@ export const cbcStudyContent: ContentItem[] = [
   ...socialStudiesArts,
   ...kicdRevision,
   ...assessmentsQuizzes,
+  ...lowerPrimary,
 ];
 
 export const strandCategories: StrandCategory[] = [
@@ -817,6 +1332,15 @@ export const strandCategories: StrandCategory[] = [
   "Social Studies & Arts",
   "KICD Revision Bank",
   "Assessments & Quizzes",
+  // ── KICD Lower Primary (Grades 1–3) ─────────────────────────────────────
+  "Indigenous Language Activities",
+  "Kiswahili Language / Kenya Sign Language Activities",
+  "English Language Activities",
+  "Mathematical Activities",
+  "Environmental Activities",
+  "Hygiene and Nutrition Activities",
+  "Religious Education Activities",
+  "Movement and Creative Activities",
 ];
 
 export const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;
