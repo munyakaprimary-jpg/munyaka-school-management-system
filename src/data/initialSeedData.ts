@@ -58,23 +58,12 @@ export const INITIAL_SEED_DATA = {
   ],
 
   // ── Fee Records ───────────────────────────────────────────────────────────
-  // Sample fee ledgers so the Fees page has data on first launch.
-  fees: {
-    "stu-001": { id: "fees-stu-001", studentId: "stu-001", studentName: "Aisha Wanjiku Mwangi", total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-02-10", status: "Cleared" },
-    "stu-002": { id: "fees-stu-002", studentId: "stu-002", studentName: "Brian Kipkorir Cheruiyot", total: 15000, paid: 10000, balance: 5000, lastPayment: "2026-02-15", status: "Partial" },
-    "stu-003": { id: "fees-stu-003", studentId: "stu-003", studentName: "Cynthia Nafula Ochieng",  total: 15000, paid: 0,     balance: 15000, lastPayment: "",          status: "Pending" },
-    "stu-004": { id: "fees-stu-004", studentId: "stu-004", studentName: "Daniel Kipng'eno Ruto",   total: 18000, paid: 18000, balance: 0,    lastPayment: "2026-01-30", status: "Cleared" },
-    "stu-005": { id: "fees-stu-005", studentId: "stu-005", studentName: "Evelyn Adhiambo Otieno",   total: 12000, paid: 12000, balance: 0,    lastPayment: "2026-02-05", status: "Cleared" },
-    "stu-006": { id: "fees-stu-006", studentId: "stu-006", studentName: "Faith Wanjiru Kamau",       total: 18000, paid: 9000,  balance: 9000, lastPayment: "2026-02-12", status: "Partial" },
-    "stu-007": { id: "fees-stu-007", studentId: "stu-007", studentName: "George Kiptoo Letting",    total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-02-01", status: "Cleared" },
-    "stu-008": { id: "fees-stu-008", studentId: "stu-008", studentName: "Happiness Muthoni Karanja", total: 20000, paid: 0,    balance: 20000, lastPayment: "",         status: "Pending" },
-    "stu-009": { id: "fees-stu-009", studentId: "stu-009", studentName: "Ian Kibet Rotich",         total: 15000, paid: 7500,  balance: 7500, lastPayment: "2026-02-18", status: "Partial" },
-    "stu-010": { id: "fees-stu-010", studentId: "stu-010", studentName: "Joyce Chepkoech Kirui",   total: 15000, paid: 15000, balance: 0,    lastPayment: "2026-01-28", status: "Cleared" },
-    "stu-011": { id: "fees-stu-011", studentId: "stu-011", studentName: "Kevin Kipng'etich Yego",  total: 18000, paid: 18000, balance: 0,    lastPayment: "2026-02-08", status: "Cleared" },
-    "stu-012": { id: "fees-stu-012", studentId: "stu-012", studentName: "Laura Achieng Opiyo",     total: 8000,  paid: 8000,  balance: 0,    lastPayment: "2026-02-20", status: "Cleared" },
-    "stu-013": { id: "fees-stu-013", studentId: "stu-013", studentName: "Moses Kiptanui Bett",     total: 12000, paid: 4000,  balance: 8000, lastPayment: "2026-02-22", status: "Partial" },
-    "stu-014": { id: "fees-stu-014", studentId: "stu-014", studentName: "Nancy Wambui Njoroge",    total: 12000, paid: 12000, balance: 0,    lastPayment: "2026-02-19", status: "Cleared" },
-  },
+  // All learners start at KES 0 balance. Fee records are accumulated only
+  // through the Fees page's payment recording flow — never pre-seeded.
+  // NOTE: the `fees` object maps studentId → fee ledger row. Each entry
+  // represents a configured fee structure for the student's grade, not
+  // historical payment data. Historical payments live in `transactions`.
+  fees: {},
 
   // ── Fee Structures (per grade) ──────────────────────────────────────────
   // Seeded so the Fee Configuration page has a starting structure.

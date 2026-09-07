@@ -287,9 +287,12 @@ const StudentProfile = () => {
   const performanceRows = useMemo(() => computeSubjectPerformance(), [activeLearner]);
 
   // ── Fee metrics (component-level so the bottom card can re-use them) ──
-  // All values are computed strictly from recorded data. No hardcoded
-  // KES 15,000 / 12,500 / 8,000 fallback. Any missing piece collapses
-  // to 0 via the `?? 0` pattern.
+  // All values are computed strictly from recorded data with strict
+  // `|| 0` zero fallbacks. No hardcoded KES 15,000 / 12,500 / 8,000
+  // fallback. Pattern follows the brief:
+  //   totalBilled = learner.totalBilled || 0
+  //   totalPaid   = learner.totalPaid   || 0
+  //   balance     = totalBilled - totalPaid (clamped to >= 0)
   interface TransactionRow {
     id?: string;
     studentId?: string;
@@ -311,25 +314,14 @@ const StudentProfile = () => {
         transactions: [] as TransactionRow[],
       };
     }
-    interface FeeStructure {
-      id: string;
-      gradeId?: string;
-      gradeName?: string;
-      year?: string;
-      term?: string;
-      amount?: number;
-    }
-    const feeStructures = safeRead<FeeStructure[]>(FEE_STRUCTURES_KEY, []);
-    const matching = feeStructures.filter((fs) => {
-      if (!fs) return false;
-      return (fs.gradeName && fs.gradeName === activeLearner.grade) ||
-             (fs.gradeId && fs.gradeId === activeLearner.grade);
-    });
-    const totalInvoiced = matching.reduce(
-      (acc, fs) => acc + (typeof fs.amount === 'number' ? fs.amount : 0),
-      0,
-    );
 
+    // 1. Read totals directly from the learner record first.
+    //    Every newly registered learner starts with these set to 0.
+    let totalBilled = (activeLearner as any).totalBilled ?? 0;
+    let totalPaid   = (activeLearner as any).totalPaid   ?? 0;
+    let balance     = (activeLearner as any).balance     ?? (totalBilled - totalPaid);
+
+    // 2. Sum payment transactions recorded for this learner.
     const allTx: TransactionRow[] = [
       ...safeRead<TransactionRow[]>(TRANSACTIONS_KEY, []),
       ...safeRead<TransactionRow[]>(PAYMENT_RECORDS_KEY, []),
@@ -344,13 +336,49 @@ const StudentProfile = () => {
         const tb = b.date ? new Date(b.date).getTime() : 0;
         return tb - ta;
       });
-    const totalPaid = studentTx.reduce(
+    const txPaid = studentTx.reduce(
       (acc, tx) => acc + (typeof tx.amount === 'number' ? tx.amount : 0),
       0,
     );
-    const outstandingBalance = Math.max(0, totalInvoiced - totalPaid);
+    // The recorded transactions are the source of truth for `totalPaid`.
+    totalPaid = txPaid;
+
+    // 3. If the learner record never recorded a `totalBilled` value,
+    //    fall back to summing the configured fee structures for the
+    //    learner's grade. This is the only place the dynamic lookup
+    //    is allowed — and only as a fallback when the row is 0/unset.
+    if (!totalBilled) {
+      interface FeeStructure {
+        id: string;
+        gradeId?: string;
+        gradeName?: string;
+        year?: string;
+        term?: string;
+        amount?: number;
+      }
+      const feeStructures = safeRead<FeeStructure[]>(FEE_STRUCTURES_KEY, []);
+      const matching = feeStructures.filter((fs) => {
+        if (!fs) return false;
+        return (fs.gradeName && fs.gradeName === activeLearner.grade) ||
+               (fs.gradeId && fs.gradeId === activeLearner.grade);
+      });
+      totalBilled = matching.reduce(
+        (acc, fs) => acc + (typeof fs.amount === 'number' ? fs.amount : 0),
+        0,
+      );
+    }
+
+    // 4. Derive outstanding balance strictly from the two clean values.
+    balance = totalBilled - totalPaid;
+    if (balance < 0) balance = 0;
     const lastTx = studentTx[0] ?? null;
-    return { totalInvoiced, totalPaid, outstandingBalance, lastTx, transactions: studentTx };
+    return {
+      totalInvoiced: totalBilled,
+      totalPaid,
+      outstandingBalance: balance,
+      lastTx,
+      transactions: studentTx,
+    };
   }, [activeLearner]);
 
   const formatKsh = (n: number) =>

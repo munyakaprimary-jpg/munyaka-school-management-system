@@ -71,6 +71,12 @@ interface LearnerRowCompat {
   admissionYear?: number;
   assessment?: string;
   status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
+  // ── Fee ledger fields (always start at zero; never pre-seeded) ─────
+  totalBilled?: number;
+  totalPaid?: number;
+  balance?: number;
+  feeBalance?: number;
+  feeHistory?: unknown[];
 }
 
 const DEFAULT_LEARNERS: LearnerRowCompat[] = INITIAL_SEED_DATA.students as LearnerRowCompat[];
@@ -708,6 +714,15 @@ export default function Students() {
             id: `L-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
             ...normalizedEntry,
             status: normalizedEntry.status ?? 'Active',
+            // ── Fee ledger defaults (zero balance, empty history) ──────
+            // Every newly registered learner starts with KES 0 across
+            // the entire fee ledger. Real values are only ever written
+            // by the Fees page's payment recording flow.
+            totalBilled: 0,
+            totalPaid: 0,
+            balance: 0,
+            feeBalance: 0,
+            feeHistory: [],
           };
     
           // ── Offline Local Storage Persistence ─────────────────────────────

@@ -47,6 +47,14 @@ export interface Learner {
   health?: string;
   needs?: string;
   feeBalance?: number;
+  /** Total invoiced / billed for the current term — 0 until a fee structure is configured. */
+  totalBilled?: number;
+  /** Total amount paid by the learner across all recorded transactions. */
+  totalPaid?: number;
+  /** Remaining balance: totalBilled - totalPaid. Clamped to ≥ 0. */
+  balance?: number;
+  /** History of individual fee payments. */
+  feeHistory?: unknown[];
   coCurricularActivities?: string;
   examType?: string;
   /** Optional assessment / notes field. */

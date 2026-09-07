@@ -74,11 +74,122 @@ import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
 
+// ── LocalStorage keys that hold active learner rows ────────────────────────
+const LEARNER_STORAGE_KEYS = [
+  'school_learners_data',
+  'students',
+  'learners',
+  'pupils',
+  'school_students',
+  'registered_students',
+  'munyaka_students',
+  'munyaka_learners',
+];
+const FEE_LEDGER_KEYS = [
+  'munyaka_fees_records',
+  'munyaka_student_fees',
+  'munyaka_payment_records',
+  'munyaka_transactions',
+];
+
+// ── One-time fee sanitizer ────────────────────────────────────────────────
+// Gated by a localStorage flag so it runs at most once per browser.
+// Resets all hardcoded fee fields on every stored learner to 0 and
+// clears any pre-seeded fee ledger so the app starts from a clean slate.
+const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
+function runOneTimeFeeSanitizer(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (window.localStorage.getItem(FEE_SANITIZER_FLAG) === 'done') return;
+
+  try {
+    // 1. Reset all hardcoded fee fields on every stored learner row.
+    for (const key of LEARNER_STORAGE_KEYS) {
+      const raw = window.localStorage.getItem(key);
+      if (!raw) continue;
+      let parsed: unknown;
+      try { parsed = JSON.parse(raw); } catch { continue; }
+      if (!Array.isArray(parsed) || parsed.length === 0) continue;
+
+      let mutated = false;
+      const cleaned = parsed.map((row) => {
+        if (!row || typeof row !== 'object') return row;
+        const r = row as Record<string, unknown>;
+        const next = { ...r };
+        let changed = false;
+        // The fields the brief asked us to normalize. They collapse to 0
+        // when the row has no custom ledger entries.
+        const feeFields: Array<keyof typeof r> = [
+          'totalBilled', 'totalPaid', 'balance', 'feeBalance',
+          'total', 'paid', 'amountOwed', 'outstandingBalance', 'arrears',
+        ];
+        for (const f of feeFields) {
+          if (f in next) {
+            const v = next[f];
+            if (typeof v === 'number' && v !== 0) {
+              next[f] = 0;
+              changed = true;
+            } else if (v !== 0 && v !== undefined) {
+              next[f] = 0;
+              changed = true;
+            }
+          }
+        }
+        // Always start with an empty fee history.
+        if ('feeHistory' in next) {
+          if (!Array.isArray(next.feeHistory) || (next.feeHistory as unknown[]).length > 0) {
+            next.feeHistory = [];
+            changed = true;
+          }
+        }
+        if (changed) mutated = true;
+        return next;
+      });
+
+      if (mutated) {
+        try {
+          window.localStorage.setItem(key, JSON.stringify(cleaned));
+        } catch (err) {
+          console.error(`[fee-sanitizer] Failed to persist "${key}":`, err);
+        }
+      }
+    }
+
+    // 2. Clear pre-seeded fee ledgers so the app boots with empty ledgers.
+    // Real fee records are only ever written through the Fees page.
+    for (const key of FEE_LEDGER_KEYS) {
+      try {
+        const raw = window.localStorage.getItem(key);
+        if (!raw) continue;
+        let parsed: unknown;
+        try { parsed = JSON.parse(raw); } catch { continue; }
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          // Keep payment records / transactions intact if they exist as
+          // user-entered data — only clear the legacy `fees_records` shape
+          // that pre-seeded per-student ledgers into the store.
+          if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
+            window.localStorage.setItem(key, JSON.stringify({}));
+          }
+        } else if (key === 'munyaka_fees_records' || key === 'munyaka_student_fees') {
+          // Force-write {} so the next hydrate cannot fall back to seed.
+          window.localStorage.setItem(key, JSON.stringify({}));
+        }
+      } catch {
+        /* no-op */
+      }
+    }
+
+    window.localStorage.setItem(FEE_SANITIZER_FLAG, 'done');
+    console.info('[fee-sanitizer] Reset hardcoded fee fields on stored learners.');
+  } catch (err) {
+    console.error('[fee-sanitizer] Unexpected failure:', err);
+  }
+}
+
 const queryClient = new QueryClient();
 
 const App = () => {
   // ── One-time learner-data migrations ───────────────────────────────────
-  // Three sequential, independently-gated migrations run on first launch:
+  // Sequential, independently-gated migrations run on first launch:
   //
   //   1. Assessment-number cleanup — removes fake MUN-XXX values that
   //      may have leaked into the `assessment` (KNEC/NEMIS) field.
@@ -88,6 +199,9 @@ const App = () => {
   //
   //   3. Admission-number backfill (v6) — generates `MUN-{family}-{seq}/{year}`
   //      for any learner still missing `admissionNo`. Supports PP1/PP2.
+  //
+  //   4. Fee sanitizer (v1) — resets all hardcoded fee fields on stored
+  //      learners to 0 and clears pre-seeded fee ledgers.
   //
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
@@ -108,6 +222,7 @@ const App = () => {
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();
+    runOneTimeFeeSanitizer();
   }, []);
 
   return (
