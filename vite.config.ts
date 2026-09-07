@@ -19,6 +19,8 @@ export default defineConfig(() => ({
     },
   },
   build: {
+    // Set target to es2015 for Android WebView compatibility
+    target: 'es2015',
     // Raise the warning threshold to accommodate the heavy vendor stack used
     // for local / Capacitor builds (recharts, pdfjs, sql.js, lucide).
     chunkSizeWarningLimit: 6000,
