@@ -345,6 +345,9 @@ export async function checkServerHealth(): Promise<{
   }
 
   const start = performance.now();
+
+  // Wrap everything in try-catch so offline / network failures resolve
+  // gracefully without propagating uncaught promise rejections.
   try {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 5000);

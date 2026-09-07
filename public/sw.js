@@ -28,8 +28,14 @@ self.addEventListener('fetch', (event) => {
           return response;
         }
         return fetch(event.request);
-      }
-    )
+      })
+      .catch(() => {
+        // Network request failed and no cache match.
+        // Silently fail rather than throwing an uncaught rejection.
+        // This prevents errors for API calls like /api/health or
+        // /reset-override.json that legitimately may not be cached.
+        console.warn('[SW] Fetch failed and no cache available for:', event.request.url);
+      })
   );
 });
 
