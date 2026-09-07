@@ -129,20 +129,27 @@ const getGradeMatchKey = (name: string): string => {
 
 export default function Students() {
   // 1. LocalStorage Persistence Setup for Learners
+  // ── Empty-by-default: do NOT fall back to `DEFAULT_LEARNERS` (the
+  // pre-seeded sample students). When localStorage is absent or empty,
+  // the table renders the clean empty state. The "Register Student"
+  // button is always available for admins.
   const [learners, setLearners] = useState<Learner[]>(() => {
     try {
       const saved = localStorage.getItem('school_learners_data');
-      if (saved) {
+      if (saved !== null) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed)) {
           return parsed;
         }
       }
     } catch (e) {
       console.error('Error loading learners from localStorage', e);
     }
-    localStorage.setItem('school_learners_data', JSON.stringify(DEFAULT_LEARNERS));
-    return DEFAULT_LEARNERS;
+    // Never re-seed from DEFAULT_LEARNERS — write empty `[]` and return it.
+    try {
+      localStorage.setItem('school_learners_data', '[]');
+    } catch { /* no-op */ }
+    return [];
   });
 
   // 2. Use the academic calendar hook for dynamic term/year
@@ -1155,9 +1162,9 @@ export default function Students() {
                       <div className="p-4 bg-slate-50 rounded-full text-slate-300">
                         <Search size={32} />
                       </div>
-                      <p className="text-slate-800 font-bold">No learners found matching your filter criteria.</p>
+                      <p className="text-slate-800 font-bold">No learners found.</p>
                       <p className="text-xs text-slate-400 max-w-sm">
-                        Try a different name or admission number above.
+                        Click <strong>+ Add Learner</strong> to register your first student.
                       </p>
                     </div>
                   </td>

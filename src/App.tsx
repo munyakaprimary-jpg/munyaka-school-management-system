@@ -97,6 +97,44 @@ const FEE_LEDGER_KEYS = [
 // Resets all hardcoded fee fields on every stored learner to 0 and
 // clears any pre-seeded fee ledger so the app starts from a clean slate.
 const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
+
+// ── One-time learner purge ────────────────────────────────────────────────
+// Forces the active learners array to an empty `[]` state on first
+// launch. Also writes the empty list to every legacy learner storage
+// key so any subsequent hydrate cannot fall back to a seed file. This
+// is the last migration in the chain; after it runs the table renders
+// its proper "no learners" empty state.
+const LEARNER_PURGE_FLAG = 'munyaka_learner_purge_v1';
+function runOneTimeLearnerPurge(): void {
+  if (typeof window === 'undefined' || !window.localStorage) return;
+  if (window.localStorage.getItem(LEARNER_PURGE_FLAG) === 'done') return;
+
+  try {
+    // Wipe every legacy learner storage key, then re-write `[]` so the
+    // key exists (downstream readers check `Array.isArray` but a
+    // missing key triggers some code paths to re-seed).
+    for (const key of LEARNER_STORAGE_KEYS) {
+      try {
+        window.localStorage.removeItem(key);
+        window.localStorage.setItem(key, JSON.stringify([]));
+      } catch (err) {
+        console.error(`[learner-purge] Failed to reset "${key}":`, err);
+      }
+    }
+
+    // Also stop the storage hydration from re-seeding by marking the
+    // students "purge stamp" so the hydration layer can opt-out.
+    try {
+      window.localStorage.setItem('munyaka_students_purged', '1');
+    } catch { /* no-op */ }
+
+    window.localStorage.setItem(LEARNER_PURGE_FLAG, 'done');
+    console.info('[learner-purge] Cleared all learners and forced empty roster.');
+  } catch (err) {
+    console.error('[learner-purge] Unexpected failure:', err);
+  }
+}
+
 function runOneTimeFeeSanitizer(): void {
   if (typeof window === 'undefined' || !window.localStorage) return;
   if (window.localStorage.getItem(FEE_SANITIZER_FLAG) === 'done') return;
@@ -254,15 +292,25 @@ const App = () => {
         'munyaka_student_fees',
         'munyaka_payment_records',
         'munyaka_transactions',
+        // Force every legacy learner key to start as `[]` so the table
+        // renders an empty roster by default.
+        'students',
+        'learners',
+        'pupils',
+        'school_students',
+        'registered_students',
       ];
       for (const k of KEYS_TO_RESET) {
-        window.localStorage.removeItem(k);
+        try {
+          window.localStorage.removeItem(k);
+        } catch { /* no-op */ }
       }
     } catch { /* no-op */ }
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();
     runOneTimeFeeSanitizer();
+    runOneTimeLearnerPurge();
   }, []);
 
   return (
