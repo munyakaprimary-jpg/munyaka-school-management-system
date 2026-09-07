@@ -428,6 +428,7 @@ export default function StudyCorner() {
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const searchRef = useRef<HTMLInputElement>(null);
 
   // Custom materials loaded from localStorage
   const [customItems, setCustomItems] = useState<ContentItem[]>(() => loadCustomMaterials());
