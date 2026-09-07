@@ -1002,19 +1002,19 @@ export default function Students() {
       {/* 4. Table Layout & Styling with Dual Horizontal Scrollbars */}
       <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden w-full max-w-full">
         <div className="w-full overflow-x-auto block">
-          <table className="w-full text-left border-collapse min-w-[650px] table-auto">
+          <table className="w-full text-left border-collapse min-w-[1100px] table-auto">
             <thead>
               <tr className="border-b border-slate-200 bg-slate-50/70 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4 whitespace-nowrap">ASSESSMENT NO.</th>
                 <th className="py-3 px-4 whitespace-nowrap">ADMISSION NO.</th>
-                <th className="py-3 px-4 whitespace-nowrap">NAME</th>
+                <th className="py-3 px-4 whitespace-nowrap">ASSESSMENT NO.</th>
                 <th className="py-3 px-4 whitespace-nowrap">BIRTH CERT NO.</th>
+                <th className="py-3 px-4 whitespace-nowrap">NAME</th>
                 <th className="py-3 px-4 whitespace-nowrap">GRADE</th>
                 <th className="py-3 px-4 whitespace-nowrap">STREAM</th>
                 <th className="py-3 px-4 whitespace-nowrap">GENDER</th>
                 <th className="py-3 px-4 whitespace-nowrap">PARENT/GUARDIAN</th>
                 <th className="py-3 px-4 whitespace-nowrap">PHONE</th>
-                <th className="py-3 px-4 text-right whitespace-nowrap">ACTIONS</th>
+                <th className="py-3 px-4 text-right whitespace-nowrap">ACTION</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 text-sm">
@@ -1030,13 +1030,23 @@ export default function Students() {
                   const rowKey = learner.admNo || learner.id;
                   return (
                     <tr key={rowKey} className="hover:bg-slate-50/60 transition-colors group">
+                      {/* Column 1: ADMISSION NO. */}
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs font-semibold text-indigo-600">
-                        {learner.admNo}
+                        {learner.admissionNo || '—'}
                       </td>
+                      {/* Column 2: ASSESSMENT NO. */}
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
-                        {(learner as any).admissionNo || '—'}
+                        {learner.assessmentNo &&
+                         !learner.assessmentNo.toUpperCase().startsWith('MUN-')
+                          ? learner.assessmentNo
+                          : '—'}
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap font-bold text-slate-900">
+                      {/* Column 3: BIRTH CERT NO. */}
+                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
+                        {learner.birthCertificateNo || '—'}
+                      </td>
+                      {/* Column 4: NAME */}
+                      <td className="py-3 px-4 whitespace-nowrap font-semibold text-slate-900">
                         <Link
                           to={`/students/${learner.id}`}
                           className="hover:text-indigo-600 transition-colors inline-flex items-center gap-1.5 group/link"
@@ -1045,26 +1055,17 @@ export default function Students() {
                           <ExternalLink className="w-3 h-3 opacity-0 group-hover/link:opacity-100 transition-opacity" />
                         </Link>
                       </td>
-                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
-                        {learner.assessmentNo &&
-                         !learner.assessmentNo.toUpperCase().startsWith('MUN-') &&
-                         learner.assessmentNo.trim() !== ''
-                          ? learner.assessmentNo
-                          : '—'}
-                      </td>
-                      <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
-                        {learner.birthCertificateNo && learner.birthCertificateNo.trim() !== ''
-                          ? learner.birthCertificateNo
-                          : <span className="text-slate-300">—</span>}
-                      </td>
+                      {/* Column 5: GRADE */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200/60">
-                          {learner.grade}
+                          {learner.grade || '—'}
                         </span>
                       </td>
+                      {/* Column 6: STREAM */}
                       <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-medium">
-                        {learner.stream}
+                        {learner.stream || '—'}
                       </td>
+                      {/* Column 7: GENDER */}
                       <td className="py-3 px-4 whitespace-nowrap">
                         {learner.gender === 'Female' ? (
                           <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-50 text-pink-700 border border-pink-200">
@@ -1076,12 +1077,15 @@ export default function Students() {
                           </span>
                         )}
                       </td>
+                      {/* Column 8: PARENT/GUARDIAN */}
                       <td className="py-3 px-4 whitespace-nowrap text-slate-700 font-medium">
-                        {learner.guardian}
+                        {(learner as any).guardianName || (learner as any).parentName || learner.guardian || '—'}
                       </td>
+                      {/* Column 9: PHONE */}
                       <td className="py-3 px-4 whitespace-nowrap text-slate-600 font-mono text-xs">
-                        {learner.phone}
+                        {(learner as any).guardianPhone || (learner as any).parentPhone || learner.phone || '—'}
                       </td>
+                      {/* Column 10: ACTION */}
                       <td className="py-3 px-4 text-right whitespace-nowrap">
                         <div className="flex items-center justify-end gap-2">
                           <button
