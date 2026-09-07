@@ -30,6 +30,7 @@ import {
   Paperclip,
   Image,
   FileSpreadsheet,
+  Award,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
@@ -95,6 +96,11 @@ const strandMeta: Record<
     color: "text-violet-700",
     bg: "bg-violet-50 border-violet-200",
     icon: <FileText size={16} />,
+  },
+  "Assessments & Quizzes": {
+    color: "text-rose-700",
+    bg: "bg-rose-50 border-rose-200",
+    icon: <Award size={16} />,
   },
 };
 
@@ -175,6 +181,38 @@ function ReaderModal({
             </p>
           </div>
 
+          {/* Assessment metadata — only shown for assessment items */}
+          {item.strand === "Assessments & Quizzes" && (
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-4 space-y-3">
+              <div className="flex items-center gap-2">
+                <Award size={15} className="text-rose-600" />
+                <h3 className="text-sm font-semibold text-rose-800">
+                  Assessment Details
+                </h3>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div className="flex flex-col items-center rounded-lg bg-white/70 p-2.5">
+                  <span className="text-[11px] text-rose-500 font-medium mb-1">Type</span>
+                  <span className="text-xs font-semibold text-rose-800 text-center leading-tight">
+                    {item.assessmentType || "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg bg-white/70 p-2.5">
+                  <span className="text-[11px] text-rose-500 font-medium mb-1">Total Marks</span>
+                  <span className="text-sm font-bold text-rose-800">
+                    {item.totalMarks ? `${item.totalMarks} marks` : "—"}
+                  </span>
+                </div>
+                <div className="flex flex-col items-center rounded-lg bg-white/70 p-2.5">
+                  <span className="text-[11px] text-rose-500 font-medium mb-1">Duration</span>
+                  <span className="text-sm font-bold text-rose-800">
+                    {item.durationMinutes ? `${item.durationMinutes} min` : "—"}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Attachment */}
           {item.attachment && (
             <div className="rounded-xl border border-indigo-200 bg-indigo-50/50 p-4">
@@ -216,6 +254,45 @@ function ReaderModal({
                 <button
                   onClick={() => downloadAttachment(item.attachment!)}
                   className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+                >
+                  <Download size={13} />
+                  Download
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Marking Scheme / Answer Key */}
+          {item.markingScheme && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/50 p-4">
+              <h3 className="text-sm font-semibold text-emerald-800 mb-3 flex items-center gap-2">
+                <span className="text-base">🔑</span>
+                Marking Scheme / Answer Key
+              </h3>
+              <div className="flex items-start gap-3">
+                <div className="shrink-0 w-12 h-12 rounded-xl bg-white flex items-center justify-center text-emerald-600 border border-emerald-200">
+                  <FileText size={22} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-800 truncate">
+                    {item.markingScheme.name}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {item.markingScheme.type || "file"} · {formatBytes(item.markingScheme.size)}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mt-3">
+                <button
+                  onClick={() => onOpenAttachment?.(item.markingScheme!)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                >
+                  <ExternalLink size={13} />
+                  Open
+                </button>
+                <button
+                  onClick={() => downloadAttachment(item.markingScheme!)}
+                  className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border border-emerald-200 text-emerald-600 hover:bg-emerald-50 transition-colors"
                 >
                   <Download size={13} />
                   Download
@@ -416,7 +493,27 @@ function ContentCard({
           <span className={meta.color}>{meta.icon}</span>
           <span className={`font-medium ${meta.color}`}>{item.strand}</span>
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-1.5">
+          {item.assessmentType && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-rose-50 text-rose-700 border border-rose-200">
+              {item.assessmentType}
+            </span>
+          )}
+          {item.totalMarks && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-violet-50 text-violet-700 border border-violet-200">
+              {item.totalMarks} marks
+            </span>
+          )}
+          {item.durationMinutes && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-slate-100 text-slate-600 border border-slate-200">
+              {item.durationMinutes} min
+            </span>
+          )}
+          {item.markingScheme && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-50 text-emerald-700 border border-emerald-200" title="Marking scheme attached">
+              🔑 Scheme
+            </span>
+          )}
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               difficultyColour[item.difficulty]
@@ -471,6 +568,31 @@ function ContentCard({
               </span>
             </span>
             <Download size={14} className="shrink-0 text-indigo-500" />
+          </button>
+        )}
+
+        {/* Marking scheme / answer key badge */}
+        {item.markingScheme && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onOpenAttachment?.(item.markingScheme!);
+            }}
+            className="mt-2 w-full flex items-center gap-2 px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100 text-left transition-colors"
+            title="Open marking scheme"
+          >
+            <span className="shrink-0 w-8 h-8 rounded-lg bg-white flex items-center justify-center text-emerald-600 border border-emerald-200">
+              🔑
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block text-xs font-semibold text-emerald-700 truncate">
+                Marking Scheme / Answer Key
+              </span>
+              <span className="block text-[11px] text-gray-500 truncate">
+                {item.markingScheme.name} · {formatBytes(item.markingScheme.size)}
+              </span>
+            </span>
+            <Download size={14} className="shrink-0 text-emerald-500" />
           </button>
         )}
       </div>
@@ -607,8 +729,18 @@ export default function StudyCorner() {
   // ── Filtered & grouped data — declared BEFORE handlers ───────────────────
   const filtered = allContent.filter((item) => {
     if (selectedGrade !== null && item.grade !== selectedGrade) return false;
-    if (selectedStrands.length > 0 && !selectedStrands.includes(item.strand))
-      return false;
+
+    // Handle strand + subject filter
+    if (selectedStrands.length > 0) {
+      if (selectedStrands[0] === "Assessments & Quizzes") {
+        if (item.strand !== "Assessments & Quizzes") return false;
+        // Second filter dimension: subject (subStrand)
+        if (selectedStrands[1] && item.subStrand !== selectedStrands[1]) return false;
+      } else {
+        if (!selectedStrands.includes(item.strand)) return false;
+      }
+    }
+
     if (showBookmarksOnly && !bookmarks.includes(item.id)) return false;
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
@@ -739,16 +871,65 @@ export default function StudyCorner() {
           </div>
 
           {/* Add Material — Admin / Teacher only */}
-          {isAdminOrTeacher && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors"
-            >
-              <PlusCircle size={16} />
-              Add Learning Material
-            </button>
-          )}
-        </div>
+            {isAdminOrTeacher && (
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="flex items-center gap-2 shrink-0 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold shadow-sm transition-colors"
+              >
+                <PlusCircle size={16} />
+                Add Learning Material
+              </button>
+            )}
+          </div>
+  
+          {/* Primary Category Tabs — click any strand to jump straight in */}
+          <div className="mt-4 -mx-1 overflow-x-auto">
+            <div className="flex items-center gap-2 px-1 min-w-max">
+              <button
+                onClick={() => setSelectedStrands([])}
+                className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
+                  selectedStrands.length === 0
+                    ? "bg-gray-900 text-white border-gray-900"
+                    : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                }`}
+              >
+                <BookOpen size={13} />
+                All
+              </button>
+              {strandCategories.map((cat) => {
+                const meta = strandMeta[cat];
+                const active = selectedStrands.length === 1 && selectedStrands[0] === cat;
+                const count = allContent.filter((i) => i.strand === cat).length;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() =>
+                      setSelectedStrands(active ? [] : [cat])
+                    }
+                    className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-full border font-semibold transition-all whitespace-nowrap ${
+                      active
+                        ? `${meta.bg} ${meta.color} border-current`
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-400"
+                    }`}
+                  >
+                    {meta.icon}
+                    {cat}
+                    {count > 0 && (
+                      <span
+                        className={`ml-1 text-[10px] px-1.5 py-0.5 rounded-full ${
+                          active
+                            ? "bg-white/70 text-current"
+                            : "bg-gray-100 text-gray-500"
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
 
         {/* Stats row */}
         <div className="flex items-center justify-between gap-4 mt-4">
@@ -901,6 +1082,102 @@ export default function StudyCorner() {
               selected={selectedStrands}
               onToggle={toggleStrand}
             />
+          </div>
+        )}
+
+        {/* Assessment-specific filters — Grade & Subject chips when the Assessments tab is active */}
+        {selectedStrands.length === 1 && selectedStrands[0] === "Assessments & Quizzes" && (
+          <div className="bg-rose-50/40 border border-rose-200 rounded-xl p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Award size={14} className="text-rose-600" />
+              <p className="text-xs font-medium text-rose-700 uppercase tracking-wide">
+                Filter Assessments
+              </p>
+            </div>
+
+            {/* Grade chips */}
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1.5">Grade</p>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  onClick={() => setSelectedGrade(null)}
+                  className={`text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
+                    selectedGrade === null
+                      ? "bg-rose-600 text-white border-rose-600"
+                      : "bg-white text-gray-600 border-gray-200 hover:border-rose-300"
+                  }`}
+                >
+                  All
+                </button>
+                {gradeLevels.map((g) => {
+                  const active = selectedGrade === g;
+                  return (
+                    <button
+                      key={g}
+                      onClick={() => setSelectedGrade(active ? null : g)}
+                      className={`text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
+                        active
+                          ? "bg-rose-600 text-white border-rose-600"
+                          : "bg-white text-gray-600 border-gray-200 hover:border-rose-300"
+                      }`}
+                    >
+                      G{g}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Learning area (subject) chips — pulled from items in the Assessments strand */}
+            <div>
+              <p className="text-[11px] text-gray-500 font-medium mb-1.5">Learning Area</p>
+              <div className="flex flex-wrap gap-1.5">
+                {(() => {
+                  const subjects = Array.from(
+                    new Set(
+                      allContent
+                        .filter((i) => i.strand === "Assessments & Quizzes")
+                        .map((i) => i.subStrand || "General")
+                    )
+                  ).sort();
+                  if (subjects.length === 0) {
+                    return (
+                      <span className="text-xs text-gray-400 italic">
+                        No assessments available yet.
+                      </span>
+                    );
+                  }
+                  return (
+                    <>
+                      {subjects.map((sub) => {
+                        const active = selectedStrands.length === 2 && selectedStrands[1] === sub;
+                        return (
+                          <button
+                            key={sub}
+                            onClick={() => {
+                              // Toggle the subject as a second filter dimension
+                              // while keeping "Assessments & Quizzes" pinned as the primary strand.
+                              if (active) {
+                                setSelectedStrands(["Assessments & Quizzes"]);
+                              } else {
+                                setSelectedStrands(["Assessments & Quizzes", sub]);
+                              }
+                            }}
+                            className={`text-xs px-2.5 py-1 rounded-full border font-semibold transition-colors ${
+                              active
+                                ? "bg-rose-600 text-white border-rose-600"
+                                : "bg-white text-gray-600 border-gray-200 hover:border-rose-300"
+                            }`}
+                          >
+                            {sub}
+                          </button>
+                        );
+                      })}
+                    </>
+                  );
+                })()}
+              </div>
+            </div>
           </div>
         )}
 

@@ -7,7 +7,8 @@ export type StrandCategory =
   | "Languages"
   | "STEM & Agriculture"
   | "Social Studies & Arts"
-  | "KICD Revision Bank";
+  | "KICD Revision Bank"
+  | "Assessments & Quizzes";
 
 export interface MemoryVerse {
   reference: string;
@@ -45,7 +46,38 @@ export interface ContentItem {
   tags: string[];
   /** Optional offline attachment — stored as Base64 so no server required */
   attachment?: Attachment;
+  /** Optional marking scheme / answer key attachment (PDF or text) */
+  markingScheme?: Attachment;
+  /** Assessment-only: type of test/quiz/exam */
+  assessmentType?: AssessmentType;
+  /** Assessment-only: total marks */
+  totalMarks?: number;
+  /** Assessment-only: duration in minutes */
+  durationMinutes?: number;
 }
+
+export type AssessmentType =
+  | "Topical Quiz"
+  | "CAT (Continuous Assessment Test)"
+  | "Mid-Term Exam"
+  | "End of Term Exam"
+  | "Revision Paper"
+  | "KNEC Sample Paper"
+  | "Mock Exam"
+  | "Opener Quiz"
+  | "Other";
+
+export const assessmentTypeOptions: AssessmentType[] = [
+  "Topical Quiz",
+  "CAT (Continuous Assessment Test)",
+  "Mid-Term Exam",
+  "End of Term Exam",
+  "Revision Paper",
+  "KNEC Sample Paper",
+  "Mock Exam",
+  "Opener Quiz",
+  "Other",
+];
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 const g = (grade: number) => grade;
@@ -653,6 +685,121 @@ const kicdRevision: ContentItem[] = [
   },
 ];
 
+// ─── Assessments & Quizzes ─────────────────────────────────────────────────────
+const assessmentsQuizzes: ContentItem[] = [
+  // Grade 1 — English CAT
+  {
+    id: "assess-1-english-cat1",
+    grade: g(1),
+    strand: "Assessments & Quizzes",
+    subStrand: "English",
+    topic: "Grade 1 English — Continuous Assessment Test 1",
+    summary: "10 questions covering colours, numbers, and simple vocabulary.",
+    notes: [],
+    revisionQuestions: [
+      { question: "Colour the sky blue. What colour is it?", answer: "Blue", rubric: "1 mark" },
+      { question: "Count the apples: 🍎🍎🍎 How many apples?", answer: "Three (3)", rubric: "1 mark" },
+      { question: "Write the letter A in capital and small.", answer: "A a", rubric: "1 mark" },
+      { question: "Circle the biggest object: 🐘 🌱 🐜", answer: "Elephant (🐘)", rubric: "1 mark" },
+      { question: "Fill in the missing letter: C _ T", answer: "A → CAT", rubric: "2 marks" },
+    ],
+    difficulty: "beginner",
+    tags: ["assessment", "cat", "english", "grade 1", "continuous assessment"],
+  },
+  // Grade 4 — Mathematics End-of-Term
+  {
+    id: "assess-4-math-eot",
+    grade: g(4),
+    strand: "Assessments & Quizzes",
+    subStrand: "Mathematics",
+    topic: "Grade 4 Mathematics — End of Term 1 Examination",
+    summary: "40 marks. Covers numbers, shapes, measurement, and word problems.",
+    notes: [],
+    revisionQuestions: [
+      { question: "Write in words: 4,506", answer: "Four thousand five hundred and six", rubric: "2 marks" },
+      { question: "Calculate: 3,280 + 1,459 = ?", answer: "4,739", rubric: "3 marks" },
+      { question: "A rectangle has length 8 cm and width 5 cm. Find its perimeter.", answer: "2(8+5) = 26 cm", rubric: "4 marks" },
+      { question: "Convert 2 kg 350 g into grams.", answer: "2,350 g", rubric: "3 marks" },
+      { question: "What is the place value of 7 in 7,349?", answer: "Thousands (7,000)", rubric: "2 marks" },
+      { question: "Draw and name 3 types of angles.", answer: "Acute, Right, Obtuse", rubric: "3 marks" },
+      { question: "Subtract: 5,000 − 2,783 = ?", answer: "2,217", rubric: "3 marks" },
+    ],
+    difficulty: "intermediate",
+    tags: ["assessment", "end of term", "mathematics", "grade 4", "examination"],
+  },
+  // Grade 7 — CRE Topical Quiz
+  {
+    id: "assess-7-cre-quiz",
+    grade: g(7),
+    strand: "Assessments & Quizzes",
+    subStrand: "CRE",
+    topic: "Grade 7 CRE — The prophets of Israel: Topical Quiz",
+    summary: "15 multiple-choice and short-answer questions on Old Testament prophets.",
+    notes: [],
+    revisionQuestions: [
+      { question: "Which prophet defeated the prophets of Baal on Mount Carmel?", answer: "Elijah", rubric: "2 marks" },
+      { question: "Name the two servants Elisha raised from death.", answer: "The Shunammite woman's son and Naaman's servant (Gehazi)", rubric: "3 marks" },
+      { question: "What did Jeremiah call the new covenant?", answer: "A law written on the heart", rubric: "2 marks" },
+      { question: "Isaiah called Emmanuel 'God with us'. True or false?", answer: "True", rubric: "1 mark" },
+      { question: "Which prophet predicted the fall of Babylon?", answer: "Isaiah", rubric: "2 marks" },
+    ],
+    difficulty: "advanced",
+    tags: ["quiz", "topical", "cre", "grade 7", "prophets", "old testament"],
+  },
+  // Grade 9 — KNEC Sample Paper
+  {
+    id: "assess-9-science-knec",
+    grade: g(9),
+    strand: "Assessments & Quizzes",
+    subStrand: "Science",
+    topic: "Grade 9 Science — KNEC Sample Paper (Physics Section)",
+    summary: "KCPE-style structured and essay questions on linear motion, forces, and energy.",
+    notes: [],
+    revisionQuestions: [
+      { question: "Define: (a) Speed, (b) Velocity.", answer: "(a) Rate of change of distance. (b) Rate of change of displacement (with direction).", rubric: "4 marks" },
+      { question: "A car travels 200 m in 10 s. Calculate its speed.", answer: "Speed = 200 ÷ 10 = 20 m/s", rubric: "3 marks" },
+      { question: "State Newton's First Law of Motion.", answer: "A body remains at rest or in uniform motion unless acted upon by an external force.", rubric: "3 marks" },
+      { question: "What is the difference between mass and weight?", answer: "Mass is the quantity of matter (constant); weight is the force due to gravity (varies with location).", rubric: "4 marks" },
+      { question: "A ball is thrown upwards with a velocity of 30 m/s. Calculate the maximum height reached. (g = 10 m/s²)", answer: "h = u²/(2g) = 900/(20) = 45 m", rubric: "5 marks" },
+      { question: "State the law of conservation of energy.", answer: "Energy cannot be created or destroyed, only transformed from one form to another.", rubric: "3 marks" },
+    ],
+    difficulty: "advanced",
+    tags: ["knec", "sample paper", "science", "grade 9", "physics", "kcpe"],
+  },
+  // Grade 5 — Kiswahili Insha
+  {
+    id: "assess-5-kiswahili-insha",
+    grade: g(5),
+    strand: "Assessments & Quizzes",
+    subStrand: "Kiswahili",
+    topic: "Grade 5 Kiswahili — Insha ya Maelezo (Descriptive Essay)",
+    summary: "Write a well-structured descriptive essay of 150–200 words on a given topic.",
+    notes: [],
+    revisionQuestions: [
+      { question: "Andika insha ya maelezo kuhusu 'Siku ya Kuzaliwa Kwangu'. (Use proper paragraphs: utangulizi, mwili, hitimisho.)", answer: "Descriptive essay with introduction (utangulizi), body (mwili), and conclusion (hitimisho). 150-200 words. Good Kiswahili vocabulary used.", rubric: "15 marks" },
+      { question: "Taja sentensi tano (5) za maelezo katika insha yako.", answer: "Any 5 descriptive sentences in correct Kiswahili.", rubric: "5 marks" },
+    ],
+    difficulty: "intermediate",
+    tags: ["insha", "kiswahili", "grade 5", "essay", "descriptive writing"],
+  },
+  // Grade 8 — English Composition
+  {
+    id: "assess-8-english-composition",
+    grade: g(8),
+    strand: "Assessments & Quizzes",
+    subStrand: "English",
+    topic: "Grade 8 English — Narrative Composition (End of Term 2)",
+    summary: "Write a story of 200–250 words beginning with: 'The door creaked open and…'",
+    notes: [],
+    revisionQuestions: [
+      { question: "Write a story beginning with: 'The door creaked open and…' (200–250 words)", answer: "Narrative composition with beginning, middle, end. Correct tense and paragraphing. Vivid descriptions. No spelling errors.", rubric: "20 marks" },
+      { question: "Identify two narrative elements used in your story.", answer: "Any two: setting, character, plot, conflict, climax, resolution.", rubric: "2 marks" },
+    ],
+    difficulty: "advanced",
+    tags: ["composition", "narrative", "english", "grade 8", "end of term"],
+  },
+];
+
 // ─── Export ───────────────────────────────────────────────────────────────────
 export const cbcStudyContent: ContentItem[] = [
   ...creValues,
@@ -660,6 +807,7 @@ export const cbcStudyContent: ContentItem[] = [
   ...stemAgriculture,
   ...socialStudiesArts,
   ...kicdRevision,
+  ...assessmentsQuizzes,
 ];
 
 export const strandCategories: StrandCategory[] = [
@@ -668,6 +816,7 @@ export const strandCategories: StrandCategory[] = [
   "STEM & Agriculture",
   "Social Studies & Arts",
   "KICD Revision Bank",
+  "Assessments & Quizzes",
 ];
 
 export const gradeLevels = [1, 2, 3, 4, 5, 6, 7, 8, 9] as const;

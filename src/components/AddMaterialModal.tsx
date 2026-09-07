@@ -13,16 +13,21 @@ import {
   Trash2,
   FileSpreadsheet,
   Image,
+  Clock,
+  Award,
+  FileKey,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   strandCategories,
   gradeLevels,
+  assessmentTypeOptions,
   type ContentItem,
   type StrandCategory,
   type MemoryVerse,
   type RevisionQuestion,
   type Attachment,
+  type AssessmentType,
 } from "@/data/cbcStudyContent";
 import { useAuth } from "@/context/AuthContext";
 import {
@@ -33,7 +38,7 @@ import {
 
 const LS_KEY = "custom_study_materials";
 
-export type ContentType = "notes" | "memory_verse" | "practice_questions" | "pdf_link";
+export type ContentType = "notes" | "memory_verse" | "practice_questions" | "pdf_link" | "assessment";
 
 export interface NewMaterialForm {
   title: string;
@@ -43,6 +48,11 @@ export interface NewMaterialForm {
   contentType: ContentType;
   body: string;
   attachment?: Attachment;
+  /** Assessment-specific fields */
+  assessmentType?: AssessmentType;
+  totalMarks?: number | "";
+  durationMinutes?: number | "";
+  markingScheme?: Attachment;
 }
 
 const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ReactNode }[] = [
@@ -50,6 +60,7 @@ const CONTENT_TYPES: { value: ContentType; label: string; icon: React.ReactNode 
   { value: "memory_verse", label: "Memory Verse", icon: <Star size={14} /> },
   { value: "practice_questions", label: "Practice Questions", icon: <ListChecks size={14} /> },
   { value: "pdf_link", label: "Resource PDF Link", icon: <Link2 size={14} /> },
+  { value: "assessment", label: "Assessment / Quiz", icon: <Award size={14} /> },
 ];
 
 export function loadCustomMaterials(): ContentItem[] {
@@ -62,7 +73,27 @@ export function loadCustomMaterials(): ContentItem[] {
 
 export function saveCustomMaterial(item: ContentItem): void {
   const existing = loadCustomMaterials();
-  localStorage.setItem(LS_KEY, JSON.stringify([item, ...existing]));
+  // Ensure the legacy `category` field mirrors `strand` so older consumers
+  // (and the requirement that assessments be tagged with
+  // category === "Assessments & Quizzes") keep working alongside the
+  // new unified `strand` field.
+  const enriched = {
+    ...item,
+    category: (item as any).category ?? item.strand,
+  };
+  localStorage.setItem(LS_KEY, JSON.stringify([enriched, ...existing]));
+}
+
+/** Read a single stored custom material by id (helper for assessment view). */
+export function getCustomMaterialById(id: string): ContentItem | null {
+  return loadCustomMaterials().find((m) => m.id === id) ?? null;
+}
+
+/** Filter stored custom materials by category/strand. */
+export function getCustomMaterialsByCategory(category: string): ContentItem[] {
+  return loadCustomMaterials().filter(
+    (m) => m.strand === category || (m as any).category === category
+  );
 }
 
 function slugify(str: string): string {
@@ -90,6 +121,10 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     contentType: "notes",
     body: "",
     attachment: undefined,
+    assessmentType: undefined,
+    totalMarks: "",
+    durationMinutes: "",
+    markingScheme: undefined,
   });
 
   const [errors, setErrors] = useState<Partial<Record<keyof NewMaterialForm | "attachment", string>>>({});
@@ -97,7 +132,14 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
   const [saved, setSaved] = useState(false);
   const [isDragOver, setIsDragOver] = useState(false);
   const [isReadingFile, setIsReadingFile] = useState(false);
+  const [isDragOverScheme, setIsDragOverScheme] = useState(false);
+  const [isReadingScheme, setIsReadingScheme] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const schemeInputRef = useRef<HTMLInputElement>(null);
+
+  const isAssessment = form.strand === "Assessments & Quizzes" || form.contentType === "assessment";
+  const effectiveContentType =
+    form.strand === "Assessments & Quizzes" ? "assessment" : form.contentType;
 
   // Trap focus inside modal
   useEffect(() => {
@@ -114,6 +156,19 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
   const set = (field: keyof NewMaterialForm, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
+    if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
+  };
+
+  /** Setter for numeric assessment fields. Empty string stays empty; otherwise parse to number. */
+  const setNumber = (
+    field: "totalMarks" | "durationMinutes",
+    raw: string
+  ) => {
+    const trimmed = raw.trim();
+    setForm((prev) => ({
+      ...prev,
+      [field]: trimmed === "" ? "" : Number(trimmed),
+    }));
     if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
   };
 
@@ -151,6 +206,41 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     setForm((prev) => ({ ...prev, attachment: undefined }));
     setErrors((prev) => ({ ...prev, attachment: undefined }));
     if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  /** Process a marking-scheme file. */
+  const processSchemeFile = async (file: File) => {
+    setErrors((prev) => ({ ...prev, markingScheme: undefined }));
+    setIsReadingScheme(true);
+    try {
+      const attachment = await fileToAttachment(file);
+      setForm((prev) => ({ ...prev, markingScheme: attachment }));
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to read file.";
+      setErrors((prev) => ({ ...prev, markingScheme: message }));
+    } finally {
+      setIsReadingScheme(false);
+    }
+  };
+
+  const handleSchemeInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) processSchemeFile(file);
+    e.target.value = "";
+  };
+
+  const handleSchemeDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOverScheme(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processSchemeFile(file);
+  };
+
+  const removeMarkingScheme = () => {
+    setForm((prev) => ({ ...prev, markingScheme: undefined }));
+    setErrors((prev) => ({ ...prev, markingScheme: undefined }));
+    if (schemeInputRef.current) schemeInputRef.current.value = "";
   };
 
   const validate = (): boolean => {
@@ -254,13 +344,32 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
       tags: [
         form.strand as StrandCategory,
         `Grade ${gradeNum}`,
-        form.contentType,
+        effectiveContentType,
         "custom",
+        ...(effectiveContentType === "assessment" && form.assessmentType
+          ? [form.assessmentType]
+          : []),
       ],
       ...(form.attachment ? { attachment: form.attachment } : {}),
+      ...(effectiveContentType === "assessment"
+        ? {
+            ...(form.assessmentType ? { assessmentType: form.assessmentType } : {}),
+            ...(form.totalMarks !== "" ? { totalMarks: Number(form.totalMarks) } : {}),
+            ...(form.durationMinutes !== ""
+              ? { durationMinutes: Number(form.durationMinutes) }
+              : {}),
+            ...(form.markingScheme ? { markingScheme: form.markingScheme } : {}),
+          }
+        : {}),
     };
 
-    saveCustomMaterial(item);
+    // Persist to localStorage. When the user picks the "Assessments &
+    // Quizzes" strand, the item's `strand` field already carries that exact
+    // value, so any consumer filtering by `category` or `strand ===
+    // "Assessments & Quizzes"` will see it. The legacy `category` alias
+    // is also included so older code paths keep working.
+    const lsPayload = { ...item, category: item.strand };
+    saveCustomMaterial(lsPayload as ContentItem);
     setIsSaving(false);
     setSaved(true);
     onSave(item);
@@ -520,8 +629,149 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
                 {form.contentType === "memory_verse" && "Enter one verse per line: Reference | Verse text"}
                 {form.contentType === "practice_questions" && "Enter one question per line: Question | Answer | Rubric (optional)"}
                 {form.contentType === "pdf_link" && "Enter the full URL or a brief description of the resource."}
+                {form.contentType === "assessment" && "Select Assessment details below; upload the question paper (PDF/Doc) and an optional marking scheme."}
               </p>
             </div>
+
+            {/* Assessment-specific fields — shown when this is an assessment material */}
+            {(isAssessment || effectiveContentType === "assessment") && (
+              <div className="rounded-2xl border border-violet-200 bg-violet-50/40 p-4 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Award size={14} className="text-violet-600" />
+                  <h3 className="text-xs font-semibold uppercase tracking-wide text-violet-700">
+                    Assessment Details
+                  </h3>
+                </div>
+
+                {/* Assessment type */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600">
+                    Assessment Type
+                  </label>
+                  <select
+                    value={form.assessmentType ?? ""}
+                    onChange={(e) =>
+                      set("assessmentType", e.target.value as string)
+                    }
+                    className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 focus:outline-none focus:ring-2 focus:ring-violet-500 cursor-pointer"
+                  >
+                    <option value="">Select assessment type…</option>
+                    {assessmentTypeOptions.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Total marks + duration */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                      <Award size={11} className="text-violet-500" />
+                      Total Marks <span className="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.totalMarks === "" ? "" : form.totalMarks}
+                      onChange={(e) => setNumber("totalMarks", e.target.value)}
+                      placeholder="e.g. 100"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                      <Clock size={11} className="text-violet-500" />
+                      Duration <span className="text-gray-400 font-normal">(minutes, optional)</span>
+                    </label>
+                    <input
+                      type="number"
+                      min={0}
+                      value={form.durationMinutes === "" ? "" : form.durationMinutes}
+                      onChange={(e) => setNumber("durationMinutes", e.target.value)}
+                      placeholder="e.g. 90"
+                      className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Marking scheme / answer key upload */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-medium text-gray-600 flex items-center gap-1">
+                    <FileKey size={11} className="text-violet-500" />
+                    Marking Scheme / Answer Key
+                    <span className="text-gray-400 font-normal">(optional)</span>
+                  </label>
+
+                  {form.markingScheme ? (
+                    <div className="flex items-center gap-2.5 px-3 py-2 rounded-lg border border-violet-200 bg-white">
+                      <div className="shrink-0 w-8 h-8 rounded-md bg-violet-50 flex items-center justify-center text-violet-600">
+                        <FileKey size={14} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800 truncate">
+                          {form.markingScheme.name}
+                        </p>
+                        <p className="text-[11px] text-gray-500">
+                          {formatBytes(form.markingScheme.size)}
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeMarkingScheme}
+                        className="text-xs text-red-600 hover:bg-red-50 px-2 py-1 rounded-md border border-red-200"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ) : (
+                    <div
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDragOverScheme(true);
+                      }}
+                      onDragLeave={() => setIsDragOverScheme(false)}
+                      onDrop={handleSchemeDrop}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 border-dashed text-sm transition-colors ${
+                        isDragOverScheme
+                          ? "border-violet-400 bg-violet-50"
+                          : "border-gray-200 bg-white/60 hover:border-violet-300"
+                      } ${isReadingScheme ? "opacity-60 pointer-events-none" : ""}`}
+                    >
+                      <FileKey
+                        size={16}
+                        className="text-violet-500 shrink-0"
+                      />
+                      <span className="flex-1 text-xs text-gray-600">
+                        {isReadingScheme
+                          ? "Reading…"
+                          : "Drop answer key file or:"}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => schemeInputRef.current?.click()}
+                        disabled={isReadingScheme}
+                        className="text-xs px-2.5 py-1 rounded-md bg-violet-600 hover:bg-violet-700 text-white font-semibold disabled:opacity-50"
+                      >
+                        Browse
+                      </button>
+                      <input
+                        ref={schemeInputRef}
+                        type="file"
+                        accept=".pdf,.doc,.docx,.txt,.md,application/pdf,text/plain"
+                        onChange={handleSchemeInputChange}
+                        className="hidden"
+                      />
+                    </div>
+                  )}
+
+                  {errors.markingScheme && (
+                    <p className="flex items-center gap-1 text-xs text-red-500">
+                      <AlertCircle size={12} /> {errors.markingScheme}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Body / Lesson Notes */}
             <div className="space-y-1.5">
@@ -548,6 +798,8 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
                     ? "What is photosynthesis? | Photosynthesis is the process by which plants make food using sunlight. | 3 marks\nWho discovered penicillin? | Alexander Fleming discovered penicillin in 1928. | 2 marks"
                     : form.contentType === "pdf_link"
                     ? "https://example.com/grade-4-science-notes.pdf\nOr enter a brief description of the PDF resource…"
+                    : form.contentType === "assessment"
+                    ? "Enter questions here (or upload the question paper above):\n\nQ1. What is…? | Answer: … | 5 marks\nQ2. Calculate…? | Answer: … | 5 marks\n…"
                     : "Enter key bullet points, one per line:\n• God created light on Day 1\n• God created the sky on Day 2\n• God rested on Day 7"
                 }
                 rows={7}
