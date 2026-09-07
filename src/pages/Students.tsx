@@ -1046,9 +1046,10 @@ export default function Students() {
                         </Link>
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
-                        {(learner as any).assessmentNo &&
-                         !(learner as any).assessmentNo.toUpperCase().startsWith('MUN-')
-                          ? (learner as any).assessmentNo
+                        {learner.assessmentNo &&
+                         !learner.assessmentNo.toUpperCase().startsWith('MUN-') &&
+                         learner.assessmentNo.trim() !== ''
+                          ? learner.assessmentNo
                           : '—'}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">

@@ -91,6 +91,20 @@ const App = () => {
   //
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
+    // ── TEMP: hard-fix migration ────────────────────────────────────────
+    // Clear stale learner storage that may contain legacy MUN-XXX
+    // placeholders so the app re-initializes with clean data on next
+    // hydrate. Safe to remove once every browser has been refreshed.
+    try {
+      const KEYS_TO_RESET = [
+        'munyaka_learners',
+        'school_learners_data',
+        'munyaka_students',
+      ];
+      for (const k of KEYS_TO_RESET) {
+        window.localStorage.removeItem(k);
+      }
+    } catch { /* no-op */ }
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();

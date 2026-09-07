@@ -16,21 +16,27 @@ export const INITIAL_SEED_DATA = {
 
   // ── Students / Learners ───────────────────────────────────────────────────────
   // Sample learners pre-seeded so the APK is immediately usable for demos.
+  //
+  // NOTE: Legacy MUN-XXX placeholders have been cleared from both `admNo`
+  //       and `assessmentNo`.  `assessmentNo` is intentionally "" so the
+  //       Learners table renders "—" until a real KNEC/NEMIS number is
+  //       entered.  The school-admission number (MUN-FAMILY-SEQ/YEAR)
+  //       is assigned automatically by the one-time backfill in App.tsx.
   students: [
-    { id: "stu-001", admNo: "MUN-001", name: "Aisha Wanjiku Mwangi",    grade: "Grade 4", stream: "Blue",  gender: "Female", guardian: "James Mwangi",    phone: "+254711001001", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-002", admNo: "MUN-002", name: "Brian Kipkorir Cheruiyot", grade: "Grade 5", stream: "Alpha", gender: "Male",   guardian: "David Cheruiyot", phone: "+254711002002", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-003", admNo: "MUN-003", name: "Cynthia Nafula Ochieng",   grade: "Grade 6", stream: "Yellow", gender: "Female", guardian: "Peter Ochieng",   phone: "+254711003003", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-004", admNo: "MUN-004", name: "Daniel Kipng'eno Ruto",   grade: "Grade 7", stream: "MERCURY", gender: "Male", guardian: "Samuel Ruto",    phone: "+254711004004", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-005", admNo: "MUN-005", name: "Evelyn Adhiambo Otieno",   grade: "Grade 3", stream: "Green",  gender: "Female", guardian: "Joseph Otieno",  phone: "+254711005005", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-006", admNo: "MUN-006", name: "Faith Wanjiru Kamau",      grade: "Grade 8", stream: "Alpha",  gender: "Female", guardian: "George Kamau",   phone: "+254711006006", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-007", admNo: "MUN-007", name: "George Kiptoo Letting",    grade: "Grade 4", stream: "Blue",   gender: "Male",   guardian: "Paul Letting",   phone: "+254711007007", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-008", admNo: "MUN-008", name: "Happiness Muthoni Karanja",grade: "Grade 9", stream: "Alpha",  gender: "Female", guardian: "Peter Karanja",  phone: "+254711008008", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-009", admNo: "MUN-009", name: "Ian Kibet Rotich",         grade: "Grade 5", stream: "Beta",   gender: "Male",   guardian: "Robert Rotich",  phone: "+254711009009", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-010", admNo: "MUN-010", name: "Joyce Chepkoech Kirui",    grade: "Grade 6", stream: "Green",  gender: "Female", guardian: "Sam Kirui",      phone: "+254711010010", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-011", admNo: "MUN-011", name: "Kevin Kipng'etich Yego",   grade: "Grade 7", stream: "VENUS",  gender: "Male",   guardian: "John Yego",     phone: "+254711011011", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-012", admNo: "MUN-012", name: "Laura Achieng Opiyo",     grade: "PP1",     stream: "Yellow", gender: "Female", guardian: "Francis Opiyo",  phone: "+254711012012", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-013", admNo: "MUN-013", name: "Moses Kiptanui Bett",     grade: "Grade 2", stream: "Green",  gender: "Male",   guardian: "Elijah Bett",   phone: "+254711013013", status: "Active", schoolId: "munyaka-sc" },
-    { id: "stu-014", admNo: "MUN-014", name: "Nancy Wambui Njoroge",    grade: "Grade 1", stream: "Blue",   gender: "Female", guardian: "Simon Njoroge",  phone: "+254711014014", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-001", admNo: "", assessmentNo: "", name: "Aisha Wanjiku Mwangi",    grade: "Grade 4", stream: "Blue",  gender: "Female", guardian: "James Mwangi",    phone: "+254711001001", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-002", admNo: "", assessmentNo: "", name: "Brian Kipkorir Cheruiyot", grade: "Grade 5", stream: "Alpha", gender: "Male",   guardian: "David Cheruiyot", phone: "+254711002002", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-003", admNo: "", assessmentNo: "", name: "Cynthia Nafula Ochieng",   grade: "Grade 6", stream: "Yellow", gender: "Female", guardian: "Peter Ochieng",   phone: "+254711003003", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-004", admNo: "", assessmentNo: "", name: "Daniel Kipng'eno Ruto",   grade: "Grade 7", stream: "MERCURY", gender: "Male", guardian: "Samuel Ruto",    phone: "+254711004004", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-005", admNo: "", assessmentNo: "", name: "Evelyn Adhiambo Otieno",   grade: "Grade 3", stream: "Green",  gender: "Female", guardian: "Joseph Otieno",  phone: "+254711005005", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-006", admNo: "", assessmentNo: "", name: "Faith Wanjiru Kamau",      grade: "Grade 8", stream: "Alpha",  gender: "Female", guardian: "George Kamau",   phone: "+254711006006", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-007", admNo: "", assessmentNo: "", name: "George Kiptoo Letting",    grade: "Grade 4", stream: "Blue",   gender: "Male",   guardian: "Paul Letting",   phone: "+254711007007", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-008", admNo: "", assessmentNo: "", name: "Happiness Muthoni Karanja",grade: "Grade 9", stream: "Alpha",  gender: "Female", guardian: "Peter Karanja",  phone: "+254711008008", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-009", admNo: "", assessmentNo: "", name: "Ian Kibet Rotich",         grade: "Grade 5", stream: "Beta",   gender: "Male",   guardian: "Robert Rotich",  phone: "+254711009009", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-010", admNo: "", assessmentNo: "", name: "Joyce Chepkoech Kirui",    grade: "Grade 6", stream: "Green",  gender: "Female", guardian: "Sam Kirui",      phone: "+254711010010", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-011", admNo: "", assessmentNo: "", name: "Kevin Kipng'etich Yego",   grade: "Grade 7", stream: "VENUS",  gender: "Male",   guardian: "John Yego",     phone: "+254711011011", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-012", admNo: "", assessmentNo: "", name: "Laura Achieng Opiyo",     grade: "PP1",     stream: "Yellow", gender: "Female", guardian: "Francis Opiyo",  phone: "+254711012012", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-013", admNo: "", assessmentNo: "", name: "Moses Kiptanui Bett",     grade: "Grade 2", stream: "Green",  gender: "Male",   guardian: "Elijah Bett",   phone: "+254711013013", status: "Active", schoolId: "munyaka-sc" },
+    { id: "stu-014", admNo: "", assessmentNo: "", name: "Nancy Wambui Njoroge",    grade: "Grade 1", stream: "Blue",   gender: "Female", guardian: "Simon Njoroge",  phone: "+254711014014", status: "Active", schoolId: "munyaka-sc" },
   ],
 
   // ── Staff / Teachers ──────────────────────────────────────────────────────

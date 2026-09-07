@@ -51,4 +51,10 @@ export interface Learner {
   examType?: string;
   /** Optional assessment / notes field. */
   assessment?: string;
+  /**
+   * KNEC / NEMIS / UPI assessment number. Distinct from `admNo`
+   * (the school-issued admission number) and from `nemisUpi`.
+   * Empty string means the field has not been captured yet.
+   */
+  assessmentNo?: string;
 }
