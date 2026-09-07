@@ -158,7 +158,10 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
     if (!form.title.trim()) next.title = "Title is required";
     if (!form.strand) next.strand = "Please select a Learning Area";
     if (!form.grade) next.grade = "Please select a Grade Level";
-    if (!form.body.trim()) next.body = "Body / Lesson Notes are required";
+    // Body is required only when no attachment is present
+    if (!form.body.trim() && !form.attachment) {
+      next.body = "Body / Lesson Notes are required (or upload an attachment instead)";
+    }
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -166,6 +169,14 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
   const handleSave = async () => {
     if (!validate()) return;
     setIsSaving(true);
+
+    // If a file is uploaded but body is empty, auto-fill with a friendly
+    // placeholder so the material has a meaningful summary / notes.
+    const effectiveBody =
+      form.body.trim() ||
+      (form.attachment
+        ? `Document file attached: ${form.attachment.name}`
+        : "");
 
     const gradeNum = form.grade as number;
     const timestamp = Date.now();
@@ -182,8 +193,9 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
     switch (form.contentType) {
       case "notes":
-        // Split by newlines into bullet notes
-        notes = form.body
+        // Split by newlines into bullet notes; if body is empty (file-only)
+        // this produces an empty notes array — that's fine, the summary carries context.
+        notes = effectiveBody
           .split("\n")
           .map((l) => l.trim())
           .filter((l) => l.length > 0);
@@ -191,7 +203,7 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
       case "memory_verse": {
         // Format: "Reference | Verse text" per line
-        memoryVerses = form.body
+        memoryVerses = effectiveBody
           .split("\n")
           .map((l) => l.trim())
           .filter((l) => l.length > 0)
@@ -207,7 +219,7 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
       case "practice_questions": {
         // Format: "Question | Answer | Rubric(optional)" per line
-        revisionQuestions = form.body
+        revisionQuestions = effectiveBody
           .split("\n")
           .map((l) => l.trim())
           .filter((l) => l.length > 0)
@@ -224,7 +236,7 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
 
       case "pdf_link":
         // Treat body as a URL or descriptive note
-        notes = [form.body.trim()];
+        notes = [effectiveBody];
         break;
     }
 
@@ -234,7 +246,7 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
       strand: form.strand as StrandCategory,
       subStrand: form.subStrand.trim() || (form.strand as StrandCategory),
       topic: form.title.trim(),
-      summary: form.body.trim().substring(0, 200),
+      summary: effectiveBody.substring(0, 200),
       notes,
       memoryVerses,
       revisionQuestions,
@@ -514,13 +526,23 @@ export default function AddMaterialModal({ onClose, onSave }: AddMaterialModalPr
             {/* Body / Lesson Notes */}
             <div className="space-y-1.5">
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Body / Lesson Notes <span className="text-red-500">*</span>
+                Body / Lesson Notes
+                {!form.attachment && (
+                  <span className="text-red-500"> *</span>
+                )}
+                {form.attachment && (
+                  <span className="ml-1 text-gray-400 normal-case font-normal">
+                    (optional — file attached)
+                  </span>
+                )}
               </label>
               <textarea
                 value={form.body}
                 onChange={(e) => set("body", e.target.value)}
                 placeholder={
-                  form.contentType === "memory_verse"
+                  form.attachment
+                    ? `Optional — notes for "${form.attachment.name}"…`
+                    : form.contentType === "memory_verse"
                     ? "Genesis 1:1 | In the beginning God created the heavens and the earth.\nJohn 3:16 | For God so loved the world…"
                     : form.contentType === "practice_questions"
                     ? "What is photosynthesis? | Photosynthesis is the process by which plants make food using sunlight. | 3 marks\nWho discovered penicillin? | Alexander Fleming discovered penicillin in 1928. | 2 marks"
