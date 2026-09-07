@@ -1347,7 +1347,7 @@ const PaymentManagement = () => {
   // Render
   // ─────────────────────────────────────────
   return (
-    <div className="w-full max-w-full space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       {/* Header */}
       <div className="action-bar">
         <h1 className="text-3xl font-bold tracking-tight text-slate-900">Payment & Subscriptions</h1>

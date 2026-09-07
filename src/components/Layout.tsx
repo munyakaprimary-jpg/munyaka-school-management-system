@@ -419,8 +419,8 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
         "flex-1 flex flex-col min-w-0 overflow-hidden transition-all duration-300",
         isCollapsed ? "lg:ml-20" : "lg:ml-72 md:lg:ml-64"
       )}>
-        {/* Mobile & Desktop Header Bar */}
-                <header className="h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex items-center justify-between px-4 lg:px-8 shrink-0 z-50 print:hidden relative">
+        {/* Mobile & Desktop Header Bar - stacks on mobile, row on sm+ */}
+                <header className="min-h-16 pt-safe bg-white dark:bg-slate-900 border-b border-slate-200/80 dark:border-slate-800 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 px-4 lg:px-8 py-3 shrink-0 z-50 print:hidden relative">
                   <div className="flex items-center gap-3">
                     {/* Hamburger Button for Mobile */}
                     <Button
@@ -492,23 +492,23 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                   </div>
                 </header>
 
-        {/* Dynamic Main Viewport */}
-        <div 
+        {/* Dynamic Main Viewport - prevent horizontal clipping */}
+        <div
           ref={scrollContainerRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
+          className="flex-1 overflow-y-auto overflow-x-hidden w-full max-w-full p-4 sm:p-6 lg:p-8 pb-24 lg:pb-8 custom-scrollbar"
         >
-          <div className="max-w-7xl mx-auto w-full table-scroll-viewport">
+          <div className="max-w-7xl mx-auto w-full max-w-full overflow-x-hidden px-0 table-scroll-viewport">
             {children}
           </div>
         </div>
 
-        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) */}
+        {/* Mobile Bottom Quick Navigation Bar (Role-Based One-Thumb Nav) - horizontally scrollable */}
         <div className={cn(
           "lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1 pb-safe pt-2 z-40 shadow-2xl transition-transform duration-300 ease-in-out print:hidden",
           showBottomNav ? "translate-y-0" : "translate-y-full"
         )}>
           {bottomQuickNav.length > 0 ? (
-            <div className="flex items-stretch justify-between gap-1 px-1">
+            <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
               {bottomQuickNav.map((item) => {
                 const isActive = location.pathname === item.path;
                 return (
@@ -516,14 +516,14 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
                     key={item.path}
                     to={item.path}
                     className={cn(
-                      "flex flex-col items-center justify-center py-2 px-1 rounded-2xl flex-1 min-h-[52px] max-w-[80px] touch-active transition-all duration-200 ease-out",
+                      "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
                       isActive
                         ? "text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40"
                         : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50"
                     )}
                   >
-                    <item.icon size={20} className={cn("transition-transform duration-200", isActive && "scale-110")} />
-                    <span className="text-[9px] mt-1 tracking-tight leading-tight text-center line-clamp-1">{item.label}</span>
+                    <item.icon size={20} className={cn("shrink-0 transition-transform duration-200", isActive && "scale-110")} />
+                    <span className="text-[10px] xs:text-xs mt-1 tracking-tight leading-tight text-center whitespace-normal break-words line-clamp-2 max-w-full px-0.5">{item.label}</span>
                   </Link>
                 );
               })}

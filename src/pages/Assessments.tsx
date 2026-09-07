@@ -785,11 +785,11 @@ ${filteredStudents.length} learner(s) included.
   };
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
-      {/* 1. Header & Quick Actions Layout */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-        <div>
-          <div className="flex items-center gap-3">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* 1. Header & Quick Actions Layout - stacks on mobile, row on sm+ */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 w-full max-w-full overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
             <button
               onClick={handleBackToParent}
               className="p-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl transition flex items-center justify-center shrink-0"
@@ -797,21 +797,21 @@ ${filteredStudents.length} learner(s) included.
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Marks Entry & CBC Assessment</h1>
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Marks Entry & CBC Assessment</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <CheckCircle2 size={12} /> Saved to LocalStorage
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1 break-words hyphens-auto">
             Enter class marks for one subject or switch to All Subjects to fill a full matrix. Valid scores autosave to localStorage; use Save All for bulk commit.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
             onClick={handleDownloadCSV}
             disabled={csvExport.isDownloading}
           >
@@ -819,7 +819,7 @@ ${filteredStudents.length} learner(s) included.
           </Button>
           <Button
                       variant="outline"
-                      className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+                      className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
                       onClick={handleDownloadPDF}
                       disabled={pdfExport.isDownloading}
                     >
@@ -827,13 +827,13 @@ ${filteredStudents.length} learner(s) included.
                     </Button>
                     <Button
                       variant="outline"
-                      className="rounded-xl h-11 px-4 border-indigo-200 bg-indigo-50 gap-2 text-sm font-bold shadow-sm hover:bg-indigo-100 text-indigo-700"
+                      className="rounded-xl h-11 px-4 border-indigo-200 bg-indigo-50 gap-2 text-sm font-bold shadow-sm hover:bg-indigo-100 text-indigo-700 w-full sm:w-auto"
                       onClick={() => navigate("/grading")}
                     >
                       <ClipboardCheck size={16} /> Grading Review
                     </Button>
           <Button
-            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2"
+            className="rounded-xl h-11 px-6 bg-[#10B981] hover:bg-[#059669] text-white font-bold shadow-lg shadow-emerald-100 gap-2 w-full sm:w-auto"
             onClick={handleSaveAll}
             disabled={isSaving}
           >
@@ -842,9 +842,9 @@ ${filteredStudents.length} learner(s) included.
         </div>
       </div>
 
-      {/* 3. Dynamic Filter Bar & Controls (Grid Card Container) */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      {/* 3. Dynamic Filter Bar & Controls (Responsive Grid Card Container) */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           {/* 1. Academic Year */}
           <div className="space-y-1.5">
@@ -1004,7 +1004,7 @@ ${filteredStudents.length} learner(s) included.
                         </td>
 
                         {activeSubjects.map(subj => (
-                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[120px] max-w-[160px]">
+                          <td key={subj} className="px-2 py-3 border-r text-center min-w-[100px] max-w-[140px]">
                             <Input
                               type="number"
                               min="0"
@@ -1012,7 +1012,7 @@ ${filteredStudents.length} learner(s) included.
                               value={studentMarks[subj] !== undefined ? studentMarks[subj] : ""}
                               onChange={e => handleMarkChange(studentId, subj, e.target.value)}
                               placeholder="—"
-                              className="w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
+                              className="w-16 sm:w-20 h-10 mx-auto text-center font-black text-sm rounded-lg bg-slate-50 border-none focus:bg-white focus:ring-2 ring-indigo-100 transition-all"
                             />
                           </td>
                         ))}

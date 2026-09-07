@@ -64,7 +64,7 @@ const Communication = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>
           <h1 className="text-3xl font-bold text-slate-900">Communication Center</h1>
@@ -92,14 +92,16 @@ const Communication = () => {
           </Card>
         </TabsContent>
         <TabsContent value="logs">
-          <Card className="rounded-3xl bg-white overflow-hidden">
-            <CardContent className="p-0">
-              <table className="w-full text-sm">
+                  <Card className="rounded-3xl bg-white overflow-hidden">
+                    <CardContent className="p-0">
+                      <div className="overflow-x-auto">
+                      <table className="w-full text-sm min-w-max">
                 <thead><tr className="bg-slate-50/50 border-b"><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Recipient</th><th className="px-8 py-5 text-left font-black text-slate-400 text-[10px]">Subject</th><th className="px-8 py-5 text-center font-black text-slate-400 text-[10px]">Type</th><th className="px-8 py-5 text-right font-black text-slate-400 text-[10px]">Status</th></tr></thead>
                 <tbody className="divide-y">{messagesList.map((msg) => (
                   <tr key={msg.id} className="hover:bg-slate-50 transition-colors"><td className="px-8 py-6 font-bold">{msg.recipient}</td><td className="px-8 py-6 font-medium">{msg.subject}</td><td className="px-8 py-6 text-center"><Badge variant="outline">{msg.type}</Badge></td><td className="px-8 py-6 text-right"><Badge><UserCheck size={12} className="mr-1.5" /> {msg.status}</Badge></td></tr>
                 ))}</tbody>
               </table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -793,21 +793,21 @@ export default function Students() {
     allLearnersExport.isDownloading || currentViewExport.isDownloading;
 
   return (
-      <div className="p-6 md:p-10 bg-[#FBFBFA] min-h-screen text-slate-800">
-        <div className="max-w-7xl mx-auto flex flex-col gap-6 w-full">
+      <div className="w-full max-w-full overflow-x-hidden px-4 py-3 bg-[#FBFBFA] min-h-screen text-slate-800">
+        <div className="max-w-7xl mx-auto flex flex-col gap-6 w-full max-w-full overflow-x-hidden">
           {/* Main content column — header, filters bar, table, modals */}
-          <div className="w-full">
-  
-        {/* 2. Top Header & Action Controls */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8 pb-6 border-b border-slate-200">
-        <div>
-          <div className="flex items-center gap-3 mb-1">
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Learners Management</h1>
+          <div className="w-full max-w-full overflow-x-hidden">
+
+        {/* 2. Top Header & Action Controls - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-8 pb-6 border-b border-slate-200 w-full max-w-full">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 mb-1 flex-wrap">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Learners Management</h1>
             <span className="px-3 py-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold rounded-full shadow-2xs">
               {termBadge}
             </span>
           </div>
-          <p className="text-sm font-medium text-slate-500">
+          <p className="text-sm font-medium text-slate-500 break-words hyphens-auto">
             {filteredLearners.length} active learners
             {learners.length !== filteredLearners.length && ` (filtered from ${learners.length} total)`}
             {isAdmin && (
@@ -825,13 +825,13 @@ export default function Students() {
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="relative">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <div className="relative w-full sm:w-auto">
             <button
               type="button"
               onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
               disabled={isAnyExportInProgress}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="flex items-center justify-center gap-2 px-4 py-2.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-medium text-sm rounded-xl shadow-2xs transition-all disabled:opacity-60 disabled:cursor-not-allowed w-full sm:w-auto"
             >
               {isAnyExportInProgress ? (
                 <Loader2 className="w-4 h-4 text-slate-500 animate-spin" />
@@ -904,8 +904,8 @@ export default function Students() {
                   </div>
                 </div>
 
-      {/* 3. Filters Bar (Dynamic Grades & Streams from LocalStorage) */}
-      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs mb-6 flex flex-col md:flex-row items-center gap-4">
+      {/* 3. Filters Bar (Dynamic Grades & Streams from LocalStorage) - stacks on mobile */}
+      <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-xs mb-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full max-w-full overflow-hidden">
         <div className="relative flex-1 w-full">
           <Search className="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" />
           <input
@@ -953,7 +953,7 @@ export default function Students() {
       </div>
 
       {/* 4. Table Layout & Styling with Dual Horizontal Scrollbars */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden">
+      <div className="bg-white border border-slate-200/80 rounded-2xl shadow-xs overflow-hidden w-full max-w-full">
         <DualScrollContainer className="min-w-full">
           <table className="w-full text-left border-collapse">
             <thead>

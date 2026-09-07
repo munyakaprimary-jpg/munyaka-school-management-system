@@ -387,28 +387,28 @@ const ResultsAnalysis = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      
-      {/* Header & Export Action Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-        <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900">Results Analysis</h1>
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+
+      {/* Header & Export Action Controls - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100 w-full max-w-full overflow-hidden">
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-3 flex-wrap">
+            <h1 className="text-2xl lg:text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Results Analysis</h1>
             {showSavedBadge && (
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 animate-pulse">
                 <CheckCircle2 size={12} /> Saved
               </span>
             )}
           </div>
-          <p className="text-sm text-slate-500 mt-1">
+          <p className="text-sm text-slate-500 mt-1 break-words hyphens-auto">
             Performance analytics, subject rankings, and class score sheets.
           </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
             onClick={handleDownloadCSV}
             disabled={resultsExport.isDownloading}
           >
@@ -418,7 +418,7 @@ const ResultsAnalysis = () => {
 
           <Button
             variant="outline"
-            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700"
+            className="rounded-xl h-11 px-4 border-slate-200 bg-white gap-2 text-sm font-bold shadow-sm hover:bg-slate-50 text-slate-700 w-full sm:w-auto"
             onClick={handlePrint}
           >
             <Printer size={16} /> Print Report / Save PDF
@@ -443,9 +443,9 @@ const ResultsAnalysis = () => {
         </div>
       </div>
 
-      {/* Filter Toolbar (Hidden on Print) */}
-      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden">
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
+      {/* Filter Toolbar (Hidden on Print) - responsive grid */}
+      <Card className="border-none shadow-sm rounded-[2rem] bg-white p-6 print:hidden w-full max-w-full overflow-hidden">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           
           <div className="space-y-1.5">
             <label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Academic Year</label>

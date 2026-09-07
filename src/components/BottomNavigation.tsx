@@ -56,7 +56,7 @@ export const BottomNavigation = () => {
   return (
     <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-slate-200 dark:border-slate-800 px-1 pb-safe pt-2 z-40 shadow-2xl print:hidden transition-all duration-300">
       {!isEmpty ? (
-        <div className="flex items-stretch justify-between gap-1 px-1">
+        <div className="flex items-stretch justify-start gap-1 px-1 overflow-x-auto scrollbar-hide snap-x snap-mandatory">
           {filteredItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
@@ -64,7 +64,7 @@ export const BottomNavigation = () => {
                 key={item.path}
                 to={item.path}
                 className={cn(
-                  "flex flex-col items-center justify-center py-2 px-1 rounded-2xl flex-1 min-h-[52px] max-w-[80px] touch-active transition-all duration-200 ease-out",
+                  "flex flex-col items-center justify-center py-2 px-2 rounded-2xl min-h-[52px] min-w-[64px] shrink-0 snap-start touch-active transition-all duration-200 ease-out",
                   isActive
                     ? "text-indigo-600 dark:text-indigo-400 font-black bg-indigo-50 dark:bg-indigo-950/40"
                     : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold hover:bg-slate-50 dark:hover:bg-slate-800/50"
@@ -73,11 +73,11 @@ export const BottomNavigation = () => {
                 <item.icon
                   size={20}
                   className={cn(
-                    "transition-transform duration-200",
+                    "shrink-0 transition-transform duration-200",
                     isActive && "scale-110"
                   )}
                 />
-                <span className="text-[9px] mt-1 tracking-tight leading-tight text-center line-clamp-1">
+                <span className="text-[10px] xs:text-xs mt-1 tracking-tight leading-tight text-center whitespace-normal break-words line-clamp-2 max-w-full px-0.5">
                   {item.label}
                 </span>
               </Link>

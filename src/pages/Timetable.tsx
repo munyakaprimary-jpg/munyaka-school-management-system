@@ -83,7 +83,7 @@ const Timetable = () => {
     : '';
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div>

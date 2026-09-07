@@ -779,23 +779,23 @@ const Fees = () => {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 action-bar">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">Finance & Fees</h1>
-          <p className="text-sm text-slate-500">Manage fee structures and student account ledgers.</p>
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-16">
+      {/* Page Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 action-bar w-full max-w-full">
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Finance & Fees</h1>
+          <p className="text-sm text-slate-500 break-words hyphens-auto">Manage fee structures and student account ledgers.</p>
         </div>
-        <div className="flex items-center gap-2">
-          <Button 
-            variant="outline" 
-            className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50" 
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="outline"
+            className="h-10 px-4 rounded-lg border-slate-200 bg-white text-sm font-medium gap-2 text-slate-700 hover:bg-slate-50 w-full sm:w-auto"
             onClick={handleOpenAuthModal}
           >
             <Lock size={15} className="text-slate-400" /> Set Term Fees
           </Button>
-          <Button 
-            className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm" 
+          <Button
+            className="h-10 px-4 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-medium gap-2 shadow-sm w-full sm:w-auto"
             onClick={() => setIsRecordOpen(true)}
             disabled={studentsFromStore.length === 0}
           >
@@ -819,9 +819,9 @@ const Fees = () => {
         totalPending={stats.totalPending} 
       />
 
-      {/* Navigation Tabs & Header Actions */}
-      <Tabs defaultValue="balances" className="w-full space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Navigation Tabs & Header Actions - stacks on mobile */}
+      <Tabs defaultValue="balances" className="w-full max-w-full overflow-x-hidden space-y-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 w-full max-w-full">
           <div className="flex flex-wrap items-center gap-3">
             <TabsList className="bg-slate-100/80 p-1 rounded-lg h-10 border border-slate-200/60 inline-flex">
               <TabsTrigger value="balances" className="rounded-md px-4 h-full font-bold text-sm text-slate-600 data-[state=active]:bg-white data-[state=active]:text-slate-900 data-[state=active]:shadow-sm">
@@ -975,7 +975,8 @@ const Fees = () => {
         {/* Transaction Ledger Table */}
         <TabsContent value="ledger" className="m-0">
           <Card className="rounded-xl bg-white border border-slate-200/80 shadow-sm overflow-hidden">
-            <table className="w-full text-sm text-left">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm text-left min-w-max">
               <thead className="bg-slate-50/80 border-b border-slate-200/80">
                 <tr>
                   <th className="px-5 py-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">Ref ID</th>
@@ -1027,6 +1028,7 @@ const Fees = () => {
                 )}
               </tbody>
             </table>
+            </div>
           </Card>
         </TabsContent>
 

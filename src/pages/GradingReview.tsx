@@ -476,9 +476,9 @@ export default function GradingReview() {
 
   // ─── Render ────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
+    <div className="w-full max-w-full overflow-x-hidden min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/20 to-purple-50/20">
       {/* ── Page Header ─────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-slate-200 shadow-sm">
+      <header className="bg-white border-b border-slate-200 shadow-sm w-full max-w-full">
         <div className="max-w-7xl mx-auto px-4 py-4 flex flex-col sm:flex-row items-start sm:items-center gap-4">
           <div className="flex items-center gap-3">
             <button

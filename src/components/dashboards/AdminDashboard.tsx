@@ -985,6 +985,7 @@ const AdminDashboard: React.FC = () => {
           </div>
 
           <div className="overflow-hidden rounded-xl border border-slate-100">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-slate-50">
                 <tr>
@@ -1045,6 +1046,7 @@ const AdminDashboard: React.FC = () => {
                 </tr>
               </tfoot>
             </table>
+            </div>
           </div>
         </CardContent>
       </Card>

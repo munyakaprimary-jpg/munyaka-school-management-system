@@ -356,23 +356,23 @@ const Staff = () => {
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Page Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 action-bar w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <BackButton parentPath="/" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Staff &amp; Personnel</h1>
-            <p className="text-muted-foreground">Master directory of teachers, administrators, and support staff.</p>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Staff &amp; Personnel</h1>
+            <p className="text-muted-foreground break-words hyphens-auto">Master directory of teachers, administrators, and support staff.</p>
           </div>
         </div>
-        <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100" onClick={handleOpenAdd}>
+        <Button className="h-11 px-6 rounded-2xl gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold shadow-lg shadow-indigo-100 w-full sm:w-auto" onClick={handleOpenAdd}>
           <UserPlus size={18} /> Add Staff
         </Button>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      {/* Metrics - responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card className="rounded-[2rem] shadow-sm flex items-center gap-4 p-6 border-none">
           <div className="p-3.5 bg-indigo-50 text-indigo-600 rounded-2xl"><Briefcase size={22} /></div>
           <div><p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">Total Staff Records</p><p className="text-2xl font-black text-slate-900">{masterStaffList.length}</p></div>
@@ -387,15 +387,15 @@ const Staff = () => {
         </Card>
       </div>
 
-      {/* Search & Status Filter */}
-      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+      {/* Search & Status Filter - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 w-full max-w-full">
         <div className="relative flex-1 w-full max-w-md">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <Input value={searchTerm} onChange={e => setSearchTerm(e.target.value)}
             placeholder="Search staff by name, ID or email..."
             className="h-12 rounded-2xl bg-white border-none shadow-sm pl-11 text-sm font-medium focus:ring-2 ring-indigo-50" />
         </div>
-        <div className="flex gap-1.5 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-full md:w-auto">
+        <div className="flex flex-wrap gap-1.5 bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 w-full sm:w-auto">
           {(['All', 'Active', 'Pre-Registered'] as const).map(status => (
             <Button key={status} variant="ghost" onClick={() => setStatusFilter(status)}
               className={statusFilter === status ? "rounded-xl h-10 px-5 font-bold text-xs bg-indigo-600 text-white shadow-md shadow-indigo-100" : "rounded-xl h-10 px-5 font-bold text-xs text-slate-500 hover:bg-slate-50"}>

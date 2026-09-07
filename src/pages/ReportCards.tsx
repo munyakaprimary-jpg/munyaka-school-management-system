@@ -362,7 +362,7 @@ const ReportCards = () => {
   };
 
   return (
-    <div className="space-y-6 pb-20 animate-in fade-in duration-500">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-20 animate-in fade-in duration-500">
       <style>{`
         @media print {
           @page {

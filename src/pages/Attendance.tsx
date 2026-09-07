@@ -1364,19 +1364,19 @@ const Attendance = () => {
   // ============================================
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20 max-w-full">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
 
       {/* ============================================
-          1. HEADER SECTION
+          1. HEADER SECTION - stacks on mobile
           ============================================ */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 action-bar w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-12 h-12 rounded-2xl bg-indigo-600 text-white flex items-center justify-center shadow-lg shadow-indigo-100 shrink-0">
             <Calendar size={24} />
           </div>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-slate-900">Attendance</h1>
-            <p className="text-sm text-slate-500 font-medium">
+          <div className="min-w-0">
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 whitespace-normal break-words">Attendance</h1>
+            <p className="text-sm text-slate-500 font-medium break-words hyphens-auto">
               {isTeacherRole
                 ? 'Mark daily attendance for each class.'
                 : viewMode === 'marking'
@@ -1386,7 +1386,7 @@ const Attendance = () => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col sm:flex-row flex-wrap items-stretch sm:items-center gap-2 w-full sm:w-auto">
           {/* Admin: Lock/Unlock Register Toggle */}
           {isAdminRole && viewMode === 'marking' && (
             <Button

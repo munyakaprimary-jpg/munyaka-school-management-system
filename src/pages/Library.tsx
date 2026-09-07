@@ -216,27 +216,27 @@ const Library = () => {
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
-        <div className="flex items-center gap-3">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-end justify-between gap-4 action-bar w-full max-w-full">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <BackButton parentPath="/" />
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight text-slate-900">Library & E-Resources</h1>
-            <p className="text-muted-foreground">Manage textbooks, supplementary materials, and circulation history.</p>
+          <div className="min-w-0">
+            <h1 className="text-3xl font-bold tracking-tight text-slate-900 whitespace-normal break-words">Library & E-Resources</h1>
+            <p className="text-muted-foreground break-words hyphens-auto">Manage textbooks, supplementary materials, and circulation history.</p>
           </div>
         </div>
-        <Button 
+        <Button
           onClick={() => setIsRegisterBookOpen(true)}
-          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold"
+          className="rounded-2xl gap-2 h-11 px-6 shadow-lg shadow-indigo-100 bg-indigo-600 hover:bg-indigo-700 font-bold w-full sm:w-auto"
         >
           <Plus size={18} /> Register New Book
         </Button>
       </div>
 
-      {/* Search & Filter Bar */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="md:col-span-3 relative">
+      {/* Search & Filter Bar - responsive grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 w-full max-w-full">
+        <div className="sm:col-span-1 lg:col-span-3 relative">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
           <Input 
             placeholder="Search books by title, author, or ISBN..." 
@@ -257,8 +257,8 @@ const Library = () => {
         </select>
       </div>
 
-      {/* Book Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      {/* Book Grid - responsive */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
         {filteredBooks.map((book) => {
           const available = book.stock - book.borrowed;
           const isOutOfStock = available <= 0;

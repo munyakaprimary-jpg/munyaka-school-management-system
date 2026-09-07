@@ -1069,10 +1069,10 @@ const Settings = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
-      
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 action-bar">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-7xl mx-auto space-y-6 md:space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 action-bar w-full max-w-full">
               <div className="flex items-center gap-3">
                 <BackButton parentPath="/" />
                 <div className="min-w-0">

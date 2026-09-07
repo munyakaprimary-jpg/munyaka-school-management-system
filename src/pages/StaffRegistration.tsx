@@ -166,7 +166,7 @@ const StaffRegistration = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-4xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex items-center gap-3">
         <BackButton to="/staff" />
         <div>

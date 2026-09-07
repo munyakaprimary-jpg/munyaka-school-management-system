@@ -248,7 +248,7 @@ const StudentProfile = () => {
   // swapping in a hardcoded student.
   if (!id) {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-3">
           <BackButton to="/students" />
           <div>
@@ -301,7 +301,7 @@ const StudentProfile = () => {
 
   if (!activeLearner && showNotFound) {
     return (
-      <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
         <div className="flex items-center gap-3">
           <BackButton to="/students" />
           <div>
@@ -334,9 +334,9 @@ const StudentProfile = () => {
   const student = activeLearner!;
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row w-full items-start md:items-center justify-between gap-4">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+      {/* Header - stacks on mobile */}
+      <div className="flex flex-col sm:flex-row w-full items-start sm:items-center justify-between gap-4">
         <div className="flex flex-col md:flex-row items-center gap-3 w-full min-w-0">
           <BackButton to="/students" />
           <div className="flex-1 min-w-0">
@@ -625,7 +625,8 @@ const StudentProfile = () => {
               <CardTitle className="text-lg">Academic Performance</CardTitle>
             </CardHeader>
             <CardContent className="p-0">
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-max">
                 <thead>
                   <tr className="bg-slate-50/50 text-slate-400 uppercase tracking-widest text-[10px]">
                     <th className="px-8 py-4 text-left font-bold">Learning Area</th>
@@ -649,6 +650,12 @@ const StudentProfile = () => {
                         </Badge>
                       </td>
                     </tr>
+                  ))}
+                </tbody>
+              </table>
+              </div>
+            </CardContent>
+          </Card>
                   ))}
                 </tbody>
               </table>

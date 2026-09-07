@@ -452,7 +452,7 @@ export default function AdminControlCenter() {
   ];
 
   return (
-    <div className="space-y-6 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 space-y-6 pb-20">
       {/* Page-level header */}
       <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-6 text-white shadow-xl">
         <div className="flex items-start justify-between mb-4">

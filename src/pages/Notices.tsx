@@ -40,7 +40,7 @@ const Notices = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
+    <div className="w-full max-w-full overflow-x-hidden px-4 py-3 max-w-5xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-20">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 action-bar">
         <div><h1 className="text-3xl font-bold text-slate-900">Notice Board</h1><p className="text-muted-foreground">Stay updated with official school communications.</p></div>
         <Button className="rounded-2xl gap-2 h-11 px-6 shadow-lg bg-indigo-600 hover:bg-indigo-700" onClick={() => setIsOpen(true)}><Plus size={18} /> Post New Notice</Button>
