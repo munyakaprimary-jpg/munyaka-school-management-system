@@ -1,17 +1,27 @@
 /**
  * Admission-number generation & one-time backfill for the `admissionNo` field.
  *
- * Format: MUN-G{gradeDigit}-{seq:03d}/{year}
- *   gradeDigit  — numeric suffix of the grade label ("Grade 4" → 4, "PP1" → 0)
- *   seq         — zero-padded 3-digit integer, unique within (grade, year)
- *   year        — 4-digit enrollment / admission year
+ * Supported formats
+ * ─────────────────
+ *  • Numbered primary school grades:  MUN-G{n}-{seq:03d}/{year}
+ *      Examples: MUN-G1-001/2026, MUN-G4-007/2026, MUN-G9-015/2026
+ *  • Early Childhood Education (ECE):  MUN-PP{1|2}-{seq:03d}/{year}
+ *      Examples: MUN-PP1-001/2026, MUN-PP2-001/2026
+ *
+ *   seq   — zero-padded 3-digit integer, unique within (family, year)
+ *   year  — 4-digit enrollment / admission year
+ *
+ * The parser is permissive: it accepts BOTH the `MUN-G{…}` (legacy
+ * numbered grade) and `MUN-PP{1|2}` (ECE) forms so the backfill can
+ * deduplicate against any number that already exists in storage, no
+ * matter which family it belongs to.
  *
  * Key invariants
  * ─────────────
- * 1. No two rows in the same (grade, year) cohort may share the same seq.
+ * 1. No two rows in the same (family, year) cohort may share the same seq.
  * 2. For backfill rows (no existing admissionNo): each row gets
  *    `positionInCohort + 1` as its sequence, where positionInCohort is
- *    the row's sorted-array index within its (grade, year) cohort.
+ *    the row's sorted-array index within its (family, year) cohort.
  *    Result: MUN-G1-001, MUN-G1-002, … in array order.
  * 3. For new-registration callers (generateAdmissionNo): scan the
  *    in-memory learners AND all known storage keys for every
@@ -34,47 +44,117 @@ export const LEARNER_STORAGE_KEYS: readonly string[] = [
   'munyaka_students',
 ] as const;
 
-const BACKFILL_FLAG_KEY = 'munyaka_admission_no_backfill_v3';
+const BACKFILL_FLAG_KEY = 'munyaka_admission_no_backfill_v4';
 
 // ─── Parsing helpers ──────────────────────────────────────────────────────────
 
+/**
+ * Family codes used in admission numbers.
+ *   "G1".."G9"  — numbered primary school grades
+ *   "PP1"/"PP2" — early childhood education (Pre-Primary)
+ *   "G0"        — fallback for any unrecognised grade label
+ */
+type FamilyCode = `G${number}` | 'PP1' | 'PP2' | 'G0';
+
 interface AdmNoParts {
-  gradeDigit: string; // "0".."10"
+  family: FamilyCode; // "G1".."G9" or "PP1" / "PP2" / "G0"
   seq: number;        // integer ≥ 1
   year: number;       // e.g. 2026
-  cohortKey: string;  // "{gradeDigit}::{year}"
+  cohortKey: string;  // "{family}::{year}"
 }
 
 /**
  * Parse a value that might be an admission number.
- * Returns null if the string is null/undefined/blank or doesn't match the
- * expected `MUN-G{grade}-{seq}/{year}` pattern.
+ * Returns null if the string is null/undefined/blank or doesn't match
+ * either of the supported patterns:
+ *   • MUN-G{1..9}-{seq:03d}/{year}   (numbered primary)
+ *   • MUN-PP{1|2}-{seq:03d}/{year}   (early childhood education)
+ *   • MUN-G0-{seq:03d}/{year}        (fallback / unrecognised grade)
+ *
+ * The legacy "Grade 4" → digit "4" mapping is preserved so existing
+ * `MUN-G{n}-…` numbers in storage still parse correctly.
  */
 function parseAdmissionNo(value: unknown): AdmNoParts | null {
   const s = typeof value === 'string' ? value.trim() : '';
   if (!s) return null;
-  const m = s.match(/^MUN-G(\d+)-(\d+)\/(\d{4})$/);
+  const m = s.match(/^MUN-(G\d+|PP[12])-(\d+)\/(\d{4})$/);
   if (!m) return null;
+  const family = m[1] as FamilyCode;
   const seq = parseInt(m[2], 10);
   const year = parseInt(m[3], 10);
   if (!Number.isFinite(seq) || !Number.isFinite(year)) return null;
   return {
-    gradeDigit: m[1],
+    family,
     seq,
     year,
-    cohortKey: `${m[1]}::${m[3]}`,
+    cohortKey: `${family}::${m[3]}`,
   };
 }
 
 /**
- * Extract the numeric grade digit from a grade label.
- * "Grade 4" → "4", "PP1" → "0", "PP2" → "2", "Grade 10" → "10".
- * Falls back to "0" when no digits are found.
+ * Resolve a grade label to a family code used in admission numbers.
+ *
+ * Explicit mapping for Early Childhood Education:
+ *   • "PP1" / "pp1" / "Playgroup" / "Pre-Primary 1" / "Pre Primary 1" → "PP1"
+ *   • "PP2" / "pp2" / "Pre-Primary 2" / "Pre Primary 2"             → "PP2"
+ *
+ * Numbered primary grades:
+ *   • "Grade 1".."Grade 9" → "G1".."G9" (the numeric digit is preserved)
+ *   • "Grade 10"+"         → "G9"      (only G1..G9 are used in admission
+ *                                       numbers, anything higher is
+ *                                       bucketed under G9 for uniqueness)
+ *
+ * Anything else falls back to "G0".
+ *
+ * Never returns NaN, never returns an empty string.
+ */
+export function gradeToFamilyCode(grade: string): FamilyCode {
+  const g = String(grade || '').trim();
+  if (!g) return 'G0';
+
+  const norm = g.toLowerCase().replace(/[\s\-_]+/g, '');
+
+  // ECE explicit mappings
+  if (
+    norm === 'pp1' ||
+    norm === 'playgroup' ||
+    norm === 'preprimary1' ||
+    norm === 'preprimaryone'
+  ) {
+    return 'PP1';
+  }
+  if (
+    norm === 'pp2' ||
+    norm === 'preprimary2' ||
+    norm === 'preprimarytwo'
+  ) {
+    return 'PP2';
+  }
+
+  // Numbered primary grades — "Grade 4" → 4 → "G4"
+  const m = g.match(/(\d+)/);
+  if (m) {
+    const n = parseInt(m[1], 10);
+    if (Number.isFinite(n)) {
+      if (n >= 1 && n <= 9) return `G${n}` as FamilyCode;
+      if (n >= 10) return 'G9'; // overflow bucket
+      return 'G0';
+    }
+  }
+
+  return 'G0';
+}
+
+/**
+ * Backwards-compatible alias — returns the family code in the same
+ * "G{n}" or "PP{n}" shape used in admission numbers. Older callers
+ * that expected a numeric digit now receive "G{n}" / "PP1" / "PP2"
+ * instead, which is what the rest of the engine expects.
+ *
+ * @deprecated Prefer `gradeToFamilyCode` for new code.
  */
 export function extractGradeDigit(grade: string): string {
-  if (!grade) return '0';
-  const m = String(grade).match(/(\d+)/);
-  return m ? m[1] : '0';
+  return gradeToFamilyCode(grade);
 }
 
 /**
@@ -105,26 +185,33 @@ function resolveEnrollmentYear(
  * Build a single admission number for a given cohort.
  * `seq` must already be confirmed unique within that cohort.
  *
- * Format: MUN-G{gradeDigit}-{seq:03d}/{year}
- * Example: MUN-G4-007/2026
+ * Format: MUN-{family}-{seq:03d}/{year}
+ *   family is derived from `gradeToFamilyCode`:
+ *     Grade 1..9   → "G1".."G9"
+ *     PP1          → "PP1"
+ *     PP2          → "PP2"
+ *     anything else → "G0"
+ *
+ * Examples: MUN-G4-007/2026, MUN-PP1-001/2026, MUN-PP2-003/2026
  */
 function buildAdmissionNo(grade: string, year: number, seq: number): string {
-  const digit = extractGradeDigit(grade);
-  return `MUN-G${digit}-${String(seq).padStart(3, '0')}/${year}`;
+  const family = gradeToFamilyCode(grade);
+  return `MUN-${family}-${String(seq).padStart(3, '0')}/${year}`;
 }
 
 /**
  * Derive the cohortKey for a learner row (used during backfill).
- * Normalises the grade label and resolves the enrollment year.
+ * Normalises the grade label into a family code (e.g. "PP1", "G4")
+ * and resolves the enrollment year.
  */
 function deriveCohortInfo(
   learner: Record<string, unknown>,
   currentYear: number
-): { cohortKey: string; grade: string; year: number } {
+): { cohortKey: string; grade: string; year: number; family: FamilyCode } {
   const grade = String(learner.grade ?? '').trim() || 'Grade 0';
-  const digit = extractGradeDigit(grade);
+  const family = gradeToFamilyCode(grade);
   const year = resolveEnrollmentYear(learner, currentYear);
-  return { cohortKey: `${digit}::${year}`, grade, year };
+  return { cohortKey: `${family}::${year}`, grade, year, family };
 }
 
 // ─── Public API — admission-number generation for new registrations ──────────
@@ -134,26 +221,17 @@ function deriveCohortInfo(
  *
  * Algorithm — strict global sequence tracker:
  *   1. Scan the passed `learners` array and every known storage key for
- *      every admission number matching the `MUN-G{grade}-{seq}/{year}`
- *      pattern.
+ *      every admission number matching any supported format
+ *      (`MUN-G{n}-…`, `MUN-PP1-…`, `MUN-PP2-…`).
  *   2. Parse the `{seq}` portion of each match as an integer and track
  *      the absolute maximum across ALL cohorts (any grade, any year).
  *   3. Return the next sequence integer as `max + 1`, formatted for the
- *      requested (grade, year) cohort.
+ *      requested (grade, year) cohort using the correct family prefix
+ *      (G{n} for numbered grades, PP1 / PP2 for early childhood).
  *
- * Why global instead of per-cohort?
- *   • The user requested "Find the highest existing index matching
- *     MUN-G1-XXX/2026, parse XXX as integer N, and assign N+1".
- *   • Treating the seq space as a single monotonic counter (scoped to
- *     the same physical format) guarantees uniqueness even when
- *     legacy keys contain numbers for grades the current user
- *     doesn't know about.
- *   • Per-cohort numbers can collide if two cohorts ever reuse the
- *     same seq (e.g. two different grades both containing seq=5);
- *     a global counter removes that risk.
- *
- * Output format: MUN-G{gradeDigit}-{seq:03d}/{year}
- * Example: MUN-G4-008/2026
+ * Output format:
+ *   • Grade 1–9:    MUN-G{n}-{seq:03d}/{year}  e.g. MUN-G4-008/2026
+ *   • PP1 / PP2:    MUN-PP{n}-{seq:03d}/{year} e.g. MUN-PP1-001/2026
  */
 export function generateAdmissionNo(
   grade: string,
@@ -278,6 +356,7 @@ export function backfillMissingAdmissionNumbers(): BackfillReport {
       grade: string;
       year: number;
       cohortKey: string;
+      family: FamilyCode;
       rows: Array<{ idx: number }>;
     };
     const cohorts = new Map<string, Cohort>();
@@ -296,9 +375,9 @@ export function backfillMissingAdmissionNumbers(): BackfillReport {
         continue;
       }
 
-      const { cohortKey, grade, year } = deriveCohortInfo(row, currentYear);
+      const { cohortKey, grade, year, family } = deriveCohortInfo(row, currentYear);
       if (!cohorts.has(cohortKey)) {
-        cohorts.set(cohortKey, { grade, year, cohortKey, rows: [] });
+        cohorts.set(cohortKey, { grade, year, cohortKey, family, rows: [] });
       }
       cohorts.get(cohortKey)!.rows.push({ idx: i });
     }
