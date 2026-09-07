@@ -25,9 +25,16 @@ import {
   ChevronRight,
   RotateCcw,
   PlusCircle,
+  Download,
+  Printer,
 } from "lucide-react";
 import { useAuth } from "@/context/AuthContext";
 import AddMaterialModal, { loadCustomMaterials } from "@/components/AddMaterialModal";
+import {
+  exportAssessment,
+  printAssessment,
+  exportAssessmentBulk,
+} from "@/utils/exportAssessment";
 
 // ─── localStorage keys ───────────────────────────────────────────────────────
 const LS_BOOKMARKS = "studyCorner_bookmarks";
@@ -95,6 +102,9 @@ function ReaderModal({
   isBookmarked,
   onMarkComplete,
   isComplete,
+  onDownload,
+  onPrint,
+  isDownloading,
 }: {
   item: ContentItem;
   onClose: () => void;
@@ -102,6 +112,9 @@ function ReaderModal({
   isBookmarked: boolean;
   onMarkComplete: () => void;
   isComplete: boolean;
+  onDownload: () => void;
+  onPrint: () => void;
+  isDownloading?: boolean;
 }) {
   const meta = strandMeta[item.strand];
 
@@ -234,7 +247,7 @@ function ReaderModal({
         </div>
 
         {/* Footer actions */}
-        <div className="sticky bottom-0 z-10 flex items-center gap-3 px-6 py-4 border-t bg-white rounded-b-2xl">
+        <div className="sticky bottom-0 z-10 flex items-center gap-2 flex-wrap px-6 py-4 border-t bg-white rounded-b-2xl">
           <button
             onClick={onToggleBookmark}
             className={`flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border transition-colors ${
@@ -261,6 +274,30 @@ function ReaderModal({
             <CheckCircle2 size={15} className={isComplete ? "text-emerald-500" : ""} />
             {isComplete ? "Completed" : "Mark Complete"}
           </button>
+
+          {/* Download as printable HTML */}
+          <button
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-blue-200 text-blue-600 hover:bg-blue-50 transition-colors disabled:opacity-50"
+          >
+            {isDownloading ? (
+              <span className="w-3.5 h-3.5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+            ) : (
+              <Download size={15} />
+            )}
+            Download
+          </button>
+
+          {/* Print / Save as PDF */}
+          <button
+            onClick={onPrint}
+            className="flex items-center gap-1.5 text-sm px-3 py-1.5 rounded-lg border border-indigo-200 text-indigo-600 hover:bg-indigo-50 transition-colors"
+          >
+            <Printer size={15} />
+            Print / PDF
+          </button>
+
           <button
             onClick={onClose}
             className="ml-auto flex items-center gap-1.5 text-sm px-4 py-1.5 rounded-lg bg-gray-900 text-white hover:bg-gray-800 transition-colors"
@@ -281,6 +318,7 @@ function ContentCard({
   progress,
   onOpen,
   onToggleBookmark,
+  onDownload,
 }: {
   item: ContentItem;
   isBookmarked: boolean;
@@ -288,6 +326,7 @@ function ContentCard({
   progress: number;
   onOpen: () => void;
   onToggleBookmark: () => void;
+  onDownload?: () => void;
 }) {
   const meta = strandMeta[item.strand];
 
@@ -358,19 +397,38 @@ function ContentCard({
             </span>
           )}
         </div>
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onToggleBookmark();
-          }}
-          className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
-        >
-          {isBookmarked ? (
-            <BookmarkCheck size={15} className="text-amber-500" />
-          ) : (
-            <Bookmark size={15} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
+        <div className="flex items-center gap-1">
+          {onDownload && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onDownload();
+              }}
+              className="flex items-center gap-1 text-xs px-2 py-1 rounded-md text-blue-600 hover:bg-blue-50 transition-colors"
+              title="Download as printable HTML / PDF"
+            >
+              <Download size={13} />
+              <span className="hidden sm:inline">
+                {item.revisionQuestions && item.revisionQuestions.length > 0
+                  ? "Download Assessment"
+                  : "Download Notes"}
+              </span>
+            </button>
           )}
-        </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleBookmark();
+            }}
+            className="p-1.5 rounded-lg hover:bg-gray-100 transition-colors"
+          >
+            {isBookmarked ? (
+              <BookmarkCheck size={15} className="text-amber-500" />
+            ) : (
+              <Bookmark size={15} className="text-gray-300 group-hover:text-amber-400 transition-colors" />
+            )}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -428,6 +486,7 @@ export default function StudyCorner() {
   const [showBookmarksOnly, setShowBookmarksOnly] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Custom materials loaded from localStorage
@@ -449,6 +508,36 @@ export default function StudyCorner() {
   const handleCustomSave = useCallback((item: ContentItem) => {
     setCustomItems((prev) => [item, ...prev]);
   }, []);
+
+  const handleDownloadItem = useCallback(async (item: ContentItem) => {
+    setIsDownloading(true);
+    try {
+      await exportAssessment({ item, format: "html" });
+    } finally {
+      setIsDownloading(false);
+    }
+  }, []);
+
+  const handlePrintItem = useCallback((item: ContentItem) => {
+    printAssessment(item);
+  }, []);
+
+  const handleDownloadAllForGrade = useCallback(async () => {
+    if (selectedGrade === null) return;
+    const subjectLabel =
+      selectedStrands.length === 1 ? selectedStrands[0] : undefined;
+    setIsDownloading(true);
+    try {
+      await exportAssessmentBulk({
+        items: filtered,
+        grade: selectedGrade,
+        subject: subjectLabel,
+        format: "html",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  }, [filtered, selectedGrade, selectedStrands]);
 
   const toggleBookmark = useCallback((id: string) => {
     setBookmarks((prev) =>
@@ -553,19 +642,37 @@ export default function StudyCorner() {
         </div>
 
         {/* Stats row */}
-        <div className="flex items-center gap-4 mt-4 text-xs text-gray-500">
-          <span className="flex items-center gap-1">
-            <Bookmark size={13} className="text-amber-500" />
-            {bookmarkCount} bookmarked
-          </span>
-          <span className="flex items-center gap-1">
-            <CheckCircle2 size={13} className="text-emerald-500" />
-            {completedCount} completed
-          </span>
-          <span className="flex items-center gap-1">
-            <FileText size={13} />
-            {filtered.length} showing
-          </span>
+        <div className="flex items-center justify-between gap-4 mt-4">
+          <div className="flex items-center gap-4 text-xs text-gray-500">
+            <span className="flex items-center gap-1">
+              <Bookmark size={13} className="text-amber-500" />
+              {bookmarkCount} bookmarked
+            </span>
+            <span className="flex items-center gap-1">
+              <CheckCircle2 size={13} className="text-emerald-500" />
+              {completedCount} completed
+            </span>
+            <span className="flex items-center gap-1">
+              <FileText size={13} />
+              {filtered.length} showing
+            </span>
+          </div>
+
+          {/* Download All for Grade — shown only when a specific grade is selected */}
+          {selectedGrade !== null && filtered.length > 0 && (
+            <button
+              onClick={handleDownloadAllForGrade}
+              disabled={isDownloading}
+              className="flex items-center gap-1.5 shrink-0 px-3 py-1.5 rounded-xl border border-blue-200 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-semibold transition-colors disabled:opacity-50"
+            >
+              {isDownloading ? (
+                <span className="w-3.5 h-3.5 border-2 border-blue-300 border-t-blue-600 rounded-full animate-spin" />
+              ) : (
+                <Download size={13} />
+              )}
+              Download All for Grade {selectedGrade}
+            </button>
+          )}
         </div>
       </div>
 
@@ -733,6 +840,7 @@ export default function StudyCorner() {
                       progress={readProgress[item.id] ?? 0}
                       onOpen={() => handleOpenItem(item)}
                       onToggleBookmark={() => toggleBookmark(item.id)}
+                      onDownload={() => handleDownloadItem(item)}
                     />
                   ))}
                 </div>
@@ -762,6 +870,7 @@ export default function StudyCorner() {
                           progress={readProgress[item.id] ?? 0}
                           onOpen={() => handleOpenItem(item)}
                           onToggleBookmark={() => toggleBookmark(item.id)}
+                          onDownload={() => handleDownloadItem(item)}
                         />
                       ))}
                     </div>
@@ -782,6 +891,9 @@ export default function StudyCorner() {
           onToggleBookmark={() => toggleBookmark(activeItem.id)}
           onMarkComplete={() => markComplete(activeItem.id)}
           isComplete={!!completionMap[activeItem.id]}
+          onDownload={() => handleDownloadItem(activeItem)}
+          onPrint={() => handlePrintItem(activeItem)}
+          isDownloading={isDownloading}
         />
       )}
 
