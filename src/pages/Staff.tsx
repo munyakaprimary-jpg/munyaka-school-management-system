@@ -482,11 +482,11 @@ const Staff = () => {
                       <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
                         <Checkbox checked={filteredStaff.length > 0 && selectedIds.size === filteredStaff.length} onCheckedChange={toggleSelectAll} aria-label="Select all staff" />
                       </th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">Role / Designation</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Contact Info</th>
-                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-center min-w-[140px]">Account Status</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
+                      <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
                       <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                     </tr>
                   </thead>
@@ -496,17 +496,6 @@ const Staff = () => {
                         <td className="px-4 py-5 w-12">
                           <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
                         </td>
-                        <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                            {(() => {
-                              const validId = (member as any).tscNo || (member as any).staffId || (member as any).nationalId || member.tsc_no || member.staff_id || member.id;
-                              if (validId && !validId.toUpperCase().startsWith('MUNYAKA-')) {
-                                return validId;
-                              }
-                              return '—';
-                            })()}
-                          </span>
-                        </td>
                         <td className="px-8 py-5 min-w-[200px]">
                           <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
@@ -515,21 +504,28 @@ const Staff = () => {
                             <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</span>
                           </div>
                         </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                            {(() => {
+                              const validId = (member as any).tscNo || (member as any).staffId || (member as any).nationalId || member.tsc_no || member.staff_id;
+                              if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                return validId;
+                              }
+                              return '—';
+                            })()}
+                          </span>
+                        </td>
                         <td className="px-8 py-5 min-w-[180px]">
                           <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
                           <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
                         </td>
                         <td className="px-8 py-5 min-w-[220px]">
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2 text-xs font-medium text-slate-700 whitespace-nowrap">
-                              <Phone size={13} className="text-slate-400 shrink-0" />
-                              <span>{member.phone || 'No Phone Provided'}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-xs text-slate-500 whitespace-nowrap">
-                              <Mail size={13} className="text-slate-400 shrink-0" />
-                              <span className="truncate max-w-[180px]">{member.email || 'No Email Provided'}</span>
-                            </div>
-                          </div>
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
+                        </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
+                            {(member as any).ref || (member as any).accessCode || (member as any).tempAccessCode || '—'}
+                          </span>
                         </td>
                         <td className="px-8 py-5 text-center min-w-[140px]">
                           <Badge className={member.status === 'Active' ? "bg-emerald-50 text-emerald-700 border-none font-bold text-xs px-3 py-1 rounded-xl" : "bg-amber-50 text-amber-700 border-none font-bold text-xs px-3 py-1 rounded-xl"}>
