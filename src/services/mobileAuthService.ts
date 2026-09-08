@@ -164,39 +164,39 @@ export async function teacherLogin(
     };
   }
 
-  console.log(`[mobileAuth] Logging in "${normalizedId}" → ${serverUrl}/api/auth/login`);
-
-  // ── Build the request body — send all possible identifier fields
-  //    so the server's flexible lookup (email / staff_id / tsc_number)
-  //    handles whichever field the user entered without needing client-side
-  //    field-type detection.
-  const requestBody = {
-    email: normalizedId,
-    password: String(password || '').trim(),
-    staff_id: normalizedId,
-    identifier: normalizedId,
-    tscNumber: normalizedId,
-    username: normalizedId,
-  };
-
-  let response: Response;
-  try {
-    const controller = new AbortController();
-    // 15-second timeout gives the APK time to wait on a slow LAN connection
-    const timeoutId = setTimeout(() => controller.abort(), 15000);
-
-    response = await fetch(`${serverUrl}/api/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-        'X-Client-Platform': isCapacitorNative() ? 'android' : 'web',
-      },
-      body: JSON.stringify(requestBody),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-  } catch (err: any) {
+  console.log(`[mobileAuth] Logging in "${normalizedId}" → ${serverUrl}/api/login`);
+  
+    // ── Build the request body — send all possible identifier fields
+    //    so the server's flexible lookup (email / staff_id / tsc_number)
+    //    handles whichever field the user entered without needing client-side
+    //    field-type detection.
+    const requestBody = {
+      email: normalizedId,
+      password: String(password || '').trim(),
+      staff_id: normalizedId,
+      identifier: normalizedId,
+      tscNumber: normalizedId,
+      username: normalizedId,
+    };
+  
+    let response: Response;
+    try {
+      const controller = new AbortController();
+      // 3-second timeout for LAN server login
+      const timeoutId = setTimeout(() => controller.abort(), 3000);
+  
+      response = await fetch(`${serverUrl}/api/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Accept: 'application/json',
+          'X-Client-Platform': isCapacitorNative() ? 'android' : 'web',
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+    } catch (err: any) {
     // ── Network-level failure ────────────────────────────────────────────────
     const isNative = isCapacitorNative();
     let displayMessage: string;

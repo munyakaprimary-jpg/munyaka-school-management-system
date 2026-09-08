@@ -43,7 +43,7 @@ import {
   DEFAULT_ADMIN_PASSWORD,
   getActiveAdminPassword,
 } from '@/services/adminCredentials';
-import type { LoginFailure } from '@/services/mobileAuthService';
+import type { LoginFailure, LoginSuccess } from '@/services/mobileAuthService';
 import ForgotPasswordModal from '@/components/ForgotPasswordModal';
 import CoverPage from './CoverPage';
 
@@ -200,11 +200,12 @@ const Login: React.FC = () => {
   const [isAdminVerifying, setIsAdminVerifying] = useState(false);
 
   // ── Staff state ──────────────────────────────────────────────────────────
-  const [staffId, setStaffId] = useState('');
-  const [staffPassword, setStaffPassword] = useState('');
-  const [showStaffPassword, setShowStaffPassword] = useState(false);
-  const [staffAuthError, setStaffAuthError] = useState('');
-  const [isStaffVerifying, setIsStaffVerifying] = useState(false);
+    const [staffId, setStaffId] = useState('');
+    const [staffPassword, setStaffPassword] = useState('');
+    const [showStaffPassword, setShowStaffPassword] = useState(false);
+    const [staffAuthError, setStaffAuthError] = useState('');
+    const [isStaffVerifying, setIsStaffVerifying] = useState(false);
+    const [selectedSupportRole, setSelectedSupportRole] = useState<string | null>(null);
 
   // ── Forgot password modal ───────────────────────────────────────────────
   const [forgotModalOpen, setForgotModalOpen] = useState(false);
@@ -301,134 +302,172 @@ const Login: React.FC = () => {
 
   // ── Staff handlers ────────────────────────────────────────────────────────
   const handleStaffLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const trimmedId = String(staffId || '').trim();
-        const trimmedPass = String(staffPassword || '').trim();
-
-    if (!trimmedId) {
-      setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
-      return;
-    }
-    // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    const isEmail = emailRegex.test(trimmedId);
-    const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
-    const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
-    if (!isEmail && !isStaffId && !isTscNumber) {
-      setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
-      return;
-    }
-    if (!trimmedPass) {
-      setStaffAuthError('Please enter your Password.');
-      return;
-    }
-
-    setIsStaffVerifying(true);
-    setStaffAuthError('');
-
-    console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
-
-    // ── Authenticate against the LAN backend (mobile / APK deployments) ─────
-    const result = await teacherLogin(trimmedId, trimmedPass);
-
-    if (result.success) {
-      console.log('[Login] LAN auth succeeded:', result.user);
-
-      // Persist the authenticated user so the rest of the app can read it
-      const userData = {
-        id: result.user.id,
-        name: result.user.name,
-        email: result.user.email || trimmedId,
-        phone: result.user.phone || '',
-        role: result.user.role || 'teacher',
-        staff_id: result.user.staff_id,
-        tsc_number: result.user.tsc_number,
-        avatar: result.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
-      };
-
+      e.preventDefault();
+      
+      const trimmedId = String(staffId || '').trim();
+      const trimmedPass = String(staffPassword || '').trim();
+  
+      if (!trimmedId) {
+        setStaffAuthError('Please enter your Email Address, TSC Number, or Staff ID.');
+        return;
+      }
+      // Accept email, TSC number (digits/hyphens), or staff ID (alphanumeric)
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      const isEmail = emailRegex.test(trimmedId);
+      const isStaffId = /^[a-z0-9_-]+$/i.test(trimmedId);
+      const isTscNumber = /^[0-9/-]+$/.test(trimmedId);
+      if (!isEmail && !isStaffId && !isTscNumber) {
+        setStaffAuthError('Please enter a valid email address, TSC Number, or Staff ID.');
+        return;
+      }
+      if (!trimmedPass) {
+        setStaffAuthError('Please enter your Password.');
+        return;
+      }
+  
+      setIsStaffVerifying(true);
+      setStaffAuthError('');
+  
+      console.log(`[Login] Staff login attempt — server: ${getApiBaseUrl()}, identifier: ${trimmedId}`);
+  
+      // ── Try LAN server login with 3-second timeout ───────────────────────────────────
+      let serverLoginSuccess = false;
+      let serverLoginResult: LoginSuccess | null = null;
+      
       try {
-        localStorage.setItem('munyaka_session', JSON.stringify(userData));
-      } catch { /* ignore */ }
-
-      showSuccess(`Welcome, ${result.user.name}!`);
-      navigate(getStaffRedirectPath(result.user.role || 'subject_teacher'), { replace: true });
-      setIsStaffVerifying(false);
-      return;
-    }
-
-    // ── Server rejected the credentials or is unreachable ─────────────────
-    console.warn('[Login] LAN auth failed:', result);
-
-    // TypeScript doesn't always narrow discriminated unions across catch-all
-    // conditionals, so we narrow explicitly here.
-    if (result.success) return;
-    const failure = result as LoginFailure;
-
-    // ── Network errors: show as native alert (impossible to miss in APK) ──
-    //    plus the inline error banner. The native alert survives screen
-    //    rotation, app backgrounding, and is the first thing a field
-    //    technician will see when troubleshooting an APK install.
-    if (failure.code === 'NETWORK_ERROR') {
-      const networkMsg = failure.error;
-      setStaffAuthError(networkMsg);
-      showError(networkMsg);
-
-      // Fire a native alert on Capacitor for unmissable diagnostics.
-      // On plain web this falls through to the toast/inline error.
-      try {
-        if ((window as any).Capacitor?.isNativePlatform?.()) {
-          const { Plugins } = (window as any).Capacitor;
-          if (Plugins?.Dialog?.alert) {
-            await Plugins.Dialog.alert({
-              title: '⚠️ Network Error',
-              message: networkMsg + '\n\nCheck that:\n• The LAN server is running\n• The Server IP in Settings is correct\n• The phone is on the same Wi-Fi as the server',
-            });
+        // Create a promise with 3-second timeout
+        const serverLoginPromise = teacherLogin(trimmedId, trimmedPass);
+        const timeoutPromise = new Promise<never>((_, reject) =>
+          setTimeout(() => reject(new Error('Server timeout')), 3000)
+        );
+        
+        const result = await Promise.race([serverLoginPromise, timeoutPromise]);
+        
+        if (result.success) {
+          serverLoginSuccess = true;
+          serverLoginResult = result;
+          console.log('[Login] LAN auth succeeded:', result.user);
+        }
+      } catch (error) {
+        // Server login failed or timed out - proceed to offline authentication
+        console.log('[Login] LAN auth failed or timed out, proceeding to offline authentication:', error);
+      }
+  
+      // ── If server login succeeded, use it ───────────────────────────────────────────
+      if (serverLoginSuccess && serverLoginResult) {
+        const userData = {
+          id: serverLoginResult.user.id,
+          name: serverLoginResult.user.name,
+          email: serverLoginResult.user.email || trimmedId,
+          phone: serverLoginResult.user.phone || '',
+          role: serverLoginResult.user.role || 'teacher',
+          staff_id: serverLoginResult.user.staff_id,
+          tsc_number: serverLoginResult.user.tsc_number,
+          avatar: serverLoginResult.user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+        };
+  
+        try {
+          localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        } catch { /* ignore */ }
+  
+        showSuccess(`Welcome, ${serverLoginResult.user.name}!`);
+        navigate(getStaffRedirectPath(serverLoginResult.user.role || 'subject_teacher'), { replace: true });
+        setIsStaffVerifying(false);
+        return;
+      }
+  
+      // ── Offline authentication (localStorage lookup) ─────────────────────────────────
+      console.log('[Login] Attempting offline authentication...');
+  
+      // Use the selected support role for role filtering
+      const requiredRole = selectedSupportRole;
+  
+      // Try multiple localStorage sources for staff data
+      const staffSources = [
+        'munyaka_staff_directory',  // Unified staff directory (StaffMasterService)
+        'munyaka_staff',           // Legacy staff array
+        'munyaka_staff_prereg',    // Pre-registration ledger
+      ];
+  
+      let foundUser = null;
+      
+      for (const source of staffSources) {
+        try {
+          const staffData = localStorage.getItem(source);
+          if (!staffData) continue;
+          
+          const staffArray = JSON.parse(staffData);
+          if (!Array.isArray(staffArray)) continue;
+          
+          // Find user by email, staffId, or nationalId
+          const user = staffArray.find((u: any) => {
+            const emailMatch = u.email && u.email.toLowerCase() === trimmedId.toLowerCase();
+            const staffIdMatch = u.staffId && u.staffId.toLowerCase() === trimmedId.toLowerCase();
+            const nationalIdMatch = u.nationalId && u.nationalId === trimmedId;
+            const phoneMatch = u.phone && u.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+            
+            if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
+              return false;
+            }
+            
+            // Check password
+            const passwordMatch = u.password === trimmedPass ||
+                                 (u.alternativePasswords && u.alternativePasswords.includes(trimmedPass));
+            
+            if (!passwordMatch) {
+              return false;
+            }
+            
+            // Check role if required (from support staff card selection)
+            if (requiredRole && u.systemRole !== requiredRole && u.role !== requiredRole) {
+              return false;
+            }
+            
+            return true;
+          });
+          
+          if (user) {
+            foundUser = user;
+            console.log('[Login] Found user in offline source:', source, foundUser);
+            break;
           }
-        } else if (typeof window !== 'undefined' && (window as any).alert) {
-          // Fallback: browser alert (works in dev mode on Chrome / Safari)
-          window.alert(`⚠️ Network Error\n\n${networkMsg}\n\nCheck that:\n• The LAN server is running\n• The Server IP in Settings is correct\n• The phone is on the same Wi-Fi as the server`);
+        } catch (error) {
+          console.error(`[Login] Error parsing ${source}:`, error);
+          continue;
         }
-      } catch { /* ignore alert failures */ }
-
-      console.error(`[Login] Server unreachable: ${failure.attemptedUrl}`);
+      }
+  
+      // ── If user found offline, log them in ───────────────────────────────────────────
+      if (foundUser) {
+        const userData = {
+          id: foundUser.id || foundUser.staffId || `offline-${Date.now()}`,
+          name: foundUser.name || foundUser.fullName || 'Unknown User',
+          email: foundUser.email || '',
+          phone: foundUser.phone || '',
+          role: foundUser.systemRole || foundUser.role || 'staff',
+          staff_id: foundUser.staffId || '',
+          avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+        };
+  
+        try {
+          localStorage.setItem('munyaka_session', JSON.stringify(userData));
+        } catch { /* ignore */ }
+  
+        showSuccess(`Welcome, ${userData.name}!`);
+        navigate(getStaffRedirectPath(userData.role), { replace: true });
+        setIsStaffVerifying(false);
+        return;
+      }
+  
+      // ── Offline authentication failed ───────────────────────────────────────────────
+      const errorMessage = requiredRole
+        ? `Invalid credentials or account not registered under this role (${requiredRole}).`
+        : 'Invalid credentials or account not registered.';
+      
+      setStaffAuthError(errorMessage);
+      showError(errorMessage);
       setIsStaffVerifying(false);
-      return;
-    }
-
-    // ── Credential / role / server errors: differentiated messages ──────
-    let displayMessage: string;
-    let alertTitle: string | null = null;
-
-    if (failure.code === 'INVALID_CREDENTIALS') {
-      displayMessage = '❌ Invalid Password — The TSC Number / Staff ID or Password is incorrect. Please check your credentials and try again.';
-      alertTitle = 'Invalid Credentials';
-    } else if (failure.code === 'ROLE_NOT_ALLOWED') {
-      displayMessage = '🚫 Access Denied — This account type is not permitted to sign in on this device. Contact the school administrator.';
-      alertTitle = 'Role Not Authorized';
-    } else if (failure.code === 'SERVER_ERROR') {
-      displayMessage = `🔧 Server Error — ${failure.error}`;
-      alertTitle = 'Server Error';
-    } else {
-      displayMessage = failure.error || 'Login failed. Please try again.';
-    }
-
-    setStaffAuthError(displayMessage);
-    showError(displayMessage);
-
-    // Native alert for credential/role errors too — these are the most
-    // common field issues and the technician needs an unambiguous signal
-    // distinguishing "you typed the wrong password" from "the server is down".
-    if (alertTitle && (window as any).Capacitor?.isNativePlatform?.()) {
-      try {
-        const { Plugins } = (window as any).Capacitor;
-        if (Plugins?.Dialog?.alert) {
-          await Plugins.Dialog.alert({ title: alertTitle, message: displayMessage });
-        }
-      } catch { /* ignore */ }
-    }
-
-    setIsStaffVerifying(false);
-  };
+    };
 
   // ── Lightweight server reachability check on mount ──────────────────────
   useEffect(() => {
@@ -837,109 +876,114 @@ const Login: React.FC = () => {
                 </p>
 
                 {/* Non-Teaching Staff Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStaffId('non_teaching@munyaka.sc.ke?role=non_teaching');
-                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                  }}
-                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Users size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-slate-800">Non-Teaching Staff</div>
-                      <div className="text-xs text-slate-500">General support &amp; administration</div>
-                    </div>
-                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
-
-                {/* Librarian Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStaffId('librarian@munyaka.sc.ke?role=librarian');
-                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                  }}
-                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <BookOpen size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-slate-800">Librarian</div>
-                      <div className="text-xs text-slate-500">Library management &amp; resources</div>
-                    </div>
-                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
-
-                {/* Storekeeper Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStaffId('storekeeper@munyaka.sc.ke?role=storekeeper');
-                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                  }}
-                  className="w-full p-4 rounded-2xl border-2 border-yellow-200 bg-white hover:shadow-lg hover:border-yellow-300 transition-all text-left group active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Package size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-slate-800">Storekeeper</div>
-                      <div className="text-xs text-slate-500">Inventory &amp; supplies management</div>
-                    </div>
-                    <ArrowRight size={16} className="text-yellow-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
-
-                {/* Science Lab Assistant Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStaffId('lab_assistant@munyaka.sc.ke?role=lab_assistant');
-                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                  }}
-                  className="w-full p-4 rounded-2xl border-2 border-teal-200 bg-white hover:shadow-lg hover:border-teal-300 transition-all text-left group active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Beaker size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-slate-800">Science Lab Assistant</div>
-                      <div className="text-xs text-slate-500">Science lab &amp; materials management</div>
-                    </div>
-                    <ArrowRight size={16} className="text-teal-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
-
-                {/* ICT Lab Technician Card */}
-                <button
-                  type="button"
-                  onClick={() => {
-                    setStaffId('ict_technician@munyaka.sc.ke?role=ict_technician');
-                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                  }}
-                  className="w-full p-4 rounded-2xl border-2 border-violet-200 bg-white hover:shadow-lg hover:border-violet-300 transition-all text-left group active:scale-[0.98]"
-                >
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                      <Monitor size={24} />
-                    </div>
-                    <div className="flex-1">
-                      <div className="font-black text-slate-800">ICT Lab Technician</div>
-                      <div className="text-xs text-slate-500">IT systems &amp; technical support</div>
-                    </div>
-                    <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform" />
-                  </div>
-                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedSupportRole('support_staff');
+                                    setStaffId('');
+                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
+                                  }}
+                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                      <Users size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-black text-slate-800">Non-Teaching Staff</div>
+                                      <div className="text-xs text-slate-500">General support &amp; administration</div>
+                                    </div>
+                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
+                
+                                {/* Librarian Card */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedSupportRole('librarian');
+                                    setStaffId('');
+                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
+                                  }}
+                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                      <BookOpen size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-black text-slate-800">Librarian</div>
+                                      <div className="text-xs text-slate-500">Library management &amp; resources</div>
+                                    </div>
+                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
+                
+                                {/* Storekeeper Card */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedSupportRole('storekeeper');
+                                    setStaffId('');
+                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
+                                  }}
+                                  className="w-full p-4 rounded-2xl border-2 border-yellow-200 bg-white hover:shadow-lg hover:border-yellow-300 transition-all text-left group active:scale-[0.98]"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                      <Package size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-black text-slate-800">Storekeeper</div>
+                                      <div className="text-xs text-slate-500">Inventory &amp; supplies management</div>
+                                    </div>
+                                    <ArrowRight size={16} className="text-yellow-400 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
+                
+                                {/* Science Lab Assistant Card */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedSupportRole('lab_assistant');
+                                    setStaffId('');
+                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
+                                  }}
+                                  className="w-full p-4 rounded-2xl border-2 border-teal-200 bg-white hover:shadow-lg hover:border-teal-300 transition-all text-left group active:scale-[0.98]"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                      <Beaker size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-black text-slate-800">Science Lab Assistant</div>
+                                      <div className="text-xs text-slate-500">Science lab &amp; materials management</div>
+                                    </div>
+                                    <ArrowRight size={16} className="text-teal-400 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
+                
+                                {/* ICT Lab Technician Card */}
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedSupportRole('ict_technician');
+                                    setStaffId('');
+                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
+                                  }}
+                                  className="w-full p-4 rounded-2xl border-2 border-violet-200 bg-white hover:shadow-lg hover:border-violet-300 transition-all text-left group active:scale-[0.98]"
+                                >
+                                  <div className="flex items-center gap-4">
+                                    <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                                      <Monitor size={24} />
+                                    </div>
+                                    <div className="flex-1">
+                                      <div className="font-black text-slate-800">ICT Lab Technician</div>
+                                      <div className="text-xs text-slate-500">IT systems &amp; technical support</div>
+                                    </div>
+                                    <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform" />
+                                  </div>
+                                </button>
 
                 {/* Login Form for Support Staff */}
                 <Card className="border-none shadow-lg rounded-2xl bg-white overflow-hidden mt-4">

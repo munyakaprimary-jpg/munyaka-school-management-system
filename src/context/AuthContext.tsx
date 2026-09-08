@@ -14,7 +14,7 @@ import {
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
-export type UserRole = 'admin' | 'teacher' | 'accountant' | 'librarian' | 'staff' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student';
 
 // 'librarian' maps to the owner-level dashboard in Dashboard.tsx (the role
 // formerly named 'owner' — kept as a separate role to preserve the hierarchy).
@@ -135,6 +135,19 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
     case 'library':
     case 'library_assistant':
       return 'librarian';
+    case 'storekeeper':
+    case 'stores':
+      return 'storekeeper';
+    case 'lab_assistant':
+    case 'laboratory_assistant':
+      return 'lab_assistant';
+    case 'ict_technician':
+    case 'ict_tech':
+      return 'ict_technician';
+    case 'support_staff':
+    case 'support':
+    case 'staff':
+      return 'staff';
     case 'student':
       return 'student';
     case 'parent':
