@@ -378,17 +378,17 @@ const Login: React.FC = () => {
   
       // ── Offline authentication (localStorage lookup) ─────────────────────────────────
       console.log('[Login] Attempting offline authentication...');
-  
-      // Use the selected support role for role filtering
-      const requiredRole = selectedSupportRole;
-  
+
+      // Use the selected support role for role filtering (normalized)
+      const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
+
       // Try multiple localStorage sources for staff data
       const staffSources = [
         'munyaka_staff_directory',  // Unified staff directory (StaffMasterService)
         'munyaka_staff',           // Legacy staff array
         'munyaka_staff_prereg',    // Pre-registration ledger
       ];
-  
+
       let foundUser = null;
       
       for (const source of staffSources) {
@@ -399,28 +399,47 @@ const Login: React.FC = () => {
           const staffArray = JSON.parse(staffData);
           if (!Array.isArray(staffArray)) continue;
           
-          // Find user by email, staffId, or nationalId
-          const user = staffArray.find((u: any) => {
-            const emailMatch = u.email && u.email.toLowerCase() === trimmedId.toLowerCase();
-            const staffIdMatch = u.staffId && u.staffId.toLowerCase() === trimmedId.toLowerCase();
-            const nationalIdMatch = u.nationalId && u.nationalId === trimmedId;
-            const phoneMatch = u.phone && u.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+          const inputId = trimmedId.toLowerCase().trim();
+          const inputCode = trimmedPass.trim();
+          
+          // Find user by email, staffId, nationalId, or phone
+          const user = staffArray.find((s: any) => {
+            const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
+            const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
+            const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
+            const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
             
             if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
               return false;
             }
             
-            // Check password
-            const passwordMatch = u.password === trimmedPass ||
-                                 (u.alternativePasswords && u.alternativePasswords.includes(trimmedPass));
+            // Flexible credential matching: accessCode, ref, staffId, or password
+            const codeMatch =
+              s.accessCode === inputCode ||
+              s.ref === inputCode ||
+              s.staffId === inputCode ||
+              s.password === inputCode ||
+              (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
             
-            if (!passwordMatch) {
+            if (!codeMatch) {
               return false;
             }
             
-            // Check role if required (from support staff card selection)
-            if (requiredRole && u.systemRole !== requiredRole && u.role !== requiredRole) {
-              return false;
+            // Case-insensitive & flexible role check
+            const normalizedStaffRole = (s.systemRole || s.role || s.designation || '').toLowerCase().trim();
+            
+            if (normalizedSelectedRole) {
+              const isRoleMatch =
+                normalizedStaffRole === normalizedSelectedRole ||
+                (normalizedSelectedRole === 'librarian' && normalizedStaffRole.includes('librar')) ||
+                normalizedStaffRole === 'staff' ||
+                normalizedStaffRole === 'support_staff' ||
+                normalizedStaffRole === 'support_admin' ||
+                normalizedStaffRole === 'bursar';
+              
+              if (!isRoleMatch) {
+                return false;
+              }
             }
             
             return true;
@@ -436,32 +455,32 @@ const Login: React.FC = () => {
           continue;
         }
       }
-  
+
       // ── If user found offline, log them in ───────────────────────────────────────────
       if (foundUser) {
         const userData = {
-          id: foundUser.id || foundUser.staffId || `offline-${Date.now()}`,
+          id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
           name: foundUser.name || foundUser.fullName || 'Unknown User',
           email: foundUser.email || '',
           phone: foundUser.phone || '',
-          role: foundUser.systemRole || foundUser.role || 'staff',
-          staff_id: foundUser.staffId || '',
+          role: foundUser.systemRole || foundUser.role || foundUser.designation || 'staff',
+          staff_id: foundUser.staffId || foundUser.ref || '',
           avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
         };
-  
+
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
         } catch { /* ignore */ }
-  
+
         showSuccess(`Welcome, ${userData.name}!`);
         navigate(getStaffRedirectPath(userData.role), { replace: true });
         setIsStaffVerifying(false);
         return;
       }
-  
+
       // ── Offline authentication failed ───────────────────────────────────────────────
-      const errorMessage = requiredRole
-        ? `Invalid credentials or account not registered under this role (${requiredRole}).`
+      const errorMessage = normalizedSelectedRole
+        ? `Invalid credentials or account not registered under this role (${normalizedSelectedRole}).`
         : 'Invalid credentials or account not registered.';
       
       setStaffAuthError(errorMessage);
