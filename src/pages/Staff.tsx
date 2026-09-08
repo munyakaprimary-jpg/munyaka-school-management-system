@@ -498,7 +498,13 @@ const Staff = () => {
                         </td>
                         <td className="px-8 py-5 min-w-[140px]">
                           <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                            {member.tsc_no || member.staff_id || member.id || '—'}
+                            {(() => {
+                              const validId = (member as any).tscNo || (member as any).staffId || (member as any).nationalId || member.tsc_no || member.staff_id || member.id;
+                              if (validId && !validId.toUpperCase().startsWith('MUNYAKA-')) {
+                                return validId;
+                              }
+                              return '—';
+                            })()}
                           </span>
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
