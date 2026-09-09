@@ -155,7 +155,6 @@ const getFeesForStudent = (studentId: string): PaymentRecord[] => {
 const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => void; onClose: () => void }) => {
   const navigate = useNavigate();
   const [identifier, setIdentifier] = useState('');
-  const [dob, setDob] = useState('');
   const [isSearching, setIsSearching] = useState(false);
   const [error, setError] = useState('');
 
@@ -163,14 +162,6 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
   const normalizeIdentifier = (id: string): string => {
     if (!id) return '';
     return id.trim().toUpperCase().replace(/[\s-]/g, '');
-  };
-
-  // Normalize date for comparison (handles multiple formats)
-  const normalizeDate = (dateStr: string): string => {
-    if (!dateStr) return '';
-    const date = new Date(dateStr);
-    if (isNaN(date.getTime())) return dateStr;
-    return date.toISOString().split('T')[0];
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -181,10 +172,6 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
       setError('Please enter your Assessment Number or Birth Certificate Number');
       return;
     }
-    if (!dob.trim()) {
-      setError('Please enter your Date of Birth');
-      return;
-    }
 
     setIsSearching(true);
 
@@ -192,22 +179,19 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
     setTimeout(() => {
       const students = getStudents();
       const normalizedId = normalizeIdentifier(identifier);
-      const normalizedDob = normalizeDate(dob);
 
       const matchedStudent = students.find(s => {
         // Check all possible identifier fields
         const studentAdm = normalizeIdentifier(s.admNo || '');
         const studentAssessment = normalizeIdentifier((s as any).assessmentNumber || '');
         const studentBirthCert = normalizeIdentifier((s as any).birthCertificateNo || '');
-        const studentDob = normalizeDate((s as any).dob || '');
         
-        // Match any of the identifiers AND DOB must match
-        const idMatches =
+        // Match any of the identifiers
+        return (
           studentAdm === normalizedId ||
           studentAssessment === normalizedId ||
-          studentBirthCert === normalizedId;
-        
-        return idMatches && studentDob === normalizedDob;
+          studentBirthCert === normalizedId
+        );
       });
 
       if (matchedStudent) {
@@ -223,7 +207,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
         onLogin(session);
         showSuccess(`Welcome, ${matchedStudent.name}!`);
       } else {
-        setError('No matching record found. Please verify your Assessment/Birth Certificate Number and Date of Birth.');
+        setError('No matching record found. Please verify your Assessment Number or Birth Certificate Number.');
         setIsSearching(false);
       }
     }, 800);
@@ -282,23 +266,6 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
                 className="h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-700 font-medium placeholder:text-slate-400 focus:border-indigo-500 focus:ring-indigo-100"
                 autoComplete="off"
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="dob" className="text-slate-700 font-bold text-sm">
-                Date of Birth
-              </Label>
-              <Input
-                id="dob"
-                type="date"
-                value={dob}
-                onChange={(e) => setDob(e.target.value)}
-                className="h-12 rounded-xl border-slate-200 bg-slate-50 text-slate-700 font-medium focus:border-indigo-500 focus:ring-indigo-100"
-                autoComplete="off"
-              />
-              <p className="text-xs text-slate-500 mt-1">
-                Enter the student's date of birth as registered with the school
-              </p>
             </div>
 
             <Button
