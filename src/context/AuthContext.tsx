@@ -547,7 +547,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('munyaka_sysadmin_pass', newPass);
     }
 
-    showSuccess("Password changed successfully");
+    // Force global session invalidation across all tabs/instances
+    localStorage.removeItem('munyaka_session');
+    persistCurrentAuthRole(null);
+    setUser(null);
+
+    showSuccess("Password changed successfully. Please log in with your new password.");
     return true;
   };
 
