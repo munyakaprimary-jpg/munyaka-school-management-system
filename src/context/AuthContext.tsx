@@ -14,7 +14,7 @@ import {
 } from '@/services/adminCredentials';
 import { getStaffMaster, initializeStaffMaster } from '@/services/staffMasterService';
 
-export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student';
+export type UserRole = 'admin' | 'teacher' | 'accountant' | 'staff' | 'librarian' | 'storekeeper' | 'lab_assistant' | 'ict_technician' | 'student' | 'non_teaching' | 'support' | 'driver';
 
 // 'librarian' maps to the owner-level dashboard in Dashboard.tsx (the role
 // formerly named 'owner' — kept as a separate role to preserve the hierarchy).
@@ -120,7 +120,8 @@ const DEFAULT_TEACHER = {
 const USERS_STORAGE_KEY = 'munyaka_users';
 
 const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
-  switch (systemRole) {
+  const norm = String(systemRole || '').trim().toLowerCase();
+  switch (norm) {
     // Normalize legacy identifiers to the canonical 'admin' role.
     case 'owner':
     case 'super_admin':
@@ -144,8 +145,11 @@ const mapSystemRoleToUserRole = (systemRole: string): UserRole => {
     case 'ict_technician':
     case 'ict_tech':
       return 'ict_technician';
+    case 'non_teaching':
     case 'support_staff':
     case 'support':
+    case 'driver':
+      return norm as UserRole;
     case 'staff':
       return 'staff';
     case 'student':
