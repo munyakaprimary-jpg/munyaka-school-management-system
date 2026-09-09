@@ -132,20 +132,36 @@ export default function Students() {
   // button is always available for admins.
   const [learners, setLearners] = useState<Learner[]>(() => {
     try {
-      const saved = localStorage.getItem('school_learners_data');
-      if (saved !== null) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          return parsed;
+      const keys = ['school_learners_data', 'students', 'learners', 'pupils', 'school_students', 'registered_students'];
+      let allFound: Learner[] = [];
+      for (const k of keys) {
+        const raw = localStorage.getItem(k);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            allFound = [...allFound, ...parsed];
+          }
         }
+      }
+      if (allFound.length > 0) {
+        // Deduplicate by ID and admission number
+        const seenIds = new Set<string>();
+        const seenAdms = new Set<string>();
+        const unique = allFound.filter(l => {
+          if (!l) return false;
+          const id = l.id;
+          const adm = String(l.admissionNo || (l as any).admNo || (l as any).admissionNumber || '').trim().toUpperCase();
+          if (id && seenIds.has(id)) return false;
+          if (id) seenIds.add(id);
+          if (adm && seenAdms.has(adm)) return false;
+          if (adm) seenAdms.add(adm);
+          return true;
+        });
+        return unique;
       }
     } catch (e) {
       console.error('Error loading learners from localStorage', e);
     }
-    // Never re-seed from DEFAULT_LEARNERS — write empty `[]` and return it.
-    try {
-      localStorage.setItem('school_learners_data', '[]');
-    } catch { /* no-op */ }
     return [];
   });
 
@@ -187,11 +203,31 @@ export default function Students() {
     const reload = (key: string | null) => {
       if (!isLearnerKey(key) && key !== undefined) return;
       try {
-        const raw = localStorage.getItem('school_learners_data');
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
-          setLearners(parsed as Learner[]);
+        const keys = ['school_learners_data', 'students', 'learners', 'pupils', 'school_students', 'registered_students'];
+        let allFound: Learner[] = [];
+        for (const k of keys) {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed) && parsed.length > 0) {
+              allFound = [...allFound, ...parsed];
+            }
+          }
+        }
+        if (allFound.length > 0) {
+          const seenIds = new Set<string>();
+          const seenAdms = new Set<string>();
+          const unique = allFound.filter(l => {
+            if (!l) return false;
+            const id = l.id;
+            const adm = String(l.admissionNo || (l as any).admNo || (l as any).admissionNumber || '').trim().toUpperCase();
+            if (id && seenIds.has(id)) return false;
+            if (id) seenIds.add(id);
+            if (adm && seenAdms.has(adm)) return false;
+            if (adm) seenAdms.add(adm);
+            return true;
+          });
+          setLearners(unique);
         }
       } catch (e) {
         console.error('Error reloading learners after external update', e);
