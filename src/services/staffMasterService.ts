@@ -35,7 +35,7 @@ export interface StaffMember {
   updated_at: string;
 }
 
-const STORAGE_KEY = 'munyaka_staff_directory';
+export const STAFF_MASTER_KEY = 'munyaka_staff_directory';
 
 const defaultStaff: MasterStaffRecord[] = [
   {
@@ -82,44 +82,51 @@ const defaultStaff: MasterStaffRecord[] = [
   },
 ];
 
-export const getStaffMaster = (): MasterStaffRecord[] => {
+export const initializeStaffMaster = (): MasterStaffRecord[] => {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STAFF_MASTER_KEY);
     if (!raw) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultStaff));
+      localStorage.setItem(STAFF_MASTER_KEY, JSON.stringify(defaultStaff));
       return defaultStaff;
     }
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(defaultStaff));
+      localStorage.setItem(STAFF_MASTER_KEY, JSON.stringify(defaultStaff));
       return defaultStaff;
     }
-    return parsed.map((item: any) => ({
-      id: item.id || `staff-${Math.random().toString(36).substr(2, 9)}`,
-      name: item.name || 'Unnamed Staff',
-      nationalId: item.nationalId || item.tscNumber || '00000000',
-      email: item.email || '',
-      phone: item.phone || '',
-      tscNumber: item.tscNumber || item.staff_id || item.tsc_number || 'TSC-PENDING',
-      staffId: item.staffId || item.tscNumber || item.tsc_number || 'TSC-PENDING',
-      role: item.role || item.system_role || 'Teacher',
-      systemRole: item.systemRole || item.system_role || 'teacher',
-      department: item.department || 'Academics',
-      status: item.status || 'Active',
-      datePreRegistered: item.datePreRegistered || item.created_at || new Date().toISOString(),
-    }));
+    return parsed;
   } catch (err) {
-    console.error('Error reading staff master from storage:', err);
+    console.error('Error initializing staff master:', err);
     return defaultStaff;
   }
 };
 
+export const getStaffMaster = (): MasterStaffRecord[] => {
+  return initializeStaffMaster();
+};
+
 export const saveStaffMaster = (records: MasterStaffRecord[]): void => {
   try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+    localStorage.setItem(STAFF_MASTER_KEY, JSON.stringify(records));
   } catch (err) {
     console.error('Error saving staff master to storage:', err);
   }
+};
+
+export const isTeachingRole = (role?: string): boolean => {
+  if (!role) return false;
+  const lower = role.toLowerCase();
+  return lower.includes('teacher') || lower.includes('tutor') || lower.includes('head_teacher');
+};
+
+export const getCategorizedMetrics = () => {
+  const staff = getStaffMaster();
+  return {
+    total: staff.length,
+    active: staff.filter(s => s.status === 'Active').length,
+    teachers: staff.filter(s => isTeachingRole(s.systemRole || s.role)).length,
+    support: staff.filter(s => !isTeachingRole(s.systemRole || s.role)).length,
+  };
 };
 
 const mapMasterToStaffMember = (record: MasterStaffRecord): StaffMember => ({
