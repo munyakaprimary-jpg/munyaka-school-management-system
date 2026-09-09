@@ -756,8 +756,11 @@ export default function Students() {
           setIsSubmitting(false);
           setIsModalOpen(false);
         } else {
+          const uniqueId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : `L-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
           const newLearner: LearnerRowCompat = {
-            id: `L-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+            id: uniqueId,
+            admissionNo: formData.admNo,
+            admNo: formData.admNo,
             ...normalizedEntry,
             status: normalizedEntry.status ?? 'Active',
             // ── Fee ledger defaults (zero balance, empty history) ──────
@@ -795,23 +798,17 @@ export default function Students() {
                   existing = parsed;
                 }
               }
-              // Defensive de-dupe: don't double-insert if the row is already there
-              if (!existing.some((l) => l.id === newLearner.id || (l.admissionNo && l.admissionNo === newLearner.admissionNo))) {
-                const updated = [newLearner, ...existing];
-                // Also deduplicate existing storage list
-                const seenIds = new Set<string>();
-                const seenAdms = new Set<string>();
-                const dedupedStorage = updated.filter(item => {
-                  const id = item.id;
-                  const adm = String(item.admissionNo || (item as any).admNo || '').trim();
-                  if (seenIds.has(id)) return false;
-                  seenIds.add(id);
-                  if (adm && seenAdms.has(adm)) return false;
-                  if (adm) seenAdms.add(adm);
-                  return true;
-                });
-                localStorage.setItem(key, JSON.stringify(dedupedStorage));
-              }
+              // Relaxed deduplication: only filter out items if an explicitly matching, valid ID or admissionNumber exists (do not filter out records where ID or admissionNumber is missing/undefined).
+              const filteredExisting = existing.filter(l => {
+                if (!l) return false;
+                const lId = l.id;
+                const lAdm = String(l.admissionNo || (l as any).admNo || '').trim();
+                if (lId && lId === newLearner.id) return false;
+                if (lAdm && newLearner.admissionNo && lAdm.toUpperCase() === String(newLearner.admissionNo).trim().toUpperCase()) return false;
+                return true;
+              });
+              const updated = [newLearner, ...filteredExisting];
+              localStorage.setItem(key, JSON.stringify(updated));
             } catch (e) {
               console.error(`[Students] Failed to persist to ${key}:`, e);
             }
@@ -821,20 +818,17 @@ export default function Students() {
           OFFLINE_KEYS.forEach((key) => notifyDataChanged(key));
     
           // Update the active React state immediately so the table re-renders
-          // without requiring a page reload (with deduplication)
+          // without requiring a page reload (with relaxed deduplication)
           setLearners((prev) => {
-            const updated = [newLearner, ...prev];
-            const seenIds = new Set<string>();
-            const seenAdms = new Set<string>();
-            return updated.filter(item => {
-              const id = item.id;
-              const adm = String(item.admissionNo || (item as any).admNo || '').trim();
-              if (seenIds.has(id)) return false;
-              seenIds.add(id);
-              if (adm && seenAdms.has(adm)) return false;
-              if (adm) seenAdms.add(adm);
+            const filteredPrev = prev.filter(l => {
+              if (!l) return false;
+              const lId = l.id;
+              const lAdm = String(l.admissionNo || (l as any).admNo || '').trim();
+              if (lId && lId === newLearner.id) return false;
+              if (lAdm && newLearner.admissionNo && lAdm.toUpperCase() === String(newLearner.admissionNo).trim().toUpperCase()) return false;
               return true;
             });
+            return [newLearner, ...filteredPrev];
           });
     
           console.log('[Registration Success] New learner registered:', {
