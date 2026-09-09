@@ -178,27 +178,58 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
     // Simulate async verification
     setTimeout(() => {
       const students = getStudents();
-      const normalizedId = normalizeIdentifier(identifier);
+      const rawInput = identifier.trim();
+      const normalizedId = normalizeIdentifier(rawInput);
+
+      console.log('[Portal Login] Searching for identifier:', { rawInput, normalizedId });
+      console.log('[Portal Login] Available students pool:', students.map(s => ({
+        id: s.id,
+        name: s.name,
+        admNo: s.admNo,
+        admissionNo: (s as any).admissionNo,
+        assessmentNumber: (s as any).assessmentNumber,
+        assessment_no: (s as any).assessment_no,
+        assessmentNo: (s as any).assessmentNo,
+        assessment: (s as any).assessment,
+        birthCertificateNumber: (s as any).birthCertificateNumber,
+        birth_cert_no: (s as any).birth_cert_no,
+        birthCertificateNo: (s as any).birthCertificateNo,
+        birthCertNo: (s as any).birthCertNo
+      })));
 
       const matchedStudent = students.find(s => {
-        // Check all possible identifier fields
         const studentAdm = normalizeIdentifier(s.admNo || '');
-        const studentAssessment = normalizeIdentifier((s as any).assessmentNumber || '');
-        const studentBirthCert = normalizeIdentifier((s as any).birthCertificateNo || '');
+        const studentAdmissionNo = normalizeIdentifier((s as any).admissionNo || '');
+        const studentAssessmentNumber = normalizeIdentifier((s as any).assessmentNumber || '');
+        const studentAssessmentNo = normalizeIdentifier((s as any).assessmentNo || '');
+        const studentAssessment_no = normalizeIdentifier((s as any).assessment_no || '');
+        const studentAssessment = normalizeIdentifier((s as any).assessment || '');
         
-        // Match any of the identifiers
-        return (
+        const studentBirthCertNumber = normalizeIdentifier((s as any).birthCertificateNumber || '');
+        const studentBirthCertNo = normalizeIdentifier((s as any).birthCertificateNo || '');
+        const studentBirth_cert_no = normalizeIdentifier((s as any).birth_cert_no || '');
+        const studentBirthCert = normalizeIdentifier((s as any).birthCertNo || '');
+
+        const idMatches =
           studentAdm === normalizedId ||
+          studentAdmissionNo === normalizedId ||
+          studentAssessmentNumber === normalizedId ||
+          studentAssessmentNo === normalizedId ||
+          studentAssessment_no === normalizedId ||
           studentAssessment === normalizedId ||
-          studentBirthCert === normalizedId
-        );
+          studentBirthCertNumber === normalizedId ||
+          studentBirthCertNo === normalizedId ||
+          studentBirth_cert_no === normalizedId ||
+          studentBirthCert === normalizedId;
+
+        return idMatches;
       });
 
       if (matchedStudent) {
         const session: PortalSession = {
           studentId: matchedStudent.id,
           studentName: matchedStudent.name || 'Unknown',
-          admissionNo: matchedStudent.admNo || '',
+          admissionNo: matchedStudent.admNo || (matchedStudent as any).admissionNo || '',
           grade: matchedStudent.grade || '',
           stream: matchedStudent.stream || '',
           loggedInAt: new Date().toISOString(),
