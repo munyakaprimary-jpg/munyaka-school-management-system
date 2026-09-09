@@ -1542,17 +1542,9 @@ const Settings = () => {
                                     variant="outline"
                                     onClick={() => {
                                       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                                      if (session.role === 'admin') {
-                                        setIsPasswordModalOpen(true);
-                                      } else {
-                                        showError("Switch to School Administrator role to update this password.");
-                                      }
+                                      setIsPasswordModalOpen(true);
                                     }}
-                                    disabled={session.role !== 'admin'}
-                                    className={cn(
-                                      "w-full h-10 rounded-xl gap-2 font-bold",
-                                      session.role !== 'admin' ? "opacity-50 cursor-not-allowed" : "border-indigo-200 text-indigo-600 hover:bg-indigo-100"
-                                    )}
+                                    className="w-full h-10 rounded-xl gap-2 font-bold border-indigo-200 text-indigo-600 hover:bg-indigo-100"
                                   >
                                     <Key size={14} /> Update Admin Password
                                   </Button>
@@ -1573,17 +1565,9 @@ const Settings = () => {
                                     variant="outline"
                                     onClick={() => {
                                       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                                      if (session.role === 'owner') {
-                                        setIsPasswordModalOpen(true);
-                                      } else {
-                                        showError("Switch to School Owner role to update this password.");
-                                      }
+                                      setIsPasswordModalOpen(true);
                                     }}
-                                    disabled={session.role !== 'owner'}
-                                    className={cn(
-                                      "w-full h-10 rounded-xl gap-2 font-bold",
-                                      session.role !== 'owner' ? "opacity-50 cursor-not-allowed" : "border-amber-200 text-amber-600 hover:bg-amber-100"
-                                    )}
+                                    className="w-full h-10 rounded-xl gap-2 font-bold border-amber-200 text-amber-600 hover:bg-amber-100"
                                   >
                                     <Key size={14} /> Update Owner Password
                                   </Button>
