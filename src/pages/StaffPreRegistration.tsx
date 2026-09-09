@@ -8,9 +8,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import Modal from '@/components/ui/Modal';
 import BackButton from '@/components/ui/BackButton';
-import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users, Mail } from 'lucide-react';
+import { Search, Plus, Loader2, X, Trash2, AlertCircle, Copy, ShieldCheck, Sparkles, Users, Mail, Eye, Edit, UserCheck, ExternalLink } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 import { PreRegisteredStaff, AccessStatus, SystemRole, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
 import AddPreRegModal from '@/components/staff-access/AddPreRegModal';
@@ -309,15 +310,17 @@ const StaffPreRegistration = () => {
           ) : (
             <div className="w-full overflow-x-auto block clear-both">
               <table className="w-full min-w-[850px] table-auto text-sm">
-                <thead className="bg-slate-50 border-b border-slate-100">
+                <thead className="text-slate-500 bg-slate-50/50 border-b">
                   <tr>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff Name</th>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff ID / TSC NO</th>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">System Role</th>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Registered Email</th>
-                    <th className="text-left px-4 py-3 min-w-[180px] font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Temp Access Key</th>
-                    <th className="text-left px-4 py-3 min-w-[120px] font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Status</th>
-                    <th className="text-right px-4 py-3 min-w-[120px] pr-4 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Actions</th>
+                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
+                      <Checkbox checked={false} onCheckedChange={() => {}} aria-label="Select all staff" />
+                    </th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
+                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -327,19 +330,19 @@ const StaffPreRegistration = () => {
                     const roleCfg = SYSTEM_ROLE_LABELS[s.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
 
                     return (
-                      <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
-                        {/* Col 1: Staff Name */}
-                        <td className="px-4 py-3">
+                      <tr key={s.id} className="hover:bg-slate-50/60 transition-colors group">
+                        <td className="px-4 py-5 w-12">
+                          <Checkbox checked={false} onCheckedChange={() => {}} aria-label={`Select ${s.fullName}`} />
+                        </td>
+                        <td className="px-8 py-5 min-w-[200px]">
                           <div className="flex items-center gap-3">
-                            <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center flex-shrink-0">
+                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                               {initialsOf(s.fullName)}
                             </div>
-                            <span className="font-bold text-slate-800 whitespace-nowrap">{s.fullName}</span>
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{s.fullName}</span>
                           </div>
                         </td>
-
-                        {/* Col 2: Staff ID / TSC NO */}
-                        <td className="px-4 py-3">
+                        <td className="px-8 py-5 min-w-[140px]">
                           <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
                             {(() => {
                               const validId = (s as any).tscNo || (s as any).staffId || s.nationalId || (s as any).tsc_no || (s as any).staff_id;
@@ -350,48 +353,20 @@ const StaffPreRegistration = () => {
                             })()}
                           </span>
                         </td>
-
-                        {/* Col 2: System Role — styled badge */}
-                        <td className="px-4 py-3">
-                          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold border ${roleCfg.badgeBg} ${roleCfg.color}`}>
-                            {roleLabel}
+                        <td className="px-8 py-5 min-w-[180px]">
+                          <p className="font-bold text-slate-800 whitespace-nowrap">{roleLabel}</p>
+                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{s.department}</p>
+                        </td>
+                        <td className="px-8 py-5 min-w-[220px]">
+                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{s.email || 'No Email Provided'}</span>
+                        </td>
+                        <td className="px-8 py-5 min-w-[140px]">
+                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
+                            {s.tempAccessCode || '—'}
                           </span>
                         </td>
-
-                        {/* Col 3: Registered Email — with icon */}
-                        <td className="px-4 py-3">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Mail size={13} className="text-slate-400 shrink-0 flex-shrink-0" />
-                            <span className="text-slate-600 text-xs truncate max-w-[200px]" title={s.email}>
-                              {s.email || <span className="italic text-slate-400">No email</span>}
-                            </span>
-                          </div>
-                        </td>
-
-                        {/* Col 4: Temp Access Key — MUNYAKA-XXXX badge + copy */}
-                        <td className="px-4 py-3 min-w-[180px]">
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1 px-2.5 py-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 font-mono font-black text-xs rounded-lg whitespace-nowrap">
-                              {s.tempAccessCode || '—'}
-                            </span>
-                            {s.tempAccessCode && (
-                              <button
-                                onClick={() => copyToClipboard(s.tempAccessCode)}
-                                title="Copy access key"
-                                className="text-slate-400 hover:text-indigo-600 transition-colors p-1 rounded"
-                              >
-                                <Copy size={13} />
-                              </button>
-                            )}
-                          </div>
-                        </td>
-
-                        {/* Col 5: Status */}
-                        <td className="px-4 py-3 min-w-[120px]">{getStatusBadge(s.status)}</td>
-
-                        {/* Col 6: Actions — Activate + Delete */}
-                        <td className="px-4 py-3 min-w-[180px] pr-4">
-                          <div className="flex items-center gap-2 flex-wrap justify-end">
+                        <td className="px-8 py-5 text-right min-w-[120px]">
+                          <div className="flex items-center gap-2 justify-end">
                             {canActivate ? (
                               <button
                                 onClick={() => handleActivateStaff(s.id)}
