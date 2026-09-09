@@ -79,7 +79,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const DEFAULT_ADMIN = {
   email: 'munyakaprimary@gmail.com',
-  password: 'ownerpass2026',
+  password: 'munyaka2026',
   user: {
     id: 'admin-001',
     name: 'School Owner',
@@ -92,7 +92,7 @@ const DEFAULT_ADMIN = {
 
 const DEFAULT_SYSTEM_ADMIN = {
   email: 'sysadmin@munyaka.sc.ke',
-  password: 'sysadmin2026',
+  password: 'munyaka2026',
   user: {
     id: 'admin-002',
     name: 'School Administrator',

@@ -203,16 +203,15 @@ const StaffPreRegistration = () => {
     setAuthError('');
     try {
       const inputTrimmed = authPassword.trim();
-      const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'sysadmin2026';
-      const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'ownerpass2026';
-      const sysAdminPass = localStorage.getItem('munyaka_sysadmin_pass') || 'sysadmin2026';
+      const currentAdminPass = localStorage.getItem('munyaka_admin_pass') || 'munyaka2026';
+      const ownerPass = localStorage.getItem('munyaka_owner_pass') || 'munyaka2026';
+      const sysAdminPass = localStorage.getItem('munyaka_sysadmin_pass') || 'munyaka2026';
 
       const isValid =
         inputTrimmed === currentAdminPass ||
         inputTrimmed === ownerPass ||
         inputTrimmed === sysAdminPass ||
-        inputTrimmed === 'sysadmin2026' ||
-        inputTrimmed === 'ownerpass2026' ||
+        inputTrimmed === 'munyaka2026' ||
         inputTrimmed === 'munyaka5239';
 
       if (isValid) {

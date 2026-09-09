@@ -111,7 +111,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
     redirectPath: '/dashboard',
     icon: Crown,
     primaryColor: 'amber',
-    defaultPassword: 'ownerpass2026',
+    defaultPassword: 'munyaka2026',
   },
 };
 
