@@ -211,7 +211,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         return ordered;
       }
 
-      // For teacher role, show "Teacher's Dashboard" label
+      // LEARNER / STUDENT role: show ONLY primary learner sidebar navigation links
+      if (roleLower === 'student' || roleLower === 'learner' || roleLower === 'parent') {
+        const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games', '/digital-hub', '/portfolio', '/library', '/timetable', '/notices'];
+        return menuItems.filter(item => learnerPaths.includes(item.path) || item.global).map(item => {
+          if (item.path === '/') return { ...item, label: 'Learner Dashboard' };
+          return item;
+        });
+      }
       if (roleLower === 'teacher') {
               return menuItems.filter(item => {
                 // Bypass role filtering for Study Corner
