@@ -311,7 +311,8 @@ const StaffPreRegistration = () => {
               <table className="w-full min-w-[850px] table-auto text-sm">
                 <thead className="bg-slate-50 border-b border-slate-100">
                   <tr>
-                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff Name</th>
+                    <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Staff ID / TSC NO</th>
                     <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">System Role</th>
                     <th className="text-left px-4 py-3 font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Registered Email</th>
                     <th className="text-left px-4 py-3 min-w-[180px] font-black text-[10px] uppercase tracking-widest text-slate-500 whitespace-nowrap">Temp Access Key</th>
@@ -327,17 +328,27 @@ const StaffPreRegistration = () => {
 
                     return (
                       <tr key={s.id} className="hover:bg-indigo-50/30 transition-colors">
-                        {/* Col 1: Staff — name + national ID */}
+                        {/* Col 1: Staff Name */}
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
                             <div className="w-9 h-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-xs flex items-center justify-center flex-shrink-0">
                               {initialsOf(s.fullName)}
                             </div>
-                            <div className="min-w-0">
-                              <p className="font-bold text-slate-800 truncate max-w-[160px]">{s.fullName}</p>
-                              <p className="text-xs text-slate-400 font-mono">ID: {s.nationalId}</p>
-                            </div>
+                            <span className="font-bold text-slate-800 whitespace-nowrap">{s.fullName}</span>
                           </div>
+                        </td>
+
+                        {/* Col 2: Staff ID / TSC NO */}
+                        <td className="px-4 py-3">
+                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                            {(() => {
+                              const validId = (s as any).tscNo || (s as any).staffId || s.nationalId || (s as any).tsc_no || (s as any).staff_id;
+                              if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                return validId;
+                              }
+                              return '—';
+                            })()}
+                          </span>
                         </td>
 
                         {/* Col 2: System Role — styled badge */}
