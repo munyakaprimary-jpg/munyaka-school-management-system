@@ -232,22 +232,6 @@ export default function RegisterModal({
                 />
               </div>
 
-        {/* 2. Admission Number (Auto-generated) */}
-        <div className="space-y-2">
-          <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-            Admission Number
-          </Label>
-          <Input
-            value={admissionNumber}
-            readOnly
-            placeholder="Auto-generated"
-            className="rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700 cursor-not-allowed"
-          />
-          <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
-            Auto-generated: MUN-G[Grade]-[Seq]/[Year]
-          </p>
-        </div>
-
         {/* 3. Assessment No & 4. Birth Certificate No */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -405,6 +389,24 @@ export default function RegisterModal({
                       </SelectContent>
                     </Select>
                   </div>
+                  {/* Admission Number (Auto-generated) placed directly between Gender and Guardian Name */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
+                      Admission Number
+                    </Label>
+                    <Input
+                      value={admissionNumber}
+                      readOnly
+                      placeholder="Auto-generated"
+                      className="rounded-xl h-12 bg-indigo-50 border border-indigo-200 font-bold text-indigo-700 cursor-not-allowed"
+                    />
+                    <p className="text-[10px] text-slate-400 font-medium leading-relaxed">
+                      MUN-G[Grade]-[Seq]/[Year]
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Guardian Name <span className="text-rose-500">*</span>
@@ -416,9 +418,6 @@ export default function RegisterModal({
                       className="rounded-xl h-12 bg-slate-50 border-none font-bold"
                     />
                   </div>
-                </div>
-        
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div className="space-y-2">
                     <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
                       Phone <span className="text-[9px] font-bold text-slate-400 normal-case tracking-normal">(optional)</span>
