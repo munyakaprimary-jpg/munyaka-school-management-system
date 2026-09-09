@@ -341,7 +341,7 @@ const LoginForm = ({ onLogin, onClose }: { onLogin: (session: PortalSession) => 
 
 // ── Dashboard ────────────────────────────────────────────────────────────────
 
-const Dashboard = ({ 
+const Dashboard = ({
   session,
   student,
   onLogout
@@ -351,7 +351,7 @@ const Dashboard = ({
   onLogout: () => void;
 }) => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'attendance' | 'reports' | 'fees' | 'games' | 'study'>('overview');
 
   const attendance = useMemo(() => getAttendanceForStudent(session.studentId), [session.studentId]);
   const assessments = useMemo(() => getAssessmentScoresForStudent(session.studentId), [session.studentId]);
@@ -376,75 +376,82 @@ const Dashboard = ({
     return { code: 'BE', label: 'Below', color: 'rose' };
   };
 
-  const tabs = [
+  const navItems = [
     { id: 'overview' as const, label: 'Overview', icon: User },
     { id: 'attendance' as const, label: 'Attendance', icon: Calendar },
     { id: 'reports' as const, label: 'Reports', icon: FileText },
     { id: 'fees' as const, label: 'Fees', icon: Receipt },
+    { id: 'games' as const, label: 'Games Hub', icon: Gamepad2 },
+    { id: 'study' as const, label: 'Study Corner', icon: BookMarked },
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white">
-        <div className="max-w-4xl mx-auto px-4 py-5">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <div className="w-14 h-14 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                <GraduationCap size={28} />
-              </div>
-              <div>
-                <h1 className="text-xl font-black tracking-tight">{session.studentName}</h1>
-                <p className="text-indigo-100 text-sm font-medium">
-                  {session.grade}{session.stream ? ` • ${session.stream}` : ''} • {session.admissionNo}
-                </p>
-              </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
+      {/* Sidebar Navigation */}
+      <aside className="w-full md:w-72 bg-gradient-to-b from-indigo-900 via-indigo-800 to-purple-900 text-white flex flex-col shrink-0 shadow-xl">
+        {/* Profile Header */}
+        <div className="p-6 border-b border-white/10">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center shrink-0">
+              <GraduationCap size={24} className="text-white" />
             </div>
-            <div className="flex items-center gap-2">
-              <Button
-                onClick={onLogout}
-                variant="outline"
-                size="sm"
-                className="bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl"
-              >
-                <LogOut size={16} className="mr-2" />
-                Logout
-              </Button>
-              <button
-                onClick={() => navigate('/login')}
-                className="w-10 h-10 rounded-xl bg-white/10 hover:bg-white/20 backdrop-blur-md flex items-center justify-center transition-all duration-200 hover:scale-105 active:scale-95 border border-white/20"
-                title="Back to Staff Login"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
+            <div className="min-w-0 flex-1">
+              <h1 className="font-black text-white text-base tracking-tight truncate">{session.studentName}</h1>
+              <p className="text-indigo-200 text-xs font-medium truncate">
+                {session.grade}{session.stream ? ` • ${session.stream}` : ''}
+              </p>
             </div>
           </div>
-
-          {/* Tabs */}
-          <div className="flex gap-1 mt-5 overflow-x-auto pb-1">
-            {tabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={cn(
-                  "flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-bold transition-all whitespace-nowrap",
-                  activeTab === tab.id
-                    ? "bg-white text-indigo-700 shadow-lg"
-                    : "bg-white/10 text-white/80 hover:bg-white/20"
-                )}
-              >
-                <tab.icon size={16} />
-                {tab.label}
-              </button>
-            ))}
+          <div className="bg-white/10 rounded-xl p-2.5 text-xs text-indigo-100 font-mono text-center truncate">
+            ID: {session.admissionNo}
           </div>
         </div>
-      </div>
 
-      {/* Content */}
-      <div className="max-w-4xl mx-auto px-4 py-6">
-        {/* Overview Tab */}
-        {activeTab === 'overview' && (
+        {/* Sidebar Links */}
+        <nav className="p-4 space-y-1.5 flex-1 overflow-y-auto">
+          {navItems.map(item => (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={cn(
+                "w-full flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-bold transition-all text-left",
+                activeTab === item.id
+                  ? "bg-white text-indigo-900 shadow-lg scale-[1.02]"
+                  : "text-indigo-100 hover:bg-white/10 hover:text-white"
+              )}
+            >
+              <item.icon size={18} />
+              <span>{item.label}</span>
+            </button>
+          ))}
+        </nav>
+
+        {/* Sidebar Footer Controls */}
+        <div className="p-4 border-t border-white/10 space-y-2">
+          <Button
+            onClick={onLogout}
+            variant="outline"
+            className="w-full bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl justify-start font-bold"
+          >
+            <LogOut size={16} className="mr-2" />
+            Logout
+          </Button>
+          <Button
+            onClick={() => navigate('/login')}
+            variant="ghost"
+            className="w-full text-indigo-200 hover:text-white hover:bg-white/10 rounded-xl justify-start text-xs font-medium"
+          >
+            <X size={16} className="mr-2" />
+            Back to Staff Login
+          </Button>
+        </div>
+      </aside>
+
+      {/* Right-Side Main Content Area */}
+      <main className="flex-1 min-w-0 p-4 md:p-8 overflow-y-auto">
+        <div className="max-w-4xl mx-auto">
+          {/* Overview Tab */}
+          {activeTab === 'overview' && (
           <div className="space-y-4">
             {/* Attendance Summary Card */}
             <Card className="rounded-2xl border-0 shadow-sm overflow-hidden">
@@ -776,8 +783,151 @@ const Dashboard = ({
             </CardContent>
           </Card>
         )}
+
+        {/* Games Hub Tab */}
+        {activeTab === 'games' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 rounded-3xl p-6 text-white shadow-xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                  <Gamepad2 size={24} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight">Learner Games Hub</h2>
+                  <p className="text-indigo-100 text-sm">Interactive educational games & brain exercises</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 font-bold">1</div>
+                    <h3 className="text-lg font-black text-slate-800">Speed Math</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Test your arithmetic speed with rapid-fire math challenges.</p>
+                  <SpeedMath onBack={() => {}} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center text-purple-600 font-bold">2</div>
+                    <h3 className="text-lg font-black text-slate-800">Target Math</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Reach the target number using addition, subtraction, multiplication, and division.</p>
+                  <TargetMath onBack={() => {}} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-emerald-100 rounded-xl flex items-center justify-center text-emerald-600 font-bold">3</div>
+                    <h3 className="text-lg font-black text-slate-800">Memory Match</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Flip cards and match pairs to test your memory skills.</p>
+                  <MemoryMatch onBack={() => {}} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center text-amber-600 font-bold">4</div>
+                    <h3 className="text-lg font-black text-slate-800">Word Scramble</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Unscramble letters to find the correct vocabulary words.</p>
+                  <WordScramble onBack={() => {}} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-rose-100 rounded-xl flex items-center justify-center text-rose-600 font-bold">5</div>
+                    <h3 className="text-lg font-black text-slate-800">Pattern Memory</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Remember and repeat the flashing pattern sequence.</p>
+                  <PatternMemory onBack={() => {}} />
+                </CardContent>
+              </Card>
+
+              <Card className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-10 h-10 bg-teal-100 rounded-xl flex items-center justify-center text-teal-600 font-bold">6</div>
+                    <h3 className="text-lg font-black text-slate-800">Bilingual Match</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 mb-6">Match words across languages to expand your vocabulary.</p>
+                  <BilingualMatch onBack={() => {}} />
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        )}
+
+        {/* Study Corner Tab */}
+        {activeTab === 'study' && (
+          <div className="space-y-6">
+            <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl">
+              <div className="flex items-center gap-3 mb-2">
+                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
+                  <BookMarked size={24} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-2xl font-black tracking-tight">CBC Study Corner</h2>
+                  <p className="text-violet-100 text-sm">Competency-Based Curriculum revision notes and study materials</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {cbcStudyContent.map((area: any, idx: number) => (
+                <Card key={idx} className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
+                  <div className="bg-gradient-to-r from-slate-800 to-indigo-900 p-4 text-white flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-black">
+                      {area.icon || '📚'}
+                    </div>
+                    <div>
+                      <h3 className="font-black text-lg">{area.title || area.name || 'Study Area'}</h3>
+                      <p className="text-xs text-indigo-200">{area.grade || session.grade || 'CBC Grade'}</p>
+                    </div>
+                  </div>
+                  <CardContent className="p-6 space-y-4">
+                    <p className="text-sm text-slate-600 leading-relaxed">{area.description || area.summary || area.content}</p>
+                    
+                    {area.topics && Array.isArray(area.topics) && area.topics.length > 0 && (
+                      <div className="space-y-2">
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Key Topics</h4>
+                        <div className="space-y-1.5">
+                          {area.topics.map((topic: any, tIdx: number) => (
+                            <div key={tIdx} className="bg-slate-50 rounded-xl p-3 flex items-start gap-2.5">
+                              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
+                                {tIdx + 1}
+                              </span>
+                              <div>
+                                <div className="font-bold text-slate-800 text-sm">{typeof topic === 'string' ? topic : topic.title}</div>
+                                {typeof topic === 'object' && topic.content && (
+                                  <p className="text-xs text-slate-500 mt-1">{topic.content}</p>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
-    </div>
+    </main>
+  </div>
   );
 };
 
