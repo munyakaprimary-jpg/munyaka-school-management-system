@@ -1204,7 +1204,7 @@ const Dashboard: React.FC = () => {
   const termBadge = formatTermBadge(activeTerm, activeYear);
 
   // Owner-level sees the full Owner Dashboard; no wrapper header needed there
-  if (role === 'owner' || role === 'super_admin' || role === 'librarian') {
+  if (role === 'owner' || role === 'librarian') {
     return <OwnerDashboard />;
   }
 
