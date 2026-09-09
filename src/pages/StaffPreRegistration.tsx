@@ -314,8 +314,8 @@ const StaffPreRegistration = () => {
           </Button>
         </div>
 
-        {/* Table — outer card: w-full, no overflow-hidden; scroll wrapper: w-full overflow-x-auto */}
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full">
+        {/* Table — outer card: w-full, no overflow-hidden; scroll wrapper with top & bottom horizontal scrollbars */}
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm w-full space-y-3 p-4">
           {filteredStaff.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
               <Users size={48} className="mb-3 opacity-40" />
@@ -323,96 +323,115 @@ const StaffPreRegistration = () => {
               <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            <div className="w-full overflow-x-auto block clear-both">
-              <table className="w-full min-w-[850px] table-auto text-sm">
-                <thead className="text-slate-500 bg-slate-50/50 border-b">
-                  <tr>
-                    <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
-                      <Checkbox checked={false} onCheckedChange={() => {}} aria-label="Select all staff" />
-                    </th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
-                    <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {filteredStaff.map(s => {
-                    const canActivate = s.status === 'Pre-Registered';
-                    const roleLabel = SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole;
-                    const roleCfg = SYSTEM_ROLE_LABELS[s.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
+            <div className="space-y-3">
+              {/* Top Horizontal Scrollbar */}
+              <div
+                ref={topScrollRef}
+                onScroll={handleTopScroll}
+                className="overflow-x-auto overflow-y-hidden pb-1 scrollbar-thin scrollbar-thumb-slate-300 bg-slate-50/80 p-2 rounded-xl border border-slate-100"
+                style={{ width: '100%' }}
+              >
+                <div style={{ width: `${tableWidth}px`, height: '1px' }} />
+              </div>
 
-                    return (
-                      <tr key={s.id} className="hover:bg-slate-50/60 transition-colors group">
-                        <td className="px-4 py-5 w-12">
-                          <Checkbox checked={false} onCheckedChange={() => {}} aria-label={`Select ${s.fullName}`} />
-                        </td>
-                        <td className="px-8 py-5 min-w-[200px]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                              {initialsOf(s.fullName)}
-                            </div>
-                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(s.fullName)}</span>
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 min-w-[140px]">
-                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                                                    {(() => {
-                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
-                                                      const tscNumber = (s as any).tscNo || s.tscNumber;
-                                                      const nationalId = (s as any).nationalId;
-                                                      const validId = tscNumber || nationalId;
-                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
-                                                        return validId;
-                                                      }
-                                                      return '—';
-                                                    })()}
-                                                  </span>
-                                                </td>
-                        <td className="px-8 py-5 min-w-[180px]">
-                          <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(roleLabel)}</p>
-                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{s.department}</p>
-                        </td>
-                        <td className="px-8 py-5 min-w-[220px]">
-                          <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{s.email || 'No Email Provided'}</span>
-                        </td>
-                        <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
-                            {s.tempAccessCode || '—'}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5 text-right min-w-[120px]">
-                          <div className="flex items-center gap-2 justify-end">
-                            {canActivate ? (
-                              <button
-                                onClick={() => handleActivateStaff(s.id)}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 hover:text-emerald-800 text-xs font-bold transition-colors"
-                              >
-                                <ShieldCheck size={13} />
-                                Activate
-                              </button>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
-                                <ShieldCheck size={13} />
-                                Active
-                              </span>
-                            )}
-                            <button
-                              onClick={() => openDeleteAuth(s.id, s.fullName)}
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-500 hover:text-red-600 text-xs font-bold transition-colors"
-                            >
-                              <Trash2 size={13} />
-                              Delete
-                            </button>
-                          </div>
-                        </td>
+              {/* Main Scrollable Table Area */}
+              <div
+                ref={bottomScrollRef}
+                onScroll={handleBottomScroll}
+                className="w-full overflow-x-auto border border-slate-100 rounded-2xl shadow-sm bg-white"
+              >
+                <div ref={tableContentWidthRef} className="min-w-[1100px]">
+                  <table className="w-full table-auto text-sm">
+                    <thead className="text-slate-500 bg-slate-50/50 border-b">
+                      <tr>
+                        <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
+                          <Checkbox checked={false} onCheckedChange={() => {}} aria-label="Select all staff" />
+                        </th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[200px]">Staff Name</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Staff ID / TSC NO</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[180px]">System Role</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[220px]">Registered Email</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 min-w-[140px]">Temp Access Code</th>
+                        <th className="px-8 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 text-right min-w-[120px]">Actions</th>
                       </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {filteredStaff.map(s => {
+                        const canActivate = s.status === 'Pre-Registered';
+                        const roleLabel = SYSTEM_ROLE_LABELS[s.systemRole]?.label ?? s.systemRole;
+                        const roleCfg = SYSTEM_ROLE_LABELS[s.systemRole] ?? SYSTEM_ROLE_LABELS.subject_teacher;
+
+                        return (
+                          <tr key={s.id} className="hover:bg-slate-50/60 transition-colors group">
+                            <td className="px-4 py-5 w-12">
+                              <Checkbox checked={false} onCheckedChange={() => {}} aria-label={`Select ${s.fullName}`} />
+                            </td>
+                            <td className="px-8 py-5 min-w-[200px]">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                  {initialsOf(s.fullName)}
+                                </div>
+                                <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(s.fullName)}</span>
+                              </div>
+                            </td>
+                            <td className="px-8 py-5 min-w-[140px]">
+                              <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                                {(() => {
+                                  // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
+                                  const tscNumber = (s as any).tscNo || s.tscNumber;
+                                  const nationalId = (s as any).nationalId;
+                                  const validId = tscNumber || nationalId;
+                                  if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                    return validId;
+                                  }
+                                  return '—';
+                                })()}
+                              </span>
+                            </td>
+                            <td className="px-8 py-5 min-w-[180px]">
+                              <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(roleLabel)}</p>
+                              <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{s.department}</p>
+                            </td>
+                            <td className="px-8 py-5 min-w-[220px]">
+                              <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{s.email || 'No Email Provided'}</span>
+                            </td>
+                            <td className="px-8 py-5 min-w-[140px]">
+                              <span className="font-mono text-xs font-bold text-amber-600 whitespace-nowrap">
+                                {s.tempAccessCode || '—'}
+                              </span>
+                            </td>
+                            <td className="px-8 py-5 text-right min-w-[120px]">
+                              <div className="flex items-center gap-2 justify-end">
+                                {canActivate ? (
+                                  <button
+                                    onClick={() => handleActivateStaff(s.id)}
+                                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 hover:text-emerald-800 text-xs font-bold transition-colors"
+                                  >
+                                    <ShieldCheck size={13} />
+                                    Activate
+                                  </button>
+                                ) : (
+                                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-50 border border-slate-200 text-slate-400 text-xs font-bold">
+                                    <ShieldCheck size={13} />
+                                    Active
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => openDeleteAuth(s.id, s.fullName)}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg hover:bg-red-50 border border-slate-200 hover:border-red-200 text-slate-500 hover:text-red-600 text-xs font-bold transition-colors"
+                                >
+                                  <Trash2 size={13} />
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
         </div>
