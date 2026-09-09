@@ -1050,7 +1050,7 @@ export default function Students() {
                     <tr key={rowKey} className="hover:bg-slate-50/60 transition-colors group">
                       {/* Column 1: ADMISSION NO. */}
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs font-semibold text-indigo-600">
-                        {learner.admissionNo || '—'}
+                        {learner.admissionNo || (learner as any).admNo || (learner as any).admission_no || '—'}
                       </td>
                       {/* Column 2: ASSESSMENT NO. */}
                       <td className="py-3 px-4 whitespace-nowrap font-mono text-xs text-slate-600">
