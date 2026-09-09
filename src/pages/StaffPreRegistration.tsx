@@ -29,6 +29,14 @@ import { notifyDataChanged } from '@/utils/storage';
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
+
 const initialsOf = (name: string): string =>
   name.split(' ').filter(Boolean).map(n => n[0]).join('').slice(0, 2).toUpperCase() || 'ST';
 
@@ -339,22 +347,25 @@ const StaffPreRegistration = () => {
                             <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
                               {initialsOf(s.fullName)}
                             </div>
-                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{s.fullName}</span>
+                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(s.fullName)}</span>
                           </div>
                         </td>
                         <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                            {(() => {
-                              const validId = (s as any).tscNo || (s as any).staffId || s.nationalId || (s as any).tsc_no || (s as any).staff_id;
-                              if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
-                                return validId;
-                              }
-                              return '—';
-                            })()}
-                          </span>
-                        </td>
+                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                                                    {(() => {
+                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
+                                                      const tscNumber = (s as any).tscNo || s.tscNumber;
+                                                      const nationalId = (s as any).nationalId;
+                                                      const validId = tscNumber || nationalId;
+                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                                        return validId;
+                                                      }
+                                                      return '—';
+                                                    })()}
+                                                  </span>
+                                                </td>
                         <td className="px-8 py-5 min-w-[180px]">
-                          <p className="font-bold text-slate-800 whitespace-nowrap">{roleLabel}</p>
+                          <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(roleLabel)}</p>
                           <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{s.department}</p>
                         </td>
                         <td className="px-8 py-5 min-w-[220px]">

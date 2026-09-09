@@ -37,6 +37,15 @@ import {
   type MasterSystemRole,
 } from '@/services/staffMasterService';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
+import { SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+
+const toTitleCase = (str: string): string => {
+  if (!str) return '';
+  return str
+    .split(' ')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
+};
 
 interface StaffMember {
   id: string;
@@ -87,7 +96,7 @@ function masterToStaffMember(r: MasterStaffRecord): StaffMember {
     access_key: r.tempAccessCode,
     tsc_no: r.tscNumber,
     full_name: r.name,
-    role: r.role || systemRoleToLabel[r.systemRole] || 'Teacher',
+    role: r.role || SYSTEM_ROLE_LABELS[r.systemRole]?.label || 'Teacher',
     systemRole: r.systemRole,
     subjects: r.assignedSubjects ?? [],
     phone: r.phone,
@@ -497,28 +506,31 @@ const Staff = () => {
                           <Checkbox checked={selectedIds.has(member.id)} onCheckedChange={() => toggleSelectOne(member.id)} aria-label={`Select ${member.full_name}`} />
                         </td>
                         <td className="px-8 py-5 min-w-[200px]">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                              {initialsOf(member.full_name)}
-                            </div>
-                            <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{member.full_name}</span>
-                          </div>
-                        </td>
+                                                  <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                                      {initialsOf(member.full_name)}
+                                                    </div>
+                                                    <span className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors whitespace-nowrap">{toTitleCase(member.full_name)}</span>
+                                                  </div>
+                                                </td>
                         <td className="px-8 py-5 min-w-[140px]">
-                          <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
-                            {(() => {
-                              const validId = (member as any).tscNo || (member as any).staffId || (member as any).nationalId || member.tsc_no || member.staff_id;
-                              if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
-                                return validId;
-                              }
-                              return '—';
-                            })()}
-                          </span>
-                        </td>
+                                                  <span className="font-mono text-xs font-bold text-slate-700 whitespace-nowrap">
+                                                    {(() => {
+                                                      // Priority: tscNumber (actual TSC) > nationalId (ID) — do NOT use staffId/login placeholder
+                                                      const tscNumber = (member as any).tscNo || member.tsc_no;
+                                                      const nationalId = (member as any).nationalId;
+                                                      const validId = tscNumber || nationalId;
+                                                      if (validId && !String(validId).toUpperCase().startsWith('MUNYAKA-')) {
+                                                        return validId;
+                                                      }
+                                                      return '—';
+                                                    })()}
+                                                  </span>
+                                                </td>
                         <td className="px-8 py-5 min-w-[180px]">
-                          <p className="font-bold text-slate-800 whitespace-nowrap">{member.role || 'Pending Assignment'}</p>
-                          <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{member.department}</p>
-                        </td>
+                                                  <p className="font-bold text-slate-800 whitespace-nowrap">{toTitleCase(member.role || 'Pending Assignment')}</p>
+                                                  <p className="text-xs text-slate-400 font-medium whitespace-nowrap">{toTitleCase(member.department)}</p>
+                                                </td>
                         <td className="px-8 py-5 min-w-[220px]">
                           <span className="text-xs font-medium text-slate-700 whitespace-nowrap">{member.email || 'No Email Provided'}</span>
                         </td>
