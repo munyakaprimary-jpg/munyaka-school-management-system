@@ -269,6 +269,31 @@ const StaffPreRegistration = () => {
   };
 
   // ── Render ─────────────────────────────────────────────────────────────────
+  // Double scroll sync refs
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+  const tableContentWidthRef = useRef<HTMLDivElement>(null);
+
+  const [tableWidth, setTableWidth] = useState<number>(1200);
+
+  useEffect(() => {
+    if (tableContentWidthRef.current) {
+      setTableWidth(tableContentWidthRef.current.scrollWidth || 1200);
+    }
+  }, [staffList, searchTerm, filterRole, filterDepartment]);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+    }
+  };
+
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-sky-50/30 p-4 md:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
