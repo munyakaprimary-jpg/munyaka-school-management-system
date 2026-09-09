@@ -24,8 +24,18 @@ import {
   Users,
   BookOpen,
   Loader2,
-  X
+  X,
+  Gamepad2,
+  BookMarked
 } from "lucide-react";
+import BilingualMatch from "@/components/games/BilingualMatch";
+import MemoryMatch from "@/components/games/MemoryMatch";
+import PatternMemory from "@/components/games/PatternMemory";
+import SpeedMath from "@/components/games/SpeedMath";
+import SudokuMini from "@/components/games/SudokuMini";
+import TargetMath from "@/components/games/TargetMath";
+import WordScramble from "@/components/games/WordScramble";
+import { cbcStudyContent } from "@/data/cbcStudyContent";
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
