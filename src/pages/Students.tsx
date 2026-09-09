@@ -634,14 +634,20 @@ export default function Students() {
     setIsTransferOpen(true);
   };
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
   // ─── Validation & submit ───────────────────────────────────────────────
   const validateAndSave = (e: React.FormEvent) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
 
     // Always-required fields (name + guardian + dateOfBirth) — these identify the learner
     if (!String(formData.name || '').trim() || !String(formData.guardian || '').trim()) {
       const errorMsg = 'Please fill in the learner\'s Full Name and Parent / Guardian name.';
       setFormError(errorMsg);
+      setIsSubmitting(false);
       console.error('[Registration Error]', errorMsg, { field: 'name/guardian', value: { name: formData.name, guardian: formData.guardian } });
       return;
     }
@@ -650,6 +656,7 @@ export default function Students() {
     if (!String(formData.dateOfBirth || '').trim()) {
       const errorMsg = 'Please provide the learner\'s Date of Birth.';
       setFormError(errorMsg);
+      setIsSubmitting(false);
       console.error('[Registration Error]', errorMsg, { field: 'dateOfBirth', value: formData.dateOfBirth });
       return;
     }
@@ -665,6 +672,7 @@ export default function Students() {
     if (!assessmentInput && !bcNo) {
       const errorMsg = 'Please provide at least one official identifier — either a KNEC Assessment Number (NEMIS/UPI) or a Birth Certificate Number.';
       setFormError(errorMsg);
+      setIsSubmitting(false);
       console.error('[Registration Error]', errorMsg, { field: 'identifier', value: { assessmentInput, birthCertificateNo: bcNo } });
       return;
     }
@@ -677,9 +685,31 @@ export default function Students() {
       if (!assessmentRegex.test(assessmentInput)) {
         const errorMsg = 'Assessment Number must strictly begin with an alphabetic letter (e.g., A827361).';
         setFormError(errorMsg);
+        setIsSubmitting(false);
         console.error('[Registration Error]', errorMsg, { field: 'assessmentNo', value: assessmentInput });
         return;
       }
+    }
+
+    // Database Unique Check: reject insertion if a learner with the same admissionNumber or assessmentNumber already exists
+    const normalizedNewAdm = String(formData.admNo || '').trim().toUpperCase();
+    const normalizedNewAssessment = assessmentInput.toUpperCase();
+    
+    const isDuplicate = learners.some(item => {
+      if (editingLearnerId && item.id === editingLearnerId) return false;
+      const itemAdm = String(item.admissionNo || (item as any).admNo || '').trim().toUpperCase();
+      const itemAssessment = String((item as any).assessment || (item as any).assessmentNo || '').trim().toUpperCase();
+      
+      const admMatch = normalizedNewAdm && itemAdm === normalizedNewAdm;
+      const assessmentMatch = normalizedNewAssessment && itemAssessment === normalizedNewAssessment;
+      return admMatch || assessmentMatch;
+    });
+
+    if (isDuplicate) {
+      const errorMsg = 'A learner with this Admission Number or Assessment Number already exists in the system.';
+      setFormError(errorMsg);
+      setIsSubmitting(false);
+      return;
     }
 
     const normalizedEntry: Partial<LearnerRowCompat> & typeof formData = {
@@ -702,15 +732,29 @@ export default function Students() {
     };
 
     if (editingLearnerId) {
-          setLearners((prev) =>
-            prev.map((item) =>
+          setLearners((prev) => {
+            const updated = prev.map((item) =>
               item.id === editingLearnerId
                 ? { ...item, ...normalizedEntry }
                 : item
-            )
-          );
+            );
+            // Deduplicate existing student list on load / save by filtering out items with duplicate id or admissionNumber
+            const seenIds = new Set<string>();
+            const seenAdms = new Set<string>();
+            return updated.filter(item => {
+              const id = item.id;
+              const adm = String(item.admissionNo || (item as any).admNo || '').trim();
+              if (seenIds.has(id)) return false;
+              seenIds.add(id);
+              if (adm && seenAdms.has(adm)) return false;
+              if (adm) seenAdms.add(adm);
+              return true;
+            });
+          });
           console.log('[Registration Success] Learner updated:', { id: editingLearnerId, name: normalizedEntry.name });
           showSuccess(`${normalizedEntry.name || 'Learner'} updated successfully.`);
+          setIsSubmitting(false);
+          setIsModalOpen(false);
         } else {
           const newLearner: LearnerRowCompat = {
             id: `L-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
@@ -752,9 +796,21 @@ export default function Students() {
                 }
               }
               // Defensive de-dupe: don't double-insert if the row is already there
-              if (!existing.some((l) => l.id === newLearner.id)) {
+              if (!existing.some((l) => l.id === newLearner.id || (l.admissionNo && l.admissionNo === newLearner.admissionNo))) {
                 const updated = [newLearner, ...existing];
-                localStorage.setItem(key, JSON.stringify(updated));
+                // Also deduplicate existing storage list
+                const seenIds = new Set<string>();
+                const seenAdms = new Set<string>();
+                const dedupedStorage = updated.filter(item => {
+                  const id = item.id;
+                  const adm = String(item.admissionNo || (item as any).admNo || '').trim();
+                  if (seenIds.has(id)) return false;
+                  seenIds.add(id);
+                  if (adm && seenAdms.has(adm)) return false;
+                  if (adm) seenAdms.add(adm);
+                  return true;
+                });
+                localStorage.setItem(key, JSON.stringify(dedupedStorage));
               }
             } catch (e) {
               console.error(`[Students] Failed to persist to ${key}:`, e);
@@ -765,8 +821,21 @@ export default function Students() {
           OFFLINE_KEYS.forEach((key) => notifyDataChanged(key));
     
           // Update the active React state immediately so the table re-renders
-          // without requiring a page reload.
-          setLearners((prev) => [newLearner, ...prev]);
+          // without requiring a page reload (with deduplication)
+          setLearners((prev) => {
+            const updated = [newLearner, ...prev];
+            const seenIds = new Set<string>();
+            const seenAdms = new Set<string>();
+            return updated.filter(item => {
+              const id = item.id;
+              const adm = String(item.admissionNo || (item as any).admNo || '').trim();
+              if (seenIds.has(id)) return false;
+              seenIds.add(id);
+              if (adm && seenAdms.has(adm)) return false;
+              if (adm) seenAdms.add(adm);
+              return true;
+            });
+          });
     
           console.log('[Registration Success] New learner registered:', {
             id: newLearner.id,
@@ -779,9 +848,9 @@ export default function Students() {
           showSuccess(
             `${newLearner.name} has been registered under ${newLearner.grade} ${newLearner.stream}. Saved offline.`
           );
+          setIsSubmitting(false);
+          setIsModalOpen(false);
         }
-    
-        setIsModalOpen(false);
       };
 
   // Close & Reset Modal Handler

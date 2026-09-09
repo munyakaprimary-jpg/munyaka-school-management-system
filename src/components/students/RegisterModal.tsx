@@ -43,6 +43,7 @@ interface RegisterModalProps {
   setGender?: (value: 'Male' | 'Female' | 'Other') => void;
   formError?: string;
   onRegister: (e?: React.FormEvent) => void;
+  isSubmitting?: boolean;
   // Optional teacher-restriction props (for non-admin users)
   currentUserId?: string;
   currentUserEmail?: string;
@@ -76,6 +77,7 @@ export default function RegisterModal({
   setGender,
   formError = '',
   onRegister,
+  isSubmitting = false,
   currentUserId,
   currentUserEmail,
   isCurrentUserAdmin = false,
@@ -179,25 +181,28 @@ export default function RegisterModal({
       title="Register New Student"
       description="Enroll learner into the academic system. Provide at least one of Assessment Number or Birth Certificate Number."
       footer={
-        <>
-          <Button
-            variant="ghost"
-            className="rounded-xl h-12 px-6 font-bold"
-            onClick={onClose}
-          >
-            Cancel
-          </Button>
-          <Button
-            className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100"
-            onClick={onRegister}
-          >
-            Register Student
-          </Button>
-        </>
-      }
-      maxWidth="max-w-xl"
-    >
-      <div className="space-y-6">
+          <>
+            <Button
+              variant="ghost"
+              className="rounded-xl h-12 px-6 font-bold"
+              onClick={onClose}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              form="register-student-form"
+              disabled={isSubmitting}
+              className="rounded-xl h-12 px-8 bg-indigo-600 hover:bg-indigo-700 text-white font-black gap-2 shadow-lg shadow-indigo-100 disabled:opacity-50"
+            >
+              {isSubmitting ? 'Registering...' : 'Register Student'}
+            </Button>
+          </>
+        }
+        maxWidth="max-w-xl"
+      >
+        <form id="register-student-form" onSubmit={onRegister} className="space-y-6">
               {formError && (
                 <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-xs text-rose-700 flex items-center gap-2 animate-in slide-in-from-top-2">
                   <AlertCircle className="w-4 h-4 shrink-0 text-rose-500" />
@@ -430,7 +435,7 @@ export default function RegisterModal({
                     />
                   </div>
                 </div>
-      </div>
-    </Modal>
+        </form>
+      </Modal>
   );
 }
