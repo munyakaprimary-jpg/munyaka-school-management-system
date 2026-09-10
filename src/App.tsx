@@ -106,33 +106,7 @@ const FEE_SANITIZER_FLAG = 'munyaka_fee_sanitizer_v1';
 // its proper "no learners" empty state.
 const LEARNER_PURGE_FLAG = 'munyaka_learner_purge_v1';
 function runOneTimeLearnerPurge(): void {
-  if (typeof window === 'undefined' || !window.localStorage) return;
-  if (window.localStorage.getItem(LEARNER_PURGE_FLAG) === 'done') return;
-
-  try {
-    // Wipe every legacy learner storage key, then re-write `[]` so the
-    // key exists (downstream readers check `Array.isArray` but a
-    // missing key triggers some code paths to re-seed).
-    for (const key of LEARNER_STORAGE_KEYS) {
-      try {
-        window.localStorage.removeItem(key);
-        window.localStorage.setItem(key, JSON.stringify([]));
-      } catch (err) {
-        console.error(`[learner-purge] Failed to reset "${key}":`, err);
-      }
-    }
-
-    // Also stop the storage hydration from re-seeding by marking the
-    // students "purge stamp" so the hydration layer can opt-out.
-    try {
-      window.localStorage.setItem('munyaka_students_purged', '1');
-    } catch { /* no-op */ }
-
-    window.localStorage.setItem(LEARNER_PURGE_FLAG, 'done');
-    console.info('[learner-purge] Cleared all learners and forced empty roster.');
-  } catch (err) {
-    console.error('[learner-purge] Unexpected failure:', err);
-  }
+  // Disabled permanently to prevent registered learners from disappearing during system changes
 }
 
 function runOneTimeFeeSanitizer(): void {

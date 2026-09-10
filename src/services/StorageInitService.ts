@@ -40,7 +40,9 @@ export function initializeAppStorage(): void {
     // All lsSet calls are already try-catch wrapped internally.
 
     // Students / Learners — NEVER pre-seed. The app boots with an empty roster.
-    lsSet('school_learners_data', []);
+    if (!localStorage.getItem('school_learners_data')) {
+      lsSet('school_learners_data', []);
+    }
     lsSet('munyaka_students', []);
 
     // Staff — also starts empty. Staff are added via pre-registration and
