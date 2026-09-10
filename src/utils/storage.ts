@@ -521,7 +521,7 @@ export function setStudents(students: Student[]): boolean {
 
 export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): Student {
   try {
-    const current = getStudents();
+    const current = getStudents() || [];
     const studentId = newStudent.id ?? generateId('stu');
     const index = current.findIndex(s => s.id === studentId || (s.admissionNo && s.admissionNo === newStudent.admissionNo));
     
@@ -536,17 +536,6 @@ export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): 
       updated = [...current, saved];
     }
     setStudents(updated);
-    return saved;
-  } catch {
-    return newStudent as Student;
-  }
-}
-    return newStudent as Student;
-  }
-}
-    return newStudent as Student;
-  }
-}
     return saved;
   } catch {
     return newStudent as Student;
