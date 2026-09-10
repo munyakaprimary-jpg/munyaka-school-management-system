@@ -685,7 +685,7 @@ const ResultsAnalysis = () => {
                   </div>
                   <div>
                     <p className="font-bold text-slate-900 text-sm leading-tight">{student.name}</p>
-                    <p className="text-[11px] text-slate-400 font-medium">Stream: {student.stream} • ID: {student.assessmentNo}</p>
+                    <p className="text-[11px] text-slate-400 font-medium">Stream: {student?.stream} • ID: {student?.assessmentNo}</p>
                   </div>
                 </div>
                 <div className="text-right">
@@ -803,7 +803,7 @@ const ResultsAnalysis = () => {
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap border-r">
                         <p className="font-bold text-slate-900">{student.name}</p>
-                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student.assessmentNo}</p>
+                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-tight">Admin No: {student?.assessmentNo}</p>
                       </td>
                       {selectedStreamId === "all" && (
                         <td className="px-4 py-3 whitespace-nowrap text-center font-bold text-slate-600 border-r">
