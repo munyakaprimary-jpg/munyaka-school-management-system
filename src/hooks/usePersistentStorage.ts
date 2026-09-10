@@ -272,7 +272,11 @@ export function usePersistentStorage(): PersistentStorage {
   useEffect(() => {
     const handleCustom = () => refreshAll();
     window.addEventListener('munyaka:data-changed', handleCustom);
-    return () => window.removeEventListener('munyaka:data-changed', handleCustom);
+    window.addEventListener('students-updated', handleCustom);
+    return () => {
+      window.removeEventListener('munyaka:data-changed', handleCustom);
+      window.removeEventListener('students-updated', handleCustom);
+    };
   }, [refreshAll]);
 
   return {

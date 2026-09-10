@@ -32,7 +32,10 @@ export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
+export const LEARNERS_KEY = 'munyaka_registered_students';
+
 export const STORAGE_KEYS = {
+  LEARNERS: LEARNERS_KEY,
   // Primary state stores
   STUDENTS: 'school_learners_data',
   STUDENTS_LEGACY: 'munyaka_students',
@@ -465,8 +468,13 @@ export function hydrateAllStores(): HydrationReport {
 
 // ─── Typed store accessors (read) ───────────────────────────────────────────
 
-export const getStudents = (): Student[] =>
-  readStorage<Student[]>(STORAGE_KEYS.STUDENTS, []);
+export const getStudents = (): Student[] => {
+  const custom = readStorage<Student[] | null>(LEARNERS_KEY, null);
+  if (custom && Array.isArray(custom) && custom.length > 0) return custom;
+  const legacy = readStorage<Student[] | null>(STORAGE_KEYS.STUDENTS, null);
+  if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+  return [];
+};
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
   readStorage<LearningAreaCluster[]>(STORAGE_KEYS.CBC_LEARNING_AREAS, []);
@@ -489,7 +497,32 @@ export const getSubscriptions = (): Subscription[] =>
  * Replace the entire students array and persist immediately.
  */
 export function setStudents(students: Student[]): boolean {
+  writeStorage(LEARNERS_KEY, students);
   const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
+  try {
+    window.dispatchEvent(new Event('students-updated'));
+  } catch {}
+  return ok;
+}
+
+export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): Student {
+  const current = getStudents();
+  const studentId = newStudent.id ?? generateId('stu');
+  const index = current.findIndex(s => s.id === studentId || (s.admissionNo && s.admissionNo === newStudent.admissionNo));
+  
+  let updated: Student[];
+  let saved: Student;
+  if (index >= 0) {
+    saved = { ...current[index], ...newStudent, id: current[index].id } as Student;
+    updated = [...current];
+    updated[index] = saved;
+  } else {
+    saved = { ...newStudent, id: studentId } as Student;
+    updated = [...current, saved];
+  }
+  setStudents(updated);
+  return saved;
+}
   if (ok) {
     // Keep legacy mirror in sync for any older code paths
     writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
