@@ -35,7 +35,7 @@ import SpeedMath from "@/components/games/SpeedMath";
 import SudokuMini from "@/components/games/SudokuMini";
 import TargetMath from "@/components/games/TargetMath";
 import WordScramble from "@/components/games/WordScramble";
-import { cbcStudyContent } from "@/data/cbcStudyContent";
+import StudyCorner from './StudyCorner';
 import { cn } from "@/lib/utils";
 import { showSuccess, showError } from '@/utils/toast';
 import { getStudents, getPaymentRecords, readStorage, STORAGE_KEYS } from '@/utils/storage';
@@ -872,57 +872,7 @@ const Dashboard = ({
         {/* Study Corner Tab */}
         {activeTab === 'study' && (
           <div className="space-y-6">
-            <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl">
-              <div className="flex items-center gap-3 mb-2">
-                <div className="w-12 h-12 bg-white/20 backdrop-blur-md rounded-2xl flex items-center justify-center">
-                  <BookMarked size={24} className="text-white" />
-                </div>
-                <div>
-                  <h2 className="text-2xl font-black tracking-tight">CBC Study Corner</h2>
-                  <p className="text-violet-100 text-sm">Competency-Based Curriculum revision notes and study materials</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {cbcStudyContent.map((area: any, idx: number) => (
-                <Card key={idx} className="rounded-3xl border-0 shadow-sm overflow-hidden hover:shadow-md transition-shadow">
-                  <div className="bg-gradient-to-r from-slate-800 to-indigo-900 p-4 text-white flex items-center gap-3">
-                    <div className="w-10 h-10 bg-white/10 rounded-xl flex items-center justify-center font-black">
-                      {area.icon || '📚'}
-                    </div>
-                    <div>
-                      <h3 className="font-black text-lg">{area.title || area.name || 'Study Area'}</h3>
-                      <p className="text-xs text-indigo-200">{area.grade || session.grade || 'CBC Grade'}</p>
-                    </div>
-                  </div>
-                  <CardContent className="p-6 space-y-4">
-                    <p className="text-sm text-slate-600 leading-relaxed">{area.description || area.summary || area.content}</p>
-                    
-                    {area.topics && Array.isArray(area.topics) && area.topics.length > 0 && (
-                      <div className="space-y-2">
-                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-wider">Key Topics</h4>
-                        <div className="space-y-1.5">
-                          {area.topics.map((topic: any, tIdx: number) => (
-                            <div key={tIdx} className="bg-slate-50 rounded-xl p-3 flex items-start gap-2.5">
-                              <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center justify-center shrink-0 mt-0.5">
-                                {tIdx + 1}
-                              </span>
-                              <div>
-                                <div className="font-bold text-slate-800 text-sm">{typeof topic === 'string' ? topic : topic.title}</div>
-                                {typeof topic === 'object' && topic.content && (
-                                  <p className="text-xs text-slate-500 mt-1">{topic.content}</p>
-                                )}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            <StudyCorner />
           </div>
         )}
       </div>
