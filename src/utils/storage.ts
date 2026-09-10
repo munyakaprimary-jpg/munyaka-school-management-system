@@ -497,10 +497,8 @@ export const getSubscriptions = (): Subscription[] =>
 
 // ─── Typed store mutators (write) ───────────────────────────────────────────
 
-/**
- * Replace the entire students array and persist immediately.
- */
-export function setStudents(students: Student[]): boolean {
+// ─── Typed store mutators (write) ───────────────────────────────────────────
+
 /**
  * Replace the entire students array and persist immediately.
  */
@@ -538,6 +536,17 @@ export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): 
       updated = [...current, saved];
     }
     setStudents(updated);
+    return saved;
+  } catch {
+    return newStudent as Student;
+  }
+}
+    return newStudent as Student;
+  }
+}
+    return newStudent as Student;
+  }
+}
     return saved;
   } catch {
     return newStudent as Student;
