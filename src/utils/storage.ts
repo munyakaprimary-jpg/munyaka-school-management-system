@@ -497,9 +497,17 @@ export const getSubscriptions = (): Subscription[] =>
  * Replace the entire students array and persist immediately.
  */
 export function setStudents(students: Student[]): boolean {
+/**
+ * Replace the entire students array and persist immediately.
+ */
+export function setStudents(students: Student[]): boolean {
   try {
     writeStorage(LEARNERS_KEY, students);
     const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
+    if (ok) {
+      // Keep legacy mirror in sync for any older code paths
+      writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
+    }
     try {
       window.dispatchEvent(new Event('students-updated'));
     } catch {}
@@ -530,12 +538,6 @@ export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): 
   } catch {
     return newStudent as Student;
   }
-}
-  if (ok) {
-    // Keep legacy mirror in sync for any older code paths
-    writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
-  }
-  return ok;
 }
 
 /**
