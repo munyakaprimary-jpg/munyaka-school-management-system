@@ -727,22 +727,25 @@ export default function Students() {
       }
     }
 
-    // Database Unique Check: reject insertion if a learner with the same admissionNumber or assessmentNumber already exists
+    // Database Unique Check: reject insertion if a learner with the same admissionNumber, assessmentNumber, or birthCertificateNo already exists
     const normalizedNewAdm = String(formData.admNo || '').trim().toUpperCase();
-    const normalizedNewAssessment = assessmentInput.toUpperCase();
+    const normalizedNewAssessment = assessmentInput.replace(/[\s-]/g, '').toUpperCase();
+    const normalizedNewBc = bcNo.replace(/[\s-]/g, '').toUpperCase();
     
     const isDuplicate = learners.some(item => {
       if (editingLearnerId && item.id === editingLearnerId) return false;
       const itemAdm = String(item.admissionNo || (item as any).admNo || '').trim().toUpperCase();
-      const itemAssessment = String((item as any).assessment || (item as any).assessmentNo || '').trim().toUpperCase();
+      const itemAssessment = String((item as any).assessment || (item as any).assessmentNo || '').trim().toUpperCase().replace(/[\s-]/g, '');
+      const itemBc = String((item as any).birthCertificateNo || (item as any).birthCertNo || '').trim().toUpperCase().replace(/[\s-]/g, '');
       
       const admMatch = normalizedNewAdm && itemAdm === normalizedNewAdm;
       const assessmentMatch = normalizedNewAssessment && itemAssessment === normalizedNewAssessment;
-      return admMatch || assessmentMatch;
+      const bcMatch = normalizedNewBc && itemBc === normalizedNewBc;
+      return admMatch || assessmentMatch || bcMatch;
     });
 
     if (isDuplicate) {
-      const errorMsg = 'A learner with this Admission Number or Assessment Number already exists in the system.';
+      const errorMsg = 'Learner with this Assessment Number / Birth Certificate Number is already registered!';
       setFormError(errorMsg);
       setIsSubmitting(false);
       return;
