@@ -211,12 +211,19 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         return ordered;
       }
 
-      // LEARNER / STUDENT role: show ONLY primary learner sidebar navigation links
-      if (roleLower === 'student' || roleLower === 'learner' || roleLower === 'parent') {
-        const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games', '/digital-hub', '/portfolio', '/library', '/timetable', '/notices'];
-        return menuItems.filter(item => learnerPaths.includes(item.path) || item.global).map(item => {
-          if (item.path === '/') return { ...item, label: 'Learner Dashboard' };
-          return item;
+      // LEARNER / STUDENT role: show ONLY the 6 primary learner navigation links
+      if (roleLower === 'student' || roleLower === 'learner') {
+        const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games'];
+        return menuItems.filter(item => learnerPaths.includes(item.path)).map(item => {
+          const labels: Record<string, string> = {
+            '/': 'Learner Dashboard',
+            '/attendance': 'My Attendance Log',
+            '/reports': 'My CBC Report Cards',
+            '/fees': 'My Fee Balance',
+            '/study-corner': 'Revision & CBC Learning Tools',
+            '/games': 'Educational Mini-Games',
+          };
+          return { ...item, label: labels[item.path] };
         });
       }
       if (roleLower === 'teacher') {
