@@ -497,31 +497,39 @@ export const getSubscriptions = (): Subscription[] =>
  * Replace the entire students array and persist immediately.
  */
 export function setStudents(students: Student[]): boolean {
-  writeStorage(LEARNERS_KEY, students);
-  const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
   try {
-    window.dispatchEvent(new Event('students-updated'));
-  } catch {}
-  return ok;
+    writeStorage(LEARNERS_KEY, students);
+    const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
+    try {
+      window.dispatchEvent(new Event('students-updated'));
+    } catch {}
+    return ok;
+  } catch {
+    return false;
+  }
 }
 
 export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): Student {
-  const current = getStudents();
-  const studentId = newStudent.id ?? generateId('stu');
-  const index = current.findIndex(s => s.id === studentId || (s.admissionNo && s.admissionNo === newStudent.admissionNo));
-  
-  let updated: Student[];
-  let saved: Student;
-  if (index >= 0) {
-    saved = { ...current[index], ...newStudent, id: current[index].id } as Student;
-    updated = [...current];
-    updated[index] = saved;
-  } else {
-    saved = { ...newStudent, id: studentId } as Student;
-    updated = [...current, saved];
+  try {
+    const current = getStudents();
+    const studentId = newStudent.id ?? generateId('stu');
+    const index = current.findIndex(s => s.id === studentId || (s.admissionNo && s.admissionNo === newStudent.admissionNo));
+    
+    let updated: Student[];
+    let saved: Student;
+    if (index >= 0) {
+      saved = { ...current[index], ...newStudent, id: current[index].id } as Student;
+      updated = [...current];
+      updated[index] = saved;
+    } else {
+      saved = { ...newStudent, id: studentId } as Student;
+      updated = [...current, saved];
+    }
+    setStudents(updated);
+    return saved;
+  } catch {
+    return newStudent as Student;
   }
-  setStudents(updated);
-  return saved;
 }
   if (ok) {
     // Keep legacy mirror in sync for any older code paths
