@@ -26,6 +26,7 @@ import {
   getStreamsForGrade,
   GradesStreamsConfig,
 } from '@/services/gradesStreamsConfig';
+import { getStudents, saveStudent as saveStudentStorage, Student } from '@/utils/storage';
 import { DualScrollContainer } from '@/hooks/useHorizontalScroll';
 
 /**
@@ -61,7 +62,7 @@ interface LearnerRowCompat {
   name: string;
   grade: string;
   stream: string;
-  gender: 'Male' | 'Female' | 'Other';
+  gender: string;
   guardian: string;
   phone: string;
   birthCertificateNo?: string;
@@ -69,13 +70,14 @@ interface LearnerRowCompat {
   dateOfAdmission?: string;
   admissionYear?: number;
   assessment?: string;
-  status?: 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended';
+  status?: 'Active' | 'Transferred' | 'Graduated' | 'Suspended' | 'TRANSFERRED' | string;
   // ── Fee ledger fields (always start at zero; never pre-seeded) ─────
   totalBilled?: number;
   totalPaid?: number;
   balance?: number;
   feeBalance?: number;
   feeHistory?: unknown[];
+  [key: string]: unknown;
 }
 
 // Key for persisting filter state in localStorage
@@ -125,45 +127,8 @@ const getGradeMatchKey = (name: string): string => {
 };
 
 export default function Students() {
-  // 1. LocalStorage Persistence Setup for Learners
-  // ── Empty-by-default: do NOT fall back to `DEFAULT_LEARNERS` (the
-  // pre-seeded sample students). When localStorage is absent or empty,
-  // the table renders the clean empty state. The "Register Student"
-  // button is always available for admins.
-  const [learners, setLearners] = useState<Learner[]>(() => {
-    try {
-      const keys = ['school_learners_data', 'students', 'learners', 'pupils', 'school_students', 'registered_students'];
-      let allFound: Learner[] = [];
-      for (const k of keys) {
-        const raw = localStorage.getItem(k);
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
-            allFound = [...allFound, ...parsed];
-          }
-        }
-      }
-      if (allFound.length > 0) {
-        // Deduplicate by ID and admission number
-        const seenIds = new Set<string>();
-        const seenAdms = new Set<string>();
-        const unique = allFound.filter(l => {
-          if (!l) return false;
-          const id = l.id;
-          const adm = String(l.admissionNo || (l as any).admNo || (l as any).admissionNumber || '').trim().toUpperCase();
-          if (id && seenIds.has(id)) return false;
-          if (id) seenIds.add(id);
-          if (adm && seenAdms.has(adm)) return false;
-          if (adm) seenAdms.add(adm);
-          return true;
-        });
-        return unique;
-      }
-    } catch (e) {
-      console.error('Error loading learners from localStorage', e);
-    }
-    return [];
-  });
+  // 1. LocalStorage Persistence Setup for Learners with Lazy Initialization
+  const [students, setStudents] = useState<Student[]>(() => getStudents());
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
@@ -172,62 +137,41 @@ export default function Students() {
       return formatTermBadge(activeTerm, activeYear);
     }, [activeTerm, activeYear, isLoading]);
 
-  // Automatically sync learners back to localStorage on change
+  // Add event listener to refresh UI instantly when a student is saved
   useEffect(() => {
-    try {
-      localStorage.setItem('school_learners_data', JSON.stringify(learners));
-      notifyDataChanged('school_learners_data');
-    } catch (e) {
-      console.error('Error saving learners to localStorage', e);
-    }
-  }, [learners]);
+    const syncStudents = () => setStudents(getStudents() as unknown as Student[]);
+    window.addEventListener('students-updated', syncStudents);
+    return () => window.removeEventListener('students-updated', syncStudents);
+  }, []);
+
+  // Backwards compatibility alias for learners array
+  const learners = students;
 
   // ── React to external learner-data changes ─────────────────────────────
   // The one-time admission-number backfill (run on app mount in App.tsx)
-  // may write to `school_learners_data` from outside this component. We
+  // may write to `munyaka_students` from outside this component. We
   // listen for the cross-component change event and re-hydrate so the
   // table immediately reflects the newly assigned admission numbers
   // instead of the em-dash placeholders.
   useEffect(() => {
     const LEARNER_KEYS = [
+      'munyaka_students',
       'school_learners_data',
       'students',
       'learners',
       'pupils',
       'school_students',
       'registered_students',
-      'munyaka_students',
+      'munyaka_registered_students',
     ];
     const isLearnerKey = (key: string | null) => !!key && LEARNER_KEYS.includes(key);
 
     const reload = (key: string | null) => {
       if (!isLearnerKey(key) && key !== undefined) return;
       try {
-        const keys = ['school_learners_data', 'students', 'learners', 'pupils', 'school_students', 'registered_students'];
-        let allFound: Learner[] = [];
-        for (const k of keys) {
-          const raw = localStorage.getItem(k);
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed) && parsed.length > 0) {
-              allFound = [...allFound, ...parsed];
-            }
-          }
-        }
-        if (allFound.length > 0) {
-          const seenIds = new Set<string>();
-          const seenAdms = new Set<string>();
-          const unique = allFound.filter(l => {
-            if (!l) return false;
-            const id = l.id;
-            const adm = String(l.admissionNo || (l as any).admNo || (l as any).admissionNumber || '').trim().toUpperCase();
-            if (id && seenIds.has(id)) return false;
-            if (id) seenIds.add(id);
-            if (adm && seenAdms.has(adm)) return false;
-            if (adm) seenAdms.add(adm);
-            return true;
-          });
-          setLearners(unique);
+        const fresh = getStudents();
+        if (fresh && fresh.length > 0) {
+          setStudents(fresh as unknown as Student[]);
         }
       } catch (e) {
         console.error('Error reloading learners after external update', e);
@@ -536,7 +480,7 @@ export default function Students() {
     birthCertificateNo: '',
     grade: 'Grade 4',
     stream: '',
-    gender: 'Female' as 'Male' | 'Female' | 'Other',
+    gender: 'Female' as string,
     guardian: '',
     phone: '',
     dateOfBirth: '',
@@ -638,28 +582,20 @@ export default function Students() {
   // the ENTIRE active learner object (cast to StudentTransferInfo) so the
   // workflow can render real data without any hardcoded fallback.
   const handleTransfer = (learner: LearnerRowCompat) => {
-    // Build the StudentTransferInfo payload from the active learner.
-    // No fallbacks to a hardcoded student — every field comes from the row.
     const transferPayload: StudentTransferInfo = {
-      ...learner,
-      // ── FIX 1: Pass the full student object, NOT a hardcoded fallback ──
-      // The previous version defaulted to `INITIAL_SEED_DATA.students[0]`
-      // (MUTWIKA KILONZO) whenever `learner` was undefined. Now we always
-      // pass the actual learner object from the row the user clicked on.
+      ...(learner as unknown as Record<string, unknown>),
       id: learner.id,
       name: learner.name,
       assessment: learner.admNo,
       grade: learner.grade,
       stream: learner.stream,
-      gender: learner.gender,
+      gender: learner.gender as 'Male' | 'Female' | 'Other',
       dob: (learner as any).dob ?? '',
       guardian: learner.guardian,
       phone: learner.phone,
       email: (learner as any).email ?? '',
-      // StudentTransferInfo-specific fields with sensible per-row defaults
-      // so the workflow modal renders real data for the selected learner.
       feeBalance: (learner as any).feeBalance ?? 0,
-      status: (learner as any).status ?? 'Active',
+      status: ((learner as any).status ?? 'Active') as 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended',
       dateOfAdmission: (learner as any).dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: (learner as any).coCurricularActivities ?? '',
       health: '',
@@ -771,7 +707,7 @@ export default function Students() {
     };
 
     if (editingLearnerId) {
-          setLearners((prev) => {
+          setStudents((prev) => {
             const updated = prev.map((item) =>
               item.id === editingLearnerId
                 ? { ...item, ...normalizedEntry }
@@ -780,7 +716,7 @@ export default function Students() {
             // Deduplicate existing student list on load / save by filtering out items with duplicate id or admissionNumber
             const seenIds = new Set<string>();
             const seenAdms = new Set<string>();
-            return updated.filter(item => {
+            const unique = updated.filter(item => {
               const id = item.id;
               const adm = String(item.admissionNo || (item as any).admNo || '').trim();
               if (seenIds.has(id)) return false;
@@ -789,6 +725,9 @@ export default function Students() {
               if (adm) seenAdms.add(adm);
               return true;
             });
+            localStorage.setItem('munyaka_students', JSON.stringify(unique));
+            window.dispatchEvent(new Event('students-updated'));
+            return unique;
           });
           console.log('[Registration Success] Learner updated:', { id: editingLearnerId, name: normalizedEntry.name });
           showSuccess(`${normalizedEntry.name || 'Learner'} updated successfully.`);
@@ -813,52 +752,11 @@ export default function Students() {
             feeHistory: [],
           };
     
-          // ── Offline Local Storage Persistence ─────────────────────────────
-          // Save the new record to ALL relevant storage keys so the registration
-          // survives even if the consumer page reads from a different key.
-          // This is the primary persistence target used by the Attendance
-          // page and the bulk of the school app.
-          const OFFLINE_KEYS = [
-            'school_learners_data',
-            'students',
-            'learners',
-            'pupils',
-            'school_students',
-            'registered_students',
-          ];
-    
-          for (const key of OFFLINE_KEYS) {
-            try {
-              const existingRaw = localStorage.getItem(key);
-              let existing: LearnerRowCompat[] = [];
-              if (existingRaw) {
-                const parsed = JSON.parse(existingRaw);
-                if (Array.isArray(parsed)) {
-                  existing = parsed;
-                }
-              }
-              // Relaxed deduplication: only filter out items if an explicitly matching, valid ID or admissionNumber exists (do not filter out records where ID or admissionNumber is missing/undefined).
-              const filteredExisting = existing.filter(l => {
-                if (!l) return false;
-                const lId = l.id;
-                const lAdm = String(l.admissionNo || (l as any).admNo || '').trim();
-                if (lId && lId === newLearner.id) return false;
-                if (lAdm && newLearner.admissionNo && lAdm.toUpperCase() === String(newLearner.admissionNo).trim().toUpperCase()) return false;
-                return true;
-              });
-              const updated = [newLearner, ...filteredExisting];
-              localStorage.setItem(key, JSON.stringify(updated));
-            } catch (e) {
-              console.error(`[Students] Failed to persist to ${key}:`, e);
-            }
-          }
-    
-          // Notify all listeners (any module that subscribes to data changes)
-          OFFLINE_KEYS.forEach((key) => notifyDataChanged(key));
+          saveStudentStorage(newLearner as unknown as Student);
     
           // Update the active React state immediately so the table re-renders
           // without requiring a page reload (with relaxed deduplication)
-          setLearners((prev) => {
+          setStudents((prev) => {
             const filteredPrev = prev.filter(l => {
               if (!l) return false;
               const lId = l.id;
@@ -919,11 +817,21 @@ export default function Students() {
       //      table re-renders without a full page reload.
       //   2. Open the learner's profile (or scroll to the class list view).
       const handleTransferInComplete = (inserted: Learner) => {
-        setLearners((prev) => {
-          // Defensive de-dupe in case the row is already present.
-          if (prev.some((l) => l.id === inserted.id)) return prev;
-          return [inserted as unknown as LearnerRowCompat, ...prev];
-        });
+        const compatInserted: LearnerRowCompat = {
+          ...(inserted as unknown as Record<string, unknown>),
+          id: inserted.id,
+          admNo: inserted.admNo,
+          name: inserted.name,
+          grade: inserted.grade,
+          stream: inserted.stream,
+          gender: inserted.gender,
+          guardian: inserted.guardian,
+          phone: inserted.phone,
+        };
+        const nextStudents = [compatInserted, ...students.filter(l => l.id !== inserted.id)];
+        setStudents(nextStudents as unknown as Student[]);
+        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+        window.dispatchEvent(new Event('students-updated'));
         setIsTransferInOpen(false);
     
         // Apply the grade & stream filters so the user lands on the updated
@@ -943,17 +851,20 @@ export default function Students() {
   // Handle Delete Confirmation — invoked by AdminPinModal when the entered
     // admin password is verified.
     const confirmDelete = (learner: LearnerRowCompat) => {
-      setLearners((prev) => prev.filter((item) => item.id !== learner.id));
-      // Write a secure audit-log entry so the deletion is traceable.
-      logDeletionAudit({
-        action: "DELETE_LEARNER",
-        targetId: learner.id,
-        targetAdmNo: learner.admNo,
-        targetName: learner.name,
-      });
-      showSuccess(`${learner.name} has been permanently removed from the directory.`);
-      setLearnerToDelete(null);
-    };
+        const nextStudents = students.filter((item) => item.id !== learner.id);
+        setStudents(nextStudents);
+        localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+        window.dispatchEvent(new Event('students-updated'));
+        // Write a secure audit-log entry so the deletion is traceable.
+        logDeletionAudit({
+          action: "DELETE_LEARNER",
+          targetId: learner.id,
+          targetAdmNo: learner.admNo,
+          targetName: learner.name,
+        });
+        showSuccess(`${learner.name} has been permanently removed from the directory.`);
+        setLearnerToDelete(null);
+      };
 
   const isAnyExportInProgress =
     allLearnersExport.isDownloading || currentViewExport.isDownloading;
@@ -1298,7 +1209,7 @@ export default function Students() {
               setDateOfBirth={(v) => setFormData(prev => ({ ...prev, dateOfBirth: v }))}
               enrollmentYear={formData.enrollmentYear}
               setEnrollmentYear={(v) => setFormData(prev => ({ ...prev, enrollmentYear: v }))}
-              gender={formData.gender}
+              gender={(formData.gender as 'Male' | 'Female' | 'Other')}
               setGender={(v) => setFormData(prev => ({ ...prev, gender: v }))}
               formError={formError}
               onRegister={validateAndSave as unknown as (e?: React.FormEvent) => void}
@@ -1320,26 +1231,17 @@ export default function Students() {
           onTransferComplete={(studentId, certificateNumber) => {
             // Mark the student as TRANSFERRED in the active roster so they are
             // excluded from all active views (attendance, marks, fee rosters, etc.)
-            setLearners(prev =>
-              prev.map(l =>
-                l.id === studentId
-                  ? { ...l, status: 'TRANSFERRED' as const }
-                  : l
-              )
+            const nextStudents = students.map(l =>
+              l.id === studentId
+                ? { ...l, status: 'Transferred' as const }
+                : l
             );
+            setStudents(nextStudents);
             // Also persist the status update directly to localStorage
             // (the useEffect will also sync, but this avoids a stale-gap)
             try {
-              const raw = localStorage.getItem('school_learners_data');
-              if (raw) {
-                const parsed: LearnerRowCompat[] = JSON.parse(raw);
-                const updated = parsed.map(l =>
-                  l.id === studentId
-                    ? { ...l, status: 'TRANSFERRED' as const }
-                    : l
-                );
-                localStorage.setItem('school_learners_data', JSON.stringify(updated));
-              }
+              localStorage.setItem('munyaka_students', JSON.stringify(nextStudents));
+              window.dispatchEvent(new Event('students-updated'));
             } catch { /* localStorage unavailable */ }
             setIsTransferOpen(false);
             setTransferLearner(null);

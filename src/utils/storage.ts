@@ -32,12 +32,13 @@ export { getLocalStorage };
 
 // ─── Storage Keys ────────────────────────────────────────────────────────────
 
-export const LEARNERS_KEY = 'munyaka_registered_students';
+export const STORAGE_KEY = 'munyaka_students';
+export const LEARNERS_KEY = STORAGE_KEY;
 
 export const STORAGE_KEYS = {
-  LEARNERS: LEARNERS_KEY,
+  LEARNERS: STORAGE_KEY,
   // Primary state stores
-  STUDENTS: 'school_learners_data',
+  STUDENTS: STORAGE_KEY,
   STUDENTS_LEGACY: 'munyaka_students',
   CBC_LEARNING_AREAS: 'munyaka_learning_areas',
   PAYMENT_RECORDS: 'munyaka_fees_records',
@@ -69,17 +70,23 @@ export const CURRENT_SCHEMA_VERSION = 'persistent-storage-v1';
 
 export interface Student {
   id: string;
-  admNo?: string;
-  name?: string;
-  grade?: string;
-  stream?: string;
-  gender?: string;
-  guardian?: string;
-  phone?: string;
+  admNo: string;
+  name: string;
+  grade: string;
+  stream: string;
+  gender: string;
+  guardian: string;
+  phone: string;
   status?: string;
   schoolId?: string;
   isArchived?: boolean;
   deletedAt?: string;
+  admissionNo?: string;
+  birthCertificateNo?: string;
+  dob?: string;
+  dateOfAdmission?: string;
+  admissionYear?: number;
+  assessmentNo?: string;
   [key: string]: unknown;
 }
 
@@ -470,10 +477,15 @@ export function hydrateAllStores(): HydrationReport {
 
 export const getStudents = (): Student[] => {
   try {
-    const custom = readStorage<Student[] | null>(LEARNERS_KEY, null);
-    if (custom && Array.isArray(custom) && custom.length > 0) return custom;
-    const legacy = readStorage<Student[] | null>(STORAGE_KEYS.STUDENTS, null);
-    if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+    const primary = readStorage<Student[] | null>(STORAGE_KEY, null);
+    if (primary && Array.isArray(primary) && primary.length > 0) return primary;
+
+    // Check legacy fallback keys
+    const legacyKeys = ['munyaka_registered_students', 'students', 'school_learners_data', 'learners', 'pupils', 'school_students', 'registered_students'];
+    for (const lKey of legacyKeys) {
+      const legacy = readStorage<Student[] | null>(lKey, null);
+      if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+    }
     return [];
   } catch {
     return [];
@@ -504,41 +516,48 @@ export const getSubscriptions = (): Subscription[] =>
  */
 export function setStudents(students: Student[]): boolean {
   try {
-    writeStorage(LEARNERS_KEY, students);
-    const ok = writeStorage(STORAGE_KEYS.STUDENTS, students);
-    if (ok) {
-      // Keep legacy mirror in sync for any older code paths
-      writeStorage(STORAGE_KEYS.STUDENTS_LEGACY, students);
-    }
-    try {
-      window.dispatchEvent(new Event('students-updated'));
-    } catch {}
-    return ok;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(students));
+    window.dispatchEvent(new Event('students-updated'));
+    return true;
   } catch {
     return false;
   }
 }
 
-export function saveStudent(newStudent: Omit<Student, 'id'> & { id?: string }): Student {
+export function saveStudent(student: Student | (Omit<Student, 'id'> & { id?: string })): Student {
   try {
-    const current = getStudents() || [];
-    const studentId = newStudent.id ?? generateId('stu');
-    const index = current.findIndex(s => s.id === studentId || (s.admissionNo && s.admissionNo === newStudent.admissionNo));
-    
-    let updated: Student[];
-    let saved: Student;
-    if (index >= 0) {
-      saved = { ...current[index], ...newStudent, id: current[index].id } as Student;
-      updated = [...current];
-      updated[index] = saved;
-    } else {
-      saved = { ...newStudent, id: studentId } as Student;
-      updated = [...current, saved];
-    }
-    setStudents(updated);
-    return saved;
-  } catch {
-    return newStudent as Student;
+    const existing = getStudents();
+    const studentId = student.id ?? generateId('stu');
+    const fullStudent: Student = {
+      admNo: String(student.admNo ?? student.admissionNo ?? 'ADM-001'),
+      name: String(student.name ?? 'Unnamed Student'),
+      grade: String(student.grade ?? 'Grade 1'),
+      stream: String(student.stream ?? 'North'),
+      gender: String(student.gender ?? 'Female'),
+      guardian: String(student.guardian ?? 'Parent'),
+      phone: String(student.phone ?? ''),
+      status: String(student.status ?? 'Active'),
+      ...student,
+      id: studentId,
+    };
+    const updated = [...existing.filter(s => s.id !== studentId), fullStudent];
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+    window.dispatchEvent(new Event('students-updated'));
+    return fullStudent;
+  } catch (err) {
+    console.error('[storage] saveStudent failed:', err);
+    const fallbackStudent: Student = {
+      id: student.id ?? generateId('stu'),
+      admNo: String(student.admNo ?? 'ADM-001'),
+      name: String(student.name ?? 'Unnamed'),
+      grade: String(student.grade ?? 'Grade 1'),
+      stream: String(student.stream ?? 'North'),
+      gender: String(student.gender ?? 'Female'),
+      guardian: String(student.guardian ?? 'Parent'),
+      phone: String(student.phone ?? ''),
+      ...student,
+    };
+    return fallbackStudent;
   }
 }
 
