@@ -469,11 +469,15 @@ export function hydrateAllStores(): HydrationReport {
 // ─── Typed store accessors (read) ───────────────────────────────────────────
 
 export const getStudents = (): Student[] => {
-  const custom = readStorage<Student[] | null>(LEARNERS_KEY, null);
-  if (custom && Array.isArray(custom) && custom.length > 0) return custom;
-  const legacy = readStorage<Student[] | null>(STORAGE_KEYS.STUDENTS, null);
-  if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
-  return [];
+  try {
+    const custom = readStorage<Student[] | null>(LEARNERS_KEY, null);
+    if (custom && Array.isArray(custom) && custom.length > 0) return custom;
+    const legacy = readStorage<Student[] | null>(STORAGE_KEYS.STUDENTS, null);
+    if (legacy && Array.isArray(legacy) && legacy.length > 0) return legacy;
+    return [];
+  } catch {
+    return [];
+  }
 };
 
 export const getLearningAreas = (): LearningAreaCluster[] =>
