@@ -139,9 +139,9 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
   ];
 
   const filteredMenu = React.useMemo(() => {
-      if (!user) return [];
-      const role = user.role ?? '';
-      const roleLower = role.toLowerCase();
+      const userObj = user || {};
+      const role = userObj.role ?? '';
+      const roleLower = String(role).toLowerCase();
   
       // ── Dashboard is ALWAYS first for every authenticated user ─────────────────
       // The Dashboard item is the single navigation entry point that routes
@@ -160,7 +160,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                                   return true;
                                 }
                                 // Exclude items that are strictly owner-only (roles = ['owner'] only).
-                                const itemRoles = item.roles ?? [];
+                                const itemRoles = item?.roles ?? [];
                                 if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
                                   return false;
                                 }
@@ -179,8 +179,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                 if (item.path === '/study-corner') {
                   return true;
                 }
-                if (item.global) return true;
-                return item.roles.map(r => r.toLowerCase()).includes('owner');
+                if (item?.global) return true;
+                return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
               });
         // Ensure Dashboard is always present.
         const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
@@ -201,7 +201,7 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                                 ];
         const ordered: typeof withDashboard = [];
         order.forEach(p => {
-          const found = withDashboard.find((i: any) => i.path === p);
+          const found = withDashboard.find((i: any) => i?.path === p);
           if (found) ordered.push(found);
         });
         // Append anything that wasn't in the explicit order (defensive).
@@ -224,22 +224,22 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         };
         const items = menuItems.filter(item => learnerPaths.includes(item.path));
         // Sort items to match learnerPaths exact order
-        return learnerPaths.map(path => items.find(item => item.path === path)).filter(Boolean).map((item: any) => ({
+        return learnerPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
           ...item,
-          label: labels[item.path] || item.label
+          label: labels[item?.path] || item?.label
         }));
       }
       if (roleLower === 'teacher') {
               return menuItems.filter(item => {
                 // Bypass role filtering for Study Corner
-                if (item.path === '/study-corner') {
+                if (item?.path === '/study-corner') {
                   return true;
                 }
-                if (item.global) return true;
-                if (!item.roles.map(r => r.toLowerCase()).includes(roleLower)) return false;
+                if (item?.global) return true;
+                if (!(item?.roles || []).map((r: string) => String(r).toLowerCase()).includes(roleLower)) return false;
                 return true;
               }).map(item => {
-          if (item.path === '/') {
+          if (item?.path === '/') {
             return { ...item, label: "Teacher's Dashboard" };
           }
           return item;
@@ -248,14 +248,14 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
 
       return menuItems.filter(item => {
               // Bypass role filtering for Study Corner
-              if (item.path === '/study-corner') {
+              if (item?.path === '/study-corner') {
                 return true;
               }
               // Global items are visible to every authenticated user.
-              if (item.global) return true;
+              if (item?.global) return true;
               // Check if user has the required role.  Match either the literal role
               // or the legacy "super_admin" alias so persisted sessions keep working.
-              const itemRoles = item.roles.map(r => r.toLowerCase());
+              const itemRoles = (item?.roles || []).map((r: string) => String(r).toLowerCase());
               const roleMatches = itemRoles.includes(roleLower) ||
                 (roleLower === 'super_admin' && itemRoles.includes('admin'));
               if (!roleMatches) return false;
