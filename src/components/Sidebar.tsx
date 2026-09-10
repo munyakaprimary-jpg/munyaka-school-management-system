@@ -374,25 +374,49 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
                         <div className="shrink-0 p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900">
                           <div className="bg-slate-50 dark:bg-slate-800/80 rounded-2xl p-3 border border-slate-100 dark:border-slate-700/50">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <Link to="/profile" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
+              <Link to="/" onClick={() => setIsOpen(false)} className="shrink-0 active:scale-95 transition-transform">
                 <div className="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center font-black text-xs shadow-md shadow-indigo-100">{user?.avatar || user?.name?.substring(0, 2).toUpperCase() || 'AD'}</div>
               </Link>
-              {!isCollapsed && <div className="overflow-hidden flex-1"><Link to="/profile" onClick={() => setIsOpen(false)}><p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{user?.name || 'Admin'}</p></Link><p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{user?.role?.replace('_', ' ') || 'Administrator'}</p></div>}
+              {!isCollapsed && (
+                <div className="overflow-hidden flex-1">
+                  {(() => {
+                    const isLearnerRole = (user?.role || '').toLowerCase() === 'student' || (user?.role || '').toLowerCase() === 'learner';
+                    let displayName = user?.name || 'User';
+                    let displayRole = user?.role?.replace('_', ' ') || 'User';
+                    let displayMeta = '';
+                    if (isLearnerRole) {
+                      try {
+                        const studentsList = JSON.parse(localStorage.getItem('munyaka_registered_students') || localStorage.getItem('school_learners_data') || '[]');
+                        const match = studentsList.find((s: any) =>
+                          (user?.admissionNumber && (s.admissionNo === user.admissionNumber || s.admissionNumber === user.admissionNumber)) ||
+                          (user?.id && s.id === user.id) ||
+                          (user?.name && s.name?.toLowerCase() === user.name?.toLowerCase())
+                        ) || studentsList[0];
+                        if (match) {
+                          displayName = match.fullName || match.name || displayName;
+                          displayRole = `${match.grade || 'Grade'} • ${match.stream || 'Stream'}`;
+                          displayMeta = match.admissionNo || match.admissionNumber || match.id || '';
+                        }
+                      } catch {}
+                    }
+                    return (
+                      <>
+                        <Link to="/" onClick={() => setIsOpen(false)}>
+                          <p className="text-xs font-bold text-slate-900 truncate hover:text-indigo-600 transition-colors dark:text-white">{displayName}</p>
+                        </Link>
+                        <p className="text-[9px] font-bold text-indigo-500 uppercase tracking-widest truncate">{displayRole} {displayMeta ? `• ${displayMeta}` : ''}</p>
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
             </div>
             {!isCollapsed && (
               <div className="flex items-center justify-between gap-2 mt-3 pt-3 border-t border-gray-100">
                 <button
                   type="button"
-                  onClick={() => navigate('/settings/profile')}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-gray-600 hover:text-indigo-600 transition-colors py-1.5 px-2 rounded-md hover:bg-gray-100"
-                >
-                  <Settings className="w-4 h-4"/>
-                  <span>Settings</span>
-                </button>
-                <button
-                  type="button"
                   onClick={handleLogout}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
+                  className="w-full flex items-center justify-center gap-1.5 text-xs font-medium text-red-600 hover:text-red-700 transition-colors py-1.5 px-2 rounded-md hover:bg-red-50"
                 >
                   <LogOut className="w-4 h-4"/>
                   <span>Log Out</span>
