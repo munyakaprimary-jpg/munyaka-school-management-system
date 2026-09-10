@@ -211,20 +211,23 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         return ordered;
       }
 
-      // LEARNER / STUDENT role: show ONLY the 6 primary learner navigation links
+      // LEARNER / STUDENT role: show ONLY the 6 primary learner navigation links in exact order
       if (roleLower === 'student' || roleLower === 'learner') {
         const learnerPaths = ['/', '/attendance', '/reports', '/fees', '/study-corner', '/games'];
-        return menuItems.filter(item => learnerPaths.includes(item.path)).map(item => {
-          const labels: Record<string, string> = {
-            '/': 'Learner Dashboard',
-            '/attendance': 'My Attendance Log',
-            '/reports': 'My CBC Report Cards',
-            '/fees': 'My Fee Balance',
-            '/study-corner': 'Revision & CBC Learning Tools',
-            '/games': 'Educational Mini-Games',
-          };
-          return { ...item, label: labels[item.path] };
-        });
+        const labels: Record<string, string> = {
+          '/': 'Overview',
+          '/attendance': 'Attendance',
+          '/reports': 'Reports & Marksheets',
+          '/fees': 'Fees',
+          '/study-corner': 'Study Corner',
+          '/games': 'Games Hub',
+        };
+        const items = menuItems.filter(item => learnerPaths.includes(item.path));
+        // Sort items to match learnerPaths exact order
+        return learnerPaths.map(path => items.find(item => item.path === path)).filter(Boolean).map((item: any) => ({
+          ...item,
+          label: labels[item.path] || item.label
+        }));
       }
       if (roleLower === 'teacher') {
               return menuItems.filter(item => {
