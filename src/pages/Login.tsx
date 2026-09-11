@@ -38,6 +38,7 @@ import { cn } from '@/lib/utils';
 import { teacherLogin, checkServerHealth } from '@/services/mobileAuthService';
 import { getApiBaseUrl } from '@/lib/apiBase';
 import { PreRegisteredStaff, SYSTEM_ROLE_LABELS } from '@/types/staff-access';
+import { authenticateUser, getAllUnifiedUsers } from '@/utils/auth';
 import {
   MUNYAKA_ADMIN_PASSWORD,
   DEFAULT_ADMIN_PASSWORD,
@@ -319,163 +320,22 @@ const Login: React.FC = () => {
       setIsStaffVerifying(true);
       setStaffAuthError('');
   
-      console.log(`[Login] Staff login attempt for identifier: ${trimmedId}`);
+      console.log(`[Login] Universal staff login attempt for identifier: ${trimmedId}`);
 
-      // ── Auto-seed default staff accounts if munyaka_staff is empty or missing ──
-      try {
-        const existingStaffRaw = localStorage.getItem('munyaka_staff');
-        let staffArray = [];
-        if (existingStaffRaw) {
-          try {
-            staffArray = JSON.parse(existingStaffRaw);
-          } catch {
-            staffArray = [];
-          }
-        }
-        if (!Array.isArray(staffArray) || staffArray.length === 0) {
-          const defaultStaff = [
-            {
-              id: 'STF-001',
-              staffId: 'STF-001',
-              name: 'Sarah Teacher',
-              email: 'sarah.teacher@munyaka.sc.ke',
-              registeredEmail: 'sarah.teacher@munyaka.sc.ke',
-              tscNo: 'TSC123456',
-              tscNumber: 'TSC123456',
-              accessCode: 'MUNYAKA2026',
-              tempAccessCode: 'MUNYAKA2026',
-              password: 'MUNYAKA2026',
-              systemRole: 'teacher',
-              role: 'teacher'
-            },
-            {
-              id: 'STF-002',
-              staffId: 'STF-002',
-              name: 'John Librarian',
-              email: 'john.librarian@munyaka.sc.ke',
-              registeredEmail: 'john.librarian@munyaka.sc.ke',
-              tscNo: 'TSC654321',
-              tscNumber: 'TSC654321',
-              accessCode: 'MUNYAKA2026',
-              tempAccessCode: 'MUNYAKA2026',
-              password: 'MUNYAKA2026',
-              systemRole: 'librarian',
-              role: 'librarian'
-            },
-            {
-              id: 'STF-003',
-              staffId: 'STF-003',
-              name: 'Mary Support',
-              email: 'mary.support@munyaka.sc.ke',
-              registeredEmail: 'mary.support@munyaka.sc.ke',
-              accessCode: 'MUNYAKA2026',
-              tempAccessCode: 'MUNYAKA2026',
-              password: 'MUNYAKA2026',
-              systemRole: 'support',
-              role: 'support'
-            },
-            {
-              id: 'STF-004',
-              staffId: 'STF-004',
-              name: 'Admin User',
-              email: 'admin@munyaka.sc.ke',
-              registeredEmail: 'admin@munyaka.sc.ke',
-              accessCode: 'MUNYAKA2026',
-              tempAccessCode: 'MUNYAKA2026',
-              password: 'MUNYAKA2026',
-              systemRole: 'admin',
-              role: 'admin'
-            }
-          ];
-          localStorage.setItem('munyaka_staff', JSON.stringify(defaultStaff));
-          console.log('[Login] Auto-seeded default staff accounts into munyaka_staff.');
-        }
-      } catch (e) {
-        console.error('[Login] Error auto-seeding staff:', e);
-      }
+      // ── Use authenticateUser from auth normalization utility ───────────
+      const matchedUser = authenticateUser(trimmedId, trimmedPass);
 
-      // ── Offline authentication directly reading munyaka_staff and munyaka_personnel ──
-      let foundUser = null;
-      
-      const recordSources = ['munyaka_staff', 'munyaka_personnel', 'munyaka_staff_directory', 'munyaka_staff_prereg'];
-      const normalizedInputId = trimmedId.toLowerCase();
-      const normalizedInputCode = trimmedPass.toUpperCase();
-      const rawInputCode = trimmedPass;
-
-      for (const source of recordSources) {
-        try {
-          const rawData = localStorage.getItem(source);
-          if (!rawData) continue;
-          const records = JSON.parse(rawData);
-          if (!Array.isArray(records)) continue;
-
-          foundUser = records.find((s: any) => {
-            if (!s) return false;
-
-            // Normalize database identity fields
-            const email = s.email ? String(s.email).toLowerCase().trim() : '';
-            const registeredEmail = s.registeredEmail ? String(s.registeredEmail).toLowerCase().trim() : '';
-            const staffIdField = s.staffId ? String(s.staffId).toLowerCase().trim() : '';
-            const idField = s.id ? String(s.id).toLowerCase().trim() : '';
-            const tscNo = s.tscNo ? String(s.tscNo).toLowerCase().trim() : '';
-            const tscNumber = s.tscNumber ? String(s.tscNumber).toLowerCase().trim() : '';
-
-            // Identity matching across registeredEmail, email, staffId, tscNo, id
-            const identityMatch =
-              email === normalizedInputId ||
-              registeredEmail === normalizedInputId ||
-              staffIdField === normalizedInputId ||
-              idField === normalizedInputId ||
-              tscNo === normalizedInputId ||
-              tscNumber === normalizedInputId ||
-              (s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '')) ||
-              (s.nationalId && String(s.nationalId).trim() === trimmedId);
-
-            if (!identityMatch) return false;
-
-            // Normalize database passcode fields
-            const tempAccessCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
-            const accessCode = s.accessCode ? String(s.accessCode).trim() : '';
-            const password = s.password ? String(s.password).trim() : '';
-            const pin = s.pin ? String(s.pin).trim() : '';
-
-            // Passcode matching across tempAccessCode, accessCode, password, pin
-            const passcodeMatch =
-              tempAccessCode === rawInputCode ||
-              tempAccessCode.toUpperCase() === normalizedInputCode ||
-              accessCode === rawInputCode ||
-              accessCode.toUpperCase() === normalizedInputCode ||
-              password === rawInputCode ||
-              password.toUpperCase() === normalizedInputCode ||
-              pin === rawInputCode ||
-              pin.toUpperCase() === normalizedInputCode ||
-              // Default fallback code for emergency access
-              rawInputCode === 'MUNYAKA2026';
-
-            return passcodeMatch;
-          });
-
-          if (foundUser) {
-            console.log(`[Login] Found user in ${source}:`, foundUser.name || foundUser.email);
-            break;
-          }
-        } catch (err) {
-          console.error(`[Login] Error reading ${source}:`, err);
-        }
-      }
-
-      // ── If user found, log them in ──────────────────────────────────────────
-      if (foundUser) {
-        const userRole = foundUser.systemRole || foundUser.role || foundUser.designation || 'teacher';
+      if (matchedUser) {
+        const userRole = matchedUser.role || 'teacher';
         const userData = {
-          id: foundUser.id || foundUser.staffId || `staff-${Date.now()}`,
-          name: foundUser.name || foundUser.fullName || foundUser.username || 'Staff Member',
-          email: foundUser.email || foundUser.registeredEmail || trimmedId,
-          phone: foundUser.phone || '',
+          id: matchedUser.id || matchedUser.staffId || `staff-${Date.now()}`,
+          name: matchedUser.name || 'Staff Member',
+          email: matchedUser.email || trimmedId,
+          phone: matchedUser.phone || '',
           role: userRole,
-          staff_id: foundUser.staffId || foundUser.id || 'STF-001',
-          tsc_number: foundUser.tscNo || foundUser.tscNumber || '',
-          avatar: (foundUser.name || foundUser.fullName || 'S').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
+          staff_id: matchedUser.staffId || matchedUser.id || 'STF-001',
+          tsc_number: matchedUser.tscNo || '',
+          avatar: (matchedUser.name || 'Staff').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
         };
 
         try {
@@ -489,7 +349,7 @@ const Login: React.FC = () => {
         return;
       }
 
-      // ── If not found in storage, attempt server login as fallback ──────────────────
+      // ── If not found via utility, try LAN server login as fallback ───────
       try {
         const result = await teacherLogin(trimmedId, trimmedPass);
         if (result.success) {
@@ -506,6 +366,7 @@ const Login: React.FC = () => {
 
           try {
             localStorage.setItem('munyaka_session', JSON.stringify(userData));
+            localStorage.setItem('munyaka_active_user', JSON.stringify(userData));
           } catch { /* ignore */ }
 
           showSuccess(`Welcome, ${result.user.name}!`);

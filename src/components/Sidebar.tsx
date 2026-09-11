@@ -152,45 +152,34 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         }
       } catch {}
 
-      // If user has custom permissions or munyaka_nav_items has valid items, use them or merge
+      if (Array.isArray(storedNavItems) && storedNavItems.length > 0) {
+        return storedNavItems;
+      }
+
+      if (userObj.permissions && Array.isArray(userObj.permissions) && userObj.permissions.length > 0) {
+        // Map permissions to menu items
+        const permitted = menuItems.filter(item => userObj.permissions.includes(item.path));
+        if (permitted.length > 0) return permitted;
+      }
+
       const dashboardItem = menuItems.find(item => item.path === '/');
   
-      // ADMIN / SUPER_ADMIN
-      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin';
+      // ADMIN / HEAD TEACHER / SUPER_ADMIN
+      const isAdminRole = roleLower === 'admin' || roleLower === 'super_admin' || roleLower === 'head_teacher';
       if (isAdminRole) {
-        return menuItems.filter(item => {
-          if (item.path === '/study-corner') return true;
-          const itemRoles = item?.roles ?? [];
-          if (itemRoles.length > 0 && !itemRoles.includes('admin') && !itemRoles.includes('super_admin')) {
-            return false;
-          }
-          return true;
-        }).map(item => {
-          if (item.path === '/') return { ...item, label: 'Admin Dashboard' };
-          return item;
-        });
+        const adminPaths = ['/', '/students', '/staff', '/staff/pre-registration', '/settings', '/grades', '/learning-areas', '/exam-types', '/attendance', '/assessments', '/fees', '/timetable', '/notices', '/study-corner', '/games'];
+        const items = menuItems.filter(item => adminPaths.includes(item.path));
+        return adminPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
+          ...item,
+          label: item?.path === '/' ? 'Admin Dashboard' : item?.label
+        }));
       }
 
       // OWNER
       if (roleLower === 'owner') {
-        const roleFiltered = menuItems.filter(item => {
-          if (item.path === '/study-corner') return true;
-          if (item?.global) return true;
-          return (item?.roles || []).map((r: string) => String(r).toLowerCase()).includes('owner');
-        });
-        const withDashboard = dashboardItem && !roleFiltered.includes(dashboardItem)
-          ? [dashboardItem, ...roleFiltered]
-          : roleFiltered;
-        const order = ['/', '/payment-management', '/games', '/settings/profile', '/settings'];
-        const ordered: typeof withDashboard = [];
-        order.forEach(p => {
-          const found = withDashboard.find((i: any) => i?.path === p);
-          if (found) ordered.push(found);
-        });
-        withDashboard.forEach((i: any) => {
-          if (!ordered.includes(i)) ordered.push(i);
-        });
-        return ordered;
+        const ownerPaths = ['/', '/payment-management', '/games', '/settings/profile', '/settings'];
+        const items = menuItems.filter(item => ownerPaths.includes(item.path));
+        return ownerPaths.map(path => items.find(item => item?.path === path)).filter(Boolean);
       }
 
       // TEACHER role
@@ -203,23 +192,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         }));
       }
 
-      // LIBRARIAN role
-      if (roleLower === 'librarian') {
-        const libPaths = ['/', '/library', '/study-corner', '/inventory', '/notices', '/games'];
-        const items = menuItems.filter(item => libPaths.includes(item.path));
-        return libPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
-          ...item,
-          label: item?.path === '/' ? "Librarian Dashboard" : item?.label
-        }));
-      }
-
-      // SUPPORT STAFF role
-      if (roleLower === 'support' || roleLower === 'support_staff' || roleLower === 'bursar' || roleLower === 'accounts' || roleLower === 'secretariat') {
-        const supportPaths = ['/', '/fees', '/inventory', '/staff', '/notices', '/study-corner', '/games'];
+      // LIBRARIAN / SUPPORT role
+      if (roleLower === 'librarian' || roleLower === 'support' || roleLower === 'support_staff' || roleLower === 'bursar' || roleLower === 'accounts' || roleLower === 'secretariat') {
+        const supportPaths = ['/', '/library', '/fees', '/inventory', '/staff', '/notices', '/study-corner', '/games'];
         const items = menuItems.filter(item => supportPaths.includes(item.path));
         return supportPaths.map(path => items.find(item => item?.path === path)).filter(Boolean).map((item: any) => ({
           ...item,
-          label: item?.path === '/' ? "Support Dashboard" : item?.label
+          label: item?.path === '/' ? "Dashboard" : item?.label
         }));
       }
 
@@ -241,14 +220,13 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         }));
       }
 
-      // ── Hardcoded robust default fallback for any other/unrecognized role ──
+      // ── Hardcoded robust default fallback for any other role ──
       const defaultRolePaths = ['/', '/students', '/attendance', '/assessments', '/analysis', '/timetable', '/notices', '/study-corner', '/library', '/games'];
       const defaultItems = menuItems.filter(item => defaultRolePaths.includes(item.path));
       if (defaultItems.length > 0) {
         return defaultItems;
       }
 
-      // Absolute emergency fallback if menuItems is empty
       return [
         { icon: LayoutDashboard, label: 'Dashboard', path: '/' },
         { icon: BookOpen, label: 'Study Corner', path: '/study-corner' },
