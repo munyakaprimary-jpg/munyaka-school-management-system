@@ -468,14 +468,14 @@ export default function StaffDirectory() {
 
       {/* Edit HR Profile Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
-          <DialogHeader>
+        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl flex flex-col">
+          <DialogHeader className="shrink-0">
             <DialogTitle className="text-xl font-black text-slate-900">
               {editingStaff ? 'Edit Staff HR Profile' : 'Add New Staff Member'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2">
+          <form onSubmit={handleSubmit} className="space-y-4 mt-2 flex-1">
             <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Full Name</Label>
               <Input
@@ -536,7 +536,7 @@ export default function StaffDirectory() {
               />
             </div>
 
-            <DialogFooter className="pt-4">
+            <DialogFooter className="pt-4 sticky bottom-0 bg-white pb-2">
               <Button
                 type="button"
                 variant="outline"
