@@ -382,10 +382,10 @@ const Login: React.FC = () => {
       // Use the selected support role for role filtering (normalized)
       const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
 
-      // Try multiple localStorage sources for staff data
+      // Try multiple localStorage sources for staff data, prioritizing 'munyaka_staff'
       const staffSources = [
+        'munyaka_staff',           // Primary Staff Access Master key
         'munyaka_staff_directory',  // Unified staff directory (StaffMasterService)
-        'munyaka_staff',           // Legacy staff array
         'munyaka_staff_prereg',    // Pre-registration ledger
       ];
 
