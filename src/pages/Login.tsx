@@ -392,12 +392,16 @@ const Login: React.FC = () => {
             
             foundUser = staffArray.find((s: any) => {
               const emailMatch =
-                (s.email && s.email.toLowerCase().trim() === inputId) ||
-                (s.registeredEmail && s.registeredEmail.toLowerCase().trim() === inputId);
+                (s.email && String(s.email).toLowerCase().trim() === inputId) ||
+                (s.registeredEmail && String(s.registeredEmail).toLowerCase().trim() === inputId);
               
-              const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
-              const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
-              const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+              const staffIdMatch =
+                (s.staffId && String(s.staffId).toLowerCase().trim() === inputId) ||
+                (s.id && String(s.id).toLowerCase().trim() === inputId) ||
+                (s.ref && String(s.ref).toLowerCase().trim() === inputId);
+
+              const nationalIdMatch = s.nationalId && String(s.nationalId).trim() === trimmedId;
+              const phoneMatch = s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
               if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
                 return false;
@@ -405,17 +409,22 @@ const Login: React.FC = () => {
               
               const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
               const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
+              const storedPin = s.pin ? String(s.pin).trim() : '';
+              const storedPassword = s.password ? String(s.password).trim() : '';
               
               const codeMatch =
                 storedAccessCode === inputCode ||
                 storedAccessCode.toUpperCase() === upperInputCode ||
                 storedTempCode === inputCode ||
                 storedTempCode.toUpperCase() === upperInputCode ||
+                storedPin === inputCode ||
+                storedPin.toUpperCase() === upperInputCode ||
+                storedPassword === inputCode ||
+                storedPassword.toUpperCase() === upperInputCode ||
                 s.ref === inputCode ||
                 s.ref?.toUpperCase() === upperInputCode ||
                 s.staffId === inputCode ||
                 s.staffId?.toUpperCase() === upperInputCode ||
-                s.password === inputCode ||
                 (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
               
               return codeMatch;
@@ -442,12 +451,16 @@ const Login: React.FC = () => {
             
             foundUser = staffArray.find((s: any) => {
               const emailMatch =
-                (s.email && s.email.toLowerCase().trim() === inputId) ||
-                (s.registeredEmail && s.registeredEmail.toLowerCase().trim() === inputId);
+                (s.email && String(s.email).toLowerCase().trim() === inputId) ||
+                (s.registeredEmail && String(s.registeredEmail).toLowerCase().trim() === inputId);
               
-              const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
-              const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
-              const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+              const staffIdMatch =
+                (s.staffId && String(s.staffId).toLowerCase().trim() === inputId) ||
+                (s.id && String(s.id).toLowerCase().trim() === inputId) ||
+                (s.ref && String(s.ref).toLowerCase().trim() === inputId);
+
+              const nationalIdMatch = s.nationalId && String(s.nationalId).trim() === trimmedId;
+              const phoneMatch = s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
               if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
                 return false;
@@ -455,15 +468,18 @@ const Login: React.FC = () => {
               
               const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
               const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
+              const storedPin = s.pin ? String(s.pin).trim() : '';
+              const storedPassword = s.password ? String(s.password).trim() : '';
               
               const codeMatch =
                 storedAccessCode === inputCode ||
                 storedAccessCode.toUpperCase() === upperInputCode ||
                 storedTempCode === inputCode ||
                 storedTempCode.toUpperCase() === upperInputCode ||
-                s.ref === inputCode ||
-                s.staffId === inputCode ||
-                s.password === inputCode;
+                storedPin === inputCode ||
+                storedPin.toUpperCase() === upperInputCode ||
+                storedPassword === inputCode ||
+                storedPassword.toUpperCase() === upperInputCode;
               
               return codeMatch;
             });
