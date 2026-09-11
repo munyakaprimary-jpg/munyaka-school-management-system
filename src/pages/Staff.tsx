@@ -123,9 +123,11 @@ const Staff = () => {
     const refresh = () => setMasterRecords(getStaffMaster());
     window.addEventListener('staff-changed', refresh);
     window.addEventListener('munyaka:staff-directory-changed', refresh);
+    window.addEventListener('staff-updated', refresh);
     return () => {
       window.removeEventListener('staff-changed', refresh);
       window.removeEventListener('munyaka:staff-directory-changed', refresh);
+      window.removeEventListener('staff-updated', refresh);
     };
   }, []);
 
