@@ -275,8 +275,10 @@ const App = () => {
                     <Sonner />
                     <Routes>
                       {/* Public Routes */}
-                      <Route path="/" element={<Login />} />
+                      <Route path="/" element={<CoverPage />} />
                       <Route path="/login" element={<Login />} />
+                      <Route path="/staff-login" element={<Login />} />
+                      <Route path="/cover" element={<CoverPage />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
                       {/* Protected Routes */}
