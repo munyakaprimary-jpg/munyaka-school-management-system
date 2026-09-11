@@ -505,8 +505,13 @@ const Login: React.FC = () => {
           userData.staff_id = foundUser.staffId || foundUser.ref || foundUser.id || 'STF-001';
         }
 
+        if (!userData.tsc_number || userData.tsc_number === '-') {
+          userData.tsc_number = foundUser.tscNumber || foundUser.tsc_no || foundUser.tsc_number || foundUser.tscNo || '';
+        }
+
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
+          localStorage.setItem('munyaka_active_user', JSON.stringify(userData));
         } catch { /* ignore */ }
 
         showSuccess(`Welcome, ${userData.name}!`);
