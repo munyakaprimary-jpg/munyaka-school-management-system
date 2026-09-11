@@ -73,6 +73,7 @@ import { AppErrorBoundary } from "./components/AppErrorBoundary";
 import AuthGate from "./components/AuthGate";
 import { runOneTimeAdmissionNoBackfill } from "./utils/backfillAdmissionNumbers";
 import { runOneTimeAssessmentCleanup, runOneTimeLegacyAdmNoMigration } from "./utils/assessmentNoMigration";
+import { initializeSeedData } from "./utils/seedData";
 
 // ── LocalStorage keys that hold active learner rows ────────────────────────
 const LEARNER_STORAGE_KEYS = [
@@ -252,6 +253,7 @@ const App = () => {
   //
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
+    initializeSeedData();
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();
