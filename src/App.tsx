@@ -11,7 +11,6 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
-import CoverPage from "./pages/CoverPage";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
@@ -276,13 +275,11 @@ const App = () => {
                     <Sonner />
                     <Routes>
                       {/* Public Routes */}
-                      <Route path="/" element={<CoverPage />} />
                       <Route path="/login" element={<Login />} />
-                      <Route path="/staff-login" element={<Login />} />
-                      <Route path="/cover" element={<CoverPage />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
                       {/* Protected Routes */}
+                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
