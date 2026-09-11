@@ -522,14 +522,14 @@ export default function StaffDirectory() {
 
       {/* Edit HR Profile / Add Staff Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl flex flex-col">
-          <DialogHeader className="shrink-0">
+        <DialogContent className="max-w-md max-h-[85vh] overflow-hidden rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl flex flex-col">
+          <DialogHeader className="shrink-0 pb-2">
             <DialogTitle className="text-xl font-black text-slate-900">
               {editingStaff ? 'Edit Staff HR Profile' : 'Add New Staff Member'}
             </DialogTitle>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4 mt-2 flex-1">
+          <form onSubmit={handleSubmit} className="space-y-4 overflow-y-auto flex-1 pr-1 custom-scrollbar">
             <div className="space-y-1.5">
               <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Full Name</Label>
               <Input
@@ -585,7 +585,7 @@ export default function StaffDirectory() {
               <Label className="text-xs font-black uppercase tracking-wider text-slate-400">
                 Assigned Learning Areas / Subjects
               </Label>
-              <div className="p-3 bg-slate-50 rounded-2xl max-h-48 overflow-y-auto space-y-2 border border-slate-100">
+              <div className="p-3 bg-slate-50 rounded-2xl max-h-44 overflow-y-auto space-y-2 border border-slate-100">
                 {availableLearningAreas.map((area) => {
                   const isChecked = selectedSubjects.includes(area);
                   return (
@@ -607,7 +607,7 @@ export default function StaffDirectory() {
               </p>
             </div>
 
-            <DialogFooter className="pt-4 sticky bottom-0 bg-white pb-2">
+            <DialogFooter className="pt-4 pb-2 shrink-0 bg-white">
               <Button
                 type="button"
                 variant="outline"
