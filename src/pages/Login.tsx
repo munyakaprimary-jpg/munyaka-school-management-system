@@ -390,10 +390,20 @@ const Login: React.FC = () => {
             const inputCode = trimmedPass.trim();
             const upperInputCode = inputCode.toUpperCase();
             
+            // Support username prefix matching (before @) to tolerate domain variations (.sc.ke vs .ac.ke)
+            const inputUsernamePrefix = inputId.includes('@') ? inputId.split('@')[0] : inputId;
+
             foundUser = staffArray.find((s: any) => {
+              const emailVal = s.email ? String(s.email).toLowerCase().trim() : '';
+              const regEmailVal = s.registeredEmail ? String(s.registeredEmail).toLowerCase().trim() : '';
+              const emailPrefix = emailVal.includes('@') ? emailVal.split('@')[0] : emailVal;
+              const regEmailPrefix = regEmailVal.includes('@') ? regEmailVal.split('@')[0] : regEmailVal;
+
               const emailMatch =
-                (s.email && String(s.email).toLowerCase().trim() === inputId) ||
-                (s.registeredEmail && String(s.registeredEmail).toLowerCase().trim() === inputId);
+                emailVal === inputId ||
+                regEmailVal === inputId ||
+                (emailPrefix && emailPrefix === inputUsernamePrefix) ||
+                (regEmailPrefix && regEmailPrefix === inputUsernamePrefix);
               
               const staffIdMatch =
                 (s.staffId && String(s.staffId).toLowerCase().trim() === inputId) ||
@@ -403,7 +413,6 @@ const Login: React.FC = () => {
               const nationalIdMatch = s.nationalId && String(s.nationalId).trim() === trimmedId;
               const phoneMatch = s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
-              // If identifier matches email, registeredEmail, or code directly, authorize
               const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
               const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
               const storedPin = s.pin ? String(s.pin).trim() : '';
@@ -424,7 +433,6 @@ const Login: React.FC = () => {
                 s.staffId?.toUpperCase() === upperInputCode ||
                 (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
 
-              // If identifier is an email/staffId and access code matches
               const identifierMatch = emailMatch || staffIdMatch || nationalIdMatch || phoneMatch || (!emailMatch && !staffIdMatch && (inputCode === storedAccessCode || inputCode === storedTempCode));
 
               return identifierMatch && codeMatch;
