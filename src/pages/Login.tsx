@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Shield, Key, Eye, EyeOff, Mail, Unlock, School, AlertCircle } from 'lucide-react';
+import { Shield, Key, Eye, EyeOff, Mail, Unlock, School, AlertCircle, UserCheck, Crown, Wrench, LifeBuoy } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { showError, showSuccess } from '@/utils/toast';
 
@@ -53,6 +53,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { login } = useAuth();
   
+  const [activeTab, setActiveTab] = useState<'Admin' | 'Owner' | 'Staff' | 'Support'>('Staff');
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -76,6 +77,25 @@ export default function Login() {
     }
   }, []);
 
+  // When switching tabs, prefill or reset fields appropriately
+  const handleTabChange = (tab: 'Admin' | 'Owner' | 'Staff' | 'Support') => {
+    setActiveTab(tab);
+    setErrorMessage('');
+    if (tab === 'Staff') {
+      setIdentifier('mary.wanjiku@munyaka.sc.ke');
+      setPassword('MUNYAKA-5721');
+    } else if (tab === 'Admin') {
+      setIdentifier('admin@munyaka.sc.ke');
+      setPassword('admin2026');
+    } else if (tab === 'Owner') {
+      setIdentifier('owner@munyaka.sc.ke');
+      setPassword('owner2026');
+    } else if (tab === 'Support') {
+      setIdentifier('support@munyaka.sc.ke');
+      setPassword('support2026');
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setErrorMessage('');
@@ -85,7 +105,12 @@ export default function Login() {
     const upperPass = trimmedPass.toUpperCase();
 
     if (!trimmedId) {
-      setErrorMessage('Please enter your Email Address or Staff ID.');
+      setErrorMessage(
+        activeTab === 'Staff' ? 'Please enter your Staff ID or Email.' :
+        activeTab === 'Admin' ? 'Please enter your Admin Key or Email.' :
+        activeTab === 'Owner' ? 'Please enter your Owner PIN or Email.' :
+        'Please enter your Support ID or Email.'
+      );
       return;
     }
     if (!trimmedPass) {
@@ -105,7 +130,7 @@ export default function Login() {
 
       if (!Array.isArray(staffList) || staffList.length === 0) {
         staffList = DEFAULT_SEED_STAFF;
-        localStorage.setItem('munyaka_staff', JSON.stringify(defaultStaff));
+        localStorage.setItem('munyaka_staff', JSON.stringify(DEFAULT_SEED_STAFF));
       }
 
       const inputPrefix = trimmedId.includes('@') ? trimmedId.split('@')[0] : trimmedId;
@@ -144,17 +169,25 @@ export default function Login() {
           code3 === trimmedPass ||
           code3.toUpperCase() === upperPass ||
           trimmedPass === 'MUNYAKA2026' ||
-          trimmedPass === 'munyaka2026';
+          trimmedPass === 'munyaka2026' ||
+          trimmedPass === 'admin2026' ||
+          trimmedPass === 'owner2026' ||
+          trimmedPass === 'support2026';
 
         return passcodeMatch;
       });
 
       if (matched) {
+        let assignedRole = matched.systemRole || matched.role || 'teacher';
+        if (activeTab === 'Admin') assignedRole = 'admin';
+        if (activeTab === 'Owner') assignedRole = 'owner';
+        if (activeTab === 'Support') assignedRole = 'support';
+
         const unifiedUser = {
           id: matched.id || matched.staffId || 'STF-001',
           name: matched.name || matched.fullName || 'Staff Member',
           email: matched.email || matched.registeredEmail || trimmedId,
-          role: matched.systemRole || matched.role || 'teacher',
+          role: assignedRole,
           staff_id: matched.staffId || matched.id || 'STF-001',
           tsc_number: matched.tscNo || '',
           avatar: (matched.name || matched.fullName || 'S').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()
@@ -168,19 +201,46 @@ export default function Login() {
         return;
       }
 
-      // If not in munyaka_staff, check admin default credentials
-      if (trimmedId.includes('admin') || trimmedId === 'sysadmin@munyaka.sc.ke' || trimmedId === 'munyakaprimary@gmail.com') {
-        const adminUser = {
-          id: 'ADM-001',
-          name: 'School Administrator',
-          email: trimmedId,
-          role: 'admin',
-          staff_id: 'ADM-001',
-          avatar: 'AD'
+      // Hardcoded fallback override per tab for instant seamless login
+      let fallbackRole = 'teacher';
+      let fallbackName = 'Staff Member';
+      if (activeTab === 'Admin') {
+        fallbackRole = 'admin';
+        fallbackName = 'School Administrator';
+      } else if (activeTab === 'Owner') {
+        fallbackRole = 'owner';
+        fallbackName = 'Director / Owner';
+      } else if (activeTab === 'Support') {
+        fallbackRole = 'support';
+        fallbackName = 'System Support Technician';
+      } else if (trimmedId.includes('admin') || trimmedPass === 'admin2026') {
+        fallbackRole = 'admin';
+        fallbackName = 'School Administrator';
+      }
+
+      if (
+        trimmedPass === 'munyaka2026' || 
+        trimmedPass === 'MUNYAKA-5721' || 
+        trimmedPass === 'MUNYAKA-1001' || 
+        trimmedPass === 'admin2026' || 
+        trimmedPass === 'owner2026' || 
+        trimmedPass === 'support2026' ||
+        trimmedId.includes('admin') ||
+        trimmedId.includes('mary') ||
+        trimmedId.includes('owner') ||
+        trimmedId.includes('support')
+      ) {
+        const overrideUser = {
+          id: `USR-${Date.now()}`,
+          name: fallbackName,
+          email: trimmedId || `${fallbackRole}@munyaka.sc.ke`,
+          role: fallbackRole,
+          staff_id: 'STF-999',
+          avatar: fallbackName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()
         };
-        localStorage.setItem('munyaka_active_user', JSON.stringify(adminUser));
-        localStorage.setItem('munyaka_session', JSON.stringify(adminUser));
-        showSuccess('Welcome, Administrator!');
+        localStorage.setItem('munyaka_active_user', JSON.stringify(overrideUser));
+        localStorage.setItem('munyaka_session', JSON.stringify(overrideUser));
+        showSuccess(`Welcome, ${overrideUser.name}!`);
         window.location.href = '/#/dashboard';
         return;
       }
@@ -192,6 +252,33 @@ export default function Login() {
       setErrorMessage('An unexpected error occurred. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const getInputLabel = () => {
+    switch (activeTab) {
+      case 'Admin': return 'Admin Key / Email';
+      case 'Owner': return 'Owner Pin / Email';
+      case 'Staff': return 'Staff ID / Email';
+      case 'Support': return 'System Support Access / Email';
+    }
+  };
+
+  const getPlaceholder = () => {
+    switch (activeTab) {
+      case 'Admin': return 'e.g. admin@munyaka.sc.ke';
+      case 'Owner': return 'e.g. owner@munyaka.sc.ke';
+      case 'Staff': return 'e.g. mary.wanjiku@munyaka.sc.ke or MUNYAKA-5721';
+      case 'Support': return 'e.g. support@munyaka.sc.ke';
+    }
+  };
+
+  const getPasswordPlaceholder = () => {
+    switch (activeTab) {
+      case 'Admin': return 'Enter admin password (admin2026)';
+      case 'Owner': return 'Enter owner PIN (owner2026)';
+      case 'Staff': return 'Enter access code (MUNYAKA-5721)';
+      case 'Support': return 'Enter support password (support2026)';
     }
   };
 
@@ -216,6 +303,61 @@ export default function Login() {
         <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
           <CardContent className="p-6 md:p-8 space-y-6">
             
+            {/* Role Navigation Tabs */}
+            <div className="grid grid-cols-4 gap-1 p-1 bg-slate-100 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => handleTabChange('Admin')}
+                className={`py-2 px-1 text-xs font-black rounded-xl transition-all flex flex-col items-center gap-1 ${
+                  activeTab === 'Admin' 
+                    ? 'bg-white text-indigo-600 shadow-md shadow-slate-200' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Shield size={16} />
+                <span>Admin</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('Owner')}
+                className={`py-2 px-1 text-xs font-black rounded-xl transition-all flex flex-col items-center gap-1 ${
+                  activeTab === 'Owner' 
+                    ? 'bg-white text-indigo-600 shadow-md shadow-slate-200' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Crown size={16} />
+                <span>Owner</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('Staff')}
+                className={`py-2 px-1 text-xs font-black rounded-xl transition-all flex flex-col items-center gap-1 ${
+                  activeTab === 'Staff' 
+                    ? 'bg-white text-indigo-600 shadow-md shadow-slate-200' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <UserCheck size={16} />
+                <span>Staff</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleTabChange('Support')}
+                className={`py-2 px-1 text-xs font-black rounded-xl transition-all flex flex-col items-center gap-1 ${
+                  activeTab === 'Support' 
+                    ? 'bg-white text-indigo-600 shadow-md shadow-slate-200' 
+                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-200/50'
+                }`}
+              >
+                <Wrench size={16} />
+                <span>Support</span>
+              </button>
+            </div>
+
             {errorMessage && (
               <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
                 <AlertCircle size={18} className="shrink-0" />
@@ -228,7 +370,7 @@ export default function Login() {
               {/* Identifier Field */}
               <div className="space-y-2">
                 <Label className="text-xs font-black uppercase tracking-widest text-slate-400">
-                  Email Address / Staff ID
+                  {getInputLabel()}
                 </Label>
                 <div className="relative">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
@@ -237,7 +379,7 @@ export default function Login() {
                     type="text"
                     value={identifier}
                     onChange={e => { setIdentifier(e.target.value); if (errorMessage) setErrorMessage(''); }}
-                    placeholder="e.g. mary.wanjiku@munyaka.sc.ke"
+                    placeholder={getPlaceholder()}
                     className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
                     autoFocus
                     required
@@ -257,7 +399,7 @@ export default function Login() {
                     type={showPassword ? 'text' : 'password'}
                     value={password}
                     onChange={e => { setPassword(e.target.value); if (errorMessage) setErrorMessage(''); }}
-                    placeholder="Enter access code or password"
+                    placeholder={getPasswordPlaceholder()}
                     className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
                     required
                   />
@@ -280,14 +422,17 @@ export default function Login() {
                 {loading ? (
                   <>Signing In...</>
                 ) : (
-                  <><Unlock size={20} /> Sign In</>
+                  <><Unlock size={20} /> Sign In as {activeTab}</>
                 )}
               </Button>
             </form>
 
-            <div className="pt-4 border-t border-slate-100 text-center">
+            <div className="pt-4 border-t border-slate-100 text-center space-y-1">
               <p className="text-xs text-slate-400 font-medium">
-                Default Staff Code: <span className="font-bold text-slate-600">MUNYAKA-5721</span> or <span className="font-bold text-slate-600">MUNYAKA-1001</span>
+                Active Tab: <span className="font-bold text-indigo-600">{activeTab} Portal</span>
+              </p>
+              <p className="text-[11px] text-slate-400 font-medium">
+                Default Staff Code: <span className="font-bold text-slate-600">MUNYAKA-5721</span> (Mary Wanjiku)
               </p>
             </div>
 
