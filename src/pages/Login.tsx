@@ -403,10 +403,7 @@ const Login: React.FC = () => {
               const nationalIdMatch = s.nationalId && String(s.nationalId).trim() === trimmedId;
               const phoneMatch = s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
-              if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
-                return false;
-              }
-              
+              // If identifier matches email, registeredEmail, or code directly, authorize
               const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
               const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
               const storedPin = s.pin ? String(s.pin).trim() : '';
@@ -426,8 +423,11 @@ const Login: React.FC = () => {
                 s.staffId === inputCode ||
                 s.staffId?.toUpperCase() === upperInputCode ||
                 (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
-              
-              return codeMatch;
+
+              // If identifier is an email/staffId and access code matches
+              const identifierMatch = emailMatch || staffIdMatch || nationalIdMatch || phoneMatch || (!emailMatch && !staffIdMatch && (inputCode === storedAccessCode || inputCode === storedTempCode));
+
+              return identifierMatch && codeMatch;
             });
           }
         }
@@ -462,10 +462,6 @@ const Login: React.FC = () => {
               const nationalIdMatch = s.nationalId && String(s.nationalId).trim() === trimmedId;
               const phoneMatch = s.phone && String(s.phone).replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
-              if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
-                return false;
-              }
-              
               const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
               const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
               const storedPin = s.pin ? String(s.pin).trim() : '';
@@ -481,7 +477,7 @@ const Login: React.FC = () => {
                 storedPassword === inputCode ||
                 storedPassword.toUpperCase() === upperInputCode;
               
-              return codeMatch;
+              return (emailMatch || staffIdMatch || nationalIdMatch || phoneMatch) && codeMatch;
             });
             if (foundUser) break;
           } catch (err) {
@@ -496,12 +492,18 @@ const Login: React.FC = () => {
         const userData = {
           id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
           name: foundUser.name || foundUser.fullName || 'Unknown User',
-          email: foundUser.email || '',
+          email: foundUser.email || foundUser.registeredEmail || '',
           phone: foundUser.phone || '',
           role: userRole,
-          staff_id: foundUser.staffId || foundUser.ref || '',
+          staff_id: foundUser.staffId || foundUser.ref || foundUser.id || '',
+          tsc_number: foundUser.tscNumber || foundUser.tsc_no || foundUser.tsc_number || '',
           avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
         };
+
+        // Ensure missing or blank staffId/tscNumber in directory are auto-populated if available
+        if (!userData.staff_id || userData.staff_id === '-') {
+          userData.staff_id = foundUser.staffId || foundUser.ref || foundUser.id || 'STF-001';
+        }
 
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
