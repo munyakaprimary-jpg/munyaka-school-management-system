@@ -40,7 +40,7 @@ const DEFAULT_LEARNING_AREAS = [
   'Agriculture & Nutrition',
   'Social Studies',
   'Creative Arts & Sports',
-  'Religious Education (CRE/IRE/HRE)'
+  'Religious Education'
 ];
 
 const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
@@ -97,12 +97,27 @@ export default function StaffDirectory() {
     try {
       const rawAreas = localStorage.getItem('munyaka_learning_areas');
       if (rawAreas) {
-        const parsedAreas = JSON.parse(rawAreas);
-        if (Array.isArray(parsedAreas) && parsedAreas.length > 0) {
-          const areaNames = parsedAreas.map((a: any) => typeof a === 'string' ? a : (a.name || a.title || ''));
-          const validNames = areaNames.filter(Boolean);
-          if (validNames.length > 0) {
-            setAvailableLearningAreas(validNames);
+        const parsed = JSON.parse(rawAreas);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const subjectList = parsed.flatMap((item: any) => {
+            if (typeof item === 'string') return item;
+            if (item.subjects && Array.isArray(item.subjects)) {
+              return item.subjects.map((s: any) => typeof s === 'string' ? s : (s.name || s.title || ''));
+            }
+            if (item.learningAreas && Array.isArray(item.learningAreas)) {
+              return item.learningAreas.map((s: any) => typeof s === 'string' ? s : (s.name || s.title || ''));
+            }
+            if (item.name || item.title) return item.name || item.title;
+            return [];
+          });
+
+          const excludedLevels = ['Pre-Primary', 'Lower Primary', 'Upper Primary', 'Junior Secondary', 'Junior School'];
+          const uniqueSubjects = Array.from(new Set(subjectList)).filter(
+            (subject) => typeof subject === 'string' && subject.trim().length > 0 && !excludedLevels.includes(subject)
+          );
+
+          if (uniqueSubjects.length > 0) {
+            setAvailableLearningAreas(uniqueSubjects as string[]);
           }
         }
       }
@@ -325,7 +340,7 @@ export default function StaffDirectory() {
             <Users size={14} /> Human Resources
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Directory & HR Profiles</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, learning areas, and employment profiles.</p>
+          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, subjects, and employment profiles.</p>
         </div>
         <Button onClick={handleOpenAdd} className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
           <UserPlus size={18} /> Add New Staff
