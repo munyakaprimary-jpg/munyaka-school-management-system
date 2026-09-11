@@ -376,96 +376,96 @@ const Login: React.FC = () => {
         return;
       }
   
-      // ── Offline authentication (localStorage lookup) ─────────────────────────────────
-      console.log('[Login] Attempting offline authentication...');
-
-      // Use the selected support role for role filtering (normalized)
-      const normalizedSelectedRole = selectedSupportRole ? selectedSupportRole.toLowerCase().trim() : null;
-
-      // Try multiple localStorage sources for staff data, prioritizing 'munyaka_staff'
-      const staffSources = [
-        'munyaka_staff',           // Primary Staff Access Master key
-        'munyaka_staff_directory',  // Unified staff directory (StaffMasterService)
-        'munyaka_staff_prereg',    // Pre-registration ledger
-      ];
+      // ── Offline authentication strictly using localStorage munyaka_staff ─────────
+      console.log('[Login] Attempting offline authentication strictly from munyaka_staff...');
 
       let foundUser = null;
       
-      for (const source of staffSources) {
-        try {
-          const staffData = localStorage.getItem(source);
-          if (!staffData) continue;
-          
+      try {
+        const staffData = localStorage.getItem('munyaka_staff');
+        if (staffData) {
           const staffArray = JSON.parse(staffData);
-          if (!Array.isArray(staffArray)) continue;
-          
-          const inputId = trimmedId.toLowerCase().trim();
-          const inputCode = trimmedPass.trim();
-          
-          // Find user by email, staffId, nationalId, or phone
-          const user = staffArray.find((s: any) => {
-            const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
-            const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
-            const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
-            const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+          if (Array.isArray(staffArray)) {
+            const inputId = trimmedId.toLowerCase().trim();
+            const inputCode = trimmedPass.trim();
             
-            if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
-              return false;
-            }
-            
-            // Flexible credential matching: accessCode, ref, staffId, or password
-            const codeMatch =
-              s.accessCode === inputCode ||
-              s.ref === inputCode ||
-              s.staffId === inputCode ||
-              s.password === inputCode ||
-              (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
-            
-            if (!codeMatch) {
-              return false;
-            }
-            
-            // Case-insensitive & flexible role check
-            const normalizedStaffRole = (s.systemRole || s.role || s.designation || '').toLowerCase().trim();
-            
-            if (normalizedSelectedRole) {
-              const isRoleMatch =
-                normalizedStaffRole === normalizedSelectedRole ||
-                (normalizedSelectedRole === 'librarian' && normalizedStaffRole.includes('librar')) ||
-                normalizedStaffRole === 'staff' ||
-                normalizedStaffRole === 'support_staff' ||
-                normalizedStaffRole === 'support_admin' ||
-                normalizedStaffRole === 'bursar';
+            foundUser = staffArray.find((s: any) => {
+              const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
+              const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
+              const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
+              const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
               
-              if (!isRoleMatch) {
+              if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
                 return false;
               }
-            }
-            
-            return true;
-          });
-          
-          if (user) {
-            foundUser = user;
-            console.log('[Login] Found user in offline source:', source, foundUser);
-            break;
+              
+              // Match accessCode or tempAccessCode or password
+              const codeMatch =
+                s.accessCode === inputCode ||
+                s.tempAccessCode === inputCode ||
+                s.ref === inputCode ||
+                s.staffId === inputCode ||
+                s.password === inputCode ||
+                (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
+              
+              return codeMatch;
+            });
           }
-        } catch (error) {
-          console.error(`[Login] Error parsing ${source}:`, error);
-          continue;
+        }
+      } catch (error) {
+        console.error('[Login] Error reading munyaka_staff:', error);
+      }
+
+      // ── Fallback to other local sources if not found in munyaka_staff ─────────
+      if (!foundUser) {
+        const fallbackSources = ['munyaka_staff_directory', 'munyaka_staff_prereg'];
+        for (const source of fallbackSources) {
+          try {
+            const staffData = localStorage.getItem(source);
+            if (!staffData) continue;
+            const staffArray = JSON.parse(staffData);
+            if (!Array.isArray(staffArray)) continue;
+            
+            const inputId = trimmedId.toLowerCase().trim();
+            const inputCode = trimmedPass.trim();
+            
+            foundUser = staffArray.find((s: any) => {
+              const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
+              const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
+              const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
+              const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
+              
+              if (!emailMatch && !staffIdMatch && !nationalIdMatch && !phoneMatch) {
+                return false;
+              }
+              
+              const codeMatch =
+                s.accessCode === inputCode ||
+                s.tempAccessCode === inputCode ||
+                s.ref === inputCode ||
+                s.staffId === inputCode ||
+                s.password === inputCode;
+              
+              return codeMatch;
+            });
+            if (foundUser) break;
+          } catch (err) {
+            console.error(`[Login] Error reading ${source}:`, err);
+          }
         }
       }
 
-      // ── If user found offline, log them in ───────────────────────────────────────────
+      // ── If user found offline, log them in and assign session based on user.role ─
       if (foundUser) {
+        const userRole = foundUser.systemRole || foundUser.role || foundUser.designation || 'staff';
         const userData = {
           id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
           name: foundUser.name || foundUser.fullName || 'Unknown User',
           email: foundUser.email || '',
           phone: foundUser.phone || '',
-          role: foundUser.systemRole || foundUser.role || foundUser.designation || 'staff',
+          role: userRole,
           staff_id: foundUser.staffId || foundUser.ref || '',
-          avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase(),
+          avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
         };
 
         try {
@@ -473,15 +473,13 @@ const Login: React.FC = () => {
         } catch { /* ignore */ }
 
         showSuccess(`Welcome, ${userData.name}!`);
-        navigate(getStaffRedirectPath(userData.role), { replace: true });
+        navigate(getStaffRedirectPath(userRole), { replace: true });
         setIsStaffVerifying(false);
         return;
       }
 
       // ── Offline authentication failed ───────────────────────────────────────────────
-      const errorMessage = normalizedSelectedRole
-        ? `Invalid credentials or account not registered under this role (${normalizedSelectedRole}).`
-        : 'Invalid credentials or account not registered.';
+      const errorMessage = 'Invalid credentials or account not registered.';
       
       setStaffAuthError(errorMessage);
       showError(errorMessage);
