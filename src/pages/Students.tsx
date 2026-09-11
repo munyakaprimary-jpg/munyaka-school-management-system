@@ -128,7 +128,9 @@ const getGradeMatchKey = (name: string): string => {
 
 export default function Students() {
   // 1. LocalStorage Persistence Setup for Learners with Lazy Initialization
-  const [students, setStudents] = useState<Student[]>(() => getStudents());
+  const [students, setStudents] = useState<Student[]>(() => {
+    return getStudents();
+  });
 
   // 2. Use the academic calendar hook for dynamic term/year
     const { activeTerm, activeYear, isLoading } = useAcademicCalendar();
