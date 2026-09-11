@@ -252,34 +252,6 @@ const App = () => {
   //
   // Each is idempotent and gated by its own localStorage flag.
   useEffect(() => {
-    // ── TEMP: hard-fix migration ────────────────────────────────────────
-    // Clear stale learner + fee storage so the app re-initializes with
-    // clean data on next hydrate. Safe to remove once every browser has
-    // been refreshed.
-    try {
-      const KEYS_TO_RESET = [
-        'munyaka_learners',
-        'school_learners_data',
-        'munyaka_students',
-        // Fee ledgers so previously-seeded mock data never resurfaces.
-        'munyaka_fees_records',
-        'munyaka_student_fees',
-        'munyaka_payment_records',
-        'munyaka_transactions',
-        // Force every legacy learner key to start as `[]` so the table
-        // renders an empty roster by default.
-        'students',
-        'learners',
-        'pupils',
-        'school_students',
-        'registered_students',
-      ];
-      for (const k of KEYS_TO_RESET) {
-        try {
-          window.localStorage.removeItem(k);
-        } catch { /* no-op */ }
-      }
-    } catch { /* no-op */ }
     runOneTimeAssessmentCleanup();
     runOneTimeLegacyAdmNoMigration();
     runOneTimeAdmissionNoBackfill();

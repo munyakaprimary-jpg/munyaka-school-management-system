@@ -137,7 +137,7 @@ export default function Students() {
       return formatTermBadge(activeTerm, activeYear);
     }, [activeTerm, activeYear, isLoading]);
 
-  // Add event listener to refresh UI instantly when a student is saved
+  // Refresh UI instantly when a student is saved, updated, or deleted
   useEffect(() => {
     const syncStudents = () => setStudents(getStudents() as unknown as Student[]);
     window.addEventListener('students-updated', syncStudents);
