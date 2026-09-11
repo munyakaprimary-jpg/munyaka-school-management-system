@@ -597,7 +597,7 @@ export default function Students() {
       phone: learner.phone,
       email: (learner as any).email ?? '',
       feeBalance: (learner as any).feeBalance ?? 0,
-      status: ((learner as any).status ?? 'Active') as 'Active' | 'TRANSFERRED' | 'Graduated' | 'Suspended',
+      status: (((learner as any).status === 'TRANSFERRED' ? 'Transferred' : (learner as any).status) ?? 'Active') as 'Active' | 'Transferred' | 'Graduated' | 'Suspended',
       dateOfAdmission: (learner as any).dateOfAdmission ?? new Date().toISOString().split('T')[0],
       coCurricularActivities: (learner as any).coCurricularActivities ?? '',
       health: '',
@@ -1257,7 +1257,7 @@ export default function Students() {
               prompt="Admin Password"
               onConfirm={(isValid) => {
                 if (isValid && learnerToDelete) {
-                  confirmDelete(learnerToDelete);
+                  confirmDelete(learnerToDelete as any);
                 }
               }}
             />

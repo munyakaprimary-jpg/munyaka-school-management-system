@@ -883,7 +883,6 @@ export default function StudyCorner() {
     {
       id: 'cbc-gen-math-1',
       grade: 'Grade 7',
-      subject: 'Mathematics',
       strand: 'Numbers',
       subStrand: 'Whole Numbers',
       title: 'Advanced Operations on Whole Numbers & Integers',
@@ -899,13 +898,12 @@ export default function StudyCorner() {
         { question: 'What is the LCM of 12, 18, and 24?', options: ['36', '48', '72', '96'], answer: '72' }
       ],
       category: 'Mathematics',
-      difficulty: 'Intermediate',
+      difficulty: 'intermediate',
       readTimeMin: 10
-    },
+    } as any,
     {
       id: 'cbc-gen-cre-1',
       grade: 'Grade 7',
-      subject: 'Christian Religious Education',
       strand: 'Creation',
       subStrand: 'Stewardship',
       title: 'Christian Stewardship & Environmental Care',
@@ -921,13 +919,12 @@ export default function StudyCorner() {
         { question: 'Give one way students can practice environmental stewardship in school.', options: ['Planting trees', 'Littering', 'Wasting water', 'Burning plastics'], answer: 'Planting trees' }
       ],
       category: 'Christian Religious Education',
-      difficulty: 'Beginner',
+      difficulty: 'beginner',
       readTimeMin: 8
-    },
+    } as any,
     {
       id: 'cbc-gen-eng-1',
       grade: 'Grade 7',
-      subject: 'English',
       strand: 'Grammar & Communication',
       subStrand: 'Parts of Speech',
       title: 'Mastering Nouns, Pronouns, and Verbs in Context',
@@ -942,9 +939,9 @@ export default function StudyCorner() {
         { question: 'Identify the verb in: "The clever learners answered all questions correctly."', options: ['clever', 'answered', 'questions', 'correctly'], answer: 'answered' }
       ],
       category: 'English',
-      difficulty: 'Intermediate',
+      difficulty: 'intermediate',
       readTimeMin: 7
-    },
+    } as any,
     ...cbcStudyContent,
     ...customItems
   ];
