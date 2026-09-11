@@ -171,32 +171,88 @@ export default function StaffDirectory() {
       return;
     }
 
-    if (editingStaff) {
-      const updated = staffList.map(s => s.id === editingStaff.id ? {
-        ...s,
-        staffName: staffName.trim(),
-        staffId: staffId.trim() || s.staffId,
-        registeredEmail: registeredEmail.trim().toLowerCase(),
-        systemRole,
-        subjects
-      } : s);
-      saveToStorage(updated);
-      showSuccess(`Updated staff HR profile: ${staffName}`);
-    } else {
-      const newRecord: StaffRecord = {
-        id: `SUP-00${staffList.length + 1}`,
-        staffId: staffId.trim() || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
-        staffName: staffName.trim(),
-        registeredEmail: registeredEmail.trim().toLowerCase(),
-        systemRole,
-        subjects,
-        isActive: true
-      };
-      saveToStorage([newRecord, ...staffList]);
-      showSuccess(`Successfully registered ${staffName}`);
-    }
+    try {
+      const raw = localStorage.getItem('munyaka_staff');
+      let staffList = [];
+      if (raw) {
+        try { staffList = JSON.parse(raw); } catch { staffList = []; }
+      }
 
-    setIsModalOpen(false);
+      if (editingStaff) {
+        const updated = staffList.map((s: any) => {
+          if (s.id === editingStaff.id || s.staffId === editingStaff.staffId) {
+            return {
+              ...s,
+              staffName: staffName.trim(),
+              name: staffName.trim(),
+              staffId: staffId.trim() || s.staffId,
+              registeredEmail: registeredEmail.trim().toLowerCase(),
+              email: registeredEmail.trim().toLowerCase(),
+              systemRole,
+              role: systemRole,
+              subjects: subjects.trim() || s.subjects || 'General'
+            };
+          }
+          return s;
+        });
+        localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+        
+        // Refresh local state
+        const normalized: StaffRecord[] = updated.map((s: any, index: number) => ({
+          id: s.id || `SUP-00${index + 1}`,
+          staffId: s.staffId || s.tscNo || s.tscNumber || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
+          staffName: s.staffName || s.name || s.fullName || 'Staff Member',
+          registeredEmail: s.registeredEmail || s.email || '',
+          systemRole: s.systemRole || s.role || 'Teacher',
+          subjects: s.subjects || s.department || 'General',
+          isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
+        }));
+        setStaffList(normalized);
+        showSuccess(`Updated staff HR profile: ${staffName}`);
+      } else {
+        const newCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
+        const newRecord = {
+          id: `SUP-00${staffList.length + 1}`,
+          staffId: staffId.trim() || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
+          staffName: staffName.trim(),
+          name: staffName.trim(),
+          registeredEmail: registeredEmail.trim().toLowerCase(),
+          email: registeredEmail.trim().toLowerCase(),
+          systemRole,
+          role: systemRole,
+          subjects: subjects.trim() || 'General',
+          tempAccessCode: newCode,
+          accessCode: newCode,
+          isActive: true
+        };
+
+        const updated = [newRecord, ...staffList];
+        localStorage.setItem('munyaka_staff', JSON.stringify(updated));
+
+        // Refresh local state
+        const normalized: StaffRecord[] = updated.map((s: any, index: number) => ({
+          id: s.id || `SUP-00${index + 1}`,
+          staffId: s.staffId || s.tscNo || s.tscNumber || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
+          staffName: s.staffName || s.name || s.fullName || 'Staff Member',
+          registeredEmail: s.registeredEmail || s.email || '',
+          systemRole: s.systemRole || s.role || 'Teacher',
+          subjects: s.subjects || s.department || 'General',
+          isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
+        }));
+        setStaffList(normalized);
+        showSuccess(`Successfully registered ${staffName} (Access Code: ${newCode})`);
+      }
+
+      // Reset form & close modal
+      setStaffName('');
+      setStaffId('');
+      setRegisteredEmail('');
+      setSubjects('');
+      setIsModalOpen(false);
+    } catch (err) {
+      console.error('[StaffDirectory] Save failed:', err);
+      showError('Failed to save staff record');
+    }
   };
 
   const handleToggleStatus = (id: string) => {
