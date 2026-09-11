@@ -90,7 +90,7 @@ const ROLE_CONFIGS: Record<AdminRole, RoleConfig> = {
   admin: {
     id: 'admin',
     label: 'School Administrator',
-    description: 'Full access: Settings, Users, Fees, Academics, RBAC, Security',
+    description: 'Full administrative access to manage school operations',
     fullDescription: 'Manage system settings, users, academics, RBAC permissions, and overall school operations.',
     email: 'sysadmin@munyaka.sc.ke',
     userName: 'School Administrator',
@@ -171,7 +171,7 @@ const RoleCard: React.FC<RoleCardProps> = ({
           <Badge variant="outline" className={cn("font-bold text-[10px] border", borderColor, textColor)}>
             {hasCustomPassword ? (
               <span className="flex items-center gap-1">
-                <KeyRound size={9} /> Custom PIN set
+                <KeyRound size={9} /> Custom PIN
               </span>
             ) : (
               `Default PIN: ${role.defaultPassword}`
