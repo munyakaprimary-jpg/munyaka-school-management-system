@@ -14,12 +14,9 @@ import {
   XCircle, 
   Edit3, 
   Trash2, 
-  UserCheck,
   Eye,
   Mail,
-  BookOpen,
-  Building2,
-  Shield
+  BookOpen
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
@@ -30,7 +27,6 @@ interface StaffRecord {
   staffName: string;
   registeredEmail: string;
   systemRole: string;
-  department?: string;
   subjects?: string;
   isActive: boolean;
 }
@@ -42,7 +38,6 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'Mary Wanjiku',
     registeredEmail: 'mary.wanjiku@munyaka.sc.ke',
     systemRole: 'Teacher',
-    department: 'Academics',
     subjects: 'Mathematics, Science',
     isActive: true
   },
@@ -52,7 +47,6 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'Grace Njeri',
     registeredEmail: 'grace.njeri@munyaka.sc.ke',
     systemRole: 'Head Teacher',
-    department: 'Administration',
     subjects: 'School Management',
     isActive: true
   },
@@ -62,7 +56,6 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'David Kiprotich',
     registeredEmail: 'david.kiprotich@munyaka.sc.ke',
     systemRole: 'Support Staff',
-    department: 'Operations',
     subjects: 'Maintenance & Security',
     isActive: true
   }
@@ -84,7 +77,6 @@ export default function StaffDirectory() {
   const [staffId, setStaffId] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [systemRole, setSystemRole] = useState('Teacher');
-  const [department, setDepartment] = useState('Academics');
   const [subjects, setSubjects] = useState('');
 
   // Load strictly from munyaka_staff
@@ -106,8 +98,7 @@ export default function StaffDirectory() {
         staffName: s.staffName || s.name || s.fullName || 'Staff Member',
         registeredEmail: s.registeredEmail || s.email || '',
         systemRole: s.systemRole || s.role || 'Teacher',
-        department: s.department || 'Academics',
-        subjects: s.subjects || 'General',
+        subjects: s.subjects || s.department || 'General',
         isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
       }));
 
@@ -147,7 +138,6 @@ export default function StaffDirectory() {
     setStaffId(`TSC-${Math.floor(100000 + Math.random() * 900000)}`);
     setRegisteredEmail('');
     setSystemRole('Teacher');
-    setDepartment('Academics');
     setSubjects('');
     setIsModalOpen(true);
   };
@@ -158,7 +148,6 @@ export default function StaffDirectory() {
     setStaffId(record.staffId);
     setRegisteredEmail(record.registeredEmail);
     setSystemRole(record.systemRole);
-    setDepartment(record.department || 'Academics');
     setSubjects(record.subjects || '');
     setIsModalOpen(true);
   };
@@ -189,7 +178,6 @@ export default function StaffDirectory() {
         staffId: staffId.trim() || s.staffId,
         registeredEmail: registeredEmail.trim().toLowerCase(),
         systemRole,
-        department,
         subjects
       } : s);
       saveToStorage(updated);
@@ -201,7 +189,6 @@ export default function StaffDirectory() {
         staffName: staffName.trim(),
         registeredEmail: registeredEmail.trim().toLowerCase(),
         systemRole,
-        department,
         subjects,
         isActive: true
       };
@@ -230,7 +217,7 @@ export default function StaffDirectory() {
     s.registeredEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.staffId.toLowerCase().includes(searchTerm.toLowerCase()) ||
     s.systemRole.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (s.department && s.department.toLowerCase().includes(searchTerm.toLowerCase()))
+    (s.subjects && s.subjects.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   return (
@@ -243,7 +230,7 @@ export default function StaffDirectory() {
             <Users size={14} /> Human Resources
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Directory & HR Profiles</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, departments, subjects, and employment profiles.</p>
+          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, subjects, and employment profiles.</p>
         </div>
         <Button onClick={handleOpenAdd} className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
           <UserPlus size={18} /> Add New Staff
@@ -257,7 +244,7 @@ export default function StaffDirectory() {
           <Input
             value={searchTerm}
             onChange={e => setSearchTerm(e.target.value)}
-            placeholder="Search by name, email, ID, department, or role..."
+            placeholder="Search by name, email, ID, subjects, or role..."
             className="border-none bg-transparent font-medium text-slate-800 focus-visible:ring-0 placeholder:text-slate-400 text-xs"
           />
         </div>
@@ -278,7 +265,7 @@ export default function StaffDirectory() {
                   <th className="py-2.5 px-4 whitespace-nowrap">Staff / TSC ID</th>
                   <th className="py-2.5 px-4 whitespace-nowrap">Email Address</th>
                   <th className="py-2.5 px-4 whitespace-nowrap">Role</th>
-                  <th className="py-2.5 px-4 whitespace-nowrap">Department / Subjects</th>
+                  <th className="py-2.5 px-4 whitespace-nowrap">Subjects</th>
                   <th className="py-2.5 px-4 whitespace-nowrap">Status</th>
                   <th className="py-2.5 px-4 text-right whitespace-nowrap">Actions</th>
                 </tr>
@@ -306,9 +293,8 @@ export default function StaffDirectory() {
                           {staff.systemRole}
                         </Badge>
                       </td>
-                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap">
-                        <span className="font-bold">{staff.department || 'Academics'}</span>
-                        {staff.subjects && <span className="text-slate-400"> • {staff.subjects}</span>}
+                      <td className="py-3 px-4 text-xs text-slate-600 whitespace-nowrap font-bold">
+                        {staff.subjects || 'General'}
                       </td>
                       <td className="py-3 px-4 whitespace-nowrap">
                         {staff.isActive ? (
@@ -403,14 +389,6 @@ export default function StaffDirectory() {
                 </div>
 
                 <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
-                  <Building2 size={18} className="text-slate-400 shrink-0" />
-                  <div>
-                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Department</div>
-                    <div className="font-bold text-slate-800">{selectedStaff.department || 'Academics'}</div>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
                   <BookOpen size={18} className="text-slate-400 shrink-0" />
                   <div>
                     <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Subjects / Area</div>
@@ -492,25 +470,14 @@ export default function StaffDirectory() {
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Department</Label>
-                <Input
-                  value={department}
-                  onChange={e => setDepartment(e.target.value)}
-                  placeholder="e.g. Academics"
-                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Subjects / Area</Label>
-                <Input
-                  value={subjects}
-                  onChange={e => setSubjects(e.target.value)}
-                  placeholder="e.g. Math, Science"
-                  className="h-12 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-indigo-200"
-                />
-              </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Subjects / Area</Label>
+              <Input
+                value={subjects}
+                onChange={e => setSubjects(e.target.value)}
+                placeholder="e.g. Mathematics, Science"
+                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
+              />
             </div>
 
             <DialogFooter className="pt-4">
