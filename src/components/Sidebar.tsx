@@ -246,19 +246,8 @@ const Sidebar = ({ children }: { children: React.ReactNode }) => {
         });
       }
 
-      const filtered = menuItems.filter(item => {
+      return menuItems.filter(item => {
               // Bypass role filtering for Study Corner
-              if (item?.path === '/study-corner') {
-                return true;
-              }
-              if (item?.global) return true;
-              const rolesList = (item?.roles || []).map((r: string) => String(r).toLowerCase());
-              if (rolesList.length === 0) return true;
-              if (rolesList.includes(roleLower)) return true;
-              if (roleLower.includes('librar') || roleLower.includes('support') || roleLower.includes('bursar') || roleLower.includes('staff') || roleLower.includes('teacher')) return true;
-              return false;
-      });
-      return filtered.length > 0 ? filtered : menuItems;
               if (item?.path === '/study-corner') {
                 return true;
               }
