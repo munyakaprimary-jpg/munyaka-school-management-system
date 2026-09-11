@@ -496,7 +496,7 @@ const Login: React.FC = () => {
         const userData = {
           id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
           name: foundUser.name || foundUser.fullName || 'Unknown User',
-          email: foundUser.email || '',
+          email: foundUser.email || foundUser.registeredEmail || '',
           phone: foundUser.phone || '',
           role: userRole,
           staff_id: foundUser.staffId || foundUser.ref || '',
@@ -505,10 +505,11 @@ const Login: React.FC = () => {
 
         try {
           localStorage.setItem('munyaka_session', JSON.stringify(userData));
+          localStorage.setItem('munyaka_active_user', JSON.stringify(userData));
         } catch { /* ignore */ }
 
         showSuccess(`Welcome, ${userData.name}!`);
-        navigate(getStaffRedirectPath(userRole), { replace: true });
+        navigate('/dashboard', { replace: true });
         setIsStaffVerifying(false);
         return;
       }
