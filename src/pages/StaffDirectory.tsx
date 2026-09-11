@@ -6,6 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Users, 
   UserPlus, 
@@ -31,6 +32,17 @@ interface StaffRecord {
   isActive: boolean;
 }
 
+const DEFAULT_LEARNING_AREAS = [
+  'Mathematics',
+  'English Language',
+  'Kiswahili Lugha',
+  'Science & Technology',
+  'Agriculture & Nutrition',
+  'Social Studies',
+  'Creative Arts & Sports',
+  'Religious Education (CRE/IRE/HRE)'
+];
+
 const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
   {
     id: 'SUP-001',
@@ -38,7 +50,7 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
     staffName: 'Mary Wanjiku',
     registeredEmail: 'mary.wanjiku@munyaka.sc.ke',
     systemRole: 'Teacher',
-    subjects: 'Mathematics, Science',
+    subjects: 'Mathematics, Science & Technology',
     isActive: true
   },
   {
@@ -77,10 +89,27 @@ export default function StaffDirectory() {
   const [staffId, setStaffId] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
   const [systemRole, setSystemRole] = useState('Teacher');
-  const [subjects, setSubjects] = useState('');
+  const [selectedSubjects, setSelectedSubjects] = useState<string[]>([]);
+  const [availableLearningAreas, setAvailableLearningAreas] = useState<string[]>(DEFAULT_LEARNING_AREAS);
 
-  // Load strictly from munyaka_staff
+  // Load learning areas and staff on mount
   useEffect(() => {
+    try {
+      const rawAreas = localStorage.getItem('munyaka_learning_areas');
+      if (rawAreas) {
+        const parsedAreas = JSON.parse(rawAreas);
+        if (Array.isArray(parsedAreas) && parsedAreas.length > 0) {
+          const areaNames = parsedAreas.map((a: any) => typeof a === 'string' ? a : (a.name || a.title || ''));
+          const validNames = areaNames.filter(Boolean);
+          if (validNames.length > 0) {
+            setAvailableLearningAreas(validNames);
+          }
+        }
+      }
+    } catch (err) {
+      console.error('[StaffDirectory] Failed to load learning areas:', err);
+    }
+
     try {
       const raw = localStorage.getItem('munyaka_staff');
       let data = [];
@@ -138,7 +167,7 @@ export default function StaffDirectory() {
     setStaffId(`TSC-${Math.floor(100000 + Math.random() * 900000)}`);
     setRegisteredEmail('');
     setSystemRole('Teacher');
-    setSubjects('');
+    setSelectedSubjects([]);
     setIsModalOpen(true);
   };
 
@@ -148,7 +177,10 @@ export default function StaffDirectory() {
     setStaffId(record.staffId);
     setRegisteredEmail(record.registeredEmail);
     setSystemRole(record.systemRole);
-    setSubjects(record.subjects || '');
+    
+    // Split existing comma-separated subjects into array
+    const existingSubs = record.subjects ? record.subjects.split(',').map(s => s.trim()).filter(Boolean) : [];
+    setSelectedSubjects(existingSubs);
     setIsModalOpen(true);
   };
 
@@ -164,6 +196,14 @@ export default function StaffDirectory() {
     setIsViewModalOpen(true);
   };
 
+  const handleCheckboxToggle = (area: string) => {
+    if (selectedSubjects.includes(area)) {
+      setSelectedSubjects(selectedSubjects.filter(s => s !== area));
+    } else {
+      setSelectedSubjects([...selectedSubjects, area]);
+    }
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffName.trim() || !registeredEmail.trim()) {
@@ -171,15 +211,17 @@ export default function StaffDirectory() {
       return;
     }
 
+    const subjectsString = selectedSubjects.length > 0 ? selectedSubjects.join(', ') : 'General';
+
     try {
       const raw = localStorage.getItem('munyaka_staff');
-      let staffList = [];
+      let staffListStored = [];
       if (raw) {
-        try { staffList = JSON.parse(raw); } catch { staffList = []; }
+        try { staffListStored = JSON.parse(raw); } catch { staffListStored = []; }
       }
 
       if (editingStaff) {
-        const updated = staffList.map((s: any) => {
+        const updated = staffListStored.map((s: any) => {
           if (s.id === editingStaff.id || s.staffId === editingStaff.staffId) {
             return {
               ...s,
@@ -190,14 +232,13 @@ export default function StaffDirectory() {
               email: registeredEmail.trim().toLowerCase(),
               systemRole,
               role: systemRole,
-              subjects: subjects.trim() || s.subjects || 'General'
+              subjects: subjectsString
             };
           }
           return s;
         });
         localStorage.setItem('munyaka_staff', JSON.stringify(updated));
         
-        // Refresh local state
         const normalized: StaffRecord[] = updated.map((s: any, index: number) => ({
           id: s.id || `SUP-00${index + 1}`,
           staffId: s.staffId || s.tscNo || s.tscNumber || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -212,7 +253,7 @@ export default function StaffDirectory() {
       } else {
         const newCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
         const newRecord = {
-          id: `SUP-00${staffList.length + 1}`,
+          id: `SUP-00${staffListStored.length + 1}`,
           staffId: staffId.trim() || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
           staffName: staffName.trim(),
           name: staffName.trim(),
@@ -220,16 +261,15 @@ export default function StaffDirectory() {
           email: registeredEmail.trim().toLowerCase(),
           systemRole,
           role: systemRole,
-          subjects: subjects.trim() || 'General',
+          subjects: subjectsString,
           tempAccessCode: newCode,
           accessCode: newCode,
           isActive: true
         };
 
-        const updated = [newRecord, ...staffList];
+        const updated = [newRecord, ...staffListStored];
         localStorage.setItem('munyaka_staff', JSON.stringify(updated));
 
-        // Refresh local state
         const normalized: StaffRecord[] = updated.map((s: any, index: number) => ({
           id: s.id || `SUP-00${index + 1}`,
           staffId: s.staffId || s.tscNo || s.tscNumber || `TSC-${Math.floor(100000 + Math.random() * 900000)}`,
@@ -243,11 +283,10 @@ export default function StaffDirectory() {
         showSuccess(`Successfully registered ${staffName} (Access Code: ${newCode})`);
       }
 
-      // Reset form & close modal
       setStaffName('');
       setStaffId('');
       setRegisteredEmail('');
-      setSubjects('');
+      setSelectedSubjects([]);
       setIsModalOpen(false);
     } catch (err) {
       console.error('[StaffDirectory] Save failed:', err);
@@ -286,7 +325,7 @@ export default function StaffDirectory() {
             <Users size={14} /> Human Resources
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Directory & HR Profiles</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, subjects, and employment profiles.</p>
+          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, learning areas, and employment profiles.</p>
         </div>
         <Button onClick={handleOpenAdd} className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
           <UserPlus size={18} /> Add New Staff
@@ -447,7 +486,7 @@ export default function StaffDirectory() {
                 <div className="flex items-center gap-3 p-3 bg-white border border-slate-100 rounded-xl">
                   <BookOpen size={18} className="text-slate-400 shrink-0" />
                   <div>
-                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Subjects / Area</div>
+                    <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Assigned Subjects / Learning Areas</div>
                     <div className="font-bold text-slate-800">{selectedStaff.subjects || 'General'}</div>
                   </div>
                 </div>
@@ -466,7 +505,7 @@ export default function StaffDirectory() {
         </DialogContent>
       </Dialog>
 
-      {/* Edit HR Profile Modal */}
+      {/* Edit HR Profile / Add Staff Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl flex flex-col">
           <DialogHeader className="shrink-0">
@@ -526,14 +565,31 @@ export default function StaffDirectory() {
               </Select>
             </div>
 
-            <div className="space-y-1.5">
-              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">Subjects / Area</Label>
-              <Input
-                value={subjects}
-                onChange={e => setSubjects(e.target.value)}
-                placeholder="e.g. Mathematics, Science"
-                className="h-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-indigo-200"
-              />
+            {/* Dynamic Learning Areas Multi-Select Checkboxes */}
+            <div className="space-y-2">
+              <Label className="text-xs font-black uppercase tracking-wider text-slate-400">
+                Assigned Learning Areas / Subjects
+              </Label>
+              <div className="p-3 bg-slate-50 rounded-2xl max-h-48 overflow-y-auto space-y-2 border border-slate-100">
+                {availableLearningAreas.map((area) => {
+                  const isChecked = selectedSubjects.includes(area);
+                  return (
+                    <label
+                      key={area}
+                      className="flex items-center gap-3 p-2 rounded-xl hover:bg-white cursor-pointer transition-colors"
+                    >
+                      <Checkbox
+                        checked={isChecked}
+                        onCheckedChange={() => handleCheckboxToggle(area)}
+                      />
+                      <span className="text-xs font-bold text-slate-700">{area}</span>
+                    </label>
+                  );
+                })}
+              </div>
+              <p className="text-[10px] text-slate-400 font-medium">
+                Select one or more learning areas taught by this staff member.
+              </p>
             </div>
 
             <DialogFooter className="pt-4 sticky bottom-0 bg-white pb-2">
