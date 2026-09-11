@@ -237,96 +237,98 @@ export default function StaffDirectory() {
       {/* Staff Table */}
       <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden">
         <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  <th className="py-4 px-6">Staff Name</th>
-                  <th className="py-4 px-6">Staff / TSC ID</th>
-                  <th className="py-4 px-6">Email Address</th>
-                  <th className="py-4 px-6">Role</th>
-                  <th className="py-4 px-6">Access Code</th>
-                  <th className="py-4 px-6">Status</th>
-                  <th className="py-4 px-6 text-right">Actions</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Staff Name</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Staff / TSC ID</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Email Address</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Role</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Access Code</th>
+                  <th className="py-3 px-5 whitespace-nowrap">Status</th>
+                  <th className="py-3 px-5 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 text-sm font-medium">
+              <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400 font-medium">
+                    <td colSpan={7} className="py-10 text-center text-slate-400 font-medium whitespace-nowrap">
                       No staff records found matching your search.
                     </td>
                   </tr>
                 ) : (
                   filteredStaff.map((staff) => (
                     <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-4 px-6 font-bold text-slate-900 flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-indigo-50 text-indigo-600 font-black text-xs flex items-center justify-center shrink-0">
+                      <td className="py-3 px-5 font-semibold text-slate-900 flex items-center gap-2.5 whitespace-nowrap">
+                        <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 font-black text-[11px] flex items-center justify-center shrink-0">
                           {staff.staffName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
-                        <span>{staff.staffName}</span>
+                        <span className="text-[13px]">{staff.staffName}</span>
                       </td>
-                      <td className="py-4 px-6 text-slate-600 font-mono text-xs font-bold">{staff.staffId}</td>
-                      <td className="py-4 px-6 text-slate-600">{staff.registeredEmail}</td>
-                      <td className="py-4 px-6">
-                        <Badge variant="outline" className="font-bold text-[11px] bg-indigo-50/50 text-indigo-700 border-indigo-100">
+                      <td className="py-3 px-5 text-slate-500 font-mono text-[11px] font-bold whitespace-nowrap">{staff.staffId}</td>
+                      <td className="py-3 px-5 text-slate-600 text-xs whitespace-nowrap">{staff.registeredEmail}</td>
+                      <td className="py-3 px-5 whitespace-nowrap">
+                        <Badge variant="outline" className="font-bold text-[11px] py-0.5 px-2 bg-indigo-50/50 text-indigo-700 border-indigo-100">
                           {staff.systemRole}
                         </Badge>
                       </td>
-                      <td className="py-4 px-6">
-                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-100 font-mono text-xs font-bold text-slate-700">
-                          <Key size={12} className="text-slate-400" />
+                      <td className="py-3 px-5 whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg bg-slate-100 font-mono text-[11px] font-bold text-slate-700">
+                          <Key size={11} className="text-slate-400" />
                           <span>{staff.tempAccessCode}</span>
                         </div>
                       </td>
-                      <td className="py-4 px-6">
+                      <td className="py-3 px-5 whitespace-nowrap">
                         {staff.isActive ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-bold">
-                            <CheckCircle2 size={12} /> Active
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
+                            <CheckCircle2 size={11} /> Active
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-50 text-rose-700 text-xs font-bold">
-                            <XCircle size={12} /> Inactive
+                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 text-[11px] font-bold">
+                            <XCircle size={11} /> Inactive
                           </span>
                         )}
                       </td>
-                      <td className="py-4 px-6 text-right space-x-1">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleResetCode(staff.id)}
-                          title="Reset Access Code"
-                          className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                        >
-                          <RefreshCw size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleToggleStatus(staff.id)}
-                          title={staff.isActive ? "Deactivate" : "Activate"}
-                          className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50"
-                        >
-                          <UserCheck size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleOpenEdit(staff)}
-                          title="Edit Staff"
-                          className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
-                        >
-                          <Edit3 size={14} />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDelete(staff.id)}
-                          title="Delete Staff"
-                          className="h-8 w-8 p-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                        >
-                          <Trash2 size={14} />
-                        </Button>
+                      <td className="py-3 px-5 text-right whitespace-nowrap">
+                        <div className="flex flex-row items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleResetCode(staff.id)}
+                            title="Reset Access Code"
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <RefreshCw size={13} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleToggleStatus(staff.id)}
+                            title={staff.isActive ? "Deactivate" : "Activate"}
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                          >
+                            <UserCheck size={13} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleOpenEdit(staff)}
+                            title="Edit Staff"
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                          >
+                            <Edit3 size={13} />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDelete(staff.id)}
+                            title="Delete Staff"
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-rose-600 hover:bg-rose-50"
+                          >
+                            <Trash2 size={13} />
+                          </Button>
+                        </div>
                       </td>
                     </tr>
                   ))
