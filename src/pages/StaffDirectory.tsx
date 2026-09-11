@@ -10,13 +10,13 @@ import {
   Users, 
   UserPlus, 
   Search, 
-  Shield, 
   CheckCircle2, 
   XCircle, 
   Edit3, 
   Trash2, 
-  UserCheck
+  Eye
 } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { showSuccess, showError } from '@/utils/toast';
 
 interface StaffRecord {
@@ -64,12 +64,13 @@ const DEFAULT_STAFF_RECORDS: StaffRecord[] = [
 ];
 
 export default function StaffDirectory() {
+  const navigate = useNavigate();
   const [staffList, setStaffList] = useState<StaffRecord[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffRecord | null>(null);
 
-  // Form states (HR focused)
+  // HR Form states
   const [staffName, setStaffName] = useState('');
   const [staffId, setStaffId] = useState('');
   const [registeredEmail, setRegisteredEmail] = useState('');
@@ -110,7 +111,6 @@ export default function StaffDirectory() {
 
   const saveToStorage = (updatedList: StaffRecord[]) => {
     try {
-      // Preserve existing security fields (like tempAccessCode) when saving HR updates
       const raw = localStorage.getItem('munyaka_staff');
       let existing = [];
       if (raw) { try { existing = JSON.parse(raw); } catch {} }
@@ -154,6 +154,10 @@ export default function StaffDirectory() {
     setIsModalOpen(true);
   };
 
+  const handleViewProfile = (record: StaffRecord) => {
+    navigate(`/staff/${record.id}`);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!staffName.trim() || !registeredEmail.trim()) {
@@ -191,14 +195,8 @@ export default function StaffDirectory() {
     setIsModalOpen(false);
   };
 
-  const handleToggleStatus = (id: string) => {
-    const updated = staffList.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s);
-    saveToStorage(updated);
-    showSuccess('Staff status updated');
-  };
-
   const handleDelete = (id: string) => {
-    if (!confirm('Are you sure you want to delete this staff member?')) return;
+    if (!confirm('Are you sure you want to delete this staff record?')) return;
     const updated = staffList.filter(s => s.id !== id);
     saveToStorage(updated);
     showSuccess('Staff member deleted');
@@ -222,7 +220,7 @@ export default function StaffDirectory() {
             <Users size={14} /> Human Resources
           </div>
           <h1 className="text-2xl md:text-3xl font-black text-slate-900 tracking-tight">Staff Directory & HR Profiles</h1>
-          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, departments, subjects, and employment status.</p>
+          <p className="text-slate-500 text-sm font-medium">Manage staff personal details, departments, subjects, and employment profiles.</p>
         </div>
         <Button onClick={handleOpenAdd} className="h-12 px-6 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold gap-2 shadow-lg shadow-indigo-100">
           <UserPlus size={18} /> Add New Staff
@@ -246,7 +244,7 @@ export default function StaffDirectory() {
         </div>
       </div>
 
-      {/* Staff Table - HR Focused (No Access Codes) */}
+      {/* Staff Table - HR Focused */}
       <Card className="border-none shadow-xl rounded-3xl bg-white overflow-hidden">
         <CardContent className="p-0">
           <div className="overflow-x-auto w-full">
@@ -305,11 +303,11 @@ export default function StaffDirectory() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleToggleStatus(staff.id)}
-                            title={staff.isActive ? "Deactivate" : "Activate"}
-                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                            onClick={() => handleViewProfile(staff)}
+                            title="View Full Profile"
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                           >
-                            <UserCheck size={13} />
+                            <Eye size={13} />
                           </Button>
                           <Button
                             variant="ghost"
@@ -340,7 +338,7 @@ export default function StaffDirectory() {
         </CardContent>
       </Card>
 
-      {/* Add/Edit Modal */}
+      {/* Edit HR Profile Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
           <DialogHeader>

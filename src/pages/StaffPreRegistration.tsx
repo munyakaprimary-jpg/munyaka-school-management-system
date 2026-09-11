@@ -7,16 +7,15 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
-  Users, 
   Key, 
   Search, 
   Shield, 
   CheckCircle2, 
   XCircle, 
-  Edit3, 
-  Trash2, 
   RefreshCw,
-  UserCheck
+  Lock,
+  Unlock,
+  ShieldCheck
 } from 'lucide-react';
 import { showSuccess, showError } from '@/utils/toast';
 
@@ -84,7 +83,7 @@ export default function StaffAccessMaster() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingStaff, setEditingStaff] = useState<StaffMember | null>(null);
 
-  // Security & Credentials form states (No Add button in UI)
+  // Security & Credentials form states
   const [staffName, setStaffName] = useState('');
   const [systemRole, setSystemRole] = useState('Teacher');
   const [tempAccessCode, setTempAccessCode] = useState('');
@@ -125,11 +124,11 @@ export default function StaffAccessMaster() {
       setStaffList(updatedList);
     } catch (err) {
       console.error('[StaffAccessMaster] Failed to save staff:', err);
-      showError('Failed to save staff records');
+      showError('Failed to save staff credentials');
     }
   };
 
-  const handleOpenEdit = (record: StaffMember) => {
+  const handleOpenRoleModal = (record: StaffMember) => {
     setEditingStaff(record);
     setStaffName(record.staffName);
     setSystemRole(record.systemRole);
@@ -151,17 +150,17 @@ export default function StaffAccessMaster() {
     setIsModalOpen(false);
   };
 
-  const handleToggleStatus = (id: string) => {
+  const handleToggleLockout = (id: string) => {
     const updated = staffList.map(s => s.id === id ? { ...s, isActive: !s.isActive } : s);
     saveToStorage(updated);
-    showSuccess('Account status updated');
+    showSuccess('Account lockout status toggled successfully');
   };
 
   const handleResetCode = (id: string) => {
     const newCode = `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`;
     const updated = staffList.map(s => s.id === id ? { ...s, tempAccessCode: newCode } : s);
     saveToStorage(updated);
-    showSuccess(`Reset access code to: ${newCode}`);
+    showSuccess(`Regenerated access code: ${newCode}`);
   };
 
   const filteredStaff = staffList.filter(s => 
@@ -209,45 +208,43 @@ export default function StaffAccessMaster() {
             <table className="w-full text-left border-collapse whitespace-nowrap">
               <thead>
                 <tr className="bg-slate-50/70 border-b border-slate-100 text-[11px] font-black uppercase tracking-wider text-slate-400">
-                  <th className="py-2 px-3 whitespace-nowrap">Staff Name</th>
-                  <th className="py-2 px-3 whitespace-nowrap">Staff / TSC ID</th>
-                  <th className="py-2 px-3 whitespace-nowrap">Email Address</th>
-                  <th className="py-2 px-3 whitespace-nowrap">Role</th>
-                  <th className="py-2 px-3 whitespace-nowrap">Access Code</th>
-                  <th className="py-2 px-3 whitespace-nowrap">Status</th>
-                  <th className="py-2 px-3 text-right whitespace-nowrap">Actions</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">Staff Name</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">Role</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">Login Email</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">Access Code</th>
+                  <th className="py-2.5 px-3 whitespace-nowrap">Status</th>
+                  <th className="py-2.5 px-3 text-right whitespace-nowrap">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-xs">
                 {filteredStaff.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="py-10 text-center text-slate-400 font-medium whitespace-nowrap">
+                    <td colSpan={6} className="py-10 text-center text-slate-400 font-medium whitespace-nowrap">
                       No staff records found.
                     </td>
                   </tr>
                 ) : (
                   filteredStaff.map((staff) => (
                     <tr key={staff.id} className="hover:bg-slate-50/50 transition-colors">
-                      <td className="py-2 px-3 font-semibold text-slate-900 flex items-center gap-2 whitespace-nowrap">
+                      <td className="py-3 px-3 font-semibold text-slate-900 flex items-center gap-2 whitespace-nowrap">
                         <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-600 font-black text-[11px] flex items-center justify-center shrink-0">
                           {staff.staffName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
                         </div>
                         <span className="text-[13px] font-semibold">{staff.staffName}</span>
                       </td>
-                      <td className="py-2 px-3 font-mono text-[11px] text-gray-500 whitespace-nowrap">{staff.staffId}</td>
-                      <td className="py-2 px-3 text-xs text-gray-600 whitespace-nowrap">{staff.registeredEmail}</td>
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         <Badge variant="outline" className="font-bold text-[11px] py-0.5 px-2 rounded-full bg-indigo-50/50 text-indigo-700 border-indigo-100">
                           {staff.systemRole}
                         </Badge>
                       </td>
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="py-3 px-3 text-xs text-gray-600 whitespace-nowrap">{staff.registeredEmail}</td>
+                      <td className="py-3 px-3 whitespace-nowrap">
                         <div className="inline-flex items-center gap-1.5 py-0.5 px-2 rounded-lg bg-gray-100 font-mono text-[11px] font-medium text-slate-700">
                           <Key size={11} className="text-slate-400" />
                           <span>{staff.tempAccessCode}</span>
                         </div>
                       </td>
-                      <td className="py-2 px-3 whitespace-nowrap">
+                      <td className="py-3 px-3 whitespace-nowrap">
                         {staff.isActive ? (
                           <span className="inline-flex items-center gap-1 py-0.5 px-2 rounded-full bg-emerald-50 text-emerald-700 text-[11px] font-bold">
                             <CheckCircle2 size={11} /> Active
@@ -258,7 +255,7 @@ export default function StaffAccessMaster() {
                           </span>
                         )}
                       </td>
-                      <td className="py-2 px-3 text-right whitespace-nowrap">
+                      <td className="py-3 px-3 text-right whitespace-nowrap">
                         <div className="flex flex-row items-center justify-end gap-2">
                           <Button
                             variant="ghost"
@@ -272,20 +269,20 @@ export default function StaffAccessMaster() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleToggleStatus(staff.id)}
-                            title={staff.isActive ? "Suspend Account" : "Activate Account"}
-                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50"
+                            onClick={() => handleOpenRoleModal(staff)}
+                            title="Change System Role & RBAC"
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
                           >
-                            <UserCheck size={13} />
+                            <ShieldCheck size={13} />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => handleOpenEdit(staff)}
-                            title="Edit Staff Details"
-                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-indigo-600 hover:bg-indigo-50"
+                            onClick={() => handleToggleLockout(staff.id)}
+                            title={staff.isActive ? "Suspend Account" : "Activate Account"}
+                            className="h-7 w-7 p-0 rounded-lg text-slate-500 hover:text-amber-600 hover:bg-amber-50"
                           >
-                            <Edit3 size={13} />
+                            {staff.isActive ? <Lock size={13} /> : <Unlock size={13} />}
                           </Button>
                         </div>
                       </td>
@@ -298,7 +295,7 @@ export default function StaffAccessMaster() {
         </CardContent>
       </Card>
 
-      {/* Edit Modal (Focused on Security & RBAC Roles) */}
+      {/* Security Role & Access Code Modal */}
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="max-w-md rounded-3xl p-6 md:p-8 bg-white border-none shadow-2xl">
           <DialogHeader>
