@@ -486,12 +486,77 @@ const Login: React.FC = () => {
   // ── Lightweight server reachability check on mount ──────────────────────
   useEffect(() => {
     let cancelled = false;
+    
+    // Auto-seed default staff accounts on mount if munyaka_staff is empty
+    try {
+      const existingStaffRaw = localStorage.getItem('munyaka_staff');
+      let staffArray = [];
+      if (existingStaffRaw) {
+        try { staffArray = JSON.parse(existingStaffRaw); } catch { staffArray = []; }
+      }
+      if (!Array.isArray(staffArray) || staffArray.length === 0) {
+        const defaultStaff = [
+          {
+            id: 'STF-1001',
+            staffId: 'MUNYAKA-1001',
+            name: 'Grace Njeri',
+            email: 'grace.njeri@munyaka.sc.ke',
+            registeredEmail: 'grace.njeri@munyaka.sc.ke',
+            tscNo: 'TSC1001',
+            accessCode: 'MUNYAKA-1001',
+            tempAccessCode: 'MUNYAKA-1001',
+            password: 'MUNYAKA-1001',
+            systemRole: 'head_teacher',
+            role: 'Head Teacher'
+          },
+          {
+            id: 'STF-5721',
+            staffId: 'MUNYAKA-5721',
+            name: 'Mary Wanjiku',
+            email: 'mary.wanjiku@munyaka.sc.ke',
+            registeredEmail: 'mary.wanjiku@munyaka.sc.ke',
+            tscNo: 'TSC5721',
+            accessCode: 'MUNYAKA-5721',
+            tempAccessCode: 'MUNYAKA-5721',
+            password: 'MUNYAKA-5721',
+            systemRole: 'teacher',
+            role: 'Teacher'
+          },
+          {
+            id: 'STF-4005',
+            staffId: 'MUNYAKA-4005',
+            name: 'David Kiprotich',
+            email: 'david.kiprotich@munyaka.sc.ke',
+            registeredEmail: 'david.kiprotich@munyaka.sc.ke',
+            accessCode: 'MUNYAKA-4005',
+            tempAccessCode: 'MUNYAKA-4005',
+            password: 'MUNYAKA-4005',
+            systemRole: 'support',
+            role: 'Support Staff'
+          },
+          {
+            id: 'STF-4006',
+            staffId: 'MUNYAKA-4006',
+            name: 'Mary Juma',
+            email: 'maryjuma@munyaka.ac.ke',
+            registeredEmail: 'maryjuma@munyaka.ac.ke',
+            accessCode: 'MUNYAKA-4005',
+            tempAccessCode: 'MUNYAKA-4005',
+            password: 'MUNYAKA-4005',
+            systemRole: 'librarian',
+            role: 'Librarian'
+          }
+        ];
+        localStorage.setItem('munyaka_staff', JSON.stringify(defaultStaff));
+        console.info('[Login] Auto-seeded default staff records into munyaka_staff on mount.');
+      }
+    } catch (err) {
+      console.error('[Login] Error auto-seeding staff on mount:', err);
+    }
+
     checkServerHealth().then((status) => {
       if (cancelled) return;
       if (!status.reachable) {
-        // Soft warning — the user can still try to log in, the service
-        // will surface the network error in the form if the server is
-        // genuinely unreachable. We just log it for diagnostics.
         console.warn(`[Login] Health check: ${status.error} — server may be offline`);
       } else {
         console.log(`[Login] Health check: server reachable in ${status.latencyMs}ms`);
