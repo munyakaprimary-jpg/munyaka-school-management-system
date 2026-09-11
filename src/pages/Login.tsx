@@ -492,43 +492,14 @@ const Login: React.FC = () => {
 
       // ── If user found offline, log them in and assign session based on user.role ─
       if (foundUser) {
-        // Cross-reference with Staff Access Master ('munyaka_staff') to backfill any missing staffId or tscNo
-        let resolvedStaffId = foundUser.staffId || foundUser.staff_id || foundUser.ref || '';
-        let resolvedTscNo = foundUser.tscNo || foundUser.tsc_number || foundUser.nationalId || '';
-
-        try {
-          const masterRaw = localStorage.getItem('munyaka_staff');
-          if (masterRaw) {
-            const masterList = JSON.parse(masterRaw);
-            if (Array.isArray(masterList)) {
-              const matchedMaster = masterList.find((m: any) =>
-                (m.email && m.email.toLowerCase().trim() === (foundUser.email || '').toLowerCase().trim()) ||
-                (m.registeredEmail && m.registeredEmail.toLowerCase().trim() === (foundUser.email || foundUser.registeredEmail || '').toLowerCase().trim()) ||
-                (m.name && foundUser.name && m.name.toLowerCase().trim() === foundUser.name.toLowerCase().trim())
-              );
-              if (matchedMaster) {
-                if (!resolvedStaffId || resolvedStaffId === '-' || resolvedStaffId === 'undefined') {
-                  resolvedStaffId = matchedMaster.staffId || matchedMaster.ref || matchedMaster.id || '';
-                }
-                if (!resolvedTscNo || resolvedTscNo === '-' || resolvedTscNo === 'undefined') {
-                  resolvedTscNo = matchedMaster.tscNo || matchedMaster.nationalId || '';
-                }
-              }
-            }
-          }
-        } catch (e) {
-          console.error('[Login] Error cross-referencing munyaka_staff:', e);
-        }
-
         const userRole = foundUser.systemRole || foundUser.role || foundUser.designation || 'staff';
         const userData = {
-          id: foundUser.id || resolvedStaffId || foundUser.ref || `offline-${Date.now()}`,
+          id: foundUser.id || foundUser.staffId || foundUser.ref || `offline-${Date.now()}`,
           name: foundUser.name || foundUser.fullName || 'Unknown User',
           email: foundUser.email || foundUser.registeredEmail || '',
           phone: foundUser.phone || '',
           role: userRole,
-          staff_id: resolvedStaffId || foundUser.ref || '',
-          tsc_number: resolvedTscNo || '',
+          staff_id: foundUser.staffId || foundUser.ref || '',
           avatar: (foundUser.name || foundUser.fullName || 'U').split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase(),
         };
 
