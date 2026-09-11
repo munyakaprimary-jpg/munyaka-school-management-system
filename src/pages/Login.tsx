@@ -794,199 +794,76 @@ const Login: React.FC = () => {
 
             {/* ── SUPPORT STAFF TAB ── */}
             <TabsContent value="support" className="mt-4">
-              <div className="space-y-4">
-                {/* Role selection cards */}
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">
-                  Select Your Role
-                </p>
-
-                {/* Non-Teaching Staff Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('support_staff');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Users size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Non-Teaching Staff</div>
-                                      <div className="text-xs text-slate-500">General support &amp; administration</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Librarian Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('librarian');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-orange-200 bg-white hover:shadow-lg hover:border-orange-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-orange-100 text-orange-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <BookOpen size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Librarian</div>
-                                      <div className="text-xs text-slate-500">Library management &amp; resources</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-orange-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Storekeeper Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('storekeeper');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-yellow-200 bg-white hover:shadow-lg hover:border-yellow-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-yellow-100 text-yellow-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Package size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Storekeeper</div>
-                                      <div className="text-xs text-slate-500">Inventory &amp; supplies management</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-yellow-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* Science Lab Assistant Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('lab_assistant');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-teal-200 bg-white hover:shadow-lg hover:border-teal-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-teal-100 text-teal-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Beaker size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">Science Lab Assistant</div>
-                                      <div className="text-xs text-slate-500">Science lab &amp; materials management</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-teal-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-                
-                                {/* ICT Lab Technician Card */}
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedSupportRole('ict_technician');
-                                    setStaffId('');
-                                    (document.getElementById('staff-id') as HTMLInputElement)?.focus();
-                                  }}
-                                  className="w-full p-4 rounded-2xl border-2 border-violet-200 bg-white hover:shadow-lg hover:border-violet-300 transition-all text-left group active:scale-[0.98]"
-                                >
-                                  <div className="flex items-center gap-4">
-                                    <div className="w-12 h-12 rounded-xl bg-violet-100 text-violet-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                                      <Monitor size={24} />
-                                    </div>
-                                    <div className="flex-1">
-                                      <div className="font-black text-slate-800">ICT Lab Technician</div>
-                                      <div className="text-xs text-slate-500">IT systems &amp; technical support</div>
-                                    </div>
-                                    <ArrowRight size={16} className="text-violet-400 group-hover:translate-x-1 transition-transform" />
-                                  </div>
-                                </button>
-
-                {/* Login Form for Support Staff */}
-                <Card className="border-none shadow-lg rounded-2xl bg-white overflow-hidden mt-4">
-                  <CardContent className="p-5 space-y-4">
-                    <div className="text-center">
-                      <p className="text-xs text-slate-500 font-medium">Enter your credentials below</p>
+              <Card className="border-none shadow-2xl rounded-3xl bg-white overflow-hidden">
+                <CardContent className="p-6 md:p-8 space-y-6">
+                  {staffAuthError && (
+                    <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl flex items-center gap-3 text-rose-600 text-xs font-bold animate-in slide-in-from-top-2">
+                      <ShieldAlert size={18} className="shrink-0" />
+                      <span>{staffAuthError}</span>
                     </div>
-                    
-                    {staffAuthError && (
-                      <div className="p-3 bg-rose-50 border border-rose-100 rounded-xl flex items-center gap-2 text-rose-600 text-xs font-bold">
-                        <ShieldAlert size={16} className="shrink-0" />
-                        <span>{staffAuthError}</span>
-                      </div>
-                    )}
+                  )}
 
-                    <form onSubmit={handleStaffLogin} className="space-y-4">
-                      {/* Email Address */}
-                      <div className="space-y-2">
-                        <Label htmlFor="staff-id" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Email / Staff ID
-                        </Label>
-                        <div className="relative">
-                          <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <Input
-                            id="staff-id"
-                            type="email"
-                            inputMode="email"
-                            autoCapitalize="none"
-                            value={staffId}
-                            onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                            placeholder="your.email@munyaka.sc.ke"
-                            autoComplete="username"
-                            className="h-11 pl-11 pr-4 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-orange-200"
-                          />
-                        </div>
+                  <form onSubmit={handleStaffLogin} className="space-y-5">
+                    {/* Email Address */}
+                    <div className="space-y-2">
+                      <Label htmlFor="support-staff-id" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Email Address / Staff ID
+                      </Label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Input
+                          id="support-staff-id"
+                          type="text"
+                          autoCapitalize="none"
+                          value={staffId}
+                          onChange={e => { setStaffId(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          placeholder="e.g. support@munyaka.sc.ke"
+                          autoComplete="username"
+                          className="h-12 md:h-14 pl-12 pr-4 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-orange-200"
+                        />
                       </div>
+                    </div>
 
-                      {/* Password */}
-                      <div className="space-y-2">
-                        <Label htmlFor="staff-password" className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                          Access Code
-                        </Label>
-                        <div className="relative">
-                          <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
-                          <Input
-                            id="staff-password"
-                            type={showStaffPassword ? 'text' : 'password'}
-                            value={staffPassword}
-                            onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
-                            placeholder="Enter your access code"
-                            autoComplete="current-password"
-                            className="h-11 pl-11 pr-11 rounded-xl bg-slate-50 border-none font-bold text-sm focus:bg-white focus:ring-2 focus:ring-orange-200"
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setShowStaffPassword(!showStaffPassword)}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
-                          >
-                            {showStaffPassword ? <EyeOff size={16} /> : <Eye size={16} />}
-                          </button>
-                        </div>
+                    {/* Password / Access Code */}
+                    <div className="space-y-2">
+                      <Label htmlFor="support-staff-password" className="text-xs font-black uppercase tracking-widest text-slate-400">
+                        Access Code / Password
+                      </Label>
+                      <div className="relative">
+                        <Key className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <Input
+                          id="support-staff-password"
+                          type={showStaffPassword ? 'text' : 'password'}
+                          value={staffPassword}
+                          onChange={e => { setStaffPassword(e.target.value); if (staffAuthError) setStaffAuthError(''); }}
+                          placeholder="Enter your password"
+                          autoComplete="current-password"
+                          className="h-12 md:h-14 pl-12 pr-12 rounded-xl bg-slate-50 border-none font-bold text-base focus:bg-white focus:ring-2 focus:ring-orange-200"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowStaffPassword(!showStaffPassword)}
+                          className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors"
+                        >
+                          {showStaffPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                        </button>
                       </div>
+                    </div>
 
-                      <Button
-                        type="submit"
-                        disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
-                        className="w-full h-11 rounded-xl text-white font-bold text-sm shadow-lg gap-2 transition-all active:scale-95 bg-orange-600 hover:bg-orange-700 shadow-orange-100"
-                      >
-                        {isStaffVerifying ? (
-                          <><Loader2 className="animate-spin" size={16} /> Signing In...</>
-                        ) : (
-                          <><Unlock size={16} /> Sign In</>
-                        )}
-                      </Button>
-                    </form>
-                  </CardContent>
-                </Card>
-              </div>
+                    <Button
+                      type="submit"
+                      disabled={isStaffVerifying || !String(staffId || '').trim() || !String(staffPassword || '').trim()}
+                      className="w-full h-12 md:h-14 rounded-xl text-white font-black text-base shadow-xl gap-2 transition-all active:scale-95 bg-orange-600 hover:bg-orange-700 shadow-orange-100"
+                    >
+                      {isStaffVerifying ? (
+                        <><Loader2 className="animate-spin" size={20} /> Signing In...</>
+                      ) : (
+                        <><Unlock size={20} /> Sign In as Support Staff</>
+                      )}
+                    </Button>
+                  </form>
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
 
