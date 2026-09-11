@@ -275,11 +275,11 @@ const App = () => {
                     <Sonner />
                     <Routes>
                       {/* Public Routes */}
+                      <Route path="/" element={<Login />} />
                       <Route path="/login" element={<Login />} />
                       <Route path="/portal" element={<ParentPortal />} />
 
                       {/* Protected Routes */}
-                      <Route path="/" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/dashboard" element={<ProtectedRoute><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/admin-dashboard" element={<ProtectedRoute allowedRoles={['admin']} blockedRoles={['owner']}><AppUnlock><Layout><Dashboard /></Layout></AppUnlock></ProtectedRoute>} />
                       <Route path="/index" element={<ProtectedRoute><AppUnlock><Layout><Index /></Layout></AppUnlock></ProtectedRoute>} />
