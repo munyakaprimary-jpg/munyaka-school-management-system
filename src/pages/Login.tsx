@@ -388,9 +388,13 @@ const Login: React.FC = () => {
           if (Array.isArray(staffArray)) {
             const inputId = trimmedId.toLowerCase().trim();
             const inputCode = trimmedPass.trim();
+            const upperInputCode = inputCode.toUpperCase();
             
             foundUser = staffArray.find((s: any) => {
-              const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
+              const emailMatch =
+                (s.email && s.email.toLowerCase().trim() === inputId) ||
+                (s.registeredEmail && s.registeredEmail.toLowerCase().trim() === inputId);
+              
               const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
               const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
               const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
@@ -399,12 +403,18 @@ const Login: React.FC = () => {
                 return false;
               }
               
-              // Match accessCode or tempAccessCode or password
+              const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
+              const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
+              
               const codeMatch =
-                s.accessCode === inputCode ||
-                s.tempAccessCode === inputCode ||
+                storedAccessCode === inputCode ||
+                storedAccessCode.toUpperCase() === upperInputCode ||
+                storedTempCode === inputCode ||
+                storedTempCode.toUpperCase() === upperInputCode ||
                 s.ref === inputCode ||
+                s.ref?.toUpperCase() === upperInputCode ||
                 s.staffId === inputCode ||
+                s.staffId?.toUpperCase() === upperInputCode ||
                 s.password === inputCode ||
                 (s.alternativePasswords && s.alternativePasswords.includes(inputCode));
               
@@ -428,9 +438,13 @@ const Login: React.FC = () => {
             
             const inputId = trimmedId.toLowerCase().trim();
             const inputCode = trimmedPass.trim();
+            const upperInputCode = inputCode.toUpperCase();
             
             foundUser = staffArray.find((s: any) => {
-              const emailMatch = s.email && s.email.toLowerCase().trim() === inputId;
+              const emailMatch =
+                (s.email && s.email.toLowerCase().trim() === inputId) ||
+                (s.registeredEmail && s.registeredEmail.toLowerCase().trim() === inputId);
+              
               const staffIdMatch = (s.staffId || s.ref || s.id) && (s.staffId || s.ref || s.id).toLowerCase().trim() === inputId;
               const nationalIdMatch = s.nationalId && s.nationalId === trimmedId;
               const phoneMatch = s.phone && s.phone.replace(/\s/g, '') === trimmedId.replace(/\s/g, '');
@@ -439,9 +453,14 @@ const Login: React.FC = () => {
                 return false;
               }
               
+              const storedAccessCode = s.accessCode ? String(s.accessCode).trim() : '';
+              const storedTempCode = s.tempAccessCode ? String(s.tempAccessCode).trim() : '';
+              
               const codeMatch =
-                s.accessCode === inputCode ||
-                s.tempAccessCode === inputCode ||
+                storedAccessCode === inputCode ||
+                storedAccessCode.toUpperCase() === upperInputCode ||
+                storedTempCode === inputCode ||
+                storedTempCode.toUpperCase() === upperInputCode ||
                 s.ref === inputCode ||
                 s.staffId === inputCode ||
                 s.password === inputCode;
