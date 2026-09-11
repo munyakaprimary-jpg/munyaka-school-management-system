@@ -110,7 +110,7 @@ export default function StaffAccessMaster() {
         staffName: s.staffName || s.name || s.fullName || 'Staff Member',
         registeredEmail: s.registeredEmail || s.email || '',
         systemRole: s.systemRole || s.role || 'Teacher',
-        tempAccessCode: s.tempAccessCode || s.accessCode || s.password || 'MUNYAKA2026',
+        tempAccessCode: s.tempAccessCode || s.accessCode || s.password || `MUNYAKA-${Math.floor(1000 + Math.random() * 9000)}`,
         isActive: s.isActive !== undefined ? Boolean(s.isActive) : true
       }));
 
@@ -124,7 +124,6 @@ export default function StaffAccessMaster() {
   const saveToStorage = (updatedList: StaffMember[]) => {
     try {
       localStorage.setItem('munyaka_staff', JSON.stringify(updatedList));
-      localStorage.setItem('munyaka_personnel', JSON.stringify(updatedList));
       setStaffList(updatedList);
     } catch (err) {
       console.error('[StaffAccessMaster] Failed to save staff:', err);
