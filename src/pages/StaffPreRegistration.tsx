@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from 'react';
+import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -73,6 +73,24 @@ const StaffPreRegistration = () => {
 
   // ── Staff list sourced exclusively from staffMasterService ─────────────────
   const [staffList, setStaffList] = useState<PreRegisteredStaff[]>([]);
+  const topScrollRef = useRef<HTMLDivElement>(null);
+  const bottomScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleTopScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      if (Math.abs(bottomScrollRef.current.scrollLeft - topScrollRef.current.scrollLeft) > 1) {
+        bottomScrollRef.current.scrollLeft = topScrollRef.current.scrollLeft;
+      }
+    }
+  };
+
+  const handleBottomScroll = () => {
+    if (topScrollRef.current && bottomScrollRef.current) {
+      if (Math.abs(topScrollRef.current.scrollLeft - bottomScrollRef.current.scrollLeft) > 1) {
+        topScrollRef.current.scrollLeft = bottomScrollRef.current.scrollLeft;
+      }
+    }
+  };
 
   // ── Boot: load from staffMasterService ─────────────────────────────────────
   useEffect(() => {
@@ -323,8 +341,17 @@ const StaffPreRegistration = () => {
               <p className="text-sm mt-1">Try adjusting your search or filter criteria</p>
             </div>
           ) : (
-            <div className="w-full overflow-x-auto block clear-both">
-              <table className="w-full min-w-[850px] table-auto text-sm">
+            <div>
+              {/* Synchronized Top Horizontal Scrollbar */}
+              <div
+                ref={topScrollRef}
+                onScroll={handleTopScroll}
+                className="overflow-x-auto overflow-y-hidden h-3 bg-slate-100 rounded-t-2xl border-b border-slate-200"
+              >
+                <div style={{ width: '1200px', height: '1px' }}></div>
+              </div>
+              <div ref={bottomScrollRef} onScroll={handleBottomScroll} className="w-full overflow-x-auto block clear-both">
+              <table className="w-full min-w-[1200px] table-auto text-sm">
                 <thead className="text-slate-500 bg-slate-50/50 border-b">
                   <tr>
                     <th className="px-4 py-5 font-black text-[10px] uppercase tracking-widest text-slate-400 w-12">
@@ -413,6 +440,7 @@ const StaffPreRegistration = () => {
                   })}
                 </tbody>
               </table>
+              </div>
             </div>
           )}
         </div>
