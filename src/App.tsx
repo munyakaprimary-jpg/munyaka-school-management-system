@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import Layout from "./components/Layout";
 import Dashboard from "./pages/Dashboard";
 import Login from "./pages/Login";
+import CoverPage from "./pages/CoverPage";
 import ParentPortal from "./pages/ParentPortal";
 import Index from "./pages/Index";
 import Students from "./pages/Students";
